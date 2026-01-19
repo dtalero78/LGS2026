@@ -1,0 +1,848 @@
+'use client'
+
+import { useState, useEffect, useMemo } from 'react'
+import DashboardLayout from '@/components/layout/DashboardLayout'
+import { format, startOfDay, endOfDay, addDays, subDays, isSaturday, nextSaturday, previousSaturday } from 'date-fns'
+import { es } from 'date-fns/locale'
+import { ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon, UserIcon } from '@heroicons/react/24/outline'
+import Link from 'next/link'
+import EventDetailModal from '@/components/academic/EventDetailModal'
+
+interface CalendarEvent {
+  _id: string
+  dia: Date
+  evento: 'SESSION' | 'CLUB' | 'WELCOME'
+  tituloONivel: string
+  nombreEvento?: string
+  advisor: string | Advisor
+  advisorNombre?: string
+  observaciones?: string
+  limiteUsuarios: number
+  linkZoom?: string
+  inscritos?: number
+}
+
+interface Advisor {
+  _id: string
+  primerNombre: string
+  primerApellido: string
+  zoom?: string
+  pais?: string
+}
+
+interface AcademicEvent {
+  _id: string
+  dia: Date
+  nivelOTitulo: string
+  advisor: string | Advisor
+  advisorNombre?: string
+  bookingCount?: number
+}
+
+export default function AgendaAcademicaPage() {
+  // Estados principales
+  const [events, setEvents] = useState<CalendarEvent[]>([])
+  const [academicEvents, setAcademicEvents] = useState<AcademicEvent[]>([])
+  const [advisors, setAdvisors] = useState<Advisor[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Estados para el loader de batch processing
+  const [batchProcessing, setBatchProcessing] = useState(false)
+  const [batchProgress, setBatchProgress] = useState<{current: number, total: number, eventsInBatch: number} | null>(null)
+
+  // Constantes para el caché
+  const CACHE_TTL = 5 * 60 * 1000 // 5 minutos en millisegundos
+  const CACHE_KEY_PREFIX = 'agenda_academica_'
+
+  // Bandera para evitar múltiples cargas
+  const [initialized, setInitialized] = useState(false)
+
+  // Estados de filtros
+  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [selectedAdvisor, setSelectedAdvisor] = useState<string>('')
+  const [searchTerm, setSearchTerm] = useState('')
+
+  // DEBUG: Función para diagnosticar el evento problema
+  const debugEvent = () => {
+    const problemaEventId = '13d83733-fa49-4a3e-93d3-21d70651f147'
+    const event = events.find(e => e._id === problemaEventId)
+    console.log('🔍 DEBUG - Current event state:', event)
+    alert(`Event ${problemaEventId}: ${event?.inscritos || 'not found'} inscritos`)
+  }
+
+  // Estados de vista
+  const [viewMode, setViewMode] = useState<'table' | 'list'>('table')
+
+  // Estados del modal de detalles
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
+  const [showEventDetail, setShowEventDetail] = useState(false)
+
+  // Generar días desde 3 días atrás hasta el sábado actual - memoizado para estabilidad del caché
+  const dateRange = useMemo(() => {
+    const today = new Date()
+    const startDate = subDays(today, 3)
+    const endDate = isSaturday(today) ? today : nextSaturday(today)
+
+    const days = []
+    let currentDate = startDate
+
+    while (currentDate <= endDate) {
+      days.push(new Date(currentDate))
+      currentDate = addDays(currentDate, 1)
+    }
+
+    return days
+  }, []) // Se recalcula solo al montar el componente
+
+  // Generar horas de 7 AM a 9 PM - memoizado
+  const hours = useMemo(() => {
+    const hours = []
+    for (let i = 7; i <= 21; i++) {
+      hours.push(i)
+    }
+    return hours
+  }, [])
+
+  // Función para obtener eventos
+  const fetchEvents = async () => {
+    try {
+      setLoading(true)
+
+      // Obtener rango de fechas
+      const startDate = dateRange[0]
+      const endDate = dateRange[dateRange.length - 1]
+
+      // Cargar advisors usando el endpoint correcto
+      const advisorsResponse = await fetch('/api/wix-proxy/advisors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      let advisorsData: Advisor[] = []
+      if (advisorsResponse.ok) {
+        const advisorsResult = await advisorsResponse.json()
+        if (advisorsResult.success && advisorsResult.advisors) {
+          advisorsData = advisorsResult.advisors
+          setAdvisors(advisorsData)
+        }
+      }
+
+      // Cargar eventos usando el endpoint correcto
+      const eventsResponse = await fetch('/api/wix-proxy/calendario-events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fechaInicio: startOfDay(startDate).toISOString(),
+          fechaFin: endOfDay(endDate).toISOString()
+        })
+      })
+
+      if (eventsResponse.ok) {
+        const eventsData = await eventsResponse.json()
+        if (eventsData.success && eventsData.events) {
+          const processedEvents = eventsData.events.map((event: any) => ({
+            ...event,
+            dia: new Date(event.dia),
+            inscritos: event.inscritos || 0, // Usar valor del evento o 0
+            advisorNombre: getAdvisorNameLocal(event.advisor, advisorsData)
+          }))
+
+          // DEBUG: Log para el evento específico
+          const problemaEventId = '13d83733-fa49-4a3e-93d3-21d70651f147'
+          const problemaEvent = processedEvents.find(e => e._id === problemaEventId)
+          if (problemaEvent) {
+            console.log('🔍 Initial load - Event', problemaEventId, 'inscritos:', problemaEvent.inscritos)
+          }
+
+          setEvents(processedEvents)
+
+          // Cargar inscripciones para los eventos
+          const eventIds = eventsData.events.map((event: any) => event._id)
+          await loadEventInscriptions(eventIds)
+        }
+      }
+
+    } catch (err) {
+      console.error('Error fetching data:', err)
+      setError('Error al cargar los datos')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Función local para obtener nombre del advisor
+  const getAdvisorNameLocal = (advisor: any, advisorsData: Advisor[]): string => {
+    if (advisor && typeof advisor === 'object' && advisor.primerNombre) {
+      return `${advisor.primerNombre} ${advisor.primerApellido || ''}`.trim()
+    }
+    if (advisor && typeof advisor === 'string') {
+      const advisorObj = advisorsData.find((a: any) => a._id === advisor)
+      return advisorObj ? `${advisorObj.primerNombre} ${advisorObj.primerApellido}` : 'Sin asignar'
+    }
+    return 'Sin asignar'
+  }
+
+  // Función para cargar inscripciones de eventos en batches más pequeños
+  const loadEventInscriptions = async (eventIds: string[]) => {
+    try {
+      console.log('🔍 Loading inscriptions for', eventIds.length, 'events')
+
+      // Activar loader de batch processing
+      setBatchProcessing(true)
+
+      // Procesar en batches de 10 eventos para mejor precisión
+      const batchSize = 10
+      const totalBatches = Math.ceil(eventIds.length / batchSize)
+      const allInscritosCounts: { [key: string]: number } = {}
+
+      for (let i = 0; i < eventIds.length; i += batchSize) {
+        const batchIds = eventIds.slice(i, i + batchSize)
+        const currentBatch = Math.floor(i / batchSize) + 1
+
+        // Actualizar progreso del loader
+        setBatchProgress({
+          current: currentBatch,
+          total: totalBatches,
+          eventsInBatch: batchIds.length
+        })
+
+        console.log(`🔍 Processing batch ${currentBatch}/${totalBatches} with ${batchIds.length} events`)
+
+        const inscripcionesResponse = await fetch('/api/wix-proxy/eventos-inscritos-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventIds: batchIds })
+        })
+
+        if (inscripcionesResponse.ok) {
+          const batchData = await inscripcionesResponse.json()
+          if (batchData.success && batchData.inscritosCounts) {
+            Object.assign(allInscritosCounts, batchData.inscritosCounts)
+          }
+        } else {
+          console.log(`❌ Error en batch ${currentBatch}:`, inscripcionesResponse.status)
+        }
+
+        // Pequeña pausa entre batches para no sobrecargar el servidor
+        if (i + batchSize < eventIds.length) {
+          await new Promise(resolve => setTimeout(resolve, 100))
+        }
+      }
+
+      // Procesar los datos combinados
+      if (Object.keys(allInscritosCounts).length > 0) {
+        const inscripcionesData = {
+          success: true,
+          inscritosCounts: allInscritosCounts
+        }
+
+        // DEBUG: Log para verificar datos
+        console.log('🔍 Updating event inscriptions:', Object.keys(inscripcionesData.inscritosCounts).length, 'events')
+
+        // Específicamente para el evento problema
+        const problemaEventId = '13d83733-fa49-4a3e-93d3-21d70651f147'
+        if (inscripcionesData.inscritosCounts[problemaEventId]) {
+          console.log('🔍 Event', problemaEventId, 'count:', inscripcionesData.inscritosCounts[problemaEventId])
+        }
+
+        // Actualizar eventos con inscripciones reales
+        setEvents(currentEvents => {
+          const updatedEvents = currentEvents.map(event => {
+            const newCount = inscripcionesData.inscritosCounts[event._id] || 0
+            return {
+              ...event,
+              inscritos: newCount
+            }
+          })
+
+          // Log del evento específico después de la actualización
+          const problemaEvent = updatedEvents.find(e => e._id === problemaEventId)
+          if (problemaEvent) {
+            console.log('🔍 After update - Event', problemaEventId, 'inscritos:', problemaEvent.inscritos)
+            console.log('🔍 Raw inscritosCounts for this event:', inscripcionesData.inscritosCounts[problemaEventId])
+          }
+
+          return updatedEvents
+        })
+      }
+
+      // Actualizar eventos con inscripciones
+      const updatedEvents = events.map(event => ({
+        ...event,
+        inscritos: allInscritosCounts[event._id] || 0
+      }))
+
+      setEvents(updatedEvents)
+
+      // Guardar en caché después de completar la carga de inscripciones
+      const startDate = dateRange[0]
+      const endDate = dateRange[dateRange.length - 1]
+      const dateRangeObj = { start: startDate, end: endDate }
+
+      if (updatedEvents.length > 0 && advisors.length > 0) {
+        saveToCache(dateRangeObj, updatedEvents, academicEvents, advisors)
+        console.log('💾 Agenda-academica: Caché guardado exitosamente con', updatedEvents.length, 'eventos')
+      }
+
+    } catch (error) {
+      console.error('Error cargando inscripciones:', error)
+    } finally {
+      // Desactivar loader de batch processing
+      setBatchProcessing(false)
+      setBatchProgress(null)
+    }
+  }
+
+  // Funciones de caché
+  const getCacheKey = (dateRange: {start: Date, end: Date}) => {
+    const startKey = `${dateRange.start.getFullYear()}_${dateRange.start.getMonth()}_${dateRange.start.getDate()}`
+    const endKey = `${dateRange.end.getFullYear()}_${dateRange.end.getMonth()}_${dateRange.end.getDate()}`
+    return `${CACHE_KEY_PREFIX}${startKey}_to_${endKey}`
+  }
+
+  const getFromCache = (dateRange: {start: Date, end: Date}) => {
+    try {
+      const cacheKey = getCacheKey(dateRange)
+      const cached = localStorage.getItem(cacheKey)
+      if (cached) {
+        const data = JSON.parse(cached)
+        const now = Date.now()
+        if (now - data.timestamp < CACHE_TTL) {
+          // Convertir fechas de string a Date
+          const eventsWithDates = data.events.map((event: any) => ({
+            ...event,
+            dia: new Date(event.dia)
+          }))
+          const academicEventsWithDates = data.academicEvents.map((event: any) => ({
+            ...event,
+            dia: new Date(event.dia)
+          }))
+          console.log('📦 Datos cargados desde caché para rango:', dateRange.start.toISOString().split('T')[0], '-', dateRange.end.toISOString().split('T')[0])
+          return {
+            events: eventsWithDates,
+            academicEvents: academicEventsWithDates,
+            advisors: data.advisors
+          }
+        } else {
+          // Caché expirado, eliminarlo
+          localStorage.removeItem(cacheKey)
+          console.log('🗑️ Caché expirado eliminado para rango:', dateRange.start.toISOString().split('T')[0], '-', dateRange.end.toISOString().split('T')[0])
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error leyendo caché:', error)
+    }
+    return null
+  }
+
+  const saveToCache = (dateRange: {start: Date, end: Date}, events: CalendarEvent[], academicEvents: AcademicEvent[], advisors: Advisor[]) => {
+    try {
+      const cacheKey = getCacheKey(dateRange)
+      const data = {
+        timestamp: Date.now(),
+        events,
+        academicEvents,
+        advisors
+      }
+      localStorage.setItem(cacheKey, JSON.stringify(data))
+      console.log('💾 Datos guardados en caché para rango:', dateRange.start.toISOString().split('T')[0], '-', dateRange.end.toISOString().split('T')[0])
+    } catch (error) {
+      console.error('❌ Error guardando caché:', error)
+    }
+  }
+
+  const clearExpiredCache = () => {
+    try {
+      const now = Date.now()
+      const keysToRemove: string[] = []
+
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith(CACHE_KEY_PREFIX)) {
+          const cached = localStorage.getItem(key)
+          if (cached) {
+            const data = JSON.parse(cached)
+            if (now - data.timestamp >= CACHE_TTL) {
+              keysToRemove.push(key)
+            }
+          }
+        }
+      }
+
+      keysToRemove.forEach(key => localStorage.removeItem(key))
+      if (keysToRemove.length > 0) {
+        console.log('🧹 Limpieza de caché:', keysToRemove.length, 'entradas expiradas eliminadas')
+      }
+    } catch (error) {
+      console.error('❌ Error limpiando caché:', error)
+    }
+  }
+
+  // Función para cargar datos con caché
+  const fetchEventsWithCache = async () => {
+    setLoading(true)
+    clearExpiredCache() // Limpiar cachés expirados al iniciar
+
+    try {
+      // Obtener rango de fechas
+      const startDate = dateRange[0]
+      const endDate = dateRange[dateRange.length - 1]
+      const dateRangeObj = { start: startDate, end: endDate }
+
+      console.log('🔍 Agenda-academica: Buscando caché para rango:', dateRangeObj.start.toISOString().split('T')[0], '-', dateRangeObj.end.toISOString().split('T')[0])
+
+      // Intentar cargar desde caché primero
+      const cachedData = getFromCache(dateRangeObj)
+
+      if (cachedData) {
+        // Usar datos del caché
+        setAdvisors(cachedData.advisors)
+        setEvents(cachedData.events)
+        setAcademicEvents(cachedData.academicEvents)
+        setLoading(false)
+        console.log('✅ Agenda-academica: Datos cargados desde caché exitosamente -', cachedData.events.length, 'eventos')
+        return
+      }
+
+      // Si no hay caché, cargar desde servidor
+      console.log('🌐 Agenda-academica: No hay caché, cargando datos desde servidor...')
+      await fetchEvents()
+
+    } catch (error) {
+      console.error('Error cargando datos:', error)
+      setError('Error al cargar los datos')
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!initialized) {
+      setInitialized(true)
+      fetchEventsWithCache()
+    }
+  }, [initialized])
+
+  // Filtrar eventos por advisor y búsqueda
+  const filteredEvents = events.filter(event => {
+    const matchesAdvisor = !selectedAdvisor ||
+      (typeof event.advisor === 'string' ? event.advisor === selectedAdvisor : event.advisor._id === selectedAdvisor)
+
+    const matchesSearch = !searchTerm ||
+      event.tituloONivel.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (event.nombreEvento && event.nombreEvento.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      getAdvisorName(event).toLowerCase().includes(searchTerm.toLowerCase())
+
+    return matchesAdvisor && matchesSearch
+  })
+
+  // Función para obtener el nombre del advisor
+  const getAdvisorName = (event: CalendarEvent | AcademicEvent): string => {
+    if ('advisorNombre' in event && event.advisorNombre) {
+      return event.advisorNombre
+    }
+
+    const advisor = event.advisor
+
+    if (advisor && typeof advisor === 'object' && advisor.primerNombre) {
+      return `${advisor.primerNombre} ${advisor.primerApellido || ''}`.trim()
+    }
+
+    if (advisor && typeof advisor === 'string') {
+      const advisorObj = advisors.find(a => a._id === advisor)
+      return advisorObj ? `${advisorObj.primerNombre} ${advisorObj.primerApellido}` : 'Sin asignar'
+    }
+
+    return 'Sin asignar'
+  }
+
+  // Función para obtener el ID del advisor
+  const getAdvisorId = (event: CalendarEvent | AcademicEvent): string | null => {
+    const advisor = event.advisor
+
+    if (advisor && typeof advisor === 'object' && advisor._id) {
+      return advisor._id
+    }
+
+    if (advisor && typeof advisor === 'string') {
+      return advisor
+    }
+
+    return null
+  }
+
+  // Función para obtener información completa del advisor
+  const getAdvisorInfo = (event: CalendarEvent | AcademicEvent) => {
+    const advisorId = getAdvisorId(event)
+    if (!advisorId) return null
+
+    const advisorObj = advisors.find(a => a._id === advisorId)
+    return advisorObj || null
+  }
+
+  // Función para manejar click en evento
+  const handleEventClick = (event: CalendarEvent) => {
+    setSelectedEvent(event)
+    setShowEventDetail(true)
+  }
+
+  // Función para cerrar modal de detalles
+  const handleCloseEventDetail = () => {
+    setShowEventDetail(false)
+    setSelectedEvent(null)
+  }
+
+  // Función para obtener eventos por día y hora
+  const getEventsForDayAndHour = (date: Date, hour: number) => {
+    return filteredEvents.filter(event => {
+      const eventDate = new Date(event.dia)
+      const eventDay = eventDate.toDateString()
+      const selectedDay = date.toDateString()
+      const eventHour = eventDate.getHours()
+
+      return eventDay === selectedDay && eventHour === hour
+    })
+  }
+
+  // Función para obtener el color según el tipo de evento
+  const getEventColor = (tipo: string) => {
+    switch (tipo) {
+      case 'SESSION':
+        return 'bg-blue-100 text-blue-900 border-blue-200'
+      case 'CLUB':
+        return 'bg-green-100 text-green-900 border-green-200'
+      case 'WELCOME':
+        return 'bg-purple-100 text-purple-900 border-purple-200'
+      default:
+        return 'bg-gray-100 text-gray-900 border-gray-200'
+    }
+  }
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="text-center text-red-600 p-8">
+          {error}
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (batchProcessing) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+          <h3 className="text-lg font-medium text-gray-900">Cargando inscripciones...</h3>
+          {batchProgress && (
+            <p className="text-gray-600 text-center">
+              Procesando grupo {batchProgress.current}/{batchProgress.total} con {batchProgress.eventsInBatch} eventos
+            </p>
+          )}
+          <div className="w-64 bg-gray-200 rounded-full h-2">
+            <div
+              className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+              style={{
+                width: batchProgress ? `${(batchProgress.current / batchProgress.total) * 100}%` : '0%'
+              }}
+            ></div>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Agenda Académica</h1>
+            <p className="text-gray-600">Vista completa de la programación académica</p>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => setViewMode(viewMode === 'table' ? 'list' : 'table')}
+              className="btn btn-outline btn-sm"
+            >
+              {viewMode === 'table' ? 'Vista Lista' : 'Vista Tabla'}
+            </button>
+
+            {/* DEBUG: Botón temporal */}
+            <button
+              onClick={debugEvent}
+              className="btn btn-primary text-xs px-2 py-1 ml-2"
+              style={{background: 'red'}}
+            >
+              DEBUG
+            </button>
+          </div>
+        </div>
+
+        {/* Controles y Filtros */}
+        <div className="card p-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Selector de Día */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Día Seleccionado
+              </label>
+              <select
+                value={selectedDate.toISOString().split('T')[0]}
+                onChange={(e) => setSelectedDate(new Date(e.target.value))}
+                className="input input-bordered w-full"
+              >
+                {dateRange.map(date => (
+                  <option key={date.toISOString()} value={date.toISOString().split('T')[0]}>
+                    {format(date, "EEEE d 'de' MMMM", { locale: es })}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Selector de Advisor */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Advisor
+              </label>
+              <select
+                value={selectedAdvisor}
+                onChange={(e) => setSelectedAdvisor(e.target.value)}
+                className="input input-bordered w-full"
+              >
+                <option value="">Todos los Advisors</option>
+                {advisors.map(advisor => (
+                  <option key={advisor._id} value={advisor._id}>
+                    {advisor.primerNombre} {advisor.primerApellido} {advisor.pais && `(${advisor.pais})`}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Buscador Universal */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Búsqueda Universal
+              </label>
+              <div className="relative">
+                <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar en académica y advisors..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="input input-bordered w-full pl-10"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Vista de Tabla Dinámica */}
+        {viewMode === 'table' && (
+          <div className="card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="table w-full">
+                <thead>
+                  <tr>
+                    <th className="sticky left-0 bg-white z-10 min-w-[120px]">Hora</th>
+                    {dateRange.map(date => (
+                      <th key={date.toISOString()} className="min-w-[200px] text-center">
+                        <div className="text-sm font-medium">
+                          {format(date, "EEE d/M", { locale: es })}
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {hours.map(hour => (
+                    <tr key={hour} className="hover:bg-gray-50">
+                      <td className="sticky left-0 bg-white z-10 font-medium">
+                        {`${hour.toString().padStart(2, '0')}:00`}
+                      </td>
+                      {dateRange.map(date => {
+                        const dayEvents = getEventsForDayAndHour(date, hour)
+                        return (
+                          <td key={`${date.toISOString()}-${hour}`} className="p-2">
+                            <div className="space-y-1">
+                              {dayEvents.map(event => {
+                                const advisorInfo = getAdvisorInfo(event)
+                                const advisorId = getAdvisorId(event)
+                                return (
+                                  <div
+                                    key={event._id}
+                                    className={`p-2 rounded border text-xs cursor-pointer hover:shadow-md transition-shadow ${getEventColor(event.evento)}`}
+                                    onClick={() => handleEventClick(event)}
+                                  >
+                                    <div className="font-medium">{event.tituloONivel}</div>
+                                    <div className="text-xs opacity-75">
+                                      {advisorId ? (
+                                        <Link
+                                          href={`/person/${advisorId}`}
+                                          className="hover:text-blue-600 hover:underline cursor-pointer inline-flex items-center gap-1"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <UserIcon className="h-3 w-3" />
+                                          {getAdvisorName(event)}
+                                          {advisorInfo?.pais && (
+                                            <span className="text-xs opacity-60">({advisorInfo.pais})</span>
+                                          )}
+                                        </Link>
+                                      ) : (
+                                        getAdvisorName(event)
+                                      )}
+                                    </div>
+                                    <div className="text-xs">
+                                      {event.inscritos || 0}/{event.limiteUsuarios}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Vista de Lista */}
+        {viewMode === 'list' && (
+          <div className="card">
+            <div className="p-4">
+              <h3 className="text-lg font-semibold mb-4">
+                Eventos del {format(selectedDate, "d 'de' MMMM", { locale: es })}
+              </h3>
+
+              <div className="space-y-3">
+                {hours.map(hour => {
+                  const hourEvents = getEventsForDayAndHour(selectedDate, hour)
+                  if (hourEvents.length === 0) return null
+
+                  return (
+                    <div key={hour} className="border-l-4 border-primary-500 pl-4">
+                      <div className="font-medium text-gray-900 mb-2">
+                        {`${hour.toString().padStart(2, '0')}:00`}
+                      </div>
+                      <div className="space-y-2">
+                        {hourEvents.map(event => {
+                          const advisorInfo = getAdvisorInfo(event)
+                          const advisorId = getAdvisorId(event)
+                          return (
+                            <div
+                              key={event._id}
+                              className={`p-3 rounded-lg border cursor-pointer hover:shadow-md transition-shadow ${getEventColor(event.evento)}`}
+                              onClick={() => handleEventClick(event)}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <div className="font-medium">{event.tituloONivel}</div>
+                                  {event.nombreEvento && (
+                                    <div className="text-sm opacity-75">{event.nombreEvento}</div>
+                                  )}
+                                  <div className="text-sm">
+                                    <span className="font-medium">Advisor:</span>{' '}
+                                    {advisorId ? (
+                                      <Link
+                                        href={`/person/${advisorId}`}
+                                        className="hover:text-blue-600 hover:underline cursor-pointer inline-flex items-center gap-1"
+                                      >
+                                        <UserIcon className="h-4 w-4" />
+                                        {getAdvisorName(event)}
+                                        {advisorInfo?.pais && (
+                                          <span className="text-sm opacity-60">({advisorInfo.pais})</span>
+                                        )}
+                                      </Link>
+                                    ) : (
+                                      getAdvisorName(event)
+                                    )}
+                                  </div>
+                                  <div className="text-sm">
+                                    <span className="font-medium">Inscritos:</span> {event.inscritos || 0}/{event.limiteUsuarios}
+                                  </div>
+                                </div>
+                                <span className={`badge ${
+                                  event.evento === 'SESSION' ? 'badge-info' :
+                                  event.evento === 'CLUB' ? 'badge-success' : 'badge-warning'
+                                }`}>
+                                  {event.evento}
+                                </span>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+
+                {filteredEvents.filter(event => {
+                  const eventDay = new Date(event.dia).toDateString()
+                  const selectedDay = selectedDate.toDateString()
+                  return eventDay === selectedDay
+                }).length === 0 && (
+                  <div className="text-center text-gray-500 py-8">
+                    No hay eventos programados para este día
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Resumen */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="card p-4 text-center">
+            <div className="text-2xl font-bold text-blue-600">
+              {filteredEvents.filter(e => e.evento === 'SESSION').length}
+            </div>
+            <div className="text-sm text-gray-600">Sessions</div>
+          </div>
+          <div className="card p-4 text-center">
+            <div className="text-2xl font-bold text-green-600">
+              {filteredEvents.filter(e => e.evento === 'CLUB').length}
+            </div>
+            <div className="text-sm text-gray-600">Clubs</div>
+          </div>
+          <div className="card p-4 text-center">
+            <div className="text-2xl font-bold text-purple-600">
+              {filteredEvents.filter(e => e.evento === 'WELCOME').length}
+            </div>
+            <div className="text-sm text-gray-600">Welcome</div>
+          </div>
+          <div className="card p-4 text-center">
+            <div className="text-2xl font-bold text-gray-600">
+              {filteredEvents.reduce((sum, event) => sum + (event.inscritos || 0), 0)}
+            </div>
+            <div className="text-sm text-gray-600">Total Inscritos</div>
+          </div>
+        </div>
+
+        {/* Event Detail Modal */}
+        <EventDetailModal
+          event={selectedEvent}
+          isOpen={showEventDetail}
+          onClose={handleCloseEventDetail}
+          advisors={advisors}
+        />
+      </div>
+    </DashboardLayout>
+  )
+}

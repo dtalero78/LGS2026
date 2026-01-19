@@ -1,0 +1,235 @@
+/**
+ * Sistema de Permisos - LGS Admin Panel
+ * Tipos y definiciones para el control de acceso basado en roles
+ */
+
+// ============================================================================
+// TIPOS BASE
+// ============================================================================
+
+/**
+ * Módulos principales de la aplicación
+ */
+export enum Module {
+  PERSON = 'PERSON',
+  STUDENT = 'STUDENT',
+  ACADEMICO = 'ACADEMICO',
+  SERVICIO = 'SERVICIO',
+  COMERCIAL = 'COMERCIAL',
+  APROBACION = 'APROBACION',
+}
+
+/**
+ * Roles disponibles en el sistema
+ */
+export enum Role {
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  ADMIN = 'ADMIN',
+  ADVISOR = 'ADVISOR',
+  COMERCIAL = 'COMERCIAL',
+  APROBADOR = 'APROBADOR',
+  TALERO = 'TALERO',
+  FINANCIERO = 'FINANCIERO',
+  SERVICIO = 'SERVICIO',
+  SERVICIO_ASIST = 'SERVICIO_ASIST',
+  RECAUDOS_ASIST = 'RECAUDOS_ASIST',
+  READONLY = 'READONLY',
+  COORDINADOR_ACADEMICO = 'COORDINADOR_ACADEMICO',
+}
+
+// ============================================================================
+// PERMISOS POR MÓDULO
+// ============================================================================
+
+/**
+ * Permisos del módulo PERSON (Endpoint /person/)
+ */
+export enum PersonPermission {
+  DESCARGAR_CONTRATO = 'PERSON.INFO.DESCARGAR_CONTRATO',
+  VER_DOCUMENTACION = 'PERSON.INFO.VER_DOCUMENTACION',
+  ADICION_DOCUMENTACION = 'PERSON.INFO.ADICION_DOCUMENTACION',
+  CAMBIO_CELULAR = 'PERSON.INFO.CAMBIO_CELULAR',
+  CAMBIAR_ESTADO = 'PERSON.INFO.CAMBIAR_ESTADO',
+  MODIFICAR = 'PERSON.INFO.MODIFICAR',
+  AGREGAR_BENEFICIARIO = 'PERSON.INFO.AGREGAR_BENEFICIARIO',
+  WHATSAPP = 'PERSON.INFO.WHATSAPP',
+  ELIMINAR = 'PERSON.INFO.ELIMINAR',
+
+  // Legacy permissions (keeping for backward compatibility)
+  ACTIVAR_DESACTIVAR = 'PERSON.ADMIN.ACTIVAR_DESACTIVAR',
+  APROBAR = 'PERSON.ADMIN.APROBAR',
+}
+
+/**
+ * Permisos del módulo STUDENT (Endpoint /student/[id])
+ */
+export enum StudentPermission {
+  // Globales
+  ENVIAR_MENSAJE = 'STUDENT.GLOBAL.ENVIAR_MENSAJE',
+  GUARDAR_PLANTILLA = 'STUDENT.GLOBAL.GUARDAR_PLANTILLA',
+  CONSULTA_CONTRATO = 'STUDENT.GLOBAL.CONSULTA_CONTRATO',
+  GENERAR_ESTADO_CUENTA = 'STUDENT.GLOBAL.GENERAR_ESTADO_CUENTA',
+
+  // Academia
+  TABLA_FILTROS = 'STUDENT.ACADEMIA.TABLA_FILTROS',
+  TABLA_DESCARGAR = 'STUDENT.ACADEMIA.TABLA_DESCARGAR',
+  COMO_VOY = 'STUDENT.ACADEMIA.COMO_VOY',
+  EVALUACION = 'STUDENT.ACADEMIA.EVALUACION',
+  ANOTACION_ADVISOR = 'STUDENT.ACADEMIA.ANOTACION_ADVISOR',
+  COMENTARIOS_ESTUDIANTE = 'STUDENT.ACADEMIA.COMENTARIOS_ESTUDIANTE',
+  ELIMINAR_EVENTO = 'STUDENT.ACADEMIA.ELIMINAR_EVENTO',
+  AGENDAR_CLASE = 'STUDENT.ACADEMIA.AGENDAR_CLASE',
+  MARCAR_STEP = 'STUDENT.ACADEMIA.MARCAR_STEP',
+  ASIGNAR_STEP = 'STUDENT.ACADEMIA.ASIGNAR_STEP',
+
+  // Contrato
+  CONSULTA = 'STUDENT.CONTRATO.CONSULTA',
+  ACTIVAR_HOLD = 'STUDENT.CONTRATO.ACTIVAR_HOLD',
+  EXTENDER_VIGENCIA = 'STUDENT.CONTRATO.EXTENDER_VIGENCIA',
+
+  // Financiera
+  GENERAR_ESTADO = 'STUDENT.FINANCIERA.GENERAR_ESTADO',
+  REGISTRAR_PAGO = 'STUDENT.FINANCIERA.REGISTRAR_PAGO',
+  ENVIO_RECORDATORIO = 'STUDENT.FINANCIERA.ENVIO_RECORDATORIO',
+}
+
+/**
+ * Permisos del módulo ACADEMICO (Menú Académico)
+ */
+export enum AcademicoPermission {
+  // Agenda Sesiones
+  VER_CALENDARIO = 'ACADEMICO.AGENDA.VER_CALENDARIO',
+  VER_AGENDA = 'ACADEMICO.AGENDA.VER_AGENDA',
+  CALENDARIO_VER = 'ACADEMICO.AGENDA.CALENDARIO_VER',
+  LISTA_VER = 'ACADEMICO.AGENDA.LISTA_VER',
+  FILTRO = 'ACADEMICO.AGENDA.FILTRO',
+  NUEVO_EVENTO = 'ACADEMICO.AGENDA.NUEVO_EVENTO',
+  EXPORTAR_CSV = 'ACADEMICO.AGENDA.EXPORTAR_CSV',
+  EDITAR = 'ACADEMICO.AGENDA.EDITAR',
+  ELIMINAR = 'ACADEMICO.AGENDA.ELIMINAR',
+  CREAR_EVENTO = 'ACADEMICO.AGENDA.CREAR_EVENTO',
+  VER_AGENDA_ACADEMICA = 'ACADEMICO.AGENDA.VER_AGENDA_ACADEMICA',
+  IR_A_SESION = 'ACADEMICO.SESION.IR_A_SESION',
+
+  // Agenda Académica
+  VER = 'ACADEMICO.ACADEMICA.VER',
+  AGENDAMIENTO = 'ACADEMICO.ACADEMICA.AGENDAMIENTO',
+  ACADEMICA_EXPORTAR_CSV = 'ACADEMICO.ACADEMICA.EXPORTAR_CSV',
+  ESTADISTICAS = 'ACADEMICO.ACADEMICA.ESTADISTICAS',
+  EXPORTAR_STATS_CSV = 'ACADEMICO.ACADEMICA.EXPORTAR_STATS_CSV',
+
+  // Advisor
+  LISTA_ADVISORS_VER = 'ACADEMICO.ADVISOR.LISTA_VER',
+  ADVISOR_VER_ENLACE = 'ACADEMICO.ADVISOR.VER_ENLACE',
+  AGREGAR = 'ACADEMICO.ADVISOR.AGREGAR',
+  ESTADISTICA = 'ACADEMICO.ADVISOR.ESTADISTICA',
+
+  // Informes
+  VER_INFORMES = 'ACADEMICO.INFORMES.VER',
+  INFORME_BENEFICIARIOS = 'ACADEMICO.INFORMES.BENEFICIARIOS',
+  EXPORTAR_INFORMES = 'ACADEMICO.INFORMES.EXPORTAR',
+}
+
+/**
+ * Permisos del módulo SERVICIO (Menú Servicio)
+ */
+export enum ServicioPermission {
+  // Welcome Session
+  WELCOME_CARGAR_EVENTOS = 'SERVICIO.WELCOME.CARGAR_EVENTOS',
+  WELCOME_EXPORTAR_CSV = 'SERVICIO.WELCOME.EXPORTAR_CSV',
+
+  // Lista de Sesiones
+  SESIONES_CARGAR_EVENTOS = 'SERVICIO.SESIONES.CARGAR_EVENTOS',
+  SESIONES_EXPORTAR_CSV = 'SERVICIO.SESIONES.EXPORTAR_CSV',
+
+  // Usuarios sin perfil
+  USUARIOS_ACTUALIZAR = 'SERVICIO.USUARIOS.ACTUALIZAR',
+  USUARIOS_EXPORTAR_CSV = 'SERVICIO.USUARIOS.EXPORTAR_CSV',
+}
+
+/**
+ * Permisos del módulo COMERCIAL (Menú Comercial)
+ */
+export enum ComercialPermission {
+  // Contrato
+  MODIFICAR_CONTRATO = 'COMERCIAL.CONTRATO.MODIFICAR',
+  ENVIAR_PDF = 'COMERCIAL.CONTRATO.ENVIAR_PDF',
+  DESCARGAR = 'COMERCIAL.CONTRATO.DESCARGAR',
+  APROBACION_AUTONOMA = 'COMERCIAL.CONTRATO.APROBACION_AUTONOMA',
+
+  // Prospectos
+  VER_PROSPECTOS = 'COMERCIAL.PROSPECTOS.VER',
+}
+
+/**
+ * Permisos del módulo APROBACION (Menú Aprobación)
+ */
+export enum AprobacionPermission {
+  // Modificar (usado en Wix)
+  ACTUALIZAR = 'APROBACION.MODIFICAR.ACTUALIZAR',
+  EXPORTAR_CSV = 'APROBACION.MODIFICAR.EXPORTAR_CSV',
+  VER_CONTRATO = 'APROBACION.MODIFICAR.CONTRATO',
+  ENVIAR_PDF = 'APROBACION.MODIFICAR.ENVIAR_PDF',
+  DESCARGAR = 'APROBACION.MODIFICAR.DESCARGAR',
+  APROBACION_AUTONOMA = 'APROBACION.MODIFICAR.APROBACION_AUTONOMA',
+
+  // Legacy (mantener compatibilidad)
+  GLOBAL_ACTUALIZAR = 'APROBACION.GLOBAL.ACTUALIZAR',
+  GLOBAL_EXPORTAR_CSV = 'APROBACION.GLOBAL.EXPORTAR_CSV',
+}
+
+// ============================================================================
+// TIPO UNION DE TODOS LOS PERMISOS
+// ============================================================================
+
+/**
+ * Tipo que representa cualquier permiso válido en el sistema
+ */
+export type Permission =
+  | PersonPermission
+  | StudentPermission
+  | AcademicoPermission
+  | ServicioPermission
+  | ComercialPermission
+  | AprobacionPermission;
+
+// ============================================================================
+// INTERFACES
+// ============================================================================
+
+/**
+ * Definición de un permiso con sus metadatos
+ */
+export interface PermissionDefinition {
+  code: Permission;
+  module: Module;
+  name: string;
+  description: string;
+}
+
+/**
+ * Matriz de permisos para un rol específico
+ */
+export interface RolePermissions {
+  role: Role;
+  permissions: Permission[];
+}
+
+/**
+ * Usuario con rol y permisos
+ */
+export interface UserWithPermissions {
+  id: string;
+  email: string;
+  name: string;
+  role: Role;
+  permissions: Permission[];
+}
+
+/**
+ * Resultado de verificación de permisos
+ */
+export interface PermissionCheck {
+  allowed: boolean;
+  reason?: string;
+}

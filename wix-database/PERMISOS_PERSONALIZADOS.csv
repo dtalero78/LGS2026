@@ -1,0 +1,2 @@
+_id,email,permisos,fechaActualizacion,notas
+1,advisor@lgs.com,"[""STUDENT.GLOBAL.ENVIAR_MENSAJE""]",2025-01-15,Permisos personalizados para advisor de prueba

@@ -1,0 +1,2618 @@
+import { sendmessage } from 'backend/realtime.jsw';
+import { searchPeopleAndAcademica, getPersonByContrato, getPersonById, getStudentById, updateClass, deleteClass, getRelatedPersons, getFinancialDataByContrato, approveBeneficiario, createNewBeneficiario, updateBeneficiario, deleteBeneficiario, inactivateBeneficiario, updateTitularEstado, getCalendarioEventos, createClassEvent, createBookingEvent, updateStudentStep, cargarStepsDelNivel, createStepOverride, deleteStepOverride, testStepOverrideByIdEnAcademica, updateOnHold, getWelcomeEvents, getAdvisors, getAdvisorById, getCalendarioEvents, getCalendarioEventsByAdvisor, getCalendarioEventsByAdvisorAndDay, getEventBookings, getEventUsersByCriteria, getEventBookingsByCriteria, getContracts, getEventInscritosCount, getMultipleEventsInscritosCount, createCalendarioEvent, updateCalendarioEvent, deleteCalendarioEvent, getNiveles, updateAprobacion, getContractosByTipo, getBeneficiariosSinRegistro, addCommentToPerson, getPersonComments, restorePersonData, getTopStudentsThisMonth } from 'backend/search.jsw';
+import { fetch } from 'wix-fetch';
+import wixData from 'wix-data';
+import { ok, serverError, badRequest } from 'wix-http-functions';
+
+
+export async function get_exportCSV(request) {
+    try {
+        const results = await wixData.query("CLASSES").find();
+        const items = results.items;
+
+        if (items.length === 0) {
+            return ok({ body: "No hay datos para exportar." });
+        }
+
+        // Obtener los nombres de los advisors
+        const advisorIds = [...new Set(items.map(item => item.advisor).filter(id => id))];
+        const advisors = await getAdvisorNames(advisorIds);
+
+        // 🔹 Seleccionar y estructurar solo las columnas necesarias
+        let selectedColumns = items.map(({ _id, fechaEvento, tipoEvento, nivel, step, primerNombre, primerApellido, advisor, asistencia, participacion }) => ({
+            idEvento: _id,
+            fechaEvento: formatFecha(fechaEvento),
+            tipoEvento,
+            nivel,
+            step,
+            nombreCompleto: `${primerNombre || ""} ${primerApellido || ""}`.trim(),
+            advisorName: advisors[advisor] || "No asignado",
+            asistencia: asistencia === true ? "Sí" : "No",
+            participacion: participacion ? "Sí" : "No"
+        }));
+
+        // Ordenar como en la tabla (Asistencia: "No" primero)
+        selectedColumns.sort((a, b) => a.asistencia.localeCompare(b.asistencia));
+
+        // Convertir a CSV solo con las columnas seleccionadas
+        let csvContent = convertToCSV(selectedColumns);
+
+        return ok({
+            headers: {
+                "Content-Type": "text/csv",
+                "Content-Disposition": "attachment; filename=clases.csv"
+            },
+            body: csvContent
+        });
+
+    } catch (error) {
+        console.error("Error al exportar CSV:", error);
+        return serverError({ body: "Error al exportar CSV: " + error.message });
+    }
+}
+
+// Función para obtener los nombres de los advisors por sus IDs
+async function getAdvisorNames(advisorIds) {
+    if (advisorIds.length === 0) return {};
+
+    try {
+        const result = await wixData.query("ADVISORS")
+            .hasSome("_id", advisorIds)
+            .find();
+
+        const advisorMap = {};
+        result.items.forEach(advisor => {
+            advisorMap[advisor._id] = `${advisor.primerNombre} ${advisor.primerApellido}`;
+        });
+
+        return advisorMap;
+    } catch (error) {
+        console.error("Error al obtener nombres de advisors:", error);
+        return {};
+    }
+}
+
+// Función para formatear la fecha igual que en el frontend
+function formatFecha(fecha) {
+    if (!fecha) return "";
+    const date = new Date(fecha);
+    return date.toLocaleString("es-CO", {
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+    }).replace(",", "");
+}
+
+// Función para convertir JSON a CSV asegurando compatibilidad con Excel
+function convertToCSV(data) {
+    if (!data.length) return "";
+
+    const keys = Object.keys(data[0]); // Obtener encabezados
+    const rows = data.map(row => 
+        keys.map(key => `"${row[key]?.toString().replace(/"/g, '""') || ""}"`).join(",") // Escapar comillas dobles
+    );
+
+    return [keys.join(","), ...rows].join("\n"); // Formato CSV válido
+}
+
+
+
+
+
+
+/*
+export function post_handleInput(request) {
+    const BOT_NUMBER = "56932631038"; // Número del bot para evitar ciclos
+
+    return request.body.json()
+        .then(async (body) => {
+            // Validar que el payload contiene el arreglo 'messages'
+            if (!body || !body.messages || !Array.isArray(body.messages)) {
+                return {
+                    status: 200,
+                    body: { message: "Solicitud ignorada: el payload no contiene mensajes." }
+                };
+            }
+
+            const messages = body.messages;
+
+            for (const message of messages) {
+                const from = message?.from?.trim(); // Número del remitente
+                const bodyText = message?.text?.body?.trim() || "Sin mensaje"; // Texto del mensaje
+                const profileName = message?.from_name?.trim() || "Nombre Desconocido"; // Nombre del remitente
+                const fromMe = message?.from_me || false; // Indica si el mensaje fue enviado por el bot
+
+                // Evitar ciclos: ignorar mensajes enviados por el bot
+                if (from === BOT_NUMBER || fromMe) {
+                    console.log(`Mensaje ignorado: fue enviado por el bot (${from}).`);
+                    continue;
+                }
+
+                if (!from || !bodyText) {
+                    console.error("No se pudieron identificar las propiedades 'from' y 'body' en el mensaje.");
+                    continue;
+                }
+
+                let conversation;
+                try {
+                    const queryResult = await wixData.query("WHP").eq("userId", from).find();
+                    if (queryResult.items.length > 0) {
+                        conversation = queryResult.items[0];
+                    } else {
+                        conversation = { userId: from, nombre: profileName, mensajes: [], stopBot: false };
+                    }
+                } catch (error) {
+                    console.error("Error consultando la conversación existente:", error);
+                }
+
+                // Respuesta fija
+                const response = "Hola. Te comunicas con LGS. ¿En qué te podemos colaborar?";
+                conversation.stopBot = true;
+
+                // Guardar la conversación actualizada
+                try {
+                    conversation.mensajes.push({
+                        from: "usuario",
+                        mensaje: bodyText,
+                        timestamp: new Date().toISOString()
+                    });
+                    conversation.mensajes.push({
+                        from: "sistema",
+                        mensaje: response,
+                        timestamp: new Date().toISOString()
+                    });
+
+                    if (conversation._id) {
+                        await wixData.update("WHP", conversation);
+                    } else {
+                        delete conversation._id;
+                        await wixData.insert("WHP", conversation);
+                    }
+                } catch (error) {
+                    console.error("Error guardando la conversación:", error);
+                }
+
+                // Enviar la respuesta al usuario
+                await sendTextMessage(from, response);
+            }
+
+            return {
+                status: 200,
+                body: { message: "Mensajes procesados correctamente." }
+            };
+        })
+        .catch(error => {
+            console.error("Error procesando webhook:", error);
+            return {
+                status: 500,
+                body: { message: "Error procesando el webhook." }
+            };
+        });
+}*/
+
+
+
+export function sendTextMessage(toNumber, messageBody) {
+    const url = "https://gate.whapi.cloud/messages/text";
+    const headers = {
+        "accept": "application/json",
+        "authorization": "Bearer VSyDX4j7ooAJ7UGOhz8lGplUVDDs2EYj",
+        "content-type": "application/json"
+    };
+    const postData = {
+        "typing_time": 0,
+        "to": toNumber,
+        "body": messageBody
+    };
+
+    // Realizar la solicitud POST
+    return fetch(url, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(postData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error en la solicitud: ${response.status} ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(json => {
+            console.log("Mensaje enviado con éxito:", json);
+
+            // Registrar el evento y cerrar la lightbox
+            return sendmessage("chatsWhp", { type: "updateComplete" })
+                .then(() => {
+                    console.log("Evento 'updateComplete' registrado correctamente.");
+                    return json; // Devuelve la respuesta principal
+                });
+        })
+        .catch(err => {
+            console.error("Error en el proceso de envío o registro del evento:", err);
+            throw err; // Propagar el error
+        });
+}
+
+// ====== FUNCIONES DE BÚSQUEDA ======
+
+export async function get_search(request) {
+    try {
+        const query = request.query;
+        const searchTerm = query.q || query.term || query.search;
+
+        if (!searchTerm) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'Parámetro de búsqueda requerido (q, term, o search)'
+                })
+            });
+        }
+
+        const result = await searchPeopleAndAcademica(searchTerm);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de búsqueda:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export async function get_person(request) {
+    try {
+        const query = request.query;
+        const contrato = query.contrato;
+
+        if (!contrato) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'Número de contrato requerido'
+                })
+            });
+        }
+
+        const result = await getPersonByContrato(contrato);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de persona:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+// Manejar OPTIONS para CORS
+export function options_search(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+    });
+}
+
+export function options_person(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+    });
+}
+
+export async function get_personById(request) {
+    try {
+        const query = request.query;
+        const personId = query.id;
+
+        if (!personId) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'ID de persona requerido'
+                })
+            });
+        }
+
+        const result = await getPersonById(personId);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de persona por ID:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_personById(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+    });
+}
+
+// ====== ENDPOINTS PARA ESTUDIANTES (ACADEMICA) ======
+
+export async function get_studentById(request) {
+    try {
+        const query = request.query;
+        const studentId = query.id;
+
+        if (!studentId) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'ID de estudiante requerido'
+                })
+            });
+        }
+
+        const result = await getStudentById(studentId);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de estudiante por ID:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export async function put_updateClass(request) {
+    try {
+        const query = request.query;
+        const classId = query.id;
+
+        if (!classId) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'ID de clase requerido'
+                })
+            });
+        }
+
+        const body = await request.body.json();
+        const result = await updateClass(classId, body);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'PUT, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de actualizar clase:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export async function delete_deleteClass(request) {
+    try {
+        const query = request.query;
+        const classId = query.id;
+
+        if (!classId) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'ID de clase requerido'
+                })
+            });
+        }
+
+        const result = await deleteClass(classId);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de eliminar clase:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+// Funciones OPTIONS para CORS
+export function options_studentById(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+    });
+}
+
+export function options_updateClass(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'PUT, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+    });
+}
+
+export function options_deleteClass(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+    });
+}
+
+// ====== ENDPOINT PARA PERSONAS RELACIONADAS ======
+
+export async function post_getRelatedPersons(request) {
+    try {
+        const body = await request.body.json();
+        const { personId, tipoUsuario, titularId } = body;
+
+        if (!personId) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'ID de persona requerido'
+                })
+            });
+        }
+
+        const result = await getRelatedPersons(personId, tipoUsuario, titularId);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de personas relacionadas:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_getRelatedPersons(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+    });
+}
+
+// ====== ENDPOINT PARA INFORMACIÓN FINANCIERA ======
+
+export async function get_financialDataByContrato(request) {
+    try {
+        const query = request.query;
+        const contrato = query.contrato;
+
+        if (!contrato) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'Número de contrato requerido'
+                })
+            });
+        }
+
+        const result = await getFinancialDataByContrato(contrato);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de información financiera:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_financialDataByContrato(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+    });
+}
+
+// ====== ENDPOINT PARA APROBACIÓN DE BENEFICIARIOS ======
+
+export async function post_approveBeneficiario(request) {
+    try {
+        const body = await request.body.json();
+        const { beneficiarioId } = body;
+
+        if (!beneficiarioId) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'ID de beneficiario requerido'
+                })
+            });
+        }
+
+        const result = await approveBeneficiario(beneficiarioId);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de aprobación de beneficiario:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_approveBeneficiario(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+    });
+}
+
+// ====== ENDPOINT PARA CREAR NUEVO BENEFICIARIO ======
+
+export async function post_createNewBeneficiario(request) {
+    try {
+        const body = await request.body.json();
+        const { titularId } = body;
+
+        if (!titularId) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'ID de titular requerido'
+                })
+            });
+        }
+
+        const result = await createNewBeneficiario(titularId);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de creación de beneficiario:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_createNewBeneficiario(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+// ====== ENDPOINT PARA ACTUALIZAR BENEFICIARIO ======
+
+export async function post_updateBeneficiario(request) {
+    try {
+        const body = await request.body.json();
+        const { beneficiarioId, datosBeneficiario } = body;
+
+        if (!beneficiarioId) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'ID de beneficiario requerido'
+                })
+            });
+        }
+
+        if (!datosBeneficiario) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'Datos de beneficiario requeridos'
+                })
+            });
+        }
+
+        const result = await updateBeneficiario(beneficiarioId, datosBeneficiario);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de actualización de beneficiario:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_updateBeneficiario(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+// ====== ENDPOINT PARA ELIMINAR BENEFICIARIO ======
+
+export async function post_deleteBeneficiario(request) {
+    try {
+        const body = await request.body.json();
+        const { beneficiarioId } = body;
+
+        if (!beneficiarioId) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'ID de beneficiario requerido'
+                })
+            });
+        }
+
+        const result = await deleteBeneficiario(beneficiarioId);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de eliminación de beneficiario:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_deleteBeneficiario(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+// ====== ENDPOINT PARA INACTIVAR BENEFICIARIO ======
+
+export async function post_inactivateBeneficiario(request) {
+    try {
+        const body = await request.body.json();
+        const { beneficiarioId } = body;
+
+        if (!beneficiarioId) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'ID de beneficiario requerido'
+                })
+            });
+        }
+
+        const result = await inactivateBeneficiario(beneficiarioId);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de inactivación de beneficiario:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_inactivateBeneficiario(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+// HTTP function para updateTitularEstado
+export async function post_updateTitularEstado(request) {
+    try {
+        const body = await request.body.json();
+        console.log('HTTP updateTitularEstado request:', body);
+
+        const { personId, nuevoEstado } = body;
+
+        const result = await updateTitularEstado(personId, nuevoEstado);
+
+        return ok({
+            body: JSON.stringify(result),
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With'
+            }
+        });
+
+    } catch (error) {
+        console.error('Error en post_updateTitularEstado:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            }),
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            }
+        });
+    }
+}
+
+export function options_updateTitularEstado(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+// ============= ENDPOINTS PARA AGENDAR CLASES =============
+
+export async function get_calendarioEventos(request) {
+    try {
+        const url = new URL(request.url);
+        const nivel = url.searchParams.get('nivel');
+        const tipoEvento = url.searchParams.get('tipoEvento');
+        const fechaInicio = url.searchParams.get('fechaInicio');
+        const fechaFin = url.searchParams.get('fechaFin');
+
+        const result = await getCalendarioEventos(nivel, tipoEvento, fechaInicio, fechaFin);
+
+        return ok({
+            body: JSON.stringify(result),
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            }
+        });
+    } catch (error) {
+        console.error('Error en get_calendarioEventos:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            }),
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            }
+        });
+    }
+}
+
+export function options_calendarioEventos(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+export async function get_advisors(request) {
+    try {
+        const result = await getAdvisors();
+
+        return ok({
+            body: JSON.stringify(result),
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            }
+        });
+    } catch (error) {
+        console.error('Error en get_advisors:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            }),
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            }
+        });
+    }
+}
+
+export function options_advisors(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+export async function post_createClassEvent(request) {
+    try {
+        const eventData = await request.body.json();
+        const result = await createClassEvent(eventData);
+
+        return ok({
+            body: JSON.stringify(result),
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            }
+        });
+    } catch (error) {
+        console.error('Error en post_createClassEvent:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            }),
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            }
+        });
+    }
+}
+
+export function options_createClassEvent(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+export async function post_createBookingEvent(request) {
+    try {
+        const eventData = await request.body.json();
+        const result = await createBookingEvent(eventData);
+
+        return ok({
+            body: JSON.stringify(result),
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            }
+        });
+    } catch (error) {
+        console.error('Error en post_createBookingEvent:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            }),
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            }
+        });
+    }
+}
+
+export function options_createBookingEvent(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+export async function post_updateStudentStep(request) {
+    try {
+        console.log('🎯 HTTP: Recibida petición para actualizar step del estudiante');
+
+        const stepData = await request.body.json();
+        console.log('🔍 Datos recibidos:', stepData);
+
+        const result = await updateStudentStep(stepData);
+
+        if (result.success) {
+            console.log('✅ Step actualizado exitosamente');
+            return ok({
+                body: JSON.stringify(result),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                }
+            });
+        } else {
+            console.error('❌ Error al actualizar step:', result.error);
+            return serverError({
+                body: JSON.stringify(result),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                }
+            });
+        }
+    } catch (error) {
+        console.error('❌ Error en HTTP endpoint:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            }),
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            }
+        });
+    }
+}
+
+export function options_updateStudentStep(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+// ============= ENDPOINTS PARA NIVELES Y STEPS =============
+
+export async function get_levelSteps(request) {
+    try {
+        const query = request.query;
+        const nivel = query.nivel;
+        const studentId = query.studentId;
+
+        if (!nivel) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'Nivel requerido'
+                })
+            });
+        }
+
+        if (!studentId) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'ID de estudiante requerido'
+                })
+            });
+        }
+
+        const result = await cargarStepsDelNivel(nivel, studentId);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de level steps:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_levelSteps(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+    });
+}
+
+export async function post_stepOverride(request) {
+    try {
+        const body = await request.body.json();
+        const { studentId, step, nivel, isCompleted } = body;
+
+        if (!studentId || !step || !nivel || isCompleted === undefined) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'studentId, step, nivel e isCompleted son requeridos'
+                })
+            });
+        }
+
+        const result = await createStepOverride({ studentId, step, nivel, isCompleted });
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de step override:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export async function delete_stepOverride(request) {
+    try {
+        const query = request.query;
+        const studentId = query.studentId;
+        const step = query.step;
+
+        if (!studentId || !step) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'studentId y step son requeridos'
+                })
+            });
+        }
+
+        const result = await deleteStepOverride(studentId, step);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de eliminar step override:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+// ==================== GESTIÓN DE CONTRATOS ====================
+
+export async function post_getContracts(request) {
+    try {
+        console.log('🔄 Proxy: Received Contracts request');
+
+        const body = request.body;
+        const { status, search, dateStart, dateEnd, page = 1, limit = 15 } = body || {};
+
+        console.log('📋 Contract filters:', { status, search, dateStart, dateEnd, page, limit });
+
+        // Usar la función getContracts de search.jsw
+        const result = await getContracts(status, search, dateStart, dateEnd, page, limit);
+
+        if (result.success) {
+            console.log('✅ Contracts loaded from search.jsw:', result);
+
+            return ok({
+                headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type'
+                },
+                body: JSON.stringify(result)
+            });
+        } else {
+            throw new Error(result.error || 'Error al obtener contratos');
+        }
+
+    } catch (error) {
+        console.error('❌ Error en endpoint de contratos:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_getContracts(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+export function options_stepOverride(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+export async function get_testStepOverrides(request) {
+    try {
+        const numeroId = request.query.numeroId;
+        if (!numeroId) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'numeroId parameter is required'
+                })
+            });
+        }
+
+        const result = await testStepOverrideByIdEnAcademica(numeroId);
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+            },
+            body: JSON.stringify(result)
+        });
+    } catch (error) {
+        console.error('Error en endpoint de test step overrides:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+// Endpoint para actualizar estado ON HOLD
+export async function post_updateOnHold(request) {
+    try {
+        const body = await request.body.json();
+        const { personId, estado, fechaOnHold, fechaFinOnHold, vigenciaExtra } = body;
+
+        if (!personId || !fechaOnHold || !fechaFinOnHold) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'personId, fechaOnHold y fechaFinOnHold son requeridos'
+                })
+            });
+        }
+
+        console.log('📝 Procesando actualización ON HOLD:', { personId, estado, fechaOnHold, fechaFinOnHold });
+
+        const result = await updateOnHold(personId, estado || 'ON HOLD', fechaOnHold, fechaFinOnHold, vigenciaExtra);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de actualizar ON HOLD:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_updateOnHold(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+// ============= ENDPOINT PARA EVENTOS DE BIENVENIDA =============
+
+export async function post_getWelcomeEvents(request) {
+    try {
+        const body = await request.body.json();
+        const { fechaInicio, fechaFin } = body;
+
+        console.log('📅 Solicitud de eventos de bienvenida:', { fechaInicio, fechaFin });
+
+        const result = await getWelcomeEvents(fechaInicio, fechaFin);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de eventos de bienvenida:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_getWelcomeEvents(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+// ============= ENDPOINTS PARA AGENDA =============
+
+export async function post_getAdvisors(request) {
+    try {
+        console.log('📞 Solicitud de lista de advisors');
+
+        const result = await getAdvisors();
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de advisors:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_getAdvisors(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+export async function get_advisorById(request) {
+    try {
+        const advisorId = request.path[0];
+        console.log('👨‍🏫 Solicitud de advisor por ID:', advisorId);
+
+        if (!advisorId) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'ID de advisor requerido'
+                })
+            });
+        }
+
+        const result = await getAdvisorById(advisorId);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de advisor por ID:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_advisorById(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+export async function post_getCalendarioEvents(request) {
+    try {
+        const body = await request.body.json();
+        const { fechaInicio, fechaFin, advisorId } = body;
+
+        console.log('📅 Solicitud de eventos de calendario:', { fechaInicio, fechaFin, advisorId });
+
+        const result = await getCalendarioEvents(fechaInicio, fechaFin, advisorId);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de eventos de calendario:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_getCalendarioEvents(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+export async function post_getCalendarioEventsByAdvisor(request) {
+    try {
+        const body = await request.body.json();
+        const { advisorId, fechaInicio, fechaFin } = body;
+
+        console.log('👤 Solicitud de eventos por advisor:', { advisorId, fechaInicio, fechaFin });
+
+        const result = await getCalendarioEventsByAdvisor(advisorId, fechaInicio, fechaFin);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de eventos por advisor:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_getCalendarioEventsByAdvisor(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+export async function post_getCalendarioEventsByAdvisorAndDay(request) {
+    try {
+        const body = await request.body.json();
+        const { advisorId, fechaInicio, fechaFin } = body;
+
+        console.log('👤📅 Solicitud de eventos por advisor y día:', { advisorId, fechaInicio, fechaFin });
+
+        const result = await getCalendarioEventsByAdvisorAndDay(advisorId, fechaInicio, fechaFin);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de eventos por advisor y día:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_getCalendarioEventsByAdvisorAndDay(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+export async function post_getEventBookings(request) {
+    try {
+        const body = await request.body.json();
+        const { eventId } = body;
+
+        console.log('📋 Solicitud de bookings para evento:', eventId);
+
+        const result = await getEventBookings(eventId);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de bookings del evento:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_getEventBookings(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+// Endpoint para obtener usuarios por criterios del evento desde CLASSES
+export async function post_getEventUsersByCriteria(request) {
+    try {
+        const body = await request.body.json();
+        const { advisorId, fechaEvento, hora, tipoEvento, nivel, step } = body;
+
+        console.log('📋 Solicitud de usuarios por criterios (CLASSES):', {
+            advisorId, fechaEvento, hora, tipoEvento, nivel, step
+        });
+
+        const result = await getEventUsersByCriteria(advisorId, fechaEvento, hora, tipoEvento, nivel, step);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de usuarios por criterios (CLASSES):', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_getEventUsersByCriteria(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+// Endpoint para obtener usuarios por criterios del evento desde BOOKING
+export async function post_getEventBookingsByCriteria(request) {
+    try {
+        const body = await request.body.json();
+        const { advisorId, fechaEvento, hora, tipoEvento, nivel, step } = body;
+
+        console.log('📋 Solicitud de usuarios por criterios (BOOKING):', {
+            advisorId, fechaEvento, hora, tipoEvento, nivel, step
+        });
+
+        const result = await getEventBookingsByCriteria(advisorId, fechaEvento, hora, tipoEvento, nivel, step);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de usuarios por criterios (BOOKING):', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_getEventBookingsByCriteria(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+export async function post_getTotalAcademicaUsers(request) {
+    try {
+        console.log('🔄 Obteniendo total de usuarios de ACADEMICA...');
+
+        // Contar todos los registros en la colección ACADEMICA
+        const totalCount = await wixData.query('ACADEMICA').count();
+
+        console.log('✅ Total de usuarios de ACADEMICA:', totalCount);
+
+        return ok({
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify({
+                success: true,
+                total: totalCount
+            })
+        });
+
+    } catch (error) {
+        console.error('❌ Error obteniendo total de usuarios de ACADEMICA:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_getTotalAcademicaUsers(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+// ============= ENDPOINT PARA CONTAR INSCRITOS DE UN EVENTO =============
+
+export async function post_getEventInscritosCount(request) {
+    try {
+        const body = await request.body.json();
+        const { eventId } = body;
+
+        console.log('🔢 Solicitud de conteo de inscritos para evento:', eventId);
+
+        if (!eventId) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'ID de evento requerido'
+                })
+            });
+        }
+
+        const result = await getEventInscritosCount(eventId);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de conteo de inscritos:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message,
+                inscritos: 0
+            })
+        });
+    }
+}
+
+export function options_getEventInscritosCount(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+// ============= ENDPOINT PARA CONTAR INSCRITOS DE MÚLTIPLES EVENTOS =============
+
+export async function post_getMultipleEventsInscritosCount(request) {
+    try {
+        const body = await request.body.json();
+        const { eventIds } = body;
+
+        console.log('🔢📊 Solicitud de conteo de inscritos para múltiples eventos:', eventIds?.length || 0);
+
+        if (!eventIds || !Array.isArray(eventIds) || eventIds.length === 0) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'Array de IDs de eventos requerido'
+                })
+            });
+        }
+
+        const result = await getMultipleEventsInscritosCount(eventIds);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de conteo múltiple de inscritos:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message,
+                inscritosCounts: {}
+            })
+        });
+    }
+}
+
+export function options_getMultipleEventsInscritosCount(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+// ============= ENDPOINTS PARA GESTIÓN DE EVENTOS EN CALENDARIO =============
+
+export async function post_createCalendarioEvent(request) {
+    try {
+        const eventData = await request.body.json();
+        console.log('📅 HTTP: Crear evento en CALENDARIO:', eventData);
+
+        const result = await createCalendarioEvent(eventData);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de crear evento en CALENDARIO:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_createCalendarioEvent(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+export async function post_updateCalendarioEvent(request) {
+    try {
+        const body = await request.body.json();
+        const { _id, ...eventData } = body;
+        console.log('📝 HTTP: Actualizar evento en CALENDARIO:', _id, eventData);
+
+        if (!_id) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'ID de evento requerido'
+                })
+            });
+        }
+
+        const result = await updateCalendarioEvent(_id, eventData);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de actualizar evento en CALENDARIO:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_updateCalendarioEvent(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+export async function post_deleteCalendarioEvent(request) {
+    try {
+        const body = await request.body.json();
+        const { eventId } = body;
+        console.log('🗑️ HTTP: Eliminar evento en CALENDARIO:', eventId);
+
+        if (!eventId) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'ID de evento requerido'
+                })
+            });
+        }
+
+        const result = await deleteCalendarioEvent(eventId);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de eliminar evento en CALENDARIO:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_deleteCalendarioEvent(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+// ============= ENDPOINT PARA OBTENER NIVELES =============
+
+export async function get_niveles(request) {
+    try {
+        console.log('📚 HTTP: Obtener niveles');
+
+        const result = await getNiveles();
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de niveles:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_niveles(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+// ==================== ENDPOINT PARA ACTUALIZAR APROBACIÓN ====================
+export async function post_updateAprobacion(request) {
+    try {
+        const { personId, aprobacion } = request.body;
+
+        console.log('🔄 HTTP updateAprobacion:', { personId, aprobacion });
+
+        if (!personId || !aprobacion) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'personId y aprobacion son requeridos'
+                })
+            });
+        }
+
+        const result = await updateAprobacion(personId, aprobacion);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('❌ Error en HTTP updateAprobacion:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_updateAprobacion(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+// ==================== ENDPOINT PARA OBTENER CONTRATOS POR TIPO ====================
+export async function get_contratosByTipo(request) {
+    try {
+        const query = request.query;
+        const tipoUsuario = query.tipoUsuario || 'TITULAR';
+
+        console.log('📋 HTTP contratosByTipo:', { tipoUsuario });
+
+        const result = await getContractosByTipo(tipoUsuario);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('❌ Error en HTTP contratosByTipo:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_contratosByTipo(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+// ==================== ENDPOINT PARA OBTENER BENEFICIARIOS SIN REGISTRO ACADÉMICO ====================
+export async function get_beneficiariosSinRegistro(request) {
+    try {
+        console.log('🔍 HTTP beneficiariosSinRegistro solicitado');
+
+        const result = await getBeneficiariosSinRegistro();
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('❌ Error en HTTP beneficiariosSinRegistro:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_beneficiariosSinRegistro(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+
+
+export async function post_addCommentToPerson(request) {
+    try {
+        const body = await request.body.text();
+        const { personId, commentData } = JSON.parse(body);
+
+        const result = await addCommentToPerson(personId, commentData);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de agregar comentario:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_addCommentToPerson(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+    });
+}
+
+export async function get_personComments(request) {
+    try {
+        const query = request.query;
+        const personId = query.id;
+
+        if (!personId) {
+            return badRequest({
+                body: JSON.stringify({
+                    success: false,
+                    error: 'ID de persona requerido'
+                })
+            });
+        }
+
+        const result = await getPersonComments(personId);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de comentarios:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_personComments(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+    });
+}
+
+export async function post_restorePersonData(request) {
+    try {
+        const body = await request.body.text();
+        const { personId } = JSON.parse(body);
+
+        const result = await restorePersonData(personId);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('Error en endpoint de restauración:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export async function post_getDashboardStats(request) {
+    try {
+        console.log('📊 Obteniendo estadísticas del dashboard...');
+
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+
+        const finDelDia = new Date();
+        finDelDia.setHours(23, 59, 59, 999);
+
+        const [
+            totalUsuarios,
+            totalInactivos,
+            sesionesHoy,
+            usuariosInscritosHoy,
+            advisorsHoy
+        ] = await Promise.all([
+            wixData.query('ACADEMICA').count(),
+
+            wixData.query('ACADEMICA')
+                .ne('estadoInactivo', true)
+                .count(),
+
+            wixData.query('CALENDARIO')
+                .between('dia', hoy, finDelDia)
+                .count(),
+
+            wixData.query('CLASSES')
+                .between('fechaEvento', hoy, finDelDia)
+                .count(),
+
+            wixData.query('CLASSES')
+                .between('fechaEvento', hoy, finDelDia)
+                .distinct('advisor')
+        ]);
+
+        const stats = {
+            totalUsuarios,
+            totalInactivos,
+            sesionesHoy,
+            usuariosInscritosHoy,
+            advisorsHoy: advisorsHoy.length
+        };
+
+        console.log('✅ Estadísticas del dashboard:', stats);
+
+        return ok({
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify({
+                success: true,
+                stats
+            })
+        });
+
+    } catch (error) {
+        console.error('❌ Error obteniendo estadísticas del dashboard:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_getDashboardStats(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+export async function post_getTopStudentsThisMonth(request) {
+    try {
+        const result = await getTopStudentsThisMonth();
+
+        return ok({
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(result)
+        });
+
+    } catch (error) {
+        console.error('❌ Error en endpoint de top estudiantes:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export async function post_getAdvisorStats(request) {
+    try {
+        const requestBody = await request.body.text();
+        const { advisorId, fechaInicio, fechaFin } = JSON.parse(requestBody);
+
+        console.log('📊 Obteniendo estadísticas de advisor:', advisorId);
+        console.log('📅 Fecha inicio:', fechaInicio);
+        console.log('📅 Fecha fin:', fechaFin);
+
+        const startDate = new Date(fechaInicio);
+        const endDate = new Date(fechaFin);
+
+        let query = wixData.query('CLASSES')
+            .between('fechaEvento', startDate, endDate)
+            .limit(1000);
+
+        if (advisorId) {
+            query = query.eq('advisor', advisorId);
+        }
+
+        let allEnrollments = [];
+        let result = await query.find();
+        allEnrollments = [...result.items];
+
+        console.log('📄 Primera página de inscripciones obtenida:', result.items.length);
+
+        while (result.hasNext()) {
+            result = await result.next();
+            allEnrollments = [...allEnrollments, ...result.items];
+            console.log('📄 Página adicional obtenida:', result.items.length, '- Total acumulado:', allEnrollments.length);
+        }
+
+        console.log('✅ Total de inscripciones encontradas:', allEnrollments.length);
+
+        const uniqueStudentIds = new Set(
+            allEnrollments.map(enrollment => enrollment.estudianteId).filter(id => id)
+        );
+
+        const stats = {
+            totalEnrollments: allEnrollments.length,
+            uniqueStudents: uniqueStudentIds.size
+        };
+
+        console.log('✅ Estadísticas del advisor:', stats);
+
+        return ok({
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify({
+                success: true,
+                stats
+            })
+        });
+
+    } catch (error) {
+        console.error('❌ Error obteniendo estadísticas del advisor:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_getAdvisorStats(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+export function options_getTopStudentsThisMonth(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}

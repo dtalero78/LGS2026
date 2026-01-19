@@ -1,0 +1,217 @@
+'use client'
+
+import { useState } from 'react'
+import { Student, Class } from '@/types'
+import { cn } from '@/lib/utils'
+import { usePermissions } from '@/hooks/usePermissions'
+import { StudentPermission } from '@/types/permissions'
+import StudentGeneral from './StudentGeneral'
+import StudentAcademic from './StudentAcademic'
+import StudentContract from './StudentContract'
+import StudentWhatsApp from './StudentWhatsApp'
+import StudentComments from './StudentComments'
+import StudentProgress from './StudentProgress'
+import StudentChangeStep from './StudentChangeStep'
+
+interface StudentTabsProps {
+  student: Student
+  classes: Class[]
+  contratoFinalizado?: boolean
+}
+
+const tabs = [
+  { id: 'general', name: 'Información General', icon: 'ℹ️' },
+  { id: 'academic', name: 'Académica', icon: '📚', hasSubmenu: true },
+  { id: 'contract', name: 'Contrato', icon: '📝' },
+  { id: 'whatsapp', name: 'WhatsApp', icon: '💬' },
+  { id: 'comments', name: 'Comentarios', icon: '💭' },
+]
+
+export default function StudentTabs({ student, classes, contratoFinalizado = false }: StudentTabsProps) {
+  const [activeTab, setActiveTab] = useState('general')
+  const [academicView, setAcademicView] = useState('attendance')
+  const [showAcademicSubmenu, setShowAcademicSubmenu] = useState(false)
+  const [closeTimeout, setCloseTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [showChangeStepModal, setShowChangeStepModal] = useState(false)
+  const { hasPermission, hasAnyPermission } = usePermissions()
+
+  // Control de acceso: usuario necesita al menos uno de los permisos de Steps para ver el botón
+  const canAccessSteps = hasAnyPermission([
+    StudentPermission.MARCAR_STEP,
+    StudentPermission.ASIGNAR_STEP,
+  ])
+
+  // Control de acceso: permiso para ver diagnóstico "¿Cómo voy?"
+  const canAccessProgress = hasPermission(StudentPermission.COMO_VOY)
+
+  // Control de acceso: permiso para cambiar step
+  const canChangeStep = hasPermission(StudentPermission.ASIGNAR_STEP)
+
+  // Filtrar submenu académico basado en permisos
+  const academicSubmenu = [
+    { id: 'attendance', name: 'Tabla de Asistencia', icon: '📋' },
+    ...(canAccessProgress ? [{ id: 'progress', name: '¿Cómo voy?', icon: '📈' }] : []),
+    { id: 'schedule', name: 'Agendar Nueva Clase', icon: '📅' },
+    ...(canAccessSteps ? [{ id: 'steps', name: 'Gestión de Steps', icon: '📊' }] : []),
+    ...(canChangeStep ? [{ id: 'change-step', name: 'Cambiar Step', icon: '👣' }] : []),
+  ]
+
+  // Debug: Log student data
+  console.log('🧪 StudentTabs - student data:', student)
+  console.log('🧪 StudentTabs - usuarioId:', student?.usuarioId)
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'general':
+        return <StudentGeneral student={student} />
+      case 'academic':
+        // Si la vista académica es "progress", mostrar el componente de diagnóstico
+        if (academicView === 'progress') {
+          return <StudentProgress student={student} />
+        }
+        return <StudentAcademic student={student} classes={classes} view={academicView as any} />
+      case 'contract':
+        return <StudentContract student={student} contratoFinalizado={contratoFinalizado} />
+      case 'whatsapp':
+        return <StudentWhatsApp student={student} />
+      case 'comments':
+        return <StudentComments studentId={student._id} usuarioId={student.usuarioId} />
+      default:
+        return <StudentGeneral student={student} />
+    }
+  }
+
+  const handleAcademicClick = () => {
+    setActiveTab('academic')
+    setAcademicView('attendance') // Always show attendance table by default
+  }
+
+  const handleMouseEnter = () => {
+    if (closeTimeout) {
+      clearTimeout(closeTimeout)
+      setCloseTimeout(null)
+    }
+    setShowAcademicSubmenu(true)
+  }
+
+  const handleMouseLeave = () => {
+    const timeout = setTimeout(() => {
+      setShowAcademicSubmenu(false)
+    }, 150) // 150ms delay antes de cerrar
+    setCloseTimeout(timeout)
+  }
+
+  return (
+    <div className="card">
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          {tabs.map((tab) => (
+            tab.hasSubmenu ? (
+              <div
+                key={tab.id}
+                className="relative"
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+              >
+                <button
+                  onClick={handleAcademicClick}
+                  className={cn(
+                    "flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm",
+                    activeTab === tab.id
+                      ? "border-primary-500 text-primary-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  )}
+                >
+                  <span>{tab.icon}</span>
+                  <span>{tab.name}</span>
+                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* Submenu Dropdown */}
+                {showAcademicSubmenu && (
+                  <div className="absolute top-full left-0 pt-2 w-56 z-50">
+                    <div className="bg-white rounded-md shadow-lg border border-gray-200">
+                      <div className="py-1">
+                        {academicSubmenu.map((item) => (
+                          <button
+                            key={item.id}
+                            onClick={() => {
+                              // Si es "change-step", abrir modal en lugar de cambiar vista
+                              if (item.id === 'change-step') {
+                                setShowChangeStepModal(true)
+                                setShowAcademicSubmenu(false)
+                                if (closeTimeout) {
+                                  clearTimeout(closeTimeout)
+                                  setCloseTimeout(null)
+                                }
+                              } else {
+                                setActiveTab('academic')
+                                setAcademicView(item.id)
+                                setShowAcademicSubmenu(false)
+                                if (closeTimeout) {
+                                  clearTimeout(closeTimeout)
+                                  setCloseTimeout(null)
+                                }
+                              }
+                            }}
+                            className={cn(
+                              "flex items-center space-x-3 w-full px-4 py-2 text-sm text-left hover:bg-gray-50 transition-colors",
+                              activeTab === 'academic' && academicView === item.id
+                                ? "bg-primary-50 text-primary-700"
+                                : "text-gray-700"
+                            )}
+                          >
+                            <span>{item.icon}</span>
+                            <span>{item.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm",
+                  activeTab === tab.id
+                    ? "border-primary-500 text-primary-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                )}
+              >
+                <span>{tab.icon}</span>
+                <span>{tab.name}</span>
+              </button>
+            )
+          ))}
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      <div className="mt-6">
+        {renderTabContent()}
+      </div>
+
+      {/* Modal Cambiar Step */}
+      {showChangeStepModal && (
+        <StudentChangeStep
+          studentId={student._id}
+          numeroId={student.numeroId}
+          currentStep={student.step || 'Sin step'}
+          currentNivel={student.nivel || 'Sin nivel'}
+          studentName={`${student.primerNombre} ${student.primerApellido}`}
+          onClose={() => setShowChangeStepModal(false)}
+          onSuccess={() => {
+            // Recargar la página para actualizar los datos
+            window.location.reload()
+          }}
+        />
+      )}
+    </div>
+  )
+}

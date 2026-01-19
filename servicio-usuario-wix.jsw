@@ -1,0 +1,716 @@
+import wixData from 'wix-data';
+import wixRealtimeFrontend from 'wix-realtime-frontend';
+import wixLocation from 'wix-location';
+import { session } from 'wix-storage';
+import wixWindow from 'wix-window';
+import wixStorage from 'wix-storage';
+
+let debounceTimer;
+const debounceDelay = 500;
+
+$w.onReady(function () {
+
+    // -----  BLOQUE DE RECONOCIMIENTO DE TOKEN LOGIN
+    const tokenData = JSON.parse(session.getItem('accessToken'));
+    if (tokenData) {
+        const currentTime = new Date().getTime();
+        // Convertir el tiempo de expiración a una fecha legible
+        const expirationDate = new Date(tokenData.expiresAt);
+        console.log(`El token expira el: ${expirationDate.toLocaleString()}`);
+        if (currentTime > tokenData.expiresAt) {
+            // Token ha expirado
+            session.removeItem('accessToken');
+            console.log("Token Acabado") // Eliminar el token expirado
+            wixLocation.to(`/login`); // Redirigir a una página de error o login
+        } else {
+            // Token es válido
+            // Aquí puedes continuar cargando el contenido de la página
+        }
+    } else {
+        console.log("Token Expirado") // Eliminar el token expirado
+        wixLocation.to(`/login`); // Redirigir a una página de error o login
+    }
+
+    const urlParams = new URLSearchParams(wixLocation.query);
+    const email = urlParams.get("email");
+
+    console.log("📩 Email del trabajador:", email);
+
+    // Guardarlo en session para que esté disponible en otras páginas
+    if (email) {
+        session.setItem("emailTrabajador", email);
+    }
+
+    $w('#createStepButton').target = "_blank"
+
+    suscribeToUpdates();
+
+    // Evento de escritura en el input search
+    $w("#search").onKeyPress(() => {
+        actualizarRepetidorFiltrado($w("#search").value);
+    });
+
+    $w("#diasParaConsulta").onChange((event) => {
+        $w('#advisorDropDown').value = "";
+        cargarAgendaPorDia(event.target.value); // 
+    });
+
+    configurarDiasDropdown();
+    cargarAdvisorsDropdown();
+    setupTableColumns();
+    setupWelcomeTableColumns();
+
+    // ===== FUNCIONES WELCOME =====
+    
+    // Configurar las columnas de la tabla welcomeTable
+    function setupWelcomeTableColumns() {
+        const columns = [
+            {
+                "id": "nombreCompleto",
+                "dataPath": "nombreCompleto",
+                "label": "Nombre Completo",
+                "width": 200,
+                "visible": true,
+                "type": "string"
+            },
+            {
+                "id": "celular",
+                "dataPath": "celular",
+                "label": "Celular",
+                "width": 150,
+                "visible": true,
+                "type": "string"
+            },
+            {
+                "id": "fechaEvento",
+                "dataPath": "fechaEvento",
+                "label": "Fecha Evento",
+                "width": 180,
+                "visible": true,
+                "type": "string"
+            },
+            {
+                "id": "asistencia",
+                "dataPath": "asistencia",
+                "label": "Asistencia",
+                "width": 100,
+                "visible": true,
+                "type": "string"
+            }
+        ];
+
+        $w("#welcomeTable").columns = columns;
+    }
+
+    // Función para cargar datos de eventos WELCOME
+    function cargarEventosWelcome() {
+        // Calcular la fecha de hace dos semanas
+        const dosSemanasAtras = new Date();
+        dosSemanasAtras.setDate(dosSemanasAtras.getDate() - 14);
+        dosSemanasAtras.setHours(0, 0, 0, 0);
+
+        // Fecha actual
+        const fechaActual = new Date();
+        fechaActual.setHours(23, 59, 59, 999);
+
+        console.log("Buscando eventos WELCOME desde:", dosSemanasAtras, "hasta:", fechaActual);
+
+        wixData.query("CLASSES")
+            .eq("tipoEvento", "WELCOME")
+            .between("_createdDate", dosSemanasAtras, fechaActual)
+            .find()
+            .then((results) => {
+                console.log("Eventos WELCOME encontrados:", results.items.length);
+                
+                if (results.items.length > 0) {
+                    // Mapear los datos para la tabla
+                    const tableData = results.items.map(item => ({
+                        _id: item._id,
+                        nombreCompleto: `${item.primerNombre || ''} ${item.primerApellido || ''}`.trim(),
+                        celular: item.celular || "N/A",
+                        fechaEvento: item.fechaEvento ? 
+                            new Date(item.fechaEvento).toLocaleDateString('es-ES', {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            }) : "N/A",
+                        asistencia: item.asistencia === true ? "✅" : 
+                                   item.asistencia === false ? "❌" : "❌"
+                    }));
+
+                    // Cargar datos en la tabla
+                    $w("#welcomeTable").rows = tableData;
+                    
+                    // Mostrar la tabla
+                    $w("#welcomeTable").show();
+                    
+                    console.log("Datos cargados en welcomeTable:", tableData.length, "registros");
+                } else {
+                    console.log("No se encontraron eventos WELCOME en las últimas dos semanas");
+                    $w("#welcomeTable").rows = [];
+                    $w("#welcomeTable").show();
+                }
+            })
+            .catch((err) => {
+                console.error("Error al cargar eventos WELCOME:", err);
+            });
+    }
+
+    // Event handler para el botón welcomeButton
+    $w("#welcomeButton").onClick(() => {
+        console.log("Botón Welcome clickeado");
+        cargarEventosWelcome();
+    });
+
+    // Event handler para hacer clic en una fila de la tabla
+    $w("#welcomeTable").onRowSelect((event) => {
+        const rowData = event.rowData;
+        console.log("🔍 Fila seleccionada:", rowData);
+        console.log("🆔 ID del row seleccionado (CLASSES):", rowData._id);
+        
+        if (rowData && rowData._id) {
+            // Buscar el registro en CLASSES para obtener el numeroId
+            console.log("📍 Buscando en CLASSES con ID:", rowData._id);
+            wixData.get("CLASSES", rowData._id)
+                .then((classItem) => {
+                    console.log("✅ Registro de CLASSES encontrado:", classItem);
+                    
+                    if (classItem.numeroId) {
+                        console.log("🎯 numeroId encontrado:", classItem.numeroId);
+                        console.log("🚀 Redirigiendo a ficha con numeroId:", classItem.numeroId);
+                        wixLocation.to(`/ficha-servicio-al-usuario/${classItem.numeroId}`);
+                    } else {
+                        console.error("❌ El registro de CLASSES no tiene numeroId");
+                    }
+                })
+                .catch((err) => {
+                    console.error("❌ Error al buscar en CLASSES:", err);
+                });
+        }
+    });
+
+    // ===== REPETIDOR DE EVENTOS =====
+
+    $w("#misEventosRepeater").onItemReady(($item, itemData) => {
+        $item("#advisorText").text = itemData.advisor;
+        $item("#tipoEventoText").text = itemData.tipoEvento;
+        $item("#horaRepetidor").text = itemData.horaRepetidor;
+
+        wixData.query("BOOKING")
+            .eq("idEvento", itemData._id)
+            .count()
+            .then((count) => {
+                $item("#cantUsuariosText").text = count.toString();
+            })
+            .catch((err) => {
+                console.error("Error al contar bookings:", err);
+                $item("#cantUsuariosText").text = "error";
+            });
+
+        $item("#tablaUsuarios").columns = [
+            {
+                "id": "nombre",
+                "dataPath": "nombre",
+                "label": "Nombre",
+                "width": 200,
+                "visible": true,
+                "type": "string"
+            }
+        ];
+
+        $item("#cantUsuariosText").onClick(() => {
+            wixData.query("BOOKING")
+                .eq("idEvento", itemData._id)
+                .find()
+                .then((results) => {
+                    if (results.items.length > 0) {
+                        let usuariosItems = results.items.map(user => ({
+                            _id: user._id,
+                            idEstudiante: user.idEstudiante,
+                            nombre: `${user.primerNombre} ${user.primerApellido}`,
+                            email: user.email || "No disponible",
+                            fuente: user.fuente || "ACADEMICA"
+                        }));
+
+                        $item("#tablaUsuarios").rows = usuariosItems;
+                        $item("#tablaUsuarios").expand();
+                    } else {
+                        $item("#tablaUsuarios").hide();
+                    }
+                })
+                .catch((err) => {
+                    console.error("Error al cargar usuarios registrados:", err);
+                });
+        });
+
+        $item("#tablaUsuarios").onRowSelect((event) => {
+            const rowData = event.rowData;
+            redirectUserProfile(
+                rowData._id,
+                null,
+                false,
+                true,
+                rowData.fuente || "ACADEMICA",
+                rowData.email || "No disponible"
+            );
+        });
+    });
+
+});
+
+const suscribeToUpdates = () => {
+    const channel = { "name": "updateChannel" };
+    wixRealtimeFrontend.subscribe(channel, (message, channel) => {
+            if (message.payload.type === "update") {
+                //queryStudents(currentStudentPage);
+            }
+        })
+        .then((id) => {});
+};
+
+function capitalizeFirstLetter(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
+}
+
+// Variables de paginación
+let paginaActual = 0;
+const registrosPorPagina = 10;
+let totalPaginas = 0;
+let allUsersData = []; // Guardará todos los datos obtenidos de la consulta
+let filteredData = []; // Datos filtrados por la búsqueda
+
+function mostrarUsuarioSeleccionado() {
+    $w("#allUsers").expand();
+
+    wixData.query("ACADEMICA")
+        .limit(500)
+        .find()
+        .then((result) => {
+            if (result.items.length > 0) {
+                // Guardar todos los registros en memoria
+                allUsersData = result.items.map((academicData) => ({
+                    _id: academicData._id,
+                    nombreUsuario: `${capitalizeFirstLetter(academicData.primerNombre)} ${capitalizeFirstLetter(academicData.primerApellido)} ${academicData.segundoApellido ? capitalizeFirstLetter(academicData.segundoApellido) : ''} (${academicData.numeroId})`,
+                    nivel: academicData.nivel || "",
+                    email: academicData.email || "",
+                    clave: academicData.clave || "",
+                    step: academicData.step || "",
+                    plataforma: academicData.plataforma || ""
+                }));
+
+                // Inicialmente mostramos todos los datos
+                filteredData = allUsersData;
+                totalPaginas = Math.ceil(filteredData.length / registrosPorPagina);
+                actualizarRepetidorFiltrado(""); // Mostrar sin filtros
+
+            } else {
+                console.log("No se encontraron datos en ACADEMICA.");
+                $w("#allUsers").collapse();
+            }
+        })
+        .catch((err) => {
+            console.error("Error en la consulta a ACADEMICA:", err);
+            $w("#allUsers").collapse();
+        });
+}
+
+// Función para actualizar el repetidor según el filtro
+function actualizarRepetidorFiltrado(query) {
+    // Filtrar datos en memoria sin hacer nuevas consultas
+    filteredData = allUsersData.filter(item =>
+        item.nombreUsuario.toLowerCase().includes(query.toLowerCase()) ||
+        item.email.toLowerCase().includes(query.toLowerCase())
+    );
+
+    // Resetear paginación con los datos filtrados
+    paginaActual = 0;
+    totalPaginas = Math.ceil(filteredData.length / registrosPorPagina);
+    actualizarRepetidor();
+}
+
+// Función para actualizar el repetidor con la página actual
+function actualizarRepetidor() {
+    const inicio = paginaActual * registrosPorPagina;
+    const fin = inicio + registrosPorPagina;
+    const datosPagina = filteredData.slice(inicio, fin);
+
+    $w("#allUsers").data = datosPagina;
+
+    // Configurar los elementos del repetidor
+    $w("#allUsers").onItemReady(($item, itemData) => {
+        $item("#nombreUsuario").text = itemData.nombreUsuario;
+        $item("#nivel").value = itemData.nivel;
+        $item("#usuario").value = itemData.email;
+        $item("#pass").value = itemData.clave;
+        $item('#plataforma').value = itemData.plataforma;
+        $item('#step').value = itemData.step;
+
+        // Botón "Modificar" para actualizar el registro
+        $item("#modificarButton").onClick(() => {
+            modificarRegistro(itemData._id, {
+                nivel: $item("#nivel").value,
+                clave: $item("#pass").value,
+                email: $item("#usuario").value,
+                plataforma: $item('#plataforma').value
+            });
+            $item('#modificarButton').label = "MODIFICADO!"
+        });
+    });
+
+    if (paginaActual > 0) {
+        $w("#backButton").enable();
+    } else {
+        $w("#backButton").disable();
+    }
+
+    if (paginaActual < totalPaginas - 1) {
+        $w("#nextButton").enable();
+    } else {
+        $w("#nextButton").disable();
+    }
+}
+
+// Función para modificar un registro sin borrar lo existente
+function modificarRegistro(id, nuevosDatos) {
+    wixData.get("ACADEMICA", id)
+        .then((registroExistente) => {
+            const registroActualizado = { ...registroExistente, ...nuevosDatos };
+            return wixData.update("ACADEMICA", registroActualizado);
+        })
+        .then(() => {
+            console.log("Registro actualizado correctamente");
+            mostrarUsuarioSeleccionado();
+        })
+        .catch((err) => {
+            console.error("Error al actualizar el registro:", err);
+        });
+}
+
+// Eventos de paginación
+$w("#backButton").onClick(() => {
+    if (paginaActual > 0) {
+        paginaActual--;
+        actualizarRepetidor();
+    }
+});
+
+$w("#nextButton").onClick(() => {
+    if (paginaActual < totalPaginas - 1) {
+        paginaActual++;
+        actualizarRepetidor();
+    }
+});
+
+$w("#search").onKeyPress(() => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        realizarBusqueda($w("#search").value);
+    }, debounceDelay);
+});
+
+function realizarBusqueda(query) {
+    $w('#noExiste').hide();
+
+    if (!query || query.trim().length < 3) {
+        console.warn("La búsqueda requiere al menos 3 caracteres.");
+        $w("#resultadoBusqueda").data = [];
+        $w('#resultadoBusqueda').collapse();
+        $w('#allUsers').collapse(); // 👈 Oculta también el repetidor filtrado
+        return;
+    }
+
+    $w('#loading').expand();
+
+    wixData.query("PEOPLE")
+        .contains("numeroId", query)
+        .or(wixData.query("PEOPLE").contains("primerNombre", query))
+        .or(wixData.query("PEOPLE").contains("primerApellido", query))
+        .or(wixData.query("PEOPLE").contains("contrato", query))
+        .or(wixData.query("PEOPLE").contains("numeroId", query))
+        .find()
+        .then((results) => {
+            const data = results.items.map(item => ({
+                _id: item._id,
+                primerNombre: item.primerNombre,
+                primerApellido: item.primerApellido,
+                segundoApellido: item.segundoApellido || "",
+                numeroId: item.numeroId || "N/A",
+                tipoUsuario: item.tipoUsuario
+            }));
+
+            if (data.length > 0) {
+                $w("#resultadoBusqueda").expand();
+                procesarResultados(data);
+                const ids = data.map(item => item._id);
+                filtrarAllUsersPorIds(ids);
+            } else {
+                $w('#noExiste').show();
+                $w('#resultadoBusqueda').collapse();
+                $w('#allUsers').collapse(); // 👈 Oculta si no hay resultados
+            }
+        })
+        .catch(err => {
+            console.error("Error en búsqueda:", err);
+            $w('#noExiste').show();
+            $w('#resultadoBusqueda').collapse();
+            $w('#allUsers').collapse();
+        })
+        .finally(() => {
+            $w('#loading').collapse();
+        });
+}
+
+function procesarResultados(resultados) {
+    $w("#resultadoBusqueda").data = resultados;
+    $w('#resultadoBusqueda').expand();
+
+    $w('#resultadoBusqueda').forEachItem(($item, itemData) => {
+        $item("#resultados").text = `ID: ${itemData.numeroId}, ${capitalizeFirstLetter(itemData.primerNombre)} ${capitalizeFirstLetter(itemData.primerApellido)} ${itemData.segundoApellido ? capitalizeFirstLetter(itemData.segundoApellido) : ''}${itemData.tipoUsuario ? ' - ' + itemData.tipoUsuario : ''}`;
+
+        $item("#resultados").onClick(() => {
+            // 1. Mostrar datos completos
+            // 2. Mostrar el repetidor si estaba oculto
+            $w("#allUsers").expand();
+            // 3. Ir a la ficha (opcional, si quieres que además redirija)
+            wixLocation.to(`/ficha-servicio-al-usuario/${itemData._id}`);
+        });
+    });
+}
+
+function filtrarAllUsersPorIds(listaIds) {
+    if (!listaIds || listaIds.length === 0) return;
+
+    wixData.query("ACADEMICA")
+        .hasSome("usuarioId", listaIds)
+        .limit(1000)
+        .find()
+        .then((result) => {
+            if (result.items.length > 0) {
+                allUsersData = result.items.map((academicData) => ({
+                    _id: academicData._id,
+                    nombreUsuario: `${capitalizeFirstLetter(academicData.primerNombre)} ${capitalizeFirstLetter(academicData.primerApellido)} ${academicData.segundoApellido ? capitalizeFirstLetter(academicData.segundoApellido) : ''} (${academicData.numeroId})`,
+                    nivel: academicData.nivel || "",
+                    email: academicData.email || "",
+                    clave: academicData.clave || "",
+                    plataforma: academicData.plataforma || "",
+                    step: academicData.step || ""
+                }));
+
+                filteredData = allUsersData;
+                totalPaginas = Math.ceil(filteredData.length / registrosPorPagina);
+                paginaActual = 0;
+                actualizarRepetidor();
+                $w("#allUsers").expand();
+            } else {
+                console.warn("No se encontraron coincidencias en ACADEMICA para los IDs filtrados.");
+                $w("#allUsers").collapse();
+            }
+        })
+        .catch((err) => {
+            console.error("Error al filtrar usuarios en ACADEMICA:", err);
+            $w("#allUsers").collapse();
+        });
+}
+
+// --------------------
+// MOSTRAR AGENDA
+// --------------------
+
+function setupTableColumns() {
+    const columns = [{
+        "id": "nombreAdvisor",
+        "dataPath": "nombreCompleto",
+        "label": "Advisor",
+        "width": 200,
+        "visible": true,
+        "type": "string"
+    }];
+
+    for (let hour = 7; hour <= 21; hour++) {
+        columns.push({
+            "id": `hora${hour}`,
+            "dataPath": `hora${hour}`,
+            "label": `${hour}-${hour + 1}`,
+            "width": 70,
+            "visible": true,
+            "type": "string"
+        });
+    }
+
+    $w("#mostrarAgenda").columns = columns;
+}
+
+function cargarAgendaPorDia(fechaSeleccionada) {
+    const fechaInicio = new Date(fechaSeleccionada);
+    fechaInicio.setHours(0, 0, 0, 0);
+    const fechaFin = new Date(fechaSeleccionada);
+    fechaFin.setHours(23, 59, 59, 999);
+
+    wixData.query("CALENDARIO")
+        .include("advisor")
+        .between("dia", fechaInicio, fechaFin)
+        .find()
+        .then((results) => {
+            const bookings = results.items;
+            mostrarAgenda(bookings);
+            //$w('#agendaGroup').show();
+        })
+        .catch((err) => {
+            console.error("Error al cargar las reservas para el día", err);
+        });
+}
+
+function mostrarAgenda(bookings) {
+    const tableData = [];
+    const advisorsMap = {};
+
+    bookings.forEach(booking => {
+        const advisor = booking.advisor;
+        const advisorId = advisor._id;
+
+        if (!advisorsMap[advisorId]) {
+            advisorsMap[advisorId] = {
+                nombreCompleto: advisor.primerNombre + " " + advisor.primerApellido
+            };
+        }
+
+        const eventHour = new Date(booking.dia).getHours();
+        const eventoConTitulo = `${booking.evento || ''} ${booking.tituloONivel || ''}`.trim();
+
+        advisorsMap[advisorId][`hora${eventHour}`] = eventoConTitulo;
+        advisorsMap[advisorId][`hora${eventHour}EventId`] = booking._id;
+    });
+
+    for (let advisorId in advisorsMap) {
+        const rowData = { id: advisorId, ...advisorsMap[advisorId] };
+        tableData.push(rowData);
+    }
+
+    //$w('#agendaButton').show();
+    $w("#mostrarAgenda").rows = tableData;
+
+    $w("#mostrarAgenda").onRowSelect((event) => {
+        // lógica del repetidor al seleccionar fila
+    });
+}
+
+$w('#verAgenda').onClick(() => {
+    $w('#mostrarAgenda').show()
+    $w('#diasParaConsulta').show()
+    const fechaSeleccionada = $w('#diasParaConsulta').value;
+    if (fechaSeleccionada) {
+        cargarAgendaPorDia(fechaSeleccionada);
+    } else {
+        console.warn("Debes seleccionar un día para ver la agenda.");
+    }
+});
+
+function configurarDiasDropdown() {
+    const hoy = new Date();
+    const inicio = new Date(hoy);
+    inicio.setDate(hoy.getDate() - 3);
+
+    const finDeSemana = new Date(hoy);
+    finDeSemana.setDate(finDeSemana.getDate() + (6 - finDeSemana.getDay()));
+
+    const dias = [];
+    for (let dia = new Date(inicio); dia <= finDeSemana; dia.setDate(dia.getDate() + 1)) {
+        const nombreDia = dia.toLocaleDateString('es-ES', { weekday: 'long' });
+        const numeroDia = dia.getDate();
+        dias.push({
+            label: `${capitalizeFirstLetter(nombreDia)} ${numeroDia}`,
+            value: dia.toISOString()
+        });
+    }
+
+    $w("#diasParaConsulta").options = dias;
+}
+
+function cargarAdvisorsDropdown() {
+    wixData.query("ADVISORS")
+        .find()
+        .then((results) => {
+            let opciones = results.items.map(item => {
+                return {
+                    value: item._id,
+                    label: `${capitalizeFirstLetter(item.primerNombre)} ${capitalizeFirstLetter(item.primerApellido)} - ${capitalizeFirstLetter(item.pais || "")}`
+                };
+            });
+
+            opciones.sort((a, b) => a.label.localeCompare(b.label));
+            $w("#advisorDropDown").options = opciones;
+        })
+        .catch((err) => {
+            console.error("❌ Error cargando advisors:", err);
+        });
+}
+
+$w("#mostrarAgenda").onRowSelect((event) => {
+    $w('#listaEstudiantes').show();
+    const rowData = event.rowData;
+    let repeaterItems = [];
+
+    for (let hour = 7; hour <= 21; hour++) {
+        const hourKey = `hora${hour}`;
+        const hourKeyId = `hora${hour}EventId`;
+
+        if (rowData[hourKey] && rowData[hourKey].trim() !== "") {
+            repeaterItems.push({
+                _id: rowData[hourKeyId],
+                advisor: rowData.nombreCompleto,
+                tipoEvento: rowData[hourKey],
+                horaRepetidor: `${hour}:00`,
+                cantUsuarios: 0
+            });
+        }
+    }
+
+    $w("#misEventosRepeater").data = repeaterItems;
+});
+
+function redirectUserProfile(idBooking, eventId, showPrimerContactoBox, showSegundoContactoBox, fuente, email) {
+   console.log("Paso 1: Buscar registro en BOOKING por _id:", idBooking);
+
+   // 1. Buscar el registro inicial en BOOKING
+   wixData.get("BOOKING", idBooking)
+       .then((bookingItem) => {
+           const idEstudiante = bookingItem.idEstudiante;
+
+           if (!idEstudiante) {
+               throw new Error("El campo idEstudiante no existe en el registro BOOKING.");
+           }
+
+           console.log("Paso 2: Buscar otro registro BOOKING con idEstudiante:", idEstudiante);
+
+           // 2. Buscar otro BOOKING que tenga ese idEstudiante para extraer el numeroId
+           return wixData.query("BOOKING")
+               .eq("idEstudiante", idEstudiante)
+               .limit(1)
+               .find();
+       })
+       .then((res) => {
+           if (!res.items.length) {
+               throw new Error("No se encontró un registro en BOOKING con ese idEstudiante.");
+           }
+
+           const numeroId = res.items[0].numeroId;
+
+           if (!numeroId) {
+               throw new Error("El campo numeroId no está presente en ese registro de BOOKING.");
+           }
+
+           console.log("Paso 3: Buscar en PEOPLE por _id =", numeroId);
+
+           // 3. Buscar en PEOPLE usando numeroId como _id
+           return wixData.get("PEOPLE", numeroId);
+       })
+       .then((peopleItem) => {
+           console.log("Redirigiendo a /ficha-servicio-al-usuario/" + peopleItem._id);
+           wixLocation.to(`/ficha-servicio-al-usuario/${peopleItem._id}`);
+       })
+       .catch((err) => {
+           console.error("❌ Error en redirección de perfil:", err);
+       });
+}

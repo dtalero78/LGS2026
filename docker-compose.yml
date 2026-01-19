@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # Next.js Application
+  lgs-admin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lgs-admin-panel
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - NEXTAUTH_URL=https://admin.letsgo-speak.com
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - WIX_API_BASE_URL=${WIX_API_BASE_URL}
+      - WIX_SITE_ID=${WIX_SITE_ID}
+      - WIX_SECRET=${WIX_SECRET}
+      - WIX_API_KEY=${WIX_API_KEY}
+      - NEXT_PUBLIC_WIX_API_BASE_URL=${NEXT_PUBLIC_WIX_API_BASE_URL}
+      - NEXT_PUBLIC_USE_REAL_WIX_DATA=${NEXT_PUBLIC_USE_REAL_WIX_DATA}
+      - MONGODB_URI=${MONGODB_URI}
+      - DATABASE_URL=${DATABASE_URL}
+      - WHATSAPP_API_URL=${WHATSAPP_API_URL}
+      - WHATSAPP_TOKEN=${WHATSAPP_TOKEN}
+      - WHATSAPP_PHONE_ID=${WHATSAPP_PHONE_ID}
+      - WHATSAPP_BUSINESS_ID=${WHATSAPP_BUSINESS_ID}
+      - DISABLE_AUTH=false
+      - DISABLE_DB=false
+      - USE_REAL_WIX_DATA=true
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      - mongodb
+    networks:
+      - lgs-network
+
+  # MongoDB Database
+  mongodb:
+    image: mongo:6.0
+    container_name: lgs-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD:-admin123}
+      - MONGO_INITDB_DATABASE=lgs_admin
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongodb/init:/docker-entrypoint-initdb.d
+    networks:
+      - lgs-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: lgs-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/sites:/etc/nginx/sites-available
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./nginx/logs:/var/log/nginx
+    depends_on:
+      - lgs-admin
+    networks:
+      - lgs-network
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  lgs-network:
+    driver: bridge

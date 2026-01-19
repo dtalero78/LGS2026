@@ -1,0 +1,62 @@
+Código de Permiso,Módulo,Nombre,Descripción,SUPER_ADMIN,ADMIN,ADVISOR,COMERCIAL,APROBADOR,TALERO,FINANCIERO,SERVICIO,READONLY
+PERSON.INFO.DESCARGAR_CONTRATO,PERSON,Descargar Contrato,Descarga el contrato del usuario,x,x,,,x,x,x,,x
+PERSON.INFO.VER_DOCUMENTACION,PERSON,Ver Documentación,Visualiza documentación,x,x,x,x,x,x,x,x,x
+PERSON.INFO.ADICION_DOCUMENTACION,PERSON,Adición Documentación,Agrega nueva documentación,x,x,,x,,x,,x,
+PERSON.ADMIN.ACTIVAR_DESACTIVAR,PERSON,Activar/Desactivar,Toggle de activación del perfil,x,x,,,,x,,,
+PERSON.ADMIN.CAMBIO_CELULAR,PERSON,Cambio Celular Titular,Cambia el celular del titular,x,x,,x,,x,,,
+PERSON.ADMIN.CAMBIAR_ESTADO,PERSON,Cambiar Estado Actual,Modifica el estado del usuario,x,x,,x,,x,,,
+PERSON.ADMIN.APROBAR,PERSON,Aprobar,Aprueba proceso o solicitud,x,x,,,x,x,,,
+PERSON.ADMIN.MODIFICAR,PERSON,Modificar,Modifica información del usuario,x,x,,x,,x,,,
+PERSON.ADMIN.ELIMINAR,PERSON,Eliminar,Elimina el registro del usuario,x,,,,,,,,
+PERSON.ADMIN.AGREGAR_BENEFICIARIO,PERSON,Agregar Beneficiario,Añade beneficiario al contrato,x,x,,x,,x,,,
+PERSON.ADMIN.WHATSAPP,PERSON,WhatsApp,Abre chat de WhatsApp,x,x,x,x,,x,x,x,
+STUDENT.GLOBAL.ENVIAR_MENSAJE,STUDENT,Enviar Mensaje,Envía mensaje al estudiante,x,x,x,x,,x,x,x,
+STUDENT.GLOBAL.GUARDAR_PLANTILLA,STUDENT,Guardar Plantilla,Guarda información como plantilla,x,x,,,,,,
+STUDENT.ACADEMIA.TABLA_FILTROS,STUDENT,Filtros (Asistencia),Filtra tabla de asistencia,x,x,x,,,x,,x,x
+STUDENT.ACADEMIA.TABLA_DESCARGAR,STUDENT,Descargar (Asistencia),Descarga tabla de asistencia,x,x,x,,,x,,x,x
+STUDENT.ACADEMIA.EVALUACION,STUDENT,Evaluación,Accede a evaluación de clase,x,x,x,,,,,,
+STUDENT.ACADEMIA.ANOTACION_ADVISOR,STUDENT,Anotación Advisor,Anota observaciones del advisor,x,x,x,,,,,,
+STUDENT.ACADEMIA.COMENTARIOS_ESTUDIANTE,STUDENT,Comentarios Estudiante,Visualiza/agrega comentarios,x,x,x,,,,,x,
+STUDENT.ACADEMIA.ELIMINAR_EVENTO,STUDENT,Eliminar Evento,Elimina evento de clase,x,x,,,,,,
+STUDENT.ACADEMIA.AGENDAR_CLASE,STUDENT,Agendar Nueva Clase,Agenda nueva clase,x,x,x,,,,,,
+STUDENT.ACADEMIA.MARCAR_STEP,STUDENT,Marcar Step,Marca step como completado,x,x,x,,,,,,
+STUDENT.ACADEMIA.ASIGNAR_STEP,STUDENT,Asignar Step,Asigna nuevo step,x,x,,,,,,
+STUDENT.CONTRATO.CONSULTA,STUDENT,Consulta,Consulta detalles del contrato,x,x,x,x,x,x,x,x,x
+STUDENT.CONTRATO.ACTIVAR_HOLD,STUDENT,Activar/Desactivar HOLD,Toggle de estado HOLD,x,x,,,,x,,,
+STUDENT.CONTRATO.EXTENDER_VIGENCIA,STUDENT,Extender Vigencia,Extiende vigencia del contrato,x,x,,,,x,,,
+STUDENT.FINANCIERA.GENERAR_ESTADO,STUDENT,Generar Estado Cuenta,Genera estado de cuenta,x,x,,x,x,,x,,x
+STUDENT.FINANCIERA.REGISTRAR_PAGO,STUDENT,Registrar Pago,Registra nuevo pago,x,x,,,,,x,,
+STUDENT.FINANCIERA.ENVIO_RECORDATORIO,STUDENT,Envío Recordatorio,Envía recordatorio de pago,x,x,,,,,x,,
+ACADEMICO.AGENDA.CALENDARIO_VER,ACADEMICO,Ver Calendario,Vista de calendario,x,x,x,,,x,,,x
+ACADEMICO.AGENDA.LISTA_VER,ACADEMICO,Ver Agenda,Vista de lista/agenda,x,x,x,,,x,,x,x
+ACADEMICO.AGENDA.FILTRO,ACADEMICO,Filtro,Filtra sesiones,x,x,x,,,x,,x,x
+ACADEMICO.AGENDA.NUEVO_EVENTO,ACADEMICO,Nuevo Evento,Crea nuevo evento,x,x,x,,,,,
+ACADEMICO.AGENDA.EXPORTAR_CSV,ACADEMICO,Exportar CSV,Exporta agenda a CSV,x,x,x,,,x,,,x
+ACADEMICO.AGENDA.EDITAR,ACADEMICO,Editar,Edita evento existente,x,x,x,,,,,,
+ACADEMICO.AGENDA.CREAR_EVENTO,ACADEMICO,Crear Evento,Crea evento (global),x,x,x,,,,,,
+ACADEMICO.ACADEMICA.VER,ACADEMICO,Ver Agenda Académica,Vista de agenda académica,x,x,x,,,,,,
+ACADEMICO.ACADEMICA.AGENDAMIENTO,ACADEMICO,Agendamiento,Gestiona agendamiento,x,x,,,,,,
+ACADEMICO.ACADEMICA.EXPORTAR_CSV,ACADEMICO,Exportar CSV,Exporta a CSV,x,x,,,,,,
+ACADEMICO.ACADEMICA.ESTADISTICAS,ACADEMICO,Estadísticas,Visualiza estadísticas,x,x,x,,,,,x
+ACADEMICO.ACADEMICA.EXPORTAR_STATS_CSV,ACADEMICO,Exportar Stats CSV,Exporta estadísticas a CSV,x,x,,,,,,,x
+ACADEMICO.ADVISOR.LISTA_VER,ACADEMICO,Ver Lista Advisors,Lista de advisors,x,x,,,,,,
+ACADEMICO.ADVISOR.VER_ENLACE,ACADEMICO,Ver enlace,Visualiza enlace del advisor,x,x,x,,,,,,
+ACADEMICO.ADVISOR.AGREGAR,ACADEMICO,Agregar Advisor,Añade nuevo advisor,x,x,,,,,,
+ACADEMICO.ADVISOR.ESTADISTICA,ACADEMICO,Estadística Advisor,Estadísticas de advisors,x,x,,,,,,
+SERVICIO.WELCOME.CARGAR_EVENTOS,SERVICIO,Cargar Eventos (Welcome),Carga eventos de welcome,x,x,x,,,x,,x,
+SERVICIO.WELCOME.EXPORTAR_CSV,SERVICIO,Exportar CSV (Welcome),Exporta welcome sessions,x,x,x,,,x,,x,x
+SERVICIO.SESIONES.CARGAR_EVENTOS,SERVICIO,Cargar Eventos (Sesiones),Carga eventos de sesiones,x,x,,,,x,,x,
+SERVICIO.SESIONES.EXPORTAR_CSV,SERVICIO,Exportar CSV (Sesiones),Exporta lista de sesiones,x,x,,,,x,,x,x
+SERVICIO.USUARIOS.ACTUALIZAR,SERVICIO,Actualizar,Actualiza usuarios sin perfil,x,x,,x,,x,,x,
+SERVICIO.USUARIOS.EXPORTAR_CSV,SERVICIO,Exportar CSV (Usuarios),Exporta usuarios sin perfil,x,x,,x,,x,,x,x
+COMERCIAL.CONTRATO.MODIFICAR,COMERCIAL,Modificar Contrato,Modifica contrato,x,x,,x,,,,
+COMERCIAL.CONTRATO.ENVIAR_PDF,COMERCIAL,Enviar PDF,Envía contrato en PDF,x,x,,x,,,,
+COMERCIAL.CONTRATO.DESCARGAR,COMERCIAL,Descargar Contrato,Descarga contrato,x,x,,x,x,,x,,
+COMERCIAL.CONTRATO.APROBACION_AUTONOMA,COMERCIAL,Aprobación Autónoma,Aprueba contrato autónomo,x,x,,x,,,,
+COMERCIAL.PROSPECTOS.VER,COMERCIAL,Ver Prospectos,Visualiza prospectos,x,x,,x,x,,x,,
+APROBACION.GLOBAL.ACTUALIZAR,APROBACION,Actualizar,Actualiza lista de contratos,x,x,,,x,,x,,
+APROBACION.GLOBAL.EXPORTAR_CSV,APROBACION,Exportar CSV,Exporta contratos pendientes,x,x,,,x,,x,,
+APROBACION.CONTRATO.MODIFICAR,APROBACION,Modificar Contrato,Modifica contrato pendiente,x,x,,,x,,,,
+APROBACION.CONTRATO.ENVIAR_PDF,APROBACION,Enviar PDF,Envía contrato en PDF,x,x,,,x,,,,
+APROBACION.CONTRATO.DESCARGAR,APROBACION,Descargar Contrato,Descarga contrato,x,x,,,x,,x,,
+APROBACION.CONTRATO.APROBACION_AUTONOMA,APROBACION,Aprobación Autónoma,Aprueba contrato autónomo,x,x,,,x,,,,

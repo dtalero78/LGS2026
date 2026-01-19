@@ -1,0 +1,10 @@
+_id,email,password,rol,nombre,activo,fechaCreacion,fechaActualizacion
+1,superadmin@lgs.com,$2a$10$7X9vQKXjZ4zF5Y2hL3xKxO8kR1wZ0nC2mE6vT5bH9sD4gW8uA3vYq,SUPER_ADMIN,Super Administrador,true,2025-01-15,2025-01-15
+2,admin@lgs.com,$2a$10$7X9vQKXjZ4zF5Y2hL3xKxO8kR1wZ0nC2mE6vT5bH9sD4gW8uA3vYq,ADMIN,Administrador,true,2025-01-15,2025-01-15
+3,advisor@lgs.com,$2a$10$7X9vQKXjZ4zF5Y2hL3xKxO8kR1wZ0nC2mE6vT5bH9sD4gW8uA3vYq,ADVISOR,Advisor de Prueba,true,2025-01-15,2025-01-15
+4,comercial@lgs.com,$2a$10$7X9vQKXjZ4zF5Y2hL3xKxO8kR1wZ0nC2mE6vT5bH9sD4gW8uA3vYq,COMERCIAL,Comercial de Prueba,true,2025-01-15,2025-01-15
+5,aprobador@lgs.com,$2a$10$7X9vQKXjZ4zF5Y2hL3xKxO8kR1wZ0nC2mE6vT5bH9sD4gW8uA3vYq,APROBADOR,Aprobador de Prueba,true,2025-01-15,2025-01-15
+6,d_talero@yahoo.com,$2a$10$7X9vQKXjZ4zF5Y2hL3xKxO8kR1wZ0nC2mE6vT5bH9sD4gW8uA3vYq,TALERO,Talero de Prueba,true,2025-01-15,2025-01-15
+7,financiero@lgs.com,$2a$10$7X9vQKXjZ4zF5Y2hL3xKxO8kR1wZ0nC2mE6vT5bH9sD4gW8uA3vYq,FINANCIERO,Financiero de Prueba,true,2025-01-15,2025-01-15
+8,servicio@lgs.com,$2a$10$7X9vQKXjZ4zF5Y2hL3xKxO8kR1wZ0nC2mE6vT5bH9sD4gW8uA3vYq,SERVICIO,Servicio de Prueba,true,2025-01-15,2025-01-15
+9,readonly@lgs.com,$2a$10$7X9vQKXjZ4zF5Y2hL3xKxO8kR1wZ0nC2mE6vT5bH9sD4gW8uA3vYq,READONLY,Solo Lectura,true,2025-01-15,2025-01-15

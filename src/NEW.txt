@@ -1,0 +1,4 @@
+En el endpoint /dashboard/servicio/welcome-session
+
+La tabla que se muestra, debe mostrar todos los items welcome pasados, presentes y futuros
+el filtro 
