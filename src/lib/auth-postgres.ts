@@ -86,67 +86,7 @@ async function verifyUserPostgres(email: string, password: string) {
 }
 
 /**
- * Verify user credentials against Wix (fallback)
- */
-async function verifyUserWix(email: string, password: string) {
-  try {
-    const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions';
-    console.log('🌐 [Wix] Intentando autenticación');
-
-    const wixResponse = await fetch(
-      `${WIX_API_BASE_URL}/userRole?email=${encodeURIComponent(email)}`,
-      {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
-
-    if (!wixResponse.ok) {
-      console.log('⚠️ [Wix] API no disponible');
-      return null;
-    }
-
-    const wixData = await wixResponse.json();
-
-    if (wixData.success && wixData.activo) {
-      console.log('✅ [Wix] Usuario encontrado:', {
-        email: wixData.email,
-        rol: wixData.rol
-      });
-
-      if (wixData.password) {
-        let isPasswordValid = false;
-
-        if (wixData.password.startsWith('$2a$') || wixData.password.startsWith('$2b$') || wixData.password.startsWith('$2y$')) {
-          console.log('🔐 [Wix] Verificando con bcrypt');
-          isPasswordValid = await bcrypt.compare(password, wixData.password);
-        } else {
-          console.log('⚠️ [Wix] Contraseña en texto plano');
-          isPasswordValid = password === wixData.password;
-        }
-
-        if (isPasswordValid) {
-          console.log('✅ [Wix] Login exitoso');
-          return {
-            id: wixData.email,
-            email: wixData.email,
-            name: wixData.nombre,
-            role: wixData.rol,
-          };
-        }
-      }
-    }
-
-    console.log('⚠️ [Wix] Credenciales inválidas');
-    return null;
-  } catch (error) {
-    console.error('❌ [Wix] Error:', error instanceof Error ? error.message : String(error));
-    return null;
-  }
-}
-
-/**
- * Test users fallback
+ * Test users fallback (only used if PostgreSQL is not available)
  */
 const testUsers = [
   {

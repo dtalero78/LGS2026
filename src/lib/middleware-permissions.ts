@@ -1,11 +1,9 @@
 /**
  * Middleware Permissions - Sistema de permisos para Next.js middleware
- * Carga permisos desde Wix con cache para optimizar performance
+ * Carga permisos desde PostgreSQL con cache para optimizar performance
  */
 
 import { Role, Permission } from '@/types/permissions';
-
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions';
 
 // Cache en memoria con TTL de 5 minutos
 interface CacheEntry {

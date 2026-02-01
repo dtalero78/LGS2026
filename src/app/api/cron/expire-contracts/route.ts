@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { query } from '@/lib/postgres'
 
-const WIX_API_BASE_URL = process.env.WIX_API_BASE_URL || process.env.NEXT_PUBLIC_WIX_API_BASE_URL
 const CRON_SECRET = process.env.CRON_SECRET
 
 /**
  * Cron Job: Marcar contratos expirados como FINALIZADA
  *
- * Este endpoint se ejecuta automáticamente via cron.
+ * Este endpoint se ejecuta automáticamente via cron en Digital Ocean App Platform.
  * Busca estudiantes cuyo contrato ha vencido (finalContrato < hoy)
  * y los marca como:
  * - estado: "FINALIZADA"
@@ -28,36 +28,21 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log('Cron expire-contracts: Iniciando proceso de verificación de contratos expirados')
-
-    if (!WIX_API_BASE_URL) {
-      console.error('Cron expire-contracts: WIX_API_BASE_URL no configurada')
-      return NextResponse.json(
-        { success: false, error: 'Configuración de Wix faltante' },
-        { status: 500 }
-      )
-    }
+    console.log('Cron expire-contracts: [PostgreSQL] Iniciando proceso de verificación de contratos expirados')
 
     // 1. Obtener estudiantes con contrato expirado
-    const expiredResponse = await fetch(`${WIX_API_BASE_URL}/getExpiredContracts`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    })
+    // Solo buscar BENEFICIARIOS activos (no en OnHold) con contrato vencido
+    const expiredResult = await query(
+      `SELECT * FROM "PEOPLE"
+       WHERE "tipoUsuario" = 'BENEFICIARIO'
+         AND "estadoInactivo" = false
+         AND "finalContrato" IS NOT NULL
+         AND "finalContrato"::date < CURRENT_DATE
+         AND ("estado" IS NULL OR "estado" != 'FINALIZADA')
+       ORDER BY "finalContrato" ASC`
+    )
 
-    if (!expiredResponse.ok) {
-      const errorText = await expiredResponse.text()
-      console.error('Cron expire-contracts: Error obteniendo contratos:', errorText)
-      return NextResponse.json(
-        { success: false, error: 'Error obteniendo contratos expirados' },
-        { status: 500 }
-      )
-    }
-
-    const expiredData = await expiredResponse.json()
-
-    if (!expiredData.success || !expiredData.students || expiredData.students.length === 0) {
+    if (expiredResult.rowCount === 0) {
       console.log('Cron expire-contracts: No hay contratos expirados para procesar')
       return NextResponse.json({
         success: true,
@@ -67,7 +52,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    const students = expiredData.students
+    const students = expiredResult.rows
     console.log(`Cron expire-contracts: Encontrados ${students.length} contratos expirados`)
 
     // 2. Marcar cada estudiante como FINALIZADA
@@ -83,37 +68,24 @@ export async function GET(request: NextRequest) {
       try {
         console.log(`Cron expire-contracts: Marcando contrato expirado ${student._id} - ${student.primerNombre} ${student.primerApellido}`)
 
-        const updateResponse = await fetch(`${WIX_API_BASE_URL}/markContractExpired`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            personId: student._id
-          })
+        // Update the student to FINALIZADA
+        await query(
+          `UPDATE "PEOPLE" SET
+            "estado" = 'FINALIZADA',
+            "estadoInactivo" = true,
+            "_updatedDate" = NOW()
+          WHERE "_id" = $1`,
+          [student._id]
+        )
+
+        console.log(`Cron expire-contracts: Estudiante ${student._id} marcado como FINALIZADA`)
+
+        results.push({
+          studentId: student._id,
+          nombre: `${student.primerNombre} ${student.primerApellido}`,
+          success: true,
+          finalContrato: student.finalContrato
         })
-
-        if (updateResponse.ok) {
-          const updateData = await updateResponse.json()
-          console.log(`Cron expire-contracts: Estudiante ${student._id} marcado como FINALIZADA`)
-
-          results.push({
-            studentId: student._id,
-            nombre: `${student.primerNombre} ${student.primerApellido}`,
-            success: true,
-            finalContrato: student.finalContrato
-          })
-        } else {
-          const errorText = await updateResponse.text()
-          console.error(`Cron expire-contracts: Error marcando estudiante ${student._id}:`, errorText)
-
-          results.push({
-            studentId: student._id,
-            nombre: `${student.primerNombre} ${student.primerApellido}`,
-            success: false,
-            error: errorText
-          })
-        }
       } catch (studentError) {
         console.error(`Cron expire-contracts: Error procesando estudiante ${student._id}:`, studentError)
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { query } from '@/lib/postgres'
 
-const WIX_API_BASE_URL = process.env.WIX_API_BASE_URL || process.env.NEXT_PUBLIC_WIX_API_BASE_URL
 const CRON_SECRET = process.env.CRON_SECRET
 
 /**
@@ -31,36 +31,18 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log('Cron reactivate-onhold: Iniciando proceso de reactivación automática')
-
-    if (!WIX_API_BASE_URL) {
-      console.error('Cron reactivate-onhold: WIX_API_BASE_URL no configurada')
-      return NextResponse.json(
-        { success: false, error: 'Configuración de Wix faltante' },
-        { status: 500 }
-      )
-    }
+    console.log('Cron reactivate-onhold: [PostgreSQL] Iniciando proceso de reactivación automática')
 
     // 1. Obtener estudiantes con OnHold vencido
-    const expiredResponse = await fetch(`${WIX_API_BASE_URL}/getExpiredOnHoldStudents`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    })
+    const expiredResult = await query(
+      `SELECT * FROM "PEOPLE"
+       WHERE "estadoInactivo" = true
+         AND "fechaFinOnHold" IS NOT NULL
+         AND "fechaFinOnHold"::date <= CURRENT_DATE
+       ORDER BY "fechaFinOnHold" ASC`
+    )
 
-    if (!expiredResponse.ok) {
-      const errorText = await expiredResponse.text()
-      console.error('Cron reactivate-onhold: Error obteniendo estudiantes:', errorText)
-      return NextResponse.json(
-        { success: false, error: 'Error obteniendo estudiantes con OnHold vencido' },
-        { status: 500 }
-      )
-    }
-
-    const expiredData = await expiredResponse.json()
-
-    if (!expiredData.success || !expiredData.students || expiredData.students.length === 0) {
+    if (expiredResult.rowCount === 0) {
       console.log('Cron reactivate-onhold: No hay estudiantes con OnHold vencido')
       return NextResponse.json({
         success: true,
@@ -70,7 +52,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    const students = expiredData.students
+    const students = expiredResult.rows
     console.log(`Cron reactivate-onhold: Encontrados ${students.length} estudiantes con OnHold vencido`)
 
     // 2. Reactivar cada estudiante
@@ -86,44 +68,52 @@ export async function GET(request: NextRequest) {
       try {
         console.log(`Cron reactivate-onhold: Reactivando estudiante ${student._id} - ${student.primerNombre} ${student.primerApellido}`)
 
-        const reactivateResponse = await fetch(`${WIX_API_BASE_URL}/toggleUserStatus`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userId: student._id,
-            setInactive: false,
-            // No enviamos fechas porque estamos desactivando OnHold
-            fechaOnHold: null,
-            fechaFinOnHold: null,
-            motivo: null,
-            // Flag para indicar que es una reactivación automática
-            automaticReactivation: true
-          })
-        })
+        // Calculate days paused
+        const fechaOnHold = new Date(student.fechaOnHold)
+        const fechaFinOnHold = new Date(student.fechaFinOnHold)
+        const diasPausados = Math.ceil((fechaFinOnHold.getTime() - fechaOnHold.getTime()) / (1000 * 60 * 60 * 24))
 
-        if (reactivateResponse.ok) {
-          const reactivateData = await reactivateResponse.json()
-          console.log(`Cron reactivate-onhold: Estudiante ${student._id} reactivado exitosamente`)
-
-          results.push({
-            studentId: student._id,
-            nombre: `${student.primerNombre} ${student.primerApellido}`,
-            success: true,
-            diasExtendidos: reactivateData.diasExtendidos || 0
-          })
-        } else {
-          const errorText = await reactivateResponse.text()
-          console.error(`Cron reactivate-onhold: Error reactivando estudiante ${student._id}:`, errorText)
-
-          results.push({
-            studentId: student._id,
-            nombre: `${student.primerNombre} ${student.primerApellido}`,
-            success: false,
-            error: errorText
-          })
+        // Calculate new finalContrato
+        let newFinalContrato = student.finalContrato
+        if (student.finalContrato) {
+          const finalDate = new Date(student.finalContrato)
+          finalDate.setDate(finalDate.getDate() + diasPausados)
+          newFinalContrato = finalDate.toISOString().split('T')[0]
         }
+
+        // Update the student
+        await query(
+          `UPDATE "PEOPLE" SET
+            "estadoInactivo" = false,
+            "fechaOnHold" = NULL,
+            "fechaFinOnHold" = NULL,
+            "finalContrato" = $2,
+            "extensionCount" = COALESCE("extensionCount", 0) + 1,
+            "extensionHistory" = COALESCE("extensionHistory", '[]'::jsonb) || $3::jsonb,
+            "_updatedDate" = NOW()
+          WHERE "_id" = $1`,
+          [
+            student._id,
+            newFinalContrato,
+            JSON.stringify({
+              numero: (student.extensionCount || 0) + 1,
+              fechaEjecucion: new Date().toISOString(),
+              vigenciaAnterior: student.finalContrato,
+              vigenciaNueva: newFinalContrato,
+              diasExtendidos: diasPausados,
+              motivo: `Extensión automática por OnHold (${diasPausados} días pausados desde ${student.fechaOnHold} hasta ${student.fechaFinOnHold}) - Cron Job`
+            })
+          ]
+        )
+
+        console.log(`Cron reactivate-onhold: Estudiante ${student._id} reactivado exitosamente`)
+
+        results.push({
+          studentId: student._id,
+          nombre: `${student.primerNombre} ${student.primerApellido}`,
+          success: true,
+          diasExtendidos: diasPausados
+        })
       } catch (studentError) {
         console.error(`Cron reactivate-onhold: Error procesando estudiante ${student._id}:`, studentError)
 

@@ -1,6 +1,16 @@
 import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
+import { queryOne } from './postgres'
+
+interface UserRole {
+  _id: string
+  email: string
+  password: string
+  nombre: string
+  rol: string
+  activo: boolean
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -17,79 +27,72 @@ export const authOptions: NextAuthOptions = {
 
         console.log('🔍 Auth Debug:', {
           inputEmail: credentials.email,
-          inputPassword: credentials.password,
         })
 
-        // STEP 1: Verify user exists and is active in Wix
+        // STEP 1: Verify user exists and is active in PostgreSQL
         try {
-          // Call Wix API directly instead of going through the proxy
-          const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions';
-          console.log('🌐 Attempting Wix auth directly:', `${WIX_API_BASE_URL}/userRole`);
-          const wixResponse = await fetch(
-            `${WIX_API_BASE_URL}/userRole?email=${encodeURIComponent(credentials.email)}`,
-            {
-              method: 'GET',
-              headers: { 'Content-Type': 'application/json' },
-            }
+          console.log('🔍 [PostgreSQL] Buscando usuario:', credentials.email);
+
+          const user = await queryOne<UserRole>(
+            `SELECT "_id", "email", "password", "nombre", "rol", "activo"
+             FROM "USUARIOS_ROLES"
+             WHERE "email" = $1`,
+            [credentials.email]
           );
 
-          console.log('📡 Wix API response status:', wixResponse.status);
+          if (user && user.activo) {
+            console.log('✅ [PostgreSQL] Usuario encontrado:', {
+              email: user.email,
+              rol: user.rol,
+              activo: user.activo
+            });
 
-          if (wixResponse.ok) {
-            const wixData = await wixResponse.json();
+            // STEP 2: Verify password (supports both bcrypt hash and plain text)
+            if (user.password) {
+              let isPasswordValid = false;
 
-            if (wixData.success && wixData.activo) {
-              // User exists in Wix and is active
-              console.log('✅ Usuario verificado en Wix:', {
-                email: wixData.email,
-                rol: wixData.rol,
-                activo: wixData.activo
-              });
-
-              // STEP 2: Verify password against Wix password (supports both bcrypt hash and plain text)
-              if (wixData.password) {
-                let isPasswordValid = false;
-
-                // Check if password is a bcrypt hash (starts with $2a$, $2b$, or $2y$)
-                if (wixData.password.startsWith('$2a$') || wixData.password.startsWith('$2b$') || wixData.password.startsWith('$2y$')) {
-                  // Use bcrypt comparison for hashed passwords
-                  console.log('🔐 Verificando contraseña con bcrypt hash');
-                  isPasswordValid = await bcrypt.compare(credentials.password, wixData.password);
-                } else {
-                  // Direct comparison for plain text passwords (legacy support)
-                  console.log('⚠️ Advertencia: Contraseña en texto plano detectada. Considere migrar a bcrypt.');
-                  isPasswordValid = credentials.password === wixData.password;
-                }
-
-                if (isPasswordValid) {
-                  console.log(`✅ Login exitoso con credenciales de Wix: ${wixData.rol}`);
-                  return {
-                    id: wixData.email, // Use email as ID
-                    email: wixData.email,
-                    name: wixData.nombre,
-                    role: wixData.rol,
-                  };
-                } else {
-                  console.log('❌ Contraseña incorrecta');
-                  return null;
-                }
+              // Check if password is a bcrypt hash (starts with $2a$, $2b$, or $2y$)
+              if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$') || user.password.startsWith('$2y$')) {
+                // Use bcrypt comparison for hashed passwords
+                console.log('🔐 [PostgreSQL] Verificando contraseña con bcrypt hash');
+                isPasswordValid = await bcrypt.compare(credentials.password, user.password);
               } else {
-                console.log('⚠️ Usuario en Wix no tiene contraseña configurada');
+                // Direct comparison for plain text passwords (legacy support)
+                console.log('⚠️ [PostgreSQL] Contraseña en texto plano detectada');
+                isPasswordValid = credentials.password === user.password;
+              }
+
+              if (isPasswordValid) {
+                console.log(`✅ [PostgreSQL] Login exitoso: ${user.rol}`);
+                return {
+                  id: user._id,
+                  email: user.email,
+                  name: user.nombre,
+                  role: user.rol,
+                };
+              } else {
+                console.log('❌ [PostgreSQL] Contraseña incorrecta');
                 return null;
               }
             } else {
-              console.log('⚠️ Usuario no encontrado o inactivo en Wix');
-              // Continue to fallback test users
+              console.log('⚠️ [PostgreSQL] Usuario no tiene contraseña configurada');
+              return null;
             }
+          } else if (user && !user.activo) {
+            console.log('⚠️ [PostgreSQL] Usuario inactivo');
+            return null;
+          } else {
+            console.log('⚠️ [PostgreSQL] Usuario no encontrado');
+            // Continue to fallback test users
           }
         } catch (error) {
-          console.error('❌ Error al verificar usuario en Wix:', error);
+          console.error('❌ [PostgreSQL] Error:', error);
           console.error('❌ Error details:', error instanceof Error ? error.message : String(error));
           // Continue to fallback test users
         }
 
-        // FALLBACK: Use hardcoded test users if Wix is not available
-        console.log('⚠️ Usando usuarios de prueba locales (Wix no disponible)');
+        // FALLBACK: Use hardcoded test users if PostgreSQL is not available
+        console.log('⚠️ Usando usuarios de prueba locales (PostgreSQL no disponible)');
 
         const testUsers = [
           {

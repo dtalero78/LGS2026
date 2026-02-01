@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || ''
+import { query } from '@/lib/postgres'
 
 /**
  * POST /api/informes/beneficiarios
@@ -26,41 +25,58 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('📊 Generando informe de beneficiarios:', { fechaInicio, fechaFin })
+    console.log('📊 [PostgreSQL] Generando informe de beneficiarios:', { fechaInicio, fechaFin })
 
-    // Llamar a la función de Wix
-    const response = await fetch(`${WIX_API_BASE_URL}/getBeneficiariosByDateRange`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        fechaInicio,
-        fechaFin,
-      }),
-    })
+    // Get beneficiaries with session counts in date range
+    const result = await query(
+      `SELECT
+        p."_id",
+        p."primerNombre",
+        p."segundoNombre",
+        p."primerApellido",
+        p."segundoApellido",
+        p."numeroId",
+        p."email",
+        p."celular",
+        p."nivel",
+        p."step",
+        p."contrato",
+        p."plataforma",
+        p."tipoUsuario",
+        p."_createdDate",
+        COUNT(ab."_id") as "totalSesiones",
+        COUNT(ab."_id") FILTER (WHERE ab."asistio" = true) as "sesionesAsistidas"
+      FROM "PEOPLE" p
+      LEFT JOIN "ACADEMICA_BOOKINGS" ab ON p."_id" = ab."visitorId"
+      LEFT JOIN "CALENDARIO" c ON ab."eventoId" = c."_id"
+        AND c."dia" >= $1::timestamp with time zone
+        AND c."dia" <= $2::timestamp with time zone
+      WHERE p."tipoUsuario" = 'BENEFICIARIO'
+      GROUP BY p."_id"
+      ORDER BY p."primerApellido" ASC, p."primerNombre" ASC`,
+      [fechaInicio, fechaFin]
+    )
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('❌ Error en Wix API:', errorText)
-      throw new Error(`Error en Wix API: ${response.statusText}`)
-    }
+    console.log(`✅ [PostgreSQL] Informe generado: ${result.rowCount} beneficiarios`)
 
-    const data = await response.json()
-
-    if (!data.success) {
-      throw new Error(data.error || 'Error obteniendo beneficiarios')
-    }
-
-    console.log(`✅ Informe generado: ${data.beneficiarios?.length || 0} beneficiarios`)
+    // Transform to match expected format
+    const beneficiarios = result.rows.map((row: any) => ({
+      ...row,
+      nombreCompleto: [row.primerNombre, row.segundoNombre, row.primerApellido, row.segundoApellido]
+        .filter(Boolean)
+        .join(' '),
+      totalSesiones: parseInt(row.totalSesiones) || 0,
+      sesionesAsistidas: parseInt(row.sesionesAsistidas) || 0
+    }))
 
     return NextResponse.json({
       success: true,
-      beneficiarios: data.beneficiarios || [],
-      total: data.total || 0,
+      beneficiarios: beneficiarios,
+      total: beneficiarios.length,
+      source: 'postgres'
     })
   } catch (error) {
-    console.error('❌ Error en /api/informes/beneficiarios:', error)
+    console.error('❌ [PostgreSQL] Error en /api/informes/beneficiarios:', error)
     return NextResponse.json(
       {
         error: 'Error generando el informe',

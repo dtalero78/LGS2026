@@ -43,11 +43,16 @@ export default function StudentComments({ studentId, usuarioId }: StudentComment
   useEffect(() => {
     const fetchStudentData = async () => {
       try {
-        const response = await fetch(`https://www.lgsplataforma.com/_functions/getStudentById?id=${studentId}`)
+        // Use internal API instead of direct Wix call
+        const response = await fetch(`/api/student/${studentId}`)
         const data = await response.json()
         if (data.success && data.student?.usuarioId) {
           setRealUsuarioId(data.student.usuarioId)
-          console.log('🎯 Found usuarioId from direct API:', data.student.usuarioId)
+          console.log('🎯 Found usuarioId from PostgreSQL API:', data.student.usuarioId)
+        } else if (data.success && data.student?._id) {
+          // If no usuarioId, use the _id directly
+          setRealUsuarioId(data.student._id)
+          console.log('🎯 Using _id as usuarioId from PostgreSQL:', data.student._id)
         }
       } catch (error) {
         console.error('Error fetching student data:', error)

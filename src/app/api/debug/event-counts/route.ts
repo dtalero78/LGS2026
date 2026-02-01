@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions'
+import { query } from '@/lib/postgres'
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,33 +13,37 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('🔍 DEBUG: Comparing counts for event:', eventId)
+    console.log('🔍 DEBUG [PostgreSQL]: Comparing counts for event:', eventId)
 
-    // Llamar a getEventBookings (usado por el modal)
-    const bookingsResponse = await fetch(`${WIX_API_BASE_URL}/getEventBookings`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ eventId })
-    })
+    // Get all bookings for the event (modal view)
+    const bookingsResult = await query(
+      `SELECT
+        ab.*,
+        p."primerNombre",
+        p."primerApellido",
+        p."nivel",
+        p."step"
+      FROM "ACADEMICA_BOOKINGS" ab
+      LEFT JOIN "PEOPLE" p ON ab."visitorId" = p."_id"
+      WHERE ab."eventoId" = $1
+      ORDER BY ab."_createdDate" DESC`,
+      [eventId]
+    )
 
-    // Llamar a getMultipleEventsInscritosCount (usado por la vista general)
-    const countsResponse = await fetch(`${WIX_API_BASE_URL}/getMultipleEventsInscritosCount`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ eventIds: [eventId] })
-    })
+    // Get count for the event (general view)
+    const countResult = await query(
+      `SELECT COUNT(*) as count FROM "ACADEMICA_BOOKINGS" WHERE "eventoId" = $1`,
+      [eventId]
+    )
 
-    const bookingsData = bookingsResponse.ok ? await bookingsResponse.json() : null
-    const countsData = countsResponse.ok ? await countsResponse.json() : null
+    const bookings = bookingsResult.rows
+    const modalCount = bookings.length
+    const generalCount = parseInt(countResult.rows[0]?.count || '0', 10)
 
-    const modalCount = bookingsData?.bookings?.length || 0
-    const generalCount = countsData?.inscritosPorEvento?.[eventId] || 0
-
-    console.log('🔍 DEBUG Results:')
-    console.log('  Modal count (getEventBookings):', modalCount)
-    console.log('  General count (getMultipleEventsInscritosCount):', generalCount)
-    console.log('  Bookings data:', bookingsData?.bookings?.slice(0, 3))
-    console.log('  Counts data:', countsData?.inscritosPorEvento)
+    console.log('🔍 DEBUG [PostgreSQL] Results:')
+    console.log('  Modal count (bookings):', modalCount)
+    console.log('  General count (count query):', generalCount)
+    console.log('  Bookings preview:', bookings.slice(0, 3))
 
     return NextResponse.json({
       success: true,
@@ -48,9 +51,8 @@ export async function POST(request: NextRequest) {
       modalCount,
       generalCount,
       difference: modalCount - generalCount,
-      bookingsPreview: bookingsData?.bookings?.slice(0, 3) || [],
-      rawBookingsData: bookingsData,
-      rawCountsData: countsData
+      bookingsPreview: bookings.slice(0, 3),
+      source: 'postgres'
     })
 
   } catch (error) {

@@ -4,6 +4,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout'
 import AdvisorTabs from '@/components/advisor/AdvisorTabs'
 import { PermissionGuard } from '@/components/permissions'
 import { AcademicoPermission } from '@/types/permissions'
+import { query } from '@/lib/postgres'
 
 interface AdvisorPageProps {
   params: {
@@ -25,30 +26,20 @@ export default async function AdvisorPage({ params }: AdvisorPageProps) {
 
 async function AdvisorContent({ advisorId }: { advisorId: string }) {
   try {
-    const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions'
+    console.log('📚 [PostgreSQL] Fetching advisor:', advisorId)
 
-    const response = await fetch(
-      `${WIX_API_BASE_URL}/advisorById/${advisorId}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        cache: 'no-store'
-      }
+    // Get advisor from PostgreSQL
+    const result = await query(
+      `SELECT * FROM "ADVISORS" WHERE "_id" = $1`,
+      [advisorId]
     )
 
-    if (!response.ok) {
+    if (result.rowCount === 0) {
       notFound()
     }
 
-    const advisorData = await response.json()
-
-    if (!advisorData.success || !advisorData.advisor) {
-      notFound()
-    }
-
-    const advisor = advisorData.advisor
+    const advisor = result.rows[0]
+    console.log('✅ [PostgreSQL] Advisor found:', advisor.nombreCompleto)
 
     return (
       <div className="space-y-6">
