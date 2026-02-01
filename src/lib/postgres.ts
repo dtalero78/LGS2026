@@ -13,27 +13,43 @@ import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 
 // Connection pool configuration
 // Supports both DATABASE_URL (Digital Ocean) and individual POSTGRES_* variables
-const poolConfig = process.env.DATABASE_URL
-  ? {
-      connectionString: process.env.DATABASE_URL,
+// Parse DATABASE_URL and force SSL settings for Digital Ocean
+const getDatabaseConfig = () => {
+  if (process.env.DATABASE_URL) {
+    // Remove sslmode from URL to prevent pg from overriding our SSL config
+    const urlWithoutSslMode = process.env.DATABASE_URL.replace(/[?&]sslmode=[^&]*/g, '');
+    return {
+      connectionString: urlWithoutSslMode,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
-      ssl: process.env.DATABASE_URL.includes('sslmode=require')
-        ? { rejectUnauthorized: false }
-        : false,
-    }
-  : {
-      host: process.env.POSTGRES_HOST || 'localhost',
-      port: parseInt(process.env.POSTGRES_PORT || '5432'),
-      database: process.env.POSTGRES_DB || 'lgs_admin',
-      user: process.env.POSTGRES_USER,
-      password: process.env.POSTGRES_PASSWORD,
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
-      ssl: process.env.POSTGRES_SSL === 'true' ? { rejectUnauthorized: false } : false,
+      ssl: {
+        rejectUnauthorized: false,
+      },
     };
+  }
+  return null;
+};
+
+const poolConfig = getDatabaseConfig() || {
+  connectionString: undefined,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+  ssl: { rejectUnauthorized: false },
+};
+
+// Fallback to individual variables if no DATABASE_URL
+if (!process.env.DATABASE_URL) {
+  Object.assign(poolConfig, {
+    host: process.env.POSTGRES_HOST || 'localhost',
+    port: parseInt(process.env.POSTGRES_PORT || '5432'),
+    database: process.env.POSTGRES_DB || 'lgs_admin',
+    user: process.env.POSTGRES_USER,
+    password: process.env.POSTGRES_PASSWORD,
+    ssl: process.env.POSTGRES_SSL === 'true' ? { rejectUnauthorized: false } : false,
+  });
+}
 
 const pool = new Pool(poolConfig);
 
