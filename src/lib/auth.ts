@@ -1,7 +1,6 @@
 import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
-import { Pool } from 'pg'
 
 interface UserRole {
   _id: string
@@ -12,26 +11,31 @@ interface UserRole {
   activo: boolean
 }
 
-// Create a separate pool for auth to avoid importing server-only postgres module
-const authPool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 5,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
-});
-
-async function queryUserByEmail(email: string): Promise<UserRole | null> {
+async function verifyUserFromAPI(email: string): Promise<UserRole | null> {
   try {
-    const result = await authPool.query(
-      `SELECT "_id", "email", "password", "nombre", "rol", "activo"
-       FROM "USUARIOS_ROLES"
-       WHERE "email" = $1`,
-      [email]
-    );
-    return result.rows[0] || null;
+    // Use internal API to verify credentials
+    // This avoids importing pg directly which causes client-side bundling issues
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3001';
+    const response = await fetch(`${baseUrl}/api/internal/verify-credentials`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+
+    if (!response.ok) {
+      console.error('❌ [Auth API] Response not ok:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+
+    if (data.success && data.user) {
+      return data.user;
+    }
+
+    return null;
   } catch (error) {
-    console.error('❌ [Auth Pool] Query error:', error);
+    console.error('❌ [Auth API] Error:', error);
     return null;
   }
 }
@@ -53,11 +57,11 @@ export const authOptions: NextAuthOptions = {
           inputEmail: credentials.email,
         })
 
-        // STEP 1: Verify user exists and is active in PostgreSQL
+        // STEP 1: Verify user exists and is active in PostgreSQL via internal API
         try {
           console.log('🔍 [PostgreSQL] Buscando usuario:', credentials.email);
 
-          const user = await queryUserByEmail(credentials.email);
+          const user = await verifyUserFromAPI(credentials.email);
 
           if (user && user.activo) {
             console.log('✅ [PostgreSQL] Usuario encontrado:', {
