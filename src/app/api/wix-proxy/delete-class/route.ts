@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions'
+import { query } from '@/lib/postgres'
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -14,35 +13,32 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    console.log('🗑️ Deleting class:', classId)
+    console.log('🗑️ [PostgreSQL] Deleting class booking:', classId)
 
-    const response = await fetch(
-      `${WIX_API_BASE_URL}/deleteClass?id=${encodeURIComponent(classId)}`,
-      {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      }
+    const result = await query(
+      `DELETE FROM "ACADEMICA_BOOKINGS" WHERE "_id" = $1 RETURNING *`,
+      [classId]
     )
 
-    if (!response.ok) {
-      console.error('❌ Wix API error:', response.status, response.statusText)
+    if (result.rowCount === 0) {
       return NextResponse.json(
-        { success: false, error: `Wix API error: ${response.status}` },
-        { status: response.status }
+        { success: false, error: 'Class record not found' },
+        { status: 404 }
       )
     }
 
-    const data = await response.json()
-    console.log('✅ Class deleted successfully:', data)
+    console.log('✅ [PostgreSQL] Class deleted successfully')
 
-    return NextResponse.json(data)
+    return NextResponse.json({
+      success: true,
+      message: 'Class deleted successfully',
+      deleted: result.rows[0]
+    })
 
-  } catch (error) {
-    console.error('❌ Error in delete-class API:', error)
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Error in delete-class API:', error)
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: error.message || 'Internal server error' },
       { status: 500 }
     )
   }

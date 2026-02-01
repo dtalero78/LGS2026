@@ -1,35 +1,78 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { query } from '@/lib/postgres'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { advisorId, fechaInicio, fechaFin } = body
 
-    const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions'
+    console.log('📊 [PostgreSQL] Getting advisor stats:', { advisorId, fechaInicio, fechaFin })
 
-    const response = await fetch(`${WIX_API_BASE_URL}/getAdvisorStats`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        advisorId,
-        fechaInicio,
-        fechaFin
-      })
-    })
+    // Build the query with optional date filters
+    let sql = `
+      SELECT
+        c.*,
+        (SELECT COUNT(*) FROM "ACADEMICA_BOOKINGS" ab WHERE ab."eventoId" = c."_id") as "inscritosCount",
+        (SELECT COUNT(*) FROM "ACADEMICA_BOOKINGS" ab WHERE ab."eventoId" = c."_id" AND ab."asistio" = true) as "asistieronCount"
+      FROM "CALENDARIO" c
+      WHERE c."advisor" = $1
+    `
+    const params: any[] = [advisorId]
+    let paramIndex = 2
 
-    if (!response.ok) {
-      throw new Error(`Error fetching advisor stats: ${response.statusText}`)
+    if (fechaInicio) {
+      sql += ` AND c."dia" >= $${paramIndex}::timestamp with time zone`
+      params.push(fechaInicio)
+      paramIndex++
     }
 
-    const data = await response.json()
-    return NextResponse.json(data)
+    if (fechaFin) {
+      sql += ` AND c."dia" <= $${paramIndex}::timestamp with time zone`
+      params.push(fechaFin)
+      paramIndex++
+    }
 
-  } catch (error) {
-    console.error('Error in advisor-stats proxy:', error)
+    sql += ` ORDER BY c."dia" DESC`
+
+    const eventsResult = await query(sql, params)
+    const events = eventsResult.rows
+
+    // Calculate stats
+    const totalSesiones = events.length
+    const totalInscritos = events.reduce((sum: number, e: any) => sum + (parseInt(e.inscritosCount) || 0), 0)
+    const totalAsistieron = events.reduce((sum: number, e: any) => sum + (parseInt(e.asistieronCount) || 0), 0)
+    const tasaAsistencia = totalInscritos > 0 ? Math.round((totalAsistieron / totalInscritos) * 100) : 0
+
+    // Count by type
+    const sesionesPorTipo: Record<string, number> = {}
+    events.forEach((e: any) => {
+      const tipo = e.tipo || 'OTROS'
+      sesionesPorTipo[tipo] = (sesionesPorTipo[tipo] || 0) + 1
+    })
+
+    console.log('✅ [PostgreSQL] Advisor stats calculated:', {
+      totalSesiones,
+      totalInscritos,
+      totalAsistieron,
+      tasaAsistencia
+    })
+
+    return NextResponse.json({
+      success: true,
+      stats: {
+        totalSesiones,
+        totalInscritos,
+        totalAsistieron,
+        tasaAsistencia,
+        sesionesPorTipo
+      },
+      events: events
+    })
+
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Error in advisor-stats:', error)
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch advisor stats' },
+      { success: false, error: error.message || 'Failed to fetch advisor stats' },
       { status: 500 }
     )
   }

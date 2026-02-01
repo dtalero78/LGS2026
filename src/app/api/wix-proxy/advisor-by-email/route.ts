@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.WIX_API_BASE_URL || process.env.NEXT_PUBLIC_WIX_API_BASE_URL
+import { query } from '@/lib/postgres'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const email = searchParams.get('email')
 
-    console.log('🔍 Advisor By Email Proxy: email =', email)
-    console.log('🔍 Advisor By Email Proxy: WIX_API_BASE_URL =', WIX_API_BASE_URL)
+    console.log('🔍 [PostgreSQL] Advisor By Email:', email)
 
     if (!email) {
       return NextResponse.json(
@@ -17,44 +15,33 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    if (!WIX_API_BASE_URL) {
-      return NextResponse.json(
-        { success: false, error: 'WIX API configuration is missing' },
-        { status: 500 }
-      )
-    }
+    // Query ADVISORS table by email
+    const result = await query(
+      `SELECT * FROM "ADVISORS" WHERE LOWER("email") = LOWER($1)`,
+      [email]
+    )
 
-    const wixUrl = `${WIX_API_BASE_URL}/advisorByEmail?email=${encodeURIComponent(email)}`
-    console.log('🔍 Advisor By Email Proxy: Making request to =', wixUrl)
-
-    const response = await fetch(wixUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-
-    console.log('🔍 Advisor By Email Proxy: Response status =', response.status)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Wix API error:', response.status, response.statusText, errorText)
-
+    if (result.rowCount === 0) {
+      console.log('⚠️ [PostgreSQL] Advisor no encontrado:', email)
       return NextResponse.json({
         success: false,
-        error: `Wix API error: ${response.status} ${response.statusText}`
-      }, { status: response.status })
+        error: 'Advisor no encontrado'
+      }, { status: 404 })
     }
 
-    const data = await response.json()
-    console.log('🔍 Advisor By Email Proxy: Success, data =', JSON.stringify(data, null, 2))
-    return NextResponse.json(data)
+    const advisor = result.rows[0]
+    console.log('✅ [PostgreSQL] Advisor encontrado:', advisor.nombreCompleto || advisor.email)
 
-  } catch (error) {
-    console.error('🔍 Advisor By Email Proxy error:', error)
+    return NextResponse.json({
+      success: true,
+      advisor: advisor
+    })
+
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Advisor By Email error:', error)
     return NextResponse.json({
       success: false,
-      error: 'Internal server error'
+      error: error.message || 'Internal server error'
     }, { status: 500 })
   }
 }

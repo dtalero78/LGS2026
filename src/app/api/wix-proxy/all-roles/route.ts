@@ -1,42 +1,35 @@
-import { NextResponse } from 'next/server';
-
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions';
+import { NextResponse } from 'next/server'
+import { query } from '@/lib/postgres'
 
 /**
- * GET /api/postgres/roles
- * Proxy para obtener todos los roles desde Wix ROL_PERMISOS
+ * GET /api/wix-proxy/all-roles
+ * Get all roles from PostgreSQL ROL_PERMISOS table
  */
 export async function GET() {
   try {
-    console.log('🔄 Proxy: Solicitando todos los roles desde Wix');
+    console.log('🔄 [PostgreSQL] Fetching all roles')
 
-    const response = await fetch(`${WIX_API_BASE_URL}/allRoles`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-    });
+    const result = await query(
+      `SELECT * FROM "ROL_PERMISOS" ORDER BY "rol" ASC`
+    )
 
-    if (!response.ok) {
-      throw new Error(`Wix API error: ${response.status}`);
-    }
+    console.log(`✅ [PostgreSQL] Found ${result.rowCount} roles`)
 
-    const data = await response.json();
+    return NextResponse.json({
+      success: true,
+      roles: result.rows
+    })
 
-    console.log(`✅ Proxy: Recibidos ${data.roles?.length || 0} roles desde Wix`);
-
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error('❌ Error en proxy all-roles:', error);
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Error fetching all roles:', error)
     return NextResponse.json(
       {
         success: false,
-        error: 'Error al obtener roles desde Wix',
-        details: error instanceof Error ? error.message : 'Error desconocido',
+        error: 'Error al obtener roles',
+        details: error.message || 'Error desconocido',
       },
       { status: 500 }
-    );
+    )
   }
 }
 
@@ -50,5 +43,5 @@ export async function OPTIONS() {
         'Access-Control-Allow-Headers': 'Content-Type',
       },
     }
-  );
+  )
 }

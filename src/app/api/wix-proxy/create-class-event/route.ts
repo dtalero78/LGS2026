@@ -1,65 +1,92 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions'
+import { query } from '@/lib/postgres'
 
 export async function POST(request: NextRequest) {
   try {
     const eventData = await request.json()
-    console.log('📚 Creating new class event:', eventData)
+    console.log('📚 [PostgreSQL] Creating new class event:', eventData)
     console.log('👤 Agendado por:', eventData.agendadoPor, '| Rol:', eventData.agendadoPorRol)
 
-    // Create class event
-    const classResponse = await fetch(
-      `${WIX_API_BASE_URL}/createClassEvent`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(eventData)
-      }
+    const {
+      studentId,
+      dia,
+      hora,
+      nivel,
+      step,
+      advisor,
+      tipo,
+      titulo,
+      nombreEvento,
+      linkZoom,
+      agendadoPor,
+      agendadoPorRol
+    } = eventData
+
+    if (!studentId || !dia) {
+      return NextResponse.json(
+        { success: false, error: 'studentId y dia son requeridos' },
+        { status: 400 }
+      )
+    }
+
+    // Generate IDs
+    const eventId = `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const bookingId = `booking_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+    // Extract date and time
+    const diaDate = new Date(dia)
+    const fecha = diaDate.toISOString().split('T')[0]
+
+    // Create CALENDARIO event
+    const calendarResult = await query(
+      `INSERT INTO "CALENDARIO" (
+        "_id", "dia", "fecha", "hora", "advisor", "nivel", "step", "tipo",
+        "titulo", "nombreEvento", "tituloONivel", "linkZoom",
+        "agendadoPor", "agendadoPorRol",
+        "origen", "_createdDate", "_updatedDate"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'POSTGRES', NOW(), NOW())
+      RETURNING *`,
+      [
+        eventId,
+        diaDate.toISOString(),
+        fecha,
+        hora || null,
+        advisor || null,
+        nivel || null,
+        step || null,
+        tipo || 'SESSION',
+        titulo || nombreEvento || `Clase ${nivel || ''} ${step || ''}`,
+        nombreEvento || titulo || null,
+        nivel || titulo || null,
+        linkZoom || null,
+        agendadoPor || null,
+        agendadoPorRol || null
+      ]
     )
 
-    if (!classResponse.ok) {
-      console.error('❌ Wix API error creating class:', classResponse.status, classResponse.statusText)
-      return NextResponse.json(
-        { success: false, error: `Wix API error: ${classResponse.status}` },
-        { status: classResponse.status }
-      )
-    }
+    console.log('✅ [PostgreSQL] Class event created:', eventId)
 
-    const classData = await classResponse.json()
-    console.log('✅ Class event created:', classData)
+    // Create booking for the student
+    await query(
+      `INSERT INTO "ACADEMICA_BOOKINGS" (
+        "_id", "studentId", "eventoId", "nivel", "step",
+        "origen", "_createdDate", "_updatedDate"
+      ) VALUES ($1, $2, $3, $4, $5, 'POSTGRES', NOW(), NOW())`,
+      [bookingId, studentId, eventId, nivel || null, step || null]
+    )
 
-    // Also create booking event
-    try {
-      const bookingResponse = await fetch(
-        `${WIX_API_BASE_URL}/createBookingEvent`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(eventData)
-        }
-      )
+    console.log('✅ [PostgreSQL] Booking created:', bookingId)
 
-      if (bookingResponse.ok) {
-        const bookingData = await bookingResponse.json()
-        console.log('✅ Booking event created:', bookingData)
-      } else {
-        console.warn('⚠️ Warning: Booking event creation failed, but class event succeeded')
-      }
-    } catch (bookingError) {
-      console.warn('⚠️ Warning: Booking event creation failed:', bookingError)
-    }
+    return NextResponse.json({
+      success: true,
+      event: calendarResult.rows[0],
+      booking: { _id: bookingId, studentId, eventoId: eventId }
+    })
 
-    return NextResponse.json(classData)
-
-  } catch (error) {
-    console.error('❌ Error in create-class-event API:', error)
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Error in create-class-event API:', error)
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: error.message || 'Internal server error' },
       { status: 500 }
     )
   }

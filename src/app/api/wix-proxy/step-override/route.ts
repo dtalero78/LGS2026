@@ -1,40 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions'
+import { query } from '@/lib/postgres'
 
 export async function POST(request: NextRequest) {
   try {
     const overrideData = await request.json()
-    console.log('➕ Creating step override:', overrideData)
+    const { studentId, step, nivel, completed, completedBy } = overrideData
 
-    const response = await fetch(
-      `${WIX_API_BASE_URL}/stepOverride`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(overrideData)
-      }
-    )
+    console.log('➕ [PostgreSQL] Creating/updating step override:', overrideData)
 
-    if (!response.ok) {
-      console.error('❌ Wix API error:', response.status, response.statusText)
+    if (!studentId || !step) {
       return NextResponse.json(
-        { success: false, error: `Wix API error: ${response.status}` },
-        { status: response.status }
+        { success: false, error: 'studentId y step son requeridos' },
+        { status: 400 }
       )
     }
 
-    const data = await response.json()
-    console.log('✅ Step override created/updated:', data)
+    // Check if override already exists
+    const existing = await query(
+      `SELECT "_id" FROM "STEP_OVERRIDES" WHERE "studentId" = $1 AND "step" = $2`,
+      [studentId, step]
+    )
 
-    return NextResponse.json(data)
+    let result
+    if (existing.rowCount && existing.rowCount > 0) {
+      // Update existing override
+      result = await query(
+        `UPDATE "STEP_OVERRIDES"
+         SET "completed" = $1,
+             "completedBy" = $2,
+             "nivel" = $3,
+             "_updatedDate" = NOW()
+         WHERE "studentId" = $4 AND "step" = $5
+         RETURNING *`,
+        [completed !== false, completedBy || null, nivel || null, studentId, step]
+      )
+      console.log('✅ [PostgreSQL] Step override updated')
+    } else {
+      // Create new override
+      const overrideId = `override_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      result = await query(
+        `INSERT INTO "STEP_OVERRIDES" (
+          "_id", "studentId", "step", "nivel", "completed", "completedBy",
+          "origen", "_createdDate", "_updatedDate"
+        ) VALUES ($1, $2, $3, $4, $5, $6, 'POSTGRES', NOW(), NOW())
+        RETURNING *`,
+        [overrideId, studentId, step, nivel || null, completed !== false, completedBy || null]
+      )
+      console.log('✅ [PostgreSQL] Step override created')
+    }
 
-  } catch (error) {
-    console.error('❌ Error in step-override API:', error)
+    return NextResponse.json({
+      success: true,
+      override: result.rows[0]
+    })
+
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Error in step-override API:', error)
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: error.message || 'Internal server error' },
       { status: 500 }
     )
   }
@@ -53,35 +76,31 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    console.log('🗑️ Deleting step override:', { studentId, step })
+    console.log('🗑️ [PostgreSQL] Deleting step override:', { studentId, step })
 
-    const response = await fetch(
-      `${WIX_API_BASE_URL}/stepOverride?studentId=${encodeURIComponent(studentId)}&step=${encodeURIComponent(step)}`,
-      {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      }
+    const result = await query(
+      `DELETE FROM "STEP_OVERRIDES" WHERE "studentId" = $1 AND "step" = $2 RETURNING *`,
+      [studentId, step]
     )
 
-    if (!response.ok) {
-      console.error('❌ Wix API error:', response.status, response.statusText)
+    if (result.rowCount === 0) {
       return NextResponse.json(
-        { success: false, error: `Wix API error: ${response.status}` },
-        { status: response.status }
+        { success: false, error: 'Override no encontrado' },
+        { status: 404 }
       )
     }
 
-    const data = await response.json()
-    console.log('✅ Step override deleted:', data)
+    console.log('✅ [PostgreSQL] Step override deleted')
 
-    return NextResponse.json(data)
+    return NextResponse.json({
+      success: true,
+      deleted: result.rows[0]
+    })
 
-  } catch (error) {
-    console.error('❌ Error in delete step-override API:', error)
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Error in delete step-override API:', error)
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: error.message || 'Internal server error' },
       { status: 500 }
     )
   }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { query } from '@/lib/postgres'
 
 export async function POST(request: Request) {
   try {
@@ -11,52 +12,54 @@ export async function POST(request: Request) {
       )
     }
 
-    const WIX_API_BASE_URL = process.env.WIX_API_BASE_URL || process.env.NEXT_PUBLIC_WIX_API_BASE_URL
+    console.log('🔄 [PostgreSQL] Toggle user status', { userId, setInactive })
 
-    if (!WIX_API_BASE_URL) {
-      console.error('WIX_API_BASE_URL no configurada')
+    const newEstado = setInactive ? 'Inactivo' : 'Aprobado'
+
+    // Update PEOPLE table
+    const result = await query(
+      `UPDATE "PEOPLE"
+       SET "estado" = $1,
+           "estadoInactivo" = $2,
+           "_updatedDate" = NOW()
+       WHERE "_id" = $3
+       RETURNING *`,
+      [newEstado, setInactive, userId]
+    )
+
+    if (result.rowCount === 0) {
       return NextResponse.json(
-        { success: false, error: 'Configuración del servidor incompleta' },
-        { status: 500 }
+        { success: false, error: 'Usuario no encontrado' },
+        { status: 404 }
       )
     }
 
-    const wixUrl = `${WIX_API_BASE_URL}/toggleUserStatus`
+    // Also update ACADEMICA if exists
+    await query(
+      `UPDATE "ACADEMICA"
+       SET "estadoInactivo" = $1,
+           "_updatedDate" = NOW()
+       WHERE "visitorId" = $2`,
+      [setInactive, userId]
+    )
 
-    console.log('🔄 Proxy: Toggle user status', { userId, setInactive })
-
-    const wixResponse = await fetch(wixUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        userId,
-        setInactive
-      })
+    console.log('✅ [PostgreSQL] User status updated:', {
+      userId,
+      newEstado,
+      estadoInactivo: setInactive
     })
 
-    if (!wixResponse.ok) {
-      const errorText = await wixResponse.text()
-      console.error('Error de Wix:', errorText)
-      return NextResponse.json(
-        { success: false, error: 'Error al cambiar estado en Wix' },
-        { status: wixResponse.status }
-      )
-    }
-
-    const wixData = await wixResponse.json()
     return NextResponse.json({
       success: true,
-      data: wixData
+      data: result.rows[0]
     })
 
-  } catch (error) {
-    console.error('Error al cambiar estado:', error)
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Error al cambiar estado:', error)
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Error interno del servidor'
+        error: error.message || 'Error interno del servidor'
       },
       { status: 500 }
     )

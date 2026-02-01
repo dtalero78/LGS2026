@@ -1,108 +1,103 @@
 /**
- * API Route: Get role permissions from Wix
- * Queries ROL_PERMISOS table to get permissions for a specific role
+ * API Route: Get/Update role permissions from PostgreSQL
+ * Queries ROL_PERMISOS table to get/update permissions for a specific role
  */
 
-import { NextResponse } from 'next/server';
-
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions';
+import { NextResponse } from 'next/server'
+import { query } from '@/lib/postgres'
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const rol = searchParams.get('rol');
+  const { searchParams } = new URL(request.url)
+  const rol = searchParams.get('rol')
 
   if (!rol) {
     return NextResponse.json(
       { success: false, error: 'Parámetro rol es requerido', permisos: [] },
       { status: 400 }
-    );
+    )
   }
 
   try {
-    console.log(`🔍 [API] Consultando permisos para rol: ${rol}`);
+    console.log(`🔍 [PostgreSQL] Consultando permisos para rol: ${rol}`)
 
-    const response = await fetch(`${WIX_API_BASE_URL}/rolePermissions?rol=${encodeURIComponent(rol)}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store', // No cachear para obtener datos frescos
-    });
+    const result = await query(
+      `SELECT * FROM "ROL_PERMISOS" WHERE "rol" = $1`,
+      [rol]
+    )
 
-    if (!response.ok) {
-      console.error(`❌ [API] Error en respuesta de Wix: ${response.status}`);
+    if (result.rowCount === 0) {
+      console.log(`⚠️ [PostgreSQL] Rol no encontrado: ${rol}`)
       return NextResponse.json(
-        { success: false, error: 'Error al consultar Wix', permisos: [] },
-        { status: response.status }
-      );
+        { success: false, error: 'Rol no encontrado', permisos: [] },
+        { status: 404 }
+      )
     }
 
-    const data = await response.json();
+    const roleData = result.rows[0]
+    const permisos = roleData.permisos || []
 
-    if (!data.success) {
-      console.log(`⚠️ [API] Rol no encontrado en Wix: ${rol}`);
-      return NextResponse.json(data, { status: 404 });
-    }
+    console.log(`✅ [PostgreSQL] Permisos encontrados para ${rol}: ${permisos.length} permisos`)
 
-    console.log(`✅ [API] Permisos encontrados para ${rol}: ${data.permisos.length} permisos`);
+    return NextResponse.json({
+      success: true,
+      rol: roleData.rol,
+      permisos: permisos,
+      descripcion: roleData.descripcion
+    })
 
-    return NextResponse.json(data);
-
-  } catch (error) {
-    console.error(`❌ [API] Error al consultar permisos del rol:`, error);
+  } catch (error: any) {
+    console.error(`❌ [PostgreSQL] Error al consultar permisos del rol:`, error)
     return NextResponse.json(
-      { success: false, error: 'Error interno del servidor', permisos: [] },
+      { success: false, error: error.message || 'Error interno del servidor', permisos: [] },
       { status: 500 }
-    );
+    )
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { rol, permisos } = body;
+    const body = await request.json()
+    const { rol, permisos } = body
 
     if (!rol || !permisos) {
       return NextResponse.json(
         { success: false, error: 'Parámetros rol y permisos son requeridos' },
         { status: 400 }
-      );
+      )
     }
 
-    console.log(`🔄 [API] Actualizando permisos para rol: ${rol}, total: ${permisos.length} permisos`);
+    console.log(`🔄 [PostgreSQL] Actualizando permisos para rol: ${rol}, total: ${permisos.length} permisos`)
 
-    const response = await fetch(`${WIX_API_BASE_URL}/updateRolePermissions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ rol, permisos }),
-    });
+    const result = await query(
+      `UPDATE "ROL_PERMISOS"
+       SET "permisos" = $1,
+           "_updatedDate" = NOW()
+       WHERE "rol" = $2
+       RETURNING *`,
+      [JSON.stringify(permisos), rol]
+    )
 
-    if (!response.ok) {
-      console.error(`❌ [API] Error actualizando en Wix: ${response.status}`);
+    if (result.rowCount === 0) {
+      console.log(`⚠️ [PostgreSQL] Rol no encontrado para actualizar: ${rol}`)
       return NextResponse.json(
-        { success: false, error: 'Error al actualizar en Wix' },
-        { status: response.status }
-      );
+        { success: false, error: 'Rol no encontrado' },
+        { status: 404 }
+      )
     }
 
-    const data = await response.json();
+    console.log(`✅ [PostgreSQL] Permisos actualizados exitosamente para ${rol}`)
 
-    if (!data.success) {
-      console.log(`⚠️ [API] No se pudieron actualizar permisos: ${data.error}`);
-      return NextResponse.json(data, { status: 400 });
-    }
+    return NextResponse.json({
+      success: true,
+      rol: result.rows[0].rol,
+      permisos: result.rows[0].permisos
+    })
 
-    console.log(`✅ [API] Permisos actualizados exitosamente para ${rol}`);
-
-    return NextResponse.json(data);
-
-  } catch (error) {
-    console.error(`❌ [API] Error al actualizar permisos:`, error);
+  } catch (error: any) {
+    console.error(`❌ [PostgreSQL] Error al actualizar permisos:`, error)
     return NextResponse.json(
-      { success: false, error: 'Error interno del servidor' },
+      { success: false, error: error.message || 'Error interno del servidor' },
       { status: 500 }
-    );
+    )
   }
 }

@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.WIX_API_BASE_URL || process.env.NEXT_PUBLIC_WIX_API_BASE_URL
-const WIX_API_KEY = process.env.WIX_API_KEY
-const WIX_SECRET = process.env.WIX_SECRET
+import { query } from '@/lib/postgres'
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +18,7 @@ export async function POST(request: NextRequest) {
       step
     } = body
 
-    console.log('📝 Update Class Record Proxy:', {
+    console.log('📝 [PostgreSQL] Update Class Record:', {
       idEstudiante,
       idEvento,
       asistencia,
@@ -37,67 +34,136 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!WIX_API_BASE_URL) {
-      return NextResponse.json(
-        { error: 'WIX API configuration is missing' },
-        { status: 500 }
+    // Find the booking record
+    const existingBooking = await query(
+      `SELECT * FROM "ACADEMICA_BOOKINGS"
+       WHERE "studentId" = $1 AND "eventoId" = $2`,
+      [idEstudiante, idEvento]
+    )
+
+    if (existingBooking.rowCount === 0) {
+      // Create a new booking record if it doesn't exist
+      const bookingId = `booking_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+      const result = await query(
+        `INSERT INTO "ACADEMICA_BOOKINGS" (
+          "_id", "studentId", "eventoId", "asistio", "asistencia",
+          "participacion", "noAprobo", "calificacion", "comentario",
+          "comentarioAdvisor", "nivel", "step",
+          "origen", "_createdDate", "_updatedDate"
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'POSTGRES', NOW(), NOW())
+        RETURNING *`,
+        [
+          bookingId,
+          idEstudiante,
+          idEvento,
+          asistencia === true || asistencia === 'true',
+          asistencia === true || asistencia === 'true',
+          participacion || null,
+          noAprobo === true || noAprobo === 'true',
+          calificacion || null,
+          comentarios || null,
+          advisorAnotaciones || null,
+          nivel || null,
+          step || null
+        ]
       )
-    }
 
-    const wixUrl = `${WIX_API_BASE_URL}/updateClassRecord`
-    console.log('📝 Update Class Record Proxy: Making request to =', wixUrl)
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-
-    if (WIX_API_KEY) {
-      headers['Authorization'] = `Bearer ${WIX_API_KEY}`
-    }
-
-    if (WIX_SECRET) {
-      headers['X-Wix-Secret'] = WIX_SECRET
-    }
-
-    const response = await fetch(wixUrl, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        idEstudiante,
-        idEvento,
-        asistencia,
-        participacion,
-        noAprobo,
-        calificacion,
-        comentarios,
-        advisorAnotaciones,
-        actividadPropuesta,
-        nivel,
-        step
-      })
-    })
-
-    console.log('📝 Update Class Record Proxy: Response status =', response.status)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Wix API error:', response.status, response.statusText, errorText)
+      console.log('✅ [PostgreSQL] Class record created')
 
       return NextResponse.json({
-        success: false,
-        error: `Wix API error: ${response.status} ${response.statusText}`
-      }, { status: response.status })
+        success: true,
+        data: result.rows[0]
+      })
     }
 
-    const data = await response.json()
-    console.log('✅ Update Class Record Proxy: Success')
-    return NextResponse.json(data)
+    // Update existing record
+    const updates: string[] = []
+    const values: any[] = []
+    let paramIndex = 1
 
-  } catch (error) {
-    console.error('📝 Update Class Record Proxy error:', error)
+    if (asistencia !== undefined) {
+      updates.push(`"asistio" = $${paramIndex}`)
+      values.push(asistencia === true || asistencia === 'true')
+      paramIndex++
+      updates.push(`"asistencia" = $${paramIndex}`)
+      values.push(asistencia === true || asistencia === 'true')
+      paramIndex++
+    }
+
+    if (participacion !== undefined) {
+      updates.push(`"participacion" = $${paramIndex}`)
+      values.push(participacion)
+      paramIndex++
+    }
+
+    if (noAprobo !== undefined) {
+      updates.push(`"noAprobo" = $${paramIndex}`)
+      values.push(noAprobo === true || noAprobo === 'true')
+      paramIndex++
+    }
+
+    if (calificacion !== undefined) {
+      updates.push(`"calificacion" = $${paramIndex}`)
+      values.push(calificacion)
+      paramIndex++
+    }
+
+    if (comentarios !== undefined) {
+      updates.push(`"comentario" = $${paramIndex}`)
+      values.push(comentarios)
+      paramIndex++
+    }
+
+    if (advisorAnotaciones !== undefined) {
+      updates.push(`"comentarioAdvisor" = $${paramIndex}`)
+      values.push(advisorAnotaciones)
+      paramIndex++
+    }
+
+    if (actividadPropuesta !== undefined) {
+      updates.push(`"actividadPropuesta" = $${paramIndex}`)
+      values.push(actividadPropuesta)
+      paramIndex++
+    }
+
+    if (nivel !== undefined) {
+      updates.push(`"nivel" = $${paramIndex}`)
+      values.push(nivel)
+      paramIndex++
+    }
+
+    if (step !== undefined) {
+      updates.push(`"step" = $${paramIndex}`)
+      values.push(step)
+      paramIndex++
+    }
+
+    updates.push(`"_updatedDate" = NOW()`)
+
+    values.push(idEstudiante)
+    values.push(idEvento)
+
+    const result = await query(
+      `UPDATE "ACADEMICA_BOOKINGS"
+       SET ${updates.join(', ')}
+       WHERE "studentId" = $${paramIndex} AND "eventoId" = $${paramIndex + 1}
+       RETURNING *`,
+      values
+    )
+
+    console.log('✅ [PostgreSQL] Class record updated')
+
+    return NextResponse.json({
+      success: true,
+      data: result.rows[0]
+    })
+
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Update Class Record error:', error)
     return NextResponse.json({
       success: false,
-      error: 'Internal server error'
+      error: error.message || 'Internal server error'
     }, { status: 500 })
   }
 }

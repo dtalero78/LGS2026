@@ -1,43 +1,72 @@
-import { NextRequest, NextResponse } from 'next/server';
-
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions';
+import { NextRequest, NextResponse } from 'next/server'
+import { query } from '@/lib/postgres'
 
 /**
- * POST /api/postgres/roles
- * Proxy para crear un nuevo rol en Wix ROL_PERMISOS
+ * POST /api/wix-proxy/create-role
+ * Create a new role in PostgreSQL ROL_PERMISOS table
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    console.log('🔄 Proxy: Creando rol en Wix:', body.rol);
+    const body = await request.json()
+    const { rol, descripcion, permisos, activo } = body
 
-    const response = await fetch(`${WIX_API_BASE_URL}/createRole`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Wix API error: ${response.status}`);
+    if (!rol) {
+      return NextResponse.json(
+        { success: false, error: 'El nombre del rol es requerido' },
+        { status: 400 }
+      )
     }
 
-    const data = await response.json();
+    console.log('🔄 [PostgreSQL] Creating role:', rol)
 
-    console.log(`✅ Proxy: Rol creado en Wix`);
+    // Check if role already exists
+    const existingRole = await query(
+      `SELECT "_id" FROM "ROL_PERMISOS" WHERE "rol" = $1`,
+      [rol]
+    )
 
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error('❌ Error en proxy create-role:', error);
+    if (existingRole.rowCount && existingRole.rowCount > 0) {
+      return NextResponse.json(
+        { success: false, error: 'El rol ya existe' },
+        { status: 400 }
+      )
+    }
+
+    // Generate unique ID
+    const roleId = `rol_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+    const result = await query(
+      `INSERT INTO "ROL_PERMISOS" (
+        "_id", "rol", "descripcion", "permisos", "activo",
+        "origen", "_createdDate", "_updatedDate"
+      ) VALUES ($1, $2, $3, $4, $5, 'POSTGRES', NOW(), NOW())
+      RETURNING *`,
+      [
+        roleId,
+        rol,
+        descripcion || null,
+        JSON.stringify(permisos || []),
+        activo !== false
+      ]
+    )
+
+    console.log(`✅ [PostgreSQL] Role created: ${rol}`)
+
+    return NextResponse.json({
+      success: true,
+      role: result.rows[0]
+    })
+
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Error creating role:', error)
     return NextResponse.json(
       {
         success: false,
-        error: 'Error al crear rol en Wix',
-        details: error instanceof Error ? error.message : 'Error desconocido',
+        error: 'Error al crear rol',
+        details: error.message || 'Error desconocido',
       },
       { status: 500 }
-    );
+    )
   }
 }
 
@@ -51,5 +80,5 @@ export async function OPTIONS() {
         'Access-Control-Allow-Headers': 'Content-Type',
       },
     }
-  );
+  )
 }

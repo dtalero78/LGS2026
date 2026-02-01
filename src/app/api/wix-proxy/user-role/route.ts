@@ -1,61 +1,67 @@
 /**
- * API Route: Get user role from Wix
+ * API Route: Get user role from PostgreSQL
  * Queries USUARIOS_ROLES table to verify user and get their role
  */
 
-import { NextResponse } from 'next/server';
-
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions';
+import { NextResponse } from 'next/server'
+import { query } from '@/lib/postgres'
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const email = searchParams.get('email');
+  const { searchParams } = new URL(request.url)
+  const email = searchParams.get('email')
 
   if (!email) {
     return NextResponse.json(
       { success: false, error: 'Email es requerido' },
       { status: 400 }
-    );
+    )
   }
 
   try {
-    console.log('🔍 Consultando rol del usuario en Wix:', email);
+    console.log('🔍 [PostgreSQL] Consultando rol del usuario:', email)
 
-    const response = await fetch(`${WIX_API_BASE_URL}/userRole?email=${encodeURIComponent(email)}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    const result = await query(
+      `SELECT * FROM "USUARIOS_ROLES" WHERE LOWER("email") = LOWER($1)`,
+      [email]
+    )
 
-    if (!response.ok) {
-      console.error('❌ Error en respuesta de Wix:', response.status);
+    if (result.rowCount === 0) {
+      console.log('⚠️ [PostgreSQL] Usuario no encontrado:', email)
       return NextResponse.json(
-        { success: false, error: 'Error al consultar Wix' },
-        { status: response.status }
-      );
+        { success: false, error: 'Usuario no encontrado' },
+        { status: 404 }
+      )
     }
 
-    const data = await response.json();
+    const user = result.rows[0]
 
-    if (!data.success) {
-      console.log('⚠️ Usuario no encontrado o inactivo:', email);
-      return NextResponse.json(data, { status: 404 });
+    if (!user.activo) {
+      console.log('⚠️ [PostgreSQL] Usuario inactivo:', email)
+      return NextResponse.json(
+        { success: false, error: 'Usuario inactivo' },
+        { status: 403 }
+      )
     }
 
-    console.log('✅ Usuario encontrado en Wix:', {
-      email: data.email,
-      rol: data.rol,
-      activo: data.activo
-    });
+    console.log('✅ [PostgreSQL] Usuario encontrado:', {
+      email: user.email,
+      rol: user.rol,
+      activo: user.activo
+    })
 
-    return NextResponse.json(data);
+    return NextResponse.json({
+      success: true,
+      email: user.email,
+      rol: user.rol,
+      activo: user.activo,
+      nombre: user.nombre
+    })
 
-  } catch (error) {
-    console.error('❌ Error al consultar rol del usuario:', error);
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Error al consultar rol del usuario:', error)
     return NextResponse.json(
-      { success: false, error: 'Error interno del servidor' },
+      { success: false, error: error.message || 'Error interno del servidor' },
       { status: 500 }
-    );
+    )
   }
 }

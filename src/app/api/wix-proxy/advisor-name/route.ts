@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions'
+import { query } from '@/lib/postgres'
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,58 +13,33 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log('🔍 Fetching advisor name for ID:', advisorId)
+    console.log('🔍 [PostgreSQL] Fetching advisor name for ID:', advisorId)
 
-    const response = await fetch(
-      `${WIX_API_BASE_URL}/getAdvisors`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
+    const result = await query(
+      `SELECT * FROM "ADVISORS" WHERE "_id" = $1`,
+      [advisorId]
     )
 
-    if (!response.ok) {
-      console.error('❌ Wix API error:', response.status, response.statusText)
-      return NextResponse.json(
-        { success: false, error: `Wix API error: ${response.status}` },
-        { status: response.status }
-      )
-    }
-
-    const data = await response.json()
-    console.log('✅ Advisors list received, searching for ID:', advisorId)
-
-    // Buscar el advisor específico en la lista
-    if (data.success && data.advisors && Array.isArray(data.advisors)) {
-      const advisor = data.advisors.find((adv: any) => adv._id === advisorId)
-
-      if (advisor) {
-        console.log('✅ Advisor encontrado:', advisor)
-        return NextResponse.json({
-          success: true,
-          advisor: advisor
-        })
-      } else {
-        console.log('❌ Advisor no encontrado en la lista')
-        return NextResponse.json({
-          success: false,
-          error: 'Advisor no encontrado'
-        })
-      }
-    } else {
-      console.log('❌ Formato de respuesta inesperado:', data)
+    if (result.rowCount === 0) {
+      console.log('❌ [PostgreSQL] Advisor no encontrado')
       return NextResponse.json({
         success: false,
-        error: 'Formato de respuesta inesperado'
-      })
+        error: 'Advisor no encontrado'
+      }, { status: 404 })
     }
 
-  } catch (error) {
-    console.error('❌ Error in advisor-name API:', error)
+    const advisor = result.rows[0]
+    console.log('✅ [PostgreSQL] Advisor encontrado:', advisor.nombreCompleto)
+
+    return NextResponse.json({
+      success: true,
+      advisor: advisor
+    })
+
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Error in advisor-name API:', error)
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: error.message || 'Internal server error' },
       { status: 500 }
     )
   }
