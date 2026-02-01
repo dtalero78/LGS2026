@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.WIX_API_BASE_URL || process.env.NEXT_PUBLIC_WIX_API_BASE_URL
-const WIX_API_KEY = process.env.WIX_API_KEY
-const WIX_SECRET = process.env.WIX_SECRET
+import { query } from '@/lib/postgres'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const searchTerm = searchParams.get('searchTerm')
 
-    console.log('🔍 Search Proxy: searchTerm =', searchTerm)
-    console.log('🔍 Search Proxy: WIX_API_BASE_URL =', WIX_API_BASE_URL)
+    console.log('🔍 [PostgreSQL] Search: searchTerm =', searchTerm)
 
     if (!searchTerm) {
       return NextResponse.json(
@@ -19,62 +15,54 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    if (!WIX_API_BASE_URL) {
-      return NextResponse.json(
-        { error: 'WIX API configuration is missing' },
-        { status: 500 }
-      )
-    }
+    const searchPattern = `%${searchTerm}%`
 
-    const wixUrl = `${WIX_API_BASE_URL}/search?q=${encodeURIComponent(searchTerm)}`
-    console.log('🔍 Search Proxy: Making request to =', wixUrl)
+    // Search in PEOPLE table
+    const peopleResult = await query(`
+      SELECT * FROM "PEOPLE"
+      WHERE "primerNombre" ILIKE $1
+         OR "segundoNombre" ILIKE $1
+         OR "primerApellido" ILIKE $1
+         OR "segundoApellido" ILIKE $1
+         OR "numeroId" ILIKE $1
+         OR "email" ILIKE $1
+         OR "contrato" ILIKE $1
+         OR "celular" ILIKE $1
+      ORDER BY "primerApellido", "primerNombre"
+      LIMIT 100
+    `, [searchPattern])
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
+    // Search in ACADEMICA table
+    const academicaResult = await query(`
+      SELECT * FROM "ACADEMICA"
+      WHERE "primerNombre" ILIKE $1
+         OR "segundoNombre" ILIKE $1
+         OR "primerApellido" ILIKE $1
+         OR "segundoApellido" ILIKE $1
+         OR "numeroId" ILIKE $1
+         OR "email" ILIKE $1
+      ORDER BY "primerApellido", "primerNombre"
+      LIMIT 100
+    `, [searchPattern])
 
-    if (WIX_API_KEY) {
-      headers['Authorization'] = `Bearer ${WIX_API_KEY}`
-    }
+    console.log('🔍 [PostgreSQL] Search: Found', peopleResult.rows.length, 'people,', academicaResult.rows.length, 'academica')
 
-    if (WIX_SECRET) {
-      headers['X-Wix-Secret'] = WIX_SECRET
-    }
-
-    console.log('🔍 Search Proxy: Headers =', Object.keys(headers))
-
-    const response = await fetch(wixUrl, {
-      method: 'GET',
-      headers,
+    return NextResponse.json({
+      success: true,
+      data: {
+        people: peopleResult.rows,
+        academica: academicaResult.rows
+      },
+      totalCount: peopleResult.rows.length + academicaResult.rows.length
     })
 
-    console.log('🔍 Search Proxy: Response status =', response.status)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Wix API error:', response.status, response.statusText, errorText)
-
-      // Return empty results instead of error to allow fallback searches
-      return NextResponse.json({
-        success: false,
-        data: { people: [], academica: [] },
-        totalCount: 0,
-        error: `Wix API error: ${response.status} ${response.statusText}`
-      })
-    }
-
-    const data = await response.json()
-    console.log('🔍 Search Proxy: Success, data =', JSON.stringify(data, null, 2))
-    return NextResponse.json(data)
-
-  } catch (error) {
-    console.error('🔍 Search Proxy error:', error)
-    // Return empty results instead of error to allow fallback searches
+  } catch (error: any) {
+    console.error('🔍 [PostgreSQL] Search error:', error)
     return NextResponse.json({
       success: false,
       data: { people: [], academica: [] },
       totalCount: 0,
-      error: 'Internal server error'
+      error: error.message || 'Internal server error'
     })
   }
 }
@@ -82,120 +70,84 @@ export async function GET(request: NextRequest) {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { query, tipoUsuario } = body
+    const { query: searchQuery, tipoUsuario } = body
 
-    console.log('🔍 Search Proxy POST: query =', query)
-    console.log('🔍 Search Proxy POST: tipoUsuario =', tipoUsuario)
-    console.log('🔍 Search Proxy POST: WIX_API_BASE_URL =', WIX_API_BASE_URL)
+    console.log('🔍 [PostgreSQL] Search POST: query =', searchQuery)
+    console.log('🔍 [PostgreSQL] Search POST: tipoUsuario =', tipoUsuario)
 
-    if (!WIX_API_BASE_URL) {
-      return NextResponse.json(
-        { error: 'WIX API configuration is missing' },
-        { status: 500 }
-      )
-    }
+    let peopleResult
+    let academicaResult
 
-    // Si hay tipoUsuario pero no query, usar endpoint especializado
-    if (tipoUsuario && (!query || query.trim() === '')) {
-      console.log('🔍 Search Proxy POST: Using specialized query for tipoUsuario =', tipoUsuario)
+    if (tipoUsuario && (!searchQuery || searchQuery.trim() === '')) {
+      // Get all users of a specific type
+      console.log('🔍 [PostgreSQL] Search POST: Getting all users of type =', tipoUsuario)
 
-      // Hacer consulta directa por tipoUsuario (simulando todos los contratos)
-      const searchQuery = 'LGS' // Buscar por algo genérico que esté en la mayoría de contratos
-      const wixUrl = `${WIX_API_BASE_URL}/search?q=${encodeURIComponent(searchQuery)}`
-      console.log('🔍 Search Proxy POST: Making request to =', wixUrl)
+      peopleResult = await query(`
+        SELECT * FROM "PEOPLE"
+        WHERE "tipoUsuario" = $1
+        ORDER BY "primerApellido", "primerNombre"
+        LIMIT 100
+      `, [tipoUsuario])
 
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      }
+      academicaResult = { rows: [] }
+    } else if (searchQuery && searchQuery.trim() !== '') {
+      const searchPattern = `%${searchQuery}%`
 
-      if (WIX_API_KEY) {
-        headers['Authorization'] = `Bearer ${WIX_API_KEY}`
-      }
+      // Build query with optional tipoUsuario filter
+      let peopleQuery = `
+        SELECT * FROM "PEOPLE"
+        WHERE ("primerNombre" ILIKE $1
+           OR "segundoNombre" ILIKE $1
+           OR "primerApellido" ILIKE $1
+           OR "segundoApellido" ILIKE $1
+           OR "numeroId" ILIKE $1
+           OR "email" ILIKE $1
+           OR "contrato" ILIKE $1
+           OR "celular" ILIKE $1)
+      `
 
-      if (WIX_SECRET) {
-        headers['X-Wix-Secret'] = WIX_SECRET
-      }
-
-      const response = await fetch(wixUrl, {
-        method: 'GET',
-        headers,
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        // Filtrar por tipoUsuario en el cliente
-        if (data.data && data.data.people) {
-          data.data.people = data.data.people.filter((person: any) => person.tipoUsuario === tipoUsuario)
-        }
-        console.log('🔍 Search Proxy POST: Filtered results count =', data.data?.people?.length || 0)
-        return NextResponse.json(data)
+      if (tipoUsuario) {
+        peopleQuery += ` AND "tipoUsuario" = $2`
+        peopleResult = await query(peopleQuery + ` ORDER BY "primerApellido", "primerNombre" LIMIT 100`, [searchPattern, tipoUsuario])
       } else {
-        const errorText = await response.text()
-        console.error('Wix API error:', response.status, response.statusText, errorText)
-        return NextResponse.json({
-          success: false,
-          data: { people: [], academica: [] },
-          totalCount: 0,
-          error: `Wix API error: ${response.status} ${response.statusText}`
-        })
+        peopleResult = await query(peopleQuery + ` ORDER BY "primerApellido", "primerNombre" LIMIT 100`, [searchPattern])
       }
+
+      academicaResult = await query(`
+        SELECT * FROM "ACADEMICA"
+        WHERE "primerNombre" ILIKE $1
+           OR "segundoNombre" ILIKE $1
+           OR "primerApellido" ILIKE $1
+           OR "segundoApellido" ILIKE $1
+           OR "numeroId" ILIKE $1
+           OR "email" ILIKE $1
+        ORDER BY "primerApellido", "primerNombre"
+        LIMIT 100
+      `, [searchPattern])
+    } else {
+      // No search criteria
+      peopleResult = { rows: [] }
+      academicaResult = { rows: [] }
     }
 
-    // Si no hay query, devolver todos los usuarios del tipo especificado
-    const searchQuery = query || ''
-    const wixUrl = `${WIX_API_BASE_URL}/search?q=${encodeURIComponent(searchQuery)}`
-    console.log('🔍 Search Proxy POST: Making request to =', wixUrl)
+    console.log('🔍 [PostgreSQL] Search POST: Found', peopleResult.rows.length, 'people')
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-
-    if (WIX_API_KEY) {
-      headers['Authorization'] = `Bearer ${WIX_API_KEY}`
-    }
-
-    if (WIX_SECRET) {
-      headers['X-Wix-Secret'] = WIX_SECRET
-    }
-
-    const response = await fetch(wixUrl, {
-      method: 'GET',
-      headers,
+    return NextResponse.json({
+      success: true,
+      data: {
+        people: peopleResult.rows,
+        academica: academicaResult.rows
+      },
+      totalCount: peopleResult.rows.length + academicaResult.rows.length
     })
 
-    console.log('🔍 Search Proxy POST: Response status =', response.status)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Wix API error:', response.status, response.statusText, errorText)
-
-      // Return empty results instead of error to allow fallback searches
-      return NextResponse.json({
-        success: false,
-        data: { people: [], academica: [] },
-        totalCount: 0,
-        error: `Wix API error: ${response.status} ${response.statusText}`
-      })
-    }
-
-    const data = await response.json()
-
-    // Si se especificó un tipoUsuario, filtrar los resultados
-    if (tipoUsuario && data.data && data.data.people) {
-      data.data.people = data.data.people.filter((person: any) => person.tipoUsuario === tipoUsuario)
-    }
-
-    console.log('🔍 Search Proxy POST: Success, filtered data count =', data.data?.people?.length || 0)
-    return NextResponse.json(data)
-
-  } catch (error) {
-    console.error('🔍 Search Proxy POST error:', error)
-    // Return empty results instead of error to allow fallback searches
+  } catch (error: any) {
+    console.error('🔍 [PostgreSQL] Search POST error:', error)
     return NextResponse.json({
       success: false,
       data: { people: [], academica: [] },
       totalCount: 0,
-      error: 'Internal server error'
+      error: error.message || 'Internal server error'
     })
   }
 }

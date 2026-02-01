@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.WIX_API_BASE_URL || process.env.NEXT_PUBLIC_WIX_API_BASE_URL
-const WIX_API_KEY = process.env.WIX_API_KEY
-const WIX_SECRET = process.env.WIX_SECRET
+import { query } from '@/lib/postgres'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
-    console.log('🔍 Person By ID Proxy: id =', id)
+    console.log('🔍 [PostgreSQL] Person By ID: id =', id)
 
     if (!id) {
       return NextResponse.json(
@@ -18,52 +15,57 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    if (!WIX_API_BASE_URL) {
-      return NextResponse.json(
-        { error: 'WIX API configuration is missing' },
-        { status: 500 }
-      )
-    }
+    // Get person from PEOPLE table
+    const personResult = await query(
+      `SELECT * FROM "PEOPLE" WHERE "_id" = $1`,
+      [id]
+    )
 
-    const wixUrl = `${WIX_API_BASE_URL}/personById?id=${encodeURIComponent(id)}`
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-
-    if (WIX_API_KEY) {
-      headers['Authorization'] = `Bearer ${WIX_API_KEY}`
-    }
-
-    if (WIX_SECRET) {
-      headers['X-Wix-Secret'] = WIX_SECRET
-    }
-
-    const response = await fetch(wixUrl, {
-      method: 'GET',
-      headers,
-    })
-
-    console.log('🔍 Person By ID Proxy: Response status =', response.status)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Wix API error:', response.status, response.statusText, errorText)
+    if (personResult.rows.length === 0) {
       return NextResponse.json({
         success: false,
-        error: `Wix API error: ${response.status} ${response.statusText}`
-      })
+        error: 'Person not found'
+      }, { status: 404 })
     }
 
-    const data = await response.json()
-    console.log('🔍 Person By ID Proxy: Success')
-    return NextResponse.json(data)
+    const person = personResult.rows[0]
 
-  } catch (error) {
-    console.error('🔍 Person By ID Proxy error:', error)
+    // Get related financial data if this is a TITULAR
+    let financialData = null
+    if (person.tipoUsuario === 'TITULAR' && person.contrato) {
+      const financialResult = await query(
+        `SELECT * FROM "FINANCIEROS" WHERE "contrato" = $1 ORDER BY "_createdDate" DESC LIMIT 1`,
+        [person.contrato]
+      )
+      if (financialResult.rows.length > 0) {
+        financialData = financialResult.rows[0]
+      }
+    }
+
+    // Get related persons (beneficiaries if TITULAR, or titular if BENEFICIARIO)
+    let relatedPersons: any[] = []
+    if (person.contrato) {
+      const relatedResult = await query(
+        `SELECT * FROM "PEOPLE" WHERE "contrato" = $1 AND "_id" != $2 ORDER BY "tipoUsuario", "primerApellido"`,
+        [person.contrato, id]
+      )
+      relatedPersons = relatedResult.rows
+    }
+
+    console.log('🔍 [PostgreSQL] Person By ID: Found person:', person.primerNombre, person.primerApellido)
+
+    return NextResponse.json({
+      success: true,
+      person,
+      financialData,
+      relatedPersons
+    })
+
+  } catch (error: any) {
+    console.error('🔍 [PostgreSQL] Person By ID error:', error)
     return NextResponse.json({
       success: false,
-      error: 'Internal server error'
-    })
+      error: error.message || 'Internal server error'
+    }, { status: 500 })
   }
 }

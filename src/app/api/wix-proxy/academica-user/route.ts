@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions'
+import { query } from '@/lib/postgres'
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,38 +13,33 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('📊 Fetching ACADEMICA data for:', idEstudiante)
+    console.log('📊 [PostgreSQL] Fetching ACADEMICA data for:', idEstudiante)
 
-    const response = await fetch(
-      `${WIX_API_BASE_URL}/studentById?id=${idEstudiante}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      }
+    // Get student from ACADEMICA table by _id
+    const studentResult = await query(
+      `SELECT * FROM "ACADEMICA" WHERE "_id" = $1`,
+      [idEstudiante]
     )
 
-    if (!response.ok) {
-      console.error('❌ Wix API error:', response.status, response.statusText)
-      return NextResponse.json(
-        { success: false, error: `Wix API error: ${response.status}` },
-        { status: response.status }
-      )
+    if (studentResult.rows.length === 0) {
+      console.log('📊 [PostgreSQL] Student not found:', idEstudiante)
+      return NextResponse.json({
+        success: true,
+        student: null
+      })
     }
 
-    const data = await response.json()
-    console.log('✅ ACADEMICA data received for:', idEstudiante)
+    console.log('✅ [PostgreSQL] ACADEMICA data found for:', idEstudiante)
 
     return NextResponse.json({
       success: true,
-      student: data.student || null
+      student: studentResult.rows[0]
     })
 
-  } catch (error) {
-    console.error('❌ Error in academica-user API:', error)
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Error in academica-user API:', error)
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: error.message || 'Internal server error' },
       { status: 500 }
     )
   }

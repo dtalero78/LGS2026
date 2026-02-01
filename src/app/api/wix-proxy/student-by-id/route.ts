@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.WIX_API_BASE_URL || process.env.NEXT_PUBLIC_WIX_API_BASE_URL
-const WIX_API_KEY = process.env.WIX_API_KEY
-const WIX_SECRET = process.env.WIX_SECRET
+import { query } from '@/lib/postgres'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
-    console.log('🔍 Student By ID Proxy: id =', id)
+    console.log('🔍 [PostgreSQL] Student By ID: id =', id)
 
     if (!id) {
       return NextResponse.json(
@@ -18,53 +15,45 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    if (!WIX_API_BASE_URL) {
-      return NextResponse.json(
-        { error: 'WIX API configuration is missing' },
-        { status: 500 }
-      )
-    }
+    // Get student from ACADEMICA table
+    const studentResult = await query(
+      `SELECT * FROM "ACADEMICA" WHERE "_id" = $1`,
+      [id]
+    )
 
-    const wixUrl = `${WIX_API_BASE_URL}/studentById?id=${encodeURIComponent(id)}`
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-
-    if (WIX_API_KEY) {
-      headers['Authorization'] = `Bearer ${WIX_API_KEY}`
-    }
-
-    if (WIX_SECRET) {
-      headers['X-Wix-Secret'] = WIX_SECRET
-    }
-
-    const response = await fetch(wixUrl, {
-      method: 'GET',
-      headers,
-      cache: 'no-store', // Disable Next.js fetch cache to always get fresh data
-    })
-
-    console.log('🔍 Student By ID Proxy: Response status =', response.status)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Wix API error:', response.status, response.statusText, errorText)
+    if (studentResult.rows.length === 0) {
       return NextResponse.json({
         success: false,
-        error: `Wix API error: ${response.status} ${response.statusText}`
-      })
+        error: 'Student not found'
+      }, { status: 404 })
     }
 
-    const data = await response.json()
-    console.log('🔍 Student By ID Proxy: Success')
-    return NextResponse.json(data)
+    const student = studentResult.rows[0]
 
-  } catch (error) {
-    console.error('🔍 Student By ID Proxy error:', error)
+    // Get student's classes/bookings
+    const classesResult = await query(
+      `SELECT ab.*, c."titulo", c."hora", c."advisor", c."tipo", c."nivel" as "calendarioNivel"
+       FROM "ACADEMICA_BOOKINGS" ab
+       LEFT JOIN "CALENDARIO" c ON ab."eventoId" = c."_id"
+       WHERE ab."visitorId" = $1
+       ORDER BY ab."dia" DESC
+       LIMIT 50`,
+      [id]
+    )
+
+    console.log('🔍 [PostgreSQL] Student By ID: Found student:', student.primerNombre, student.primerApellido, 'with', classesResult.rows.length, 'classes')
+
+    return NextResponse.json({
+      success: true,
+      student,
+      classes: classesResult.rows
+    })
+
+  } catch (error: any) {
+    console.error('🔍 [PostgreSQL] Student By ID error:', error)
     return NextResponse.json({
       success: false,
-      error: 'Internal server error'
-    })
+      error: error.message || 'Internal server error'
+    }, { status: 500 })
   }
 }

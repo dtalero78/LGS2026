@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.WIX_API_BASE_URL || process.env.NEXT_PUBLIC_WIX_API_BASE_URL
-const WIX_API_KEY = process.env.WIX_API_KEY
-const WIX_SECRET = process.env.WIX_SECRET
+import { query } from '@/lib/postgres'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { personId, tipoUsuario, titularId } = body
 
-    console.log('🔍 Related Persons Proxy:', { personId, tipoUsuario, titularId })
+    console.log('🔍 [PostgreSQL] Related Persons:', { personId, tipoUsuario, titularId })
 
     if (!personId) {
       return NextResponse.json(
@@ -18,55 +15,50 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!WIX_API_BASE_URL) {
-      return NextResponse.json(
-        { error: 'WIX API configuration is missing' },
-        { status: 500 }
-      )
-    }
+    // First get the person to find their contract
+    const personResult = await query(
+      `SELECT "contrato", "tipoUsuario" FROM "PEOPLE" WHERE "_id" = $1`,
+      [personId]
+    )
 
-    const wixUrl = `${WIX_API_BASE_URL}/getRelatedPersons`
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-
-    if (WIX_API_KEY) {
-      headers['Authorization'] = `Bearer ${WIX_API_KEY}`
-    }
-
-    if (WIX_SECRET) {
-      headers['X-Wix-Secret'] = WIX_SECRET
-    }
-
-    const response = await fetch(wixUrl, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ personId, tipoUsuario, titularId })
-    })
-
-    console.log('🔍 Related Persons Proxy: Response status =', response.status)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Wix API error:', response.status, response.statusText, errorText)
+    if (personResult.rows.length === 0) {
       return NextResponse.json({
-        success: false,
-        relatedPersons: [],
-        error: `Wix API error: ${response.status} ${response.statusText}`
+        success: true,
+        relatedPersons: []
       })
     }
 
-    const data = await response.json()
-    console.log('🔍 Related Persons Proxy: Success, data =', data)
-    return NextResponse.json(data)
+    const person = personResult.rows[0]
+    const contrato = person.contrato
 
-  } catch (error) {
-    console.error('🔍 Related Persons Proxy error:', error)
+    if (!contrato) {
+      return NextResponse.json({
+        success: true,
+        relatedPersons: []
+      })
+    }
+
+    // Get all related persons with the same contract (excluding the current person)
+    const relatedResult = await query(
+      `SELECT * FROM "PEOPLE"
+       WHERE "contrato" = $1 AND "_id" != $2
+       ORDER BY "tipoUsuario" DESC, "primerApellido", "primerNombre"`,
+      [contrato, personId]
+    )
+
+    console.log('🔍 [PostgreSQL] Related Persons: Found', relatedResult.rows.length, 'related persons')
+
+    return NextResponse.json({
+      success: true,
+      relatedPersons: relatedResult.rows
+    })
+
+  } catch (error: any) {
+    console.error('🔍 [PostgreSQL] Related Persons error:', error)
     return NextResponse.json({
       success: false,
       relatedPersons: [],
-      error: 'Internal server error'
+      error: error.message || 'Internal server error'
     })
   }
 }
