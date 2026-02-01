@@ -1,81 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.WIX_API_BASE_URL || process.env.NEXT_PUBLIC_WIX_API_BASE_URL
-const WIX_API_KEY = process.env.WIX_API_KEY
-const WIX_SECRET = process.env.WIX_SECRET
+import { query } from '@/lib/postgres'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 Beneficiarios Sin Registro Proxy: WIX_API_BASE_URL =', WIX_API_BASE_URL)
+    console.log('🔍 [PostgreSQL] Fetching beneficiarios sin registro ACADEMICA...')
 
-    if (!WIX_API_BASE_URL) {
-      return NextResponse.json(
-        { error: 'WIX API configuration is missing' },
-        { status: 500 }
+    // Find beneficiaries who don't have an ACADEMICA record
+    const result = await query(`
+      SELECT p.*
+      FROM "PEOPLE" p
+      WHERE p."tipoUsuario" = 'BENEFICIARIO'
+        AND p."estado" = 'Aprobado'
+        AND p."estadoInactivo" IS NOT TRUE
+        AND NOT EXISTS (
+          SELECT 1 FROM "ACADEMICA" a WHERE a."visitorId" = p."_id"
+        )
+      ORDER BY p."_createdDate" DESC
+    `)
+
+    // Also get ACADEMICA records without proper PEOPLE link for stats
+    const academicaOrphanResult = await query(`
+      SELECT a.*
+      FROM "ACADEMICA" a
+      WHERE NOT EXISTS (
+        SELECT 1 FROM "PEOPLE" p WHERE p."_id" = a."visitorId"
       )
-    }
+    `)
 
-    // Agregar timestamp para evitar cache
-    const wixUrl = `${WIX_API_BASE_URL}/beneficiariosSinRegistro?_t=${Date.now()}`
-    console.log('🔍 Beneficiarios Sin Registro Proxy: Making request to =', wixUrl)
+    console.log('✅ [PostgreSQL] Beneficiarios sin registro:', result.rowCount)
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0'
-    }
-
-    if (WIX_API_KEY) {
-      headers['Authorization'] = `Bearer ${WIX_API_KEY}`
-    }
-
-    if (WIX_SECRET) {
-      headers['X-Wix-Secret'] = WIX_SECRET
-    }
-
-    console.log('🔍 Beneficiarios Sin Registro Proxy: Headers =', Object.keys(headers))
-
-    const response = await fetch(wixUrl, {
-      method: 'GET',
-      headers,
+    return NextResponse.json({
+      success: true,
+      data: {
+        people: result.rows,
+        academica: academicaOrphanResult.rows
+      },
+      totalCount: result.rowCount || 0,
+      stats: {
+        beneficiariosSinRegistro: result.rowCount || 0,
+        academicasSinPeople: academicaOrphanResult.rowCount || 0
+      }
     })
 
-    console.log('🔍 Beneficiarios Sin Registro Proxy: Response status =', response.status)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Wix API error:', response.status, response.statusText, errorText)
-
-      return NextResponse.json({
-        success: false,
-        data: { people: [], academica: [] },
-        totalCount: 0,
-        error: `Wix API error: ${response.status} ${response.statusText}`
-      })
-    }
-
-    const data = await response.json()
-    console.log('🔍 Beneficiarios Sin Registro Proxy: Success, data count =', data.data?.people?.length || 0)
-
-    // Log stats if available
-    if (data.stats) {
-      console.log('📊 Stats recibidas de Wix:', data.stats)
-    }
-
-    // Log específico para debug
-    console.log('🔍 Debug: beneficiariosSinRegistro =', data.stats?.beneficiariosSinRegistro)
-    console.log('🔍 Debug: data.data.people length =', data.data?.people?.length)
-
-    return NextResponse.json(data)
-
-  } catch (error) {
-    console.error('🔍 Beneficiarios Sin Registro Proxy error:', error)
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Beneficiarios Sin Registro error:', error)
     return NextResponse.json({
       success: false,
       data: { people: [], academica: [] },
       totalCount: 0,
-      error: 'Internal server error'
+      error: error.message || 'Internal server error'
     })
   }
 }

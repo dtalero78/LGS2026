@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions'
+import { query } from '@/lib/postgres'
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,42 +9,60 @@ export async function GET(request: NextRequest) {
     const fechaInicio = searchParams.get('fechaInicio')
     const fechaFin = searchParams.get('fechaFin')
 
-    console.log('🗓️ Fetching calendar events:', { nivel, tipoEvento, fechaInicio, fechaFin })
+    console.log('🗓️ [PostgreSQL] Fetching calendar events:', { nivel, tipoEvento, fechaInicio, fechaFin })
 
-    // Build query string
-    const params = new URLSearchParams()
-    if (nivel) params.append('nivel', nivel)
-    if (tipoEvento) params.append('tipoEvento', tipoEvento)
-    if (fechaInicio) params.append('fechaInicio', fechaInicio)
-    if (fechaFin) params.append('fechaFin', fechaFin)
+    // Build query with optional filters
+    let sql = `
+      SELECT
+        c.*,
+        (SELECT COUNT(*) FROM "ACADEMICA_BOOKINGS" ab WHERE ab."eventoId" = c."_id") as "inscritosCount",
+        (SELECT COUNT(*) FROM "ACADEMICA_BOOKINGS" ab WHERE ab."eventoId" = c."_id" AND ab."asistio" = true) as "asistieronCount"
+      FROM "CALENDARIO" c
+      WHERE 1=1
+    `
+    const params: any[] = []
+    let paramIndex = 1
 
-    const response = await fetch(
-      `${WIX_API_BASE_URL}/calendarioEventos?${params.toString()}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      }
-    )
-
-    if (!response.ok) {
-      console.error('❌ Wix API error:', response.status, response.statusText)
-      return NextResponse.json(
-        { success: false, error: `Wix API error: ${response.status}` },
-        { status: response.status }
-      )
+    if (nivel) {
+      sql += ` AND c."nivel" = $${paramIndex}`
+      params.push(nivel)
+      paramIndex++
     }
 
-    const data = await response.json()
-    console.log('✅ Calendar events received:', data)
+    if (tipoEvento) {
+      sql += ` AND c."tipo" = $${paramIndex}`
+      params.push(tipoEvento)
+      paramIndex++
+    }
 
-    return NextResponse.json(data)
+    if (fechaInicio) {
+      sql += ` AND c."dia" >= $${paramIndex}::timestamp with time zone`
+      params.push(fechaInicio)
+      paramIndex++
+    }
 
-  } catch (error) {
-    console.error('❌ Error in calendario-eventos API:', error)
+    if (fechaFin) {
+      sql += ` AND c."dia" <= $${paramIndex}::timestamp with time zone`
+      params.push(fechaFin)
+      paramIndex++
+    }
+
+    sql += ` ORDER BY c."dia" DESC`
+
+    const result = await query(sql, params)
+
+    console.log('✅ [PostgreSQL] Calendar events received:', result.rowCount)
+
+    return NextResponse.json({
+      success: true,
+      events: result.rows,
+      total: result.rowCount || 0
+    })
+
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Error in calendario-eventos API:', error)
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: error.message || 'Internal server error' },
       { status: 500 }
     )
   }

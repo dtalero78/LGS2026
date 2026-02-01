@@ -1,55 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions'
+import { query } from '@/lib/postgres'
 
 // Aumentar timeout para permitir cargar todos los datos
 export const maxDuration = 60 // 60 segundos
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('📚 Cargando TODAS las sesiones de CLASSES...')
+    console.log('📚 [PostgreSQL] Cargando TODAS las sesiones de CLASSES...')
 
     const body = await request.json()
     const { fechaInicio, fechaFin } = body
 
-    // Llamar al endpoint getAllClassSessions de Wix
-    const response = await fetch(
-      `${WIX_API_BASE_URL}/getAllClassSessions`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fechaInicio,
-          fechaFin
-        })
-      }
-    )
+    // Build query with optional date filters
+    let sql = `
+      SELECT
+        c.*,
+        (SELECT COUNT(*) FROM "ACADEMICA_BOOKINGS" ab WHERE ab."eventoId" = c."_id") as "inscritosCount",
+        (SELECT COUNT(*) FROM "ACADEMICA_BOOKINGS" ab WHERE ab."eventoId" = c."_id" AND ab."asistio" = true) as "asistieronCount"
+      FROM "CALENDARIO" c
+      WHERE c."tipo" = 'SESSION' OR c."tipo" = 'CLASS'
+    `
+    const params: any[] = []
+    let paramIndex = 1
 
-    if (!response.ok) {
-      console.error('❌ Wix API error:', response.status, response.statusText)
-      const errorText = await response.text()
-      console.error('❌ Wix API response:', errorText)
-      return NextResponse.json(
-        { success: false, error: `Wix API error: ${response.status} - ${errorText}` },
-        { status: response.status }
-      )
+    if (fechaInicio) {
+      sql += ` AND c."dia" >= $${paramIndex}::timestamp with time zone`
+      params.push(fechaInicio)
+      paramIndex++
     }
 
-    const data = await response.json()
-    console.log('✅ Datos de sesiones recibidos de Wix:', data.total || 0, 'sesiones')
+    if (fechaFin) {
+      sql += ` AND c."dia" <= $${paramIndex}::timestamp with time zone`
+      params.push(fechaFin)
+      paramIndex++
+    }
+
+    sql += ` ORDER BY c."dia" DESC`
+
+    const result = await query(sql, params)
+
+    console.log('✅ [PostgreSQL] Datos de sesiones recibidos:', result.rowCount, 'sesiones')
 
     return NextResponse.json({
       success: true,
-      sessions: data.sessions || data.items || [],
-      total: data.total || data.totalCount || 0
+      sessions: result.rows,
+      total: result.rowCount || 0
     })
 
-  } catch (error) {
-    console.error('❌ Error en all-sessions API:', error)
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Error en all-sessions API:', error)
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: error.message || 'Internal server error' },
       { status: 500 }
     )
   }

@@ -1,45 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { query } from '@/lib/postgres'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('📚 [PostgreSQL] Fetching niveles')
+    console.log('📚 [PostgreSQL] Fetching niveles directly')
 
-    // Use PostgreSQL endpoint
-    const baseUrl = process.env.NODE_ENV === 'production'
-      ? (process.env.NEXTAUTH_URL || '')
-      : 'http://localhost:3001'
+    const result = await query(`SELECT * FROM "NIVELES" ORDER BY "code" ASC`)
 
-    const response = await fetch(`${baseUrl}/api/postgres/niveles`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store'
-    })
-
-    if (!response.ok) {
-      console.error('❌ PostgreSQL API error:', response.status, response.statusText)
-      throw new Error(`PostgreSQL API error: ${response.status}`)
+    if (result.rowCount === 0) {
+      console.log('⚠️ [PostgreSQL] No niveles found')
+      return NextResponse.json({
+        success: true,
+        niveles: [],
+        source: 'postgres'
+      })
     }
 
-    const data = await response.json()
-
-    if (!data.success || !data.data) {
-      throw new Error('Invalid response from PostgreSQL')
-    }
-
-    // Transform PostgreSQL response to match Wix format
+    // Transform PostgreSQL response to match expected format
     // PostgreSQL returns individual step records, need to group by level code
     const stepsGroupedByLevel: Record<string, any[]> = {}
 
-    data.data.forEach((step: any) => {
+    result.rows.forEach((step: any) => {
       if (!stepsGroupedByLevel[step.code]) {
         stepsGroupedByLevel[step.code] = []
       }
       stepsGroupedByLevel[step.code].push(step)
     })
 
-    // Build niveles array in Wix format
+    // Build niveles array in expected format
     const niveles = Object.keys(stepsGroupedByLevel).map(code => {
       const steps = stepsGroupedByLevel[code]
       const firstStep = steps[0]
@@ -64,7 +52,7 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    console.log('✅ Niveles received from PostgreSQL:', niveles.length, 'levels')
+    console.log('✅ [PostgreSQL] Niveles received:', niveles.length, 'levels')
 
     return NextResponse.json({
       success: true,
@@ -72,8 +60,8 @@ export async function GET(request: NextRequest) {
       source: 'postgres'
     })
 
-  } catch (error) {
-    console.error('❌ Error in niveles API:', error)
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Error in niveles API:', error)
 
     // Fallback con datos estructurados básicos en caso de error
     const fallbackNiveles = [

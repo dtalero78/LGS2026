@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.WIX_API_BASE_URL || process.env.NEXT_PUBLIC_WIX_API_BASE_URL
+import { query } from '@/lib/postgres'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { advisorId, fechaInicio, fechaFin } = body
 
-    console.log('📅 Calendario Events By Advisor Proxy:', { advisorId, fechaInicio, fechaFin })
+    console.log('📅 [PostgreSQL] Calendario Events By Advisor:', { advisorId, fechaInicio, fechaFin })
 
     if (!advisorId) {
       return NextResponse.json(
@@ -16,46 +15,48 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!WIX_API_BASE_URL) {
-      return NextResponse.json(
-        { success: false, error: 'WIX API configuration is missing' },
-        { status: 500 }
-      )
+    // Build query with optional date filters
+    let sql = `
+      SELECT
+        c.*,
+        (SELECT COUNT(*) FROM "ACADEMICA_BOOKINGS" ab WHERE ab."eventoId" = c."_id") as "inscritosCount",
+        (SELECT COUNT(*) FROM "ACADEMICA_BOOKINGS" ab WHERE ab."eventoId" = c."_id" AND ab."asistio" = true) as "asistieronCount"
+      FROM "CALENDARIO" c
+      WHERE c."advisor" = $1
+    `
+    const params: any[] = [advisorId]
+    let paramIndex = 2
+
+    if (fechaInicio) {
+      sql += ` AND c."dia" >= $${paramIndex}::timestamp with time zone`
+      params.push(fechaInicio)
+      paramIndex++
     }
 
-    const wixUrl = `${WIX_API_BASE_URL}/getCalendarioEventsByAdvisor`
-    console.log('📅 Making request to:', wixUrl)
+    if (fechaFin) {
+      sql += ` AND c."dia" <= $${paramIndex}::timestamp with time zone`
+      params.push(fechaFin)
+      paramIndex++
+    }
 
-    const response = await fetch(wixUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ advisorId, fechaInicio, fechaFin })
+    sql += ` ORDER BY c."dia" DESC`
+
+    const result = await query(sql, params)
+
+    console.log('📅 [PostgreSQL] Success, eventos count:', result.rowCount)
+
+    return NextResponse.json({
+      success: true,
+      events: result.rows,
+      eventos: result.rows,
+      total: result.rowCount || 0
     })
 
-    console.log('📅 Response status:', response.status)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Wix API error:', response.status, response.statusText, errorText)
-
-      return NextResponse.json({
-        success: false,
-        error: `Wix API error: ${response.status} ${response.statusText}`
-      }, { status: response.status })
-    }
-
-    const data = await response.json()
-    const eventCount = data.events?.length || data.eventos?.length || 0
-    console.log('📅 Success, eventos count:', eventCount)
-    return NextResponse.json(data)
-
-  } catch (error) {
-    console.error('📅 Calendario Events By Advisor Proxy error:', error)
+  } catch (error: any) {
+    console.error('📅 [PostgreSQL] Calendario Events By Advisor error:', error)
     return NextResponse.json({
       success: false,
-      error: 'Internal server error'
+      error: error.message || 'Internal server error'
     }, { status: 500 })
   }
 }
