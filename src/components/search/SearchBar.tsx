@@ -27,8 +27,8 @@ export default function SearchBar() {
 
   const searchFunction = async (searchTerm: string): Promise<SearchResult> => {
     try {
-      // Use unified search proxy API - searches name, document, and contract
-      const response = await fetch(`/api/wix-proxy/search?searchTerm=${encodeURIComponent(searchTerm)}`)
+      // Use PostgreSQL unified search API - searches name, document, contract, and email
+      const response = await fetch(`/api/postgres/search?searchTerm=${encodeURIComponent(searchTerm)}`)
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
@@ -36,20 +36,11 @@ export default function SearchBar() {
 
       const data = await response.json()
 
-      // Transform response to match expected SearchResult structure if needed
-      if (data && data.data) {
-        return {
-          success: data.success || true,
-          data: data.data,
-          totalCount: data.data.totalResults || ((data.data.people?.length || 0) + (data.data.academica?.length || 0))
-        }
-      }
-
-      // Handle direct response
+      // PostgreSQL endpoint returns consistent structure
       return {
-        success: true,
-        data: data,
-        totalCount: (data.people?.length || 0) + (data.academica?.length || 0)
+        success: data.success,
+        data: data.data,
+        totalCount: data.totalCount
       }
     } catch (error) {
       console.error('Search error:', error)

@@ -396,7 +396,7 @@ export async function getPermissionsByRole(role: Role): Promise<Permission[]> {
   try {
     const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3001';
     const response = await fetch(
-      `${baseUrl}/api/wix-proxy/role-permissions?rol=${role}`,
+      `${baseUrl}/api/postgres/roles?rol=${role}`,
       {
         cache: 'no-store',
         signal: AbortSignal.timeout(3000) // Timeout 3 segundos

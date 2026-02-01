@@ -47,7 +47,7 @@ export default function PersonComments({ personId }: PersonCommentsProps) {
   const loadComments = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`/api/wix-proxy/person-comments?id=${personId}`)
+      const response = await fetch(`/api/postgres/people?id=${personId}`)
       const data = await response.json()
 
       if (data.success) {
@@ -76,7 +76,7 @@ export default function PersonComments({ personId }: PersonCommentsProps) {
     setError(null)
 
     try {
-      const response = await fetch('/api/wix-proxy/add-comment', {
+      const response = await fetch('/api/postgres/people', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

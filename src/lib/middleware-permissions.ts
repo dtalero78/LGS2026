@@ -17,7 +17,7 @@ const permissionsCache = new Map<Role, CacheEntry>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
 /**
- * Carga los permisos de un rol desde Wix (con cache)
+ * Carga los permisos de un rol desde PostgreSQL (con cache)
  */
 export async function getPermissionsForRoleFromWix(role: Role): Promise<Permission[]> {
   // Verificar cache
@@ -29,23 +29,23 @@ export async function getPermissionsForRoleFromWix(role: Role): Promise<Permissi
     return cached.permissions;
   }
 
-  console.log(`📡 [Middleware] Cargando permisos desde Wix para rol ${role}`);
+  console.log(`📡 [Middleware] Cargando permisos desde API para rol ${role}`);
 
   try {
+    // Use API endpoint instead of direct PostgreSQL connection
+    // Middleware runs in Edge Runtime which doesn't support pg module
+    const apiUrl = process.env.NEXTAUTH_URL || 'http://localhost:3001';
     const response = await fetch(
-      `${WIX_API_BASE_URL}/rolePermissions?rol=${encodeURIComponent(role)}`,
+      `${apiUrl}/api/postgres/permissions?rol=${encodeURIComponent(role)}`,
       {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        // No usar cache de Next.js/fetch
+        headers: { 'Content-Type': 'application/json' },
         next: { revalidate: 0 },
       }
     );
 
     if (!response.ok) {
-      throw new Error(`Wix API error: ${response.status}`);
+      throw new Error(`API error: ${response.status}`);
     }
 
     const data = await response.json();
@@ -59,16 +59,18 @@ export async function getPermissionsForRoleFromWix(role: Role): Promise<Permissi
         timestamp: now,
       });
 
-      console.log(`✅ [Middleware] Permisos cargados desde Wix: ${permissions.length} permisos`);
+      console.log(`✅ [Middleware] Permisos cargados: ${permissions.length} permisos`);
       return permissions;
     }
 
-    throw new Error('Invalid Wix response');
+    // Si no hay resultado, retornar array vacío
+    console.warn(`⚠️ [Middleware] Rol ${role} no encontrado`);
+    return [];
   } catch (error) {
-    console.error(`❌ [Middleware] Error cargando permisos desde Wix para ${role}:`, error);
+    console.error(`❌ [Middleware] API error para ${role}:`, error);
 
-    // Fallback: usar permisos hardcodeados
-    console.log(`⚠️ [Middleware] Usando fallback para rol ${role}`);
+    // En caso de error, usar fallback hardcodeado
+    console.log(`⚠️ [Middleware] Usando permisos hardcodeados para rol ${role}`);
     const { getPermissionsByRole } = await import('@/config/roles');
     return getPermissionsByRole(role);
   }

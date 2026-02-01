@@ -91,7 +91,7 @@ function PanelAdvisorContent() {
       setLoading(true)
       setError(null)
 
-      const response = await fetch(`/api/wix-proxy/advisor-by-email?email=${encodeURIComponent(email)}`)
+      const response = await fetch(`/api/postgres/advisors/by-email?email=${encodeURIComponent(email)}`)
 
       if (!response.ok) {
         throw new Error('Error al buscar advisor')
@@ -126,7 +126,7 @@ function PanelAdvisorContent() {
       const fechaFin = monthEnd.toISOString()
 
       // Usar el endpoint correcto de Wix para obtener eventos por advisor
-      const response = await fetch('/api/wix-proxy/calendario-events-by-advisor', {
+      const response = await fetch('/api/postgres/calendar/events-by-advisor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -154,7 +154,7 @@ function PanelAdvisorContent() {
         const eventIds = eventos.map((event: CalendarioEvent) => event._id)
 
         // Usar el endpoint batch para obtener todos los conteos de una vez (más eficiente)
-        const countsResponse = await fetch('/api/wix-proxy/eventos-inscritos-batch', {
+        const countsResponse = await fetch('/api/postgres/events/batch-counts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ eventIds })
@@ -194,7 +194,7 @@ function PanelAdvisorContent() {
   const loadBooks = async () => {
     try {
       setBooksLoading(true)
-      const response = await fetch('/api/wix-proxy/material-usuario?step=Step 0')
+      const response = await fetch('/api/postgres/materials/usuario?step=Step 0')
 
       if (!response.ok) {
         throw new Error('Error al cargar libros')

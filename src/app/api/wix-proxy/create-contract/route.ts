@@ -26,7 +26,7 @@ async function getNextSequentialNumber(countryCode: string, year: string): Promi
   try {
     // Fetch existing contracts to find the highest number
     const apiBaseUrl = process.env.NEXTAUTH_URL || '';
-    const response = await fetch(`${apiBaseUrl}/api/wix-proxy/contracts-by-pattern`, {
+    const response = await fetch(`${apiBaseUrl}/api/postgres/contracts/search`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
 
     // Create titular in PEOPLE collection
     const apiBaseUrl = process.env.NEXTAUTH_URL || '';
-    const createTitularResponse = await fetch(`${apiBaseUrl}/api/wix-proxy/create-person`, {
+    const createTitularResponse = await fetch(`${apiBaseUrl}/api/postgres/people`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
         _createdDate: new Date().toISOString()
       };
 
-      const createFinancialResponse = await fetch(`${apiBaseUrl}/api/wix-proxy/create-financial`, {
+      const createFinancialResponse = await fetch(`${apiBaseUrl}/api/postgres/financial`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
         _createdDate: new Date().toISOString()
       };
 
-      const createTitularBeneficiarioResponse = await fetch(`${apiBaseUrl}/api/wix-proxy/create-person`, {
+      const createTitularBeneficiarioResponse = await fetch(`${apiBaseUrl}/api/postgres/people`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -257,7 +257,7 @@ export async function POST(request: NextRequest) {
         _createdDate: new Date().toISOString()
       };
 
-      const createBeneficiarioResponse = await fetch(`${apiBaseUrl}/api/wix-proxy/create-person`, {
+      const createBeneficiarioResponse = await fetch(`${apiBaseUrl}/api/postgres/people`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

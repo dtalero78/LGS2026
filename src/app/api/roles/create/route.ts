@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
 
     // Validar que el rol no exista ya
     const checkResponse = await fetch(
-      `${process.env.NEXTAUTH_URL || 'http://localhost:3001'}/api/wix-proxy/role-permissions?rol=${encodeURIComponent(rol)}`,
+      `${process.env.NEXTAUTH_URL || 'http://localhost:3001'}/api/postgres/roles?rol=${encodeURIComponent(rol)}`,
       {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
 
     // Crear rol en Wix
     const response = await fetch(
-      `${process.env.NEXTAUTH_URL || 'http://localhost:3001'}/api/wix-proxy/create-role`,
+      `${process.env.NEXTAUTH_URL || 'http://localhost:3001'}/api/postgres/roles`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

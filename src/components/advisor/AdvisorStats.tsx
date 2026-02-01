@@ -49,7 +49,7 @@ export default function AdvisorStats({ advisorId, advisorName }: AdvisorStatsPro
 
   const loadAdvisors = async () => {
     try {
-      const response = await fetch('/api/wix-proxy/advisors', {
+      const response = await fetch('/api/postgres/advisors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       })
@@ -73,7 +73,7 @@ export default function AdvisorStats({ advisorId, advisorName }: AdvisorStatsPro
       const monthStart = startOfMonth(currentMonth)
       const monthEnd = endOfMonth(currentMonth)
 
-      const response = await fetch('/api/wix-proxy/calendario-events', {
+      const response = await fetch('/api/postgres/calendar/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

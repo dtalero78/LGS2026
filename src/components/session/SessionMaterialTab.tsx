@@ -33,7 +33,7 @@ export default function SessionMaterialTab({ eventoNombre }: SessionMaterialTabP
       setError(null)
       console.log('📚 Cargando material para step:', eventoNombre)
 
-      const response = await fetch(`/api/wix-proxy/nivel-material?step=${encodeURIComponent(eventoNombre)}`)
+      const response = await fetch(`/api/postgres/materials/nivel?step=${encodeURIComponent(eventoNombre)}`)
 
       if (!response.ok) throw new Error('Error al cargar material')
 

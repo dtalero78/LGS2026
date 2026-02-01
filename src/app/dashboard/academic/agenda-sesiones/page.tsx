@@ -268,7 +268,7 @@ export default function AgendaSesionesPage() {
 
         console.log(`📦 ${typeLabel}: Procesando batch ${currentBatch}/${totalBatches} con ${batchIds.length} eventos`)
 
-        const inscripcionesResponse = await fetch('/api/wix-proxy/eventos-inscritos-batch', {
+        const inscripcionesResponse = await fetch('/api/postgres/events/batch-counts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ eventIds: batchIds })
@@ -395,19 +395,15 @@ export default function AgendaSesionesPage() {
         calendarEnd.setDate(monthEnd.getDate() + (6 - endDayOfWeek))
       }
 
-      const eventsResponse = await fetch('/api/wix-proxy/calendario-events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fechaInicio: startOfDay(calendarStart).toISOString(),
-          fechaFin: endOfDay(calendarEnd).toISOString()
-        })
-      })
+      // Use PostgreSQL calendar endpoint
+      const startDateStr = format(startOfDay(calendarStart), 'yyyy-MM-dd')
+      const endDateStr = format(endOfDay(calendarEnd), 'yyyy-MM-dd')
+      const eventsResponse = await fetch(`/api/postgres/calendar/events?startDate=${startDateStr}&endDate=${endDateStr}&limit=1000`)
 
       if (eventsResponse.ok) {
         const eventsData = await eventsResponse.json()
-        if (eventsData.success && eventsData.events) {
-          const basicEvents = eventsData.events.map((event: any) => ({
+        if (eventsData.success && eventsData.data) {
+          const basicEvents = eventsData.data.map((event: any) => ({
             ...event,
             dia: new Date(event.dia),
             inscritos: 0, // Inicializar en 0
@@ -417,7 +413,7 @@ export default function AgendaSesionesPage() {
           setEvents(basicEvents)
 
           // Triggear la carga de inscripciones y asistencias
-          const eventIds = eventsData.events.map((event: any) => event._id)
+          const eventIds = eventsData.data.map((event: any) => event._id)
           console.log('🚀 Cargando inscripciones + asistencias para nuevo mes:', eventIds.length, 'eventos')
           setShouldUpdateInscritos({ eventIds, advisorsData: advisors })
         }
@@ -462,17 +458,16 @@ export default function AgendaSesionesPage() {
   // Cargar datos desde servidor
   const loadInitialData = async (targetDate: Date = new Date()) => {
     try {
-      // Cargar advisors
-      const advisorsResponse = await fetch('/api/wix-proxy/advisors', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      })
+      // Cargar advisors from PostgreSQL
+      const advisorsResponse = await fetch('/api/postgres/advisors')
 
       let advisorsData: Advisor[] = []
       if (advisorsResponse.ok) {
         const advisorsResult = await advisorsResponse.json()
-        if (advisorsResult.success && advisorsResult.advisors) {
-          advisorsData = advisorsResult.advisors
+        // API puede devolver "advisors" o "data"
+        const advisorsArray = advisorsResult.advisors || advisorsResult.data || []
+        if (advisorsResult.success && advisorsArray.length > 0) {
+          advisorsData = advisorsArray
           setAdvisors(advisorsData)
         }
       }
@@ -494,14 +489,10 @@ export default function AgendaSesionesPage() {
         calendarEnd.setDate(monthEnd.getDate() + (6 - endDayOfWeek))
       }
 
-      const eventsResponse = await fetch('/api/wix-proxy/calendario-events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fechaInicio: startOfDay(calendarStart).toISOString(),
-          fechaFin: endOfDay(calendarEnd).toISOString()
-        })
-      })
+      // Use PostgreSQL calendar endpoint
+      const startDateStr = format(startOfDay(calendarStart), 'yyyy-MM-dd')
+      const endDateStr = format(endOfDay(calendarEnd), 'yyyy-MM-dd')
+      const eventsResponse = await fetch(`/api/postgres/calendar/events?startDate=${startDateStr}&endDate=${endDateStr}&limit=1000`)
 
       // Función local para obtener advisor name
       const getAdvisorNameLocal = (advisor: any): string => {
@@ -517,9 +508,9 @@ export default function AgendaSesionesPage() {
 
       if (eventsResponse.ok) {
         const eventsData = await eventsResponse.json()
-        if (eventsData.success && eventsData.events) {
+        if (eventsData.success && eventsData.data) {
           // Primero, cargar eventos con datos básicos
-          const basicEvents = eventsData.events.map((event: any) => ({
+          const basicEvents = eventsData.data.map((event: any) => ({
             ...event,
             dia: new Date(event.dia),
             inscritos: 0, // Inicializar en 0
@@ -529,7 +520,7 @@ export default function AgendaSesionesPage() {
           setEvents(basicEvents)
 
           // Después, triggear la carga de inscripciones y asistencias usando useEffect
-          const eventIds = eventsData.events.map((event: any) => event._id)
+          const eventIds = eventsData.data.map((event: any) => event._id)
           console.log('🚀 Frontend: Triggering inscripciones + asistencias update para', eventIds.length, 'eventos')
           setShouldUpdateInscritos({ eventIds, advisorsData })
         }
@@ -609,7 +600,7 @@ export default function AgendaSesionesPage() {
     if (!confirm('¿Estás seguro de que deseas eliminar este evento?')) return
 
     try {
-      const response = await fetch(`/api/wix-proxy/delete-calendario-event/${eventId}`, {
+      const response = await fetch(`/api/postgres/events/${eventId}`, {
         method: 'DELETE'
       })
 
@@ -634,10 +625,10 @@ export default function AgendaSesionesPage() {
     try {
       if (editingEvent) {
         // Actualizar evento existente
-        const response = await fetch('/api/wix-proxy/update-calendario-event', {
+        const response = await fetch(`/api/postgres/events/${editingEvent._id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...eventData, _id: editingEvent._id })
+          body: JSON.stringify(eventData)
         })
 
         if (response.ok) {
@@ -651,7 +642,7 @@ export default function AgendaSesionesPage() {
         }
       } else {
         // Crear nuevo evento
-        const response = await fetch('/api/wix-proxy/create-calendario-event', {
+        const response = await fetch('/api/postgres/events', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(eventData)
@@ -758,7 +749,7 @@ export default function AgendaSesionesPage() {
             </button>
 
             <button
-              onClick={() => window.open('/api/wix-proxy/export-calendar-csv', '_blank')}
+              onClick={() => window.open('/api/postgres/calendar/export-csv', '_blank')}
               className="btn btn-secondary"
             >
               📥 Exportar CSV

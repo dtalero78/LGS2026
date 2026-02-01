@@ -1,5 +1,5 @@
 /**
- * API Route: /api/wix-proxy/student-progress
+ * API Route: /api/postgres/students
  * Proxy para obtener el diagnóstico académico "¿Cómo voy?" del estudiante
  */
 
@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions';
 
 /**
- * GET /api/wix-proxy/student-progress?id=studentId
+ * GET /api/postgres/students?id=studentId
  * Obtiene el diagnóstico académico del estudiante
  */
 export async function GET(req: NextRequest) {
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(data, { status: 200 });
 
   } catch (error) {
-    console.error('❌ Error en /api/wix-proxy/student-progress:', error);
+    console.error('❌ Error en /api/postgres/students:', error);
     return NextResponse.json(
       {
         success: false,

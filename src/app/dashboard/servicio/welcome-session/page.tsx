@@ -65,7 +65,7 @@ export default function WelcomeSessionPage() {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 90000)
 
-      const response = await fetch('/api/wix-proxy/welcome-events', {
+      const response = await fetch('/api/postgres/events/welcome', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

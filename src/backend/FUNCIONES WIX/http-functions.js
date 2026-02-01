@@ -1,5 +1,18 @@
 import { sendmessage } from 'backend/realtime.jsw';
 import { searchPeopleAndAcademica, getPersonByContrato, getPersonById, getStudentById, updateClass, deleteClass, getRelatedPersons, getFinancialDataByContrato, approveBeneficiario, createNewBeneficiario, updateBeneficiario, deleteBeneficiario, inactivateBeneficiario, inactivateUser, toggleUserStatus, toggleContractStatus, toggleOnHoldStatus, extendStudentVigencia, updateTitularEstado, getCalendarioEventos, createClassEvent, createBookingEvent, updateStudentStep, cargarStepsDelNivel, createStepOverride, deleteStepOverride, testStepOverrideByIdEnAcademica, updateOnHold, getWelcomeEvents, getAllClassSessions, getAdvisors, getAdvisorById, getAdvisorByEmail, getCalendarioEvents, getCalendarioEventsByAdvisor, getCalendarioEventsByAdvisorAndDay, getEventBookings, getEventUsersByCriteria, getEventBookingsByCriteria, getContracts, getEventInscritosCount, getMultipleEventsInscritosCount, createCalendarioEvent, updateCalendarioEvent, deleteCalendarioEvent, getNiveles, updateAprobacion, getContractosByTipo, getBeneficiariosSinRegistro, addCommentToPerson, getPersonComments, restorePersonData, getTopStudentsThisMonth, getAdvisorStats, createPerson, createFinancial, getContractsByPattern, getPendingApprovals, getCalendarioEventById, updateClassRecord, generateStudentActivity, generateSessionActivities, getStudentProgress, getNivelMaterial, getMaterialUsuario, debugNivelesOrder, getExpiredOnHoldStudents, getExpiredContracts, markContractExpired } from 'backend/search.jsw';
+import {
+    exportarNiveles,
+    exportarPeople,
+    exportarAcademica,
+    exportarClasses,
+    exportarBooking,
+    exportarAdvisors,
+    exportarUsuariosRoles,
+    exportarRolPermisos,
+    exportarContratos,
+    exportarCalendario,
+    exportarMetadata
+} from 'backend/exposeDataBase.jsw';
 import { fetch } from 'wix-fetch';
 import wixData from 'wix-data';
 import { ok, serverError, badRequest } from 'wix-http-functions';
@@ -4226,3 +4239,860 @@ export function options_markContractExpired(request) {
     });
 }
 
+// ============================================================================
+// ENDPOINT DE PRUEBA: EXPORTAR NIVELES
+// ============================================================================
+
+/**
+ * GET /_functions/exportarNiveles?skip=0&limit=100
+ * Endpoint de prueba para verificar que el import funciona
+ */
+export async function get_exportarNiveles(request) {
+    try {
+        const { skip = '0', limit = '100' } = request.query;
+        const skipNum = parseInt(skip);
+        const limitNum = parseInt(limit);
+
+        console.log(`📤 HTTP: exportarNiveles llamado con skip=${skipNum}, limit=${limitNum}`);
+
+        const resultado = await exportarNiveles(skipNum, limitNum);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify(resultado)
+        });
+
+    } catch (error) {
+        console.error('❌ Error en HTTP exportarNiveles:', error);
+        return serverError({
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_exportarNiveles(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+    });
+}
+
+// ============================================================================
+// ENDPOINTS DE EXPORTACIÓN PARA MIGRACIÓN A POSTGRESQL
+// ============================================================================
+
+/**
+ * GET /_functions/exportarPeople?skip=0&limit=100
+ */
+export async function get_exportarPeople(request) {
+    try {
+        const { skip = '0', limit = '100' } = request.query;
+        const resultado = await exportarPeople(parseInt(skip), parseInt(limit));
+        return ok({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify(resultado)
+        });
+    } catch (error) {
+        console.error('❌ Error en exportarPeople:', error);
+        return serverError({ body: JSON.stringify({ success: false, error: error.message }) });
+    }
+}
+
+export function options_exportarPeople(request) {
+    return ok({ headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS' } });
+}
+
+/**
+ * GET /_functions/exportarAcademica?skip=0&limit=100
+ */
+export async function get_exportarAcademica(request) {
+    try {
+        const { skip = '0', limit = '100' } = request.query;
+        const resultado = await exportarAcademica(parseInt(skip), parseInt(limit));
+        return ok({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify(resultado)
+        });
+    } catch (error) {
+        console.error('❌ Error en exportarAcademica:', error);
+        return serverError({ body: JSON.stringify({ success: false, error: error.message }) });
+    }
+}
+
+export function options_exportarAcademica(request) {
+    return ok({ headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS' } });
+}
+
+/**
+ * GET /_functions/exportarClasses?skip=0&limit=100
+ */
+export async function get_exportarClasses(request) {
+    try {
+        const { skip = '0', limit = '100' } = request.query;
+        const resultado = await exportarClasses(parseInt(skip), parseInt(limit));
+        return ok({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify(resultado)
+        });
+    } catch (error) {
+        console.error('❌ Error en exportarClasses:', error);
+        return serverError({ body: JSON.stringify({ success: false, error: error.message }) });
+    }
+}
+
+export function options_exportarClasses(request) {
+    return ok({ headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS' } });
+}
+
+/**
+ * GET /_functions/exportarBooking?skip=0&limit=100
+ */
+export async function get_exportarBooking(request) {
+    try {
+        const { skip = '0', limit = '100' } = request.query;
+        const resultado = await exportarBooking(parseInt(skip), parseInt(limit));
+        return ok({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify(resultado)
+        });
+    } catch (error) {
+        console.error('❌ Error en exportarBooking:', error);
+        return serverError({ body: JSON.stringify({ success: false, error: error.message }) });
+    }
+}
+
+export function options_exportarBooking(request) {
+    return ok({ headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS' } });
+}
+
+/**
+ * GET /_functions/exportarAdvisors?skip=0&limit=100
+ */
+export async function get_exportarAdvisors(request) {
+    try {
+        const { skip = '0', limit = '100' } = request.query;
+        const resultado = await exportarAdvisors(parseInt(skip), parseInt(limit));
+        return ok({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify(resultado)
+        });
+    } catch (error) {
+        console.error('❌ Error en exportarAdvisors:', error);
+        return serverError({ body: JSON.stringify({ success: false, error: error.message }) });
+    }
+}
+
+export function options_exportarAdvisors(request) {
+    return ok({ headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS' } });
+}
+
+/**
+ * GET /_functions/exportarUsuariosRoles?skip=0&limit=100
+ */
+export async function get_exportarUsuariosRoles(request) {
+    try {
+        const { skip = '0', limit = '100' } = request.query;
+        const resultado = await exportarUsuariosRoles(parseInt(skip), parseInt(limit));
+        return ok({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify(resultado)
+        });
+    } catch (error) {
+        console.error('❌ Error en exportarUsuariosRoles:', error);
+        return serverError({ body: JSON.stringify({ success: false, error: error.message }) });
+    }
+}
+
+export function options_exportarUsuariosRoles(request) {
+    return ok({ headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS' } });
+}
+
+/**
+ * GET /_functions/exportarRolPermisos?skip=0&limit=100
+ */
+export async function get_exportarRolPermisos(request) {
+    try {
+        const { skip = '0', limit = '100' } = request.query;
+        const resultado = await exportarRolPermisos(parseInt(skip), parseInt(limit));
+        return ok({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify(resultado)
+        });
+    } catch (error) {
+        console.error('❌ Error en exportarRolPermisos:', error);
+        return serverError({ body: JSON.stringify({ success: false, error: error.message }) });
+    }
+}
+
+export function options_exportarRolPermisos(request) {
+    return ok({ headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS' } });
+}
+
+/**
+ * GET /_functions/exportarContratos?skip=0&limit=100
+ */
+export async function get_exportarContratos(request) {
+    try {
+        const { skip = '0', limit = '100' } = request.query;
+        const resultado = await exportarContratos(parseInt(skip), parseInt(limit));
+        return ok({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify(resultado)
+        });
+    } catch (error) {
+        console.error('❌ Error en exportarContratos:', error);
+        return serverError({ body: JSON.stringify({ success: false, error: error.message }) });
+    }
+}
+
+export function options_exportarContratos(request) {
+    return ok({ headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS' } });
+}
+
+/**
+ * GET /_functions/exportarCalendario?skip=0&limit=100
+ */
+export async function get_exportarCalendario(request) {
+    try {
+        const { skip = '0', limit = '100' } = request.query;
+        const resultado = await exportarCalendario(parseInt(skip), parseInt(limit));
+        return ok({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify(resultado)
+        });
+    } catch (error) {
+        console.error('❌ Error en exportarCalendario:', error);
+        return serverError({ body: JSON.stringify({ success: false, error: error.message }) });
+    }
+}
+
+export function options_exportarCalendario(request) {
+    return ok({ headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS' } });
+}
+
+/**
+ * GET /_functions/exportarMetadata
+ * Retorna metadata de todas las colecciones (nombre y totalCount)
+ */
+export async function get_exportarMetadata(request) {
+    try {
+        const resultado = await exportarMetadata();
+        return ok({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify(resultado)
+        });
+    } catch (error) {
+        console.error('❌ Error en exportarMetadata:', error);
+        return serverError({ body: JSON.stringify({ success: false, error: error.message }) });
+    }
+}
+
+export function options_exportarMetadata(request) {
+    return ok({ headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS' } });
+}
+
+
+
+// ============================================================================
+// ENDPOINTS PORTAL DE ESTUDIANTES
+// ============================================================================
+
+/**
+ * GET /_functions/searchStudentByEmail?email=estudiante@lgs.com
+ * Busca un estudiante por su email en la colección ACADEMICA
+ */
+export async function get_searchStudentByEmail(request) {
+    try {
+        const { query } = request;
+        const email = query.email;
+
+        console.log('🔍 HTTP searchStudentByEmail: Buscando estudiante con email:', email);
+
+        if (!email) {
+            return badRequest({
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                body: JSON.stringify({
+                    success: false,
+                    error: 'Email es requerido'
+                })
+            });
+        }
+
+        // Buscar en ACADEMICA por campo "email"
+        const results = await wixData.query("ACADEMICA")
+            .eq("email", email)
+            .limit(1)
+            .find();
+
+        if (results.items.length === 0) {
+            console.log('⚠️ No se encontró estudiante con email:', email);
+            return ok({
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                body: JSON.stringify({
+                    success: false,
+                    error: 'No se encontró estudiante con este email',
+                    student: null
+                })
+            });
+        }
+
+        const student = results.items[0];
+        console.log('✅ Estudiante encontrado:', student._id, student.primerNombre, student.primerApellido);
+
+        return ok({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify({
+                success: true,
+                student: {
+                    _id: student._id,
+                    email: student.email,
+                    primerNombre: student.primerNombre,
+                    segundoNombre: student.segundoNombre || null,
+                    primerApellido: student.primerApellido,
+                    segundoApellido: student.segundoApellido || null,
+                    numeroId: student.numeroId,
+                    nivel: student.nivel,
+                    step: student.step,
+                    nivelParalelo: student.nivelParalelo || null,
+                    stepParalelo: student.stepParalelo || null,
+                    foto: student.foto || null,
+                    celular: student.celular || null,
+                    contrato: student.contrato || null,
+                    finalContrato: student.finalContrato || null,
+                    vigencia: student.vigencia || null,
+                    estadoInactivo: student.estadoInactivo || false,
+                    peopleId: student.peopleId || student.usuarioId || null
+                }
+            })
+        });
+
+    } catch (error) {
+        console.error('❌ Error en searchStudentByEmail:', error);
+        return serverError({
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            body: JSON.stringify({
+                success: false,
+                error: 'Error interno del servidor',
+                details: error.message
+            })
+        });
+    }
+}
+
+export function options_searchStudentByEmail(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-Requested-With',
+            'Access-Control-Max-Age': '86400'
+        }
+    });
+}
+
+/**
+ * GET /_functions/getNextClass?studentId=xxx
+ * Retorna la próxima clase del estudiante
+ */
+export async function get_getNextClass(request) {
+    try {
+        const { query } = request;
+        const studentId = query.studentId;
+
+        if (!studentId) {
+            return badRequest({
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                body: JSON.stringify({ success: false, error: 'studentId es requerido' })
+            });
+        }
+
+        const now = new Date();
+
+        // Buscar la próxima clase del estudiante
+        const results = await wixData.query("CLASSES")
+            .eq("usuarioId", studentId)
+            .gt("dia", now)
+            .ascending("dia")
+            .limit(1)
+            .find();
+
+        if (results.items.length === 0) {
+            return ok({
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                body: JSON.stringify({ success: true, nextClass: null })
+            });
+        }
+
+        const clase = results.items[0];
+
+        return ok({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({
+                success: true,
+                nextClass: {
+                    _id: clase._id,
+                    dia: clase.dia,
+                    nivel: clase.nivel,
+                    step: clase.step,
+                    nombreEvento: clase.nombreEvento,
+                    advisor: clase.advisor,
+                    advisorNombre: clase.advisorNombre || null,
+                    zoom: clase.zoom || null,
+                    cancelo: clase.cancelo || false
+                }
+            })
+        });
+
+    } catch (error) {
+        console.error('❌ Error en getNextClass:', error);
+        return serverError({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: false, error: error.message })
+        });
+    }
+}
+
+export function options_getNextClass(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+    });
+}
+
+/**
+ * GET /_functions/getUpcomingEvents?studentId=xxx&limit=4
+ * Retorna las próximas N clases del estudiante
+ */
+export async function get_getUpcomingEvents(request) {
+    try {
+        const { query } = request;
+        const studentId = query.studentId;
+        const limit = parseInt(query.limit) || 4;
+
+        if (!studentId) {
+            return badRequest({
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                body: JSON.stringify({ success: false, error: 'studentId es requerido' })
+            });
+        }
+
+        const now = new Date();
+
+        // Buscar las próximas clases del estudiante
+        const results = await wixData.query("CLASSES")
+            .eq("usuarioId", studentId)
+            .gt("dia", now)
+            .ascending("dia")
+            .limit(limit)
+            .find();
+
+        const events = results.items.map(clase => ({
+            _id: clase._id,
+            dia: clase.dia,
+            nivel: clase.nivel,
+            step: clase.step,
+            nombreEvento: clase.nombreEvento,
+            advisor: clase.advisor,
+            advisorNombre: clase.advisorNombre || null,
+            cancelo: clase.cancelo || false,
+            tipoEvento: clase.tipoEvento || 'SESSION'
+        }));
+
+        return ok({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: true, events })
+        });
+
+    } catch (error) {
+        console.error('❌ Error en getUpcomingEvents:', error);
+        return serverError({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: false, error: error.message })
+        });
+    }
+}
+
+export function options_getUpcomingEvents(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+    });
+}
+
+/**
+ * GET /_functions/consolidadoNumericoAsistencia?studentId=xxx
+ * Retorna estadísticas de asistencia del estudiante
+ */
+export async function get_consolidadoNumericoAsistencia(request) {
+    try {
+        const { query } = request;
+        const studentId = query.studentId;
+
+        if (!studentId) {
+            return badRequest({
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                body: JSON.stringify({ success: false, error: 'studentId es requerido' })
+            });
+        }
+
+        // Obtener todas las clases del estudiante
+        const results = await wixData.query("CLASSES")
+            .eq("usuarioId", studentId)
+            .find();
+
+        let asistidos = 0;
+        let cancelados = 0;
+        let noAsistidos = 0;
+
+        results.items.forEach(clase => {
+            if (clase.asistio === true) {
+                asistidos++;
+            } else if (clase.cancelo === true) {
+                cancelados++;
+            } else if (clase.dia < new Date()) {
+                // Si la clase ya pasó y no asistió ni canceló
+                noAsistidos++;
+            }
+        });
+
+        return ok({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({
+                success: true,
+                stats: {
+                    asistidos,
+                    cancelados,
+                    noAsistidos
+                }
+            })
+        });
+
+    } catch (error) {
+        console.error('❌ Error en consolidadoNumericoAsistencia:', error);
+        return serverError({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: false, error: error.message })
+        });
+    }
+}
+
+export function options_consolidadoNumericoAsistencia(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+    });
+}
+
+/**
+ * POST /_functions/cancelEvent
+ * Cancela una clase del estudiante
+ */
+export async function post_cancelEvent(request) {
+    try {
+        const { body } = request;
+        const { eventId, studentId } = JSON.parse(body);
+
+        if (!eventId || !studentId) {
+            return badRequest({
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                body: JSON.stringify({ success: false, error: 'eventId y studentId son requeridos' })
+            });
+        }
+
+        // Verificar que la clase existe y pertenece al estudiante
+        const clase = await wixData.get("CLASSES", eventId);
+
+        if (!clase || clase.usuarioId !== studentId) {
+            return badRequest({
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                body: JSON.stringify({ success: false, error: 'Clase no encontrada o no pertenece al estudiante' })
+            });
+        }
+
+        // Verificar que la clase no haya pasado
+        const now = new Date();
+        const claseDia = new Date(clase.dia);
+
+        if (claseDia < now) {
+            return badRequest({
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                body: JSON.stringify({ success: false, error: 'No se puede cancelar una clase que ya pasó' })
+            });
+        }
+
+        // Verificar que falten más de 60 minutos
+        const minutosHastaClase = (claseDia.getTime() - now.getTime()) / (1000 * 60);
+        if (minutosHastaClase < 60) {
+            return badRequest({
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                body: JSON.stringify({ success: false, error: 'Debes cancelar con al menos 60 minutos de anticipación' })
+            });
+        }
+
+        // Marcar la clase como cancelada
+        await wixData.update("CLASSES", {
+            _id: eventId,
+            cancelo: true,
+            asistio: false
+        });
+
+        return ok({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: true, message: 'Clase cancelada exitosamente' })
+        });
+
+    } catch (error) {
+        console.error('❌ Error en cancelEvent:', error);
+        return serverError({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: false, error: error.message })
+        });
+    }
+}
+
+export function options_cancelEvent(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+    });
+}
+
+/**
+ * GET /_functions/getAvailableEvents?studentId=xxx&nivel=BN1&tipoEvento=SESSION&fecha=2025-01-11
+ * Retorna eventos disponibles para agendar
+ */
+export async function get_getAvailableEvents(request) {
+    try {
+        const { query } = request;
+        const studentId = query.studentId;
+        const nivel = query.nivel;
+        const tipoEvento = query.tipoEvento;
+        const fecha = query.fecha;
+
+        if (!studentId || !nivel || !tipoEvento || !fecha) {
+            return badRequest({
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                body: JSON.stringify({ success: false, error: 'Todos los parámetros son requeridos' })
+            });
+        }
+
+        // Parsear fecha
+        const fechaInicio = new Date(fecha);
+        fechaInicio.setHours(0, 0, 0, 0);
+
+        const fechaFin = new Date(fecha);
+        fechaFin.setHours(23, 59, 59, 999);
+
+        // Buscar eventos del calendario para ese día y nivel
+        const calendarioResults = await wixData.query("CALENDARIO")
+            .eq("tituloONivel", nivel)
+            .eq("evento", tipoEvento)
+            .ge("dia", fechaInicio)
+            .le("dia", fechaFin)
+            .ascending("dia")
+            .find();
+
+        // Para cada evento, contar cuántos estudiantes están inscritos
+        const eventosConCapacidad = await Promise.all(
+            calendarioResults.items.map(async (evento) => {
+                const inscritosResults = await wixData.query("CLASSES")
+                    .eq("eventoId", evento._id)
+                    .find();
+
+                const usuariosInscritos = inscritosResults.items.length;
+                const limiteUsuarios = evento.limiteUsuarios || 6;
+                const cupoCompleto = usuariosInscritos >= limiteUsuarios;
+
+                return {
+                    _id: evento._id,
+                    dia: evento.dia,
+                    nivel: evento.tituloONivel,
+                    nombreEvento: evento.nombreEvento || evento.evento,
+                    advisor: evento.advisor,
+                    advisorNombre: evento.advisorNombre || null,
+                    limiteUsuarios,
+                    usuariosInscritos,
+                    cupoCompleto
+                };
+            })
+        );
+
+        return ok({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: true, events: eventosConCapacidad })
+        });
+
+    } catch (error) {
+        console.error('❌ Error en getAvailableEvents:', error);
+        return serverError({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: false, error: error.message })
+        });
+    }
+}
+
+export function options_getAvailableEvents(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+    });
+}
+
+/**
+ * POST /_functions/bookEvent
+ * Agenda una clase para el estudiante
+ */
+export async function post_bookEvent(request) {
+    try {
+        const { body } = request;
+        const { eventId, studentId, tipoEvento } = JSON.parse(body);
+
+        if (!eventId || !studentId || !tipoEvento) {
+            return badRequest({
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                body: JSON.stringify({ success: false, error: 'eventId, studentId y tipoEvento son requeridos' })
+            });
+        }
+
+        // Obtener el evento del calendario
+        const evento = await wixData.get("CALENDARIO", eventId);
+
+        if (!evento) {
+            return badRequest({
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                body: JSON.stringify({ success: false, error: 'Evento no encontrado' })
+            });
+        }
+
+        // Verificar que el evento no haya pasado
+        const now = new Date();
+        const eventoDia = new Date(evento.dia);
+
+        if (eventoDia < now) {
+            return badRequest({
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                body: JSON.stringify({ success: false, error: 'No se puede agendar un evento que ya pasó' })
+            });
+        }
+
+        // Verificar capacidad
+        const inscritosResults = await wixData.query("CLASSES")
+            .eq("eventoId", eventId)
+            .find();
+
+        const limiteUsuarios = evento.limiteUsuarios || 6;
+        if (inscritosResults.items.length >= limiteUsuarios) {
+            return badRequest({
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                body: JSON.stringify({ success: false, error: 'El evento está lleno' })
+            });
+        }
+
+        // Verificar que el estudiante no esté ya inscrito
+        const yaInscrito = inscritosResults.items.some(c => c.usuarioId === studentId);
+        if (yaInscrito) {
+            return badRequest({
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                body: JSON.stringify({ success: false, error: 'Ya estás inscrito en este evento' })
+            });
+        }
+
+        // Obtener datos del estudiante
+        const studentResults = await wixData.query("ACADEMICA")
+            .eq("_id", studentId)
+            .limit(1)
+            .find();
+
+        if (studentResults.items.length === 0) {
+            return badRequest({
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                body: JSON.stringify({ success: false, error: 'Estudiante no encontrado' })
+            });
+        }
+
+        const student = studentResults.items[0];
+
+        // Crear la clase
+        const nuevaClase = {
+            usuarioId: studentId,
+            peopleId: student.peopleId || student.usuarioId,
+            eventoId: eventId,
+            dia: evento.dia,
+            nivel: evento.nivel,
+            step: student.step,
+            nombreEvento: evento.nombreEvento || evento.tipoEvento,
+            tipoEvento: tipoEvento,
+            advisor: evento.advisor,
+            advisorNombre: evento.advisorNombre || null,
+            zoom: evento.zoom || null,
+            asistio: false,
+            cancelo: false,
+            _createdDate: new Date()
+        };
+
+        await wixData.insert("CLASSES", nuevaClase);
+
+        return ok({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: true, message: 'Clase agendada exitosamente' })
+        });
+
+    } catch (error) {
+        console.error('❌ Error en bookEvent:', error);
+        return serverError({
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ success: false, error: error.message })
+        });
+    }
+}
+
+export function options_bookEvent(request) {
+    return ok({
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }
+    });
+}

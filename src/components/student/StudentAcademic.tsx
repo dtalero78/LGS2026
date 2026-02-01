@@ -66,7 +66,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
       await Promise.all(
         uniqueAdvisorIds.map(async (advisorId) => {
           try {
-            const response = await fetch(`/api/wix-proxy/advisor-name?advisorId=${encodeURIComponent(advisorId)}`)
+            const response = await fetch(`/api/postgres/advisors?advisorId=${encodeURIComponent(advisorId)}`)
             if (response.ok) {
               const data = await response.json()
               if (data.success && data.advisor) {
@@ -106,7 +106,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
   const refreshStudentData = async () => {
     try {
       console.log('🔄 Recargando datos del estudiante...')
-      const response = await fetch(`/api/wix-proxy/student-by-id?id=${student._id}&_t=${Date.now()}`)
+      const response = await fetch(`/api/postgres/students?id=${student._id}&_t=${Date.now()}`)
       if (response.ok) {
         const data = await response.json()
         if (data.success && data.classes) {
@@ -130,7 +130,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
     try {
       console.log('📊 Loading level steps for:', { nivel: student.nivel, studentId: student._id })
 
-      const response = await fetch(`/api/wix-proxy/level-steps?nivel=${encodeURIComponent(student.nivel)}&studentId=${encodeURIComponent(student._id)}`)
+      const response = await fetch(`/api/postgres/niveles?nivel=${encodeURIComponent(student.nivel)}&studentId=${encodeURIComponent(student._id)}`)
 
       if (response.ok) {
         const data = await response.json()
@@ -173,7 +173,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
           isCompleted: true
         }
 
-        const response = await fetch('/api/wix-proxy/step-override', {
+        const response = await fetch('/api/postgres/students', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -193,7 +193,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
         console.log('✅ Step override created:', result)
       } else {
         // Delete step override
-        const response = await fetch(`/api/wix-proxy/step-override?studentId=${encodeURIComponent(student._id)}&step=${encodeURIComponent(stepData.step)}`, {
+        const response = await fetch(`/api/postgres/students?studentId=${encodeURIComponent(student._id)}&step=${encodeURIComponent(stepData.step)}`, {
           method: 'DELETE'
         })
 
@@ -305,7 +305,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
       })
 
       const response = await fetch(
-        `/api/wix-proxy/calendario-eventos?nivel=${encodeURIComponent(student.nivel)}&tipoEvento=${selectedEventType}&fechaInicio=${encodeURIComponent(startOfDay)}&fechaFin=${encodeURIComponent(endOfDay)}`
+        `/api/postgres/events/filtered?nivel=${encodeURIComponent(student.nivel)}&tipoEvento=${selectedEventType}&fechaInicio=${encodeURIComponent(startOfDay)}&fechaFin=${encodeURIComponent(endOfDay)}`
       )
 
       if (response.ok) {
@@ -325,7 +325,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
           if (eventIds.length > 0) {
             console.log('🔢 Cargando inscritos para', eventIds.length, 'eventos')
             try {
-              const inscritosResponse = await fetch('/api/wix-proxy/eventos-inscritos-batch', {
+              const inscritosResponse = await fetch('/api/postgres/events/batch-counts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ eventIds })
@@ -355,7 +355,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
           await Promise.all(
             uniqueAdvisorIds.map(async (advisorId) => {
               try {
-                const response = await fetch(`/api/wix-proxy/advisor-name?advisorId=${encodeURIComponent(advisorId)}`)
+                const response = await fetch(`/api/postgres/advisors?advisorId=${encodeURIComponent(advisorId)}`)
                 if (response.ok) {
                   const advisorData = await response.json()
                   if (advisorData.success && advisorData.advisor) {
@@ -472,7 +472,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
       const endOfDay = endLocal.toISOString()
 
       const calendarResponse = await fetch(
-        `/api/wix-proxy/calendario-eventos?nivel=${encodeURIComponent(student.nivel)}&tipoEvento=${selectedEventType}&fechaInicio=${encodeURIComponent(startOfDay)}&fechaFin=${encodeURIComponent(endOfDay)}`
+        `/api/postgres/events/filtered?nivel=${encodeURIComponent(student.nivel)}&tipoEvento=${selectedEventType}&fechaInicio=${encodeURIComponent(startOfDay)}&fechaFin=${encodeURIComponent(endOfDay)}`
       )
 
       if (!calendarResponse.ok) {
@@ -527,7 +527,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
 
       console.log('📅 Event data to save:', eventData)
 
-      const response = await fetch('/api/wix-proxy/create-class-event', {
+      const response = await fetch('/api/postgres/events', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -572,7 +572,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
     // Buscar el nombre del advisor si existe
     if (classItem.advisor) {
       try {
-        const response = await fetch(`/api/wix-proxy/advisor-name?advisorId=${encodeURIComponent(classItem.advisor)}`)
+        const response = await fetch(`/api/postgres/advisors?advisorId=${encodeURIComponent(classItem.advisor)}`)
         if (response.ok) {
           const data = await response.json()
           if (data.success && data.advisor) {
@@ -598,7 +598,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
     try {
       console.log('💾 Guardando cambios:', selectedClass)
 
-      const response = await fetch(`/api/wix-proxy/update-class?id=${selectedClass._id}`, {
+      const response = await fetch(`/api/postgres/academic?id=${selectedClass._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -642,7 +642,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
     try {
       console.log('🗑️ Eliminando clase:', selectedClass._id)
 
-      const response = await fetch(`/api/wix-proxy/delete-class?id=${selectedClass._id}`, {
+      const response = await fetch(`/api/postgres/academic?id=${selectedClass._id}`, {
         method: 'DELETE'
       })
 

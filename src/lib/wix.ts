@@ -46,28 +46,66 @@ export async function searchByContract(contrato: string) {
 
 // Student functions
 export async function getStudentById(studentId: string) {
-  // SOLUTION: Always use localhost in development, it works for both client and server
+  // Use PostgreSQL endpoint
   const baseUrl = process.env.NODE_ENV === 'production'
     ? (process.env.NEXTAUTH_URL || '')
     : 'http://localhost:3001'
 
-  const fullUrl = `${baseUrl}/api/wix-proxy/student-by-id?id=${encodeURIComponent(studentId)}`;
-  console.log('🔍 getStudentById - Fetching from URL:', fullUrl);
+  const fullUrl = `${baseUrl}/api/postgres/students/${encodeURIComponent(studentId)}`;
+  console.log('🔍 [PostgreSQL] getStudentById - Fetching from URL:', fullUrl);
 
   const response = await fetch(fullUrl, {
     cache: 'no-store', // Disable Next.js fetch cache to always get fresh data
   })
 
-  console.log('🔍 getStudentById - Response status:', response.status);
+  console.log('🔍 [PostgreSQL] getStudentById - Response status:', response.status);
 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${response.statusText}`)
   }
-  return await response.json()
+
+  const result = await response.json()
+
+  // Transform PostgreSQL response to match expected format
+  if (result.success && result.data) {
+    return {
+      success: true,
+      student: result.data,
+      classes: [] // Classes will be loaded separately
+    }
+  }
+
+  return result
 }
 
 export async function getStudentClasses(studentId: string) {
-  return makeWixApiCall(`studentClasses?id=${encodeURIComponent(studentId)}`)
+  // Use PostgreSQL endpoint
+  const baseUrl = process.env.NODE_ENV === 'production'
+    ? (process.env.NEXTAUTH_URL || '')
+    : 'http://localhost:3001'
+
+  const fullUrl = `${baseUrl}/api/postgres/students/${encodeURIComponent(studentId)}/academic`;
+  console.log('🔍 [PostgreSQL] getStudentClasses - Fetching from URL:', fullUrl);
+
+  const response = await fetch(fullUrl, {
+    cache: 'no-store',
+  })
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+  }
+
+  const result = await response.json()
+
+  // Transform PostgreSQL response to match expected format
+  if (result.success && result.data) {
+    return {
+      success: true,
+      classes: result.data.classes || []
+    }
+  }
+
+  return result
 }
 
 // Person functions

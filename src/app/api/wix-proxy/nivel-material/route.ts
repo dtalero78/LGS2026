@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions'
 
 /**
- * GET /api/wix-proxy/nivel-material?step=Step1
+ * GET /api/postgres/materials/nivel?step=Step1
  * Obtiene los materiales de un step específico desde la colección NIVELES
  */
 export async function GET(request: NextRequest) {

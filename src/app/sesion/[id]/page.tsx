@@ -81,7 +81,7 @@ export default function SesionPage() {
       setLoading(true)
 
       // Cargar datos del evento
-      const eventoResponse = await fetch(`/api/wix-proxy/calendario-event?id=${eventoId}`)
+      const eventoResponse = await fetch(`/api/postgres/events/${eventoId}`)
       if (!eventoResponse.ok) throw new Error('Error al cargar evento')
 
       const eventoData = await eventoResponse.json()
@@ -103,11 +103,7 @@ export default function SesionPage() {
   const loadStudents = async () => {
     try {
       // Obtener bookings del evento
-      const bookingsResponse = await fetch('/api/wix-proxy/event-bookings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idEvento: eventoId })
-      })
+      const bookingsResponse = await fetch(`/api/postgres/events/${eventoId}/bookings?includeStudent=true`)
 
       if (!bookingsResponse.ok) throw new Error('Error al cargar estudiantes')
 

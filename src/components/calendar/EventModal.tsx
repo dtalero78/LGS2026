@@ -204,20 +204,22 @@ export default function EventModal({
 
   const loadCodigosNivel = async () => {
     try {
-      const response = await fetch('/api/wix-proxy/niveles', {
+      const response = await fetch('/api/postgres/niveles', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       })
 
       if (response.ok) {
         const data = await response.json()
-        if (data.success && data.niveles) {
-          setNiveles(data.niveles)
-          // Extraer códigos únicos del nuevo formato
-          const codigos = data.niveles.map((nivel: any) => nivel.code)
+        // API puede devolver "niveles" o "data" dependiendo del endpoint
+        const nivelesArray = data.niveles || data.data || []
+        if (data.success && nivelesArray.length > 0) {
+          setNiveles(nivelesArray)
+          // Extraer códigos únicos (eliminar duplicados)
+          const codigos = [...new Set(nivelesArray.map((nivel: any) => nivel.code))] as string[]
           setCodigosNivel(codigos)
-          console.log('✅ Niveles loaded:', data.niveles.length, 'Source:', data.source)
-          return data.niveles
+          console.log('✅ Niveles loaded:', nivelesArray.length, 'códigos únicos:', codigos.length)
+          return nivelesArray
         }
       }
       return []

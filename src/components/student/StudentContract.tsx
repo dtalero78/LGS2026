@@ -121,7 +121,7 @@ export default function StudentContract({ student, contratoFinalizado = false }:
     setIsExtendingVigencia(true)
 
     try {
-      const response = await fetch('/api/wix-proxy/extend-vigencia', {
+      const response = await fetch('/api/postgres/students', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

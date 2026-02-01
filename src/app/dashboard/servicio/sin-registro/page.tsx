@@ -60,7 +60,7 @@ export default function SinRegistroPage() {
     try {
       console.log('🔍 Cargando beneficiarios sin registro...')
 
-      const response = await fetch('/api/wix-proxy/beneficiarios-sin-registro')
+      const response = await fetch('/api/postgres/people/beneficiarios-sin-registro')
 
       if (!response.ok) {
         throw new Error(`Error ${response.status}: ${response.statusText}`)

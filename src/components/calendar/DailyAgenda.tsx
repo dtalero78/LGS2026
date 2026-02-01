@@ -58,10 +58,37 @@ export default function DailyAgenda({
 
   // Obtener lista única de niveles de los eventos del día
   const eventsForSelectedDay = events.filter(event => {
-    const eventDay = new Date(event.dia).toDateString()
+    const eventDate = event.dia instanceof Date ? event.dia : new Date(event.dia)
+    const eventDay = eventDate.toDateString()
     const selectedDay = date.toDateString()
+
     return eventDay === selectedDay
   })
+
+  // Debug logging (moved outside filter to avoid temporal dead zone)
+  if (events.length > 0) {
+    if (eventsForSelectedDay.length === 0) {
+      console.log('🔍 [DailyAgenda] Debug - No events found:', {
+        totalEvents: events.length,
+        selectedDay: date.toDateString(),
+        firstEventDay: new Date(events[0].dia).toDateString(),
+        firstEventDia: events[0].dia,
+        match: new Date(events[0].dia).toDateString() === date.toDateString()
+      })
+    } else {
+      console.log('🔍 [DailyAgenda] Debug - Events found:', {
+        eventsForSelectedDay: eventsForSelectedDay.length,
+        selectedDay: date.toDateString(),
+        eventDetails: eventsForSelectedDay.map(e => ({
+          dia: e.dia,
+          diaDate: new Date(e.dia),
+          hour: new Date(e.dia).getHours(),
+          evento: e.evento,
+          nivel: e.tituloONivel
+        }))
+      })
+    }
+  }
 
   const availableNiveles = Array.from(
     new Set(eventsForSelectedDay.map(e => e.tituloONivel))
@@ -72,8 +99,8 @@ export default function DailyAgenda({
     ? eventsForSelectedDay
     : eventsForSelectedDay.filter(e => e.tituloONivel === selectedNivel)
 
-  // Generar horas del día (6:00 AM - 11:00 PM)
-  const hours = Array.from({ length: 18 }, (_, i) => i + 6)
+  // Generar horas del día (0:00 AM - 11:00 PM - 24 horas completas)
+  const hours = Array.from({ length: 24 }, (_, i) => i)
 
   // Agrupar eventos por hora SOLO del día seleccionado y filtrados por nivel
   const eventsByHour = hours.map(hour => {

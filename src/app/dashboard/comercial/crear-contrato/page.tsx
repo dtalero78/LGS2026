@@ -270,7 +270,7 @@ export default function CrearContratoPage() {
     setSuccess('');
 
     try {
-      const response = await fetch('/api/wix-proxy/create-contract', {
+      const response = await fetch('/api/postgres/contracts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -81,7 +81,7 @@ export default function StudentComments({ studentId, usuarioId }: StudentComment
   const loadComments = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`/api/wix-proxy/person-comments?id=${activeUsuarioId}`)
+      const response = await fetch(`/api/postgres/people?id=${activeUsuarioId}`)
       const data = await response.json()
 
       if (data.success) {
@@ -110,7 +110,7 @@ export default function StudentComments({ studentId, usuarioId }: StudentComment
     setError(null)
 
     try {
-      const response = await fetch('/api/wix-proxy/add-comment', {
+      const response = await fetch('/api/postgres/people', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

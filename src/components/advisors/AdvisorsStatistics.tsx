@@ -80,7 +80,7 @@ export default function AdvisorsStatistics({ advisors }: AdvisorsStatisticsProps
       // Obtener datos para cada advisor seleccionado
       for (const advisor of selectedAdvisors) {
         try {
-          const response = await fetch('/api/wix-proxy/advisor-stats', {
+          const response = await fetch('/api/postgres/advisors', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

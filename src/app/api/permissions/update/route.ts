@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
 
     // 1. Actualizar permisos en Wix
     const response = await fetch(
-      `${process.env.NEXTAUTH_URL || 'http://localhost:3001'}/api/wix-proxy/role-permissions`,
+      `${process.env.NEXTAUTH_URL || 'http://localhost:3001'}/api/postgres/roles`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

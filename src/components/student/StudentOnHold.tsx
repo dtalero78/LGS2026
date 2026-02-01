@@ -101,7 +101,7 @@ export default function StudentOnHold({
     setIsTogglingOnHold(true)
 
     try {
-      const response = await fetch('/api/wix-proxy/toggle-student-onhold', {
+      const response = await fetch('/api/postgres/students/onhold', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

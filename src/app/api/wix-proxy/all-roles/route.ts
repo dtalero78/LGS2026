@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions';
 
 /**
- * GET /api/wix-proxy/all-roles
+ * GET /api/postgres/roles
  * Proxy para obtener todos los roles desde Wix ROL_PERMISOS
  */
 export async function GET() {

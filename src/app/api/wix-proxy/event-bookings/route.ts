@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions'
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -16,52 +14,59 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('📊 Fetching event bookings for:', finalEventId)
+    console.log('📊 [PostgreSQL] Fetching event bookings for:', finalEventId)
+
+    // Use PostgreSQL endpoint
+    const baseUrl = process.env.NODE_ENV === 'production'
+      ? (process.env.NEXTAUTH_URL || '')
+      : 'http://localhost:3001'
 
     const response = await fetch(
-      `${WIX_API_BASE_URL}/getEventBookings`,
+      `${baseUrl}/api/postgres/calendar/${encodeURIComponent(finalEventId)}`,
       {
-        method: 'POST',
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          eventId: finalEventId
-        })
+        cache: 'no-store'
       }
     )
 
     if (!response.ok) {
-      console.error('❌ Wix API error:', response.status, response.statusText)
+      console.error('❌ PostgreSQL API error:', response.status, response.statusText)
       return NextResponse.json(
-        { success: false, error: `Wix API error: ${response.status}`, count: 0 },
+        { success: false, error: `PostgreSQL API error: ${response.status}`, count: 0 },
         { status: response.status }
       )
     }
 
     const data = await response.json()
-    const rawBookings = data?.bookings || []
-    const classes = data?.classes || []
 
-    // Map bookings to include class data if exists
-    const bookings = rawBookings.map((booking: any) => {
-      const classData = classes.find((c: any) => c.idEstudiante === booking.idEstudiante)
-      return {
-        ...booking,
-        classData: classData || null
+    if (!data.success) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch bookings', count: 0 },
+        { status: 500 }
+      )
+    }
+
+    // PostgreSQL response already includes student data via LEFT JOIN
+    const bookings = (data.data || []).map((booking: any) => ({
+      ...booking,
+      // Map asistencia boolean to classData for backward compatibility
+      classData: {
+        asistencia: booking.asistencia || false,
+        asistio: booking.asistio || false,
+        participacion: booking.participacion || null,
+        noAprobo: booking.noAprobo || false,
+        cancelo: booking.cancelo || false,
+        calificacion: booking.calificacion || null
       }
-    })
+    }))
 
     const count = bookings.length
     const asistieron = bookings.filter((b: any) => b.classData?.asistencia === true).length
 
-    // Log hobbies de cada estudiante
-    console.log('🔍 DEBUG - Hobbies de estudiantes en bookings:')
-    bookings.forEach((b: any) => {
-      console.log(`  - ${b.primerNombre} ${b.primerApellido}: hobbies = "${b.hobbies}"`)
-    })
-
-    console.log('✅ Event bookings received:', count, '| Classes:', classes.length, '| Asistieron:', asistieron)
+    console.log('✅ Event bookings received from PostgreSQL:', count, '| Asistieron:', asistieron)
 
     return NextResponse.json({
       success: true,

@@ -51,7 +51,7 @@ export default function StudentProgress({ student }: StudentProgressProps) {
 
       console.log('📊 Cargando diagnóstico académico para:', student._id)
 
-      const response = await fetch(`/api/wix-proxy/student-progress?id=${student._id}`)
+      const response = await fetch(`/api/postgres/students?id=${student._id}`)
 
       if (!response.ok) {
         throw new Error('Error al cargar el diagnóstico académico')

@@ -1,30 +1,76 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions'
-
 export async function GET(request: NextRequest) {
   try {
-    console.log('📚 Fetching niveles from Wix')
+    console.log('📚 [PostgreSQL] Fetching niveles')
 
-    const response = await fetch(
-      `${WIX_API_BASE_URL}/niveles`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      }
-    )
+    // Use PostgreSQL endpoint
+    const baseUrl = process.env.NODE_ENV === 'production'
+      ? (process.env.NEXTAUTH_URL || '')
+      : 'http://localhost:3001'
+
+    const response = await fetch(`${baseUrl}/api/postgres/niveles`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store'
+    })
 
     if (!response.ok) {
-      console.error('❌ Wix API error:', response.status, response.statusText)
-      throw new Error(`Wix API error: ${response.status}`)
+      console.error('❌ PostgreSQL API error:', response.status, response.statusText)
+      throw new Error(`PostgreSQL API error: ${response.status}`)
     }
 
     const data = await response.json()
-    console.log('✅ Niveles received from Wix:', data?.niveles?.length || 0, 'Source:', data?.source || 'unknown')
 
-    return NextResponse.json(data)
+    if (!data.success || !data.data) {
+      throw new Error('Invalid response from PostgreSQL')
+    }
+
+    // Transform PostgreSQL response to match Wix format
+    // PostgreSQL returns individual step records, need to group by level code
+    const stepsGroupedByLevel: Record<string, any[]> = {}
+
+    data.data.forEach((step: any) => {
+      if (!stepsGroupedByLevel[step.code]) {
+        stepsGroupedByLevel[step.code] = []
+      }
+      stepsGroupedByLevel[step.code].push(step)
+    })
+
+    // Build niveles array in Wix format
+    const niveles = Object.keys(stepsGroupedByLevel).map(code => {
+      const steps = stepsGroupedByLevel[code]
+      const firstStep = steps[0]
+
+      // Sort steps by step number (extract number from "Step 1", "Step 2", etc.)
+      const sortedSteps = steps
+        .filter(s => s.step) // Remove nulls
+        .sort((a, b) => {
+          const aNum = parseInt(a.step.replace(/\D/g, '')) || 0
+          const bNum = parseInt(b.step.replace(/\D/g, '')) || 0
+          return aNum - bNum
+        })
+
+      return {
+        _id: firstStep._id,
+        code: code,
+        steps: sortedSteps.map(s => s.step), // Array of step names: ['Step 1', 'Step 2', ...]
+        clubs: firstStep.clubs || [],
+        material: firstStep.material || [],
+        esParalelo: firstStep.esParalelo || false,
+        description: firstStep.description || ''
+      }
+    })
+
+    console.log('✅ Niveles received from PostgreSQL:', niveles.length, 'levels')
+
+    return NextResponse.json({
+      success: true,
+      niveles: niveles,
+      source: 'postgres'
+    })
 
   } catch (error) {
     console.error('❌ Error in niveles API:', error)

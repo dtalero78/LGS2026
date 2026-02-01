@@ -61,7 +61,7 @@ export default function ListaSesionesPage() {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 90000)
 
-      const response = await fetch('/api/wix-proxy/all-sessions', {
+      const response = await fetch('/api/postgres/events/sessions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

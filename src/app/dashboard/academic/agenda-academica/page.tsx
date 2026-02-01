@@ -147,7 +147,7 @@ export default function AgendaAcademicaPage() {
         console.log('🌐 No hay caché, cargando desde servidor...')
 
         // Cargar eventos del calendario
-        const eventsResponse = await fetch('/api/wix-proxy/calendario-events', {
+        const eventsResponse = await fetch('/api/postgres/calendar/events', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -215,7 +215,7 @@ export default function AgendaAcademicaPage() {
 
           console.log(`🔍 Procesando batch ${currentBatch}/${totalBatches} con ${batchIds.length} eventos`)
 
-          const inscripcionesResponse = await fetch('/api/wix-proxy/eventos-inscritos-batch', {
+          const inscripcionesResponse = await fetch('/api/postgres/events/batch-counts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ eventIds: batchIds })
@@ -272,7 +272,7 @@ export default function AgendaAcademicaPage() {
   useEffect(() => {
     const loadAdvisors = async () => {
       try {
-        const response = await fetch('/api/wix-proxy/advisors', {
+        const response = await fetch('/api/postgres/advisors', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})

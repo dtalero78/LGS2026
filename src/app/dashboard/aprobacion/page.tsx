@@ -87,17 +87,17 @@ export default function AprobacionPage() {
     setLoading(true)
     try {
       console.log('🔍 Cargando registros pendientes de aprobación (sin estado)')
-      const response = await fetch('/api/wix-proxy/pending-approvals', {
+      const response = await fetch('/api/postgres/approvals/pending', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       })
 
       if (response.ok) {
         const result = await response.json()
-        if (result.success && result.data) {
-          console.log('✅ Registros pendientes cargados:', result.totalRecords)
-          setAllContratos(result.data)
-          updatePagination(result.data)
+        if (result.success && result.approvals) {
+          console.log('✅ Registros pendientes cargados:', result.count)
+          setAllContratos(result.approvals)
+          updatePagination(result.approvals)
         } else {
           console.error('Error en respuesta:', result.error)
           setAllContratos([])
@@ -202,12 +202,11 @@ export default function AprobacionPage() {
   // Cambiar estado de aprobación
   const updateAprobacion = async (contratoId: string, nuevoEstado: string) => {
     try {
-      const response = await fetch('/api/wix-proxy/update-aprobacion', {
-        method: 'POST',
+      const response = await fetch(`/api/postgres/approvals/${contratoId}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          personId: contratoId,
-          aprobacion: nuevoEstado
+          estado: nuevoEstado === 'Aprobado' ? 'APROBADO' : 'RECHAZADO'
         })
       })
 

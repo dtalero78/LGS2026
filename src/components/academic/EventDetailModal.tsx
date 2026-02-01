@@ -92,7 +92,7 @@ export default function EventDetailModal({ event, isOpen, onClose, advisors, adv
     // Si el email es "No disponible", buscar datos en ACADEMICA
     if (user.email === 'No disponible' && user.idEstudiante) {
       try {
-        const response = await fetch('/api/wix-proxy/academica-user', {
+        const response = await fetch('/api/postgres/academic/user', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ idEstudiante: user.idEstudiante })
@@ -123,10 +123,9 @@ export default function EventDetailModal({ event, isOpen, onClose, advisors, adv
       setLoading(true)
       setError(null)
 
-      const response = await fetch('/api/wix-proxy/event-bookings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idEvento: eventId })
+      const response = await fetch(`/api/postgres/events/${eventId}/bookings?includeStudent=true`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       })
 
       if (response.ok) {

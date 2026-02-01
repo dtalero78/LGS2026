@@ -119,7 +119,7 @@ export default function SessionStudentsTab({
     try {
       setIsGeneratingActivity(true)
 
-      const response = await fetch('/api/wix-proxy/generate-student-activity', {
+      const response = await fetch('/api/postgres/academic/activity', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -156,7 +156,7 @@ export default function SessionStudentsTab({
         return match ? `Step ${match[1]}` : nombreEvento
       }
 
-      const response = await fetch('/api/wix-proxy/update-class-record', {
+      const response = await fetch('/api/postgres/academic-record', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -182,32 +182,7 @@ export default function SessionStudentsTab({
         alert('Datos guardados exitosamente')
         onDataUpdate()
 
-        // 🔍 DIAGNÓSTICO: Verificar orden de steps en NIVELES
-        try {
-          const nivel = evento?.tituloONivel
-          if (nivel) {
-            console.log('🔍 [DIAGNÓSTICO] Verificando orden de steps para nivel:', nivel)
-
-            const debugResponse = await fetch(
-              `/api/wix-proxy/debug-niveles?nivel=${encodeURIComponent(nivel)}`
-            )
-
-            if (debugResponse.ok) {
-              const debugData = await debugResponse.json()
-
-              console.log('📊 [DIAGNÓSTICO] Steps SIN ordenar desde Wix:')
-              console.log(debugData.stepsRaw?.map((s: any) => s.step).join(', '))
-
-              console.log('📊 [DIAGNÓSTICO] Steps ordenados numéricamente:')
-              console.log(debugData.stepsSorted?.map((s: any) => `${s.step} (num: ${s.numeroStep})`).join(', '))
-
-              console.log('✅ [DIAGNÓSTICO] ¿Orden correcto?:', debugData.ordenCorrecto)
-              console.log('📋 [DIAGNÓSTICO] Respuesta completa:', debugData)
-            }
-          }
-        } catch (debugError) {
-          console.log('⚠️ Error en diagnóstico (no afecta guardado):', debugError)
-        }
+        // Debug code removed - diagnostic endpoint no longer needed after Wix → PostgreSQL migration
       } else {
         throw new Error(data.error)
       }

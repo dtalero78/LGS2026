@@ -52,7 +52,7 @@ export default function AdvisorCalendar({ advisorId, advisorName }: AdvisorCalen
 
   const loadAdvisors = async () => {
     try {
-      const response = await fetch('/api/wix-proxy/advisors', {
+      const response = await fetch('/api/postgres/advisors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       })
@@ -75,7 +75,7 @@ export default function AdvisorCalendar({ advisorId, advisorName }: AdvisorCalen
       const monthStart = startOfMonth(currentMonth)
       const monthEnd = endOfMonth(currentMonth)
 
-      const response = await fetch('/api/wix-proxy/calendario-events', {
+      const response = await fetch('/api/postgres/calendar/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -122,7 +122,7 @@ export default function AdvisorCalendar({ advisorId, advisorName }: AdvisorCalen
       for (let i = 0; i < eventIds.length; i += batchSize) {
         const batchIds = eventIds.slice(i, i + batchSize)
 
-        const inscripcionesResponse = await fetch('/api/wix-proxy/eventos-inscritos-batch', {
+        const inscripcionesResponse = await fetch('/api/postgres/events/batch-counts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ eventIds: batchIds })

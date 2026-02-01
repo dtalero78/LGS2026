@@ -430,7 +430,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     setIsTogglingContract(true)
 
     try {
-      const response = await fetch('/api/wix-proxy/toggle-contract-status', {
+      const response = await fetch('/api/postgres/students', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -468,7 +468,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
 
     try {
       // Fetch beneficiary full data using correct endpoint
-      const response = await fetch(`/api/wix-proxy/person-by-id?id=${beneficiaryId}`)
+      const response = await fetch(`/api/postgres/students/${beneficiaryId}`)
       if (response.ok) {
         const result = await response.json()
         if (result.success && result.person) {

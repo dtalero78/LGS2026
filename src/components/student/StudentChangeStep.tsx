@@ -39,7 +39,7 @@ export default function StudentChangeStep({
     const fetchAllSteps = async () => {
       try {
         setLoadingSteps(true);
-        const response = await fetch('/api/wix-proxy/niveles');
+        const response = await fetch('/api/postgres/niveles');
 
         if (!response.ok) {
           throw new Error('Error al cargar los niveles');
@@ -95,7 +95,7 @@ export default function StudentChangeStep({
     setError(null);
 
     try {
-      const response = await fetch('/api/wix-proxy/update-student-step', {
+      const response = await fetch('/api/postgres/students', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
