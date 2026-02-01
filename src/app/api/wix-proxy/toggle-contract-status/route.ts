@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { query } from '@/lib/postgres'
 
 export async function POST(request: Request) {
   try {
@@ -11,66 +12,73 @@ export async function POST(request: Request) {
       )
     }
 
-    const WIX_API_BASE_URL = process.env.WIX_API_BASE_URL || process.env.NEXT_PUBLIC_WIX_API_BASE_URL
-
-    if (!WIX_API_BASE_URL) {
-      console.error('WIX_API_BASE_URL no configurada')
-      return NextResponse.json(
-        { success: false, error: 'Configuración del servidor incompleta' },
-        { status: 500 }
-      )
-    }
-
-    const wixUrl = `${WIX_API_BASE_URL}/toggleContractStatus`
-
-    console.log('🔄 Proxy: Toggle contract status', {
+    console.log('🔄 [PostgreSQL] Toggle contract status', {
       contrato,
       titularId,
       beneficiaryCount: beneficiaryIds?.length || 0,
       setInactive
     })
 
-    const wixResponse = await fetch(wixUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contrato,
-        titularId,
-        beneficiaryIds: beneficiaryIds || [],
-        setInactive
-      })
-    })
+    const newEstado = setInactive ? 'Inactivo' : 'Aprobado'
+    let updatedCount = 0
 
-    if (!wixResponse.ok) {
-      const errorText = await wixResponse.text()
-      console.error('Error de Wix:', errorText)
-      return NextResponse.json(
-        { success: false, error: 'Error al cambiar estado del contrato en Wix' },
-        { status: wixResponse.status }
-      )
-    }
+    // Update titular
+    const titularResult = await query(
+      `UPDATE "PEOPLE"
+       SET "estado" = $1,
+           "estadoInactivo" = $2,
+           "_updatedDate" = NOW()
+       WHERE "_id" = $3
+       RETURNING "_id"`,
+      [newEstado, setInactive, titularId]
+    )
+    updatedCount += titularResult.rowCount || 0
 
-    const wixData = await wixResponse.json()
+    // Update all beneficiaries for this contract
+    const beneficiariesResult = await query(
+      `UPDATE "PEOPLE"
+       SET "estado" = $1,
+           "estadoInactivo" = $2,
+           "_updatedDate" = NOW()
+       WHERE "contrato" = $3
+         AND "tipoUsuario" = 'BENEFICIARIO'
+       RETURNING "_id"`,
+      [newEstado, setInactive, contrato]
+    )
+    updatedCount += beneficiariesResult.rowCount || 0
 
-    console.log('✅ Contrato actualizado exitosamente:', {
+    // Also update ACADEMICA records for the contract
+    await query(
+      `UPDATE "ACADEMICA"
+       SET "estadoInactivo" = $1,
+           "_updatedDate" = NOW()
+       WHERE "contrato" = $2`,
+      [setInactive, contrato]
+    )
+
+    console.log('✅ [PostgreSQL] Contrato actualizado exitosamente:', {
       contrato,
-      updatedCount: wixData.updatedCount
+      updatedCount,
+      newEstado
     })
 
     return NextResponse.json({
       success: true,
-      updatedCount: wixData.updatedCount,
-      data: wixData
+      updatedCount,
+      data: {
+        contrato,
+        newEstado,
+        titularUpdated: titularResult.rowCount || 0,
+        beneficiariesUpdated: beneficiariesResult.rowCount || 0
+      }
     })
 
-  } catch (error) {
-    console.error('Error al cambiar estado del contrato:', error)
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Error al cambiar estado del contrato:', error)
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Error interno del servidor'
+        error: error.message || 'Error interno del servidor'
       },
       { status: 500 }
     )

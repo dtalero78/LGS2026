@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.WIX_API_BASE_URL || process.env.NEXT_PUBLIC_WIX_API_BASE_URL
+import { query } from '@/lib/postgres'
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,40 +13,37 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    if (!WIX_API_BASE_URL) {
+    console.log('💬 [PostgreSQL] Getting comments for person:', id)
+
+    // Get the person's comments field
+    const result = await query(
+      `SELECT "comentarios" FROM "PEOPLE" WHERE "_id" = $1`,
+      [id]
+    )
+
+    if (result.rowCount === 0) {
       return NextResponse.json(
-        { success: false, error: 'WIX API configuration is missing' },
-        { status: 500 }
+        { success: false, error: 'Persona no encontrada' },
+        { status: 404 }
       )
     }
 
-    const wixUrl = `${WIX_API_BASE_URL}/personComments?id=${encodeURIComponent(id)}`
+    // Parse comments (JSONB array)
+    const comentarios = result.rows[0].comentarios || []
+    const comments = Array.isArray(comentarios) ? comentarios : JSON.parse(comentarios || '[]')
 
-    const response = await fetch(wixUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store'
+    console.log('✅ [PostgreSQL] Comments retrieved:', comments.length)
+
+    return NextResponse.json({
+      success: true,
+      comments: comments
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Wix API error:', response.status, errorText)
-      return NextResponse.json({
-        success: false,
-        error: `Wix API error: ${response.status}`
-      })
-    }
-
-    const data = await response.json()
-    return NextResponse.json(data)
-
-  } catch (error) {
-    console.error('Person comments proxy error:', error)
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Person comments error:', error)
     return NextResponse.json({
       success: false,
-      error: 'Internal server error'
+      error: error.message || 'Internal server error'
     }, { status: 500 })
   }
 }

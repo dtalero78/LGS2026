@@ -1,42 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL
+import { query } from '@/lib/postgres'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('📥 API Route: Obteniendo registros pendientes de aprobación')
+    console.log('📥 [PostgreSQL] Obteniendo registros pendientes de aprobación')
 
-    if (!WIX_API_BASE_URL) {
-      return NextResponse.json(
-        { success: false, error: 'WIX_API_BASE_URL no configurada' },
-        { status: 500 }
-      )
-    }
+    // Query PEOPLE table for pending approvals
+    // Pendiente = records with estado = 'Pendiente' and tipoUsuario = 'TITULAR'
+    const result = await query(`
+      SELECT
+        p."_id",
+        p."primerNombre",
+        p."segundoNombre",
+        p."primerApellido",
+        p."segundoApellido",
+        p."numeroId",
+        p."email",
+        p."celular",
+        p."contrato",
+        p."tipoUsuario",
+        p."estado",
+        p."pais",
+        p."ciudad",
+        p."finalContrato",
+        p."vigencia",
+        p."_createdDate",
+        p."_updatedDate",
+        (
+          SELECT COUNT(*)
+          FROM "PEOPLE" b
+          WHERE b."contrato" = p."contrato"
+          AND b."tipoUsuario" = 'BENEFICIARIO'
+        ) as "beneficiariosCount"
+      FROM "PEOPLE" p
+      WHERE p."estado" = 'Pendiente'
+        AND p."tipoUsuario" = 'TITULAR'
+      ORDER BY p."_createdDate" DESC
+    `)
 
-    // Llamar a la función de Wix
-    const response = await fetch(`${WIX_API_BASE_URL}/getPendingApprovals`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+    console.log('✅ [PostgreSQL] Registros pendientes obtenidos:', result.rowCount)
+
+    return NextResponse.json({
+      success: true,
+      items: result.rows,
+      totalRecords: result.rowCount
     })
 
-    if (!response.ok) {
-      console.error('❌ Error en respuesta de Wix:', response.status)
-      return NextResponse.json(
-        { success: false, error: 'Error al obtener registros de Wix' },
-        { status: response.status }
-      )
-    }
-
-    const data = await response.json()
-    console.log('✅ Registros pendientes obtenidos:', data.totalRecords || 0)
-
-    return NextResponse.json(data)
-  } catch (error) {
-    console.error('❌ Error en API route pending-approvals:', error)
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Error en pending-approvals:', error)
     return NextResponse.json(
-      { success: false, error: 'Error interno del servidor' },
+      { success: false, error: error.message || 'Error interno del servidor' },
       { status: 500 }
     )
   }

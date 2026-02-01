@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions'
+import { query } from '@/lib/postgres'
 
 // Aumentar timeout para permitir cargar todos los datos
 export const maxDuration = 60 // 60 segundos
@@ -12,49 +11,52 @@ export async function POST(request: NextRequest) {
 
     const hasDateFilter = fechaInicio || fechaFin
     const logMessage = hasDateFilter
-      ? `📅 Cargando eventos WELCOME desde ${fechaInicio || 'inicio'} hasta ${fechaFin || 'fin'}...`
-      : '📅 Cargando TODOS los eventos WELCOME (pasados, presentes y futuros)...'
+      ? `📅 [PostgreSQL] Cargando eventos WELCOME desde ${fechaInicio || 'inicio'} hasta ${fechaFin || 'fin'}...`
+      : '📅 [PostgreSQL] Cargando TODOS los eventos WELCOME (pasados, presentes y futuros)...'
 
     console.log(logMessage)
 
-    // Llamar al endpoint post_getWelcomeEvents de Wix con filtros de fecha opcionales
-    const response = await fetch(
-      `${WIX_API_BASE_URL}/getWelcomeEvents`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fechaInicio,
-          fechaFin
-        })
-      }
-    )
+    // Build query with optional date filters
+    let sql = `
+      SELECT
+        c.*,
+        (SELECT COUNT(*) FROM "ACADEMICA_BOOKINGS" ab WHERE ab."eventoId" = c."_id") as "inscritosCount",
+        (SELECT COUNT(*) FROM "ACADEMICA_BOOKINGS" ab WHERE ab."eventoId" = c."_id" AND ab."asistio" = true) as "asistieronCount"
+      FROM "CALENDARIO" c
+      WHERE (c."tipo" = 'WELCOME' OR c."tipo" = 'WELCOME_EVENT' OR LOWER(c."tituloONivel") LIKE '%welcome%')
+    `
 
-    if (!response.ok) {
-      console.error('❌ Wix API error:', response.status, response.statusText)
-      const errorText = await response.text()
-      console.error('❌ Wix API response:', errorText)
-      return NextResponse.json(
-        { success: false, error: `Wix API error: ${response.status} - ${errorText}` },
-        { status: response.status }
-      )
+    const params: any[] = []
+    let paramIndex = 1
+
+    if (fechaInicio) {
+      sql += ` AND c."dia" >= $${paramIndex}::timestamp with time zone`
+      params.push(fechaInicio)
+      paramIndex++
     }
 
-    const data = await response.json()
-    console.log('✅ Datos de eventos WELCOME recibidos de Wix:', data)
+    if (fechaFin) {
+      sql += ` AND c."dia" <= $${paramIndex}::timestamp with time zone`
+      params.push(fechaFin)
+      paramIndex++
+    }
+
+    sql += ` ORDER BY c."dia" DESC`
+
+    const result = await query(sql, params)
+
+    console.log('✅ [PostgreSQL] Datos de eventos WELCOME recibidos:', result.rowCount)
 
     return NextResponse.json({
       success: true,
-      events: data.events || data.items || [],
-      total: data.total || data.totalCount || 0
+      events: result.rows,
+      total: result.rowCount
     })
 
-  } catch (error) {
-    console.error('❌ Error en welcome-events API:', error)
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Error en welcome-events API:', error)
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: error.message || 'Internal server error' },
       { status: 500 }
     )
   }

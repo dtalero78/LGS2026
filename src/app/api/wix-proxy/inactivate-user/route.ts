@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { query } from '@/lib/postgres'
 
 export async function POST(request: Request) {
   try {
@@ -11,52 +12,48 @@ export async function POST(request: Request) {
       )
     }
 
-    const WIX_API_BASE_URL = process.env.WIX_API_BASE_URL || process.env.NEXT_PUBLIC_WIX_API_BASE_URL
+    console.log('🔄 [PostgreSQL] Inactivating user:', beneficiarioId)
 
-    if (!WIX_API_BASE_URL) {
-      console.error('WIX_API_BASE_URL no configurada')
+    // Update the user's estado to Inactivo
+    const result = await query(
+      `UPDATE "PEOPLE"
+       SET "estado" = 'Inactivo',
+           "estadoInactivo" = true,
+           "_updatedDate" = NOW()
+       WHERE "_id" = $1
+       RETURNING *`,
+      [beneficiarioId]
+    )
+
+    if (result.rowCount === 0) {
       return NextResponse.json(
-        { success: false, error: 'Configuración del servidor incompleta' },
-        { status: 500 }
+        { success: false, error: 'Usuario no encontrado' },
+        { status: 404 }
       )
     }
 
-    // Llamar a la función de Wix para inactivar el usuario
-    const wixUrl = `${WIX_API_BASE_URL}/inactivateUser`
+    // Also update ACADEMICA record if exists
+    await query(
+      `UPDATE "ACADEMICA"
+       SET "estadoInactivo" = true,
+           "_updatedDate" = NOW()
+       WHERE "visitorId" = $1`,
+      [beneficiarioId]
+    )
 
-    console.log('🔄 Proxy: Calling inactivateUser for userId:', beneficiarioId)
+    console.log('✅ [PostgreSQL] User inactivated:', beneficiarioId)
 
-    const wixResponse = await fetch(wixUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        userId: beneficiarioId
-      })
-    })
-
-    if (!wixResponse.ok) {
-      const errorText = await wixResponse.text()
-      console.error('Error de Wix:', errorText)
-      return NextResponse.json(
-        { success: false, error: 'Error al inactivar usuario en Wix' },
-        { status: wixResponse.status }
-      )
-    }
-
-    const wixData = await wixResponse.json()
     return NextResponse.json({
       success: true,
-      data: wixData
+      data: result.rows[0]
     })
 
-  } catch (error) {
-    console.error('Error al inactivar usuario:', error)
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Error al inactivar usuario:', error)
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Error interno del servidor'
+        error: error.message || 'Error interno del servidor'
       },
       { status: 500 }
     )

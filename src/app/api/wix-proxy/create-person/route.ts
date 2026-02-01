@@ -1,37 +1,108 @@
-import { NextRequest, NextResponse } from 'next/server';
-
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions';
+import { NextRequest, NextResponse } from 'next/server'
+import { query } from '@/lib/postgres'
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await request.json()
 
-    // Call Wix backend function to create person
-    const response = await fetch(`${WIX_API_BASE_URL}/createPerson`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body)
-    });
+    console.log('👤 [PostgreSQL] Creating person:', body)
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error from Wix:', errorText);
+    // Generate new ID
+    const personId = `person_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+    // Extract fields from body
+    const {
+      primerNombre,
+      segundoNombre,
+      primerApellido,
+      segundoApellido,
+      numeroId,
+      email,
+      celular,
+      tipoUsuario,
+      contrato,
+      pais,
+      ciudad,
+      domicilio,
+      fechaNacimiento,
+      estado,
+      nivel,
+      step,
+      finalContrato,
+      vigencia
+    } = body
+
+    // Validate required fields
+    if (!primerNombre || !primerApellido || !numeroId) {
       return NextResponse.json(
-        { error: 'Error creating person in Wix' },
-        { status: response.status }
-      );
+        { success: false, error: 'primerNombre, primerApellido y numeroId son requeridos' },
+        { status: 400 }
+      )
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    // Insert person into PEOPLE table
+    const result = await query(
+      `INSERT INTO "PEOPLE" (
+        "_id", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
+        "numeroId", "email", "celular", "tipoUsuario", "contrato", "pais", "ciudad",
+        "domicilio", "fechaNacimiento", "estado", "nivel", "step", "finalContrato",
+        "vigencia", "origen", "_createdDate", "_updatedDate"
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
+        'POSTGRES', NOW(), NOW()
+      )
+      RETURNING *`,
+      [
+        personId,
+        primerNombre,
+        segundoNombre || null,
+        primerApellido,
+        segundoApellido || null,
+        numeroId,
+        email || null,
+        celular || null,
+        tipoUsuario || 'BENEFICIARIO',
+        contrato || null,
+        pais || null,
+        ciudad || null,
+        domicilio || null,
+        fechaNacimiento || null,
+        estado || 'Pendiente',
+        nivel || null,
+        step || null,
+        finalContrato || null,
+        vigencia || null
+      ]
+    )
 
-  } catch (error) {
-    console.error('Error creating person:', error);
+    console.log('✅ [PostgreSQL] Person created:', personId)
+
+    // If it's a beneficiary with a nivel, also create ACADEMICA record
+    if (tipoUsuario === 'BENEFICIARIO' && nivel) {
+      const academicaId = `acad_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+      await query(
+        `INSERT INTO "ACADEMICA" (
+          "_id", "visitorId", "numeroId", "nivel", "step", "contrato",
+          "origen", "_createdDate", "_updatedDate"
+        ) VALUES ($1, $2, $3, $4, $5, $6, 'POSTGRES', NOW(), NOW())`,
+        [academicaId, personId, numeroId, nivel, step || 'Step 1', contrato]
+      )
+
+      console.log('✅ [PostgreSQL] ACADEMICA record created:', academicaId)
+    }
+
+    return NextResponse.json({
+      success: true,
+      person: result.rows[0],
+      message: 'Persona creada exitosamente'
+    })
+
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Error creating person:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Error creating person' },
+      { success: false, error: error.message || 'Error creating person' },
       { status: 500 }
-    );
+    )
   }
 }
