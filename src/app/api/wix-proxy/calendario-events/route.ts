@@ -1,46 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions'
+import { query } from '@/lib/postgres'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { fechaInicio, fechaFin, advisorId } = body
 
-    console.log('🗓️ Fetching calendar events:', { fechaInicio, fechaFin, advisorId })
+    console.log('🗓️ [PostgreSQL] Fetching calendar events:', { fechaInicio, fechaFin, advisorId })
 
-    const response = await fetch(
-      `${WIX_API_BASE_URL}/getCalendarioEvents`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fechaInicio,
-          fechaFin,
-          advisorId
-        })
-      }
-    )
+    let sql = `
+      SELECT * FROM "CALENDARIO"
+      WHERE "dia" >= $1 AND "dia" <= $2
+    `
+    const params: any[] = [fechaInicio, fechaFin]
 
-    if (!response.ok) {
-      console.error('❌ Wix API error:', response.status, response.statusText)
-      return NextResponse.json(
-        { success: false, error: `Wix API error: ${response.status}` },
-        { status: response.status }
-      )
+    if (advisorId) {
+      sql += ` AND "advisor" = $3`
+      params.push(advisorId)
     }
 
-    const data = await response.json()
-    console.log('✅ Calendar events received:', data?.events?.length || 0)
+    sql += ` ORDER BY "dia", "hora"`
 
-    return NextResponse.json(data)
+    const result = await query(sql, params)
 
-  } catch (error) {
-    console.error('❌ Error in calendario-events API:', error)
+    console.log('✅ [PostgreSQL] Calendar events received:', result.rows.length)
+
+    return NextResponse.json({
+      success: true,
+      events: result.rows
+    })
+
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Error in calendario-events API:', error)
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: error.message || 'Internal server error' },
       { status: 500 }
     )
   }

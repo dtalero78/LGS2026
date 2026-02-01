@@ -1,39 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions'
+import { query } from '@/lib/postgres'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('👨‍🏫 Fetching advisors from Wix')
+    console.log('👨‍🏫 [PostgreSQL] Fetching advisors')
 
-    const response = await fetch(
-      `${WIX_API_BASE_URL}/getAdvisors`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({})
-      }
-    )
+    const result = await query(`
+      SELECT * FROM "ADVISORS"
+      WHERE "activo" = true OR "activo" IS NULL
+      ORDER BY "nombre"
+    `)
 
-    if (!response.ok) {
-      console.error('❌ Wix API error:', response.status, response.statusText)
-      return NextResponse.json(
-        { success: false, error: `Wix API error: ${response.status}` },
-        { status: response.status }
-      )
-    }
+    console.log('✅ [PostgreSQL] Advisors received:', result.rows.length)
 
-    const data = await response.json()
-    console.log('✅ Advisors received:', data?.advisors?.length || 0)
+    return NextResponse.json({
+      success: true,
+      advisors: result.rows
+    })
 
-    return NextResponse.json(data)
-
-  } catch (error) {
-    console.error('❌ Error in advisors API:', error)
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Error in advisors API:', error)
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: error.message || 'Internal server error' },
       { status: 500 }
     )
   }

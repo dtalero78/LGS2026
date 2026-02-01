@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.WIX_API_BASE_URL || process.env.NEXT_PUBLIC_WIX_API_BASE_URL
-const WIX_API_KEY = process.env.WIX_API_KEY
-const WIX_SECRET = process.env.WIX_SECRET
+import { query } from '@/lib/postgres'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
-    console.log('🔍 Calendario Event Proxy: id =', id)
-    console.log('🔍 Calendario Event Proxy: WIX_API_BASE_URL =', WIX_API_BASE_URL)
+    console.log('🔍 [PostgreSQL] Calendario Event: id =', id)
 
     if (!id) {
       return NextResponse.json(
@@ -19,56 +15,30 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    if (!WIX_API_BASE_URL) {
-      return NextResponse.json(
-        { error: 'WIX API configuration is missing' },
-        { status: 500 }
-      )
-    }
+    const result = await query(
+      `SELECT * FROM "CALENDARIO" WHERE "_id" = $1`,
+      [id]
+    )
 
-    const wixUrl = `${WIX_API_BASE_URL}/getCalendarioEventById?id=${encodeURIComponent(id)}`
-    console.log('🔍 Calendario Event Proxy: Making request to =', wixUrl)
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-
-    if (WIX_API_KEY) {
-      headers['Authorization'] = `Bearer ${WIX_API_KEY}`
-    }
-
-    if (WIX_SECRET) {
-      headers['X-Wix-Secret'] = WIX_SECRET
-    }
-
-    console.log('🔍 Calendario Event Proxy: Headers =', Object.keys(headers))
-
-    const response = await fetch(wixUrl, {
-      method: 'GET',
-      headers,
-    })
-
-    console.log('🔍 Calendario Event Proxy: Response status =', response.status)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Wix API error:', response.status, response.statusText, errorText)
-
+    if (result.rows.length === 0) {
       return NextResponse.json({
         success: false,
-        error: `Wix API error: ${response.status} ${response.statusText}`
-      }, { status: response.status })
+        error: 'Event not found'
+      }, { status: 404 })
     }
 
-    const data = await response.json()
-    console.log('🔍 Calendario Event Proxy: Success, data =', JSON.stringify(data, null, 2))
-    return NextResponse.json(data)
+    console.log('🔍 [PostgreSQL] Calendario Event: Found event:', result.rows[0].titulo)
 
-  } catch (error) {
-    console.error('🔍 Calendario Event Proxy error:', error)
+    return NextResponse.json({
+      success: true,
+      event: result.rows[0]
+    })
+
+  } catch (error: any) {
+    console.error('🔍 [PostgreSQL] Calendario Event error:', error)
     return NextResponse.json({
       success: false,
-      error: 'Internal server error'
+      error: error.message || 'Internal server error'
     }, { status: 500 })
   }
 }
