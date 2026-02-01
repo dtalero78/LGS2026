@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.WIX_API_BASE_URL || process.env.NEXT_PUBLIC_WIX_API_BASE_URL
+import { query } from '@/lib/postgres'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth-postgres'
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,40 +15,67 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!WIX_API_BASE_URL) {
+    console.log('💬 [PostgreSQL] Adding comment to person:', personId)
+
+    // Get session for user info
+    const session = await getServerSession(authOptions)
+
+    // Get current person data
+    const personResult = await query(
+      `SELECT "_id", "comentarios"
+       FROM "PEOPLE"
+       WHERE "_id" = $1`,
+      [personId]
+    )
+
+    if (personResult.rowCount === 0) {
       return NextResponse.json(
-        { success: false, error: 'WIX API configuration is missing' },
-        { status: 500 }
+        { success: false, error: 'Person not found' },
+        { status: 404 }
       )
     }
 
-    const wixUrl = `${WIX_API_BASE_URL}/addCommentToPerson`
+    const person = personResult.rows[0]
 
-    const response = await fetch(wixUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ personId, commentData })
-    })
+    // Parse existing comments
+    let comments = Array.isArray(person.comentarios)
+      ? person.comentarios
+      : JSON.parse(person.comentarios || '[]')
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Wix API error:', response.status, errorText)
-      return NextResponse.json({
-        success: false,
-        error: `Wix API error: ${response.status}`
-      })
+    // Create new comment entry
+    const newComment = {
+      id: `comment_${Date.now()}`,
+      fecha: new Date().toISOString(),
+      texto: commentData.texto || commentData.comment || commentData,
+      autor: session?.user?.name || session?.user?.email || 'Unknown',
+      tipo: commentData.tipo || 'general'
     }
 
-    const data = await response.json()
-    return NextResponse.json(data)
+    comments.push(newComment)
 
-  } catch (error) {
-    console.error('Add comment proxy error:', error)
+    // Update person
+    const result = await query(
+      `UPDATE "PEOPLE"
+       SET "comentarios" = $1::jsonb,
+           "_updatedDate" = NOW()
+       WHERE "_id" = $2
+       RETURNING *`,
+      [JSON.stringify(comments), personId]
+    )
+
+    console.log('✅ [PostgreSQL] Comment added successfully')
+
+    return NextResponse.json({
+      success: true,
+      comment: newComment,
+      person: result.rows[0]
+    })
+
+  } catch (error: any) {
+    console.error('❌ [PostgreSQL] Add comment error:', error)
     return NextResponse.json({
       success: false,
-      error: 'Internal server error'
+      error: error.message || 'Internal server error'
     }, { status: 500 })
   }
 }
