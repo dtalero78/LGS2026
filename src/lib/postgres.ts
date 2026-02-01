@@ -12,17 +12,31 @@ import 'server-only';
 import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 
 // Connection pool configuration
-const pool = new Pool({
-  host: process.env.POSTGRES_HOST || 'localhost',
-  port: parseInt(process.env.POSTGRES_PORT || '5432'),
-  database: process.env.POSTGRES_DB || 'lgs_admin',
-  user: process.env.POSTGRES_USER,
-  password: process.env.POSTGRES_PASSWORD,
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 10000, // Fail if connection takes > 10 seconds
-  ssl: process.env.POSTGRES_SSL === 'true' ? { rejectUnauthorized: false } : false,
-});
+// Supports both DATABASE_URL (Digital Ocean) and individual POSTGRES_* variables
+const poolConfig = process.env.DATABASE_URL
+  ? {
+      connectionString: process.env.DATABASE_URL,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+      ssl: { rejectUnauthorized: false },
+    }
+  : {
+      host: process.env.POSTGRES_HOST || 'localhost',
+      port: parseInt(process.env.POSTGRES_PORT || '5432'),
+      database: process.env.POSTGRES_DB || 'lgs_admin',
+      user: process.env.POSTGRES_USER,
+      password: process.env.POSTGRES_PASSWORD,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+      ssl: process.env.POSTGRES_SSL === 'true' ? { rejectUnauthorized: false } : false,
+    };
+
+const pool = new Pool(poolConfig);
+
+// Log which connection method is being used
+console.log(`🔌 PostgreSQL using ${process.env.DATABASE_URL ? 'DATABASE_URL' : 'individual POSTGRES_* variables'}`);
 
 // Handle pool errors
 pool.on('error', (err) => {
