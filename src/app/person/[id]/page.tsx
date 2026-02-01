@@ -2,7 +2,6 @@ import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import PersonTabs from '@/components/person/PersonTabs'
-import { makeWixApiCall } from '@/lib/wix'
 import { PermissionGuard } from '@/components/permissions'
 import { PersonPermission } from '@/types/permissions'
 
@@ -10,6 +9,16 @@ interface PersonPageProps {
   params: {
     id: string
   }
+}
+
+// Helper to get base URL for server-side fetch
+function getBaseUrl() {
+  // In production, use NEXTAUTH_URL
+  if (process.env.NEXTAUTH_URL) {
+    return process.env.NEXTAUTH_URL
+  }
+  // In development
+  return 'http://localhost:3001'
 }
 
 export default async function PersonPage({ params }: PersonPageProps) {
@@ -26,54 +35,48 @@ export default async function PersonPage({ params }: PersonPageProps) {
 
 async function PersonContent({ personId }: { personId: string }) {
   try {
-    // Call Wix directly from server component - add cache busting
-    const personData = await makeWixApiCall(`personById?id=${encodeURIComponent(personId)}&_t=${Date.now()}`)
+    // Call PostgreSQL API endpoint
+    const baseUrl = getBaseUrl()
+    console.log('🔍 [PersonPage] Fetching person from PostgreSQL:', personId)
 
-    if (!personData.success || !personData.person) {
+    const response = await fetch(
+      `${baseUrl}/api/postgres/people/${encodeURIComponent(personId)}`,
+      { cache: 'no-store' }
+    )
+
+    if (!response.ok) {
+      console.error('❌ [PersonPage] Error fetching person:', response.status, response.statusText)
       notFound()
     }
 
-    // Get financial data if contract exists
-    let financialData = null
-    if (personData.person.contrato) {
-      try {
-        const financialResponse = await makeWixApiCall(`financialDataByContrato?contrato=${encodeURIComponent(personData.person.contrato)}`)
-        if (financialResponse.success) {
-          financialData = financialResponse.financialData
-        }
-      } catch (error) {
-        console.error('Error fetching financial data:', error)
-      }
+    const data = await response.json()
+
+    if (!data.success || !data.person) {
+      console.error('❌ [PersonPage] No person data returned')
+      notFound()
     }
 
-    // Get related persons (beneficiaries) from Wix
-    let beneficiaries = []
-    try {
-      const relatedData = await makeWixApiCall('getRelatedPersons', 'POST', {
-        personId: personId,
-        tipoUsuario: personData.person.tipoUsuario,
-        titularId: personData.person.titularId,
-        _t: Date.now() // Cache-busting parameter
-      })
+    console.log('✅ [PersonPage] Person loaded from PostgreSQL:', {
+      id: data.person._id,
+      nombre: `${data.person.primerNombre} ${data.person.primerApellido}`,
+    })
 
-      if (relatedData.success && relatedData.relatedPersons) {
-        beneficiaries = relatedData.relatedPersons.map((person: any) => ({
-          _id: person._id,
-          numeroId: person.numeroId,
-          nombre: person.nombreCompleto.split(' ')[0] || '',
-          apellido: person.nombreCompleto.split(' ').slice(1).join(' ') || '',
-          celular: person.celular || person.telefono || '',
-          estado: person.estadoInactivo ? 'Inactivo' : person.aprobacion,
-          fechaCreacion: person._createdDate,
-          nivel: person.nivel,
-          existeEnAcademica: person.existeEnAcademica,
-          estadoInactivo: person.estadoInactivo || false
-        }))
-      }
-    } catch (error) {
-      console.error('Error fetching related persons:', error)
-      beneficiaries = []
-    }
+    const personData = { person: data.person }
+    const financialData = data.financialData
+
+    // Transform related persons to beneficiaries format
+    const beneficiaries = (data.relatedPersons || []).map((person: any) => ({
+      _id: person._id,
+      numeroId: person.numeroId,
+      nombre: person.nombreCompleto?.split(' ')[0] || '',
+      apellido: person.nombreCompleto?.split(' ').slice(1).join(' ') || '',
+      celular: person.celular || '',
+      estado: person.estadoInactivo ? 'Inactivo' : person.aprobacion,
+      fechaCreacion: person._createdDate,
+      nivel: person.nivel,
+      existeEnAcademica: person.existeEnAcademica,
+      estadoInactivo: person.estadoInactivo || false
+    }))
 
     return (
       <div className="space-y-6">
@@ -131,7 +134,7 @@ async function PersonContent({ personId }: { personId: string }) {
       </div>
     )
   } catch (error) {
-    console.error('Error loading person:', error)
+    console.error('❌ [PersonPage] Error loading person:', error)
     notFound()
   }
 }
