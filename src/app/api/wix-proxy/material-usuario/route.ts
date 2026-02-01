@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions'
+import { query } from '@/lib/postgres'
 
 /**
- * GET /api/postgres/materials/usuario?step=Step 1
+ * GET /api/wix-proxy/material-usuario?step=Step 1
  * Obtiene el campo materialUsuario de un step específico desde la colección NIVELES
  */
 export async function GET(request: NextRequest) {
@@ -11,34 +10,39 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const step = searchParams.get('step') || 'Step 1'
 
-    console.log('📚 Obteniendo materialUsuario para step:', step)
+    console.log('📚 [PostgreSQL] Obteniendo materialUsuario para step:', step)
 
-    // Llamar al endpoint de Wix para obtener el material de usuario
-    const response = await fetch(
-      `${WIX_API_BASE_URL}/getMaterialUsuario?step=${encodeURIComponent(step)}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      }
+    // Query NIVELES table for the material of the specific step
+    const result = await query(
+      `SELECT "materialUsuario", "material", "code", "step"
+       FROM "NIVELES"
+       WHERE "step" = $1
+       LIMIT 1`,
+      [step]
     )
 
-    if (!response.ok) {
-      console.error('❌ Wix API error:', response.status, response.statusText)
-      return NextResponse.json(
-        { success: false, error: `Wix API error: ${response.status}` },
-        { status: response.status }
-      )
+    if (result.rowCount === 0) {
+      console.log('⚠️ [PostgreSQL] No material found for step:', step)
+      return NextResponse.json({
+        success: true,
+        materialUsuario: null,
+        step: step
+      })
     }
 
-    const data = await response.json()
-    console.log('✅ Material usuario obtenido:', data)
+    const row = result.rows[0]
+    console.log('✅ [PostgreSQL] Material usuario obtenido:', row.materialUsuario ? 'found' : 'empty')
 
-    return NextResponse.json(data)
+    return NextResponse.json({
+      success: true,
+      materialUsuario: row.materialUsuario || null,
+      material: row.material || null,
+      code: row.code,
+      step: row.step
+    })
 
   } catch (error) {
-    console.error('❌ Error in material-usuario API:', error)
+    console.error('❌ [PostgreSQL] Error in material-usuario API:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

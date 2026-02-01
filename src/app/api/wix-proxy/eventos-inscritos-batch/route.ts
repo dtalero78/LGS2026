@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WIX_API_BASE_URL = process.env.NEXT_PUBLIC_WIX_API_BASE_URL || 'https://www.lgsplataforma.com/_functions'
+import { query } from '@/lib/postgres'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { eventIds } = body
 
-    console.log('🔢📊 Proxy: Solicitud de conteo de inscritos para múltiples eventos:', eventIds?.length || 0)
+    console.log('🔢📊 [PostgreSQL] Conteo de inscritos para múltiples eventos:', eventIds?.length || 0)
 
     if (!eventIds || !Array.isArray(eventIds) || eventIds.length === 0) {
       return NextResponse.json(
@@ -16,39 +15,46 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const response = await fetch(`${WIX_API_BASE_URL}/getMultipleEventsInscritosCount`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ eventIds })
+    // Query to count inscritos and asistencias per event
+    const result = await query(
+      `SELECT
+        "eventoId",
+        COUNT(*) as "inscritosCount",
+        COUNT(*) FILTER (WHERE "asistio" = true) as "asistenciasCount"
+      FROM "ACADEMICA_BOOKINGS"
+      WHERE "eventoId" = ANY($1)
+      GROUP BY "eventoId"`,
+      [eventIds]
+    )
+
+    // Build the response maps
+    const inscritosCounts: Record<string, number> = {}
+    const asistenciasCounts: Record<string, number> = {}
+    let totalBookings = 0
+
+    result.rows.forEach((row: any) => {
+      inscritosCounts[row.eventoId] = parseInt(row.inscritosCount) || 0
+      asistenciasCounts[row.eventoId] = parseInt(row.asistenciasCount) || 0
+      totalBookings += parseInt(row.inscritosCount) || 0
     })
 
-    if (!response.ok) {
-      console.error('❌ Wix API error:', response.status)
-      return NextResponse.json(
-        { success: false, error: `Error del servidor Wix: ${response.status}`, inscritosCounts: {} },
-        { status: response.status }
-      )
-    }
+    // Initialize events with no bookings to 0
+    eventIds.forEach((eventId: string) => {
+      if (!(eventId in inscritosCounts)) {
+        inscritosCounts[eventId] = 0
+        asistenciasCounts[eventId] = 0
+      }
+    })
 
-    const data = await response.json()
-
-    console.log('🔍 DEBUG - Respuesta RAW de Wix:', JSON.stringify(data, null, 2))
-
-    // Mapear la respuesta de Wix al formato que espera el frontend
     const mappedData = {
-      success: data.success,
-      inscritosCounts: data.inscritosPorEvento || {},
-      asistenciasCounts: data.asistenciasPorEvento || {},
-      totalEventos: data.totalEventos,
-      totalBookings: data.totalBookings
+      success: true,
+      inscritosCounts,
+      asistenciasCounts,
+      totalEventos: eventIds.length,
+      totalBookings
     }
 
-    console.log('✅ Conteo múltiple de inscritos recibido:', Object.keys(mappedData.inscritosCounts || {}).length, 'eventos')
-    console.log('✅ Conteo múltiple de asistencias recibido:', Object.keys(mappedData.asistenciasCounts || {}).length, 'eventos')
-    console.log('🔍 DEBUG - Evento c33e7197:', mappedData.inscritosCounts['c33e7197-a553-4823-a741-0c8c17a1388d'])
-
+    console.log('✅ [PostgreSQL] Conteo de inscritos:', Object.keys(inscritosCounts).length, 'eventos')
 
     return NextResponse.json(mappedData, {
       status: 200,
@@ -60,7 +66,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Error en eventos-inscritos-batch proxy:', error)
+    console.error('❌ [PostgreSQL] Error en eventos-inscritos-batch:', error)
     return NextResponse.json(
       { success: false, error: 'Error interno del servidor', inscritosCounts: {} },
       { status: 500 }

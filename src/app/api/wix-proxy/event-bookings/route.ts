@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { query } from '@/lib/postgres'
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,43 +17,30 @@ export async function POST(request: NextRequest) {
 
     console.log('📊 [PostgreSQL] Fetching event bookings for:', finalEventId)
 
-    // Use PostgreSQL endpoint
-    const baseUrl = process.env.NODE_ENV === 'production'
-      ? (process.env.NEXTAUTH_URL || '')
-      : 'http://localhost:3001'
-
-    const response = await fetch(
-      `${baseUrl}/api/postgres/calendar/${encodeURIComponent(finalEventId)}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        cache: 'no-store'
-      }
+    // Query bookings with student data joined
+    const result = await query(
+      `SELECT
+        ab.*,
+        p."primerNombre",
+        p."segundoNombre",
+        p."primerApellido",
+        p."segundoApellido",
+        p."numeroId",
+        p."email",
+        p."celular",
+        p."nivel" as "studentNivel",
+        p."step" as "studentStep",
+        p."plataforma"
+      FROM "ACADEMICA_BOOKINGS" ab
+      LEFT JOIN "PEOPLE" p ON ab."visitorId" = p."_id"
+      WHERE ab."eventoId" = $1
+      ORDER BY p."primerApellido" ASC, p."primerNombre" ASC`,
+      [finalEventId]
     )
 
-    if (!response.ok) {
-      console.error('❌ PostgreSQL API error:', response.status, response.statusText)
-      return NextResponse.json(
-        { success: false, error: `PostgreSQL API error: ${response.status}`, count: 0 },
-        { status: response.status }
-      )
-    }
-
-    const data = await response.json()
-
-    if (!data.success) {
-      return NextResponse.json(
-        { success: false, error: 'Failed to fetch bookings', count: 0 },
-        { status: 500 }
-      )
-    }
-
-    // PostgreSQL response already includes student data via LEFT JOIN
-    const bookings = (data.data || []).map((booking: any) => ({
+    // Map bookings with classData for backward compatibility
+    const bookings = result.rows.map((booking: any) => ({
       ...booking,
-      // Map asistencia boolean to classData for backward compatibility
       classData: {
         asistencia: booking.asistencia || false,
         asistio: booking.asistio || false,
@@ -64,9 +52,9 @@ export async function POST(request: NextRequest) {
     }))
 
     const count = bookings.length
-    const asistieron = bookings.filter((b: any) => b.classData?.asistencia === true).length
+    const asistieron = bookings.filter((b: any) => b.asistio === true).length
 
-    console.log('✅ Event bookings received from PostgreSQL:', count, '| Asistieron:', asistieron)
+    console.log('✅ [PostgreSQL] Event bookings received:', count, '| Asistieron:', asistieron)
 
     return NextResponse.json({
       success: true,
@@ -82,7 +70,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Error in event-bookings API:', error)
+    console.error('❌ [PostgreSQL] Error in event-bookings API:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error', count: 0 },
       { status: 500 }
