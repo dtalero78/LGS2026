@@ -58,6 +58,11 @@ async function verifyUserPostgres(email: string, password: string) {
       } else {
         // Plain text comparison (legacy support)
         console.log('⚠️ [PostgreSQL] Contraseña en texto plano');
+        console.log('🔍 [PostgreSQL] Comparando:', {
+          inputLen: password.length,
+          dbLen: user.password.length,
+          match: password === user.password
+        });
         isPasswordValid = password === user.password;
       }
     }
