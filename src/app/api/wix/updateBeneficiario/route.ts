@@ -1,28 +1,100 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { query } from '@/lib/postgres'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    const { beneficiaryId, visitorId, ...updateFields } = body
 
-    const response = await fetch('https://www.lgsplataforma.com/_functions/updateBeneficiario', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body)
-    })
+    const id = beneficiaryId || visitorId
+    console.log('🔄 [PostgreSQL] Updating beneficiary:', id, updateFields)
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: 'beneficiaryId or visitorId is required' },
+        { status: 400 }
+      )
     }
 
-    const data = await response.json()
-    return NextResponse.json(data)
+    // Build dynamic update query
+    const allowedFields = [
+      'primerNombre', 'segundoNombre', 'primerApellido', 'segundoApellido',
+      'email', 'celular', 'fechaNacimiento', 'nivel', 'step',
+      'nivelParalelo', 'stepParalelo', 'plataforma', 'observaciones',
+      'direccion', 'ciudad', 'pais'
+    ]
 
-  } catch (error) {
-    console.error('Error in updateBeneficiario proxy:', error)
+    const updates: string[] = []
+    const values: any[] = []
+    let paramIndex = 1
+
+    for (const field of allowedFields) {
+      if (updateFields[field] !== undefined) {
+        updates.push(`"${field}" = $${paramIndex}`)
+        values.push(updateFields[field])
+        paramIndex++
+      }
+    }
+
+    if (updates.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'No valid fields to update' },
+        { status: 400 }
+      )
+    }
+
+    // Add _updatedDate and the ID
+    updates.push(`"_updatedDate" = NOW()`)
+    values.push(id)
+
+    const result = await query(
+      `UPDATE "PEOPLE"
+       SET ${updates.join(', ')}
+       WHERE "_id" = $${paramIndex}
+       RETURNING *`,
+      values
+    )
+
+    if (result.rowCount === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Beneficiary not found' },
+        { status: 404 }
+      )
+    }
+
+    // Also update ACADEMICA if nivel/step changed
+    if (updateFields.nivel || updateFields.step) {
+      const person = result.rows[0]
+      await query(
+        `UPDATE "ACADEMICA"
+         SET "nivel" = COALESCE($2, "nivel"),
+             "step" = COALESCE($3, "step"),
+             "primerNombre" = COALESCE($4, "primerNombre"),
+             "primerApellido" = COALESCE($5, "primerApellido"),
+             "_updatedDate" = NOW()
+         WHERE "numeroId" = $1`,
+        [
+          person.numeroId,
+          updateFields.nivel || null,
+          updateFields.step || null,
+          updateFields.primerNombre || null,
+          updateFields.primerApellido || null
+        ]
+      )
+    }
+
+    console.log('✅ [PostgreSQL] Beneficiary updated successfully')
+
+    return NextResponse.json({
+      success: true,
+      message: 'Beneficiary updated successfully',
+      person: result.rows[0]
+    })
+
+  } catch (error: any) {
+    console.error('❌ Error in updateBeneficiario:', error)
     return NextResponse.json(
-      { success: false, error: 'Failed to update beneficiary' },
+      { success: false, error: 'Failed to update beneficiary', details: error.message },
       { status: 500 }
     )
   }

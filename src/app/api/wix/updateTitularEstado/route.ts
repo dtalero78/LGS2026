@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { query } from '@/lib/postgres'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,32 +13,36 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('🔄 Enviando solicitud de actualización de estado a Wix:', { personId, nuevoEstado })
+    console.log('🔄 [PostgreSQL] Updating titular estado:', { personId, nuevoEstado })
 
-    const response = await fetch('https://www.lgsplataforma.com/_functions/updateTitularEstado', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        personId,
-        nuevoEstado
-      })
-    })
+    // Update PEOPLE table - set aprobacion to new estado
+    const result = await query(
+      `UPDATE "PEOPLE"
+       SET "aprobacion" = $2, "_updatedDate" = NOW()
+       WHERE "_id" = $1
+       RETURNING *`,
+      [personId, nuevoEstado]
+    )
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+    if (result.rowCount === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Titular not found' },
+        { status: 404 }
+      )
     }
 
-    const data = await response.json()
-    console.log('✅ Respuesta de Wix:', data)
+    console.log('✅ [PostgreSQL] Titular estado updated successfully')
 
-    return NextResponse.json(data)
+    return NextResponse.json({
+      success: true,
+      message: 'Titular estado updated successfully',
+      person: result.rows[0]
+    })
 
-  } catch (error) {
-    console.error('Error in updateTitularEstado proxy:', error)
+  } catch (error: any) {
+    console.error('❌ Error in updateTitularEstado:', error)
     return NextResponse.json(
-      { success: false, error: 'Failed to update titular estado' },
+      { success: false, error: 'Failed to update titular estado', details: error.message },
       { status: 500 }
     )
   }
