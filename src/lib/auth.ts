@@ -1,7 +1,7 @@
 import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
-import { queryOne } from './postgres'
+import { Pool } from 'pg'
 
 interface UserRole {
   _id: string
@@ -10,6 +10,30 @@ interface UserRole {
   nombre: string
   rol: string
   activo: boolean
+}
+
+// Create a separate pool for auth to avoid importing server-only postgres module
+const authPool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  max: 5,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+});
+
+async function queryUserByEmail(email: string): Promise<UserRole | null> {
+  try {
+    const result = await authPool.query(
+      `SELECT "_id", "email", "password", "nombre", "rol", "activo"
+       FROM "USUARIOS_ROLES"
+       WHERE "email" = $1`,
+      [email]
+    );
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('❌ [Auth Pool] Query error:', error);
+    return null;
+  }
 }
 
 export const authOptions: NextAuthOptions = {
@@ -33,12 +57,7 @@ export const authOptions: NextAuthOptions = {
         try {
           console.log('🔍 [PostgreSQL] Buscando usuario:', credentials.email);
 
-          const user = await queryOne<UserRole>(
-            `SELECT "_id", "email", "password", "nombre", "rol", "activo"
-             FROM "USUARIOS_ROLES"
-             WHERE "email" = $1`,
-            [credentials.email]
-          );
+          const user = await queryUserByEmail(credentials.email);
 
           if (user && user.activo) {
             console.log('✅ [PostgreSQL] Usuario encontrado:', {
