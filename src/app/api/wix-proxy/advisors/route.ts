@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     const result = await query(`
       SELECT * FROM "ADVISORS"
       WHERE "activo" = true OR "activo" IS NULL
-      ORDER BY "nombre"
+      ORDER BY "nombreCompleto"
     `)
 
     console.log('✅ [PostgreSQL] Advisors received:', result.rows.length)
