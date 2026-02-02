@@ -9,9 +9,12 @@
 const { Pool } = require('pg');
 
 // Configuración de PostgreSQL para Digital Ocean
+// Disable SSL certificate validation for self-signed certs
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: { rejectUnauthorized: false },
 });
 
 const WIX_API_URL = 'https://www.lgsplataforma.com/_functions/advisors';

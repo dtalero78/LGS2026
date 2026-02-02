@@ -26,6 +26,7 @@ export async function GET(
     console.log('🔍 [PostgreSQL] Getting academic history for student:', id)
 
     // Get academic record from ACADEMICA
+    // Search by multiple ID fields to handle different ID formats
     const academicRecord = await queryOne(
       `SELECT
         "_id",
@@ -58,7 +59,7 @@ export async function GET(
         "extensionHistory",
         "onHoldCount"
       FROM "ACADEMICA"
-      WHERE "_id" = $1 OR "studentId" = $1 OR "peopleId" = $1`,
+      WHERE "_id" = $1 OR "studentId" = $1 OR "peopleId" = $1 OR "numeroId" = $1`,
       [id]
     )
 
@@ -73,6 +74,10 @@ export async function GET(
     console.log('✅ [PostgreSQL] Academic record loaded:', academicRecord.primerNombre, academicRecord.primerApellido)
 
     // Get class history from ACADEMICA_BOOKINGS
+    // Search by multiple possible ID fields: studentId, peopleId from ACADEMICA, or the _id itself
+    const studentIdToSearch = academicRecord.studentId || academicRecord.peopleId || academicRecord._id || id
+    console.log('🔍 [PostgreSQL] Searching bookings with studentId:', studentIdToSearch)
+
     const classes = await queryMany(
       `SELECT
         "_id",
@@ -108,10 +113,10 @@ export async function GET(
         "_createdDate",
         "_updatedDate"
       FROM "ACADEMICA_BOOKINGS"
-      WHERE "studentId" = $1 OR "idEstudiante" = $1
+      WHERE "studentId" = $1
       ORDER BY "fecha" DESC, "hora" DESC
       LIMIT $2`,
-      [academicRecord.studentId || id, limit]
+      [studentIdToSearch, limit]
     )
 
     console.log('✅ [PostgreSQL] Found', classes.length, 'classes for student')
