@@ -9,17 +9,24 @@ export async function POST(request: NextRequest) {
     console.log('🗓️ [PostgreSQL] Fetching calendar events:', { fechaInicio, fechaFin, advisorId })
 
     let sql = `
-      SELECT * FROM "CALENDARIO"
-      WHERE "dia" >= $1 AND "dia" <= $2
+      SELECT
+        c.*,
+        a."primerNombre" as "advisorPrimerNombre",
+        a."primerApellido" as "advisorPrimerApellido",
+        a."nombreCompleto" as "advisorNombreCompleto",
+        a."email" as "advisorEmail"
+      FROM "CALENDARIO" c
+      LEFT JOIN "ADVISORS" a ON c."advisor" = a."_id"
+      WHERE c."dia" >= $1 AND c."dia" <= $2
     `
     const params: any[] = [fechaInicio, fechaFin]
 
     if (advisorId) {
-      sql += ` AND "advisor" = $3`
+      sql += ` AND c."advisor" = $3`
       params.push(advisorId)
     }
 
-    sql += ` ORDER BY "dia", "hora"`
+    sql += ` ORDER BY c."dia", c."hora"`
 
     const result = await query(sql, params)
 
