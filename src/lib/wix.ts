@@ -68,10 +68,32 @@ export async function getStudentById(studentId: string) {
 
   // Transform PostgreSQL response to match expected format
   if (result.success && result.data) {
+    // Also fetch academic history (classes)
+    let classes: any[] = []
+    try {
+      const academicUrl = `${baseUrl}/api/postgres/students/${encodeURIComponent(studentId)}/academic`;
+      console.log('🔍 [PostgreSQL] getStudentById - Fetching classes from:', academicUrl);
+
+      const academicResponse = await fetch(academicUrl, {
+        cache: 'no-store',
+      })
+
+      if (academicResponse.ok) {
+        const academicResult = await academicResponse.json()
+        if (academicResult.success && academicResult.data?.classes) {
+          classes = academicResult.data.classes
+          console.log('✅ [PostgreSQL] getStudentById - Classes loaded:', classes.length)
+        }
+      }
+    } catch (error) {
+      console.error('⚠️ [PostgreSQL] Error loading classes:', error)
+      // Continue without classes if there's an error
+    }
+
     return {
       success: true,
       student: result.data,
-      classes: [] // Classes will be loaded separately
+      classes
     }
   }
 
