@@ -16,6 +16,11 @@ interface CalendarEvent {
   nombreEvento?: string
   advisor: string | Advisor
   advisorNombre?: string
+  // Fields from ADVISORS JOIN
+  advisorPrimerNombre?: string
+  advisorPrimerApellido?: string
+  advisorNombreCompleto?: string
+  advisorEmail?: string
   observaciones?: string
   limiteUsuarios: number
   linkZoom?: string

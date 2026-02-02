@@ -3,24 +3,27 @@ import { queryMany } from '@/lib/postgres'
 
 /**
  * Get Advisors List (PostgreSQL)
- * Returns list of active users with ADVISOR or ADMIN roles
+ * Returns list of advisors from the ADVISORS table (migrated from Wix)
+ * This table contains the advisors that are used in CALENDARIO events
  */
 async function getAdvisors(includeInactive: boolean = false) {
-  console.log('🔍 [PostgreSQL Advisors] Getting advisors list, includeInactive:', includeInactive)
+  console.log('🔍 [PostgreSQL Advisors] Getting advisors list from ADVISORS table, includeInactive:', includeInactive)
 
   const query = `
     SELECT
       "_id",
       "email",
-      "nombre",
-      "rol",
+      "primerNombre",
+      "primerApellido",
+      "nombreCompleto",
+      "pais",
+      "zoom",
       "activo",
       "_createdDate",
       "_updatedDate"
-    FROM "USUARIOS_ROLES"
-    WHERE ("rol" = 'ADVISOR' OR "rol" = 'ADMIN' OR "rol" = 'SUPER_ADMIN')
-    ${includeInactive ? '' : 'AND "activo" = true'}
-    ORDER BY "nombre" ASC
+    FROM "ADVISORS"
+    ${includeInactive ? '' : 'WHERE "activo" = true OR "activo" IS NULL'}
+    ORDER BY "nombreCompleto" ASC NULLS LAST
   `
 
   const advisors = await queryMany(query, [])
@@ -38,7 +41,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: advisors,
+      advisors: advisors,
+      data: advisors, // For backwards compatibility
       total: advisors.length,
     })
 
@@ -64,7 +68,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: advisors,
+      advisors: advisors,
+      data: advisors, // For backwards compatibility
       total: advisors.length,
     })
 

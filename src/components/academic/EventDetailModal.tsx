@@ -14,6 +14,11 @@ interface CalendarEvent {
   nombreEvento?: string
   advisor: string | Advisor
   advisorNombre?: string
+  // Fields from ADVISORS JOIN
+  advisorPrimerNombre?: string
+  advisorPrimerApellido?: string
+  advisorNombreCompleto?: string
+  advisorEmail?: string
   observaciones?: string
   limiteUsuarios: number
   linkZoom?: string
@@ -79,10 +84,20 @@ export default function EventDetailModal({ event, isOpen, onClose, advisors, adv
   const getAdvisorName = () => {
     if (!event) return 'Sin asignar'
 
+    // First try JOIN fields from the event
+    if (event.advisorNombreCompleto) {
+      return event.advisorNombreCompleto
+    }
+    if (event.advisorPrimerNombre) {
+      return `${event.advisorPrimerNombre} ${event.advisorPrimerApellido || ''}`.trim()
+    }
+
+    // Fallback to advisorNombre field
     if (event.advisorNombre) {
       return event.advisorNombre
     }
 
+    // Last resort: lookup in advisors array
     const advisorInfo = getAdvisorInfo()
     return advisorInfo ? `${advisorInfo.primerNombre} ${advisorInfo.primerApellido}` : 'Sin asignar'
   }
