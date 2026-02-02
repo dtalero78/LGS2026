@@ -366,8 +366,17 @@ export default function AgendaSesionesPage() {
     try {
       console.log('🗓️ Cargando eventos para:', currentMonth.toISOString().split('T')[0])
 
-      // Función local para obtener advisor name
-      const getAdvisorNameLocal = (advisor: any): string => {
+      // Función local para obtener advisor name - ahora usa campos del JOIN
+      const getAdvisorNameLocal = (event: any): string => {
+        // Primero intentar con los nuevos campos del JOIN
+        if (event.advisorNombreCompleto) {
+          return event.advisorNombreCompleto
+        }
+        if (event.advisorPrimerNombre) {
+          return `${event.advisorPrimerNombre} ${event.advisorPrimerApellido || ''}`.trim()
+        }
+        // Fallback al método anterior por compatibilidad
+        const advisor = event.advisor
         if (advisor && typeof advisor === 'object' && advisor.primerNombre) {
           return `${advisor.primerNombre} ${advisor.primerApellido || ''}`.trim()
         }
@@ -408,7 +417,7 @@ export default function AgendaSesionesPage() {
             dia: new Date(event.dia),
             inscritos: 0, // Inicializar en 0
             asistieron: 0, // Inicializar en 0
-            advisorNombre: getAdvisorNameLocal(event.advisor)
+            advisorNombre: getAdvisorNameLocal(event)
           }))
           setEvents(basicEvents)
 
@@ -494,8 +503,17 @@ export default function AgendaSesionesPage() {
       const endDateStr = format(endOfDay(calendarEnd), 'yyyy-MM-dd')
       const eventsResponse = await fetch(`/api/postgres/calendar/events?startDate=${startDateStr}&endDate=${endDateStr}&limit=1000`)
 
-      // Función local para obtener advisor name
-      const getAdvisorNameLocal = (advisor: any): string => {
+      // Función local para obtener advisor name - ahora usa campos del JOIN
+      const getAdvisorNameLocal = (event: any): string => {
+        // Primero intentar con los nuevos campos del JOIN
+        if (event.advisorNombreCompleto) {
+          return event.advisorNombreCompleto
+        }
+        if (event.advisorPrimerNombre) {
+          return `${event.advisorPrimerNombre} ${event.advisorPrimerApellido || ''}`.trim()
+        }
+        // Fallback al método anterior por compatibilidad
+        const advisor = event.advisor
         if (advisor && typeof advisor === 'object' && advisor.primerNombre) {
           return `${advisor.primerNombre} ${advisor.primerApellido || ''}`.trim()
         }
@@ -515,7 +533,7 @@ export default function AgendaSesionesPage() {
             dia: new Date(event.dia),
             inscritos: 0, // Inicializar en 0
             asistieron: 0, // Inicializar en 0
-            advisorNombre: getAdvisorNameLocal(event.advisor)
+            advisorNombre: getAdvisorNameLocal(event)
           }))
           setEvents(basicEvents)
 
