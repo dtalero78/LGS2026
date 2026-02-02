@@ -39,40 +39,40 @@ export async function GET(request: NextRequest) {
       const lastDay = new Date(parseInt(year), parseInt(monthNum), 0).getDate()
       const lastDayTimestamp = `${year}-${monthNum}-${lastDay.toString().padStart(2, '0')}T23:59:59.999Z`
 
-      conditions.push(`"dia" >= $${paramIndex}::timestamp`)
+      conditions.push(`c."dia" >= $${paramIndex}::timestamp`)
       params.push(firstDay)
       paramIndex++
 
-      conditions.push(`"dia" <= $${paramIndex}::timestamp`)
+      conditions.push(`c."dia" <= $${paramIndex}::timestamp`)
       params.push(lastDayTimestamp)
       paramIndex++
     } else if (startDate && endDate) {
-      conditions.push(`"dia" >= $${paramIndex}::timestamp`)
+      conditions.push(`c."dia" >= $${paramIndex}::timestamp`)
       params.push(`${startDate}T00:00:00.000Z`)
       paramIndex++
 
-      conditions.push(`"dia" <= $${paramIndex}::timestamp`)
+      conditions.push(`c."dia" <= $${paramIndex}::timestamp`)
       params.push(`${endDate}T23:59:59.999Z`)
       paramIndex++
     }
 
     // Type filter
     if (tipo) {
-      conditions.push(`"tipo" = $${paramIndex}`)
+      conditions.push(`c."tipo" = $${paramIndex}`)
       params.push(tipo)
       paramIndex++
     }
 
     // Advisor filter
     if (advisor) {
-      conditions.push(`LOWER("advisor") = LOWER($${paramIndex})`)
+      conditions.push(`LOWER(c."advisor") = LOWER($${paramIndex})`)
       params.push(advisor)
       paramIndex++
     }
 
     // Level filter
     if (nivel) {
-      conditions.push(`"nivel" = $${paramIndex}`)
+      conditions.push(`c."nivel" = $${paramIndex}`)
       params.push(nivel)
       paramIndex++
     }
@@ -81,29 +81,34 @@ export async function GET(request: NextRequest) {
 
     const query = `
       SELECT
-        "_id",
-        "tipo",
-        "fecha",
-        "hora",
-        "advisor",
-        "nivel",
-        "step",
-        "club",
-        "titulo",
-        "observaciones",
-        "linkZoom",
-        "limiteUsuarios",
-        "inscritos",
-        "origen",
-        "dia",
-        "evento",
-        "nombreEvento",
-        "tituloONivel",
-        "_createdDate",
-        "_updatedDate"
-      FROM "CALENDARIO"
+        c."_id",
+        c."tipo",
+        c."fecha",
+        c."hora",
+        c."advisor",
+        c."nivel",
+        c."step",
+        c."club",
+        c."titulo",
+        c."observaciones",
+        c."linkZoom",
+        c."limiteUsuarios",
+        c."inscritos",
+        c."origen",
+        c."dia",
+        c."evento",
+        c."nombreEvento",
+        c."tituloONivel",
+        c."_createdDate",
+        c."_updatedDate",
+        a."primerNombre" as "advisorPrimerNombre",
+        a."primerApellido" as "advisorPrimerApellido",
+        a."nombreCompleto" as "advisorNombreCompleto",
+        a."email" as "advisorEmail"
+      FROM "CALENDARIO" c
+      LEFT JOIN "ADVISORS" a ON c."advisor" = a."_id"
       ${whereClause}
-      ORDER BY "dia" DESC
+      ORDER BY c."dia" DESC
       LIMIT $${paramIndex}
     `
 

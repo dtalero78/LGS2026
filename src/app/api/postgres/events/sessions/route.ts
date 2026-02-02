@@ -29,21 +29,21 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
 
     // Build WHERE clause - filter by tipo = SESSION
-    const conditions: string[] = [`"tipo" = 'SESSION'`];
+    const conditions: string[] = [`c."tipo" = 'SESSION'`];
     const values: any[] = [];
     let paramIndex = 1;
 
     // Filter by date range
     const startDate = searchParams.get('startDate');
     if (startDate) {
-      conditions.push(`"dia" >= $${paramIndex}::timestamp with time zone`);
+      conditions.push(`c."dia" >= $${paramIndex}::timestamp with time zone`);
       values.push(startDate);
       paramIndex++;
     }
 
     const endDate = searchParams.get('endDate');
     if (endDate) {
-      conditions.push(`"dia" <= $${paramIndex}::timestamp with time zone`);
+      conditions.push(`c."dia" <= $${paramIndex}::timestamp with time zone`);
       values.push(endDate);
       paramIndex++;
     }
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     // Filter by advisor
     const advisor = searchParams.get('advisor');
     if (advisor) {
-      conditions.push(`"advisor" = $${paramIndex}`);
+      conditions.push(`c."advisor" = $${paramIndex}`);
       values.push(advisor);
       paramIndex++;
     }
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
     // Filter by nivel
     const nivel = searchParams.get('nivel');
     if (nivel) {
-      conditions.push(`"nivel" = $${paramIndex}`);
+      conditions.push(`c."nivel" = $${paramIndex}`);
       values.push(nivel);
       paramIndex++;
     }
@@ -75,20 +75,30 @@ export async function GET(request: Request) {
       queryText = `
         SELECT
           c.*,
+          a."primerNombre" as "advisorPrimerNombre",
+          a."primerApellido" as "advisorPrimerApellido",
+          a."nombreCompleto" as "advisorNombreCompleto",
           COUNT(DISTINCT b."_id") as "bookingCount",
           COUNT(DISTINCT CASE WHEN b."asistio" = true THEN b."_id" END) as "asistenciasCount",
           COUNT(DISTINCT CASE WHEN b."asistio" = false THEN b."_id" END) as "ausenciasCount"
         FROM "CALENDARIO" c
+        LEFT JOIN "ADVISORS" a ON c."advisor" = a."_id"
         LEFT JOIN "ACADEMICA_BOOKINGS" b ON c."_id" = b."eventoId" OR c."_id" = b."idEvento"
         ${whereClause}
-        GROUP BY c."_id"
+        GROUP BY c."_id", a."primerNombre", a."primerApellido", a."nombreCompleto"
         ORDER BY c."dia" DESC, c."hora" DESC
       `;
     } else {
       queryText = `
-        SELECT * FROM "CALENDARIO"
+        SELECT
+          c.*,
+          a."primerNombre" as "advisorPrimerNombre",
+          a."primerApellido" as "advisorPrimerApellido",
+          a."nombreCompleto" as "advisorNombreCompleto"
+        FROM "CALENDARIO" c
+        LEFT JOIN "ADVISORS" a ON c."advisor" = a."_id"
         ${whereClause}
-        ORDER BY "dia" DESC, "hora" DESC
+        ORDER BY c."dia" DESC, c."hora" DESC
       `;
     }
 

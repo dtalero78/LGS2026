@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     // Filter by nivel
     const nivel = searchParams.get('nivel');
     if (nivel) {
-      conditions.push(`"nivel" = $${paramIndex}`);
+      conditions.push(`c."nivel" = $${paramIndex}`);
       values.push(nivel);
       paramIndex++;
     }
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     // Filter by step
     const step = searchParams.get('step');
     if (step) {
-      conditions.push(`"step" = $${paramIndex}`);
+      conditions.push(`c."step" = $${paramIndex}`);
       values.push(step);
       paramIndex++;
     }
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
     // Filter by tipo (support both 'tipo' and 'tipoEvento')
     const tipo = searchParams.get('tipo') || searchParams.get('tipoEvento');
     if (tipo) {
-      conditions.push(`"tipo" = $${paramIndex}`);
+      conditions.push(`c."tipo" = $${paramIndex}`);
       values.push(tipo);
       paramIndex++;
     }
@@ -67,7 +67,7 @@ export async function GET(request: Request) {
     // Filter by advisor
     const advisor = searchParams.get('advisor');
     if (advisor) {
-      conditions.push(`"advisor" = $${paramIndex}`);
+      conditions.push(`c."advisor" = $${paramIndex}`);
       values.push(advisor);
       paramIndex++;
     }
@@ -75,14 +75,14 @@ export async function GET(request: Request) {
     // Filter by date range (support both fechaInicio/fechaFin and startDate/endDate)
     const fechaInicio = searchParams.get('fechaInicio') || searchParams.get('startDate');
     if (fechaInicio) {
-      conditions.push(`"dia" >= $${paramIndex}::timestamp with time zone`);
+      conditions.push(`c."dia" >= $${paramIndex}::timestamp with time zone`);
       values.push(fechaInicio);
       paramIndex++;
     }
 
     const fechaFin = searchParams.get('fechaFin') || searchParams.get('endDate');
     if (fechaFin) {
-      conditions.push(`"dia" <= $${paramIndex}::timestamp with time zone`);
+      conditions.push(`c."dia" <= $${paramIndex}::timestamp with time zone`);
       values.push(fechaFin);
       paramIndex++;
     }
@@ -98,20 +98,30 @@ export async function GET(request: Request) {
       queryText = `
         SELECT
           c.*,
+          a."primerNombre" as "advisorPrimerNombre",
+          a."primerApellido" as "advisorPrimerApellido",
+          a."nombreCompleto" as "advisorNombreCompleto",
           COUNT(DISTINCT b."_id") as "bookingCount",
           COUNT(DISTINCT CASE WHEN b."asistio" = true THEN b."_id" END) as "asistenciasCount",
           COUNT(DISTINCT CASE WHEN b."asistio" = false THEN b."_id" END) as "ausenciasCount"
         FROM "CALENDARIO" c
+        LEFT JOIN "ADVISORS" a ON c."advisor" = a."_id"
         LEFT JOIN "ACADEMICA_BOOKINGS" b ON c."_id" = b."eventoId" OR c."_id" = b."idEvento"
         ${whereClause}
-        GROUP BY c."_id"
+        GROUP BY c."_id", a."primerNombre", a."primerApellido", a."nombreCompleto"
         ORDER BY c."dia" DESC, c."hora" DESC
       `;
     } else {
       queryText = `
-        SELECT * FROM "CALENDARIO"
+        SELECT
+          c.*,
+          a."primerNombre" as "advisorPrimerNombre",
+          a."primerApellido" as "advisorPrimerApellido",
+          a."nombreCompleto" as "advisorNombreCompleto"
+        FROM "CALENDARIO" c
+        LEFT JOIN "ADVISORS" a ON c."advisor" = a."_id"
         ${whereClause}
-        ORDER BY "dia" DESC, "hora" DESC
+        ORDER BY c."dia" DESC, c."hora" DESC
       `;
     }
 

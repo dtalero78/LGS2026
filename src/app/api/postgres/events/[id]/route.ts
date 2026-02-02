@@ -23,7 +23,15 @@ export async function GET(
     }
 
     const result = await query(
-      `SELECT * FROM "CALENDARIO" WHERE "_id" = $1`,
+      `SELECT
+        c.*,
+        a."primerNombre" as "advisorPrimerNombre",
+        a."primerApellido" as "advisorPrimerApellido",
+        a."nombreCompleto" as "advisorNombreCompleto",
+        a."email" as "advisorEmail"
+      FROM "CALENDARIO" c
+      LEFT JOIN "ADVISORS" a ON c."advisor" = a."_id"
+      WHERE c."_id" = $1`,
       [params.id]
     );
 

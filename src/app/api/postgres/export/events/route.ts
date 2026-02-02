@@ -39,38 +39,38 @@ export async function GET(request: Request) {
     let paramIndex = 1;
 
     if (startDate) {
-      conditions.push(`"dia" >= $${paramIndex}::timestamp`);
+      conditions.push(`c."dia" >= $${paramIndex}::timestamp`);
       values.push(startDate);
       paramIndex++;
     }
 
     if (endDate) {
-      conditions.push(`"dia" <= $${paramIndex}::timestamp`);
+      conditions.push(`c."dia" <= $${paramIndex}::timestamp`);
       values.push(endDate);
       paramIndex++;
     }
 
     if (advisor) {
-      conditions.push(`"advisor" = $${paramIndex}`);
+      conditions.push(`c."advisor" = $${paramIndex}`);
       values.push(advisor);
       paramIndex++;
     }
 
     if (nivel) {
-      conditions.push(`"nivel" = $${paramIndex}`);
+      conditions.push(`c."nivel" = $${paramIndex}`);
       values.push(nivel);
       paramIndex++;
     }
 
     if (tipo) {
-      conditions.push(`"tipo" = $${paramIndex}`);
+      conditions.push(`c."tipo" = $${paramIndex}`);
       values.push(tipo);
       paramIndex++;
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    // Get events with enrollment counts
+    // Get events with enrollment counts and advisor names
     const result = await query(
       `SELECT
          c."_id",
@@ -87,14 +87,18 @@ export async function GET(request: Request) {
          c."limiteUsuarios",
          c."linkZoom",
          c."club",
+         a."primerNombre" as "advisorPrimerNombre",
+         a."primerApellido" as "advisorPrimerApellido",
+         a."nombreCompleto" as "advisorNombreCompleto",
          COUNT(DISTINCT b."_id") as bookings_count,
          COUNT(DISTINCT CASE WHEN b."asistio" = true THEN b."_id" END) as asistencias_count
        FROM "CALENDARIO" c
+       LEFT JOIN "ADVISORS" a ON c."advisor" = a."_id"
        LEFT JOIN "ACADEMICA_BOOKINGS" b ON c."_id" = b."eventoId" OR c."_id" = b."idEvento"
        ${whereClause}
        GROUP BY c."_id", c."dia", c."hora", c."advisor", c."nivel", c."step", c."tipo",
                 c."titulo", c."nombreEvento", c."tituloONivel", c."inscritos", c."limiteUsuarios",
-                c."linkZoom", c."club"
+                c."linkZoom", c."club", a."primerNombre", a."primerApellido", a."nombreCompleto"
        ORDER BY c."dia" DESC`,
       values
     );
@@ -104,7 +108,8 @@ export async function GET(request: Request) {
       'ID',
       'Fecha',
       'Hora',
-      'Advisor',
+      'Advisor ID',
+      'Advisor Nombre',
       'Nivel',
       'Step',
       'Tipo',
@@ -121,11 +126,14 @@ export async function GET(request: Request) {
     const csvRows = [headers.join(',')];
 
     for (const row of result.rows) {
+      const advisorName = row.advisorNombreCompleto ||
+        (row.advisorPrimerNombre ? `${row.advisorPrimerNombre} ${row.advisorPrimerApellido || ''}`.trim() : '');
       const csvRow = [
         row._id,
         row.dia ? new Date(row.dia).toISOString() : '',
         row.hora || '',
         row.advisor || '',
+        `"${(advisorName || '').replace(/"/g, '""')}"`,
         row.nivel || '',
         row.step || '',
         row.tipo || '',
