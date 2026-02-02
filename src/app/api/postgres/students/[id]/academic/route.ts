@@ -25,9 +25,8 @@ export async function GET(
 
     console.log('🔍 [PostgreSQL] Getting academic history for student:', id)
 
-    // Get academic record from ACADEMICA
-    // Search by multiple ID fields to handle different ID formats
-    const academicRecord = await queryOne(
+    // First, try to get academic record from ACADEMICA
+    let academicRecord = await queryOne(
       `SELECT
         "_id",
         "studentId",
@@ -62,6 +61,55 @@ export async function GET(
       WHERE "_id" = $1 OR "studentId" = $1 OR "peopleId" = $1 OR "numeroId" = $1`,
       [id]
     )
+
+    // If not found in ACADEMICA, the ID might be from PEOPLE table
+    // Try to find the ACADEMICA record using numeroId from PEOPLE
+    if (!academicRecord) {
+      console.log('🔍 [PostgreSQL] Not found in ACADEMICA, checking PEOPLE table...')
+      const person = await queryOne(
+        `SELECT "numeroId", "_id" FROM "PEOPLE" WHERE "_id" = $1`,
+        [id]
+      )
+
+      if (person && person.numeroId) {
+        console.log('🔍 [PostgreSQL] Found person with numeroId:', person.numeroId)
+        academicRecord = await queryOne(
+          `SELECT
+            "_id",
+            "studentId",
+            "numeroId",
+            "nivel",
+            "step",
+            "nivelParalelo",
+            "stepParalelo",
+            "primerNombre",
+            "segundoNombre",
+            "primerApellido",
+            "segundoApellido",
+            "asesor",
+            "fechaNacimiento",
+            "celular",
+            "telefono",
+            "email",
+            "contrato",
+            "fechaCreacion",
+            "tipoUsuario",
+            "plataforma",
+            "usuarioId",
+            "peopleId",
+            "estadoInactivo",
+            "fechaContrato",
+            "finalContrato",
+            "vigencia",
+            "extensionCount",
+            "extensionHistory",
+            "onHoldCount"
+          FROM "ACADEMICA"
+          WHERE "numeroId" = $1`,
+          [person.numeroId]
+        )
+      }
+    }
 
     if (!academicRecord) {
       console.log('⚠️ [PostgreSQL] Academic record not found for:', id)
