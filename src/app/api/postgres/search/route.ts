@@ -4,10 +4,10 @@ import { queryMany } from '@/lib/postgres'
 /**
  * Unified Search Endpoint (PostgreSQL)
  * Searches in PEOPLE and ACADEMICA tables by:
- * - Name (first/last name)
- * - Document (numeroId)
- * - Contract (contrato)
- * - Email
+ * - primerNombre (first name)
+ * - primerApellido (last name)
+ * - numeroId (document)
+ * - contrato (contract number)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -48,11 +48,8 @@ export async function GET(request: NextRequest) {
       FROM "PEOPLE"
       WHERE
         (LOWER("primerNombre") LIKE LOWER($1) OR
-         LOWER("segundoNombre") LIKE LOWER($1) OR
          LOWER("primerApellido") LIKE LOWER($1) OR
-         LOWER("segundoApellido") LIKE LOWER($1) OR
          "numeroId" LIKE $1 OR
-         LOWER("email") LIKE LOWER($1) OR
          "contrato" LIKE $1)
       ORDER BY "primerNombre", "primerApellido"
       LIMIT 100
@@ -81,11 +78,8 @@ export async function GET(request: NextRequest) {
       INNER JOIN "PEOPLE" p ON a."numeroId" = p."numeroId"
       WHERE
         (LOWER(p."primerNombre") LIKE LOWER($1) OR
-         LOWER(p."segundoNombre") LIKE LOWER($1) OR
          LOWER(p."primerApellido") LIKE LOWER($1) OR
-         LOWER(p."segundoApellido") LIKE LOWER($1) OR
          a."numeroId" LIKE $1 OR
-         LOWER(p."email") LIKE LOWER($1) OR
          p."contrato" LIKE $1)
       ORDER BY p."primerNombre", p."primerApellido"
       LIMIT 100
