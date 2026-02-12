@@ -10,23 +10,39 @@ import toast from 'react-hot-toast'
 
 export default function SearchBar() {
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
   const [isOpen, setIsOpen] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
+  // Debounce: espera 400ms después de que el usuario deja de escribir
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [query])
+
   const { data: results, isLoading } = useQuery<SearchResult>(
-    ['search', query],
-    () => searchFunction(query),
+    ['search', debouncedQuery],
+    () => searchFunction(debouncedQuery),
     {
-      enabled: query.length >= 2,
+      enabled: debouncedQuery.length >= 3,
       staleTime: 30000,
     }
   )
 
   const searchFunction = async (searchTerm: string): Promise<SearchResult> => {
     try {
-      // Use PostgreSQL unified search API - searches name, document, contract, and email
+      const searchFields = {
+        PEOPLE: ['primerNombre', 'primerApellido', 'numeroId', 'contrato'],
+        ACADEMICA: ['primerNombre', 'primerApellido', 'numeroId', 'contrato (via JOIN PEOPLE)'],
+      }
+      console.log('🔍 [SearchBar] Buscando:', searchTerm)
+      console.log('🔍 [SearchBar] Campos de búsqueda:', searchFields)
+      console.log('🔍 [SearchBar] Endpoint:', `/api/postgres/search?searchTerm=${encodeURIComponent(searchTerm)}`)
+
       const response = await fetch(`/api/postgres/search?searchTerm=${encodeURIComponent(searchTerm)}`)
 
       if (!response.ok) {
@@ -34,6 +50,12 @@ export default function SearchBar() {
       }
 
       const data = await response.json()
+
+      console.log('🔍 [SearchBar] Resultados:', {
+        people: data.data?.people?.length || 0,
+        academica: data.data?.academica?.length || 0,
+        total: data.totalCount,
+      })
 
       // PostgreSQL endpoint returns consistent structure
       return {
@@ -139,9 +161,13 @@ export default function SearchBar() {
     setSelectedIndex(-1)
   }, [results])
 
+  // Abrir dropdown cuando hay query >= 3 chars (inmediato, no esperar debounce)
   useEffect(() => {
-    setIsOpen(query.length >= 2)
+    setIsOpen(query.length >= 3)
   }, [query])
+
+  // Resultados son stale si el usuario sigue escribiendo (query != debouncedQuery)
+  const isDebouncing = query !== debouncedQuery && query.length >= 3
 
   return (
     <div className="relative w-full">
@@ -156,7 +182,7 @@ export default function SearchBar() {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           className="block w-full rounded-md border-0 py-2 pl-10 pr-10 text-gray-900 bg-gray-50 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-600 focus:bg-white sm:text-sm sm:leading-6 transition-all duration-200"
-          placeholder="Buscar por nombre, ID, email o número de contrato..."
+          placeholder="Buscar por nombre, ID o número de contrato..."
         />
         {query && (
           <button
@@ -171,7 +197,7 @@ export default function SearchBar() {
       {/* Search Results */}
       {isOpen && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl ring-1 ring-black ring-opacity-5 max-h-96 overflow-auto z-50">
-          {isLoading ? (
+          {isLoading || isDebouncing ? (
             <div className="p-4 text-center">
               <div className="inline-block w-4 h-4 loading-spinner border-primary-600"></div>
               <span className="ml-2 text-sm text-gray-600">Buscando...</span>
@@ -214,7 +240,7 @@ export default function SearchBar() {
                 </button>
               ))}
             </div>
-          ) : query.length >= 2 ? (
+          ) : debouncedQuery.length >= 3 ? (
             <div className="p-4 text-center text-sm text-gray-500">
               No se encontraron resultados para &ldquo;{query}&rdquo;
             </div>
