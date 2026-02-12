@@ -53,18 +53,28 @@ if (!process.env.DATABASE_URL) {
 
 const pool = new Pool(poolConfig);
 
-// Log which connection method is being used
-console.log(`🔌 PostgreSQL using ${process.env.DATABASE_URL ? 'DATABASE_URL' : 'individual POSTGRES_* variables'}`);
+// Resolve database name for logging
+const _resolvedDbName = (() => {
+  if (process.env.DATABASE_URL) {
+    try {
+      const url = new URL(process.env.DATABASE_URL);
+      return `${url.pathname.replace('/', '')} @ ${url.hostname}`;
+    } catch { return 'DATABASE_URL (parse error)'; }
+  }
+  const h = process.env.POSTGRES_HOST || 'localhost';
+  const db = process.env.POSTGRES_DB || 'lgs_admin';
+  return `${db} @ ${h}`;
+})();
+
+// Startup banner
+console.log('\n╔══════════════════════════════════════════════════════╗');
+console.log(`║  🐘 POSTGRESQL: ${_resolvedDbName.padEnd(37)}║`);
+console.log('╚══════════════════════════════════════════════════════╝\n');
 
 // Handle pool errors
 pool.on('error', (err) => {
   console.error('❌ Unexpected PostgreSQL pool error:', err);
   process.exit(-1);
-});
-
-// Log successful connection
-pool.on('connect', () => {
-  console.log('✅ PostgreSQL client connected');
 });
 
 /**
@@ -85,20 +95,19 @@ export async function query<T extends QueryResultRow = any>(
 
     // Log slow queries (> 1 second)
     if (duration > 1000) {
-      console.warn(`⚠️ Slow query (${duration}ms):`, {
+      console.warn(`⚠️ [DB: ${_resolvedDbName}] Slow query (${duration}ms):`, {
         query: text.substring(0, 100) + '...',
         rows: result.rowCount,
       });
     } else {
-      console.log(`✅ Query executed in ${duration}ms (${result.rowCount} rows)`);
+      console.log(`🐘 [DB: ${_resolvedDbName}] ${duration}ms | ${result.rowCount} rows | ${text.substring(0, 80).replace(/\s+/g, ' ').trim()}`);
     }
 
     return result;
   } catch (error: any) {
-    console.error('❌ PostgreSQL query error:', {
+    console.error(`❌ [DB: ${_resolvedDbName}] Query error:`, {
       query: text.substring(0, 100) + '...',
       error: error.message,
-      params,
     });
     throw error;
   }
