@@ -45,6 +45,16 @@ class AdvisorRepositoryClass extends BaseRepository {
   }
 
   /**
+   * Find advisor by _id or email (for flexible lookups from booking data)
+   */
+  async findByIdOrEmail(idOrEmail: string) {
+    return queryOne(
+      `SELECT ${ADVISOR_COLUMNS} FROM "ADVISORS" WHERE "_id" = $1 OR "email" = $1`,
+      [idOrEmail]
+    );
+  }
+
+  /**
    * Get advisor name by ID (for display purposes)
    */
   async getNameById(id: string): Promise<string | null> {

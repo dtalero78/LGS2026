@@ -44,7 +44,13 @@ export async function getAcademicHistory(id: string, limit: number = 100) {
   if (!academicRecord) throw new NotFoundError('Academic record', id);
 
   // Get class history using the student's _id
-  const classes = await BookingRepository.findByStudentId(academicRecord._id, limit);
+  const rawClasses = await BookingRepository.findByStudentId(academicRecord._id, limit);
+
+  // Normalize: asistio is the source of truth (asistencia column has stale/inverted data from migration)
+  const classes = rawClasses.map((c: any) => ({
+    ...c,
+    asistencia: c.asistio != null ? c.asistio : c.asistencia,
+  }));
 
   return {
     academicRecord,
