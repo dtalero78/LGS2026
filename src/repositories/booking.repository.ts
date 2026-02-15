@@ -79,7 +79,7 @@ class BookingRepositoryClass extends BaseRepository {
               "fechaAgendamiento", "fechaEvento", "tipoEvento", "nombreEvento", "tituloONivel",
               "_createdDate", "_updatedDate"
        FROM "ACADEMICA_BOOKINGS"
-       WHERE "studentId" = $1
+       WHERE ("idEstudiante" = $1 OR "studentId" = $1)
        ORDER BY "fecha" DESC, "hora" DESC
        LIMIT $2`,
       [studentId, limit]
