@@ -134,15 +134,21 @@ export async function deleteEvent(eventId: string, deleteBookings: boolean = tru
  * Get bookings for an event with attendance stats.
  */
 export async function getEventBookings(eventId: string, includeStudent: boolean = false) {
-  const bookings = includeStudent
+  const rawBookings = includeStudent
     ? await BookingRepository.findByEventIdWithStudentDetails(eventId)
     : await BookingRepository.findByEventId(eventId);
 
+  // Normalize: asistio is the source of truth (asistencia column has stale/inverted data from migration)
+  const bookings = rawBookings.map((b: any) => ({
+    ...b,
+    asistencia: b.asistio != null ? b.asistio : b.asistencia,
+  }));
+
   const stats = {
     total: bookings.length,
-    asistencias: bookings.filter((b: any) => b.asistio === true).length,
-    ausencias: bookings.filter((b: any) => b.asistio === false).length,
-    pendientes: bookings.filter((b: any) => b.asistio === null).length,
+    asistencias: bookings.filter((b: any) => b.asistencia === true).length,
+    ausencias: bookings.filter((b: any) => b.asistencia === false).length,
+    pendientes: bookings.filter((b: any) => b.asistencia === null).length,
   };
 
   return { bookings, stats };
