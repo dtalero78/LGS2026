@@ -1,202 +1,51 @@
-import { NextResponse } from 'next/server';
-import { query } from '@/lib/postgres';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-postgres';
+import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
+import { PeopleRepository } from '@/repositories/people.repository';
+import { CommentsRepository } from '@/repositories/comments.repository';
+import { ValidationError } from '@/lib/errors';
+import { ids } from '@/lib/id-generator';
 
 /**
  * GET /api/postgres/people/[id]/comments
- *
- * Get all comments for a person/student
- *
- * Query params:
- * - limit: number (default: 50) - Maximum number of comments to return
- * - offset: number (default: 0) - Offset for pagination
  */
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+export const GET = handlerWithAuth(async (request, { params }) => {
+  const { searchParams } = new URL(request.url);
+  const limit = parseInt(searchParams.get('limit') || '50');
+  const offset = parseInt(searchParams.get('offset') || '0');
 
-    const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const offset = parseInt(searchParams.get('offset') || '0');
+  const person = await PeopleRepository.findByIdOrNumeroIdOrThrow(params.id);
+  const comments = await CommentsRepository.findByPersonId(person._id, person.numeroId, limit, offset);
+  const totalComments = await CommentsRepository.countByPersonId(person._id, person.numeroId);
 
-    // Get person ID (could be _id or numeroId)
-    const personResult = await query(
-      `SELECT "_id", "numeroId", "primerNombre", "primerApellido"
-       FROM "PEOPLE"
-       WHERE "_id" = $1 OR "numeroId" = $1`,
-      [params.id]
-    );
-
-    if (personResult.rowCount === 0) {
-      return NextResponse.json(
-        { error: 'Person not found' },
-        { status: 404 }
-      );
-    }
-
-    const person = personResult.rows[0];
-
-    // Get comments for this person
-    const commentsResult = await query(
-      `SELECT
-        "_id",
-        "personId",
-        "numeroId",
-        "comentario",
-        "tipo",
-        "creadoPor",
-        "creadoPorEmail",
-        "creadoPorRol",
-        "_createdDate",
-        "_updatedDate"
-       FROM "COMENTARIOS"
-       WHERE "personId" = $1 OR "numeroId" = $2
-       ORDER BY "_createdDate" DESC
-       LIMIT $3 OFFSET $4`,
-      [person._id, person.numeroId, limit, offset]
-    );
-
-    // Get total count
-    const countResult = await query(
-      `SELECT COUNT(*) as count FROM "COMENTARIOS"
-       WHERE "personId" = $1 OR "numeroId" = $2`,
-      [person._id, person.numeroId]
-    );
-
-    const totalComments = parseInt(countResult.rows[0]?.count || '0');
-
-    return NextResponse.json({
-      success: true,
-      person: {
-        _id: person._id,
-        numeroId: person.numeroId,
-        nombre: `${person.primerNombre} ${person.primerApellido}`,
-      },
-      comments: commentsResult.rows,
-      count: commentsResult.rowCount || 0,
-      totalComments,
-      pagination: {
-        limit,
-        offset,
-        hasMore: offset + (commentsResult.rowCount || 0) < totalComments,
-      },
-    });
-  } catch (error: any) {
-    console.error('❌ Error fetching comments:', error);
-    return NextResponse.json(
-      {
-        error: 'Database error',
-        details: error.message,
-      },
-      { status: 500 }
-    );
-  }
-}
+  return successResponse({
+    person: { _id: person._id, numeroId: person.numeroId, nombre: `${person.primerNombre} ${person.primerApellido}` },
+    comments,
+    count: comments.length,
+    totalComments,
+    pagination: { limit, offset, hasMore: offset + comments.length < totalComments },
+  });
+});
 
 /**
  * POST /api/postgres/people/[id]/comments
- *
- * Add a new comment for a person/student
- *
- * Body:
- * - comentario: string - The comment text
- * - tipo: string (optional) - Comment type (e.g., "GENERAL", "ACADEMIC", "FINANCIAL")
  */
-export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+export const POST = handlerWithAuth(async (request, { params, session }) => {
+  const body = await request.json();
+  const { comentario, tipo } = body;
 
-    const body = await request.json();
-    const { comentario, tipo } = body;
+  if (!comentario || comentario.trim() === '') throw new ValidationError('comentario is required');
 
-    if (!comentario || comentario.trim() === '') {
-      return NextResponse.json(
-        { error: 'comentario is required' },
-        { status: 400 }
-      );
-    }
+  const person = await PeopleRepository.findByIdOrNumeroIdOrThrow(params.id);
 
-    // Get person details
-    const personResult = await query(
-      `SELECT "_id", "numeroId", "primerNombre", "primerApellido"
-       FROM "PEOPLE"
-       WHERE "_id" = $1 OR "numeroId" = $1`,
-      [params.id]
-    );
+  const comment = await CommentsRepository.create({
+    _id: ids.comment(),
+    personId: person._id,
+    numeroId: person.numeroId,
+    comentario: comentario.trim(),
+    tipo: tipo || 'GENERAL',
+    creadoPor: session.user?.name || 'System',
+    creadoPorEmail: session.user?.email || 'system@lgs.com',
+    creadoPorRol: (session.user as any)?.rol || 'USER',
+  });
 
-    if (personResult.rowCount === 0) {
-      return NextResponse.json(
-        { error: 'Person not found' },
-        { status: 404 }
-      );
-    }
-
-    const person = personResult.rows[0];
-
-    // Create comment
-    const commentId = `cmt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-    const insertResult = await query(
-      `INSERT INTO "COMENTARIOS" (
-        "_id",
-        "personId",
-        "numeroId",
-        "comentario",
-        "tipo",
-        "creadoPor",
-        "creadoPorEmail",
-        "creadoPorRol",
-        "_createdDate",
-        "_updatedDate"
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW()
-      ) RETURNING *`,
-      [
-        commentId,
-        person._id,
-        person.numeroId,
-        comentario.trim(),
-        tipo || 'GENERAL',
-        session.user?.name || 'System',
-        session.user?.email || 'system@lgs.com',
-        session.user?.rol || 'USER',
-      ]
-    );
-
-    return NextResponse.json({
-      success: true,
-      message: 'Comment added successfully',
-      comment: insertResult.rows[0],
-    });
-  } catch (error: any) {
-    console.error('❌ Error adding comment:', error);
-    return NextResponse.json(
-      {
-        error: 'Database error',
-        details: error.message,
-      },
-      { status: 500 }
-    );
-  }
-}
+  return successResponse({ message: 'Comment added successfully', comment });
+});

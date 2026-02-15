@@ -1,87 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { queryMany } from '@/lib/postgres'
+import { handler, successResponse } from '@/lib/api-helpers';
+import { AdvisorRepository } from '@/repositories/advisor.repository';
 
 /**
- * Get Advisors List (PostgreSQL)
- * Returns list of advisors from the ADVISORS table (migrated from Wix)
- * This table contains the advisors that are used in CALENDARIO events
+ * GET /api/postgres/advisors
  */
-async function getAdvisors(includeInactive: boolean = false) {
-  console.log('🔍 [PostgreSQL Advisors] Getting advisors list from ADVISORS table, includeInactive:', includeInactive)
+export const GET = handler(async (request: Request) => {
+  const { searchParams } = new URL(request.url);
+  const includeInactive = searchParams.get('includeInactive') === 'true';
+  const advisors = await AdvisorRepository.findAll(includeInactive);
 
-  const query = `
-    SELECT
-      "_id",
-      "email",
-      "primerNombre",
-      "primerApellido",
-      "nombreCompleto",
-      "pais",
-      "zoom",
-      "activo",
-      "_createdDate",
-      "_updatedDate"
-    FROM "ADVISORS"
-    ${includeInactive ? '' : 'WHERE "activo" = true OR "activo" IS NULL'}
-    ORDER BY "nombreCompleto" ASC NULLS LAST
-  `
+  return successResponse({ advisors, data: advisors, total: advisors.length });
+});
 
-  const advisors = await queryMany(query, [])
+/**
+ * POST /api/postgres/advisors (frontend compatibility)
+ */
+export const POST = handler(async (request: Request) => {
+  const body = await request.json().catch(() => ({}));
+  const includeInactive = body.includeInactive === true;
+  const advisors = await AdvisorRepository.findAll(includeInactive);
 
-  console.log('✅ [PostgreSQL Advisors] Found', advisors.length, 'advisors')
-
-  return advisors
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const includeInactive = searchParams.get('includeInactive') === 'true'
-    const advisors = await getAdvisors(includeInactive)
-
-    return NextResponse.json({
-      success: true,
-      advisors: advisors,
-      data: advisors, // For backwards compatibility
-      total: advisors.length,
-    })
-
-  } catch (error: any) {
-    console.error('❌ [PostgreSQL Advisors] Error:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Database error',
-        details: error.message,
-      },
-      { status: 500 }
-    )
-  }
-}
-
-// POST handler for frontend compatibility
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json().catch(() => ({}))
-    const includeInactive = body.includeInactive === true
-    const advisors = await getAdvisors(includeInactive)
-
-    return NextResponse.json({
-      success: true,
-      advisors: advisors,
-      data: advisors, // For backwards compatibility
-      total: advisors.length,
-    })
-
-  } catch (error: any) {
-    console.error('❌ [PostgreSQL Advisors] Error:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Database error',
-        details: error.message,
-      },
-      { status: 500 }
-    )
-  }
-}
+  return successResponse({ advisors, data: advisors, total: advisors.length });
+});

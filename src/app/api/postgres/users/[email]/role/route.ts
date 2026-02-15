@@ -1,162 +1,42 @@
-import { NextResponse } from 'next/server';
-import { query } from '@/lib/postgres';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-postgres';
+import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
+import { RolPermisosRepository, UsuariosRolesRepository } from '@/repositories/roles.repository';
+import { ValidationError, NotFoundError } from '@/lib/errors';
 
 /**
  * GET /api/postgres/users/[email]/role
- *
- * Get role for a specific user
  */
-export async function GET(
-  request: Request,
-  { params }: { params: { email: string } }
-) {
-  try {
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+export const GET = handlerWithAuth(async (request, { params }) => {
+  const email = decodeURIComponent(params.email);
+  const user = await UsuariosRolesRepository.findByEmail(email);
 
-    const email = decodeURIComponent(params.email);
+  if (!user) throw new NotFoundError('User', email);
 
-    const result = await query(
-      `SELECT
-        "email",
-        "rol",
-        "activo",
-        "_createdDate",
-        "_updatedDate"
-      FROM "USUARIOS_ROLES"
-      WHERE "email" = $1`,
-      [email]
-    );
+  const roleData = await RolPermisosRepository.findByRol(user.rol);
 
-    if (result.rowCount === 0) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    const user = result.rows[0];
-
-    // Get role permissions
-    const roleResult = await query(
-      `SELECT "permisos", "descripcion" FROM "ROL_PERMISOS" WHERE "rol" = $1`,
-      [user.rol]
-    );
-
-    const roleData = roleResult.rows[0] || { permisos: [], descripcion: '' };
-
-    return NextResponse.json({
-      success: true,
-      user: {
-        email: user.email,
-        rol: user.rol,
-        activo: user.activo,
-      },
-      permissions: roleData.permisos || [],
-      roleDescription: roleData.descripcion,
-    });
-  } catch (error: any) {
-    console.error('❌ Error fetching user role:', error);
-    return NextResponse.json(
-      {
-        error: 'Database error',
-        details: error.message,
-      },
-      { status: 500 }
-    );
-  }
-}
+  return successResponse({
+    user: { email: user.email, rol: user.rol, activo: user.activo },
+    permissions: roleData?.permisos || [],
+    roleDescription: roleData?.descripcion || '',
+  });
+});
 
 /**
  * PUT /api/postgres/users/[email]/role
- *
- * Update role for a specific user
- *
- * Body:
- * - rol: string - New role name
  */
-export async function PUT(
-  request: Request,
-  { params }: { params: { email: string } }
-) {
-  try {
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+export const PUT = handlerWithAuth(async (request, { params }) => {
+  const body = await request.json();
+  const { rol } = body;
+  const email = decodeURIComponent(params.email);
 
-    const body = await request.json();
-    const { rol } = body;
-    const email = decodeURIComponent(params.email);
+  if (!rol) throw new ValidationError('rol is required');
 
-    if (!rol) {
-      return NextResponse.json(
-        { error: 'rol is required' },
-        { status: 400 }
-      );
-    }
+  const user = await UsuariosRolesRepository.findByEmail(email);
+  if (!user) throw new NotFoundError('User', email);
 
-    // Check if user exists
-    const userCheck = await query(
-      `SELECT "email" FROM "USUARIOS_ROLES" WHERE "email" = $1`,
-      [email]
-    );
+  const roleExists = await RolPermisosRepository.findByRol(rol);
+  if (!roleExists) throw new NotFoundError('Role', rol);
 
-    if (userCheck.rowCount === 0) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
+  const updated = await UsuariosRolesRepository.updateRol(email, rol);
 
-    // Check if role exists
-    const roleCheck = await query(
-      `SELECT "rol" FROM "ROL_PERMISOS" WHERE "rol" = $1`,
-      [rol]
-    );
-
-    if (roleCheck.rowCount === 0) {
-      return NextResponse.json(
-        { error: `Role ${rol} does not exist` },
-        { status: 404 }
-      );
-    }
-
-    // Update user role
-    const updateResult = await query(
-      `UPDATE "USUARIOS_ROLES"
-       SET "rol" = $1,
-           "_updatedDate" = NOW()
-       WHERE "email" = $2
-       RETURNING *`,
-      [rol, email]
-    );
-
-    return NextResponse.json({
-      success: true,
-      message: `Role updated to ${rol} for user ${email}`,
-      user: updateResult.rows[0],
-    });
-  } catch (error: any) {
-    console.error('❌ Error updating user role:', error);
-    return NextResponse.json(
-      {
-        error: 'Database error',
-        details: error.message,
-      },
-      { status: 500 }
-    );
-  }
-}
+  return successResponse({ message: `Role updated to ${rol} for user ${email}`, user: updated });
+});

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Student } from '@/types'
 import { formatDate } from '@/lib/utils'
 import StudentOnHold from './StudentOnHold'
+import { api, ApiError } from '@/hooks/use-api'
 
 interface StudentContractProps {
   student: Student
@@ -121,37 +122,25 @@ export default function StudentContract({ student, contratoFinalizado = false }:
     setIsExtendingVigencia(true)
 
     try {
-      const response = await fetch('/api/postgres/students', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          studentId: student.peopleId || student._id,
-          nuevaFechaFinal,
-          motivo: motivoExtension
-        })
+      const data = await api.post('/api/postgres/students', {
+        studentId: student.peopleId || student._id,
+        nuevaFechaFinal,
+        motivo: motivoExtension
       })
 
-      const data = await response.json()
-
-      if (data.success) {
-        alert(
-          `✅ Extensión aplicada exitosamente\n\n` +
-          `• Estudiante: ${student.primerNombre} ${student.primerApellido}\n` +
-          `• Días extendidos: ${data.data?.data?.diasExtendidos || diasExtendidos}\n` +
-          `• Nueva vigencia: ${nuevaFecha.toLocaleDateString('es-ES')}\n` +
-          `• Extensión #${data.data?.data?.extensionNumero || (student.extensionCount ? student.extensionCount + 1 : 1)}`
-        )
-        setShowExtensionModal(false)
-        setMotivoExtension('')
-        window.location.reload()
-      } else {
-        alert(`❌ Error al extender vigencia: ${data.error || 'Error desconocido'}`)
-      }
+      alert(
+        `✅ Extensión aplicada exitosamente\n\n` +
+        `• Estudiante: ${student.primerNombre} ${student.primerApellido}\n` +
+        `• Días extendidos: ${data.data?.data?.diasExtendidos || diasExtendidos}\n` +
+        `• Nueva vigencia: ${nuevaFecha.toLocaleDateString('es-ES')}\n` +
+        `• Extensión #${data.data?.data?.extensionNumero || (student.extensionCount ? student.extensionCount + 1 : 1)}`
+      )
+      setShowExtensionModal(false)
+      setMotivoExtension('')
+      window.location.reload()
     } catch (error) {
-      console.error('Error al extender vigencia:', error)
-      alert('❌ Error al comunicarse con el servidor')
+      const msg = error instanceof ApiError ? error.message : 'Error al comunicarse con el servidor'
+      alert(`❌ ${msg}`)
     } finally {
       setIsExtendingVigencia(false)
     }

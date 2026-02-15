@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { OnHoldHistoryEntry } from '@/types'
+import { api, ApiError } from '@/hooks/use-api'
 
 interface StudentOnHoldProps {
   studentId: string
@@ -101,36 +102,23 @@ export default function StudentOnHold({
     setIsTogglingOnHold(true)
 
     try {
-      const response = await fetch('/api/postgres/students/onhold', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          studentId: peopleId || studentId,
-          setOnHold,
-          fechaOnHold: setOnHold ? inicio : null,
-          fechaFinOnHold: setOnHold ? fin : null,
-          motivo: motivo || undefined
-        })
+      const data = await api.post('/api/postgres/students/onhold', {
+        studentId: peopleId || studentId,
+        setOnHold,
+        fechaOnHold: setOnHold ? inicio : null,
+        fechaFinOnHold: setOnHold ? fin : null,
+        motivo: motivo || undefined
       })
 
-      const data = await response.json()
-
-      if (data.success) {
-        setIsOnHold(setOnHold)
-        alert(
-          `✅ OnHold ${setOnHold ? 'activado' : 'desactivado'} exitosamente\n\n` +
-          (data.message || 'Operación completada')
-        )
-        // Hard reload para refrescar datos
-        window.location.href = window.location.href
-      } else {
-        alert(`❌ Error al cambiar estado OnHold: ${data.error || 'Error desconocido'}`)
-      }
+      setIsOnHold(setOnHold)
+      alert(
+        `✅ OnHold ${setOnHold ? 'activado' : 'desactivado'} exitosamente\n\n` +
+        (data.message || 'Operación completada')
+      )
+      window.location.href = window.location.href
     } catch (error) {
-      console.error('Error al cambiar estado OnHold:', error)
-      alert('❌ Error al comunicarse con el servidor')
+      const msg = error instanceof ApiError ? error.message : 'Error al comunicarse con el servidor'
+      alert(`❌ ${msg}`)
     } finally {
       setIsTogglingOnHold(false)
     }

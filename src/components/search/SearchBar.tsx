@@ -2,85 +2,26 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline'
-import { useQuery } from 'react-query'
 import { useRouter } from 'next/navigation'
-import { SearchResult } from '@/types'
 import { cn } from '@/lib/utils'
-import toast from 'react-hot-toast'
+import { useSearch } from '@/hooks/use-search'
 
 export default function SearchBar() {
   const [query, setQuery] = useState('')
-  const [debouncedQuery, setDebouncedQuery] = useState('')
   const [isOpen, setIsOpen] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
-  // Debounce: espera 400ms después de que el usuario deja de escribir
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedQuery(query)
-    }, 400)
-    return () => clearTimeout(timer)
-  }, [query])
-
-  const { data: results, isLoading } = useQuery<SearchResult>(
-    ['search', debouncedQuery],
-    () => searchFunction(debouncedQuery),
-    {
-      enabled: debouncedQuery.length >= 3,
-      staleTime: 30000,
-    }
-  )
-
-  const searchFunction = async (searchTerm: string): Promise<SearchResult> => {
-    try {
-      const searchFields = {
-        PEOPLE: ['primerNombre', 'primerApellido', 'numeroId', 'contrato'],
-        ACADEMICA: ['primerNombre', 'primerApellido', 'numeroId', 'contrato (via JOIN PEOPLE)'],
-      }
-      console.log('🔍 [SearchBar] Buscando:', searchTerm)
-      console.log('🔍 [SearchBar] Campos de búsqueda:', searchFields)
-      console.log('🔍 [SearchBar] Endpoint:', `/api/postgres/search?searchTerm=${encodeURIComponent(searchTerm)}`)
-
-      const response = await fetch(`/api/postgres/search?searchTerm=${encodeURIComponent(searchTerm)}`)
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      const data = await response.json()
-
-      console.log('🔍 [SearchBar] Resultados:', {
-        people: data.data?.people?.length || 0,
-        academica: data.data?.academica?.length || 0,
-        total: data.totalCount,
-      })
-
-      // PostgreSQL endpoint returns consistent structure
-      return {
-        success: data.success,
-        data: data.data,
-        totalCount: data.totalCount
-      }
-    } catch (error) {
-      console.error('Search error:', error)
-      toast.error('Error al buscar. Intenta nuevamente.')
-      return {
-        success: false,
-        data: { people: [], academica: [] },
-        totalCount: 0
-      }
-    }
-  }
+  const { data: results, isLoading, isDebouncing } = useSearch(query)
 
   const allResults = [
-    ...(results?.data?.people || []).map(p => ({
+    ...(results?.data?.people || []).map((p: any) => ({
       ...p,
       type: p.tipoUsuario === 'TITULAR' ? 'person' : 'student',
       source: 'people'
     })),
-    ...(results?.data?.academica || []).map(s => ({ ...s, type: 'student', source: 'academica' }))
+    ...(results?.data?.academica || []).map((s: any) => ({ ...s, type: 'student', source: 'academica' }))
   ]
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -111,35 +52,23 @@ export default function SearchBar() {
 
   const handleResultClick = (result: any) => {
     if (result.type === 'person') {
-      // TITULAR goes to /person/ page
-      console.log('🔗 Navigating TITULAR to /person/', result._id)
       router.push(`/person/${result._id}`)
     } else {
-      // BENEFICIARIO goes to /student/ page
-      // Check if this result came from ACADEMICA (has academic type)
       if (result.type === 'student' && result.hasOwnProperty('nivel')) {
-        console.log('🔗 Navigating BENEFICIARIO to /student/', result._id, '(direct from ACADEMICA)')
         router.push(`/student/${result._id}`)
       } else {
-        // This is a beneficiary from PEOPLE, find corresponding ACADEMICA record
         const academicRecord = results?.data?.academica.find(
-          (academic) => academic.numeroId === result.numeroId
+          (academic: any) => academic.numeroId === result.numeroId
         )
         if (academicRecord) {
-          console.log('🔗 Navigating BENEFICIARIO to /student/', academicRecord._id, '(from ACADEMICA via PEOPLE)')
           router.push(`/student/${academicRecord._id}`)
         } else {
-          console.log('⚠️ No academic record found for beneficiary, navigating to person page instead')
-          // If no academic record exists, show this beneficiary in the person page of their titular
-          // We need to find the titular first
           const titularRecord = results?.data?.people.find(
-            (person) => person.numeroId === result.numeroId && person.tipoUsuario === 'TITULAR'
+            (person: any) => person.numeroId === result.numeroId && person.tipoUsuario === 'TITULAR'
           )
           if (titularRecord) {
-            console.log('🔗 Redirecting to titular page for beneficiary without academic record:', titularRecord._id)
             router.push(`/person/${titularRecord._id}`)
           } else {
-            console.log('❌ No titular found for this beneficiary')
             alert('Este beneficiario no tiene registro académico activo ni titular asociado.')
           }
         }
@@ -161,13 +90,9 @@ export default function SearchBar() {
     setSelectedIndex(-1)
   }, [results])
 
-  // Abrir dropdown cuando hay query >= 3 chars (inmediato, no esperar debounce)
   useEffect(() => {
     setIsOpen(query.length >= 3)
   }, [query])
-
-  // Resultados son stale si el usuario sigue escribiendo (query != debouncedQuery)
-  const isDebouncing = query !== debouncedQuery && query.length >= 3
 
   return (
     <div className="relative w-full">
@@ -194,7 +119,6 @@ export default function SearchBar() {
         )}
       </div>
 
-      {/* Search Results */}
       {isOpen && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl ring-1 ring-black ring-opacity-5 max-h-96 overflow-auto z-50">
           {isLoading || isDebouncing ? (
@@ -240,7 +164,7 @@ export default function SearchBar() {
                 </button>
               ))}
             </div>
-          ) : debouncedQuery.length >= 3 ? (
+          ) : query.length >= 3 && !isDebouncing ? (
             <div className="p-4 text-center text-sm text-gray-500">
               No se encontraron resultados para &ldquo;{query}&rdquo;
             </div>

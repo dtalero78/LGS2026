@@ -7,15 +7,22 @@ require('dotenv').config();
 
 module.exports = {
   // PostgreSQL connection settings
-  postgres: {
+  // Supports DATABASE_URL (strips sslmode to avoid conflicts) or individual POSTGRES_* vars
+  postgres: process.env.DATABASE_URL ? {
+    connectionString: process.env.DATABASE_URL.replace(/[?&]sslmode=[^&]*/g, ''),
+    max: 5,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 30000,
+    ssl: { rejectUnauthorized: false },
+  } : {
     host: process.env.POSTGRES_HOST || 'localhost',
     port: parseInt(process.env.POSTGRES_PORT || '5432'),
     database: process.env.POSTGRES_DB || 'lgs_admin',
     user: process.env.POSTGRES_USER,
     password: process.env.POSTGRES_PASSWORD,
-    max: 20, // Connection pool size
+    max: 5,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
+    connectionTimeoutMillis: 30000,
     ssl: process.env.POSTGRES_SSL === 'true' ? { rejectUnauthorized: false } : false,
   },
 

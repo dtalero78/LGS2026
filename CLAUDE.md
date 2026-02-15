@@ -6,6 +6,128 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" language learning platform. The panel provides management interfaces for students, classes, events, and financial data, integrating with Wix as the primary data source.
 
+## Lista Completa de Funcionalidades
+
+### Autenticación y Acceso
+1. Login con email/contraseña
+2. Control de acceso basado en roles (RBAC) con 12 roles
+3. Carga dinámica de permisos desde Wix con caché de 5 minutos
+4. Control de acceso por ruta (middleware)
+5. Gestión de sesiones con JWT (NextAuth.js)
+
+### Dashboard (Inicio)
+6. Tarjetas de estadísticas (Total Usuarios, Inactivos, Sesiones Hoy, Inscritos Hoy, Advisors Hoy)
+7. Top 5 estudiantes del mes (por asistencia)
+
+### Módulo Académico
+8. Agenda de Sesiones - Vista de calendario mensual
+9. Creación de eventos (SESSION, CLUB, WELCOME)
+10. Edición de eventos
+11. Eliminación de eventos
+12. Filtrado de eventos por advisor, tipo, nivel, rango de fechas
+13. Gestión de inscripciones por evento
+14. Seguimiento de asistencia
+15. Vista de agenda diaria
+16. Exportación CSV de eventos
+17. Agenda Académica - Vista semanal de clases
+18. Lista de Advisors con estadísticas
+19. Creación de nuevos advisors
+20. Detalle de advisor (calendario, estadísticas, eventos)
+21. Panel Advisor personal (calendario y métricas propias)
+22. Informe de Beneficiarios (reportes por rango de fechas)
+23. Exportación PDF/CSV de informes
+
+### Módulo Servicio
+24. Welcome Session - Carga y gestión de eventos de bienvenida
+25. Seguimiento de asistencia de welcome sessions
+26. Lista de Sesiones de clase
+27. Filtrado por fecha, estado de asistencia, apellido
+28. Usuarios sin Registro - Vista de beneficiarios sin perfil académico
+29. Creación de perfiles académicos para beneficiarios
+30. Integración con WhatsApp para mensajes
+31. Exportación CSV de datos de servicio
+
+### Módulo Comercial
+32. Crear Contrato - Formulario wizard multi-paso
+33. Selección de país con prefijos telefónicos
+34. Generación de PDF de contrato
+35. Vista previa de contrato
+36. Envío de contrato por WhatsApp
+37. Opción de auto-aprobación de contratos
+38. Gestión de Prospectos (pipeline comercial)
+
+### Módulo Aprobación
+39. Vista de contratos pendientes de aprobación
+40. Aprobación/rechazo de contratos con comentarios
+41. Filtrado por estado (Pendiente, Aprobado, Rechazado)
+42. Descarga y envío de PDF de contratos
+43. Paginación y búsqueda de aprobaciones
+
+### Gestión de Permisos (Admin)
+44. Interfaz de matriz de permisos (solo SUPER_ADMIN/ADMIN)
+45. Vista agrupada por módulo con colores distintos
+46. Asignación masiva de permisos ("Select All" por módulo)
+47. Creación y edición de roles
+
+### Detalle de Estudiante
+48. Información general (datos personales, contacto, plataforma)
+49. Tabla de asistencia académica
+50. Diagnóstico "¿Cómo voy?" (progreso del estudiante)
+51. Agendar nueva clase
+52. Gestión de Steps (marcar/asignar steps)
+53. Cambiar Step del estudiante
+54. Modal de detalles de clase (evaluación, anotaciones, comentarios)
+55. Información del contrato (fechas, estado, vigencia)
+56. Historial de extensiones (manuales y automáticas)
+57. Extensión manual del contrato
+58. Sistema OnHold - Activar pausa del contrato
+59. Sistema OnHold - Desactivar pausa (extensión automática)
+60. Historial de OnHold
+61. Envío de mensajes por WhatsApp con plantillas
+62. Sección de comentarios del estudiante
+
+### Detalle de Persona (Titular)
+63. Información general del titular
+64. Contacto y referencias (teléfonos, emails, dirección, emergencia)
+65. Información financiera
+66. Administración de beneficiarios (agregar, vincular, desvincular)
+67. Control de estado de cuenta
+68. Comentarios internos
+
+### Detalle de Advisor
+69. Información del advisor (nombre, email, Zoom)
+70. Calendario de eventos asignados
+71. Estadísticas de rendimiento (clases, estudiantes, asistencia)
+
+### Detalle de Sesión
+72. Información general de la sesión (fecha, hora, advisor, Zoom, tipo)
+73. Roster de estudiantes con marcado de asistencia
+74. Material y recursos de enseñanza
+
+### Búsqueda Global
+75. Búsqueda por nombre, apellido, número de ID, contrato
+76. Búsqueda con debounce (400ms)
+77. Resultados multi-tipo (PEOPLE y ACADEMICA)
+78. Navegación por teclado en resultados
+
+### ESS (English Speaking Sessions)
+79. Nivel paralelo que no bloquea avance en niveles principales
+80. Tracking de asistencia ESS independiente
+81. Asignación simultánea de nivel principal + nivel paralelo
+
+### Exportación de Datos
+82. Exportación CSV (eventos, agenda, sesiones, beneficiarios, aprobaciones)
+83. Exportación PDF (contratos, reportes)
+
+### Jobs Automáticos (Cron)
+84. Expiración automática de contratos
+85. Reactivación automática de OnHold
+
+### Caché y Rendimiento
+86. Caché client-side en localStorage con TTL para calendario
+87. Caché server-side en memoria para permisos
+88. Invalidación automática de caché en operaciones CRUD
+
 ## Architecture
 
 ### Data Flow

@@ -156,6 +156,46 @@ class CalendarioExporter {
   }
 
   /**
+   * Build multi-row UPSERT query for a batch of records
+   */
+  buildBatchUpsertQuery(transformedRecords) {
+    const columnSet = new Set();
+    for (const record of transformedRecords) {
+      for (const key of Object.keys(record)) {
+        columnSet.add(key);
+      }
+    }
+    const columns = Array.from(columnSet);
+    const columnList = columns.map(col => `"${col}"`).join(', ');
+
+    const values = [];
+    const valueRows = [];
+    let paramIndex = 1;
+    for (const record of transformedRecords) {
+      const rowPlaceholders = [];
+      for (const col of columns) {
+        rowPlaceholders.push(`$${paramIndex++}`);
+        values.push(record[col] !== undefined ? record[col] : null);
+      }
+      valueRows.push(`(${rowPlaceholders.join(', ')})`);
+    }
+
+    const updateList = columns
+      .filter(col => col !== '_id')
+      .map(col => `"${col}" = EXCLUDED."${col}"`)
+      .join(', ');
+
+    const query = `
+      INSERT INTO ${this.pgTable} (${columnList})
+      VALUES ${valueRows.join(', ')}
+      ON CONFLICT ("_id") DO UPDATE SET
+        ${updateList}
+    `;
+
+    return { query, values };
+  }
+
+  /**
    * Export all records from Wix to PostgreSQL
    */
   async export(pool, options = {}) {
@@ -183,17 +223,28 @@ class CalendarioExporter {
         break;
       }
 
-      // Fetch batch from Wix
+      // Fetch batch from Wix with retry
       let batch;
-      try {
-        batch = await this.fetchFromWix(skip, this.batchSize);
-      } catch (error) {
-        console.error(`❌ Failed to fetch batch at skip=${skip}:`, error.message);
-        totalFailed += this.batchSize;
-
-        // Retry logic could go here
-        break;
+      let fetchAttempts = 0;
+      const maxFetchAttempts = 5;
+      while (fetchAttempts < maxFetchAttempts) {
+        try {
+          batch = await this.fetchFromWix(skip, this.batchSize);
+          break;
+        } catch (error) {
+          fetchAttempts++;
+          if (fetchAttempts >= maxFetchAttempts) {
+            console.error(`❌ Failed to fetch at skip=${skip} after ${maxFetchAttempts} attempts:`, error.message);
+            totalFailed += this.batchSize;
+            hasMore = false;
+            break;
+          }
+          const delay = Math.min(5000 * fetchAttempts, 30000);
+          console.log(`⚠️ Fetch failed (attempt ${fetchAttempts}/${maxFetchAttempts}), retrying in ${delay}ms...`);
+          await this.sleep(delay);
+        }
       }
+      if (!batch) break;
 
       if (!batch || batch.length === 0) {
         console.log('✅ No more records to fetch');
@@ -201,32 +252,43 @@ class CalendarioExporter {
         break;
       }
 
-      // Process each record in the batch
-      for (const record of batch) {
-        try {
-          if (!dryRun) {
-            const result = await this.upsertRecord(pool, record);
-            if (result.rowCount === 1) {
-              totalInserted++;
+      // Batch UPSERT: transform all records and send as single query
+      if (!dryRun) {
+        if (!this.pgColumns) {
+          const colResult = await pool.query(`SELECT column_name FROM information_schema.columns WHERE table_name = '${this.collectionName}'`);
+          this.pgColumns = new Set(colResult.rows.map(r => r.column_name));
+          console.log(`📋 PG columns loaded: ${this.pgColumns.size} columns`);
+        }
+        const transformedRecords = batch.map(record => {
+          const transformed = this.transformRecord(record);
+          const filtered = {};
+          for (const [key, value] of Object.entries(transformed)) {
+            if (this.pgColumns.has(key)) filtered[key] = value;
+          }
+          return filtered;
+        });
+        let retries = 0;
+        const maxRetries = 3;
+        while (retries <= maxRetries) {
+          try {
+            const { query, values } = this.buildBatchUpsertQuery(transformedRecords);
+            await pool.query(query, values);
+            totalInserted += batch.length;
+            break;
+          } catch (error) {
+            retries++;
+            if (retries > maxRetries) {
+              console.error(`❌ Batch failed after ${maxRetries} retries:`, error.message);
+              totalFailed += batch.length;
             } else {
-              totalUpdated++;
+              console.log(`⚠️ PG batch error (attempt ${retries}/${maxRetries}): ${error.message}`);
+              await this.sleep(2000 * retries);
             }
           }
-          totalProcessed++;
-
-          // Log progress every 10 records
-          if (totalProcessed % 10 === 0) {
-            console.log(`📊 Progress: ${totalProcessed} records processed`);
-          }
-        } catch (error) {
-          console.error(`❌ Failed to process record:`, {
-            _id: record._id,
-            titulo: record.titulo,
-            error: error.message,
-          });
-          totalFailed++;
         }
       }
+      totalProcessed += batch.length;
+      console.log(`📊 Progress: ${totalProcessed} records processed`);
 
       // Update skip for next batch
       skip += batch.length;
@@ -237,10 +299,9 @@ class CalendarioExporter {
         hasMore = false;
       }
 
-      // Rate limiting - pause between batches
+      // Rate limiting - reduced pause between batches
       if (hasMore) {
-        console.log(`⏸️  Pausing ${this.rateLimit}ms before next batch...`);
-        await this.sleep(this.rateLimit);
+        await this.sleep(200);
       }
     }
 

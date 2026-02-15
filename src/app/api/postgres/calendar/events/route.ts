@@ -1,149 +1,46 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { queryMany } from '@/lib/postgres'
+import { handler, successResponse } from '@/lib/api-helpers';
+import { getEvents } from '@/services/calendar.service';
 
 /**
- * Get Calendar Events (PostgreSQL)
- * Query parameters:
- * - month: YYYY-MM (optional, defaults to current month)
- * - startDate: YYYY-MM-DD (optional)
- * - endDate: YYYY-MM-DD (optional)
- * - tipo: Event type filter (optional)
- * - advisor: Advisor email filter (optional)
- * - nivel: Level filter (optional)
- * - limit: Max results (default 500)
+ * GET /api/postgres/calendar/events
+ *
+ * Get calendar events with optional filters (month, date range, tipo, advisor, nivel).
  */
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
+export const GET = handler(async (request) => {
+  const { searchParams } = new URL(request.url);
 
-    const month = searchParams.get('month')
-    const startDate = searchParams.get('startDate')
-    const endDate = searchParams.get('endDate')
-    const tipo = searchParams.get('tipo')
-    const advisor = searchParams.get('advisor')
-    const nivel = searchParams.get('nivel')
-    const limit = parseInt(searchParams.get('limit') || '500')
+  const month = searchParams.get('month');
+  const tipo = searchParams.get('tipo');
+  const advisor = searchParams.get('advisor');
+  const nivel = searchParams.get('nivel');
+  const limit = parseInt(searchParams.get('limit') || '500');
 
-    console.log('🔍 [PostgreSQL Calendar] Filters:', { month, startDate, endDate, tipo, advisor, nivel, limit })
+  let startDate = searchParams.get('startDate');
+  let endDate = searchParams.get('endDate');
 
-    // Build dynamic WHERE clause
-    const conditions: string[] = []
-    const params: any[] = []
-    let paramIndex = 1
-
-    // Date filters (using "dia" column which is timestamp)
-    if (month) {
-      // Month format: YYYY-MM
-      const [year, monthNum] = month.split('-')
-      const firstDay = `${year}-${monthNum}-01T00:00:00.000Z`
-      const lastDay = new Date(parseInt(year), parseInt(monthNum), 0).getDate()
-      const lastDayTimestamp = `${year}-${monthNum}-${lastDay.toString().padStart(2, '0')}T23:59:59.999Z`
-
-      conditions.push(`c."dia" >= $${paramIndex}::timestamp`)
-      params.push(firstDay)
-      paramIndex++
-
-      conditions.push(`c."dia" <= $${paramIndex}::timestamp`)
-      params.push(lastDayTimestamp)
-      paramIndex++
-    } else if (startDate && endDate) {
-      conditions.push(`c."dia" >= $${paramIndex}::timestamp`)
-      params.push(`${startDate}T00:00:00.000Z`)
-      paramIndex++
-
-      conditions.push(`c."dia" <= $${paramIndex}::timestamp`)
-      params.push(`${endDate}T23:59:59.999Z`)
-      paramIndex++
-    }
-
-    // Type filter
-    if (tipo) {
-      conditions.push(`c."tipo" = $${paramIndex}`)
-      params.push(tipo)
-      paramIndex++
-    }
-
-    // Advisor filter
-    if (advisor) {
-      conditions.push(`LOWER(c."advisor") = LOWER($${paramIndex})`)
-      params.push(advisor)
-      paramIndex++
-    }
-
-    // Level filter
-    if (nivel) {
-      conditions.push(`c."nivel" = $${paramIndex}`)
-      params.push(nivel)
-      paramIndex++
-    }
-
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
-
-    const query = `
-      SELECT
-        c."_id",
-        c."tipo",
-        c."fecha",
-        c."hora",
-        c."advisor",
-        c."nivel",
-        c."step",
-        c."club",
-        c."titulo",
-        c."observaciones",
-        c."linkZoom",
-        c."limiteUsuarios",
-        c."inscritos",
-        c."origen",
-        c."dia",
-        c."evento",
-        c."nombreEvento",
-        c."tituloONivel",
-        c."_createdDate",
-        c."_updatedDate",
-        a."primerNombre" as "advisorPrimerNombre",
-        a."primerApellido" as "advisorPrimerApellido",
-        a."nombreCompleto" as "advisorNombreCompleto",
-        a."email" as "advisorEmail"
-      FROM "CALENDARIO" c
-      LEFT JOIN "ADVISORS" a ON c."advisor" = a."_id"
-      ${whereClause}
-      ORDER BY c."dia" DESC
-      LIMIT $${paramIndex}
-    `
-
-    params.push(limit)
-
-    console.log('🔍 [PostgreSQL Calendar] Query:', query)
-    console.log('🔍 [PostgreSQL Calendar] Params:', params)
-
-    const events = await queryMany(query, params)
-
-    console.log('✅ [PostgreSQL Calendar] Found', events.length, 'events')
-
-    return NextResponse.json({
-      success: true,
-      data: events,
-      total: events.length,
-      filters: {
-        month,
-        startDate,
-        endDate,
-        tipo,
-        advisor,
-        nivel,
-      },
-    })
-
-  } catch (error: any) {
-    console.error('❌ [PostgreSQL Calendar] Error:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Database error',
-        details: error.message,
-      },
-      { status: 500 }
-    )
+  // Convert month (YYYY-MM) to date range
+  if (month && !startDate && !endDate) {
+    const [year, monthNum] = month.split('-');
+    startDate = `${year}-${monthNum}-01T00:00:00.000Z`;
+    const lastDay = new Date(parseInt(year), parseInt(monthNum), 0).getDate();
+    endDate = `${year}-${monthNum}-${lastDay.toString().padStart(2, '0')}T23:59:59.999Z`;
+  } else if (startDate && endDate) {
+    startDate = `${startDate}T00:00:00.000Z`;
+    endDate = `${endDate}T23:59:59.999Z`;
   }
-}
+
+  const events = await getEvents({
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    tipo: tipo || undefined,
+    advisor: advisor || undefined,
+    nivel: nivel || undefined,
+    limit,
+  });
+
+  return successResponse({
+    data: events,
+    total: events.length,
+    filters: { month, startDate, endDate, tipo, advisor, nivel },
+  });
+});

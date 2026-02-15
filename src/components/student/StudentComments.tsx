@@ -44,7 +44,7 @@ export default function StudentComments({ studentId, usuarioId }: StudentComment
     const fetchStudentData = async () => {
       try {
         // Use internal API instead of direct Wix call
-        const response = await fetch(`/api/student/${studentId}`)
+        const response = await fetch(`/api/postgres/students/${studentId}`)
         const data = await response.json()
         if (data.success && data.student?.usuarioId) {
           setRealUsuarioId(data.student.usuarioId)

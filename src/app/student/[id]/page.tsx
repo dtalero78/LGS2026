@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import StudentTabs from '@/components/student/StudentTabs'
-import { getStudentById } from '@/lib/wix'
+import { getProfile, getAcademicHistory } from '@/services/student.service'
 import { PermissionGuard } from '@/components/permissions'
 import { StudentPermission } from '@/types/permissions'
 import { formatDateTimeColombia } from '@/lib/utils'
@@ -31,26 +31,23 @@ export default async function StudentPage({ params }: StudentPageProps) {
 
 async function StudentContent({ studentId }: { studentId: string }) {
   try {
-    const studentData = await getStudentById(studentId)
+    const student = await getProfile(studentId)
 
-    if (!studentData.success || !studentData.student) {
+    if (!student) {
       notFound()
     }
 
-    // DEBUG: Ver qué datos estamos recibiendo
-    console.log('🔍 DEBUG Student Data:', {
-      numeroId: studentData.student.numeroId,
-      contrato: studentData.student.contrato,
-      tipoUsuario: studentData.student.tipoUsuario,
-      estadoInactivo: studentData.student.estadoInactivo,
-      onHoldCount: studentData.student.onHoldCount,
-      onHoldHistory: studentData.student.onHoldHistory,
-      allFields: Object.keys(studentData.student)
-    })
+    let classes: any[] = []
+    try {
+      const academicData = await getAcademicHistory(studentId)
+      classes = academicData.classes || []
+    } catch {
+      // Continue without classes if there's an error
+    }
 
     // Find next scheduled class
     const now = new Date()
-    const nextClass = (studentData.classes || [])
+    const nextClass = classes
       .filter((cls: any) => {
         const classDate = new Date(cls.fechaEvento)
         return classDate > now
@@ -58,8 +55,8 @@ async function StudentContent({ studentId }: { studentId: string }) {
       .sort((a: any, b: any) => new Date(a.fechaEvento).getTime() - new Date(b.fechaEvento).getTime())[0]
 
     // Check if contract has expired
-    const contratoFinalizado = studentData.student.finalContrato ?
-      new Date(studentData.student.finalContrato) < now : false
+    const contratoFinalizado = student.finalContrato ?
+      new Date(student.finalContrato) < now : false
 
     return (
       <div className="space-y-6">
@@ -68,23 +65,23 @@ async function StudentContent({ studentId }: { studentId: string }) {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                {studentData.student.primerNombre} {studentData.student.primerApellido}
+                {student.primerNombre} {student.primerApellido}
               </h1>
               <div className="mt-1 flex items-center space-x-4 text-sm text-gray-500">
-                <span>ID: {studentData.student.numeroId || 'No disponible'}</span>
-                <span>Contrato: {studentData.student.contrato || 'No disponible'}</span>
-                <span>Nivel: {studentData.student.nivel || 'No asignado'}</span>
-                <span>Step: {studentData.student.step || 'No asignado'}</span>
+                <span>ID: {student.numeroId || 'No disponible'}</span>
+                <span>Contrato: {student.contrato || 'No disponible'}</span>
+                <span>Nivel: {student.nivel || 'No asignado'}</span>
+                <span>Step: {student.step || 'No asignado'}</span>
               </div>
             </div>
             <div className="flex flex-col items-end space-y-2">
               <div className="flex items-center space-x-2">
                 <span className="badge badge-info">
-                  {studentData.student.tipoUsuario || 'Beneficiario'}
+                  {student.tipoUsuario || 'Beneficiario'}
                 </span>
-                {studentData.student.plataforma && (
+                {student.plataforma && (
                   <span className="badge badge-success">
-                    {studentData.student.plataforma}
+                    {student.plataforma}
                   </span>
                 )}
                 {contratoFinalizado ? (
@@ -102,7 +99,7 @@ async function StudentContent({ studentId }: { studentId: string }) {
                 )}
               </div>
               {/* OnHold Indicator - Hide if contract is finalized */}
-              {!contratoFinalizado && studentData.student.estadoInactivo && (
+              {!contratoFinalizado && student.estadoInactivo && (
                 <span className="badge badge-warning">
                   ⏸️ OnHold
                 </span>
@@ -113,8 +110,8 @@ async function StudentContent({ studentId }: { studentId: string }) {
 
         {/* Student Tabs */}
         <StudentTabs
-          student={studentData.student}
-          classes={studentData.classes || []}
+          student={student}
+          classes={classes}
           contratoFinalizado={contratoFinalizado}
         />
       </div>

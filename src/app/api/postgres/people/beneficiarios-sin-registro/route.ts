@@ -1,81 +1,37 @@
-import { NextResponse } from 'next/server';
-import { query } from '@/lib/postgres';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-postgres';
+import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
+import { queryMany } from '@/lib/postgres';
 
 /**
  * GET /api/postgres/people/beneficiarios-sin-registro
  *
- * Get all beneficiarios (students) who don't have an academic record (ACADEMICA)
- *
- * Query params:
- * - nivel: string (optional) - Filter by nivel
- * - contrato: string (optional) - Filter by contrato
+ * Get all beneficiarios without an academic record.
  */
-export async function GET(request: Request) {
-  try {
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+export const GET = handlerWithAuth(async (request) => {
+  const { searchParams } = new URL(request.url);
+  const nivel = searchParams.get('nivel');
+  const contrato = searchParams.get('contrato');
 
-    const { searchParams } = new URL(request.url);
-    const nivel = searchParams.get('nivel');
-    const contrato = searchParams.get('contrato');
+  const conditions: string[] = [`p."tipoUsuario" = 'BENEFICIARIO'`, `a."_id" IS NULL`];
+  const values: any[] = [];
+  let idx = 1;
 
-    // Build WHERE clause
-    const conditions: string[] = [
-      `p."tipoUsuario" = 'BENEFICIARIO'`,
-      `a."_id" IS NULL`, // No academic record
-    ];
-    const values: any[] = [];
-    let paramIndex = 1;
+  if (nivel) { conditions.push(`p."nivel" = $${idx}`); values.push(nivel); idx++; }
+  if (contrato) { conditions.push(`p."contrato" = $${idx}`); values.push(contrato); idx++; }
 
-    if (nivel) {
-      conditions.push(`p."nivel" = $${paramIndex}`);
-      values.push(nivel);
-      paramIndex++;
-    }
+  const beneficiarios = await queryMany(
+    `SELECT p.*, NULL as "hasAcademicRecord"
+     FROM "PEOPLE" p
+     LEFT JOIN "ACADEMICA" a ON p."numeroId" = a."numeroId"
+     WHERE ${conditions.join(' AND ')}
+     ORDER BY p."primerApellido", p."primerNombre"`,
+    values
+  );
 
-    if (contrato) {
-      conditions.push(`p."contrato" = $${paramIndex}`);
-      values.push(contrato);
-      paramIndex++;
-    }
-
-    const whereClause = `WHERE ${conditions.join(' AND ')}`;
-
-    const result = await query(
-      `SELECT
-        p.*,
-        NULL as "hasAcademicRecord"
-      FROM "PEOPLE" p
-      LEFT JOIN "ACADEMICA" a ON p."numeroId" = a."numeroId"
-      ${whereClause}
-      ORDER BY p."primerApellido", p."primerNombre"`,
-      values
-    );
-
-    return NextResponse.json({
-      success: true,
-      beneficiarios: result.rows,
-      count: result.rowCount || 0,
-      message: result.rowCount === 0
-        ? 'Todos los beneficiarios tienen registro académico'
-        : `${result.rowCount} beneficiarios sin registro académico`,
-    });
-  } catch (error: any) {
-    console.error('❌ Error fetching beneficiarios sin registro:', error);
-    return NextResponse.json(
-      {
-        error: 'Database error',
-        details: error.message,
-      },
-      { status: 500 }
-    );
-  }
-}
+  return successResponse({
+    beneficiarios,
+    count: beneficiarios.length,
+    message: beneficiarios.length === 0
+      ? 'Todos los beneficiarios tienen registro académico'
+      : `${beneficiarios.length} beneficiarios sin registro académico`,
+  });
+});
