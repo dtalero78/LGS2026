@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" language learning platform. The panel provides management interfaces for students, classes, events, and financial data, integrating with Wix as the primary data source.
+LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" language learning platform. The panel provides management interfaces for students, classes, events, and financial data. Uses PostgreSQL (Digital Ocean) as primary database with a layered architecture (Repository → Service → API Route → Hook).
 
 ## Lista Completa de Funcionalidades
 
 ### Autenticación y Acceso
 1. Login con email/contraseña
 2. Control de acceso basado en roles (RBAC) con 12 roles
-3. Carga dinámica de permisos desde Wix con caché de 5 minutos
+3. Carga dinámica de permisos desde PostgreSQL con caché de 5 minutos
 4. Control de acceso por ruta (middleware)
 5. Gestión de sesiones con JWT (NextAuth.js)
 
@@ -131,16 +131,114 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 ## Architecture
 
 ### Data Flow
-- **Primary Data Source**: Wix backend via API proxy endpoints (`/api/wix-proxy/*`)
-- **Authentication**: Hardcoded admin credentials (no database dependency)
-- **Client-Side Caching**: localStorage with TTL for calendar/event data
-- **Server-Side Rendering**: Next.js App Router with API routes
+```
+Browser (React)
+   │  El usuario interactúa con la app
+   ▼
+HOOKS (use-student.ts, use-calendar.ts, ...)
+   │  Reciben la petición del componente,
+   │  la pasan al API, y manejan cache/loading/error
+   │  con React Query.
+   ▼
+API ROUTES (postgres/students/[id]/route.ts)
+   │  Adaptadores HTTP delgados. Solo reciben el request,
+   │  llaman al servicio, y devuelven la respuesta.
+   │  Usan handler()/handlerWithAuth() para estandarizar
+   │  try/catch, auth y error responses.
+   ▼
+SERVICES (student.service.ts, contract.service.ts, ...)
+   │  Lógica de negocio. Saben las "recetas":
+   │  "Para un perfil, buscar en ACADEMICA y si no,
+   │   buscar en PEOPLE". Combinan repositorios.
+   ▼
+REPOSITORIES (people.repository.ts, academica.repository.ts, ...)
+   │  Capa de acceso a datos. Solo SQL parametrizado.
+   │  Un repositorio por tabla (o grupo de tablas).
+   ▼
+PostgreSQL (Digital Ocean)
+```
 
-### Key Directories
-- `src/app/` - App Router pages and API routes
-- `src/components/` - Reusable UI components organized by feature
-- `src/lib/` - Utilities, authentication, and Wix API integration
-- `src/types/` - TypeScript definitions and module declarations
+### Los archivos y qué hacen
+
+```
+src/
+├── hooks/                   ← HOOKS - Frontend data fetching (5 archivos)
+│   ├── use-api.ts               Wrapper de fetch con manejo de errores
+│   ├── use-student.ts           Datos de estudiantes (perfil, académico, progreso, onhold, extensiones)
+│   ├── use-calendar.ts          Datos del calendario (eventos, bookings, inscripciones)
+│   ├── use-advisors.ts          Datos de advisors (lista, stats)
+│   └── use-search.ts            Búsqueda global con debounce
+│
+├── app/api/postgres/        ← API ROUTES - Adaptadores HTTP (52 rutas)
+│   ├── students/                Perfil, academic, step, toggle-status, onhold, extend, progress
+│   ├── calendar/                Eventos del calendario, CRUD
+│   ├── events/                  Eventos, bookings, inscripciones, batch-counts
+│   ├── people/                  PEOPLE CRUD, comments, beneficiarios-sin-registro
+│   ├── advisors/                Lista, stats, events por advisor
+│   ├── search/                  Búsqueda unificada (PEOPLE + ACADEMICA)
+│   ├── contracts/               Contratos, búsqueda por patrón
+│   ├── dashboard/               Estadísticas del inicio
+│   ├── roles/                   CRUD de roles y permisos
+│   ├── niveles/                 Niveles y steps
+│   ├── financial/               Datos financieros
+│   ├── export/                  Exportación CSV (eventos, estudiantes)
+│   ├── reports/                 Reportes de asistencia
+│   ├── academic/                Historial académico, asistencia, evaluación, actividad
+│   ├── approvals/               Aprobaciones pendientes
+│   ├── materials/               Material por nivel y usuario
+│   ├── permissions/             Permisos del usuario actual
+│   └── users/                   Rol de usuario por email
+│
+├── services/                ← SERVICES - Lógica de negocio (7 archivos)
+│   ├── student.service.ts       Perfil (lookup ACADEMICA→PEOPLE), historial, toggle status
+│   ├── contract.service.ts      OnHold, extensiones, expiración
+│   ├── calendar.service.ts      Crear/editar/eliminar eventos con bookings
+│   ├── enrollment.service.ts    Inscribir estudiantes en eventos (validación de capacidad)
+│   ├── search.service.ts        Búsqueda unificada en PEOPLE + ACADEMICA en paralelo
+│   ├── dashboard.service.ts     Estadísticas del dashboard (queries paralelas)
+│   └── progress.service.ts      Reporte "¿Cómo voy?" (diagnóstico del estudiante)
+│
+├── repositories/            ← REPOSITORIES - Acceso a datos / SQL (10 archivos)
+│   ├── base.repository.ts       Clase base: findById, findMany, updateFields, parseJsonb
+│   ├── people.repository.ts     Tabla PEOPLE (~10 rutas)
+│   ├── academica.repository.ts  Tabla ACADEMICA (~4 rutas)
+│   ├── booking.repository.ts    Tabla ACADEMICA_BOOKINGS (~8 rutas)
+│   ├── calendar.repository.ts   Tabla CALENDARIO (~6 rutas)
+│   ├── advisor.repository.ts    Tabla ADVISORS (~4 rutas)
+│   ├── roles.repository.ts      Tablas ROL_PERMISOS + USUARIOS_ROLES (~4 rutas)
+│   ├── niveles.repository.ts    Tablas NIVELES + STEP_OVERRIDES (~4 rutas)
+│   ├── financial.repository.ts  Tabla FINANCIEROS (~2 rutas)
+│   └── comments.repository.ts   Tabla COMENTARIOS (~2 rutas)
+│
+├── lib/                     ← UTILIDADES compartidas (4 archivos nuevos + existentes)
+│   ├── errors.ts                Clases de error: NotFoundError, ValidationError, UnauthorizedError
+│   ├── api-helpers.ts           handler(), handlerWithAuth(), successResponse()
+│   ├── query-builder.ts         buildDynamicUpdate(), buildDynamicWhere()
+│   ├── id-generator.ts          ids.event(), ids.booking(), etc.
+│   ├── postgres.ts              Pool de conexión PostgreSQL (existente)
+│   ├── auth.ts                  NextAuth.js config (existente)
+│   └── middleware-permissions.ts Cache de permisos server-side (existente)
+│
+├── components/              ← COMPONENTES React organizados por feature
+│   ├── layout/                  DashboardLayout, sidebar, navigation
+│   ├── student/                 StudentTabs, StudentAcademic, StudentOnHold, StudentContract...
+│   ├── search/                  SearchBar (búsqueda global)
+│   ├── calendar/                CalendarView, EventModal, EventForm...
+│   ├── permissions/             PermissionGuard
+│   └── ui/                      Componentes genéricos reutilizables
+│
+└── types/                   ← TypeScript definitions
+    ├── index.ts                 Student, Person, Event, Booking, etc.
+    └── permissions.ts           Enums de permisos sincronizados con ROL_PERMISOS
+```
+
+### Convenciones importantes
+
+- **`server-only`**: Todos los repositorios, servicios y api-helpers importan `'server-only'` para evitar que se incluyan en bundles del cliente
+- **SQL parametrizado**: Todo el SQL usa placeholders `$1, $2, ...` (nunca interpolación de strings)
+- **React Query v3**: Se importa de `'react-query'` (NO de `@tanstack/react-query`)
+- **handler() wrapper**: Todas las rutas API usan `handler()` o `handlerWithAuth()` de `@/lib/api-helpers` para estandarizar try/catch y respuestas de error
+- **JSONB**: Campos como `onHoldHistory`, `extensionHistory`, `evaluacion` se almacenan como JSONB en PostgreSQL. Los repositorios usan `parseJsonb()` de la clase base para deserializarlos
 
 ## Development Commands
 
@@ -160,23 +258,17 @@ npm run db:backup            # Backup database (legacy MongoDB)
 ## Key Implementation Details
 
 ### Authentication System
-- Uses NextAuth.js with credentials from Wix `USUARIOS_ROLES` table
+- Uses NextAuth.js with credentials from PostgreSQL `USUARIOS_ROLES` table
 - Supports both bcrypt hashed passwords and plain text (legacy compatibility)
-- User credentials and roles stored in Wix backend
+- User credentials and roles stored in PostgreSQL
 - Admin fallback credentials via environment variables: `ADMIN_EMAIL`, `ADMIN_PASSWORD`
 - Implementation: `src/lib/auth.ts`
-- Password verification: Checks Wix first, then falls back to test users
+- Password verification: Checks PostgreSQL first, then falls back to test users
 
 ### Custom Form Validation
 - Custom `zodResolver` implementation in `src/lib/zod-resolver.ts`
 - Replaced `@hookform/resolvers` to avoid peer dependency issues
 - Only supports Zod schemas
-
-### Wix API Integration
-- All data operations proxy through `/api/wix-proxy/*` endpoints
-- Server-side API calls use `process.env.NEXTAUTH_URL` for correct URL resolution
-- Client-side calls use relative URLs
-- Implementation: `src/lib/wix.ts:47-74`
 
 ### Caching Strategy
 - **Client-side**: localStorage-based caching for calendar events with 5-minute TTL
@@ -196,7 +288,7 @@ NEXTAUTH_URL=https://your-app-url.ondigitalocean.app
 NEXTAUTH_SECRET=your_32_character_secret_key
 ADMIN_EMAIL=your-admin@email.com
 ADMIN_PASSWORD=your-secure-password
-NEXT_PUBLIC_WIX_API_BASE_URL=https://www.lgsplataforma.com/_functions
+DATABASE_URL=postgresql://user:pass@host:port/dbname
 ```
 
 ### TypeScript Build Configuration
@@ -234,13 +326,22 @@ NEXT_PUBLIC_WIX_API_BASE_URL=https://www.lgsplataforma.com/_functions
 - Only Zod schemas are supported
 
 ## Database Architecture
-- **No MongoDB dependency** - authentication and permissions use Wix backend
-- All business data stored in Wix
-- Legacy MongoDB code remains but is unused
-- Key Wix tables:
-  - `USUARIOS_ROLES`: User credentials, roles, and basic info
-  - `ROL_PERMISOS`: Role definitions with permission arrays
-  - Other business tables: Students, Events, Contracts, etc.
+- **PostgreSQL** (Digital Ocean Managed Database) as sole data store
+- Connection: `src/lib/postgres.ts` with connection pool and SSL
+- All SQL is parameterized ($1, $2, ...) to prevent injection
+- JSONB fields for flexible data: `onHoldHistory`, `extensionHistory`, `evaluacion`, `steps`, etc.
+- Key tables:
+  - `PEOPLE`: Personas (titulares y beneficiarios), contratos, OnHold
+  - `ACADEMICA`: Registros académicos por estudiante
+  - `ACADEMICA_BOOKINGS`: Inscripciones a eventos (asistencia, evaluación)
+  - `CALENDARIO`: Eventos (SESSION, CLUB, WELCOME)
+  - `ADVISORS`: Profesores/advisors
+  - `USUARIOS_ROLES`: Credenciales y roles de usuario
+  - `ROL_PERMISOS`: Definiciones de roles con arrays de permisos
+  - `NIVELES`: Niveles académicos y steps
+  - `STEP_OVERRIDES`: Overrides manuales de steps por estudiante
+  - `FINANCIEROS`: Datos financieros
+  - `COMENTARIOS`: Comentarios internos por persona
 
 ## OnHold System with Automatic Contract Extension
 
@@ -259,7 +360,7 @@ The OnHold system allows administrators to temporarily pause a student without l
 #### Data Flow - Activating OnHold
 ```javascript
 // User activates OnHold via StudentOnHold component
-POST /api/wix-proxy/toggle-student-onhold
+POST /api/postgres/students/onhold
 {
   studentId: "abc123",
   setOnHold: true,
@@ -268,7 +369,7 @@ POST /api/wix-proxy/toggle-student-onhold
   motivo: "Vacaciones"
 }
 
-// Backend updates PEOPLE table:
+// contractService.activateOnHold() updates PEOPLE table:
 {
   estadoInactivo: true,
   fechaOnHold: "2025-07-01",
@@ -284,16 +385,16 @@ POST /api/wix-proxy/toggle-student-onhold
 }
 ```
 
-#### Data Flow - Deactivating OnHold (NEW: Automatic Extension)
+#### Data Flow - Deactivating OnHold (Automatic Extension)
 ```javascript
 // User deactivates OnHold via StudentOnHold component
-POST /api/wix-proxy/toggle-student-onhold
+POST /api/postgres/students/onhold
 {
   studentId: "abc123",
   setOnHold: false
 }
 
-// Backend (search.jsw:toggleUserStatus):
+// contractService.deactivateOnHold():
 // 1. Calculates paused days: 30 days
 // 2. Extends finalContrato: 2025-12-31 → 2026-01-30 (+30 days)
 // 3. Creates extension history entry
@@ -307,7 +408,7 @@ POST /api/wix-proxy/toggle-student-onhold
   finalContrato: "2026-01-30",  // ← Extended automatically
   vigencia: 395,                 // ← Recalculated
   extensionCount: 1,             // ← Incremented
-  extensionHistory: [{           // ← NEW: Auto-extension entry
+  extensionHistory: [{           // ← Auto-extension entry
     numero: 1,
     fechaEjecucion: "2025-07-31T14:00:00Z",
     vigenciaAnterior: "2025-12-31",
@@ -320,18 +421,16 @@ POST /api/wix-proxy/toggle-student-onhold
 
 ### Implementation Files
 
-#### Backend (Wix)
-- **`backend/search.jsw:toggleUserStatus`** (line ~1279-1340)
-  - Handles OnHold activation/deactivation
-  - Calculates paused days when deactivating
-  - Automatically extends `finalContrato`
-  - Creates `extensionHistory` entry
-  - Updates `extensionCount`
+- **`src/services/contract.service.ts`**
+  - `activateOnHold()`: Handles OnHold activation
+  - `deactivateOnHold()`: Calculates paused days, extends `finalContrato`, creates `extensionHistory` entry
+  - `extendByDays()`: Manual contract extension
 
-#### Frontend (Next.js)
-- **`src/app/api/wix-proxy/toggle-student-onhold/route.ts`**
-  - API proxy to Wix `toggleUserStatus` function
-  - Passes `studentId`, `setOnHold`, `fechaOnHold`, `fechaFinOnHold`, `motivo`
+- **`src/repositories/people.repository.ts`**
+  - `activateOnHold()`, `deactivateOnHold()`, `extendContract()`: SQL queries for PEOPLE table updates
+
+- **`src/app/api/postgres/students/onhold/route.ts`**
+  - API route that delegates to `contractService`
 
 - **`src/components/student/StudentOnHold.tsx`**
   - Modal to activate OnHold with date pickers
@@ -421,20 +520,9 @@ Result: Student maintains full 365 days of contract
 4. **Transparent**: Extension reason clearly indicates OnHold origin
 5. **Consistent**: Uses same structure as manual extensions
 
-### Deployment Instructions
-
-See detailed deployment guide: [DESPLEGAR_ONHOLD_AUTO_EXTENSION.md](DESPLEGAR_ONHOLD_AUTO_EXTENSION.md)
-
-Quick summary:
-1. Open Wix Editor → Velo backend
-2. Edit `backend/search.jsw`
-3. Find `toggleUserStatus` function (line ~1279)
-4. Replace OnHold deactivation logic (6 lines)
-5. Save and Publish
-
 ### Testing
 
-After deployment:
+After changes:
 1. Activate OnHold on a test student (e.g., 10 days)
 2. Verify `onHoldCount` incremented
 3. Deactivate OnHold
@@ -446,28 +534,18 @@ After deployment:
 ## Permissions System (RBAC - Role-Based Access Control)
 
 ### Overview
-The application implements a comprehensive RBAC system that loads permissions dynamically from Wix. All permission checks are synchronized across:
+The application implements a comprehensive RBAC system that loads permissions dynamically from PostgreSQL. All permission checks are synchronized across:
 - **Middleware** (route access control)
 - **Frontend UI** (menu visibility and component rendering)
 - **API endpoints** (server-side permission verification)
 
 ### Architecture
 
-#### 1. Wix as Source of Truth
-- **Table**: `ROL_PERMISOS` in Wix database
-- **Structure**: Each role has an array of permission strings
-- **Wix Endpoint**: `https://www.lgsplataforma.com/_functions/rolePermissions?rol=ROLENAME`
-- **Wix Endpoint (All Roles)**: `https://www.lgsplataforma.com/_functions/allRoles`
-
-Example Wix data for TALERO role:
-```json
-{
-  "success": true,
-  "rol": "TALERO",
-  "permisos": ["ACADEMICO.ADVISOR.LISTA_VER"],
-  "descripcion": "Talero - Gestión de servicios y soporte"
-}
-```
+#### 1. PostgreSQL as Source of Truth
+- **Table**: `ROL_PERMISOS` in PostgreSQL
+- **Structure**: Each role has a JSONB array of permission strings
+- **API Endpoints**: `/api/postgres/roles` (all roles), `/api/postgres/roles/[rol]/permissions` (by role)
+- **Repository**: `src/repositories/roles.repository.ts`
 
 #### 2. Permission Format
 Permissions follow a hierarchical dot notation:
@@ -493,7 +571,7 @@ Permissions follow a hierarchical dot notation:
 #### 1. TypeScript Permission Enums
 **File**: `src/types/permissions.ts`
 
-Defines all permission constants synchronized with Wix:
+Defines all permission constants synchronized with PostgreSQL `ROL_PERMISOS`:
 ```typescript
 export enum AcademicoPermission {
   VER_CALENDARIO = 'ACADEMICO.AGENDA.VER_CALENDARIO',
@@ -507,13 +585,13 @@ export enum ServicioPermission {
 }
 ```
 
-**Important**: These enums MUST match exactly with Wix permission strings.
+**Important**: These enums MUST match exactly with the permission strings in PostgreSQL `ROL_PERMISOS` table.
 
 #### 2. Middleware Permission System
 **File**: `src/lib/middleware-permissions.ts`
 
 Core functions:
-- `getPermissionsForRoleFromWix(role)`: Loads permissions from Wix with 5-minute cache
+- `getPermissionsForRole(role)`: Loads permissions from PostgreSQL with 5-minute cache
 - `hasAccessToRoute(pathname, userPermissions)`: Verifies route access
 - `ROUTE_PERMISSIONS`: Maps specific routes to required permissions
 - `GENERIC_ROUTE_ACCESS`: Maps parent routes to any child permission
@@ -523,7 +601,7 @@ Core functions:
 Middleware flow:
 1. Check if user is authenticated
 2. SUPER_ADMIN/ADMIN get full access
-3. For other roles: Load permissions from Wix (cached)
+3. For other roles: Load permissions from PostgreSQL (cached)
 4. Verify if user has ANY of the required permissions for the route
 5. Allow or deny access
 
@@ -546,7 +624,7 @@ const {
   hasAnyPermission,     // Check if has any of array
   hasAllPermissions,    // Check if has all of array
   isLoading,           // Loading state
-  permissionsSource    // 'wix' or 'fallback'
+  permissionsSource    // 'postgres' or 'fallback'
 } = usePermissions();
 ```
 
@@ -632,29 +710,27 @@ if (!hasPermission(userRole, RequiredPermission)) {
 - Shows complete permission matrix for all roles grouped by module
 - Each module section has distinct color coding (purple for TITULAR, blue for BENEFICIARIO, etc.)
 - "Select All" checkbox per module for bulk permission assignment
-- Loads data directly from Wix ROL_PERMISOS table
-- Source indicator shows if data is from 'wix' or 'fallback'
+- Loads data directly from PostgreSQL ROL_PERMISOS table
+- Source indicator shows if data is from 'postgres' or 'fallback'
 - "Volver al Dashboard" button returns to `/` (root/homepage)
 
 #### Modifying Permissions
-1. **Via Wix Dashboard** (Recommended):
-   - Edit ROL_PERMISOS table directly in Wix
+1. **Via Admin UI** (Recommended):
+   - Use `/admin/permissions` interface
    - Changes take effect within 5 minutes (cache TTL)
-   - No code deployment needed
 
-2. **Via API** (Advanced):
+2. **Via API**:
    ```typescript
    // Update permissions for a role
-   POST /api/roles/update
+   PUT /api/postgres/roles/TALERO/permissions
    {
-     "rol": "TALERO",
      "permisos": ["ACADEMICO.ADVISOR.LISTA_VER", "NEW.PERMISSION"]
    }
    ```
 
 #### Creating New Roles
 ```typescript
-POST /api/roles/create
+POST /api/postgres/roles
 {
   "rol": "NEW_ROLE",
   "descripcion": "Role description",
@@ -679,8 +755,8 @@ POST /api/roles/create
 ### Troubleshooting Permissions
 
 #### User Can't Access a Route
-1. Check user's role in Wix `USUARIOS_ROLES` table
-2. Check role's permissions in Wix `ROL_PERMISOS` table
+1. Check user's role in PostgreSQL `USUARIOS_ROLES` table
+2. Check role's permissions in PostgreSQL `ROL_PERMISOS` table
 3. Check middleware logs for permission verification:
    ```
    🔐 [Middleware] Verificando permisos para ROLE → /path
@@ -695,7 +771,7 @@ POST /api/roles/create
    ✅ Permisos cargados desde wix: X
    📋 Lista de permisos: [...]
    ```
-2. Verify `permissionsSource: 'wix'` (not 'fallback')
+2. Verify `permissionsSource: 'postgres'` (not 'fallback')
 3. Check `DashboardLayout` logs for menu filtering:
    ```
    Académico: ✅
@@ -705,12 +781,12 @@ POST /api/roles/create
 #### Permissions Not Updating
 1. Wait 5 minutes for cache to expire
 2. Force logout and login again
-3. Check if changes were saved in Wix ROL_PERMISOS
+3. Check if changes were saved in PostgreSQL ROL_PERMISOS
 4. Verify Digital Ocean deployment completed successfully
 
 ### Adding New Permissions
 
-#### Step 1: Add to Wix
+#### Step 1: Add to PostgreSQL
 Add permission string to `ROL_PERMISOS` table for desired roles.
 
 #### Step 2: Add to TypeScript Enum
@@ -738,29 +814,16 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
 </PermissionGate>
 ```
 
-## File Structure and Key Components
+## Ejemplo de flujo completo: "Ver perfil del estudiante"
 
-### Authentication Flow
-1. User enters credentials on `/login` page
-2. NextAuth validates against environment variables in `src/lib/auth.ts`
-3. JWT token created with user role
-4. Protected routes check session status
-
-### Calendar System
-1. Events loaded from Wix via `/api/wix-proxy/calendario-events`
-2. Data cached in localStorage with 5-minute TTL
-3. Enrollment data loaded separately in batches
-4. Cache invalidated on any CRUD operation
-
-### Student Management
-1. Search functionality via Wix API (`searchByName`, `searchByDocument`, `searchByContract`)
-2. Student details loaded via `/api/wix-proxy/student-by-id`
-3. Classes and enrollment data fetched separately
-
-### Data Export
-- CSV export functionality for calendar events
-- Excel export for student data
-- PDF generation for reports using `@react-pdf/renderer`
+| Paso | Capa | Archivo | Qué hace |
+|------|------|---------|----------|
+| 1 | **Hook** | `use-student.ts` → `useStudentProfile(id)` | Hace fetch a `/api/postgres/students/{id}`, maneja cache con React Query |
+| 2 | **Ruta** | `postgres/students/[id]/route.ts` | `handlerWithAuth()` recibe, llama `studentService.getProfile(id)` |
+| 3 | **Servicio** | `student.service.ts` → `getProfile()` | Busca en ACADEMICA, si no encuentra busca en PEOPLE, combina datos |
+| 4 | **Repositorio** | `academica.repository.ts` | `SELECT * FROM "ACADEMICA" WHERE _id = $1` |
+| 5 | **Repositorio** | `people.repository.ts` | `SELECT * FROM "PEOPLE" WHERE _id = $1` |
+| 6 | Respuesta sube de vuelta hasta el componente React |
 
 ## Development Notes
 
@@ -769,7 +832,7 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
 - Next.js 14 with App Router
 - TypeScript with `es2017` target
 - TailwindCSS for styling
-- React Query for data fetching
+- React Query v3 (`'react-query'`, NOT `@tanstack/react-query`)
 
 ### Troubleshooting Tips
 1. If build fails with TypeScript errors, check `tsconfig.json` excludes
@@ -778,8 +841,8 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
 4. If server-side API calls fail, verify `NEXTAUTH_URL` is set for production
 
 ### Security Considerations
-- Hardcoded credentials should only be used for demo/development
-- All API routes proxy through the application (no direct Wix access from frontend)
+- All SQL uses parameterized queries ($1, $2, ...) to prevent injection
+- All API routes proxy through the application (no direct DB access from frontend)
 - JWT tokens expire based on NextAuth configuration
 - No sensitive data logged in production builds
 
@@ -796,7 +859,7 @@ ESS es un nivel **paralelo y opcional** que NO bloquea el avance en los niveles 
 
 ### Estructura de Datos
 
-#### NIVELES (Wix Collection)
+#### NIVELES (PostgreSQL)
 ```javascript
 {
   code: "ESS",          // Código del nivel
@@ -808,7 +871,7 @@ ESS es un nivel **paralelo y opcional** que NO bloquea el avance en los niveles 
 }
 ```
 
-#### ACADEMICA (Wix Collection)
+#### ACADEMICA (PostgreSQL)
 ```javascript
 {
   _id: "...",
@@ -820,7 +883,7 @@ ESS es un nivel **paralelo y opcional** que NO bloquea el avance en los niveles 
 }
 ```
 
-#### PEOPLE (Wix Collection)
+#### PEOPLE (PostgreSQL)
 ```javascript
 {
   _id: "...",
@@ -832,65 +895,22 @@ ESS es un nivel **paralelo y opcional** que NO bloquea el avance en los niveles 
 }
 ```
 
-### Funciones Modificadas
+### Implementación
 
-#### 1. updateStudentStep
-**Archivo**: `src/backend/FUNCIONES WIX/search.jsw:2097-2177`
-
-**Lógica**:
+#### updateStudentStep
+- **API**: `PUT /api/postgres/students/[id]/step`
+- **Servicio**: `student.service.ts`
+- **Repositorios**: `niveles.repository.ts`, `academica.repository.ts`, `people.repository.ts`
 - Detecta si el nuevo step pertenece a un nivel paralelo consultando `NIVELES.esParalelo`
-- Si `esParalelo === true`: Actualiza `nivelParalelo` y `stepParalelo` en ACADEMICA y PEOPLE
-- Si `esParalelo === false`: Actualiza `nivel` y `step` (comportamiento original)
+- Si `esParalelo === true`: Actualiza `nivelParalelo` y `stepParalelo`
+- Si `esParalelo === false`: Actualiza `nivel` y `step` (comportamiento normal)
 
-**Uso**:
-```javascript
-// Cambiar estudiante a ESS (nivel paralelo)
-await updateStudentStep({
-  numeroId: "1234567890",
-  newStep: "0"  // ESS Step 0
-});
-// Resultado: nivelParalelo = "ESS", nivel principal no cambia
-
-// Cambiar estudiante a BN2 (nivel principal)
-await updateStudentStep({
-  numeroId: "1234567890",
-  newStep: "6"  // BN2 Step 6
-});
-// Resultado: nivel = "BN2", nivelParalelo no cambia
-```
-
-#### 2. cargarStepsDelNivel
-**Archivo**: `src/backend/FUNCIONES WIX/search.jsw:2327-2580`
-
-**Cambio**: Retorna campo adicional `esParalelo` para indicar si el nivel consultado es paralelo.
-
-```javascript
-return {
-  success: true,
-  steps: [...],
-  nivel: "ESS",
-  esParalelo: true,  // Nuevo campo
-  totalSteps: 1
-};
-```
-
-#### 3. getStudentProgress (Diagnóstico "¿Cómo voy?")
-**Archivo**: `src/backend/FUNCIONES WIX/search.jsw:4896-5198`
-
-**Lógica**:
+#### getStudentProgress (Diagnóstico "¿Cómo voy?")
+- **API**: `GET /api/postgres/students/[id]/progress`
+- **Servicio**: `progress.service.ts`
 - Usa solo `nivel` (nivel principal) para generar el diagnóstico
 - **EXCLUYE** explícitamente ESS del diagnóstico de steps
 - Incluye todas las clases (incluyendo ESS) en la tabla "Todas las clases" para tracking
-- Muestra nivel paralelo en la información del estudiante pero NO lo evalúa
-
-**Filtro clave**:
-```javascript
-const clasesNivelActual = classes.filter(c =>
-  c.nivel === nivelPrincipal &&
-  c.step !== 'WELCOME' &&
-  c.nivel !== 'ESS'  // Excluir ESS del diagnóstico
-);
-```
 
 ### TypeScript Types
 
@@ -937,28 +957,9 @@ export interface Person {
    - Tabla "Todas las clases": Incluye sesiones de ESS para referencia
    - No evalúa completitud de ESS
 
-### Despliegue
-
-Ver guía completa de despliegue: [DESPLEGAR_ESS_PARALELO.md](DESPLEGAR_ESS_PARALELO.md)
-
-**Pasos resumidos:**
-
-1. **Base de Datos Wix:**
-   - Agregar campo `esParalelo` en NIVELES (Boolean, default: false)
-   - Marcar ESS con `esParalelo: true`
-   - Agregar campos `nivelParalelo` y `stepParalelo` en ACADEMICA y PEOPLE (Text, opcional)
-
-2. **Backend Wix:**
-   - Actualizar funciones `updateStudentStep`, `cargarStepsDelNivel`, `getStudentProgress`
-   - Código completo en: [CODIGO_MODIFICADO_ESS_PARALELO.js](CODIGO_MODIFICADO_ESS_PARALELO.js)
-
-3. **Frontend Next.js:**
-   - Tipos TypeScript ya actualizados en `src/types/index.ts`
-   - Componentes se actualizarán automáticamente al recibir nuevos campos
-
 ### Notas Importantes
 
 - **Retrocompatibilidad**: Estudiantes sin nivel paralelo siguen funcionando normalmente
 - **ESS Step 0 especial**: Sigue usando lógica de 5 semanas para aprobación automática
-- **No migración necesaria**: Los campos nuevos son opcionales, no requieren actualizar registros existentes
+- **Campos opcionales**: `nivelParalelo` y `stepParalelo` son nullable en PostgreSQL
 - **Jump Steps**: Funcionan igual en niveles paralelos y principales
