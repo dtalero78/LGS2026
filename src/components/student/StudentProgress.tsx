@@ -7,32 +7,39 @@ interface StudentProgressProps {
   student: Student
 }
 
+interface StepProgress {
+  step: string
+  totalClases: number
+  asistencias: number
+  noAprobo: number
+  completado: boolean
+  hasOverride: boolean
+  overrideCompletado: boolean | null
+}
+
 interface ProgressData {
-  diagnosticoHTML: string
-  estadisticas: {
-    totalClases: number
-    clasesAsistidas: number
-    clasesConParticipacion: number
-    porcentajeAsistencia: number
-    porcentajeParticipacion: number
-    stepsCompletados: number
-    stepMasAlto: number
-    tiposEvento: Record<string, number>
-  }
-  ultimasClases: Array<{
-    fecha: string
-    tipo: string
-    nivel: string
-    step: string
-    asistio: boolean
-    participo: boolean
-    advisor?: string
-  }>
-  estudiante: {
+  student: {
     nombre: string
     nivel: string
     step: string
+    nivelParalelo?: string
+    stepParalelo?: string
   }
+  progress: {
+    nivelActual: string
+    totalSteps: number
+    stepsCompletados: number
+    porcentajeProgreso: number
+    progressByStep: StepProgress[]
+  }
+  stats: {
+    totalClases: number
+    totalAsistencias: number
+    totalAusencias: number
+    totalPendientes: number
+    porcentajeAsistencia: number
+  }
+  byTipo: Array<{ tipo: string; totalClases: number; asistencias: number }>
 }
 
 export default function StudentProgress({ student }: StudentProgressProps) {
@@ -49,9 +56,7 @@ export default function StudentProgress({ student }: StudentProgressProps) {
       setIsLoading(true)
       setError(null)
 
-      console.log('📊 Cargando diagnóstico académico para:', student._id)
-
-      const response = await fetch(`/api/postgres/students?id=${student._id}`)
+      const response = await fetch(`/api/postgres/students/${student._id}/progress`)
 
       if (!response.ok) {
         throw new Error('Error al cargar el diagnóstico académico')
@@ -63,11 +68,10 @@ export default function StudentProgress({ student }: StudentProgressProps) {
         throw new Error(result.error || 'Error al cargar el diagnóstico académico')
       }
 
-      setProgressData(result.data)
-      console.log('✅ Diagnóstico académico cargado:', result.data)
+      setProgressData(result)
 
     } catch (err) {
-      console.error('❌ Error cargando diagnóstico:', err)
+      console.error('Error cargando diagnóstico:', err)
       setError(err instanceof Error ? err.message : 'Error desconocido')
     } finally {
       setIsLoading(false)
@@ -122,13 +126,111 @@ export default function StudentProgress({ student }: StudentProgressProps) {
     )
   }
 
+  const { progress, stats, byTipo } = progressData
+
   return (
     <div className="space-y-4">
-      {/* HTML Diagnóstico renderizado */}
-      <div
-        className="rounded-lg overflow-hidden shadow-sm"
-        dangerouslySetInnerHTML={{ __html: progressData.diagnosticoHTML }}
-      />
+      {/* Resumen general */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="card text-center">
+          <p className="text-2xl font-bold text-blue-600">{stats.totalClases}</p>
+          <p className="text-xs text-gray-500 mt-1">Total Clases</p>
+        </div>
+        <div className="card text-center">
+          <p className="text-2xl font-bold text-green-600">{stats.totalAsistencias}</p>
+          <p className="text-xs text-gray-500 mt-1">Asistencias</p>
+        </div>
+        <div className="card text-center">
+          <p className="text-2xl font-bold text-red-600">{stats.totalAusencias}</p>
+          <p className="text-xs text-gray-500 mt-1">Ausencias</p>
+        </div>
+        <div className="card text-center">
+          <p className="text-2xl font-bold text-purple-600">{stats.porcentajeAsistencia}%</p>
+          <p className="text-xs text-gray-500 mt-1">% Asistencia</p>
+        </div>
+      </div>
+
+      {/* Progreso del nivel */}
+      {progress.nivelActual && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-700">
+              Progreso en {progress.nivelActual}
+            </h3>
+            <span className="text-sm text-gray-500">
+              {progress.stepsCompletados} / {progress.totalSteps} steps completados
+            </span>
+          </div>
+
+          {/* Barra de progreso */}
+          <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
+            <div
+              className="bg-blue-600 h-3 rounded-full transition-all duration-500"
+              style={{ width: `${progress.porcentajeProgreso}%` }}
+            />
+          </div>
+          <p className="text-xs text-gray-500 text-right mb-4">{progress.porcentajeProgreso}% completado</p>
+
+          {/* Tabla de steps */}
+          {progress.progressByStep.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Step</th>
+                    <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase">Clases</th>
+                    <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase">Asistencias</th>
+                    <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {progress.progressByStep.map((s) => (
+                    <tr key={s.step} className="border-b border-gray-100">
+                      <td className="py-2 px-3 font-medium text-gray-900">{s.step}</td>
+                      <td className="py-2 px-3 text-center text-gray-600">{s.totalClases}</td>
+                      <td className="py-2 px-3 text-center text-gray-600">{s.asistencias} / 5</td>
+                      <td className="py-2 px-3 text-center">
+                        {s.completado ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Completado
+                          </span>
+                        ) : s.asistencias > 0 ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            En progreso
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                            Pendiente
+                          </span>
+                        )}
+                        {s.hasOverride && (
+                          <span className="ml-1 text-xs text-blue-500" title="Override manual">*</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Clases por tipo */}
+      {byTipo.length > 0 && (
+        <div className="card">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">Clases por Tipo</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {byTipo.map((t) => (
+              <div key={t.tipo} className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs font-medium text-gray-500 uppercase">{t.tipo}</p>
+                <p className="text-lg font-bold text-gray-900">{t.totalClases}</p>
+                <p className="text-xs text-green-600">{t.asistencias} asistencias</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Botón para recargar */}
       <div className="flex justify-end">
@@ -137,22 +239,10 @@ export default function StudentProgress({ student }: StudentProgressProps) {
           className="btn-secondary text-sm"
           disabled={isLoading}
         >
-          {isLoading ? (
-            <>
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Actualizando...
-            </>
-          ) : (
-            <>
-              <svg className="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Actualizar
-            </>
-          )}
+          <svg className="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Actualizar
         </button>
       </div>
     </div>
