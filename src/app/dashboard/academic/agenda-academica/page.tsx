@@ -152,21 +152,16 @@ export default function AgendaAcademicaPage() {
         console.log('🌐 No hay caché, cargando desde servidor...')
 
         // Cargar eventos del calendario
-        const eventsResponse = await fetch('/api/postgres/calendar/events', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            fechaInicio: startDate.toISOString(),
-            fechaFin: endDate.toISOString()
-          })
-        })
+        const startDateStr = startDate.toISOString().split('T')[0]
+        const endDateStr = endDate.toISOString().split('T')[0]
+        const eventsResponse = await fetch(`/api/postgres/calendar/events?startDate=${startDateStr}&endDate=${endDateStr}&limit=1000`)
 
         if (!isMounted) return
 
         if (eventsResponse.ok) {
           const eventsData = await eventsResponse.json()
-          if (eventsData.success && eventsData.events && isMounted) {
-            const formattedEvents = eventsData.events.map((event: any) => ({
+          if (eventsData.success && eventsData.data && isMounted) {
+            const formattedEvents = eventsData.data.map((event: any) => ({
               ...event,
               dia: new Date(event.dia),
               inscritos: 0 // Inicializar en 0
@@ -175,7 +170,7 @@ export default function AgendaAcademicaPage() {
             setEvents(formattedEvents)
 
             // Cargar inscripciones después
-            const eventIds = eventsData.events.map((event: any) => event._id)
+            const eventIds = eventsData.data.map((event: any) => event._id)
             if (eventIds.length > 0 && isMounted) {
               await loadInscriptions(eventIds, formattedEvents, dateRangeObj)
             }

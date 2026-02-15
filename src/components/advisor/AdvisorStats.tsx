@@ -73,20 +73,14 @@ export default function AdvisorStats({ advisorId, advisorName }: AdvisorStatsPro
       const monthStart = startOfMonth(currentMonth)
       const monthEnd = endOfMonth(currentMonth)
 
-      const response = await fetch('/api/postgres/calendar/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fechaInicio: monthStart.toISOString(),
-          fechaFin: monthEnd.toISOString(),
-          advisorId: advisorId
-        })
-      })
+      const startDate = monthStart.toISOString().split('T')[0]
+      const endDate = monthEnd.toISOString().split('T')[0]
+      const response = await fetch(`/api/postgres/calendar/events?startDate=${startDate}&endDate=${endDate}&advisor=${encodeURIComponent(advisorId)}&limit=1000`)
 
       if (response.ok) {
         const data = await response.json()
-        if (data.success && data.events) {
-          const formattedEvents = data.events.map((event: any) => ({
+        if (data.success && data.data) {
+          const formattedEvents = data.data.map((event: any) => ({
             ...event,
             dia: new Date(event.dia)
           }))

@@ -122,19 +122,10 @@ function PanelAdvisorContent() {
       const monthStart = startOfMonth(currentMonth)
       const monthEnd = endOfMonth(currentMonth)
 
-      const fechaInicio = monthStart.toISOString()
-      const fechaFin = monthEnd.toISOString()
+      const startDate = monthStart.toISOString().split('T')[0]
+      const endDate = monthEnd.toISOString().split('T')[0]
 
-      // Usar el endpoint correcto de Wix para obtener eventos por advisor
-      const response = await fetch('/api/postgres/calendar/events-by-advisor', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          advisorId: advisor._id,
-          fechaInicio,
-          fechaFin
-        })
-      })
+      const response = await fetch(`/api/postgres/calendar/events?startDate=${startDate}&endDate=${endDate}&advisor=${encodeURIComponent(advisor._id)}&limit=1000`)
 
       if (!response.ok) {
         throw new Error('Error al cargar eventos')
@@ -143,7 +134,7 @@ function PanelAdvisorContent() {
       const data = await response.json()
 
       if (data.success) {
-        const eventos = data.events || data.eventos || []
+        const eventos = data.data || []
 
         if (eventos.length === 0) {
           setEvents([])

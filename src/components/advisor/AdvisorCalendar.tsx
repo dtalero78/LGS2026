@@ -75,21 +75,15 @@ export default function AdvisorCalendar({ advisorId, advisorName }: AdvisorCalen
       const monthStart = startOfMonth(currentMonth)
       const monthEnd = endOfMonth(currentMonth)
 
-      const response = await fetch('/api/postgres/calendar/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fechaInicio: monthStart.toISOString(),
-          fechaFin: monthEnd.toISOString(),
-          advisorId: advisorId
-        })
-      })
+      const startDate = monthStart.toISOString().split('T')[0]
+      const endDate = monthEnd.toISOString().split('T')[0]
+      const response = await fetch(`/api/postgres/calendar/events?startDate=${startDate}&endDate=${endDate}&advisor=${encodeURIComponent(advisorId)}&limit=1000`)
 
       if (response.ok) {
         const data = await response.json()
-        if (data.success && data.events) {
+        if (data.success && data.data) {
           // 1. Cargar eventos básicos primero
-          const formattedEvents = data.events.map((event: any) => ({
+          const formattedEvents = data.data.map((event: any) => ({
             ...event,
             dia: new Date(event.dia),
             inscritos: 0, // Inicializar en 0
@@ -98,7 +92,7 @@ export default function AdvisorCalendar({ advisorId, advisorName }: AdvisorCalen
           setEvents(formattedEvents)
 
           // 2. Cargar inscripciones y asistencias reales
-          const eventIds = data.events.map((event: any) => event._id)
+          const eventIds = data.data.map((event: any) => event._id)
           if (eventIds.length > 0) {
             await loadInscripciones(eventIds)
           }
