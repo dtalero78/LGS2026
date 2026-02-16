@@ -343,6 +343,125 @@ DATABASE_URL=postgresql://user:pass@host:port/dbname
   - `FINANCIEROS`: Datos financieros
   - `COMENTARIOS`: Comentarios internos por persona
 
+## Migración Wix → PostgreSQL
+
+### Resumen
+Los datos de producción viven en Wix (base NoSQL). Periódicamente se sincronizan a PostgreSQL (Digital Ocean) usando scripts de migración que hacen UPSERT (INSERT ... ON CONFLICT DO UPDATE). Es idempotente: se puede re-ejecutar sin duplicar datos.
+
+### Archivos del sistema de migración
+
+```
+migration/
+├── config.js                        ← Configuración central (conexión PG, endpoints Wix, batch sizes)
+├── orchestrator.js                  ← Ejecuta todos los exporters en secuencia
+├── check-db.js                      ← Verifica conexión y cuenta registros por tabla
+├── .env                             ← Credenciales (gitignored)
+└── exporters/
+    ├── 04-people.js                 ← PEOPLE (~9K registros)
+    ├── 05-academica.js              ← ACADEMICA (~5K registros)
+    ├── 06-calendario.js             ← CALENDARIO (~18K registros)
+    ├── 07-academica-bookings.js     ← ACADEMICA_BOOKINGS (~100K registros)
+    └── 08-financieros.js            ← FINANCIEROS (endpoint Wix no existe aún)
+```
+
+### Cómo ejecutar la migración
+
+#### 1. Prerequisitos
+```bash
+# Asegurar que node está disponible
+export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+# El archivo .env debe existir en migration/ con:
+DATABASE_URL=postgresql://doadmin:PASS@lgs-db-do-user-19197755-0.e.db.ondigitalocean.com:25060/defaultdb?sslmode=require
+WIX_API_BASE_URL=https://www.lgsplataforma.com/_functions
+```
+
+#### 2. Abrir acceso en Digital Ocean
+- Ir a Digital Ocean → Database → Trusted Sources
+- Agregar `0.0.0.0/0` temporalmente (el ISP rota IPs entre subredes distintas: 191.x, 186.x, 212.x)
+- **IMPORTANTE**: Quitar `0.0.0.0/0` al terminar la migración
+
+#### 3. Preparar la base de datos
+Antes de migrar, se deben **eliminar check constraints y NOT NULL** que bloquean datos de Wix:
+```sql
+-- Check constraints (valores de Wix fuera del rango permitido)
+ALTER TABLE "PEOPLE" DROP CONSTRAINT IF EXISTS "PEOPLE_aprobacion_check";
+ALTER TABLE "CALENDARIO" DROP CONSTRAINT IF EXISTS "CALENDARIO_tipo_check";
+ALTER TABLE "ACADEMICA_BOOKINGS" DROP CONSTRAINT IF EXISTS "ACADEMICA_BOOKINGS_calificacion_check";
+ALTER TABLE "FINANCIEROS" DROP CONSTRAINT IF EXISTS "FINANCIEROS_estado_check";
+
+-- NOT NULL en campos que Wix deja vacíos
+ALTER TABLE "PEOPLE" ALTER COLUMN "fechaCreacion" DROP NOT NULL;
+ALTER TABLE "PEOPLE" ALTER COLUMN "tipoUsuario" DROP NOT NULL;
+ALTER TABLE "ACADEMICA" ALTER COLUMN "fechaCreacion" DROP NOT NULL;
+```
+
+#### 4. Ejecutar migración por tabla
+```bash
+cd migration/
+
+# Verificar conexión primero
+node check-db.js
+
+# Migrar tabla por tabla (recomendado)
+node exporters/04-people.js
+node exporters/05-academica.js
+node exporters/06-calendario.js
+node exporters/07-academica-bookings.js
+
+# Opciones útiles
+node exporters/04-people.js --dry-run     # Solo leer de Wix, no escribir en PG
+node exporters/04-people.js --max=200     # Migrar solo 200 registros (para probar)
+
+# O ejecutar todo en secuencia
+node orchestrator.js
+```
+
+#### 5. Verificar resultados
+```bash
+node check-db.js    # Muestra conteos por tabla
+```
+
+### Arquitectura técnica de los exporters
+
+Cada exporter sigue el mismo patrón:
+
+1. **Fetch paginado desde Wix** con retry (5 intentos, backoff exponencial 5s-30s)
+   - Endpoint: `https://www.lgsplataforma.com/_functions/exportar{Tabla}?skip=N&limit=M`
+   - Batch size configurado en `config.js` (100-200 registros)
+
+2. **Transform**: Limpia datos (fechas, JSONB, strings vacíos → NULL)
+
+3. **Filtrado de columnas**: Consulta las columnas reales de la tabla PG y descarta campos de Wix que no existen en PG (Wix es schema-less y tiene campos extra como `crmContactId`, `direccion`, `link-copy-of-contrato-_id`, etc.)
+
+4. **Batch UPSERT**: Construye un solo `INSERT INTO ... VALUES (...), (...), ... ON CONFLICT ("_id") DO UPDATE SET ...` por lote completo (~100-200 registros en una sola query)
+   - Rendimiento: **125-226 registros/segundo**
+   - Retry: 3 intentos con backoff de 2s-6s para errores de PG
+
+### Rendimiento y problemas conocidos
+
+| Estrategia | Velocidad | Estabilidad |
+|---|---|---|
+| Individual UPSERT (1 query por registro) | ~3 rec/sec | Estable pero muy lento |
+| Parallel UPSERT (CONCURRENT=5-10) | ~12 rec/sec | Pool PG se agota después de ~2300 registros |
+| **Batch UPSERT (multi-row INSERT)** | **125-226 rec/sec** | **Estable, 0 fallos** |
+
+- **FINANCIEROS**: El endpoint Wix `/exportarContratos` falla porque la colección `CONTRATOS` no existe en Wix
+- **CLUBS, NIVELES_MATERIAL, COMMENTS, STEP_OVERRIDES**: Endpoints Wix no implementados
+- **IP rotation**: El ISP rota IPs entre subredes completamente distintas. Por eso se necesita `0.0.0.0/0` en trusted sources durante la migración
+- **SSL**: El `?sslmode=require` de DATABASE_URL se stripea automáticamente en `config.js` (igual que en `src/lib/postgres.ts`), usando `ssl: { rejectUnauthorized: false }` en su lugar
+
+### Última migración exitosa: Feb 15, 2026
+
+| Tabla | Registros | Última actualización |
+|---|---|---|
+| PEOPLE | 9,130 | 2026-02-15 |
+| ACADEMICA | 5,169 | 2026-02-15 |
+| CALENDARIO | 18,585 | 2026-02-15 |
+| ACADEMICA_BOOKINGS | 101,105 | 2026-02-15 |
+| ADVISORS | 45 | 2026-02-02 |
+| FINANCIEROS | 0 | N/A (endpoint falta) |
+
 ## OnHold System with Automatic Contract Extension
 
 ### Overview
@@ -908,9 +1027,67 @@ ESS es un nivel **paralelo y opcional** que NO bloquea el avance en los niveles 
 #### getStudentProgress (Diagnóstico "¿Cómo voy?")
 - **API**: `GET /api/postgres/students/[id]/progress`
 - **Servicio**: `progress.service.ts`
+- **Repositorios**: `people.repository.ts`, `academica.repository.ts`, `niveles.repository.ts`
 - Usa solo `nivel` (nivel principal) para generar el diagnóstico
-- **EXCLUYE** explícitamente ESS del diagnóstico de steps
-- Incluye todas las clases (incluyendo ESS) en la tabla "Todas las clases" para tracking
+- **EXCLUYE** explícitamente ESS y WELCOME del diagnóstico de steps
+- Incluye todas las clases (incluyendo ESS) en estadísticas globales y "Clases por Tipo"
+
+##### Lógica de completitud de Steps
+
+**1. Normal Steps (1-4, 6-9, 11-14, etc.)**
+- Requiere **2 sesiones exitosas** (tipo SESSION) + **1 TRAINING club exitoso** (tipo CLUB)
+- Una clase es "exitosa" si `asistio === true` OR `asistencia === true` OR `participacion === true`
+- Mensajes diagnósticos específicos según lo que falta:
+  - `sesExitosas >= 2, clubs === 0` → "Falta un TRAINING SESSION"
+  - `sesExitosas === 1, clubs === 0` → "Falta una sesión (¿quieres realizar la actividad...)"
+  - `sesExitosas === 1, clubs >= 1` → "Falta una sesión para terminar. Realiza la prueba escrita..."
+  - `sesExitosas === 0, clubs >= 1` → "Faltan dos sesiones"
+  - `sesExitosas === 0, clubs === 0` → "Faltan dos sesiones y un TRAINING SESSION"
+
+**2. Jump Steps (5, 10, 15, 20, 25, 30, 35, 40, 45) — múltiplos de 5**
+- Requiere **1 clase registrada** en el step + `noAprobo !== true`
+- Si `noAprobo === true` → "No aprobó el jump"
+- Si no hay clases → "Falta la clase del jump"
+
+**3. Overrides manuales**
+- Tienen **prioridad absoluta** sobre toda la lógica
+- `overrideCompletado === true` → completado sin importar clases
+- `overrideCompletado === false` → incompleto, "Marcado como incompleto por administrador"
+- Se almacenan en tabla `STEP_OVERRIDES` vía `StepOverridesRepository`
+
+**4. Completitud del nivel**
+- Un nivel se considera completado cuando **todos sus steps** están completados
+
+##### Inferencia de tipo de clase
+
+El campo `tipo` en `ACADEMICA_BOOKINGS` es `null` en datos migrados de Wix. El tipo se infiere del nombre del step:
+
+| Nombre del step en booking | Tipo inferido | Ejemplo |
+|---|---|---|
+| `"Step N"` | SESSION | `"Step 7"` |
+| `"TRAINING - Step N"` | CLUB | `"TRAINING - Step 7"` |
+| Otros prefijos (KARAOKE, PRONUNCIATION, LISTENING) | OTHER (no cuenta) | `"KARAOKE - Step 7"` |
+
+Cuando `tipo` está poblado (eventos creados vía admin panel), se usa directamente.
+
+##### Ordenamiento de steps
+
+Los steps se ordenan **numéricamente** (no alfabéticamente), extrayendo el número del nombre:
+- `extractStepNumber("Step 7")` → 7
+- `extractStepNumber("TRAINING - Step 7")` → 7
+- Esto evita que "Step 10" aparezca antes de "Step 6" (orden alfabético)
+
+##### Estructura de niveles
+
+| Nivel | Steps | Notas |
+|---|---|---|
+| WELCOME | WELCOME | 1 step (nombre "WELCOME", no "Step 0"), excluido del diagnóstico |
+| BN1 | Steps 1-5 | Step 5 = Jump |
+| BN2 | Steps 6-10 | Step 10 = Jump |
+| BN3 | Steps 11-15 | Step 15 = Jump |
+| ... | ... | Patrón continúa hasta F4 |
+| ESS | Step 0 | Nivel paralelo, excluido del diagnóstico |
+| DONE | Step 0 | Nivel final |
 
 ### TypeScript Types
 
@@ -951,10 +1128,12 @@ export interface Person {
 
 #### Diagnóstico "¿Cómo voy?"
 1. Estudiante: `nivel: "BN2"`, `step: "Step 7"`, `nivelParalelo: "ESS"`
-2. Generar diagnóstico: `getStudentProgress(studentId)`
+2. Generar diagnóstico: `generateReport(studentId)` desde `progress.service.ts`
 3. **Resultado**:
-   - Diagnóstico por steps: Solo muestra progreso de BN2
-   - Tabla "Todas las clases": Incluye sesiones de ESS para referencia
+   - Diagnóstico por steps: Solo muestra progreso de BN2 (Steps 6-10)
+   - Cada step muestra: sesiones exitosas/2, clubs exitosos/1, estado, diagnóstico
+   - Jump (Step 10) muestra: clases/1, sin columna clubs, estado especial
+   - Estadísticas globales: Incluye TODAS las clases (incluyendo ESS) para tracking
    - No evalúa completitud de ESS
 
 ### Notas Importantes
