@@ -43,14 +43,14 @@ export const GET = handlerWithAuth(async (request, { params }) => {
       COUNT(DISTINCT b."idEstudiante") as "estudiantesUnicos",
       ROUND(AVG(CASE WHEN b."asistio" = true THEN 1 ELSE 0 END)::numeric * 100, 2) as "promedioAsistencia"
       FROM "CALENDARIO" c LEFT JOIN "ACADEMICA_BOOKINGS" b ON c."_id" = b."eventoId" OR c."_id" = b."idEvento" ${w}`, values),
-    query(`SELECT c."tipo", COUNT(DISTINCT c."_id") as "totalEventos", COUNT(DISTINCT b."_id") as "totalInscripciones",
+    query(`SELECT COALESCE(c."tipo", c."evento") as "tipo", COUNT(DISTINCT c."_id") as "totalEventos", COUNT(DISTINCT b."_id") as "totalInscripciones",
       COUNT(DISTINCT CASE WHEN b."asistio" = true THEN b."_id" END) as "totalAsistencias"
       FROM "CALENDARIO" c LEFT JOIN "ACADEMICA_BOOKINGS" b ON c."_id" = b."eventoId" OR c."_id" = b."idEvento" ${w}
-      GROUP BY c."tipo" ORDER BY "totalEventos" DESC`, values),
-    query(`SELECT c."nivel", COUNT(DISTINCT c."_id") as "totalEventos", COUNT(DISTINCT b."_id") as "totalInscripciones",
+      GROUP BY COALESCE(c."tipo", c."evento") ORDER BY "totalEventos" DESC`, values),
+    query(`SELECT COALESCE(c."nivel", c."tituloONivel") as "nivel", COUNT(DISTINCT c."_id") as "totalEventos", COUNT(DISTINCT b."_id") as "totalInscripciones",
       COUNT(DISTINCT CASE WHEN b."asistio" = true THEN b."_id" END) as "totalAsistencias"
-      FROM "CALENDARIO" c LEFT JOIN "ACADEMICA_BOOKINGS" b ON c."_id" = b."eventoId" OR c."_id" = b."idEvento" ${w} AND c."nivel" IS NOT NULL
-      GROUP BY c."nivel" ORDER BY "totalEventos" DESC`, values),
+      FROM "CALENDARIO" c LEFT JOIN "ACADEMICA_BOOKINGS" b ON c."_id" = b."eventoId" OR c."_id" = b."idEvento" ${w} AND COALESCE(c."nivel", c."tituloONivel") IS NOT NULL
+      GROUP BY COALESCE(c."nivel", c."tituloONivel") ORDER BY "totalEventos" DESC`, values),
     query(`SELECT c."_id", c."dia", c."hora", c."tipo", c."nivel", c."step", c."titulo", c."inscritos",
       COUNT(DISTINCT b."_id") as "bookingCount", COUNT(DISTINCT CASE WHEN b."asistio" = true THEN b."_id" END) as "asistenciasCount"
       FROM "CALENDARIO" c LEFT JOIN "ACADEMICA_BOOKINGS" b ON c."_id" = b."eventoId" OR c."_id" = b."idEvento" ${w}

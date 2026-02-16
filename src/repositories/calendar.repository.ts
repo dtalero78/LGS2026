@@ -45,33 +45,41 @@ class CalendarioRepositoryClass extends BaseRepository {
    * Get events with dynamic filters and advisor details
    */
   async findEvents(filters: EventFilters) {
-    const whereFilters: WhereFilter[] = [
-      { field: 'c."dia"', value: filters.startDate, operator: '>=', cast: '::timestamp' },
-      { field: 'c."dia"', value: filters.endDate, operator: '<=', cast: '::timestamp' },
-      { field: 'c."tipo"', value: filters.tipo },
-      { field: 'c."nivel"', value: filters.nivel },
-      { field: 'c."step"', value: filters.step },
-    ];
-
-    // Advisor filter uses case-insensitive match
-    if (filters.advisor) {
-      whereFilters.push({ field: 'c."advisor"', value: filters.advisor.toLowerCase(), operator: 'ILIKE' });
-    }
-
     // Build WHERE clause manually since columns have table alias
+    // Note: Wix-migrated data uses "evento" instead of "tipo", and "tituloONivel" instead of "nivel"
+    // We use COALESCE to check both columns
     const conditions: string[] = [];
     const params: any[] = [];
     let idx = 1;
 
-    for (const f of whereFilters) {
-      if (f.value === undefined || f.value === null) continue;
-      const cast = f.cast || '';
-      if (f.operator === 'ILIKE') {
-        conditions.push(`LOWER(${f.field}) = LOWER($${idx}${cast})`);
-      } else {
-        conditions.push(`${f.field} ${f.operator || '='} $${idx}${cast}`);
-      }
-      params.push(f.value);
+    if (filters.startDate) {
+      conditions.push(`c."dia" >= $${idx}::timestamp`);
+      params.push(filters.startDate);
+      idx++;
+    }
+    if (filters.endDate) {
+      conditions.push(`c."dia" <= $${idx}::timestamp`);
+      params.push(filters.endDate);
+      idx++;
+    }
+    if (filters.tipo) {
+      conditions.push(`COALESCE(c."tipo", c."evento") = $${idx}`);
+      params.push(filters.tipo);
+      idx++;
+    }
+    if (filters.nivel) {
+      conditions.push(`COALESCE(c."nivel", c."tituloONivel") = $${idx}`);
+      params.push(filters.nivel);
+      idx++;
+    }
+    if (filters.step) {
+      conditions.push(`c."step" = $${idx}`);
+      params.push(filters.step);
+      idx++;
+    }
+    if (filters.advisor) {
+      conditions.push(`LOWER(c."advisor") = LOWER($${idx})`);
+      params.push(filters.advisor);
       idx++;
     }
 
@@ -117,7 +125,7 @@ class CalendarioRepositoryClass extends BaseRepository {
       params.push(opts.endDate);
     }
     if (opts?.tipo) {
-      conditions.push(`c."tipo" = $${idx++}`);
+      conditions.push(`COALESCE(c."tipo", c."evento") = $${idx++}`);
       params.push(opts.tipo);
     }
 
@@ -139,27 +147,39 @@ class CalendarioRepositoryClass extends BaseRepository {
    * Get events with booking counts (GROUP BY query)
    */
   async findEventsWithBookingCounts(filters: EventFilters) {
-    const whereFilters: WhereFilter[] = [
-      { field: 'c."dia"', value: filters.startDate, operator: '>=', cast: '::timestamp with time zone' },
-      { field: 'c."dia"', value: filters.endDate, operator: '<=', cast: '::timestamp with time zone' },
-      { field: 'c."tipo"', value: filters.tipo },
-      { field: 'c."nivel"', value: filters.nivel },
-      { field: 'c."step"', value: filters.step },
-    ];
-
-    if (filters.advisor) {
-      whereFilters.push({ field: 'c."advisor"', value: filters.advisor });
-    }
-
+    // Same COALESCE logic as findEvents for Wix-migrated data
     const conditions: string[] = [];
     const params: any[] = [];
     let idx = 1;
 
-    for (const f of whereFilters) {
-      if (f.value === undefined || f.value === null) continue;
-      const cast = f.cast || '';
-      conditions.push(`${f.field} ${f.operator || '='} $${idx}${cast}`);
-      params.push(f.value);
+    if (filters.startDate) {
+      conditions.push(`c."dia" >= $${idx}::timestamp with time zone`);
+      params.push(filters.startDate);
+      idx++;
+    }
+    if (filters.endDate) {
+      conditions.push(`c."dia" <= $${idx}::timestamp with time zone`);
+      params.push(filters.endDate);
+      idx++;
+    }
+    if (filters.tipo) {
+      conditions.push(`COALESCE(c."tipo", c."evento") = $${idx}`);
+      params.push(filters.tipo);
+      idx++;
+    }
+    if (filters.nivel) {
+      conditions.push(`COALESCE(c."nivel", c."tituloONivel") = $${idx}`);
+      params.push(filters.nivel);
+      idx++;
+    }
+    if (filters.step) {
+      conditions.push(`c."step" = $${idx}`);
+      params.push(filters.step);
+      idx++;
+    }
+    if (filters.advisor) {
+      conditions.push(`c."advisor" = $${idx}`);
+      params.push(filters.advisor);
       idx++;
     }
 

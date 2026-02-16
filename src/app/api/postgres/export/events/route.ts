@@ -22,8 +22,8 @@ export async function GET(request: Request) {
     if (startDate) { conditions.push(`c."dia" >= $${pi}::timestamp`); values.push(startDate); pi++; }
     if (endDate) { conditions.push(`c."dia" <= $${pi}::timestamp`); values.push(endDate); pi++; }
     if (advisor) { conditions.push(`c."advisor" = $${pi}`); values.push(advisor); pi++; }
-    if (nivel) { conditions.push(`c."nivel" = $${pi}`); values.push(nivel); pi++; }
-    if (tipo) { conditions.push(`c."tipo" = $${pi}`); values.push(tipo); pi++; }
+    if (nivel) { conditions.push(`COALESCE(c."nivel", c."tituloONivel") = $${pi}`); values.push(nivel); pi++; }
+    if (tipo) { conditions.push(`COALESCE(c."tipo", c."evento") = $${pi}`); values.push(tipo); pi++; }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
