@@ -283,6 +283,15 @@ class PeopleRepositoryClass extends BaseRepository {
   async countInactive(): Promise<number> {
     return this.count(`WHERE "estadoInactivo" = true`);
   }
+
+  // ── Panel Estudiante helpers ──
+
+  async findByEmail(email: string) {
+    return this.rawQueryOne(
+      `SELECT * FROM "PEOPLE" WHERE "email" = $1 LIMIT 1`,
+      [email]
+    );
+  }
 }
 
 export const PeopleRepository = new PeopleRepositoryClass();

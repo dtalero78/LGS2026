@@ -303,6 +303,16 @@ class CalendarioRepositoryClass extends BaseRepository {
     );
     return parseInt(row?.count ?? '0', 10);
   }
+  // ── Panel Estudiante helpers ──
+
+  async countActiveEnrollments(eventId: string): Promise<number> {
+    const row = await queryOne<{ count: string }>(
+      `SELECT COUNT(*) as count FROM "ACADEMICA_BOOKINGS"
+       WHERE ("eventoId" = $1 OR "idEvento" = $1) AND "cancelo" = false`,
+      [eventId]
+    );
+    return parseInt(row?.count ?? '0', 10);
+  }
 }
 
 export const CalendarioRepository = new CalendarioRepositoryClass();

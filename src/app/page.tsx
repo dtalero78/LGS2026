@@ -16,6 +16,12 @@ export default async function HomePage() {
     redirect('/login')
   }
 
+  // Students should not see the admin dashboard
+  const userRole = (session.user as any)?.role
+  if (userRole === 'ESTUDIANTE') {
+    redirect('/panel-estudiante')
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">

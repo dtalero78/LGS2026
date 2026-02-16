@@ -88,6 +88,9 @@ export default function LoginPage() {
           if (userRole === 'ADVISOR') {
             console.log('✅ Redirecting ADVISOR to panel-advisor with email:', userEmail)
             router.push(`/panel-advisor?email=${encodeURIComponent(userEmail || '')}`)
+          } else if (userRole === 'ESTUDIANTE') {
+            console.log('✅ Redirecting ESTUDIANTE to panel-estudiante')
+            router.push('/panel-estudiante')
           } else {
             // Other roles go to homepage
             router.push('/')

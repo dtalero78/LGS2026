@@ -57,7 +57,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Rutas que siempre están permitidas (búsqueda de personas/estudiantes, panel de advisor)
-    const alwaysAllowedRoutes = ['/person', '/student', '/sesion', '/advisor', '/panel-advisor'];
+    const alwaysAllowedRoutes = ['/person', '/student', '/sesion', '/advisor', '/panel-advisor', '/panel-estudiante'];
     if (alwaysAllowedRoutes.some(route => pathname.startsWith(route))) {
       console.log(`✅ [Middleware] Access granted to ${pathname} (always allowed route)`);
       return NextResponse.next();

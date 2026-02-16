@@ -35,6 +35,7 @@ export enum Role {
   RECAUDOS_ASIST = 'RECAUDOS_ASIST',
   READONLY = 'READONLY',
   COORDINADOR_ACADEMICO = 'COORDINADOR_ACADEMICO',
+  ESTUDIANTE = 'ESTUDIANTE',
 }
 
 // ============================================================================

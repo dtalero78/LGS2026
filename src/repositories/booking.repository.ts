@@ -284,6 +284,108 @@ class BookingRepositoryClass extends BaseRepository {
       params
     );
   }
+  // ── Panel Estudiante helpers ──
+
+  async findUpcomingByStudentId(studentId: string, limit: number = 10) {
+    return queryMany(
+      `SELECT ab.*,
+              a."nombreCompleto" as "advisorNombre",
+              c."linkZoom" as "eventLinkZoom"
+       FROM "ACADEMICA_BOOKINGS" ab
+       LEFT JOIN "ADVISORS" a ON ab."advisor" = a."_id"
+       LEFT JOIN "CALENDARIO" c ON COALESCE(ab."eventoId", ab."idEvento") = c."_id"
+       WHERE (ab."idEstudiante" = $1 OR ab."studentId" = $1)
+         AND ab."cancelo" = false
+         AND ab."fechaEvento" >= NOW()
+       ORDER BY ab."fechaEvento" ASC
+       LIMIT $2`,
+      [studentId, limit]
+    );
+  }
+
+  async getStudentAttendanceStats(studentId: string) {
+    return queryOne(
+      `SELECT
+        COUNT(*)::int as total,
+        COUNT(CASE WHEN "asistio" = true THEN 1 END)::int as asistencias,
+        COUNT(CASE WHEN "asistio" = false AND "cancelo" = false THEN 1 END)::int as ausencias,
+        COUNT(CASE WHEN "cancelo" = true THEN 1 END)::int as canceladas
+       FROM "ACADEMICA_BOOKINGS"
+       WHERE ("idEstudiante" = $1 OR "studentId" = $1)`,
+      [studentId]
+    );
+  }
+
+  async findCommentsForStudent(studentId: string, limit: number = 50) {
+    return queryMany(
+      `SELECT ab."_id", ab."fechaEvento", ab."nivel", ab."step", ab."advisor",
+              ab."advisorAnotaciones", ab."comentarios", ab."calificacion",
+              a."nombreCompleto" as "advisorNombre"
+       FROM "ACADEMICA_BOOKINGS" ab
+       LEFT JOIN "ADVISORS" a ON ab."advisor" = a."_id"
+       WHERE (ab."idEstudiante" = $1 OR ab."studentId" = $1)
+         AND (ab."advisorAnotaciones" IS NOT NULL AND ab."advisorAnotaciones" != ''
+              OR ab."comentarios" IS NOT NULL AND ab."comentarios" != '')
+       ORDER BY ab."fechaEvento" DESC
+       LIMIT $2`,
+      [studentId, limit]
+    );
+  }
+
+  async countWeeklyBookingsByType(studentId: string, weekStart: string, weekEnd: string) {
+    return queryMany(
+      `SELECT COALESCE("tipo", "tipoEvento") as tipo, COUNT(*)::int as count
+       FROM "ACADEMICA_BOOKINGS"
+       WHERE ("idEstudiante" = $1 OR "studentId" = $1)
+         AND "fechaEvento" >= $2::timestamp
+         AND "fechaEvento" <= $3::timestamp
+         AND "cancelo" = false
+       GROUP BY COALESCE("tipo", "tipoEvento")`,
+      [studentId, weekStart, weekEnd]
+    );
+  }
+
+  async existsByStudentAndEvent(studentId: string, eventId: string): Promise<boolean> {
+    const row = await queryOne(
+      `SELECT 1 FROM "ACADEMICA_BOOKINGS"
+       WHERE ("idEstudiante" = $1 OR "studentId" = $1)
+         AND ("eventoId" = $2 OR "idEvento" = $2)
+         AND "cancelo" = false
+       LIMIT 1`,
+      [studentId, eventId]
+    );
+    return !!row;
+  }
+
+  async existsSameDaySession(studentId: string, dateStr: string): Promise<boolean> {
+    const row = await queryOne(
+      `SELECT 1 FROM "ACADEMICA_BOOKINGS"
+       WHERE ("idEstudiante" = $1 OR "studentId" = $1)
+         AND DATE("fechaEvento") = $2::date
+         AND COALESCE("tipo", "tipoEvento") = 'SESSION'
+         AND "cancelo" = false
+       LIMIT 1`,
+      [studentId, dateStr]
+    );
+    return !!row;
+  }
+
+  async findBookingById(bookingId: string) {
+    return queryOne(
+      `SELECT * FROM "ACADEMICA_BOOKINGS" WHERE "_id" = $1`,
+      [bookingId]
+    );
+  }
+
+  async cancelBooking(bookingId: string) {
+    return queryOne(
+      `UPDATE "ACADEMICA_BOOKINGS"
+       SET "cancelo" = true, "_updatedDate" = NOW()
+       WHERE "_id" = $1
+       RETURNING *`,
+      [bookingId]
+    );
+  }
 }
 
 export const BookingRepository = new BookingRepositoryClass();
