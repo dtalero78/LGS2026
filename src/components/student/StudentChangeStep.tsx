@@ -95,13 +95,12 @@ export default function StudentChangeStep({
     setError(null);
 
     try {
-      const response = await fetch('/api/postgres/students', {
-        method: 'POST',
+      const response = await fetch(`/api/postgres/students/${encodeURIComponent(studentId)}/step`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          numeroId: numeroId,
           newStep: selectedStep,
         }),
       });
