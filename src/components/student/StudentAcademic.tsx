@@ -304,16 +304,16 @@ export default function StudentAcademic({ student, classes: initialClasses, view
 
       if (response.ok) {
         const data = await response.json()
-        if (data.success && data.eventos) {
-          console.log('✅ Available times received:', data.eventos.length, 'eventos')
-          console.log('📅 Fechas de eventos recibidos:', data.eventos.map((e: any) => ({
+        if (data.success && data.events) {
+          console.log('✅ Available times received:', data.events.length, 'eventos')
+          console.log('📅 Fechas de eventos recibidos:', data.events.map((e: any) => ({
             dia: e.dia,
             diaLocal: new Date(e.dia).toString(),
             titulo: e.tituloONivel
           })))
 
           // Cargar cantidad de inscritos para todos los eventos
-          const eventIds = data.eventos.map((evento: any) => evento._id)
+          const eventIds = data.events.map((evento: any) => evento._id)
           let inscritosPorEvento: { [key: string]: number } = {}
 
           if (eventIds.length > 0) {
@@ -350,7 +350,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
           const rolesRestringidos = [Role.SERVICIO_ASIST, Role.RECAUDOS_ASIST]
           const esRolRestringido = userRole && rolesRestringidos.includes(userRole as Role)
 
-          const timeOptions = data.eventos.map((evento: any) => {
+          const timeOptions = data.events.map((evento: any) => {
             const eventDate = new Date(evento.dia)
             const hour = eventDate.toLocaleTimeString('es', {
               hour: '2-digit',
