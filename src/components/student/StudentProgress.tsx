@@ -9,10 +9,15 @@ interface StudentProgressProps {
 
 interface StepProgress {
   step: string
+  esJump: boolean
   totalClases: number
-  asistencias: number
-  noAprobo: number
+  sesiones: number
+  sesionesExitosas: number
+  clubs: number
+  clubsExitosos: number
+  noAprobo: boolean
   completado: boolean
+  mensaje: string | null
   hasOverride: boolean
   overrideCompletado: boolean | null
 }
@@ -178,23 +183,53 @@ export default function StudentProgress({ student }: StudentProgressProps) {
                 <thead>
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Step</th>
-                    <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase">Clases</th>
-                    <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase">Asistencias</th>
+                    <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase">Sesiones</th>
+                    <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase">Clubs</th>
                     <th className="text-center py-2 px-3 text-xs font-medium text-gray-500 uppercase">Estado</th>
+                    <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">Diagnóstico</th>
                   </tr>
                 </thead>
                 <tbody>
                   {progress.progressByStep.map((s) => (
-                    <tr key={s.step} className="border-b border-gray-100">
-                      <td className="py-2 px-3 font-medium text-gray-900">{s.step}</td>
-                      <td className="py-2 px-3 text-center text-gray-600">{s.totalClases}</td>
-                      <td className="py-2 px-3 text-center text-gray-600">{s.asistencias} / 5</td>
+                    <tr key={s.step} className={`border-b border-gray-100 ${s.esJump ? 'bg-orange-50' : ''}`}>
+                      <td className="py-2 px-3 font-medium text-gray-900">
+                        {s.esJump ? (
+                          <span className="flex items-center gap-1">
+                            <span className="text-orange-600">Jump</span>
+                            <span className="text-gray-400 text-xs">({s.step})</span>
+                          </span>
+                        ) : (
+                          s.step
+                        )}
+                      </td>
+                      <td className="py-2 px-3 text-center text-gray-600">
+                        {s.esJump ? (
+                          <span>{s.totalClases > 0 ? '1' : '0'} / 1</span>
+                        ) : (
+                          <span className={s.sesionesExitosas >= 2 ? 'text-green-600 font-medium' : ''}>
+                            {s.sesionesExitosas} / 2
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2 px-3 text-center text-gray-600">
+                        {s.esJump ? (
+                          <span className="text-gray-400">—</span>
+                        ) : (
+                          <span className={s.clubsExitosos >= 1 ? 'text-green-600 font-medium' : ''}>
+                            {s.clubsExitosos} / 1
+                          </span>
+                        )}
+                      </td>
                       <td className="py-2 px-3 text-center">
                         {s.completado ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                             Completado
                           </span>
-                        ) : s.asistencias > 0 ? (
+                        ) : s.noAprobo ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            No aprobó
+                          </span>
+                        ) : s.totalClases > 0 ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                             En progreso
                           </span>
@@ -206,6 +241,9 @@ export default function StudentProgress({ student }: StudentProgressProps) {
                         {s.hasOverride && (
                           <span className="ml-1 text-xs text-blue-500" title="Override manual">*</span>
                         )}
+                      </td>
+                      <td className="py-2 px-3 text-xs text-gray-500 italic">
+                        {s.mensaje || (s.completado ? '' : '')}
                       </td>
                     </tr>
                   ))}

@@ -3,6 +3,15 @@
  *
  * Business logic for the "¿Cómo voy?" student progress report.
  * Calculates step completion, attendance stats, and class breakdown.
+ *
+ * Step completion rules:
+ *   1. Normal Steps (1-4, 6-9, 11-14, etc.):
+ *      - 2 sesiones exitosas (tipo SESSION, asistio/asistencia/participacion = true)
+ *      - 1 TRAINING club exitoso (tipo CLUB, asistio/asistencia/participacion = true)
+ *   2. Jump Steps (5, 10, 15, 20, 25, 30, 35, 40, 45):
+ *      - 1 clase registrada en ese step
+ *      - noAprobo !== true
+ *   3. Overrides manuales tienen prioridad absoluta sobre toda la lógica.
  */
 
 import 'server-only';
@@ -11,6 +20,47 @@ import { PeopleRepository } from '@/repositories/people.repository';
 import { AcademicaRepository } from '@/repositories/academica.repository';
 import { StepOverridesRepository } from '@/repositories/niveles.repository';
 import { NotFoundError } from '@/lib/errors';
+
+// --- Helpers ---
+
+/** Extract the numeric part from a step name: "Step 7" → 7, "TRAINING - Step 7" → 7 */
+function extractStepNumber(stepName: string): number | null {
+  const match = stepName.match(/Step\s*(\d+)/i);
+  return match ? parseInt(match[1]) : null;
+}
+
+/** Jump Steps are multiples of 5: Step 5, 10, 15, 20, 25, 30, 35, 40, 45 */
+function isJumpStep(stepName: string): boolean {
+  const num = extractStepNumber(stepName);
+  return num !== null && num > 0 && num % 5 === 0;
+}
+
+/** A class counts as "exitosa" if student attended or participated */
+function isExitosa(c: any): boolean {
+  return c.asistio === true || c.asistencia === true || c.participacion === true;
+}
+
+/**
+ * Determine the effective class type.
+ * The `tipo` column is null in migrated Wix data, so we infer from the step name:
+ *   - "Step N"            → SESSION
+ *   - "TRAINING - Step N" → CLUB
+ *   - Other prefixes      → OTHER (not counted toward step requirements)
+ * When `tipo` is populated (e.g. events created via admin panel), use it directly.
+ */
+function getClassType(c: any): 'SESSION' | 'CLUB' | 'OTHER' {
+  if (c.tipo === 'SESSION') return 'SESSION';
+  if (c.tipo === 'CLUB') return 'CLUB';
+  if (c.tipo === 'WELCOME') return 'OTHER';
+  // Infer from step name when tipo is null
+  if (!c.tipo && c.step) {
+    if (/^TRAINING\s*-/i.test(c.step)) return 'CLUB';
+    if (/^Step\s+\d+$/i.test(c.step)) return 'SESSION';
+  }
+  return 'OTHER';
+}
+
+// --- Main ---
 
 /**
  * Generate the full progress report for a student.
@@ -49,7 +99,9 @@ export async function generateReport(studentId: string) {
      ORDER BY "step"`,
     [nivelPrincipal]
   );
-  const allSteps = stepsRows.map((r) => r.step);
+  const allSteps = stepsRows
+    .map((r) => r.step)
+    .sort((a, b) => (extractStepNumber(a) ?? 0) - (extractStepNumber(b) ?? 0));
 
   // Get all overrides for this student at once (avoid N+1)
   const overrides = await StepOverridesRepository.findByStudentId(student._id);
@@ -59,22 +111,74 @@ export async function generateReport(studentId: string) {
 
   // Calculate progress by step
   const progressByStep = allSteps.map((stepName) => {
-    const clasesDelStep = clasesNivelActual.filter((c) => c.step === stepName);
-    const asistencias = clasesDelStep.filter((c) => c.asistio === true).length;
-    const noAprobo = clasesDelStep.filter((c) => c.noAprobo === true).length;
+    const stepNum = extractStepNumber(stepName);
+    const esJump = isJumpStep(stepName);
 
+    // Match classes by step number to handle both "Step 7" and "TRAINING - Step 7"
+    const clasesDelStep = clasesNivelActual.filter(
+      (c) => extractStepNumber(c.step) === stepNum
+    );
+
+    // Separate by type (infer from step name when tipo is null)
+    const sesiones = clasesDelStep.filter((c) => getClassType(c) === 'SESSION');
+    const clubs = clasesDelStep.filter((c) => getClassType(c) === 'CLUB');
+    const sesionesExitosas = sesiones.filter(isExitosa).length;
+    const clubsExitosos = clubs.filter(isExitosa).length;
+    const tieneNoAprobo = clasesDelStep.some((c) => c.noAprobo === true);
+
+    // Override has absolute priority
     const hasOverride = overrideMap.has(stepName);
     const overrideCompletado = hasOverride ? overrideMap.get(stepName) : null;
 
-    // Step is complete if override says so OR 5+ attended classes
-    const completado = overrideCompletado === true || asistencias >= 5;
+    let completado: boolean;
+    let mensaje: string | null = null;
+
+    if (overrideCompletado === true) {
+      completado = true;
+    } else if (overrideCompletado === false) {
+      completado = false;
+      mensaje = 'Marcado como incompleto por administrador';
+    } else if (esJump) {
+      // Jump Step: 1 class registered + noAprobo !== true
+      if (tieneNoAprobo) {
+        completado = false;
+        mensaje = 'No aprobó el jump';
+      } else if (clasesDelStep.length === 0) {
+        completado = false;
+        mensaje = 'Falta la clase del jump';
+      } else {
+        completado = true;
+      }
+    } else {
+      // Normal Step: 2 sesiones exitosas + 1 club exitoso
+      completado = sesionesExitosas >= 2 && clubsExitosos >= 1;
+
+      if (!completado) {
+        if (sesionesExitosas >= 2 && clubsExitosos === 0) {
+          mensaje = 'Falta un TRAINING SESSION';
+        } else if (sesionesExitosas === 1 && clubsExitosos === 0) {
+          mensaje = 'Falta una sesión (¿quieres realizar la actividad...)';
+        } else if (sesionesExitosas === 1 && clubsExitosos >= 1) {
+          mensaje = 'Falta una sesión para terminar. Realiza la prueba escrita...';
+        } else if (sesionesExitosas === 0 && clubsExitosos >= 1) {
+          mensaje = 'Faltan dos sesiones';
+        } else {
+          mensaje = 'Faltan dos sesiones y un TRAINING SESSION';
+        }
+      }
+    }
 
     return {
       step: stepName,
+      esJump,
       totalClases: clasesDelStep.length,
-      asistencias,
-      noAprobo,
+      sesiones: sesiones.length,
+      sesionesExitosas,
+      clubs: clubs.length,
+      clubsExitosos,
+      noAprobo: tieneNoAprobo,
       completado,
+      mensaje,
       hasOverride,
       overrideCompletado,
     };
@@ -82,9 +186,9 @@ export async function generateReport(studentId: string) {
 
   // Overall statistics (across ALL classes including ESS)
   const totalClases = allClasses.length;
-  const totalAsistencias = allClasses.filter((c) => c.asistio === true).length;
+  const totalAsistencias = allClasses.filter((c) => isExitosa(c)).length;
   const totalAusencias = allClasses.filter((c) => c.asistio === false).length;
-  const totalPendientes = allClasses.filter((c) => c.asistio === null).length;
+  const totalPendientes = allClasses.filter((c) => c.asistio === null || c.asistio === undefined).length;
   const porcentajeAsistencia =
     totalClases > 0 ? Math.round((totalAsistencias / totalClases) * 100) : 0;
 
@@ -100,7 +204,7 @@ export async function generateReport(studentId: string) {
       byTipoMap[c.tipo] = { tipo: c.tipo, totalClases: 0, asistencias: 0 };
     }
     byTipoMap[c.tipo].totalClases++;
-    if (c.asistio === true) byTipoMap[c.tipo].asistencias++;
+    if (isExitosa(c)) byTipoMap[c.tipo].asistencias++;
   }
 
   return {
