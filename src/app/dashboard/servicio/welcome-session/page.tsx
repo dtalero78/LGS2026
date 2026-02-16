@@ -39,38 +39,26 @@ export default function WelcomeSessionPage() {
     setError(null)
 
     try {
-      // Preparar parámetros de fecha si están definidos
-      const requestBody: { fechaInicio?: string; fechaFin?: string } = {}
-
-      if (startDate) {
-        requestBody.fechaInicio = startDate
-      }
-
+      // Build query params
+      const params = new URLSearchParams()
+      if (startDate) params.set('startDate', startDate)
       if (endDate) {
-        // Sumar un día a fechaFin para incluir todo el día seleccionado
-        // Porque el backend filtra fechaEvento < fechaFin (no <=)
+        // Add one day to endDate to include the full selected day (backend filters with <)
         const endDateObj = new Date(endDate)
         endDateObj.setDate(endDateObj.getDate() + 1)
-        requestBody.fechaFin = endDateObj.toISOString().split('T')[0]
+        params.set('endDate', endDateObj.toISOString().split('T')[0])
       }
+      const qs = params.toString()
 
       const hasDateFilter = startDate || endDate
-      const logMessage = hasDateFilter
+      console.log(hasDateFilter
         ? `🔍 Cargando eventos WELCOME desde ${startDate || 'inicio'} hasta ${endDate || 'fin'}...`
-        : '🔍 Cargando eventos WELCOME... (esto puede tardar hasta 30 segundos)'
+        : '🔍 Cargando eventos WELCOME...')
 
-      console.log(logMessage)
-
-      // Crear un AbortController con timeout de 90 segundos
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 90000)
 
-      const response = await fetch('/api/postgres/events/welcome', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
+      const response = await fetch(`/api/postgres/events/welcome${qs ? `?${qs}` : ''}`, {
         signal: controller.signal
       })
 

@@ -239,6 +239,51 @@ class BookingRepositoryClass extends BaseRepository {
     );
     return parseInt(row?.count ?? '0', 10);
   }
+
+  /**
+   * Get WELCOME bookings with student details for the welcome-session page.
+   * Returns one row per student booking (not per event).
+   */
+  async findWelcomeBookings(startDate?: string, endDate?: string) {
+    const conditions = [`c."tipo" = 'WELCOME'`];
+    const params: any[] = [];
+    let paramIdx = 1;
+
+    if (startDate) {
+      conditions.push(`c."dia" >= $${paramIdx}::timestamp`);
+      params.push(startDate);
+      paramIdx++;
+    }
+    if (endDate) {
+      conditions.push(`c."dia" < $${paramIdx}::timestamp`);
+      params.push(endDate);
+      paramIdx++;
+    }
+
+    return queryMany(
+      `SELECT
+         ab."_id",
+         COALESCE(ab."primerNombre", p."primerNombre", '') as "primerNombre",
+         COALESCE(ab."primerApellido", p."primerApellido", '') as "primerApellido",
+         COALESCE(p."segundoNombre", '') as "segundoNombre",
+         COALESCE(p."segundoApellido", '') as "segundoApellido",
+         COALESCE(p."celular", '') as "celular",
+         c."dia" as "fechaEvento",
+         ab."asistio" as "asistencia",
+         COALESCE(p."numeroId", '') as "numeroId",
+         ab."studentId" as "idEstudiante",
+         ab."nivel",
+         ab."advisor",
+         COALESCE(p."plataforma", '') as "plataforma",
+         COUNT(*) OVER (PARTITION BY ab."studentId") as "totalSesionesWelcome"
+       FROM "CALENDARIO" c
+       INNER JOIN "ACADEMICA_BOOKINGS" ab ON c."_id" = ab."eventoId"
+       LEFT JOIN "PEOPLE" p ON ab."studentId" = p."_id"
+       WHERE ${conditions.join(' AND ')}
+       ORDER BY c."dia" DESC, ab."primerApellido" ASC, ab."primerNombre" ASC`,
+      params
+    );
+  }
 }
 
 export const BookingRepository = new BookingRepositoryClass();
