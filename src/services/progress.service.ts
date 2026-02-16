@@ -8,6 +8,7 @@
 import 'server-only';
 import { queryMany } from '@/lib/postgres';
 import { PeopleRepository } from '@/repositories/people.repository';
+import { AcademicaRepository } from '@/repositories/academica.repository';
 import { StepOverridesRepository } from '@/repositories/niveles.repository';
 import { NotFoundError } from '@/lib/errors';
 
@@ -15,8 +16,11 @@ import { NotFoundError } from '@/lib/errors';
  * Generate the full progress report for a student.
  */
 export async function generateReport(studentId: string) {
-  // Get student info
-  const student = await PeopleRepository.findByIdOrNumeroId(studentId);
+  // Get student info (try PEOPLE first, fallback to ACADEMICA)
+  let student: any = await PeopleRepository.findByIdOrNumeroId(studentId);
+  if (!student) {
+    student = await AcademicaRepository.findByAnyId(studentId);
+  }
   if (!student) throw new NotFoundError('Student', studentId);
 
   const nivelPrincipal = student.nivel;
@@ -25,7 +29,7 @@ export async function generateReport(studentId: string) {
   const allClasses = await queryMany(
     `SELECT "_id", "eventoId", "nivel", "step", "advisor", "fechaEvento", "hora",
             "tipo", "nombreEvento", "asistio", "asistencia", "participacion",
-            "evaluacion", "comentarios", "noAprobo"
+            "calificacion", "comentarios", "noAprobo"
      FROM "ACADEMICA_BOOKINGS"
      WHERE ("idEstudiante" = $1 OR "studentId" = $1)
      ORDER BY "fechaEvento" DESC`,
@@ -138,7 +142,7 @@ export async function generateReport(studentId: string) {
       asistio: c.asistio,
       asistencia: c.asistencia,
       participacion: c.participacion,
-      evaluacion: c.evaluacion,
+      calificacion: c.calificacion,
       comentarios: c.comentarios,
       noAprobo: c.noAprobo,
     })),

@@ -53,42 +53,30 @@ export default function StudentAcademic({ student, classes: initialClasses, view
   const [loadingSteps, setLoadingSteps] = useState(false)
   const [updatingSteps, setUpdatingSteps] = useState<{[key: string]: boolean}>({})
 
-  // Cargar nombres de advisors cuando se monta el componente
+  // Cargar todos los advisors de una sola vez (tabla pequeña)
   useEffect(() => {
     const loadAdvisorNames = async () => {
-      const uniqueAdvisorIds = Array.from(new Set(classes.map(c => c.advisor).filter(Boolean)))
-
-      if (uniqueAdvisorIds.length === 0) return
-
-      const advisorNamesMap: {[key: string]: string} = {}
-
-      // Cargar nombres de todos los advisors en paralelo
-      await Promise.all(
-        uniqueAdvisorIds.map(async (advisorId) => {
-          try {
-            const response = await fetch(`/api/postgres/advisors?advisorId=${encodeURIComponent(advisorId)}`)
-            if (response.ok) {
-              const data = await response.json()
-              if (data.success && data.advisor) {
-                advisorNamesMap[advisorId] = `${data.advisor.primerNombre} ${data.advisor.primerApellido}`
-              } else {
-                advisorNamesMap[advisorId] = 'No encontrado'
-              }
-            } else {
-              advisorNamesMap[advisorId] = 'Error'
+      try {
+        const response = await fetch('/api/postgres/advisors')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && data.advisors) {
+            const map: {[key: string]: string} = {}
+            for (const a of data.advisors) {
+              const name = a.nombreCompleto || `${a.primerNombre || ''} ${a.primerApellido || ''}`.trim()
+              if (a._id) map[a._id] = name || 'Sin nombre'
+              if (a.email) map[a.email] = name || 'Sin nombre'
             }
-          } catch (error) {
-            console.error('Error loading advisor name:', error)
-            advisorNamesMap[advisorId] = 'Error'
+            setAdvisorNames(map)
           }
-        })
-      )
-
-      setAdvisorNames(advisorNamesMap)
+        }
+      } catch (error) {
+        console.error('Error loading advisors:', error)
+      }
     }
 
     loadAdvisorNames()
-  }, [classes])
+  }, [])
 
   // Sincronizar con props cuando cambian
   useEffect(() => {
@@ -130,13 +118,19 @@ export default function StudentAcademic({ student, classes: initialClasses, view
     try {
       console.log('📊 Loading level steps for:', { nivel: student.nivel, studentId: student._id })
 
-      const response = await fetch(`/api/postgres/niveles?nivel=${encodeURIComponent(student.nivel)}&studentId=${encodeURIComponent(student._id)}`)
+      const response = await fetch(`/api/postgres/niveles/${encodeURIComponent(student.nivel)}/steps?studentId=${encodeURIComponent(student._id)}`)
 
       if (response.ok) {
         const data = await response.json()
         if (data.success && data.steps) {
           console.log('✅ Level steps loaded:', data.steps)
-          setSteps(data.steps)
+          // Map endpoint shape to component shape
+          const mapped = data.steps.map((s: any) => ({
+            _id: s.step,
+            step: s.step,
+            checkCompletado: s.override?.completado === true || (s.totalClases || 0) >= 5,
+          }))
+          setSteps(mapped)
         } else {
           console.error('❌ Error loading steps:', data.error)
           setSteps([])
@@ -349,29 +343,8 @@ export default function StudentAcademic({ student, classes: initialClasses, view
           }
 
           // Cargar nombres de advisors para estos eventos
-          const uniqueAdvisorIds = Array.from(new Set(data.eventos.map((e: any) => e.advisor).filter(Boolean)))
-          const eventAdvisorNames: {[key: string]: string} = {}
-
-          await Promise.all(
-            uniqueAdvisorIds.map(async (advisorId) => {
-              try {
-                const response = await fetch(`/api/postgres/advisors?advisorId=${encodeURIComponent(advisorId)}`)
-                if (response.ok) {
-                  const advisorData = await response.json()
-                  if (advisorData.success && advisorData.advisor) {
-                    eventAdvisorNames[advisorId] = `${advisorData.advisor.primerNombre} ${advisorData.advisor.primerApellido}`
-                  } else {
-                    eventAdvisorNames[advisorId] = 'No encontrado'
-                  }
-                } else {
-                  eventAdvisorNames[advisorId] = 'Error'
-                }
-              } catch (error) {
-                console.error('Error loading advisor name:', error)
-                eventAdvisorNames[advisorId] = 'Error'
-              }
-            })
-          )
+          // Use already-loaded advisor names map
+          const eventAdvisorNames = advisorNames
 
           // Roles que no pueden agendar en eventos con cupo lleno
           const rolesRestringidos = [Role.SERVICIO_ASIST, Role.RECAUDOS_ASIST]
@@ -569,24 +542,11 @@ export default function StudentAcademic({ student, classes: initialClasses, view
     console.log("Fila seleccionada en tabla:", classItem)
     console.log("ID (_id) del registro seleccionado:", classItem._id)
 
-    // Buscar el nombre del advisor si existe
-    if (classItem.advisor) {
-      try {
-        const response = await fetch(`/api/postgres/advisors?advisorId=${encodeURIComponent(classItem.advisor)}`)
-        if (response.ok) {
-          const data = await response.json()
-          if (data.success && data.advisor) {
-            setAdvisorName(`${data.advisor.primerNombre} ${data.advisor.primerApellido}`)
-          } else {
-            setAdvisorName('No encontrado')
-          }
-        } else {
-          setAdvisorName('Error al cargar')
-        }
-      } catch (error) {
-        console.error('Error al buscar advisor:', error)
-        setAdvisorName('Error al cargar')
-      }
+    // Usar el mapa de advisors ya cargado
+    if (classItem.advisor && advisorNames[classItem.advisor]) {
+      setAdvisorName(advisorNames[classItem.advisor])
+    } else if (classItem.advisor) {
+      setAdvisorName('No encontrado')
     } else {
       setAdvisorName('No asignado')
     }
