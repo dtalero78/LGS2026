@@ -130,7 +130,7 @@ function DblgsPage() {
   // ── State ───────────────────────────────────────────────────────
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
+  const [pageSize, setPageSize] = useState(20);
   const [sortBy, setSortBy] = useState<string | undefined>(undefined);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [search, setSearch] = useState('');
@@ -371,7 +371,7 @@ function DblgsPage() {
                   onChange={e => { setPageSize(parseInt(e.target.value)); setPage(1); }}
                   className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg bg-white"
                 >
-                  {[25, 50, 100, 200].map(n => (
+                  {[20, 50, 100, 200].map(n => (
                     <option key={n} value={n}>{n} filas</option>
                   ))}
                 </select>
@@ -389,7 +389,7 @@ function DblgsPage() {
           </div>
 
           {/* ── Table ────────────────────────────────────────── */}
-          <div className="overflow-x-auto">
+          <div className="overflow-auto" style={{ maxHeight: 'calc(100vh - 160px)' }}>
             <table className="min-w-full text-sm">
               {/* Column headers */}
               <thead className="bg-gray-50 sticky top-0 z-10">
