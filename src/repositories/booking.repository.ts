@@ -377,6 +377,36 @@ class BookingRepositoryClass extends BaseRepository {
     );
   }
 
+  /**
+   * Check if student has any future non-cancelled SESSION booking
+   */
+  async hasPendingSession(studentId: string): Promise<boolean> {
+    const row = await queryOne(
+      `SELECT 1 FROM "ACADEMICA_BOOKINGS"
+       WHERE ("idEstudiante" = $1 OR "studentId" = $1)
+         AND COALESCE("tipo", "tipoEvento") = 'SESSION'
+         AND "cancelo" = false
+         AND "fechaEvento" >= NOW()
+       LIMIT 1`,
+      [studentId]
+    );
+    return !!row;
+  }
+
+  /**
+   * Get hours where student already has a booking on a given date
+   */
+  async findBookedHoursForDate(studentId: string, dateStr: string): Promise<string[]> {
+    const rows = await queryMany<{ hora: string }>(
+      `SELECT DISTINCT "hora" FROM "ACADEMICA_BOOKINGS"
+       WHERE ("idEstudiante" = $1 OR "studentId" = $1)
+         AND DATE("fechaEvento") = $2::date
+         AND "cancelo" = false`,
+      [studentId, dateStr]
+    );
+    return rows.map((r) => r.hora);
+  }
+
   async cancelBooking(bookingId: string) {
     return queryOne(
       `UPDATE "ACADEMICA_BOOKINGS"

@@ -14,6 +14,7 @@ import { ids } from '@/lib/id-generator';
 const WEEKLY_SESSION_LIMIT = 2;
 const WEEKLY_CLUB_LIMIT = 3;
 const CANCEL_DEADLINE_MINUTES = 60;
+const BOOKING_MIN_ADVANCE_MINUTES = 30;
 
 /**
  * Get events available for a student to book.
@@ -44,23 +45,44 @@ export async function getAvailableEvents(
     upcoming.map((b: any) => b.eventoId || b.idEvento)
   );
 
+  // Get hours where student already has a booking on this date (same-hour exclusion)
+  const bookedHours = await BookingRepository.findBookedHoursForDate(studentId, date);
+  const bookedHoursSet = new Set(bookedHours);
+
   // Check if student is on a jump step (multiples of 5)
   const stepNum = parseInt(step?.replace(/\D/g, '') || '0', 10);
   const isJumpStep = stepNum > 0 && stepNum % 5 === 0;
 
+  const now = new Date();
+
   // Annotate events
   const annotated = await Promise.all(
     events.map(async (evt: any) => {
+      // Filter out events less than 30 min from now
+      const evtDate = new Date(evt.dia);
+      const minutesUntil = (evtDate.getTime() - now.getTime()) / (1000 * 60);
+      if (minutesUntil < BOOKING_MIN_ADVANCE_MINUTES) {
+        return null;
+      }
+
+      // Same-hour exclusion: skip events at hours where student already has a booking
+      if (evt.hora && bookedHoursSet.has(evt.hora)) {
+        return null;
+      }
+
       const activeCount = await CalendarioRepository.countActiveEnrollments(evt._id);
       const cupoLleno = evt.limiteUsuarios > 0 && activeCount >= evt.limiteUsuarios;
       const yaInscrito = enrolledEventIds.has(evt._id);
 
       // If student is on a jump step, only show jump-compatible events
-      // (events for that specific step or events without step restriction)
       const evtStepNum = parseInt(evt.step?.replace(/\D/g, '') || '0', 10);
       const isJumpEvent = evtStepNum > 0 && evtStepNum % 5 === 0;
       if (isJumpStep && evt.step && !isJumpEvent) {
-        return null; // Filter out non-jump events for jump students
+        return null;
+      }
+      // If student is NOT on a jump step, hide jump events
+      if (!isJumpStep && isJumpEvent) {
+        return null;
       }
 
       return {
@@ -99,10 +121,15 @@ export async function bookEvent(
   const event = await CalendarioRepository.findByIdWithAdvisor(eventId);
   if (!event) throw new NotFoundError('Evento', eventId);
 
-  // 2. Validate future date
+  // 2. Validate future date + 30 min advance
   const eventDate = new Date(event.dia);
-  if (eventDate <= new Date()) {
+  const now = new Date();
+  const minutesUntil = (eventDate.getTime() - now.getTime()) / (1000 * 60);
+  if (minutesUntil <= 0) {
     throw new ValidationError('No se puede agendar en un evento pasado');
+  }
+  if (minutesUntil < BOOKING_MIN_ADVANCE_MINUTES) {
+    throw new ValidationError(`Debes agendar con al menos ${BOOKING_MIN_ADVANCE_MINUTES} minutos de anticipación`);
   }
 
   // 3. Check capacity using real active enrollment count
@@ -117,7 +144,17 @@ export async function bookEvent(
     throw new ConflictError('Ya estás inscrito en este evento');
   }
 
-  // 5. Check weekly limits
+  const eventTipo = event.tipo || event.evento || '';
+
+  // 5. Pending SESSION rule: can't book a new SESSION if you already have one pending
+  if (eventTipo === 'SESSION') {
+    const hasPending = await BookingRepository.hasPendingSession(studentId);
+    if (hasPending) {
+      throw new ConflictError('Ya tienes una sesión reservada y pendiente. Solo puedes reservar otra cuando pase tu sesión actual.');
+    }
+  }
+
+  // 6. Check weekly limits
   const eventDay = new Date(event.dia);
   const dayOfWeek = eventDay.getDay();
   const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
@@ -134,7 +171,6 @@ export async function bookEvent(
     weekEnd.toISOString()
   );
 
-  const eventTipo = event.tipo || event.evento || '';
   const weeklyMap: Record<string, number> = {};
   for (const row of weeklyCounts) {
     weeklyMap[(row as any).tipo] = (row as any).count;

@@ -66,13 +66,19 @@ export default function BookingFlow({ onClose, initialTipo }: BookingFlowProps) 
     else if (step === 'confirm') { setStep('events') }
   }
 
-  // Generate next 14 days for date selection
-  const dates: string[] = []
-  for (let i = 0; i < 14; i++) {
-    const d = new Date()
-    d.setDate(d.getDate() + i + 1)
-    dates.push(d.toISOString().split('T')[0])
-  }
+  // Only allow Today and Tomorrow
+  const dates: { date: string; label: string }[] = []
+  const today = new Date()
+  dates.push({
+    date: today.toISOString().split('T')[0],
+    label: 'Hoy',
+  })
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  dates.push({
+    date: tomorrow.toISOString().split('T')[0],
+    label: 'Mañana',
+  })
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
@@ -104,21 +110,19 @@ export default function BookingFlow({ onClose, initialTipo }: BookingFlowProps) 
           {/* Step 1: Date Selection */}
           {step === 'date' && (
             <div className="grid grid-cols-2 gap-2">
-              {dates.map((date) => {
+              {dates.map(({ date, label }) => {
                 const d = new Date(date + 'T12:00:00')
                 return (
                   <button
                     key={date}
                     onClick={() => handleDateSelect(date)}
-                    className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg hover:bg-primary-50 hover:border-primary-300 border border-gray-200 transition-colors text-left"
+                    className="flex items-center gap-2 p-4 bg-gray-50 rounded-lg hover:bg-primary-50 hover:border-primary-300 border border-gray-200 transition-colors text-left"
                   >
                     <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
                     <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {format(d, 'EEEE', { locale: es })}
-                      </div>
+                      <div className="text-sm font-bold text-gray-900">{label}</div>
                       <div className="text-xs text-gray-500">
-                        {format(d, "d 'de' MMMM", { locale: es })}
+                        {format(d, "EEEE d 'de' MMMM", { locale: es })}
                       </div>
                     </div>
                   </button>

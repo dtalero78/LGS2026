@@ -3,25 +3,25 @@
 const CONTACTS = [
   {
     label: 'Soporte Usuario',
-    phone: '573007654321',
+    phone: '56957208697',
     message: 'Hola, soy estudiante de LGS y necesito ayuda.',
     color: 'bg-blue-100 text-blue-600',
   },
   {
     label: 'Soporte Academico',
-    phone: '573001234567',
+    phone: '56926209723',
     message: 'Hola, tengo una consulta academica.',
     color: 'bg-green-100 text-green-600',
   },
   {
     label: 'Chile Recaudos',
-    phone: '56912345678',
+    phone: '56964077877',
     message: 'Hola, tengo una consulta sobre recaudos Chile.',
     color: 'bg-red-100 text-red-600',
   },
   {
     label: 'Col/Peru/Ec Recaudos',
-    phone: '573009876543',
+    phone: '573013894444',
     message: 'Hola, tengo una consulta sobre recaudos.',
     color: 'bg-amber-100 text-amber-600',
   },
