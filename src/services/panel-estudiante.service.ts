@@ -4,20 +4,30 @@
  * Business logic for the student-facing portal.
  * Resolves the logged-in student from their session, then delegates
  * to existing repositories for data fetching.
+ *
+ * IMPORTANT: Students have TWO records — PEOPLE (personal data) and ACADEMICA
+ * (academic data with nivel/step). Bookings reference the ACADEMICA._id via
+ * "idEstudiante", NOT the PEOPLE._id. This service merges both records and
+ * exposes `academicaId` for booking queries.
  */
 
 import 'server-only';
 import { Session } from 'next-auth';
 import { PeopleRepository } from '@/repositories/people.repository';
+import { AcademicaRepository } from '@/repositories/academica.repository';
 import { BookingRepository } from '@/repositories/booking.repository';
 import { NivelesRepository } from '@/repositories/niveles.repository';
 import { ForbiddenError, NotFoundError } from '@/lib/errors';
-import { getProfile } from '@/services/student.service';
 import { generateReport } from '@/services/progress.service';
 
 /**
- * Resolve the PEOPLE record for the logged-in student.
- * Verifies the session role is ESTUDIANTE and looks up by email.
+ * Resolve the student from the session.
+ * Returns a merged PEOPLE + ACADEMICA object with `academicaId` for booking queries.
+ *
+ * Lookup chain:
+ *   1. PEOPLE by email (session.user.email)
+ *   2. ACADEMICA by PEOPLE.numeroId (links the two tables)
+ *   3. Merge: PEOPLE base + ACADEMICA overrides (nivel, step, academicaId)
  */
 export async function resolveStudentFromSession(session: Session) {
   const role = (session.user as any)?.role;
@@ -30,50 +40,76 @@ export async function resolveStudentFromSession(session: Session) {
     throw new ForbiddenError('No se encontró email en la sesión');
   }
 
-  const student = await PeopleRepository.findByEmail(email);
-  if (!student) {
+  const person = await PeopleRepository.findByEmail(email);
+  if (!person) {
     throw new NotFoundError('Estudiante', email);
   }
 
+  // Look up ACADEMICA record (has nivel/step and is the ID used by bookings)
+  let academicaId: string | null = null;
+  let nivel: string | null = person.nivel || null;
+  let step: string | null = person.step || null;
+  let nivelParalelo: string | null = person.nivelParalelo || null;
+  let stepParalelo: string | null = person.stepParalelo || null;
+
+  if (person.numeroId) {
+    const academica = await AcademicaRepository.findByNumeroId(person.numeroId);
+    if (academica) {
+      academicaId = academica._id;
+      nivel = academica.nivel || nivel;
+      step = academica.step || step;
+      nivelParalelo = academica.nivelParalelo || nivelParalelo;
+      stepParalelo = academica.stepParalelo || stepParalelo;
+    }
+  }
+
+  return {
+    ...person,
+    academicaId,  // ACADEMICA._id — use this for booking queries
+    nivel,
+    step,
+    nivelParalelo,
+    stepParalelo,
+  };
+}
+
+/**
+ * Get the full student profile (merged PEOPLE + ACADEMICA).
+ * The resolveStudentFromSession already merges both, so this just
+ * re-returns it — but also called from the /me route with the resolved student.
+ */
+export async function getStudentProfile(student: any) {
   return student;
 }
 
 /**
- * Get the full student profile (ACADEMICA + PEOPLE merge).
- * Reuses the existing student.service.getProfile() which tries
- * ACADEMICA first, then falls back to PEOPLE.
- */
-export async function getStudentProfile(studentId: string) {
-  return getProfile(studentId);
-}
-
-/**
  * Get the student's upcoming (non-cancelled) events with advisor name and Zoom link.
+ * Uses academicaId because bookings reference ACADEMICA._id via "idEstudiante".
  */
-export async function getStudentUpcomingEvents(studentId: string) {
-  return BookingRepository.findUpcomingByStudentId(studentId, 10);
+export async function getStudentUpcomingEvents(academicaId: string) {
+  return BookingRepository.findUpcomingByStudentId(academicaId, 10);
 }
 
 /**
  * Get attendance statistics for the student.
  */
-export async function getStudentStats(studentId: string) {
-  return BookingRepository.getStudentAttendanceStats(studentId);
+export async function getStudentStats(academicaId: string) {
+  return BookingRepository.getStudentAttendanceStats(academicaId);
 }
 
 /**
  * Get the "¿Cómo voy?" progress report.
- * Reuses the existing progress.service.generateReport().
+ * Passes the ACADEMICA _id so generateReport finds both the record and its bookings.
  */
-export async function getStudentProgress(studentId: string) {
-  return generateReport(studentId);
+export async function getStudentProgress(academicaId: string) {
+  return generateReport(academicaId);
 }
 
 /**
  * Get the student's full class history.
  */
-export async function getStudentHistory(studentId: string) {
-  return BookingRepository.findByStudentId(studentId, 500);
+export async function getStudentHistory(academicaId: string) {
+  return BookingRepository.findByStudentId(academicaId, 500);
 }
 
 /**
@@ -86,6 +122,6 @@ export async function getStudentMaterials(nivel: string) {
 /**
  * Get advisor comments/annotations for the student.
  */
-export async function getStudentComments(studentId: string) {
-  return BookingRepository.findCommentsForStudent(studentId, 50);
+export async function getStudentComments(academicaId: string) {
+  return BookingRepository.findCommentsForStudent(academicaId, 50);
 }

@@ -2,9 +2,9 @@
 
 import {
   CheckCircleIcon,
-  XCircleIcon,
-  NoSymbolIcon,
-} from '@heroicons/react/24/outline'
+  XMarkIcon,
+  HandThumbDownIcon,
+} from '@heroicons/react/24/solid'
 
 interface AttendanceStatsProps {
   stats: any
@@ -14,11 +14,11 @@ interface AttendanceStatsProps {
 export default function AttendanceStats({ stats, isLoading }: AttendanceStatsProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-3 gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 animate-pulse">
+          <div key={i} className="flex-1 rounded-xl p-4 animate-pulse bg-gray-100">
             <div className="h-8 bg-gray-200 rounded w-12 mb-2" />
-            <div className="h-4 bg-gray-200 rounded w-16" />
+            <div className="h-4 bg-gray-200 rounded w-24" />
           </div>
         ))}
       </div>
@@ -29,40 +29,45 @@ export default function AttendanceStats({ stats, isLoading }: AttendanceStatsPro
 
   const cards = [
     {
-      label: 'Asistencias',
+      label: 'Completaste',
       value: data.asistencias,
+      suffix: 'sesiones',
       icon: CheckCircleIcon,
-      color: 'text-green-600',
-      bg: 'bg-green-50',
+      bg: 'bg-green-500',
+      iconColor: 'text-white',
     },
     {
-      label: 'Ausencias',
-      value: data.ausencias,
-      icon: XCircleIcon,
-      color: 'text-red-600',
-      bg: 'bg-red-50',
-    },
-    {
-      label: 'Canceladas',
+      label: 'Cancelaste',
       value: data.canceladas,
-      icon: NoSymbolIcon,
-      color: 'text-amber-600',
-      bg: 'bg-amber-50',
+      suffix: 'sesiones',
+      icon: XMarkIcon,
+      bg: 'bg-amber-500',
+      iconColor: 'text-white',
+    },
+    {
+      label: 'No asististe',
+      value: data.ausencias,
+      suffix: 'sesiones',
+      icon: HandThumbDownIcon,
+      bg: 'bg-slate-700',
+      iconColor: 'text-white',
     },
   ]
 
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className="flex flex-col sm:flex-row gap-3">
       {cards.map((card) => (
         <div
           key={card.label}
-          className={`${card.bg} rounded-xl shadow-sm border border-gray-200 p-4 text-center`}
+          className={`flex-1 ${card.bg} rounded-xl p-4 text-white flex items-center gap-3`}
         >
-          <card.icon className={`h-6 w-6 mx-auto ${card.color}`} />
-          <div className={`text-2xl font-bold mt-1 ${card.color}`}>
-            {card.value}
+          <card.icon className={`h-8 w-8 flex-shrink-0 ${card.iconColor}`} />
+          <div>
+            <div className="text-2xl font-bold">{card.value}</div>
+            <div className="text-sm opacity-90">
+              {card.label} {card.value !== 1 ? card.suffix : 'sesion'}
+            </div>
           </div>
-          <div className="text-xs text-gray-500 mt-0.5">{card.label}</div>
         </div>
       ))}
     </div>

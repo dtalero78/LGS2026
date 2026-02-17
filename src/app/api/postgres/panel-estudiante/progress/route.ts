@@ -4,6 +4,7 @@ import { resolveStudentFromSession, getStudentProgress } from '@/services/panel-
 
 export const GET = handlerWithAuth(async (request, context, session) => {
   const student = await resolveStudentFromSession(session);
-  const report = await getStudentProgress(student._id);
+  const bookingId = student.academicaId || student._id;
+  const report = await getStudentProgress(bookingId);
   return successResponse({ report });
 });

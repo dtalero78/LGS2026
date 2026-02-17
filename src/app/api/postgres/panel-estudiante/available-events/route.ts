@@ -15,6 +15,7 @@ export const GET = handlerWithAuth(async (request, context, session) => {
   const nivel = student.nivel || '';
   const step = student.step || '';
 
-  const events = await getAvailableEvents(student._id, nivel, step, date, tipo);
+  const bookingId = student.academicaId || student._id;
+  const events = await getAvailableEvents(bookingId, nivel, step, date, tipo);
   return successResponse({ events });
 });

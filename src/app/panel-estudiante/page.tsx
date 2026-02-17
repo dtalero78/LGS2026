@@ -1,55 +1,43 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, useMemo, Suspense } from 'react'
 import {
-  HomeIcon,
   CalendarDaysIcon,
-  ChartBarIcon,
-  ClockIcon,
   BookOpenIcon,
+  ChartBarIcon,
+  VideoCameraIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline'
 import {
   useStudentMe,
   useStudentEvents,
   useStudentStats,
   useStudentPanelProgress,
-  useStudentHistory,
   useStudentMaterials,
   useStudentComments,
   useCancelBooking,
 } from '@/hooks/use-panel-estudiante'
 
 import StudentHeader from '@/components/panel-estudiante/StudentHeader'
-import NextClassCard from '@/components/panel-estudiante/NextClassCard'
 import MyEventsSection from '@/components/panel-estudiante/MyEventsSection'
 import AttendanceStats from '@/components/panel-estudiante/AttendanceStats'
 import BookingFlow from '@/components/panel-estudiante/BookingFlow'
 import ProgressReport from '@/components/panel-estudiante/ProgressReport'
-import ClassHistory from '@/components/panel-estudiante/ClassHistory'
 import MaterialsList from '@/components/panel-estudiante/MaterialsList'
 import WhatsAppContacts from '@/components/panel-estudiante/WhatsAppContacts'
 import AdvisorComments from '@/components/panel-estudiante/AdvisorComments'
 
-type Tab = 'inicio' | 'agendar' | 'progreso' | 'historial' | 'material'
-
-const TABS: { key: Tab; label: string; icon: typeof HomeIcon }[] = [
-  { key: 'inicio', label: 'Inicio', icon: HomeIcon },
-  { key: 'agendar', label: 'Agendar', icon: CalendarDaysIcon },
-  { key: 'progreso', label: 'Progreso', icon: ChartBarIcon },
-  { key: 'historial', label: 'Historial', icon: ClockIcon },
-  { key: 'material', label: 'Material', icon: BookOpenIcon },
-]
-
 function PanelEstudianteContent() {
-  const [activeTab, setActiveTab] = useState<Tab>('inicio')
   const [showBookingFlow, setShowBookingFlow] = useState(false)
+  const [bookingTipo, setBookingTipo] = useState<string | undefined>(undefined)
+  const [showProgress, setShowProgress] = useState(false)
+  const [showMaterials, setShowMaterials] = useState(false)
 
   // Queries
   const meQuery = useStudentMe()
   const eventsQuery = useStudentEvents()
   const statsQuery = useStudentStats()
   const progressQuery = useStudentPanelProgress()
-  const historyQuery = useStudentHistory()
   const materialsQuery = useStudentMaterials()
   const commentsQuery = useStudentComments()
 
@@ -57,6 +45,13 @@ function PanelEstudianteContent() {
   const cancelMutation = useCancelBooking()
 
   const profile = meQuery.data?.profile
+  const events = eventsQuery.data?.events || []
+
+  // Derive next class info for student card
+  const nextClass = useMemo(() => {
+    if (!events || events.length === 0) return null
+    return events[0]
+  }, [events])
 
   const handleCancel = (bookingId: string) => {
     if (confirm('Estas seguro de que quieres cancelar esta clase?')) {
@@ -64,117 +59,194 @@ function PanelEstudianteContent() {
     }
   }
 
+  const openBooking = (tipo?: string) => {
+    setBookingTipo(tipo)
+    setShowBookingFlow(true)
+  }
+
+  const nextEventDate = nextClass ? new Date(nextClass.fechaEvento) : null
+  const now = new Date()
+  const showZoom = nextClass && nextEventDate
+    ? (nextEventDate.getTime() - now.getTime()) / (1000 * 60) <= 5
+      && (now.getTime() - nextEventDate.getTime()) / (1000 * 60) <= 10
+    : false
+  const zoomLink = nextClass?.eventLinkZoom || nextClass?.linkZoom
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Main Content */}
-      <div className="max-w-lg mx-auto px-4 pb-24 pt-4">
-        {/* Header always visible */}
-        <StudentHeader profile={profile} isLoading={meQuery.isLoading} />
+      {/* 1. Top Bar: WhatsApp + Greeting + Nivel */}
+      <StudentHeader profile={profile} isLoading={meQuery.isLoading} />
 
-        <div className="mt-4 space-y-4">
-          {/* ── Tab: Inicio ── */}
-          {activeTab === 'inicio' && (
-            <>
-              <NextClassCard
-                events={eventsQuery.data?.events || []}
-                isLoading={eventsQuery.isLoading}
-              />
-              <AttendanceStats
-                stats={statsQuery.data?.stats}
-                isLoading={statsQuery.isLoading}
-              />
-              <MyEventsSection
-                events={eventsQuery.data?.events || []}
-                isLoading={eventsQuery.isLoading}
-                onCancel={handleCancel}
-                isCancelling={cancelMutation.isLoading}
-              />
-              <WhatsAppContacts />
-            </>
-          )}
+      {/* 2. Booking Bar */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3">
+        <div className="max-w-5xl mx-auto flex flex-wrap items-center gap-3">
+          <span className="text-lg font-bold text-primary-700 mr-2">LGS</span>
+          <span className="text-sm text-gray-500 mr-1">Booking:</span>
+          <button
+            onClick={() => openBooking('SESSION')}
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5"
+          >
+            <CalendarDaysIcon className="h-4 w-4" />
+            Session
+          </button>
+          <button
+            onClick={() => openBooking('CLUB')}
+            className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1.5"
+          >
+            <CalendarDaysIcon className="h-4 w-4" />
+            Clubs
+          </button>
 
-          {/* ── Tab: Agendar ── */}
-          {activeTab === 'agendar' && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
-                Agendar Clase
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Selecciona una fecha y horario para agendar tu proxima clase.
-              </p>
-              <button
-                onClick={() => setShowBookingFlow(true)}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"
-              >
-                <CalendarDaysIcon className="h-5 w-5" />
-                Buscar Clases Disponibles
-              </button>
-              <div className="mt-4 text-xs text-gray-400 space-y-1">
-                <p>Limite semanal: 2 sesiones, 3 clubs</p>
-                <p>Solo puedes agendar 1 sesion por dia</p>
-                <p>Cancelacion permitida hasta 60 min antes</p>
-              </div>
-            </div>
-          )}
+          <div className="flex-1" />
 
-          {/* ── Tab: Progreso ── */}
-          {activeTab === 'progreso' && (
-            <ProgressReport
-              data={progressQuery.data}
-              isLoading={progressQuery.isLoading}
-            />
-          )}
-
-          {/* ── Tab: Historial ── */}
-          {activeTab === 'historial' && (
-            <>
-              <ClassHistory
-                data={historyQuery.data}
-                isLoading={historyQuery.isLoading}
-              />
-              <AdvisorComments
-                data={commentsQuery.data}
-                isLoading={commentsQuery.isLoading}
-              />
-            </>
-          )}
-
-          {/* ── Tab: Material ── */}
-          {activeTab === 'material' && (
-            <MaterialsList
-              data={materialsQuery.data}
-              isLoading={materialsQuery.isLoading}
-            />
-          )}
+          <button
+            onClick={() => setShowMaterials(true)}
+            className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1.5"
+          >
+            <BookOpenIcon className="h-4 w-4" />
+            Material
+          </button>
+          <button
+            onClick={() => setShowProgress(true)}
+            className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1.5"
+          >
+            <ChartBarIcon className="h-4 w-4" />
+            Como voy?
+          </button>
         </div>
       </div>
 
-      {/* Bottom Tab Bar (mobile-first) */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
-        <div className="max-w-lg mx-auto flex">
-          {TABS.map((tab) => {
-            const isActive = activeTab === tab.key
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-xs transition-colors ${
-                  isActive
-                    ? 'text-primary-600'
-                    : 'text-gray-400 hover:text-gray-600'
-                }`}
-              >
-                <tab.icon className={`h-5 w-5 ${isActive ? 'text-primary-600' : ''}`} />
-                <span className={isActive ? 'font-semibold' : ''}>{tab.label}</span>
-              </button>
-            )
-          })}
-        </div>
-      </nav>
+      {/* Main Content */}
+      <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+        {/* 3. Student Info Card + Attendance Stats */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Student Info Card */}
+          <div className="bg-gradient-to-br from-primary-600 to-primary-800 rounded-xl p-5 text-white">
+            {meQuery.isLoading ? (
+              <div className="animate-pulse space-y-3">
+                <div className="h-4 bg-white/20 rounded w-24" />
+                <div className="h-4 bg-white/20 rounded w-32" />
+                <div className="h-4 bg-white/20 rounded w-28" />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <span className="text-xs text-primary-200 uppercase tracking-wide">Nivel</span>
+                  <p className="text-lg font-bold">{profile?.nivel || '---'}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-primary-200 uppercase tracking-wide">Asesor</span>
+                  <p className="text-sm font-medium">
+                    {nextClass?.advisorNombre || '---'}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-xs text-primary-200 uppercase tracking-wide">Fecha</span>
+                  <p className="text-sm font-medium">
+                    {nextEventDate
+                      ? nextEventDate.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+                      : '---'}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-xs text-primary-200 uppercase tracking-wide">Link de Ingreso</span>
+                  {showZoom && zoomLink ? (
+                    <a
+                      href={zoomLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 text-white text-sm font-medium rounded-lg hover:bg-white/30 transition-colors"
+                    >
+                      <VideoCameraIcon className="h-4 w-4" />
+                      Entrar a Zoom
+                    </a>
+                  ) : (
+                    <p className="text-sm text-primary-200">
+                      {zoomLink ? 'Disponible 5 min antes' : '---'}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
-      {/* Booking Flow Modal */}
+          {/* Stats Cards */}
+          <div className="lg:col-span-2">
+            <AttendanceStats
+              stats={statsQuery.data?.stats}
+              isLoading={statsQuery.isLoading}
+            />
+          </div>
+        </div>
+
+        {/* 4. Two-column: Comments + Events */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <AdvisorComments
+            data={commentsQuery.data}
+            isLoading={commentsQuery.isLoading}
+          />
+          <MyEventsSection
+            events={events}
+            isLoading={eventsQuery.isLoading}
+            onCancel={handleCancel}
+            isCancelling={cancelMutation.isLoading}
+          />
+        </div>
+
+        {/* 5. Let's Go assistance */}
+        <WhatsAppContacts />
+      </div>
+
+      {/* Modals */}
       {showBookingFlow && (
-        <BookingFlow onClose={() => setShowBookingFlow(false)} />
+        <BookingFlow
+          onClose={() => { setShowBookingFlow(false); setBookingTipo(undefined) }}
+          initialTipo={bookingTipo}
+        />
+      )}
+
+      {showProgress && (
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between rounded-t-2xl">
+              <h2 className="text-lg font-semibold text-gray-900">Como voy?</h2>
+              <button
+                onClick={() => setShowProgress(false)}
+                className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-4">
+              <ProgressReport
+                data={progressQuery.data}
+                isLoading={progressQuery.isLoading}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showMaterials && (
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[85vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between rounded-t-2xl">
+              <h2 className="text-lg font-semibold text-gray-900">Material</h2>
+              <button
+                onClick={() => setShowMaterials(false)}
+                className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-4">
+              <MaterialsList
+                data={materialsQuery.data}
+                isLoading={materialsQuery.isLoading}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

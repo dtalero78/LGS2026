@@ -4,6 +4,7 @@ import { resolveStudentFromSession, getStudentStats } from '@/services/panel-est
 
 export const GET = handlerWithAuth(async (request, context, session) => {
   const student = await resolveStudentFromSession(session);
-  const stats = await getStudentStats(student._id);
+  const bookingId = student.academicaId || student._id;
+  const stats = await getStudentStats(bookingId);
   return successResponse({ stats });
 });

@@ -11,6 +11,7 @@ export const POST = handlerWithAuth(async (request, context, session) => {
   const { bookingId } = body;
   if (!bookingId) throw new ValidationError('bookingId es requerido');
 
-  const result = await cancelBooking(student._id, bookingId);
+  const bookingStudentId = student.academicaId || student._id;
+  const result = await cancelBooking(bookingStudentId, bookingId);
   return successResponse(result);
 });

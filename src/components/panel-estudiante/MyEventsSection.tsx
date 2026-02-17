@@ -1,10 +1,6 @@
 'use client'
 
-import {
-  ClockIcon,
-  UserIcon,
-  XMarkIcon,
-} from '@heroicons/react/24/outline'
+import { XMarkIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -26,81 +22,76 @@ export default function MyEventsSection({
   if (isLoading) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-        <div className="h-5 bg-gray-200 rounded w-36 mb-4 animate-pulse" />
+        <div className="h-5 bg-gray-200 rounded w-44 mb-4 animate-pulse" />
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-16 bg-gray-100 rounded-lg mb-2 animate-pulse" />
+          <div key={i} className="h-12 bg-gray-100 rounded-lg mb-2 animate-pulse" />
         ))}
       </div>
     )
   }
 
-  // Show up to 4 upcoming events
-  const upcomingEvents = (events || []).slice(0, 4)
-
-  const tipoColor = (tipo: string) => {
-    switch (tipo) {
-      case 'SESSION': return 'border-l-blue-500'
-      case 'CLUB': return 'border-l-green-500'
-      case 'WELCOME': return 'border-l-purple-500'
-      default: return 'border-l-gray-400'
-    }
-  }
+  const upcomingEvents = events || []
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
       <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
-        Mis Proximas Clases
+        Eventos programados:
       </h3>
       {upcomingEvents.length === 0 ? (
-        <p className="text-gray-400 text-sm">No tienes clases programadas</p>
+        <p className="text-gray-400 text-sm py-4">No tienes eventos programados</p>
       ) : (
-        <div className="space-y-2">
-          {upcomingEvents.map((evt: any) => {
-            const eventDate = new Date(evt.fechaEvento)
-            const now = new Date()
-            const minutesUntil = (eventDate.getTime() - now.getTime()) / (1000 * 60)
-            const canCancel = minutesUntil >= CANCEL_DEADLINE_MINUTES
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-2 px-2 text-xs font-semibold text-gray-500 uppercase">Fecha</th>
+                <th className="text-left py-2 px-2 text-xs font-semibold text-gray-500 uppercase">Evento</th>
+                <th className="text-left py-2 px-2 text-xs font-semibold text-gray-500 uppercase">Advisor</th>
+                <th className="text-center py-2 px-2 text-xs font-semibold text-gray-500 uppercase w-16">Cancelar</th>
+              </tr>
+            </thead>
+            <tbody>
+              {upcomingEvents.map((evt: any) => {
+                const eventDate = new Date(evt.fechaEvento)
+                const now = new Date()
+                const minutesUntil = (eventDate.getTime() - now.getTime()) / (1000 * 60)
+                const canCancel = minutesUntil >= CANCEL_DEADLINE_MINUTES
 
-            return (
-              <div
-                key={evt._id}
-                className={`flex items-center justify-between p-3 bg-gray-50 rounded-lg border-l-4 ${tipoColor(evt.tipo || evt.tipoEvento)}`}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 text-sm font-medium text-gray-900">
-                    <span className="text-xs font-semibold text-gray-500">
-                      {evt.tipo || evt.tipoEvento}
-                    </span>
-                    <span className="truncate">
-                      {evt.nivel} - {evt.step}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-                    <span className="flex items-center gap-1">
-                      <ClockIcon className="h-3.5 w-3.5" />
-                      {format(eventDate, "EEE d MMM, HH:mm", { locale: es })}
-                    </span>
-                    {evt.advisorNombre && (
-                      <span className="flex items-center gap-1">
-                        <UserIcon className="h-3.5 w-3.5" />
-                        {evt.advisorNombre}
+                return (
+                  <tr key={evt._id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-2.5 px-2 text-gray-700 whitespace-nowrap">
+                      {format(eventDate, "d MMM, HH:mm", { locale: es })}
+                    </td>
+                    <td className="py-2.5 px-2">
+                      <span className="text-gray-900 font-medium">
+                        {evt.tipo || evt.tipoEvento}
                       </span>
-                    )}
-                  </div>
-                </div>
-                {canCancel && (
-                  <button
-                    onClick={() => onCancel(evt._id)}
-                    disabled={isCancelling}
-                    className="ml-2 p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                    title="Cancelar clase"
-                  >
-                    <XMarkIcon className="h-5 w-5" />
-                  </button>
-                )}
-              </div>
-            )
-          })}
+                      <span className="text-gray-500 ml-1">
+                        {evt.nivel} - {evt.step}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-2 text-gray-600">
+                      {evt.advisorNombre || '---'}
+                    </td>
+                    <td className="py-2.5 px-2 text-center">
+                      {canCancel ? (
+                        <button
+                          onClick={() => onCancel(evt._id)}
+                          disabled={isCancelling}
+                          className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                          title="Cancelar"
+                        >
+                          <XMarkIcon className="h-5 w-5" />
+                        </button>
+                      ) : (
+                        <span className="text-gray-300">-</span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

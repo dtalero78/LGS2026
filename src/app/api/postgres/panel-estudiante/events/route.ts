@@ -4,6 +4,7 @@ import { resolveStudentFromSession, getStudentUpcomingEvents } from '@/services/
 
 export const GET = handlerWithAuth(async (request, context, session) => {
   const student = await resolveStudentFromSession(session);
-  const events = await getStudentUpcomingEvents(student._id);
+  const bookingId = student.academicaId || student._id;
+  const events = await getStudentUpcomingEvents(bookingId);
   return successResponse({ events });
 });

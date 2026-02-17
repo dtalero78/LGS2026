@@ -14,14 +14,15 @@ import { es } from 'date-fns/locale'
 
 interface BookingFlowProps {
   onClose: () => void
+  initialTipo?: string
 }
 
 type Step = 'date' | 'type' | 'events' | 'confirm'
 
-export default function BookingFlow({ onClose }: BookingFlowProps) {
+export default function BookingFlow({ onClose, initialTipo }: BookingFlowProps) {
   const [step, setStep] = useState<Step>('date')
   const [selectedDate, setSelectedDate] = useState('')
-  const [selectedTipo, setSelectedTipo] = useState<string | undefined>(undefined)
+  const [selectedTipo, setSelectedTipo] = useState<string | undefined>(initialTipo)
   const [selectedEvent, setSelectedEvent] = useState<any>(null)
 
   const { data, isLoading } = useAvailableEvents(selectedDate, selectedTipo)
@@ -31,7 +32,12 @@ export default function BookingFlow({ onClose }: BookingFlowProps) {
 
   const handleDateSelect = (date: string) => {
     setSelectedDate(date)
-    setStep('type')
+    // Skip type step when tipo was pre-selected
+    if (initialTipo) {
+      setStep('events')
+    } else {
+      setStep('type')
+    }
   }
 
   const handleTipoSelect = (tipo?: string) => {
@@ -53,7 +59,10 @@ export default function BookingFlow({ onClose }: BookingFlowProps) {
 
   const handleBack = () => {
     if (step === 'type') { setStep('date'); setSelectedTipo(undefined) }
-    else if (step === 'events') { setStep('type'); setSelectedEvent(null) }
+    else if (step === 'events') {
+      if (initialTipo) { setStep('date'); setSelectedDate('') }
+      else { setStep('type'); setSelectedEvent(null) }
+    }
     else if (step === 'confirm') { setStep('events') }
   }
 

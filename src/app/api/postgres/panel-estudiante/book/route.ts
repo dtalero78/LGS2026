@@ -11,8 +11,9 @@ export const POST = handlerWithAuth(async (request, context, session) => {
   const { eventId } = body;
   if (!eventId) throw new ValidationError('eventId es requerido');
 
+  const bookingId = student.academicaId || student._id;
   const booking = await bookEvent(
-    student._id,
+    bookingId,
     {
       primerNombre: student.primerNombre || '',
       primerApellido: student.primerApellido || '',
