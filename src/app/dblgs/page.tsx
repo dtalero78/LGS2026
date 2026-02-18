@@ -8,7 +8,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { QueryClient, QueryClientProvider } from 'react-query';
@@ -143,6 +143,7 @@ function DblgsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newRowData, setNewRowData] = useState<Record<string, string>>({});
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   // ── Debounce search ─────────────────────────────────────────────
   useEffect(() => {
@@ -262,6 +263,64 @@ function DblgsPage() {
     });
   }, []);
 
+  // ── Export CSV ─────────────────────────────────────────────────
+  const handleExportCSV = useCallback(async () => {
+    if (!selectedTable || columns.length === 0) return;
+    setExporting(true);
+    try {
+      // Fetch ALL filtered rows (no pagination)
+      const params = new URLSearchParams();
+      params.set('page', '1');
+      params.set('pageSize', '10000');
+      if (sortBy) params.set('sortBy', sortBy);
+      if (sortDir) params.set('sortDir', sortDir);
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      if (Object.keys(debouncedFilters).length > 0) params.set('filters', JSON.stringify(debouncedFilters));
+
+      const res = await fetch(`/api/postgres/dblgs/${encodeURIComponent(selectedTable)}?${params.toString()}`);
+      if (!res.ok) throw new Error('Error al exportar');
+      const data = await res.json();
+      const exportRows: any[] = data.rows || [];
+
+      if (exportRows.length === 0) {
+        toast.error('No hay datos para exportar');
+        return;
+      }
+
+      // Build CSV with BOM for Excel UTF-8 compatibility
+      const colNames = columns.map(c => c.name);
+      const escapeCSV = (val: any): string => {
+        if (val === null || val === undefined) return '';
+        const str = typeof val === 'object' ? JSON.stringify(val) : String(val);
+        if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      };
+
+      const header = colNames.map(escapeCSV).join(',');
+      const lines = exportRows.map(row =>
+        colNames.map(col => escapeCSV(row[col])).join(',')
+      );
+
+      const bom = '\uFEFF';
+      const csv = bom + [header, ...lines].join('\r\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${selectedTable}_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.success(`${exportRows.length} filas exportadas`);
+    } catch (err: any) {
+      toast.error(err.message || 'Error al exportar');
+    } finally {
+      setExporting(false);
+    }
+  }, [selectedTable, columns, sortBy, sortDir, debouncedSearch, debouncedFilters]);
+
   // ── Loading state ───────────────────────────────────────────────
   if (status === 'loading') {
     return (
@@ -339,6 +398,18 @@ function DblgsPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
                   Agregar
+                </button>
+
+                {/* Export CSV */}
+                <button
+                  onClick={handleExportCSV}
+                  disabled={exporting || rows.length === 0}
+                  className="px-3 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  {exporting ? 'Exportando...' : 'Exportar CSV'}
                 </button>
 
                 {/* Delete */}
