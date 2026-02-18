@@ -7,7 +7,6 @@
 import 'server-only';
 import { CalendarioRepository } from '@/repositories/calendar.repository';
 import { BookingRepository } from '@/repositories/booking.repository';
-import { PeopleRepository } from '@/repositories/people.repository';
 import { ValidationError, NotFoundError, ConflictError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 
@@ -40,13 +39,35 @@ export async function enrollStudents(input: EnrollInput) {
     throw new ConflictError('Event is full');
   }
 
-  // Fetch all students in one batch
+  // Fetch all students - try PEOPLE first, then fallback to ACADEMICA (IDs may come from either table)
   const { queryMany } = await import('@/lib/postgres');
-  const students = await queryMany(
+  let students = await queryMany(
     `SELECT "_id", "numeroId", "primerNombre", "primerApellido", "celular", "nivel", "step"
      FROM "PEOPLE" WHERE "_id" = ANY($1::text[])`,
     [input.studentIds]
   );
+
+  // If not found in PEOPLE, the IDs might be ACADEMICA IDs - look up via ACADEMICA JOIN PEOPLE
+  if (students.length < input.studentIds.length) {
+    const foundIds = new Set(students.map((s: any) => s._id));
+    const missingIds = input.studentIds.filter(id => !foundIds.has(id));
+    if (missingIds.length > 0) {
+      const academicStudents = await queryMany(
+        `SELECT a."_id",
+                COALESCE(p."numeroId", a."numeroId") as "numeroId",
+                COALESCE(p."primerNombre", a."primerNombre") as "primerNombre",
+                COALESCE(p."primerApellido", a."primerApellido") as "primerApellido",
+                p."celular",
+                COALESCE(a."nivel", p."nivel") as "nivel",
+                COALESCE(a."step", p."step") as "step"
+         FROM "ACADEMICA" a
+         LEFT JOIN "PEOPLE" p ON a."numeroId" = p."numeroId"
+         WHERE a."_id" = ANY($1::text[])`,
+        [missingIds]
+      );
+      students = [...students, ...academicStudents];
+    }
+  }
 
   if (students.length === 0) {
     throw new NotFoundError('Students', input.studentIds.join(', '));
@@ -65,8 +86,8 @@ export async function enrollStudents(input: EnrollInput) {
       primerApellido: student.primerApellido,
       numeroId: student.numeroId,
       celular: student.celular,
-      nivel: student.nivel || event.nivel || event.tituloONivel,
-      step: student.step || event.step || event.nombreEvento,
+      nivel: event.nivel || event.tituloONivel || student.nivel,
+      step: event.step || event.nombreEvento || student.step,
       advisor: event.advisor,
       fecha: event.dia,
       fechaEvento: event.dia,

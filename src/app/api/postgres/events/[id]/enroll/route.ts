@@ -7,7 +7,7 @@ import { ValidationError } from '@/lib/errors';
  *
  * Enroll student(s) in an event.
  */
-export const POST = handlerWithAuth(async (request, { params, session }) => {
+export const POST = handlerWithAuth(async (request, { params }, session) => {
   const body = await request.json();
 
   if (!body.studentIds || !Array.isArray(body.studentIds) || body.studentIds.length === 0) {
@@ -17,9 +17,9 @@ export const POST = handlerWithAuth(async (request, { params, session }) => {
   const result = await enrollStudents({
     eventId: params.id,
     studentIds: body.studentIds,
-    agendadoPor: body.agendadoPor || session.user?.name || undefined,
-    agendadoPorEmail: body.agendadoPorEmail || session.user?.email || undefined,
-    agendadoPorRol: body.agendadoPorRol || (session.user as any)?.role || undefined,
+    agendadoPor: body.agendadoPor || session?.user?.name || undefined,
+    agendadoPorEmail: body.agendadoPorEmail || session?.user?.email || undefined,
+    agendadoPorRol: body.agendadoPorRol || (session?.user as any)?.role || undefined,
   });
 
   return successResponse({

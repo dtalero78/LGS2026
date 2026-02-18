@@ -358,12 +358,13 @@ export default function StudentAcademic({ student, classes: initialClasses, view
               hour12: true
             })
 
-            // Apply step vs jump logic from Wix code
+            // Apply step vs jump logic - prefer evento.step (canonical), fallback to nombreEvento
+            const stepSource = evento.step || evento.nombreEvento
             let stepLabel = "Sin Step"
-            if (evento.nombreEvento) {
+            if (stepSource) {
               // Check if it's a step (starts with "Step ") or a club name (string)
-              if (evento.nombreEvento.startsWith("Step ")) {
-                const stepNumber = parseInt(evento.nombreEvento.replace("Step ", ""))
+              if (stepSource.startsWith("Step ")) {
+                const stepNumber = parseInt(stepSource.replace("Step ", ""))
                 if (!isNaN(stepNumber)) {
                   const jumps = [5, 10, 15, 20, 25, 30, 35, 40, 45]
                   if (jumps.includes(stepNumber)) {
@@ -374,7 +375,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
                 }
               } else {
                 // For clubs, use the name directly
-                stepLabel = evento.nombreEvento
+                stepLabel = stepSource
               }
             }
 
@@ -453,13 +454,13 @@ export default function StudentAcademic({ student, classes: initialClasses, view
       }
 
       const calendarData = await calendarResponse.json()
-      console.log('📋 Calendar events fetched:', calendarData.eventos?.length, 'eventos')
+      console.log('📋 Calendar events fetched:', calendarData.events?.length, 'eventos')
       console.log('🔍 Looking for event ID:', selectedTime)
 
-      const selectedEvent = calendarData.eventos?.find((evento: any) => evento._id === selectedTime)
+      const selectedEvent = calendarData.events?.find((evento: any) => evento._id === selectedTime)
 
       if (!selectedEvent) {
-        console.error('❌ Event not found. Available events:', calendarData.eventos?.map((e: any) => e._id))
+        console.error('❌ Event not found. Available events:', calendarData.events?.map((e: any) => e._id))
         throw new Error('Selected event not found in calendar')
       }
 
@@ -489,7 +490,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
         primerApellido: student.primerApellido,
         nivel: selectedEvent.tituloONivel,
         numeroId: student.peopleId || student.usuarioId || '', // numeroId debe ser el _id de PEOPLE - Usa usuarioId como fallback
-        tipoEvento: selectedEvent.evento,
+        tipoEvento: selectedEvent.evento || selectedEvent.tipo,
         step: selectedEvent.nombreEvento,
         idEvento: selectedEvent._id,
         advisor: selectedEvent.advisor,
@@ -498,14 +499,19 @@ export default function StudentAcademic({ student, classes: initialClasses, view
         ...usuarioAgenda
       }
 
-      console.log('📅 Event data to save:', eventData)
+      console.log('📅 Enrolling student in event:', { eventId: selectedEvent._id, studentId: student._id })
 
-      const response = await fetch('/api/postgres/events', {
+      const response = await fetch(`/api/postgres/events/${selectedEvent._id}/enroll`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(eventData)
+        body: JSON.stringify({
+          studentIds: [student._id],
+          agendadoPor: usuarioAgenda.agendadoPor || '',
+          agendadoPorEmail: usuarioAgenda.agendadoPorEmail || '',
+          agendadoPorRol: usuarioAgenda.agendadoPorRol || '',
+        })
       })
 
       if (response.ok) {
