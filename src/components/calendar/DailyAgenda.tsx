@@ -9,7 +9,8 @@ import Link from 'next/link'
 interface CalendarEvent {
   _id: string
   dia: Date
-  evento: 'SESSION' | 'CLUB' | 'WELCOME'
+  evento?: 'SESSION' | 'CLUB' | 'WELCOME'
+  tipo?: string
   tituloONivel: string
   nombreEvento?: string
   advisor: string | {_id: string, primerNombre: string, primerApellido: string}
@@ -239,14 +240,14 @@ export default function DailyAgenda({
                   {hourEvents.map(event => (
                     <div
                       key={event._id}
-                      className={`p-3 rounded-lg border cursor-pointer hover:shadow-md transition-shadow ${getEventColor(event.evento)}`}
+                      className={`p-3 rounded-lg border cursor-pointer hover:shadow-md transition-shadow ${getEventColor(event.evento || event.tipo || '')}`}
                       onClick={() => onViewDetail ? onViewDetail(event) : onEditEvent(event)}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className={`badge ${getEventBadge(event.evento)}`}>
-                              {event.evento}
+                            <span className={`badge ${getEventBadge(event.evento || event.tipo || '')}`}>
+                              {event.evento || event.tipo}
                             </span>
                             <span className="font-medium text-sm">
                               {event.tituloONivel}
@@ -358,19 +359,19 @@ export default function DailyAgenda({
             <div>
               <span className="text-gray-500">Sessions:</span>
               <span className="ml-2 font-medium">
-                {filteredEvents.filter(e => e.evento === 'SESSION').length}
+                {filteredEvents.filter(e => (e.evento || e.tipo) === 'SESSION').length}
               </span>
             </div>
             <div>
               <span className="text-gray-500">Clubs:</span>
               <span className="ml-2 font-medium">
-                {filteredEvents.filter(e => e.evento === 'CLUB').length}
+                {filteredEvents.filter(e => (e.evento || e.tipo) === 'CLUB').length}
               </span>
             </div>
             <div>
               <span className="text-gray-500">Welcome:</span>
               <span className="ml-2 font-medium">
-                {filteredEvents.filter(e => e.evento === 'WELCOME').length}
+                {filteredEvents.filter(e => (e.evento || e.tipo) === 'WELCOME').length}
               </span>
             </div>
           </div>

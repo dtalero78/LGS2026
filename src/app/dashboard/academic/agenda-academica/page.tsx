@@ -11,7 +11,8 @@ import { es } from 'date-fns/locale'
 interface CalendarEvent {
   _id: string
   dia: Date
-  evento: 'SESSION' | 'CLUB' | 'WELCOME'
+  evento?: 'SESSION' | 'CLUB' | 'WELCOME'
+  tipo?: string
   tituloONivel: string
   nombreEvento?: string
   advisor: string | Advisor
@@ -548,10 +549,10 @@ export default function AgendaAcademicaPage() {
                         <div
                           key={event._id}
                           onClick={() => handleEventClick(event)}
-                          className={`text-xs p-2 rounded-md border mb-1 cursor-pointer transition-colors ${getEventColor(event.evento)}`}
+                          className={`text-xs p-2 rounded-md border mb-1 cursor-pointer transition-colors ${getEventColor(event.evento || event.tipo || '')}`}
                         >
                           <div className="font-medium truncate">
-                            {event.evento} - {event.tituloONivel}
+                            {event.evento || event.tipo} - {event.tituloONivel}
                           </div>
                           {event.nombreEvento && (
                             <div className="truncate opacity-75">
@@ -578,19 +579,19 @@ export default function AgendaAcademicaPage() {
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">
-                {filteredEvents.filter(e => e.evento === 'SESSION').length}
+                {filteredEvents.filter(e => (e.evento || e.tipo) === 'SESSION').length}
               </div>
               <div className="text-sm text-gray-600">Sessions</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">
-                {filteredEvents.filter(e => e.evento === 'CLUB').length}
+                {filteredEvents.filter(e => (e.evento || e.tipo) === 'CLUB').length}
               </div>
               <div className="text-sm text-gray-600">Clubs</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
-                {filteredEvents.filter(e => e.evento === 'WELCOME').length}
+                {filteredEvents.filter(e => (e.evento || e.tipo) === 'WELCOME').length}
               </div>
               <div className="text-sm text-gray-600">Welcome Events</div>
             </div>

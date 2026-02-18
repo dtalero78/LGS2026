@@ -9,7 +9,8 @@ import Link from 'next/link'
 interface CalendarEvent {
   _id: string
   dia: Date
-  evento: 'SESSION' | 'CLUB' | 'WELCOME'
+  evento?: 'SESSION' | 'CLUB' | 'WELCOME'
+  tipo?: string
   tituloONivel: string
   nombreEvento?: string
   advisor: string | Advisor
@@ -221,8 +222,8 @@ export default function EventDetailModal({ event, isOpen, onClose, advisors, adv
               <h4 className="font-medium text-gray-900 mb-2">Información del Evento</h4>
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getEventBadgeColor(event.evento)}`}>
-                    {event.evento}
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getEventBadgeColor(event.evento || event.tipo || '')}`}>
+                    {event.evento || event.tipo}
                   </span>
                   <span className="font-medium">{event.tituloONivel}</span>
                 </div>

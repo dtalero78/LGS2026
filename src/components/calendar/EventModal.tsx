@@ -7,7 +7,8 @@ import { XMarkIcon } from '@heroicons/react/24/outline'
 interface CalendarEvent {
   _id: string
   dia: Date
-  evento: 'SESSION' | 'CLUB' | 'WELCOME'
+  evento?: 'SESSION' | 'CLUB' | 'WELCOME'
+  tipo?: string
   tituloONivel: string
   nombreEvento?: string
   advisor: string
@@ -155,7 +156,7 @@ export default function EventModal({
       setFormData({
         fecha: format(eventDate, 'yyyy-MM-dd'),
         hora: format(eventDate, 'HH:mm'),
-        evento: editingEvent.evento,
+        evento: editingEvent.evento || editingEvent.tipo,
         tituloONivel: editingEvent.tituloONivel,
         nombreEvento: nombreEventoValue,
         advisor: advisorId,
@@ -165,20 +166,21 @@ export default function EventModal({
         clubStep: ''
       })
 
+      const eventType = editingEvent.evento || editingEvent.tipo
       // Cargar opciones de step/club después de un pequeño delay para asegurar que niveles esté cargado
       setTimeout(() => {
         if (niveles.length === 0) {
           // Si niveles no está cargado, cargarlos primero
           loadCodigosNivel().then((loadedNiveles) => {
             // Luego cargar opciones de step/club con los niveles recién cargados
-            if (editingEvent.evento === 'SESSION' || editingEvent.evento === 'CLUB') {
-              cargarNombreStepForEdit(editingEvent.tituloONivel, editingEvent.evento, nombreEventoValue, loadedNiveles)
+            if (eventType === 'SESSION' || eventType === 'CLUB') {
+              cargarNombreStepForEdit(editingEvent.tituloONivel, eventType, nombreEventoValue, loadedNiveles)
             }
           })
         } else {
           // Si niveles ya está cargado, cargar directamente
-          if (editingEvent.evento === 'SESSION' || editingEvent.evento === 'CLUB') {
-            cargarNombreStepForEdit(editingEvent.tituloONivel, editingEvent.evento, nombreEventoValue, niveles)
+          if (eventType === 'SESSION' || eventType === 'CLUB') {
+            cargarNombreStepForEdit(editingEvent.tituloONivel, eventType, nombreEventoValue, niveles)
           }
         }
       }, 100)

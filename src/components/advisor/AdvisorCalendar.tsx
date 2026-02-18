@@ -9,7 +9,8 @@ import EventDetailModal from '@/components/academic/EventDetailModal'
 interface CalendarEvent {
   _id: string
   dia: Date
-  evento: 'SESSION' | 'CLUB' | 'WELCOME'
+  evento?: 'SESSION' | 'CLUB' | 'WELCOME'
+  tipo?: string
   tituloONivel: string
   nombreEvento?: string
   advisor: string | Advisor
@@ -261,8 +262,8 @@ export default function AdvisorCalendar({ advisorId, advisorName }: AdvisorCalen
                     {dayEvents.slice(0, 3).map(event => (
                       <div
                         key={event._id}
-                        className={`text-xs px-1 py-0.5 rounded text-white truncate ${getEventColor(event.evento)} cursor-pointer hover:opacity-80`}
-                        title={`${event.evento} - ${event.tituloONivel} ${event.nombreEvento || ''} (${event.inscritos || 0}/${event.limiteUsuarios})`}
+                        className={`text-xs px-1 py-0.5 rounded text-white truncate ${getEventColor(event.evento || event.tipo || '')} cursor-pointer hover:opacity-80`}
+                        title={`${event.evento || event.tipo || ''} - ${event.tituloONivel} ${event.nombreEvento || ''} (${event.inscritos || 0}/${event.limiteUsuarios})`}
                         onClick={(e) => {
                           e.stopPropagation()
                           handleEventClick(event)
@@ -325,7 +326,7 @@ export default function AdvisorCalendar({ advisorId, advisorName }: AdvisorCalen
                         setDayEventsModalDate(null)
                         handleEventClick(event)
                       }}
-                      className={`p-3 rounded-lg cursor-pointer hover:opacity-80 transition-opacity ${getEventColor(event.evento)} text-white`}
+                      className={`p-3 rounded-lg cursor-pointer hover:opacity-80 transition-opacity ${getEventColor(event.evento || event.tipo || '')} text-white`}
                     >
                       <div className="flex items-center justify-between">
                         <div>
@@ -333,7 +334,7 @@ export default function AdvisorCalendar({ advisorId, advisorName }: AdvisorCalen
                             {format(new Date(event.dia), 'HH:mm')} - {event.tituloONivel}
                           </div>
                           <div className="text-sm opacity-90">
-                            {event.evento} {event.nombreEvento && `- ${event.nombreEvento}`}
+                            {event.evento || event.tipo} {event.nombreEvento && `- ${event.nombreEvento}`}
                           </div>
                         </div>
                         <div className="text-sm opacity-90">

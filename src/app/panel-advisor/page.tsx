@@ -27,7 +27,8 @@ interface Advisor {
 interface CalendarioEvent {
   _id: string
   nombreEvento?: string
-  evento: 'SESSION' | 'CLUB' | 'WELCOME'
+  evento?: 'SESSION' | 'CLUB' | 'WELCOME'
+  tipo?: string
   dia: string | Date
   advisor: string | Advisor
   tituloONivel: string
@@ -366,8 +367,8 @@ function PanelAdvisorContent() {
                         {dayEvents.slice(0, 3).map(event => (
                           <div
                             key={event._id}
-                            className={`text-xs px-1 py-0.5 rounded text-white truncate ${getEventColor(event.evento)} cursor-pointer hover:opacity-80`}
-                            title={`${event.evento} - ${event.tituloONivel} ${event.nombreEvento || ''}`}
+                            className={`text-xs px-1 py-0.5 rounded text-white truncate ${getEventColor(event.evento || event.tipo || '')} cursor-pointer hover:opacity-80`}
+                            title={`${event.evento || event.tipo || ''} - ${event.tituloONivel} ${event.nombreEvento || ''}`}
                             onClick={(e) => {
                               e.stopPropagation()
                               handleEventClick(event)
@@ -421,7 +422,7 @@ function PanelAdvisorContent() {
                     setDayEventsModalDate(null)
                     handleEventClick(event)
                   }}
-                  className={`p-3 rounded-lg cursor-pointer hover:opacity-80 transition-opacity ${getEventColor(event.evento)} text-white`}
+                  className={`p-3 rounded-lg cursor-pointer hover:opacity-80 transition-opacity ${getEventColor(event.evento || event.tipo || '')} text-white`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -429,7 +430,7 @@ function PanelAdvisorContent() {
                         {format(new Date(event.dia), 'HH:mm')} - {event.tituloONivel}
                       </div>
                       <div className="text-sm opacity-90">
-                        {event.evento} {event.nombreEvento && `- ${event.nombreEvento}`}
+                        {event.evento || event.tipo} {event.nombreEvento && `- ${event.nombreEvento}`}
                       </div>
                     </div>
                   </div>

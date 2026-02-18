@@ -13,7 +13,8 @@ interface Advisor {
 interface CalendarEvent {
   _id: string
   dia: Date
-  evento: 'SESSION' | 'CLUB' | 'WELCOME'
+  evento?: 'SESSION' | 'CLUB' | 'WELCOME'
+  tipo?: string
   tituloONivel: string
   nombreEvento?: string
   advisor: string | Advisor
@@ -70,6 +71,11 @@ export default function CalendarView({
         const timeB = new Date(b.dia).getTime()
         return timeA - timeB
       })
+  }
+
+  // Resolver tipo de evento: soporta ambos campos (evento de Wix, tipo de Postgres)
+  const getEventType = (event: CalendarEvent): string => {
+    return event.evento || event.tipo || ''
   }
 
   // Función para obtener el color según el tipo de evento
@@ -158,11 +164,11 @@ export default function CalendarView({
                 {dayEvents.slice(0, 2).map(event => (
                   <div
                     key={event._id}
-                    className={`text-xs px-1 py-0.5 rounded ${getEventColor(event.evento)}`}
-                    title={`${event.evento} - ${event.tituloONivel} ${event.nombreEvento || ''}\nAdvisor: ${event.advisorNombre || 'Sin asignar'}\nInscritos: ${event.inscritos || 0}/${event.limiteUsuarios}\nAsistieron: ${event.asistieron || 0}`}
+                    className={`text-xs px-1 py-0.5 rounded ${getEventColor(getEventType(event))}`}
+                    title={`${getEventType(event)} - ${event.tituloONivel} ${event.nombreEvento || ''}\nAdvisor: ${event.advisorNombre || 'Sin asignar'}\nInscritos: ${event.inscritos || 0}/${event.limiteUsuarios}\nAsistieron: ${event.asistieron || 0}`}
                   >
                     <div className="truncate">
-                      {format(new Date(event.dia), 'HH:mm')} {event.evento}
+                      {format(new Date(event.dia), 'HH:mm')} {getEventType(event)}
                     </div>
                     <div className="truncate text-[10px] opacity-75">
                       {event.advisorNombre || 'Sin advisor'}

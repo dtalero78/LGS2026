@@ -14,7 +14,8 @@ import { es } from 'date-fns/locale'
 interface CalendarEvent {
   _id: string
   dia: Date
-  evento: 'SESSION' | 'CLUB' | 'WELCOME'
+  evento?: 'SESSION' | 'CLUB' | 'WELCOME'
+  tipo?: string
   tituloONivel: string
   nombreEvento?: string
   advisor: string | Advisor
@@ -836,7 +837,7 @@ export default function AgendaSesionesPage() {
                   <div>
                     <h3 className="text-lg font-medium text-gray-900">Sessions</h3>
                     <p className="text-3xl font-bold text-blue-600">
-                      {events.filter(e => e.evento === 'SESSION').length}
+                      {events.filter(e => (e.evento || e.tipo) === 'SESSION').length}
                     </p>
                   </div>
                 </div>
@@ -848,7 +849,7 @@ export default function AgendaSesionesPage() {
                   <div>
                     <h3 className="text-lg font-medium text-gray-900">Clubs</h3>
                     <p className="text-3xl font-bold text-green-600">
-                      {events.filter(e => e.evento === 'CLUB').length}
+                      {events.filter(e => (e.evento || e.tipo) === 'CLUB').length}
                     </p>
                   </div>
                 </div>
@@ -860,7 +861,7 @@ export default function AgendaSesionesPage() {
                   <div>
                     <h3 className="text-lg font-medium text-gray-900">Welcome</h3>
                     <p className="text-3xl font-bold text-purple-600">
-                      {events.filter(e => e.evento === 'WELCOME').length}
+                      {events.filter(e => (e.evento || e.tipo) === 'WELCOME').length}
                     </p>
                   </div>
                 </div>

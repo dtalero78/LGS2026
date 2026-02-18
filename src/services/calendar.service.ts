@@ -74,6 +74,8 @@ export async function createEvent(data: {
   if (!data.hora) throw new ValidationError('hora is required');
   if (!data.tipo) throw new ValidationError('tipo is required');
 
+  const tipo = data.tipo;
+
   const eventData: Record<string, any> = {
     _id: ids.event(),
     dia: data.dia,
@@ -82,7 +84,8 @@ export async function createEvent(data: {
     advisor: data.advisor,
     nivel: data.nivel || null,
     step: data.step || null,
-    tipo: data.tipo,
+    tipo: tipo,
+    evento: tipo,
     titulo: data.titulo || data.nombreEvento || '',
     nombreEvento: data.nombreEvento || data.titulo || '',
     tituloONivel: data.tituloONivel || (data.nivel ? `${data.nivel} ${data.step || ''}`.trim() : ''),
@@ -96,7 +99,7 @@ export async function createEvent(data: {
 }
 
 const ALLOWED_EVENT_FIELDS = [
-  'dia', 'hora', 'advisor', 'nivel', 'step', 'tipo', 'titulo',
+  'dia', 'hora', 'advisor', 'nivel', 'step', 'tipo', 'evento', 'titulo',
   'nombreEvento', 'linkZoom', 'limiteUsuarios', 'club', 'observaciones',
 ];
 
