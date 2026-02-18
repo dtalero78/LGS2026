@@ -230,7 +230,7 @@ export async function bookEvent(
     agendadoPorEmail: '',
     agendadoPorRol: 'ESTUDIANTE',
     fechaAgendamiento: new Date().toISOString(),
-    origen: 'PANEL_ESTUDIANTE',
+    origen: 'PANEL_EST',
   };
 
   const booking = await BookingRepository.createEnrollment(bookingData);
