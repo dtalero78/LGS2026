@@ -358,27 +358,6 @@ export default function StudentAcademic({ student, classes: initialClasses, view
               hour12: true
             })
 
-            // Apply step vs jump logic - prefer evento.step (canonical), fallback to nombreEvento
-            const stepSource = evento.step || evento.nombreEvento
-            let stepLabel = "Sin Step"
-            if (stepSource) {
-              // Check if it's a step (starts with "Step ") or a club name (string)
-              if (stepSource.startsWith("Step ")) {
-                const stepNumber = parseInt(stepSource.replace("Step ", ""))
-                if (!isNaN(stepNumber)) {
-                  const jumps = [5, 10, 15, 20, 25, 30, 35, 40, 45]
-                  if (jumps.includes(stepNumber)) {
-                    stepLabel = "Jump"
-                  } else {
-                    stepLabel = `Step ${stepNumber}`
-                  }
-                }
-              } else {
-                // For clubs, use the name directly
-                stepLabel = stepSource
-              }
-            }
-
             // Obtener cantidad de inscritos para este evento
             const inscritos = inscritosPorEvento[evento._id] || 0
             const limiteUsuarios = evento.limiteUsuarios || 0
@@ -392,8 +371,8 @@ export default function StudentAcademic({ student, classes: initialClasses, view
 
             return {
               label: cupoLleno
-                ? `${hour} - ${evento.tituloONivel} (${stepLabel}) • 👥 ${inscritos}/${limiteUsuarios} [LLENO] • ${advisorName}`
-                : `${hour} - ${evento.tituloONivel} (${stepLabel}) • 👥 ${inscritos}/${limiteUsuarios} • ${advisorName} • ID: ${eventIdShort}`,
+                ? `${hour} - ${evento.tituloONivel} • 👥 ${inscritos}/${limiteUsuarios} [LLENO] • ${advisorName}`
+                : `${hour} - ${evento.tituloONivel} • 👥 ${inscritos}/${limiteUsuarios} • ${advisorName} • ID: ${eventIdShort}`,
               value: evento._id,
               disabled: isDisabled
             }
@@ -482,22 +461,6 @@ export default function StudentAcademic({ student, classes: initialClasses, view
         agendadoPorRol: (session.user as any).role || 'N/A',
         fechaAgendamiento: new Date().toISOString()
       } : {}
-
-      const eventData = {
-        fechaEvento: selectedEvent.dia,
-        idEstudiante: student._id,
-        primerNombre: student.primerNombre,
-        primerApellido: student.primerApellido,
-        nivel: selectedEvent.tituloONivel,
-        numeroId: student.peopleId || student.usuarioId || '', // numeroId debe ser el _id de PEOPLE - Usa usuarioId como fallback
-        tipoEvento: selectedEvent.evento || selectedEvent.tipo,
-        step: selectedEvent.nombreEvento,
-        idEvento: selectedEvent._id,
-        advisor: selectedEvent.advisor,
-        celular: student.celular || '',
-        // Información de quién agenda el evento
-        ...usuarioAgenda
-      }
 
       console.log('📅 Enrolling student in event:', { eventId: selectedEvent._id, studentId: student._id })
 
