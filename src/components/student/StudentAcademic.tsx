@@ -357,9 +357,6 @@ export default function StudentAcademic({ student, classes: initialClasses, view
               .map((c: any) => c.eventoId)
               .filter(Boolean)
           )
-          console.log('🔍 enrolledEventIds:', [...enrolledEventIds])
-          console.log('🔍 eventos del día:', data.events.map((e: any) => e._id))
-
           const timeOptions = data.events
             .map((evento: any) => {
             const yaInscrito = enrolledEventIds.has(evento._id)
@@ -518,6 +515,8 @@ export default function StudentAcademic({ student, classes: initialClasses, view
     } catch (error) {
       console.error('❌ Error creating class event:', error)
       alert(`Error al crear la clase: ${error instanceof Error ? error.message : 'Error desconocido'}`)
+      // Refresh to sync UI with actual DB state (in case the INSERT succeeded before the error)
+      await refreshStudentData()
     } finally {
       setIsCreatingEvent(false)
     }

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { queryOne, queryMany, parseJsonbFields } from '@/lib/postgres';
+import { query, queryOne, queryMany, parseJsonbFields } from '@/lib/postgres';
 import { handler, handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { buildDynamicUpdate } from '@/lib/query-builder';
@@ -173,10 +173,8 @@ const PEOPLE_UPDATE_FIELDS = [
   'celular',
   'telefono',
   'fechaNacimiento',
-  'direccion',
+  'domicilio',
   'ciudad',
-  'pais',
-  'codigoPais',
   'nivel',
   'step',
   'nivelParalelo',
@@ -222,4 +220,37 @@ export const PATCH = handlerWithAuth(async (
   console.log('✅ [PostgreSQL People] Person updated successfully');
 
   return successResponse({ person: parsedPerson });
+});
+
+/**
+ * DELETE /api/postgres/people/[id]
+ *
+ * Delete a BENEFICIARIO from PEOPLE (and their ACADEMICA record if exists).
+ * Only BENEFICIARIO type persons can be deleted via this endpoint.
+ */
+export const DELETE = handlerWithAuth(async (
+  _request: Request,
+  { params }: { params: Record<string, string> }
+) => {
+  const personId = params.id;
+
+  const person = await queryOne(
+    `SELECT "_id", "numeroId", "tipoUsuario" FROM "PEOPLE" WHERE "_id" = $1`,
+    [personId]
+  );
+
+  if (!person) throw new NotFoundError('Person', personId);
+  if (person.tipoUsuario !== 'BENEFICIARIO') {
+    throw new ValidationError('Solo se pueden eliminar registros de tipo BENEFICIARIO');
+  }
+
+  // Delete from ACADEMICA if exists
+  await query(`DELETE FROM "ACADEMICA" WHERE "numeroId" = $1`, [person.numeroId]);
+
+  // Delete from PEOPLE
+  await query(`DELETE FROM "PEOPLE" WHERE "_id" = $1`, [personId]);
+
+  console.log('✅ [PostgreSQL People] Beneficiario deleted:', personId);
+
+  return successResponse({ deleted: true, personId });
 });

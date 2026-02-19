@@ -38,7 +38,6 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
   })
   const [selectedEstado, setSelectedEstado] = useState(person.aprobacion || 'Pendiente')
   const [newComment, setNewComment] = useState('')
-  const [isCreatingBeneficiary, setIsCreatingBeneficiary] = useState(false)
   const [showBeneficiaryForm, setShowBeneficiaryForm] = useState(false)
   const [newBeneficiaryId, setNewBeneficiaryId] = useState<string | null>(null)
   const [currentFormStep, setCurrentFormStep] = useState(1)
@@ -105,135 +104,44 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
   ]
 
   const handleApproveSpecificBeneficiary = async (beneficiaryId: string) => {
-    if (!beneficiaryId) {
-      console.error('beneficiaryId is undefined or null')
-      return
-    }
+    if (!beneficiaryId) return
 
-    // Set loading state
     setApprovingBeneficiaries(prev => new Set(prev).add(beneficiaryId))
     setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Aprobando...' }))
 
     try {
-      console.log('🔄 Iniciando aprobación del beneficiario...')
-
-      const response = await fetch('/api/wix/approveBeneficiario', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ beneficiarioId: beneficiaryId })
+      const response = await fetch(`/api/postgres/people/${beneficiaryId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aprobacion: 'Aprobado' })
       })
 
-      if (response.ok) {
-        const result = await response.json()
-        console.log('✅ Beneficiario aprobado exitosamente')
+      const data = await response.json()
 
-        // Update the beneficiary status in the list
+      if (response.ok && data.success) {
         setCurrentBeneficiaries(prev =>
           prev.map(ben =>
-            ben._id === beneficiaryId
-              ? { ...ben, estado: 'Aprobado' }
-              : ben
+            ben._id === beneficiaryId ? { ...ben, estado: 'Aprobado' } : ben
           )
         )
-
-        // Send WhatsApp message if approval was successful and WhatsApp data is available
-        if (result.success && result.whatsappData && result.whatsappData.celular) {
-          setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Enviando WhatsApp...' }))
-          console.log('📱 Enviando mensaje de WhatsApp...')
-
-          try {
-            const whatsappResponse = await fetch('/api/wix/sendWhatsApp', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                toNumber: result.whatsappData.celular,
-                messageBody: result.whatsappData.message
-              })
-            })
-
-            const whatsappResult = await whatsappResponse.json()
-
-            if (whatsappResponse.ok && whatsappResult.success) {
-              console.log('✅ WhatsApp enviado exitosamente a:', result.whatsappData.celular)
-              setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Completado ✅' }))
-
-              // Update UI to show WhatsApp was sent
-              setCurrentBeneficiaries(prev => {
-                const updated = prev.map(ben =>
-                  ben._id === beneficiaryId
-                    ? { ...ben, whatsappSent: true }
-                    : ben
-                )
-                console.log('🔄 Actualizando beneficiarios con WhatsApp sent:', updated)
-                console.log('🔍 Beneficiario específico actualizado:', updated.find(b => b._id === beneficiaryId))
-                return updated
-              })
-
-              // Show completed status briefly then hide
-              setTimeout(() => {
-                setProcessStatus(prev => {
-                  const newStatus = { ...prev }
-                  delete newStatus[beneficiaryId]
-                  return newStatus
-                })
-                setApprovingBeneficiaries(prev => {
-                  const newSet = new Set(prev)
-                  newSet.delete(beneficiaryId)
-                  return newSet
-                })
-              }, 2000)
-            } else {
-              console.error('❌ Error al enviar WhatsApp:', whatsappResult)
-              console.error('Response status:', whatsappResponse.status)
-              console.error('Error details:', whatsappResult?.error, whatsappResult?.details)
-              setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Error WhatsApp ❌' }))
-            }
-          } catch (whatsappError) {
-            console.error('❌ Error enviando WhatsApp:', whatsappError)
-            setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Error WhatsApp ❌' }))
-          }
-        } else {
-          // No WhatsApp to send, just complete
-          setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Completado ✅' }))
-          setTimeout(() => {
-            setProcessStatus(prev => {
-              const newStatus = { ...prev }
-              delete newStatus[beneficiaryId]
-              return newStatus
-            })
-            setApprovingBeneficiaries(prev => {
-              const newSet = new Set(prev)
-              newSet.delete(beneficiaryId)
-              return newSet
-            })
-          }, 2000)
-        }
-
-        console.log('🎉 Proceso completado exitosamente')
+        setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Completado ✅' }))
+        setTimeout(() => {
+          setProcessStatus(prev => { const s = { ...prev }; delete s[beneficiaryId]; return s })
+          setApprovingBeneficiaries(prev => { const s = new Set(prev); s.delete(beneficiaryId); return s })
+        }, 2000)
       } else {
-        console.error('❌ Error al aprobar beneficiario')
         setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Error ❌' }))
+        setTimeout(() => {
+          setProcessStatus(prev => { const s = { ...prev }; delete s[beneficiaryId]; return s })
+          setApprovingBeneficiaries(prev => { const s = new Set(prev); s.delete(beneficiaryId); return s })
+        }, 3000)
       }
     } catch (error) {
-      console.error('❌ Error en el proceso de aprobación:', error)
+      console.error('❌ Error aprobando beneficiario:', error)
       setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Error ❌' }))
-
-      // Clean up error state after 3 seconds
       setTimeout(() => {
-        setProcessStatus(prev => {
-          const newStatus = { ...prev }
-          delete newStatus[beneficiaryId]
-          return newStatus
-        })
-        setApprovingBeneficiaries(prev => {
-          const newSet = new Set(prev)
-          newSet.delete(beneficiaryId)
-          return newSet
-        })
+        setProcessStatus(prev => { const s = { ...prev }; delete s[beneficiaryId]; return s })
+        setApprovingBeneficiaries(prev => { const s = new Set(prev); s.delete(beneficiaryId); return s })
       }, 3000)
     }
   }
@@ -265,24 +173,15 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
 
   const handleInactivateBeneficiary = async (beneficiary: Beneficiary) => {
     try {
-      console.log('🔄 Inactivating beneficiary:', beneficiary._id)
-
-      const response = await fetch('/api/wix/inactivateBeneficiario', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          beneficiaryId: beneficiary._id
-        })
+      const response = await fetch(`/api/postgres/people/${beneficiary._id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estadoInactivo: true })
       })
 
       const data = await response.json()
 
-      if (data.success) {
-        console.log('✅ Beneficiary inactivated successfully')
-
-        // Update local state to mark beneficiary as inactive (keep in list)
+      if (response.ok && data.success) {
         setCurrentBeneficiaries(prev =>
           prev.map(b =>
             b._id === beneficiary._id
@@ -291,10 +190,10 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
           )
         )
       } else {
-        console.error('❌ Error inactivating beneficiary:', data.error)
+        console.error('❌ Error inactivando beneficiario:', data.error)
       }
     } catch (error) {
-      console.error('❌ Error in inactivation process:', error)
+      console.error('❌ Error inactivando beneficiario:', error)
     }
   }
 
@@ -304,37 +203,23 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     setIsDeletingBeneficiary(true)
 
     try {
-      console.log('🗑️ Eliminando beneficiario:', beneficiaryToDelete._id)
-
-      const response = await fetch('/api/wix/deleteBeneficiario', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          beneficiaryId: beneficiaryToDelete._id,
-          numeroId: beneficiaryToDelete.numeroId
-        })
+      const response = await fetch(`/api/postgres/people/${beneficiaryToDelete._id}`, {
+        method: 'DELETE',
       })
 
       const data = await response.json()
 
-      if (data.success) {
-        console.log('✅ Beneficiario eliminado exitosamente')
-
-        // Remove from local state
+      if (response.ok && data.success) {
         setCurrentBeneficiaries(prev =>
           prev.filter(b => b._id !== beneficiaryToDelete._id)
         )
-
-        // Close modal
         setShowDeleteModal(false)
         setBeneficiaryToDelete(null)
       } else {
         console.error('❌ Error al eliminar beneficiario:', data.error)
       }
     } catch (error) {
-      console.error('❌ Error en el proceso de eliminación:', error)
+      console.error('❌ Error eliminando beneficiario:', error)
     } finally {
       setIsDeletingBeneficiary(false)
     }
@@ -354,37 +239,25 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     setIsUpdatingEstado(true)
 
     try {
-      const response = await fetch('/api/wix/updateTitularEstado', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          personId: person._id,
-          nuevoEstado: pendingEstado
-        })
+      const response = await fetch(`/api/postgres/people/${person._id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aprobacion: pendingEstado })
       })
 
       const data = await response.json()
 
-      if (data.success) {
-        console.log('✅ Estado actualizado exitosamente')
-
-        // Actualizar el estado local
+      if (response.ok && data.success) {
         setSelectedEstado(pendingEstado as any)
         setOriginalEstado(pendingEstado as any)
-
-        // Cerrar modal
         setShowEstadoModal(false)
         setPendingEstado(null)
       } else {
         console.error('❌ Error al actualizar estado:', data.error)
-        // Restaurar estado original
         setSelectedEstado(originalEstado as any)
       }
     } catch (error) {
-      console.error('❌ Error en el proceso de actualización:', error)
-      // Restaurar estado original
+      console.error('❌ Error actualizando estado:', error)
       setSelectedEstado(originalEstado as any)
     } finally {
       setIsUpdatingEstado(false)
@@ -462,19 +335,16 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
   }
 
   const handleEditBeneficiary = async (beneficiaryId: string) => {
-    setIsCreatingBeneficiary(true)
     setIsEditMode(true)
     setEditingBeneficiaryId(beneficiaryId)
 
     try {
-      // Fetch beneficiary full data using correct endpoint
-      const response = await fetch(`/api/postgres/students/${beneficiaryId}`)
+      const response = await fetch(`/api/postgres/people/${beneficiaryId}`)
       if (response.ok) {
         const result = await response.json()
         if (result.success && result.person) {
           const ben = result.person
 
-          // Load data into form
           setBeneficiaryData({
             primerNombre: ben.primerNombre || '',
             segundoNombre: ben.segundoNombre || '',
@@ -494,22 +364,16 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
           setNewBeneficiaryId(beneficiaryId)
           setShowBeneficiaryForm(true)
           setCurrentFormStep(1)
-          console.log('Beneficiary loaded for editing:', beneficiaryId)
         }
       }
     } catch (error) {
       console.error('Error loading beneficiary:', error)
-    } finally {
-      setIsCreatingBeneficiary(false)
     }
   }
 
-  const handleAddBeneficiary = async () => {
-    setIsCreatingBeneficiary(true)
+  const handleAddBeneficiary = () => {
     setIsEditMode(false)
     setEditingBeneficiaryId(null)
-
-    // Reset beneficiary form data to empty values
     setBeneficiaryData({
       primerNombre: '',
       segundoNombre: '',
@@ -525,48 +389,9 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
       email: '',
       genero: ''
     })
-
-    try {
-      const response = await fetch('/api/wix/createNewBeneficiario', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ titularId: person._id })
-      })
-
-      if (response.ok) {
-        const result = await response.json()
-        if (result.success && result.beneficiario?._id) {
-          setNewBeneficiaryId(result.beneficiario._id)
-
-          // Add temporary beneficiary to the list immediately
-          const tempBeneficiary = {
-            _id: result.beneficiario._id,
-            numeroId: '',
-            nombre: 'Nuevo',
-            apellido: 'Beneficiario',
-            estado: 'Pendiente' as 'Pendiente',
-            fechaCreacion: new Date().toISOString(),
-            nivel: '',
-            existeEnAcademica: false
-          }
-
-          setCurrentBeneficiaries(prev => [...prev, tempBeneficiary])
-          setShowBeneficiaryForm(true)
-          setCurrentFormStep(1)
-          console.log('New beneficiary created:', result.beneficiario._id)
-        } else {
-          console.error('Failed to create beneficiary:', result.error)
-        }
-      } else {
-        console.error('Failed to create beneficiary')
-      }
-    } catch (error) {
-      console.error('Error creating beneficiary:', error)
-    } finally {
-      setIsCreatingBeneficiary(false)
-    }
+    setNewBeneficiaryId('__new__')
+    setShowBeneficiaryForm(true)
+    setCurrentFormStep(1)
   }
 
   const handleBeneficiaryDataChange = (field: string, value: string) => {
@@ -651,84 +476,84 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
 
   const handleSaveBeneficiary = async () => {
     try {
-      // In edit mode, only send the 3 editable fields
-      const dataToSend = isEditMode
-        ? {
+      let response: Response
+
+      if (isEditMode && editingBeneficiaryId) {
+        // PATCH - only contact fields are editable
+        response = await fetch(`/api/postgres/people/${editingBeneficiaryId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             celular: beneficiaryData.celular,
             domicilio: beneficiaryData.domicilio,
-            email: beneficiaryData.email
-          }
-        : {
-            ...beneficiaryData,
-            titularId: person._id,
-            tipoUsuario: 'BENEFICIARIO',
-            aprobacion: 'Pendiente',
-            contrato: person.contrato || '',
-            numeroContrato: person.contrato || ''
-          }
-
-      const response = await fetch('/api/wix/updateBeneficiario', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          beneficiarioId: isEditMode ? editingBeneficiaryId : newBeneficiaryId,
-          datosBeneficiario: dataToSend
+            email: beneficiaryData.email,
+          })
         })
-      })
+      } else {
+        // POST - create new beneficiary in PEOPLE
+        response = await fetch('/api/postgres/people', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            primerNombre: beneficiaryData.primerNombre,
+            segundoNombre: beneficiaryData.segundoNombre || undefined,
+            primerApellido: beneficiaryData.primerApellido,
+            segundoApellido: beneficiaryData.segundoApellido || undefined,
+            numeroId: beneficiaryData.numeroId,
+            tipoUsuario: 'BENEFICIARIO',
+            contrato: person.contrato || '',
+            aprobacion: 'Pendiente',
+            email: beneficiaryData.email || undefined,
+            celular: beneficiaryData.celular || undefined,
+            fechaNacimiento: beneficiaryData.fechaNacimiento || undefined,
+            ciudad: beneficiaryData.ciudad || undefined,
+            domicilio: beneficiaryData.domicilio || undefined,
+          })
+        })
+      }
 
-      if (response.ok) {
-        const result = await response.json()
+      const result = await response.json()
 
-        // Update the beneficiary in the list with complete information
-        setCurrentBeneficiaries(prev =>
-          prev.map(ben =>
-            ben._id === (isEditMode ? editingBeneficiaryId : newBeneficiaryId)
-              ? isEditMode
-                ? {
-                    ...ben,
-                    celular: beneficiaryData.celular,
-                    domicilio: beneficiaryData.domicilio,
-                    email: beneficiaryData.email
-                  }
-                : {
-                    ...ben,
-                    numeroId: beneficiaryData.numeroId,
-                    nombre: beneficiaryData.primerNombre,
-                    apellido: beneficiaryData.primerApellido,
-                    estado: 'Pendiente'
-                  }
-              : ben
+      if (response.ok && result.success) {
+        if (isEditMode && editingBeneficiaryId) {
+          setCurrentBeneficiaries(prev =>
+            prev.map(ben =>
+              ben._id === editingBeneficiaryId
+                ? { ...ben, celular: beneficiaryData.celular }
+                : ben
+            )
           )
-        )
+        } else {
+          // Add newly created beneficiary to the list
+          const created = result.person
+          const newBen: Beneficiary = {
+            _id: created._id,
+            numeroId: created.numeroId,
+            nombre: created.primerNombre,
+            apellido: [created.primerApellido, created.segundoApellido].filter(Boolean).join(' '),
+            celular: created.celular || '',
+            estado: 'Pendiente',
+            fechaCreacion: created._createdDate || new Date().toISOString(),
+          }
+          setCurrentBeneficiaries(prev => [...prev, newBen])
+        }
 
         setShowBeneficiaryForm(false)
         setNewBeneficiaryId(null)
         setIsEditMode(false)
         setEditingBeneficiaryId(null)
         setBeneficiaryData({
-          primerNombre: '',
-          segundoNombre: '',
-          primerApellido: '',
-          segundoApellido: '',
-          numeroId: '',
-          fechaNacimiento: '',
-          edad: '',
-          pais: '',
-          domicilio: '',
-          ciudad: '',
-          celular: '',
-          email: '',
-          genero: ''
+          primerNombre: '', segundoNombre: '', primerApellido: '', segundoApellido: '',
+          numeroId: '', fechaNacimiento: '', edad: '', pais: '', domicilio: '',
+          ciudad: '', celular: '', email: '', genero: ''
         })
         setCurrentFormStep(1)
-        console.log(isEditMode ? 'Beneficiary updated successfully' : 'Beneficiary saved successfully')
       } else {
-        console.error('Failed to save beneficiary')
+        console.error('❌ Error guardando beneficiario:', result.error, result.details)
+        alert(`Error: ${result.error || 'No se pudo guardar el beneficiario'}\n${result.details || ''}`)
       }
     } catch (error) {
-      console.error('Error saving beneficiary:', error)
+      console.error('❌ Error guardando beneficiario:', error)
     }
   }
 
@@ -964,11 +789,10 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             <div className="pt-4 flex justify-end">
               <button
                 onClick={handleAddBeneficiary}
-                disabled={isCreatingBeneficiary}
-                className="btn-primary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary flex items-center space-x-2"
               >
                 <UserPlusIcon className="h-4 w-4" />
-                <span>{isCreatingBeneficiary ? 'Creando...' : 'Agregar Beneficiario'}</span>
+                <span>Agregar Beneficiario</span>
               </button>
             </div>
           </PermissionGuard>

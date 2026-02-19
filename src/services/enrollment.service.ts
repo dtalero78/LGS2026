@@ -39,11 +39,20 @@ export async function enrollStudents(input: EnrollInput) {
     throw new ConflictError('Event is full');
   }
 
-  // Fetch all students - try PEOPLE first, then fallback to ACADEMICA (IDs may come from either table)
+  // Fetch all students - try PEOPLE first with JOIN to ACADEMICA to get canonical ACADEMICA _id.
+  // Using ACADEMICA _id is critical: historical bookings use ACADEMICA _id, not PEOPLE _id.
   const { queryMany } = await import('@/lib/postgres');
   let students = await queryMany(
-    `SELECT "_id", "numeroId", "primerNombre", "primerApellido", "celular", "nivel", "step"
-     FROM "PEOPLE" WHERE "_id" = ANY($1::text[])`,
+    `SELECT COALESCE(a."_id", p."_id") as "_id",
+            COALESCE(p."numeroId", a."numeroId") as "numeroId",
+            COALESCE(p."primerNombre", a."primerNombre") as "primerNombre",
+            COALESCE(p."primerApellido", a."primerApellido") as "primerApellido",
+            p."celular",
+            COALESCE(a."nivel", p."nivel") as "nivel",
+            COALESCE(a."step", p."step") as "step"
+     FROM "PEOPLE" p
+     LEFT JOIN "ACADEMICA" a ON a."numeroId" = p."numeroId"
+     WHERE p."_id" = ANY($1::text[])`,
     [input.studentIds]
   );
 
@@ -73,54 +82,70 @@ export async function enrollStudents(input: EnrollInput) {
     throw new NotFoundError('Students', input.studentIds.join(', '));
   }
 
-  // Create bookings
-  const bookings = [];
-  for (const student of students) {
-    // Skip if student already has an active (non-cancelled) booking for this event
-    const alreadyEnrolled = await BookingRepository.existsByStudentAndEvent(student._id, input.eventId);
-    if (alreadyEnrolled) {
-      throw new ConflictError(`El estudiante ya está inscrito en este evento`);
+  // Create bookings inside a transaction so INSERT + incrementInscritos are atomic.
+  // This prevents "ghost bookings" where INSERT succeeds but incrementInscritos fails.
+  const { transaction } = await import('@/lib/postgres');
+  const bookings: any[] = [];
+
+  await transaction(async (client) => {
+    for (const student of students) {
+      // Skip if student already has an active (non-cancelled) booking for this event
+      const alreadyEnrolled = await BookingRepository.existsByStudentAndEvent(student._id, input.eventId);
+      if (alreadyEnrolled) {
+        throw new ConflictError(`El estudiante ya está inscrito en este evento`);
+      }
+      const bookingData: Record<string, any> = {
+        _id: ids.booking(),
+        eventoId: input.eventId,
+        idEvento: input.eventId,
+        studentId: student._id,
+        idEstudiante: student._id,
+        primerNombre: student.primerNombre,
+        primerApellido: student.primerApellido,
+        numeroId: student.numeroId,
+        celular: student.celular,
+        nivel: event.nivel || event.tituloONivel || student.nivel,
+        step: event.step || event.nombreEvento || student.step,
+        advisor: event.advisor,
+        fecha: event.dia,
+        fechaEvento: event.dia,
+        hora: event.hora,
+        tipo: event.tipo || event.evento,
+        tipoEvento: event.tipo || event.evento,
+        linkZoom: event.linkZoom,
+        nombreEvento: event.nombreEvento || event.titulo,
+        tituloONivel: event.tituloONivel,
+        asistio: false,
+        asistencia: false,
+        participacion: false,
+        noAprobo: false,
+        cancelo: false,
+        agendadoPor: input.agendadoPor || '',
+        agendadoPorEmail: input.agendadoPorEmail || '',
+        agendadoPorRol: input.agendadoPorRol || '',
+        origen: 'POSTGRES',
+      };
+
+      const columns = Object.keys(bookingData);
+      const values = Object.values(bookingData);
+      const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
+      const columnList = columns.map((c) => `"${c}"`).join(', ');
+      const result = await client.query(
+        `INSERT INTO "ACADEMICA_BOOKINGS" (${columnList}, "_createdDate", "_updatedDate")
+         VALUES (${placeholders}, NOW(), NOW())
+         RETURNING *`,
+        values
+      );
+      if (result.rows[0]) bookings.push(result.rows[0]);
     }
-    const bookingData: Record<string, any> = {
-      _id: ids.booking(),
-      eventoId: input.eventId,
-      idEvento: input.eventId,
-      studentId: student._id,
-      idEstudiante: student._id,
-      primerNombre: student.primerNombre,
-      primerApellido: student.primerApellido,
-      numeroId: student.numeroId,
-      celular: student.celular,
-      nivel: event.nivel || event.tituloONivel || student.nivel,
-      step: event.step || event.nombreEvento || student.step,
-      advisor: event.advisor,
-      fecha: event.dia,
-      fechaEvento: event.dia,
-      hora: event.hora,
-      tipo: event.tipo || event.evento,
-      tipoEvento: event.tipo || event.evento,
-      linkZoom: event.linkZoom,
-      nombreEvento: event.nombreEvento || event.titulo,
-      tituloONivel: event.tituloONivel,
-      asistio: false,
-      asistencia: false,
-      participacion: false,
-      noAprobo: false,
-      cancelo: false,
-      agendadoPor: input.agendadoPor || '',
-      agendadoPorEmail: input.agendadoPorEmail || '',
-      agendadoPorRol: input.agendadoPorRol || '',
-      origen: 'POSTGRES',
-    };
 
-    const booking = await BookingRepository.createEnrollment(bookingData);
-    if (booking) bookings.push(booking);
-  }
-
-  // Update event inscritos count
-  if (bookings.length > 0) {
-    await CalendarioRepository.incrementInscritos(input.eventId, bookings.length);
-  }
+    if (bookings.length > 0) {
+      await client.query(
+        `UPDATE "CALENDARIO" SET "inscritos" = "inscritos" + $1, "_updatedDate" = NOW() WHERE "_id" = $2`,
+        [bookings.length, input.eventId]
+      );
+    }
+  });
 
   return {
     bookings,

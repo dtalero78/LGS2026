@@ -34,8 +34,8 @@ export const POST = handlerWithAuth(async (request) => {
     nivelParalelo: body.nivelParalelo, stepParalelo: body.stepParalelo,
     plataforma: body.plataforma, estadoInactivo: body.estadoInactivo,
     vigencia: body.vigencia, finalContrato: body.finalContrato, inicioCurso: body.inicioCurso,
-    observaciones: body.observaciones, direccion: body.direccion, ciudad: body.ciudad,
-    pais: body.pais, codigoPais: body.codigoPais,
+    observaciones: body.observaciones, domicilio: body.domicilio, ciudad: body.ciudad,
+    aprobacion: body.aprobacion,
   };
 
   for (const [field, value] of Object.entries(optionalFields)) {
