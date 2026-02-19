@@ -543,6 +543,12 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             fechaNacimiento: beneficiaryData.fechaNacimiento || undefined,
             ciudad: beneficiaryData.ciudad || undefined,
             domicilio: beneficiaryData.domicilio || undefined,
+            // Campos del form
+            plataforma: beneficiaryData.pais || undefined,
+            // Campos heredados del titular
+            inicioCurso: (person as any).inicioCurso || person.fechaContrato || undefined,
+            finalContrato: person.finalContrato || undefined,
+            vigencia: person.vigencia || undefined,
           })
         })
       }
