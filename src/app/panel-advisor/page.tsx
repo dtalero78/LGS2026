@@ -92,7 +92,7 @@ function PanelAdvisorContent() {
       setLoading(true)
       setError(null)
 
-      const response = await fetch(`/api/postgres/advisors/by-email?email=${encodeURIComponent(email)}`)
+      const response = await fetch(`/api/postgres/advisors/by-email/${encodeURIComponent(email)}`)
 
       if (!response.ok) {
         throw new Error('Error al buscar advisor')
@@ -520,7 +520,7 @@ function PanelAdvisorContent() {
 
       {/* Event Detail Modal */}
       <EventDetailModal
-        event={selectedEvent}
+        event={selectedEvent ? { ...selectedEvent, dia: new Date(selectedEvent.dia) } : null}
         isOpen={showEventDetailModal}
         onClose={() => {
           setShowEventDetailModal(false)

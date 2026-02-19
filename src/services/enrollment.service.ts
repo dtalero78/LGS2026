@@ -76,6 +76,11 @@ export async function enrollStudents(input: EnrollInput) {
   // Create bookings
   const bookings = [];
   for (const student of students) {
+    // Skip if student already has an active (non-cancelled) booking for this event
+    const alreadyEnrolled = await BookingRepository.existsByStudentAndEvent(student._id, input.eventId);
+    if (alreadyEnrolled) {
+      throw new ConflictError(`El estudiante ya está inscrito en este evento`);
+    }
     const bookingData: Record<string, any> = {
       _id: ids.booking(),
       eventoId: input.eventId,

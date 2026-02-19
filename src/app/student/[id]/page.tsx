@@ -50,7 +50,7 @@ async function StudentContent({ studentId }: { studentId: string }) {
     const nextClass = classes
       .filter((cls: any) => {
         const classDate = new Date(cls.fechaEvento)
-        return classDate > now
+        return classDate > now && !cls.cancelo
       })
       .sort((a: any, b: any) => new Date(a.fechaEvento).getTime() - new Date(b.fechaEvento).getTime())[0]
 

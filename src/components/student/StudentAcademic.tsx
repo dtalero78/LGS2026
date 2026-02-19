@@ -94,17 +94,17 @@ export default function StudentAcademic({ student, classes: initialClasses, view
   const refreshStudentData = async () => {
     try {
       console.log('🔄 Recargando datos del estudiante...')
-      const response = await fetch(`/api/postgres/students?id=${student._id}&_t=${Date.now()}`)
+      const response = await fetch(`/api/postgres/students/${student._id}/academic?_t=${Date.now()}`)
       if (response.ok) {
         const data = await response.json()
-        if (data.success && data.classes) {
-          console.log('✅ Datos frescos recibidos:', data.classes.length, 'clases')
-          console.log('📅 Fechas de eventos:', data.classes.map((c: any) => ({
+        if (data.success && data.data?.classes) {
+          console.log('✅ Datos frescos recibidos:', data.data.classes.length, 'clases')
+          console.log('📅 Fechas de eventos:', data.data.classes.map((c: any) => ({
             fecha: c.fechaEvento,
             nivel: c.nivel,
             step: c.step
           })))
-          setClasses(data.classes)
+          setClasses(data.data.classes)
         }
       }
     } catch (error) {
@@ -350,7 +350,19 @@ export default function StudentAcademic({ student, classes: initialClasses, view
           const rolesRestringidos = [Role.SERVICIO_ASIST, Role.RECAUDOS_ASIST]
           const esRolRestringido = userRole && rolesRestringidos.includes(userRole as Role)
 
-          const timeOptions = data.events.map((evento: any) => {
+          // IDs de eventos en los que el estudiante ya está inscrito (no cancelados)
+          const enrolledEventIds = new Set(
+            classes
+              .filter((c: any) => !c.cancelo)
+              .map((c: any) => c.eventoId)
+              .filter(Boolean)
+          )
+          console.log('🔍 enrolledEventIds:', [...enrolledEventIds])
+          console.log('🔍 eventos del día:', data.events.map((e: any) => e._id))
+
+          const timeOptions = data.events
+            .map((evento: any) => {
+            const yaInscrito = enrolledEventIds.has(evento._id)
             const eventDate = new Date(evento.dia)
             const hour = eventDate.toLocaleTimeString('es', {
               hour: '2-digit',
@@ -366,13 +378,15 @@ export default function StudentAcademic({ student, classes: initialClasses, view
 
             // Verificar si el evento tiene cupo lleno
             const cupoLleno = limiteUsuarios > 0 && inscritos >= limiteUsuarios
-            // Deshabilitar para roles restringidos si el cupo está lleno
-            const isDisabled = esRolRestringido && cupoLleno
+            // Deshabilitar si ya inscrito, cupo lleno para rol restringido, o ya inscrito
+            const isDisabled = yaInscrito || (esRolRestringido && cupoLleno)
+
+            const baseLabel = cupoLleno
+              ? `${hour} - ${evento.tituloONivel} • 👥 ${inscritos}/${limiteUsuarios} [LLENO] • ${advisorName}`
+              : `${hour} - ${evento.tituloONivel} • 👥 ${inscritos}/${limiteUsuarios} • ${advisorName} • ID: ${eventIdShort}`
 
             return {
-              label: cupoLleno
-                ? `${hour} - ${evento.tituloONivel} • 👥 ${inscritos}/${limiteUsuarios} [LLENO] • ${advisorName}`
-                : `${hour} - ${evento.tituloONivel} • 👥 ${inscritos}/${limiteUsuarios} • ${advisorName} • ID: ${eventIdShort}`,
+              label: yaInscrito ? `${baseLabel} • ✓ Ya inscrito` : baseLabel,
               value: evento._id,
               disabled: isDisabled
             }
@@ -494,7 +508,12 @@ export default function StudentAcademic({ student, classes: initialClasses, view
           throw new Error(result.error || 'Failed to create class event')
         }
       } else {
-        throw new Error(`HTTP error: ${response.status}`)
+        let errorDetail = `HTTP error: ${response.status}`
+        try {
+          const errData = await response.json()
+          errorDetail = errData.details || errData.error || errorDetail
+        } catch {}
+        throw new Error(errorDetail)
       }
     } catch (error) {
       console.error('❌ Error creating class event:', error)

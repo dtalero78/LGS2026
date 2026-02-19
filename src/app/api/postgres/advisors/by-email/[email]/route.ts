@@ -6,7 +6,7 @@ import { authOptions } from '@/lib/auth-postgres';
 /**
  * GET /api/postgres/advisors/by-email/[email]
  *
- * Get advisor details by email
+ * Get advisor details by email from ADVISORS table
  */
 export async function GET(
   request: Request,
@@ -24,16 +24,10 @@ export async function GET(
 
     const decodedEmail = decodeURIComponent(params.email);
 
-    // Search in USUARIOS_ROLES table for advisor
     const result = await query(
-      `SELECT
-        "email",
-        "rol",
-        "activo",
-        "_createdDate",
-        "_updatedDate"
-      FROM "USUARIOS_ROLES"
-      WHERE "email" = $1 AND "activo" = true`,
+      `SELECT "_id", "email", "primerNombre", "primerApellido", "nombreCompleto", "zoom", "activo"
+       FROM "ADVISORS"
+       WHERE "email" = $1`,
       [decodedEmail]
     );
 
@@ -44,36 +38,9 @@ export async function GET(
       );
     }
 
-    const advisor = result.rows[0];
-
-    // Get additional stats for this advisor
-    const statsResult = await query(
-      `SELECT
-        COUNT(DISTINCT c."_id") as "totalEventos",
-        COUNT(DISTINCT b."_id") as "totalInscripciones",
-        COUNT(DISTINCT CASE WHEN b."asistio" = true THEN b."_id" END) as "totalAsistencias"
-      FROM "CALENDARIO" c
-      LEFT JOIN "ACADEMICA_BOOKINGS" b ON c."_id" = b."eventoId" OR c."_id" = b."idEvento"
-      WHERE c."advisor" = $1`,
-      [decodedEmail]
-    );
-
-    const stats = statsResult.rows[0] || {
-      totalEventos: 0,
-      totalInscripciones: 0,
-      totalAsistencias: 0,
-    };
-
     return NextResponse.json({
       success: true,
-      advisor: {
-        ...advisor,
-        stats: {
-          totalEventos: parseInt(stats.totalEventos) || 0,
-          totalInscripciones: parseInt(stats.totalInscripciones) || 0,
-          totalAsistencias: parseInt(stats.totalAsistencias) || 0,
-        },
-      },
+      advisor: result.rows[0],
     });
   } catch (error: any) {
     console.error('❌ Error fetching advisor by email:', error);
