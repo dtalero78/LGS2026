@@ -124,7 +124,39 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             ben._id === beneficiaryId ? { ...ben, estado: 'Aprobado' } : ben
           )
         )
-        setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Completado ✅' }))
+
+        // Enviar WhatsApp de bienvenida si el beneficiario tiene celular
+        const beneficiary = currentBeneficiaries.find(b => b._id === beneficiaryId)
+        if (beneficiary?.celular) {
+          setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Enviando WhatsApp...' }))
+          try {
+            const whatsappResponse = await fetch('/api/wix/sendWelcomeWhatsApp', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                celular: beneficiary.celular,
+                beneficiarioId: beneficiaryId,
+                nombre: beneficiary.nombre,
+              })
+            })
+            const whatsappResult = await whatsappResponse.json()
+            if (whatsappResponse.ok && whatsappResult.success) {
+              setCurrentBeneficiaries(prev =>
+                prev.map(ben => ben._id === beneficiaryId ? { ...ben, whatsappSent: true } : ben)
+              )
+              setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Completado ✅' }))
+            } else {
+              console.error('❌ Error enviando WhatsApp:', whatsappResult)
+              setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Aprobado (sin WhatsApp)' }))
+            }
+          } catch (whatsappError) {
+            console.error('❌ Error enviando WhatsApp:', whatsappError)
+            setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Aprobado (sin WhatsApp)' }))
+          }
+        } else {
+          setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Completado ✅' }))
+        }
+
         setTimeout(() => {
           setProcessStatus(prev => { const s = { ...prev }; delete s[beneficiaryId]; return s })
           setApprovingBeneficiaries(prev => { const s = new Set(prev); s.delete(beneficiaryId); return s })
@@ -475,6 +507,9 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
   }
 
   const handleSaveBeneficiary = async () => {
+    // Normalizar celular: remover '+', espacios y caracteres no numéricos → ej: "+57 3008021701" → "573008021701"
+    const normalizedCelular = (beneficiaryData.celular || '').replace(/\D/g, '')
+
     try {
       let response: Response
 
@@ -484,7 +519,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            celular: beneficiaryData.celular,
+            celular: normalizedCelular || undefined,
             domicilio: beneficiaryData.domicilio,
             email: beneficiaryData.email,
           })
@@ -504,7 +539,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             contrato: person.contrato || '',
             aprobacion: 'Pendiente',
             email: beneficiaryData.email || undefined,
-            celular: beneficiaryData.celular || undefined,
+            celular: normalizedCelular || undefined,
             fechaNacimiento: beneficiaryData.fechaNacimiento || undefined,
             ciudad: beneficiaryData.ciudad || undefined,
             domicilio: beneficiaryData.domicilio || undefined,
@@ -519,7 +554,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
           setCurrentBeneficiaries(prev =>
             prev.map(ben =>
               ben._id === editingBeneficiaryId
-                ? { ...ben, celular: beneficiaryData.celular }
+                ? { ...ben, celular: normalizedCelular || beneficiaryData.celular }
                 : ben
             )
           )
@@ -531,7 +566,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             numeroId: created.numeroId,
             nombre: created.primerNombre,
             apellido: [created.primerApellido, created.segundoApellido].filter(Boolean).join(' '),
-            celular: created.celular || '',
+            celular: (created.celular || '').replace(/\D/g, '') || created.celular || '',
             estado: 'Pendiente',
             fechaCreacion: created._createdDate || new Date().toISOString(),
           }
