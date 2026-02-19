@@ -13,12 +13,22 @@ interface PersonAdminProps {
   beneficiaries: Beneficiary[]
 }
 
-// Constantes para prefijos de países (plataformas activas)
+// Plataformas activas (solo para dropdown Plataforma)
 const PREFIJOS_PAISES = [
   { pais: "Chile", prefijo: "+56" },
   { pais: "Colombia", prefijo: "+57" },
   { pais: "Ecuador", prefijo: "+593" },
   { pais: "Perú", prefijo: "+51" },
+]
+
+// Indicativos telefónicos disponibles (para selector de celular)
+const PREFIJOS_CELULAR = [
+  { pais: "Australia", codigo: "AU", prefijo: "+61" },
+  { pais: "Chile", codigo: "CL", prefijo: "+56" },
+  { pais: "Colombia", codigo: "CO", prefijo: "+57" },
+  { pais: "Ecuador", codigo: "EC", prefijo: "+593" },
+  { pais: "Estados Unidos", codigo: "US", prefijo: "+1" },
+  { pais: "Perú", codigo: "PE", prefijo: "+51" },
 ]
 
 export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps) {
@@ -1053,9 +1063,9 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                             onChange={(e) => handleBeneficiaryDataChange('celularPrefijo', e.target.value)}
                             className="input-field w-28 flex-shrink-0"
                           >
-                            {PREFIJOS_PAISES.map(item => (
-                              <option key={item.pais} value={item.prefijo}>
-                                {item.prefijo} {item.pais.slice(0, 3)}
+                            {PREFIJOS_CELULAR.map(item => (
+                              <option key={item.codigo} value={item.prefijo}>
+                                {item.prefijo} ({item.codigo})
                               </option>
                             ))}
                           </select>
