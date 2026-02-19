@@ -13,21 +13,12 @@ interface PersonAdminProps {
   beneficiaries: Beneficiary[]
 }
 
-// Constantes para prefijos de países
+// Constantes para prefijos de países (plataformas activas)
 const PREFIJOS_PAISES = [
-  { pais: "Argentina", prefijo: "+54" },
-  { pais: "Bolivia", prefijo: "+591" },
   { pais: "Chile", prefijo: "+56" },
   { pais: "Colombia", prefijo: "+57" },
-  { pais: "Costa Rica", prefijo: "+506" },
   { pais: "Ecuador", prefijo: "+593" },
-  { pais: "España", prefijo: "+34" },
-  { pais: "México", prefijo: "+52" },
-  { pais: "Panamá", prefijo: "+507" },
-  { pais: "Paraguay", prefijo: "+595" },
   { pais: "Perú", prefijo: "+51" },
-  { pais: "Uruguay", prefijo: "+598" },
-  { pais: "Venezuela", prefijo: "+58" }
 ]
 
 export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps) {
@@ -51,6 +42,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     pais: '',
     domicilio: '',
     ciudad: '',
+    celularPrefijo: '+57',
     celular: '',
     email: '',
     genero: ''
@@ -417,6 +409,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
       pais: '',
       domicilio: '',
       ciudad: '',
+      celularPrefijo: '+57',
       celular: '',
       email: '',
       genero: ''
@@ -427,59 +420,21 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
   }
 
   const handleBeneficiaryDataChange = (field: string, value: string) => {
-    if (field === 'pais') {
-      // Cuando se cambia el país, actualizar el prefijo del celular
-      const paisSeleccionado = PREFIJOS_PAISES.find(p => p.pais === value)
-      if (paisSeleccionado) {
-        setBeneficiaryData(prev => ({
-          ...prev,
-          pais: value,
-          celular: prev.celular.startsWith('+') ? paisSeleccionado.prefijo : paisSeleccionado.prefijo + ' '
-        }))
-      } else {
-        setBeneficiaryData(prev => ({
-          ...prev,
-          [field]: value
-        }))
-      }
-    } else if (field === 'celular') {
-      // Mantener el prefijo al editar el celular
-      const currentCountry = beneficiaryData.pais
-      const paisSeleccionado = PREFIJOS_PAISES.find(p => p.pais === currentCountry)
-      if (paisSeleccionado && !value.startsWith(paisSeleccionado.prefijo)) {
-        // Si el usuario borra el prefijo, mantenerlo
-        setBeneficiaryData(prev => ({
-          ...prev,
-          celular: value
-        }))
-      } else {
-        setBeneficiaryData(prev => ({
-          ...prev,
-          celular: value
-        }))
-      }
-    } else {
-      setBeneficiaryData(prev => ({
-        ...prev,
-        [field]: value
-      }))
-    }
+    setBeneficiaryData(prev => ({ ...prev, [field]: value }))
   }
 
   const validateRequiredFields = (step: number): boolean => {
     if (step === 1) {
-      // Validar campos obligatorios del paso 1
       return (
         beneficiaryData.primerNombre.trim() !== '' &&
         beneficiaryData.primerApellido.trim() !== '' &&
-        beneficiaryData.numeroId.trim() !== ''
+        beneficiaryData.numeroId.trim() !== '' &&
+        beneficiaryData.pais !== ''
       )
     } else if (step === 2) {
-      // Validar campos obligatorios del paso 2
       return (
         beneficiaryData.fechaNacimiento !== '' &&
         beneficiaryData.genero !== '' &&
-        beneficiaryData.pais !== '' &&
         beneficiaryData.ciudad !== '' &&
         beneficiaryData.domicilio.trim() !== '' &&
         beneficiaryData.celular.trim() !== '' &&
@@ -508,7 +463,8 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
 
   const handleSaveBeneficiary = async () => {
     // Normalizar celular: remover '+', espacios y caracteres no numéricos → ej: "+57 3008021701" → "573008021701"
-    const normalizedCelular = (beneficiaryData.celular || '').replace(/\D/g, '')
+    // Concatenar prefijo + número y eliminar todo excepto dígitos → ej: "+57" + "3008021701" = "573008021701"
+    const normalizedCelular = ((beneficiaryData.celularPrefijo || '') + (beneficiaryData.celular || '')).replace(/\D/g, '')
 
     try {
       let response: Response
@@ -1012,6 +968,23 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                           placeholder="Número de ID"
                         />
                       </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Plataforma *
+                        </label>
+                        <select
+                          value={beneficiaryData.pais}
+                          onChange={(e) => handleBeneficiaryDataChange('pais', e.target.value)}
+                          className="input-field"
+                        >
+                          <option value="">Seleccionar</option>
+                          {PREFIJOS_PAISES.map(item => (
+                            <option key={item.pais} value={item.pais}>
+                              {item.pais}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1048,23 +1021,6 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          País/Plataforma *
-                        </label>
-                        <select
-                          value={beneficiaryData.pais}
-                          onChange={(e) => handleBeneficiaryDataChange('pais', e.target.value)}
-                          className="input-field"
-                        >
-                          <option value="">Seleccionar país</option>
-                          {PREFIJOS_PAISES.map(item => (
-                            <option key={item.pais} value={item.pais}>
-                              {item.pais}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
                           Ciudad *
                         </label>
                         <input
@@ -1091,13 +1047,26 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Celular *
                         </label>
-                        <input
-                          type="tel"
-                          value={beneficiaryData.celular}
-                          onChange={(e) => handleBeneficiaryDataChange('celular', e.target.value)}
-                          className="input-field"
-                          placeholder="Número de celular"
-                        />
+                        <div className="flex gap-2">
+                          <select
+                            value={beneficiaryData.celularPrefijo}
+                            onChange={(e) => handleBeneficiaryDataChange('celularPrefijo', e.target.value)}
+                            className="input-field w-28 flex-shrink-0"
+                          >
+                            {PREFIJOS_PAISES.map(item => (
+                              <option key={item.pais} value={item.prefijo}>
+                                {item.prefijo} {item.pais.slice(0, 3)}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            type="tel"
+                            value={beneficiaryData.celular}
+                            onChange={(e) => handleBeneficiaryDataChange('celular', e.target.value)}
+                            className="input-field flex-1"
+                            placeholder="Número de celular"
+                          />
+                        </div>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
