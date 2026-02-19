@@ -549,6 +549,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             inicioCurso: (person as any).inicioCurso || person.fechaContrato || undefined,
             finalContrato: person.finalContrato || undefined,
             vigencia: person.vigencia || undefined,
+            fechaIngreso: new Date().toISOString(),
           })
         })
       }
