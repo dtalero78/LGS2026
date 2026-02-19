@@ -33,7 +33,7 @@ export const POST = handlerWithAuth(async (request) => {
     contrato: body.contrato, nivel: body.nivel, step: body.step,
     nivelParalelo: body.nivelParalelo, stepParalelo: body.stepParalelo,
     plataforma: body.plataforma, estadoInactivo: body.estadoInactivo,
-    vigencia: body.vigencia, finalContrato: body.finalContrato, inicioCurso: body.inicioCurso,
+    vigencia: body.vigencia, finalContrato: body.finalContrato,
     observaciones: body.observaciones, domicilio: body.domicilio, ciudad: body.ciudad,
     aprobacion: body.aprobacion, fechaIngreso: body.fechaIngreso,
   };

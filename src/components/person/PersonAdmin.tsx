@@ -512,7 +512,6 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             // Campos del form
             plataforma: beneficiaryData.pais || undefined,
             // Campos heredados del titular
-            inicioCurso: (person as any).inicioCurso || person.fechaContrato || undefined,
             finalContrato: person.finalContrato || undefined,
             vigencia: person.vigencia || undefined,
             fechaIngreso: new Date().toISOString(),
