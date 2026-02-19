@@ -75,6 +75,7 @@ class AcademicaRepositoryClass extends BaseRepository {
               p."vigenciaOriginalPreOnHold", p."onHoldCount", p."onHoldHistory",
               a."extensionCount", a."extensionHistory", a."fechaContrato", a."finalContrato",
               p."titularId", a."asesor", a."usuarioId", p."ingresos", p."genero",
+              COALESCE(a."clave", p."clave") AS "clave",
               p."empresa", p."cargo", p."referenciaUno", p."parentezcoRefUno", p."telefonoRefUno",
               p."referenciaDos", p."parentezcoRefDos", p."telefonoRefDos",
               a."_createdDate", a."_updatedDate"
