@@ -22,7 +22,12 @@ export default function SearchBar() {
       type: p.tipoUsuario === 'TITULAR' ? 'person' : 'student',
       source: 'people'
     }))
-    const fromAcademica = (results?.data?.academica || []).map((s: any) => ({ ...s, type: 'student', source: 'academica' }))
+    const fromAcademica = (results?.data?.academica || []).map((s: any) => ({
+      ...s,
+      tipoUsuario: 'BENEFICIARIO', // always student, regardless of what the PEOPLE JOIN returned
+      type: 'student',
+      source: 'academica'
+    }))
 
     // Deduplicate fromAcademica by _id (JOIN with PEOPLE can produce duplicate rows
     // if PEOPLE has multiple records with the same numeroId)

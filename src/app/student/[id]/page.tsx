@@ -77,7 +77,7 @@ async function StudentContent({ studentId }: { studentId: string }) {
             <div className="flex flex-col items-end space-y-2">
               <div className="flex items-center space-x-2">
                 <span className="badge badge-info">
-                  {student.tipoUsuario || 'Beneficiario'}
+                  BENEFICIARIO
                 </span>
                 {student.plataforma && (
                   <span className="badge badge-success">

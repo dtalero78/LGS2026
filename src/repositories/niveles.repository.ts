@@ -95,8 +95,8 @@ class StepOverridesRepositoryClass extends BaseRepository {
    * Get overrides for a specific nivel
    */
   async findByStudentAndNivel(studentId: string, nivel: string) {
-    return queryMany<{ step: string; completado: boolean; fechaCompletado: string }>(
-      `SELECT "step", "completado", "fechaCompletado"
+    return queryMany<{ step: string; isCompleted: boolean }>(
+      `SELECT "step", "isCompleted"
        FROM "STEP_OVERRIDES"
        WHERE "studentId" = $1 AND "nivel" = $2`,
       [studentId, nivel]
@@ -107,8 +107,8 @@ class StepOverridesRepositoryClass extends BaseRepository {
    * Find a specific override
    */
   async findByStudentAndStep(studentId: string, step: string) {
-    return queryOne<{ _id: string; completado: boolean }>(
-      `SELECT "_id", "completado" FROM "STEP_OVERRIDES"
+    return queryOne<{ _id: string; isCompleted: boolean }>(
+      `SELECT "_id", "isCompleted" FROM "STEP_OVERRIDES"
        WHERE "studentId" = $1 AND "step" = $2`,
       [studentId, step]
     );
@@ -120,51 +120,33 @@ class StepOverridesRepositoryClass extends BaseRepository {
   async create(data: {
     _id: string;
     studentId: string;
-    numeroId: string;
     nivel: string;
     step: string;
-    completado: boolean;
-    fechaCompletado: string | null;
-    creadoPor: string;
-    creadoPorEmail: string;
+    isCompleted: boolean;
   }) {
     return queryOne(
       `INSERT INTO "STEP_OVERRIDES" (
-        "_id", "studentId", "numeroId", "nivel", "step", "completado",
-        "fechaCompletado", "creadoPor", "creadoPorEmail",
-        "modificadoPor", "modificadoPorEmail", "_createdDate", "_updatedDate"
+        "_id", "studentId", "nivel", "step", "isCompleted",
+        "_createdDate", "_updatedDate"
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7::timestamp with time zone,
-        $8, $9, $8, $9, NOW(), NOW()
+        $1, $2, $3, $4, $5, NOW(), NOW()
       )
       RETURNING *`,
-      [
-        data._id, data.studentId, data.numeroId, data.nivel, data.step,
-        data.completado, data.fechaCompletado, data.creadoPor, data.creadoPorEmail,
-      ]
+      [data._id, data.studentId, data.nivel, data.step, data.isCompleted]
     );
   }
 
   /**
    * Update an existing override
    */
-  async update(
-    id: string,
-    completado: boolean,
-    fechaCompletado: string | null,
-    modificadoPor: string,
-    modificadoPorEmail: string
-  ) {
+  async update(id: string, isCompleted: boolean) {
     return queryOne(
       `UPDATE "STEP_OVERRIDES"
-       SET "completado" = $1,
-           "fechaCompletado" = $2::timestamp with time zone,
-           "modificadoPor" = $3,
-           "modificadoPorEmail" = $4,
+       SET "isCompleted" = $1,
            "_updatedDate" = NOW()
-       WHERE "_id" = $5
+       WHERE "_id" = $2
        RETURNING *`,
-      [completado, fechaCompletado, modificadoPor, modificadoPorEmail, id]
+      [isCompleted, id]
     );
   }
 

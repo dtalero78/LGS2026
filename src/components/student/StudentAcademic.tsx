@@ -118,7 +118,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
     try {
       console.log('📊 Loading level steps for:', { nivel: student.nivel, studentId: student._id })
 
-      const response = await fetch(`/api/postgres/niveles/${encodeURIComponent(student.nivel)}/steps?studentId=${encodeURIComponent(student._id)}`)
+      const response = await fetch(`/api/postgres/niveles/${encodeURIComponent(student.nivel)}/steps?studentId=${encodeURIComponent(student.numeroId || student._id)}`)
 
       if (response.ok) {
         const data = await response.json()
@@ -160,19 +160,10 @@ export default function StudentAcademic({ student, classes: initialClasses, view
       // Create or delete step override
       if (newCompleted) {
         // Create step override
-        const overrideData = {
-          studentId: student._id,
-          step: stepData.step,
-          nivel: student.nivel,
-          isCompleted: true
-        }
-
-        const response = await fetch('/api/postgres/students', {
+        const response = await fetch(`/api/postgres/students/${student.numeroId}/step-override`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(overrideData)
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ step: stepData.step, completado: true, nivel: student.nivel })
         })
 
         if (!response.ok) {
@@ -187,7 +178,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
         console.log('✅ Step override created:', result)
       } else {
         // Delete step override
-        const response = await fetch(`/api/postgres/students?studentId=${encodeURIComponent(student._id)}&step=${encodeURIComponent(stepData.step)}`, {
+        const response = await fetch(`/api/postgres/students/${student.numeroId}/step-override?step=${encodeURIComponent(stepData.step)}`, {
           method: 'DELETE'
         })
 

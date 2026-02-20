@@ -33,7 +33,7 @@ export const GET = handlerWithAuth(async (request, { params }) => {
     if (student) {
       const overridesRaw = await StepOverridesRepository.findByStudentAndNivel(student._id, nivelCodigo);
       const overrides = overridesRaw.reduce((acc: any, row: any) => {
-        acc[row.step] = { completado: row.completado, fechaCompletado: row.fechaCompletado };
+        acc[row.step] = { completado: row.isCompleted };
         return acc;
       }, {});
 

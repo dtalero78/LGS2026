@@ -11,7 +11,7 @@ import { ids } from '@/lib/id-generator';
  */
 export const POST = handlerWithAuth(async (request, { params, session }) => {
   const body = await request.json();
-  const { step, completado, fechaCompletado } = body;
+  const { step, completado, nivel: nivelFromBody } = body;
 
   if (!step) throw new ValidationError('step is required');
 
@@ -19,26 +19,16 @@ export const POST = handlerWithAuth(async (request, { params, session }) => {
   const existing = await StepOverridesRepository.findByStudentAndStep(student._id, step);
 
   if (existing) {
-    const override = await StepOverridesRepository.update(
-      existing._id,
-      completado,
-      fechaCompletado || new Date().toISOString(),
-      session.user?.name || 'System',
-      session.user?.email || 'system@lgs.com',
-    );
+    const override = await StepOverridesRepository.update(existing._id, completado);
     return successResponse({ message: `Override actualizado para ${step}`, override });
   }
 
   const override = await StepOverridesRepository.create({
     _id: ids.override(),
     studentId: student._id,
-    numeroId: student.numeroId,
-    nivel: student.nivel,
+    nivel: student.nivel || nivelFromBody || '',
     step,
-    completado,
-    fechaCompletado: fechaCompletado || new Date().toISOString(),
-    creadoPor: session.user?.name || 'System',
-    creadoPorEmail: session.user?.email || 'system@lgs.com',
+    isCompleted: completado,
   });
 
   return successResponse({ message: `Override creado para ${step}`, override });

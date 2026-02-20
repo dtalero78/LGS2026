@@ -68,10 +68,20 @@ function getClassType(c: any): 'SESSION' | 'CLUB' | 'OTHER' {
 export async function generateReport(studentId: string) {
   // Get student info (try PEOPLE first, fallback to ACADEMICA)
   let student: any = await PeopleRepository.findByIdOrNumeroId(studentId);
+  // overrideStudentId: the PEOPLE _id used when writing STEP_OVERRIDES
+  let overrideStudentId: string;
+
   if (!student) {
     student = await AcademicaRepository.findByAnyId(studentId);
+    if (!student) throw new NotFoundError('Student', studentId);
+    // Overrides are stored with PEOPLE _id — resolve it via numeroId
+    const peopleRecord = student.numeroId
+      ? await PeopleRepository.findByIdOrNumeroId(student.numeroId)
+      : null;
+    overrideStudentId = peopleRecord?._id ?? student._id;
+  } else {
+    overrideStudentId = student._id;
   }
-  if (!student) throw new NotFoundError('Student', studentId);
 
   const nivelPrincipal = student.nivel;
 
@@ -104,9 +114,10 @@ export async function generateReport(studentId: string) {
     .sort((a, b) => (extractStepNumber(a) ?? 0) - (extractStepNumber(b) ?? 0));
 
   // Get all overrides for this student at once (avoid N+1)
-  const overrides = await StepOverridesRepository.findByStudentId(student._id);
+  // Use overrideStudentId (PEOPLE _id) to match how step-override route stores them
+  const overrides = await StepOverridesRepository.findByStudentId(overrideStudentId);
   const overrideMap = new Map(
-    overrides.map((o: any) => [o.step, o.completado])
+    overrides.map((o: any) => [o.step, o.isCompleted])
   );
 
   // Calculate progress by step
