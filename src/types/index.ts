@@ -30,6 +30,7 @@ export interface Student {
   tipoUsuario: 'BENEFICIARIO'
   plataforma?: string
   clave?: string
+  claveLogin?: string
   usuarioId?: string
   peopleId?: string
   estadoInactivo?: boolean

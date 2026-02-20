@@ -15,6 +15,7 @@ import {
   useStudentPanelProgress,
   useStudentMaterials,
   useStudentComments,
+  useStudentHistory,
   useCancelBooking,
 } from '@/hooks/use-panel-estudiante'
 
@@ -26,12 +27,14 @@ import ProgressReport from '@/components/panel-estudiante/ProgressReport'
 import MaterialsList from '@/components/panel-estudiante/MaterialsList'
 import WhatsAppContacts from '@/components/panel-estudiante/WhatsAppContacts'
 import AdvisorComments from '@/components/panel-estudiante/AdvisorComments'
+import ClassHistory from '@/components/panel-estudiante/ClassHistory'
 
 function PanelEstudianteContent() {
   const [showBookingFlow, setShowBookingFlow] = useState(false)
   const [bookingTipo, setBookingTipo] = useState<string | undefined>(undefined)
   const [showProgress, setShowProgress] = useState(false)
   const [showMaterials, setShowMaterials] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
 
   // Queries
   const meQuery = useStudentMe()
@@ -40,6 +43,7 @@ function PanelEstudianteContent() {
   const progressQuery = useStudentPanelProgress()
   const materialsQuery = useStudentMaterials()
   const commentsQuery = useStudentComments()
+  const historyQuery = useStudentHistory()
 
   // Mutations
   const cancelMutation = useCancelBooking()
@@ -79,7 +83,7 @@ function PanelEstudianteContent() {
 
       {/* 2. Booking Bar */}
       <div className="bg-white border-b border-gray-200 px-4 py-3">
-        <div className="max-w-5xl mx-auto flex flex-wrap items-center gap-3">
+        <div className="mx-auto px-2 flex flex-wrap items-center gap-3">
           <span className="text-lg font-bold text-primary-700 mr-2">LGS</span>
           <span className="text-sm text-gray-500 mr-1">Booking:</span>
           <button
@@ -107,17 +111,33 @@ function PanelEstudianteContent() {
             Material
           </button>
           <button
+            onClick={() => setShowHistory(true)}
+            className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1.5"
+          >
+            <BookOpenIcon className="h-4 w-4" />
+            Historial
+          </button>
+          <button
             onClick={() => setShowProgress(true)}
             className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1.5"
           >
             <ChartBarIcon className="h-4 w-4" />
             Como voy?
           </button>
+          <a
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1.5"
+          >
+            <BookOpenIcon className="h-4 w-4" />
+            Instructivo
+          </a>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+      <div className="px-6 py-6 space-y-6">
         {/* 3. Student Info Card + Attendance Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Student Info Card */}
@@ -131,8 +151,8 @@ function PanelEstudianteContent() {
             ) : (
               <div className="space-y-3">
                 <div>
-                  <span className="text-xs text-primary-200 uppercase tracking-wide">Nivel</span>
-                  <p className="text-lg font-bold">{profile?.nivel || '---'}</p>
+                  <p className="text-lg font-bold uppercase tracking-wide">Next Session</p>
+                  <p className="text-sm font-medium text-primary-200">{profile?.nivel || '---'} - {nextClass?.step || profile?.step || '---'}</p>
                 </div>
                 <div>
                   <span className="text-xs text-primary-200 uppercase tracking-wide">Asesor</span>
@@ -166,32 +186,39 @@ function PanelEstudianteContent() {
                     </p>
                   )}
                 </div>
+                <div className="pt-2 border-t border-white/20">
+                  <p className="text-sm text-primary-200 mb-2">Que aprenderas...</p>
+                  <button
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/20 text-white text-sm font-medium rounded-lg hover:bg-white/30 transition-colors"
+                  >
+                    <VideoCameraIcon className="h-4 w-4" />
+                    Ver video
+                  </button>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Stats Cards */}
-          <div className="lg:col-span-2">
+          {/* Stats Cards + Events stacked */}
+          <div className="lg:col-span-2 space-y-4">
             <AttendanceStats
               stats={statsQuery.data?.stats}
               isLoading={statsQuery.isLoading}
             />
+            <MyEventsSection
+              events={events}
+              isLoading={eventsQuery.isLoading}
+              onCancel={handleCancel}
+              isCancelling={cancelMutation.isLoading}
+            />
           </div>
         </div>
 
-        {/* 4. Two-column: Comments + Events */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <AdvisorComments
-            data={commentsQuery.data}
-            isLoading={commentsQuery.isLoading}
-          />
-          <MyEventsSection
-            events={events}
-            isLoading={eventsQuery.isLoading}
-            onCancel={handleCancel}
-            isCancelling={cancelMutation.isLoading}
-          />
-        </div>
+        {/* 5. Advisor Comments (full width) */}
+        <AdvisorComments
+          data={commentsQuery.data}
+          isLoading={commentsQuery.isLoading}
+        />
 
         {/* 5. Let's Go assistance */}
         <WhatsAppContacts />
@@ -243,6 +270,28 @@ function PanelEstudianteContent() {
               <MaterialsList
                 data={materialsQuery.data}
                 isLoading={materialsQuery.isLoading}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showHistory && (
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-5xl max-h-[85vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between rounded-t-2xl">
+              <h2 className="text-lg font-semibold text-gray-900">Historial de Clases</h2>
+              <button
+                onClick={() => setShowHistory(false)}
+                className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-4">
+              <ClassHistory
+                data={historyQuery.data}
+                isLoading={historyQuery.isLoading}
               />
             </div>
           </div>

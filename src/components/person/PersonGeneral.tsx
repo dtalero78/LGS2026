@@ -165,13 +165,18 @@ export default function PersonGeneral({ person }: PersonGeneralProps) {
                   <div className="flex items-center space-x-3">
                     <DocumentTextIcon className="h-8 w-8 text-gray-400" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{doc}</p>
+                      <p className="text-sm font-medium text-gray-900">Documento {index + 1}</p>
                       <p className="text-xs text-gray-500">PDF Document</p>
                     </div>
                   </div>
-                  <button className="mt-2 text-sm text-primary-600 hover:text-primary-800">
+                  <a
+                    href={doc}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 text-sm text-primary-600 hover:text-primary-800 block"
+                  >
                     Ver documento
-                  </button>
+                  </a>
                 </div>
               ))}
             </div>

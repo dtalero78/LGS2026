@@ -31,13 +31,13 @@ export default function AdvisorComments({ data, isLoading }: AdvisorCommentsProp
   const paged = comments.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 min-h-[280px]">
       <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
         Advisor comments:
       </h3>
       {comments.length === 0 ? (
-        <div className="text-center py-8 text-gray-400">
-          <ChatBubbleLeftEllipsisIcon className="h-10 w-10 mx-auto mb-2 text-gray-300" />
+        <div className="text-center py-16 text-gray-400">
+          <ChatBubbleLeftEllipsisIcon className="h-12 w-12 mx-auto mb-3 text-gray-300" />
           <p className="text-sm">No hay comentarios aun</p>
         </div>
       ) : (

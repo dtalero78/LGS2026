@@ -10,20 +10,42 @@ import { AcademicaRepository } from '@/repositories/academica.repository';
 import { PeopleRepository } from '@/repositories/people.repository';
 import { BookingRepository } from '@/repositories/booking.repository';
 import { NotFoundError, ValidationError } from '@/lib/errors';
+import { queryOne } from '@/lib/postgres';
 
 /**
  * Get student profile.
  * Prioritizes ACADEMICA (beneficiaries), falls back to PEOPLE (titulares).
+ * Also looks up login password from USUARIOS_ROLES by email.
  */
 export async function getProfile(id: string) {
   // Try ACADEMICA first (has JOIN with PEOPLE for full profile)
   const profile = await AcademicaRepository.findProfileById(id);
-  if (profile) return profile;
+  if (profile) return enrichWithLoginPassword(profile);
 
   // Fallback to PEOPLE (for titulares without academic record)
   const person = await PeopleRepository.findByIdOrNumeroId(id);
   if (!person) throw new NotFoundError('Student', id);
-  return person;
+  return enrichWithLoginPassword(person);
+}
+
+/**
+ * Look up USUARIOS_ROLES.password by email and attach as claveLogin.
+ */
+async function enrichWithLoginPassword(profile: any) {
+  if (!profile?.email) return profile;
+  try {
+    const user = await queryOne(
+      `SELECT "password" FROM "USUARIOS_ROLES" WHERE "email" = $1`,
+      [profile.email]
+    );
+    if (user?.password) {
+      const isBcrypt = user.password.startsWith('$2a$') || user.password.startsWith('$2b$') || user.password.startsWith('$2y$');
+      profile.claveLogin = isBcrypt ? '(Encriptada)' : user.password;
+    }
+  } catch (e) {
+    // Non-critical — don't fail the profile
+  }
+  return profile;
 }
 
 /**

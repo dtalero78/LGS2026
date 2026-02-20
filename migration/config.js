@@ -113,7 +113,7 @@ module.exports = {
     ACADEMICA: '/exportarAcademica',
     CALENDARIO: '/exportarCalendario',
     ACADEMICA_BOOKINGS: '/exportarBooking',
-    FINANCIEROS: '/exportarContratos', // Note: Wix calls it "Contratos"
+    FINANCIEROS: '/exportarFinanciera', // Wix collection: FINANCIERA
     CLUBS: '/exportarClubs', // May need to be added to Wix
     NIVELES_MATERIAL: '/exportarMaterial', // May need to be added to Wix
     COMMENTS: '/exportarComments', // May need to be added to Wix

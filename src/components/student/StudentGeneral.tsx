@@ -183,11 +183,11 @@ export default function StudentGeneral({ student }: StudentGeneralProps) {
               {student.step}
             </span>
           </div>
-          {student.clave && (
+          {(student.claveLogin || student.clave) && (
             <div>
-              <label className="block text-sm font-medium text-gray-700">Clave</label>
+              <label className="block text-sm font-medium text-gray-700">Clave Login</label>
               <span className="mt-1 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                {student.clave}
+                {student.claveLogin || student.clave}
               </span>
             </div>
           )}

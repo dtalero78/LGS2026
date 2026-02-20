@@ -545,7 +545,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
     try {
       console.log('💾 Guardando cambios:', selectedClass)
 
-      const response = await fetch(`/api/postgres/academic?id=${selectedClass._id}`, {
+      const response = await fetch(`/api/postgres/academic/${selectedClass._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -589,7 +589,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
     try {
       console.log('🗑️ Eliminando clase:', selectedClass._id)
 
-      const response = await fetch(`/api/postgres/academic?id=${selectedClass._id}`, {
+      const response = await fetch(`/api/postgres/academic/${selectedClass._id}`, {
         method: 'DELETE'
       })
 

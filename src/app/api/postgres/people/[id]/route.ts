@@ -37,6 +37,22 @@ export const GET = handler(async (
     tipoUsuario: parsedPerson?.tipoUsuario,
   });
 
+  // Look up login password from USUARIOS_ROLES by email
+  if (parsedPerson?.email) {
+    try {
+      const userLogin = await queryOne(
+        `SELECT "password" FROM "USUARIOS_ROLES" WHERE "email" = $1`,
+        [parsedPerson.email]
+      );
+      if (userLogin?.password) {
+        const isBcrypt = userLogin.password.startsWith('$2a$') || userLogin.password.startsWith('$2b$') || userLogin.password.startsWith('$2y$');
+        parsedPerson.claveLogin = isBcrypt ? '(Encriptada)' : userLogin.password;
+      }
+    } catch (e) {
+      // Non-critical
+    }
+  }
+
   // Get financial data if contract exists
   let financialData = null;
   if (parsedPerson?.contrato) {
