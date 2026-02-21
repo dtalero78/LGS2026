@@ -123,10 +123,29 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 84. Expiración automática de contratos
 85. Reactivación automática de OnHold
 
+### Panel del Estudiante
+86. Portal de auto-servicio para estudiantes logueados
+87. Ver perfil propio y progreso académico
+88. Ver eventos próximos y disponibles
+89. Auto-reserva y cancelación de clases
+90. Estadísticas personales de asistencia
+91. Historial de clases y materiales
+92. Comentarios del estudiante
+
+### Contratos con Templates
+93. Plantillas de contrato configurables
+94. Detalle de contrato con vista previa y edición
+95. Numeración automática de contratos (next-number)
+96. Envío de contrato por WhatsApp
+
+### Visor de Base de Datos (dblgs)
+97. Herramienta de debug para ver tablas de PostgreSQL
+98. Edición y creación de registros desde el visor
+
 ### Caché y Rendimiento
-86. Caché client-side en localStorage con TTL para calendario
-87. Caché server-side en memoria para permisos
-88. Invalidación automática de caché en operaciones CRUD
+99. Caché client-side en localStorage con TTL para calendario
+100. Caché server-side en memoria para permisos
+101. Invalidación automática de caché en operaciones CRUD
 
 ## Architecture
 
@@ -162,43 +181,62 @@ PostgreSQL (Digital Ocean)
 
 ```
 src/
-├── hooks/                   ← HOOKS - Frontend data fetching (5 archivos)
+├── hooks/                   ← HOOKS - Frontend data fetching (8 archivos)
 │   ├── use-api.ts               Wrapper de fetch con manejo de errores
 │   ├── use-student.ts           Datos de estudiantes (perfil, académico, progreso, onhold, extensiones)
 │   ├── use-calendar.ts          Datos del calendario (eventos, bookings, inscripciones)
 │   ├── use-advisors.ts          Datos de advisors (lista, stats)
-│   └── use-search.ts            Búsqueda global con debounce
+│   ├── use-search.ts            Búsqueda global con debounce
+│   ├── use-dblgs.ts             Visor de BD (tablas, schema, rows, CRUD)
+│   ├── use-panel-estudiante.ts  Panel estudiante (me, events, stats, progress)
+│   └── usePermissions.ts        Permisos del usuario (hasPermission, hasAny, hasAll)
 │
-├── app/api/postgres/        ← API ROUTES - Adaptadores HTTP (52 rutas)
-│   ├── students/                Perfil, academic, step, toggle-status, onhold, extend, progress
-│   ├── calendar/                Eventos del calendario, CRUD
-│   ├── events/                  Eventos, bookings, inscripciones, batch-counts
-│   ├── people/                  PEOPLE CRUD, comments, beneficiarios-sin-registro
-│   ├── advisors/                Lista, stats, events por advisor
-│   ├── search/                  Búsqueda unificada (PEOPLE + ACADEMICA)
-│   ├── contracts/               Contratos, búsqueda por patrón
-│   ├── dashboard/               Estadísticas del inicio
-│   ├── roles/                   CRUD de roles y permisos
-│   ├── niveles/                 Niveles y steps
-│   ├── financial/               Datos financieros
-│   ├── export/                  Exportación CSV (eventos, estudiantes)
-│   ├── reports/                 Reportes de asistencia
-│   ├── academic/                Historial académico, asistencia, evaluación, actividad
-│   ├── approvals/               Aprobaciones pendientes
-│   ├── materials/               Material por nivel y usuario
-│   ├── permissions/             Permisos del usuario actual
-│   └── users/                   Rol de usuario por email
+├── app/api/                 ← API ROUTES - Adaptadores HTTP (~75 rutas)
+│   ├── postgres/
+│   │   ├── students/            Perfil, academic, step, toggle-status, onhold, extend, progress, contract
+│   │   ├── calendar/            Eventos del calendario, CRUD
+│   │   ├── events/              Eventos, bookings, inscripciones, batch-counts, welcome, filtered
+│   │   ├── people/              PEOPLE CRUD, comments, beneficiarios-sin-registro
+│   │   ├── advisors/            Lista, stats, events, by-email, name
+│   │   ├── search/              Búsqueda unificada (PEOPLE + ACADEMICA)
+│   │   ├── contracts/           Contratos, búsqueda, template, next-number
+│   │   ├── dashboard/           Estadísticas del inicio
+│   │   ├── roles/               CRUD de roles y permisos
+│   │   ├── niveles/             Niveles y steps
+│   │   ├── financial/           Datos financieros
+│   │   ├── export/              Exportación CSV (eventos, estudiantes)
+│   │   ├── reports/             Reportes de asistencia
+│   │   ├── academic/            Historial académico, asistencia, evaluación, actividad
+│   │   ├── approvals/           Aprobaciones pendientes
+│   │   ├── materials/           Material por nivel y usuario
+│   │   ├── permissions/         Permisos del usuario actual
+│   │   ├── users/               Rol de usuario por email
+│   │   ├── panel-estudiante/    Panel del estudiante (me, events, stats, progress, book, cancel)
+│   │   └── dblgs/               Visor/editor de base de datos
+│   ├── auth/                    NextAuth handler, logout
+│   ├── cron/                    Jobs automáticos (expire-contracts, reactivate-onhold)
+│   ├── wix/                     Integraciones WhatsApp, CRUD beneficiarios
+│   ├── admin/                   Invalidar cache de permisos
+│   ├── dashboard/               Stats y top-students (legacy, con handler wrapper)
+│   ├── permissions/             Matriz completa de permisos, actualización
+│   ├── roles/                   Crear roles
+│   ├── user/                    Permisos del usuario actual
+│   ├── informes/                Informes de beneficiarios
+│   └── internal/                Verificación de credenciales (uso interno por auth)
 │
-├── services/                ← SERVICES - Lógica de negocio (7 archivos)
+├── services/                ← SERVICES - Lógica de negocio (10 archivos)
 │   ├── student.service.ts       Perfil (lookup ACADEMICA→PEOPLE), historial, toggle status
 │   ├── contract.service.ts      OnHold, extensiones, expiración
 │   ├── calendar.service.ts      Crear/editar/eliminar eventos con bookings
 │   ├── enrollment.service.ts    Inscribir estudiantes en eventos (validación de capacidad)
 │   ├── search.service.ts        Búsqueda unificada en PEOPLE + ACADEMICA en paralelo
 │   ├── dashboard.service.ts     Estadísticas del dashboard (queries paralelas)
-│   └── progress.service.ts      Reporte "¿Cómo voy?" (diagnóstico del estudiante)
+│   ├── progress.service.ts      Reporte "¿Cómo voy?" (diagnóstico del estudiante)
+│   ├── panel-estudiante.service.ts  Panel del estudiante (perfil, eventos, stats, progreso)
+│   ├── student-booking.service.ts   Auto-reserva de clases por estudiantes
+│   └── dblgs.service.ts         Acceso dinámico a tablas de BD (visor/editor)
 │
-├── repositories/            ← REPOSITORIES - Acceso a datos / SQL (10 archivos)
+├── repositories/            ← REPOSITORIES - Acceso a datos / SQL (11 archivos)
 │   ├── base.repository.ts       Clase base: findById, findMany, updateFields, parseJsonb
 │   ├── people.repository.ts     Tabla PEOPLE (~10 rutas)
 │   ├── academica.repository.ts  Tabla ACADEMICA (~4 rutas)
@@ -208,24 +246,36 @@ src/
 │   ├── roles.repository.ts      Tablas ROL_PERMISOS + USUARIOS_ROLES (~4 rutas)
 │   ├── niveles.repository.ts    Tablas NIVELES + STEP_OVERRIDES (~4 rutas)
 │   ├── financial.repository.ts  Tabla FINANCIEROS (~2 rutas)
-│   └── comments.repository.ts   Tabla COMENTARIOS (~2 rutas)
+│   ├── comments.repository.ts   Tabla COMENTARIOS (~2 rutas)
+│   └── dblgs.repository.ts      Consultas genéricas dinámicas por tabla (standalone, no extiende Base)
 │
-├── lib/                     ← UTILIDADES compartidas (4 archivos nuevos + existentes)
-│   ├── errors.ts                Clases de error: NotFoundError, ValidationError, UnauthorizedError
-│   ├── api-helpers.ts           handler(), handlerWithAuth(), successResponse()
+├── lib/                     ← UTILIDADES compartidas (12 archivos)
+│   ├── errors.ts                Clases de error: NotFoundError, ValidationError, UnauthorizedError, ForbiddenError, ConflictError
+│   ├── api-helpers.ts           handler(), handlerWithAuth(), successResponse(), errorResponse()
 │   ├── query-builder.ts         buildDynamicUpdate(), buildDynamicWhere()
 │   ├── id-generator.ts          ids.event(), ids.booking(), etc.
-│   ├── postgres.ts              Pool de conexión PostgreSQL (existente)
-│   ├── auth.ts                  NextAuth.js config (existente)
-│   └── middleware-permissions.ts Cache de permisos server-side (existente)
+│   ├── postgres.ts              Pool de conexión PostgreSQL
+│   ├── auth.ts                  NextAuth.js config (legacy)
+│   ├── auth-postgres.ts         NextAuth.js config (PostgreSQL actual)
+│   ├── middleware-permissions.ts Cache de permisos server-side
+│   ├── zod-resolver.ts          Custom zodResolver para react-hook-form
+│   ├── custom-permissions.ts    Resolución de permisos con fallback
+│   ├── permissions.ts           Utilidades de permisos
+│   └── utils.ts                 Utilidades generales
 │
-├── components/              ← COMPONENTES React organizados por feature
-│   ├── layout/                  DashboardLayout, sidebar, navigation
-│   ├── student/                 StudentTabs, StudentAcademic, StudentOnHold, StudentContract...
-│   ├── search/                  SearchBar (búsqueda global)
-│   ├── calendar/                CalendarView, EventModal, EventForm...
-│   ├── permissions/             PermissionGuard
-│   └── ui/                      Componentes genéricos reutilizables
+├── components/              ← COMPONENTES React organizados por feature (12 directorios)
+│   ├── layout/                  DashboardLayout, sidebar, navigation (1 archivo)
+│   ├── student/                 StudentTabs, StudentAcademic, StudentOnHold, StudentContract... (10 archivos)
+│   ├── search/                  SearchBar (búsqueda global) (1 archivo)
+│   ├── calendar/                CalendarView, EventModal, EventForm... (4 archivos)
+│   ├── permissions/             PermissionGuard y utilidades (6 archivos)
+│   ├── panel-estudiante/        Panel del estudiante (10 archivos)
+│   ├── person/                  Detalle de persona/titular (6 archivos)
+│   ├── advisor/                 Detalle de advisor (3 archivos)
+│   ├── advisors/                Lista de advisors (3 archivos)
+│   ├── session/                 Detalle de sesión (4 archivos)
+│   ├── dashboard/               Componentes del dashboard (2 archivos)
+│   └── academic/                Componentes académicos (1 archivo)
 │
 └── types/                   ← TypeScript definitions
     ├── index.ts                 Student, Person, Event, Booking, etc.
@@ -237,7 +287,7 @@ src/
 - **`server-only`**: Todos los repositorios, servicios y api-helpers importan `'server-only'` para evitar que se incluyan en bundles del cliente
 - **SQL parametrizado**: Todo el SQL usa placeholders `$1, $2, ...` (nunca interpolación de strings)
 - **React Query v3**: Se importa de `'react-query'` (NO de `@tanstack/react-query`)
-- **handler() wrapper**: Todas las rutas API usan `handler()` o `handlerWithAuth()` de `@/lib/api-helpers` para estandarizar try/catch y respuestas de error
+- **handler() wrapper**: Todas las rutas API de postgres/ usan `handler()` o `handlerWithAuth()` de `@/lib/api-helpers` para estandarizar try/catch y respuestas de error. Rutas legacy (auth, cron, wix) son excepciones legítimas que manejan su propio error handling
 - **JSONB**: Campos como `onHoldHistory`, `extensionHistory`, `evaluacion` se almacenan como JSONB en PostgreSQL. Los repositorios usan `parseJsonb()` de la clase base para deserializarlos
 
 ## Development Commands
