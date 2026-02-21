@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
 import { ComercialPermission } from '@/types/permissions'
@@ -10,6 +9,7 @@ import { ArrowLeftIcon, ArrowRightIcon, PlusIcon, TrashIcon } from '@heroicons/r
 // Country prefixes
 const COUNTRY_PREFIXES = [
   { country: "Argentina", prefix: "+54" },
+  { country: "Australia", prefix: "+61" },
   { country: "Bolivia", prefix: "+591" },
   { country: "Chile", prefix: "+56" },
   { country: "Colombia", prefix: "+57" },
@@ -18,6 +18,7 @@ const COUNTRY_PREFIXES = [
   { country: "Ecuador", prefix: "+593" },
   { country: "El Salvador", prefix: "+503" },
   { country: "España", prefix: "+34" },
+  { country: "Estados Unidos", prefix: "+1" },
   { country: "Guatemala", prefix: "+502" },
   { country: "Honduras", prefix: "+504" },
   { country: "México", prefix: "+52" },
@@ -28,7 +29,8 @@ const COUNTRY_PREFIXES = [
   { country: "Puerto Rico", prefix: "+1 787" },
   { country: "República Dominicana", prefix: "+1 809" },
   { country: "Uruguay", prefix: "+598" },
-  { country: "Venezuela", prefix: "+58" }
+  { country: "Venezuela", prefix: "+58" },
+  { country: "Otro", prefix: "" }
 ];
 
 // Payment method options by country
@@ -66,7 +68,6 @@ interface Beneficiario {
 }
 
 export default function CrearContratoPage() {
-  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -75,12 +76,13 @@ export default function CrearContratoPage() {
 
   // Form data
   const [titular, setTitular] = useState({
-    asesorCreadorContrato: '',
+    asesor: '',
     primerNombre: '',
     segundoNombre: '',
     primerApellido: '',
     segundoApellido: '',
     numeroId: '',
+    plataforma: '',
     fechaNacimiento: '',
     pais: 'Colombia',
     domicilio: '',
@@ -113,11 +115,34 @@ export default function CrearContratoPage() {
 
   const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>([]);
   const [titularEsBeneficiario, setTitularEsBeneficiario] = useState(false);
+  const [contrato, setContrato] = useState('');
+  const [loadingContrato, setLoadingContrato] = useState(false);
 
-  // Get phone prefix based on selected country
+  // Auto-generate contract number when plataforma changes
+  const fetchNextContractNumber = useCallback(async (plataforma: string) => {
+    if (!plataforma) { setContrato(''); return; }
+    setLoadingContrato(true);
+    try {
+      const res = await fetch(`/api/postgres/contracts/next-number?plataforma=${encodeURIComponent(plataforma)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setContrato(data.contrato);
+      }
+    } catch (err) {
+      console.error('Error fetching contract number:', err);
+    } finally {
+      setLoadingContrato(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNextContractNumber(titular.plataforma);
+  }, [titular.plataforma, fetchNextContractNumber]);
+
+  // Get phone prefix based on selected country (without '+')
   const getPhonePrefix = () => {
     const countryData = COUNTRY_PREFIXES.find(c => c.country === titular.pais);
-    return countryData?.prefix || '';
+    return (countryData?.prefix || '').replace(/\+/g, '').replace(/\s/g, '');
   };
 
   // Get payment options based on selected country
@@ -207,11 +232,13 @@ export default function CrearContratoPage() {
   const validateStep = (step: number): boolean => {
     switch (step) {
       case 1:
-        return titular.asesorCreadorContrato !== '';
+        return titular.asesor !== '';
       case 2:
         return titular.primerNombre !== '' &&
                titular.primerApellido !== '' &&
-               titular.numeroId !== '';
+               titular.numeroId !== '' &&
+               titular.plataforma !== '' &&
+               contrato !== '';
       case 3:
         return titular.fechaNacimiento !== '' &&
                titular.pais !== '' &&
@@ -276,12 +303,16 @@ export default function CrearContratoPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          contrato,
           titular: {
             ...titular,
             celular: getPhonePrefix() + titular.celular
           },
           financial,
-          beneficiarios,
+          beneficiarios: beneficiarios.map(b => ({
+            ...b,
+            celular: b.celular ? getPhonePrefix() + b.celular : null
+          })),
           titularEsBeneficiario
         })
       });
@@ -292,13 +323,13 @@ export default function CrearContratoPage() {
       }
 
       const data = await response.json();
-      setContractNumber(data.data.contractNumber);
-      setSuccess(`Contrato creado exitosamente. Número de contrato: ${data.data.contractNumber}`);
+      setContractNumber(data.contractNumber);
+      setSuccess(`Contrato creado exitosamente. Número de contrato: ${data.contractNumber}`);
 
-      // Redirect to Wix contract review page
-      if (data.data._id) {
+      // Redirect to contract detail page
+      if (data._id) {
         setTimeout(() => {
-          window.location.href = `https://www.lgsplataforma.com/contrato/${data.data._id}?forReview=`;
+          window.location.href = `/dashboard/comercial/contrato/${data._id}`;
         }, 2000);
       }
 
@@ -365,8 +396,8 @@ export default function CrearContratoPage() {
                 </label>
                 <input
                   type="text"
-                  value={titular.asesorCreadorContrato}
-                  onChange={(e) => setTitular({...titular, asesorCreadorContrato: e.target.value})}
+                  value={titular.asesor}
+                  onChange={(e) => setTitular({...titular, asesor: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   placeholder="Nombre del asesor"
                 />
@@ -423,7 +454,7 @@ export default function CrearContratoPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
-                <div className="col-span-2">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Número de identificación *
                   </label>
@@ -434,8 +465,44 @@ export default function CrearContratoPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Plataforma *
+                  </label>
+                  <select
+                    value={titular.plataforma}
+                    onChange={(e) => setTitular({...titular, plataforma: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="">Seleccionar...</option>
+                    <option value="Chile">Chile</option>
+                    <option value="Colombia">Colombia</option>
+                    <option value="Ecuador">Ecuador</option>
+                    <option value="Perú">Perú</option>
+                  </select>
+                </div>
                 <div className="col-span-2">
-                  <div className="flex items-center">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Número de contrato *
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={contrato}
+                      onChange={(e) => setContrato(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      placeholder={loadingContrato ? 'Generando...' : 'Seleccione plataforma para generar'}
+                    />
+                    {loadingContrato && (
+                      <svg className="animate-spin h-5 w-5 text-gray-400 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                      </svg>
+                    )}
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <div className="relative group flex items-center">
                     <input
                       type="checkbox"
                       id="titularEsBeneficiario"
@@ -443,13 +510,13 @@ export default function CrearContratoPage() {
                       onChange={(e) => setTitularEsBeneficiario(e.target.checked)}
                       className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                     />
-                    <label htmlFor="titularEsBeneficiario" className="ml-2 block text-sm font-medium text-gray-700">
+                    <label htmlFor="titularEsBeneficiario" className="ml-2 block text-lg font-bold text-gray-900 cursor-pointer">
                       ¿Este titular será beneficiario? (tomará clases)
                     </label>
+                    <span className="invisible group-hover:visible absolute left-0 top-full mt-1 bg-gray-800 text-white text-sm rounded px-3 py-1.5 whitespace-nowrap z-10">
+                      Marque esta opción si el titular también tomará clases de inglés
+                    </span>
                   </div>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Marque esta opción si el titular también tomará clases de inglés
-                  </p>
                 </div>
               </div>
             </div>

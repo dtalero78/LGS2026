@@ -47,6 +47,7 @@ module.exports = {
     CLUBS: 100, // Very small table
     COMMENTS: 100, // Medium table
     STEP_OVERRIDES: 100, // Medium table
+    CONTRACT_TEMPLATES: 100, // Very small table (4 records)
   },
 
   // Rate limiting (pause between batches in milliseconds)
@@ -63,6 +64,7 @@ module.exports = {
     CLUBS: 1000,
     COMMENTS: 1500,
     STEP_OVERRIDES: 1500,
+    CONTRACT_TEMPLATES: 1000,
   },
 
   // Retry settings
@@ -118,6 +120,7 @@ module.exports = {
     NIVELES_MATERIAL: '/exportarMaterial', // May need to be added to Wix
     COMMENTS: '/exportarComments', // May need to be added to Wix
     STEP_OVERRIDES: '/exportarOverrides', // May need to be added to Wix
+    CONTRACT_TEMPLATES: '/exportarContractTemplates',
     METADATA: '/exportarMetadata', // Get total counts
   },
 
@@ -135,6 +138,7 @@ module.exports = {
     CLUBS: '"CLUBS"',
     COMMENTS: '"COMMENTS"',
     STEP_OVERRIDES: '"STEP_OVERRIDES"',
+    CONTRACT_TEMPLATES: '"ContractTemplates"',
   },
 
   // JSONB fields per table (for parsing/stringifying)
@@ -151,6 +155,7 @@ module.exports = {
     CLUBS: [],
     COMMENTS: [],
     STEP_OVERRIDES: [],
+    CONTRACT_TEMPLATES: [],
   },
 
   // Primary key field (always _id for Wix collections)

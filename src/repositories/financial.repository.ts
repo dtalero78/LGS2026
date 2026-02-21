@@ -7,6 +7,7 @@
 import 'server-only';
 import { queryOne } from '@/lib/postgres';
 import { BaseRepository } from './base.repository';
+import { buildDynamicUpdate } from '@/lib/query-builder';
 
 class FinancialRepositoryClass extends BaseRepository {
   constructor() {
@@ -24,6 +25,16 @@ class FinancialRepositoryClass extends BaseRepository {
        LIMIT 1`,
       [contrato]
     );
+  }
+
+  /**
+   * Update financial record by _id
+   */
+  async updateFields(id: string, body: Record<string, any>, allowedFields: string[]) {
+    const built = buildDynamicUpdate('FINANCIEROS', body, allowedFields);
+    if (!built) return null;
+    built.values.push(id);
+    return queryOne(built.query, built.values);
   }
 }
 

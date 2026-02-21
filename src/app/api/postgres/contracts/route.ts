@@ -1,90 +1,99 @@
 import 'server-only';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { query } from '@/lib/postgres';
-import { ValidationError, ConflictError } from '@/lib/errors';
+import { ValidationError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 
 export const POST = handlerWithAuth(async (request) => {
-  const { contrato, titular, beneficiarios, financiero } = await request.json();
+  const { contrato, titular, financial, beneficiarios, titularEsBeneficiario } = await request.json();
 
   if (!contrato) throw new ValidationError('contrato is required');
   if (!titular?.numeroId || !titular?.primerNombre || !titular?.primerApellido) {
     throw new ValidationError('titular with numeroId, primerNombre, and primerApellido is required');
   }
-  if (!beneficiarios?.length) throw new ValidationError('At least one beneficiario is required');
 
-  // Check duplicates
-  const existingContract = await query(`SELECT "contrato" FROM "PEOPLE" WHERE "contrato" = $1 LIMIT 1`, [contrato]);
-  if (existingContract.rowCount > 0) throw new ConflictError(`Contract ${contrato} already exists`);
+  const created: any = { contrato, titular: null, beneficiarios: [] };
 
-  const existingTitular = await query(`SELECT "numeroId" FROM "PEOPLE" WHERE "numeroId" = $1`, [titular.numeroId]);
-  if (existingTitular.rowCount > 0) throw new ConflictError(`Titular with numeroId ${titular.numeroId} already exists`);
-
-  for (const b of beneficiarios) {
-    const exists = await query(`SELECT "numeroId" FROM "PEOPLE" WHERE "numeroId" = $1`, [b.numeroId]);
-    if (exists.rowCount > 0) throw new ConflictError(`Beneficiario with numeroId ${b.numeroId} already exists`);
-  }
-
-  const created: any = { contrato, titular: null, beneficiarios: [], academica: [], financiero: null };
-
-  // 1. Create TITULAR
+  // 1. Create TITULAR in PEOPLE
+  const titularId = ids.person();
   const titularResult = await query(
     `INSERT INTO "PEOPLE" ("_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
-      "email", "celular", "fechaNacimiento", "direccion", "ciudad", "pais", "codigoPais",
-      "tipoUsuario", "contrato", "vigencia", "finalContrato", "inicioCurso", "observaciones", "origen", "_createdDate", "_updatedDate")
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'TITULAR',$14,$15,$16,$17,$18,'POSTGRES',NOW(),NOW()) RETURNING *`,
-    [ids.person(), titular.numeroId, titular.primerNombre, titular.segundoNombre||null, titular.primerApellido,
-     titular.segundoApellido||null, titular.email||null, titular.celular||null, titular.fechaNacimiento||null,
-     titular.direccion||null, titular.ciudad||null, titular.pais||null, titular.codigoPais||null,
-     contrato, titular.vigencia||null, titular.finalContrato||null, titular.inicioCurso||null, titular.observaciones||null]
+      "email", "celular", "telefono", "fechaNacimiento", "domicilio", "ciudad",
+      "plataforma", "ingresos", "empresa", "cargo", "genero",
+      "referenciaUno", "parentezcoRefUno", "telefonoRefUno", "referenciaDos", "parentezcoRefDos", "telefonoRefDos",
+      "asesor", "tipoUsuario", "contrato", "vigencia", "fechaContrato", "origen", "_createdDate", "_updatedDate")
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,'TITULAR',$25,$26,NOW(),'POSTGRES',NOW(),NOW()) RETURNING *`,
+    [titularId, titular.numeroId, titular.primerNombre, titular.segundoNombre || null,
+     titular.primerApellido, titular.segundoApellido || null,
+     titular.email || null, titular.celular || null, titular.telefono || null,
+     titular.fechaNacimiento || null, titular.domicilio || null, titular.ciudad || null,
+     titular.plataforma || null, titular.ingresos || null, titular.empresa || null, titular.cargo || null, titular.genero || null,
+     titular.referenciaUno || null, titular.parentezcoRefUno || null, titular.telRefUno || null,
+     titular.referenciaDos || null, titular.parentezcoRefDos || null, titular.telRefDos || null,
+     titular.asesor || null, contrato, financial?.vigencia || null]
   );
   created.titular = titularResult.rows[0];
 
-  // 2. Create BENEFICIARIOS + ACADEMICA
-  for (const b of beneficiarios) {
-    const benefResult = await query(
-      `INSERT INTO "PEOPLE" ("_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
-        "email", "celular", "fechaNacimiento", "direccion", "ciudad", "pais", "codigoPais",
-        "tipoUsuario", "contrato", "nivel", "step", "nivelParalelo", "stepParalelo",
-        "plataforma", "vigencia", "finalContrato", "inicioCurso", "estadoInactivo", "observaciones", "origen", "_createdDate", "_updatedDate")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'BENEFICIARIO',$14,$15,$16,$17,$18,$19,$20,$21,$22,false,$23,'POSTGRES',NOW(),NOW()) RETURNING *`,
-      [ids.person(), b.numeroId, b.primerNombre, b.segundoNombre||null, b.primerApellido, b.segundoApellido||null,
-       b.email||null, b.celular||null, b.fechaNacimiento||null, b.direccion||null, b.ciudad||null, b.pais||null,
-       b.codigoPais||null, contrato, b.nivel||'WELCOME', b.step||'WELCOME', b.nivelParalelo||null, b.stepParalelo||null,
-       b.plataforma||'ZOOM', titular.vigencia||null, titular.finalContrato||null, titular.inicioCurso||null, b.observaciones||null]
-    );
-    created.beneficiarios.push(benefResult.rows[0]);
+  // 2. Build beneficiarios list (include titular if titularEsBeneficiario)
+  const allBeneficiarios: any[] = [];
 
-    const academicaResult = await query(
-      `INSERT INTO "ACADEMICA" ("_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
-        "email", "celular", "nivel", "step", "plataforma", "origen", "_createdDate", "_updatedDate")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'POSTGRES',NOW(),NOW()) RETURNING *`,
-      [ids.academic(), b.numeroId, b.primerNombre, b.segundoNombre||null, b.primerApellido, b.segundoApellido||null,
-       b.email||null, b.celular||null, b.nivel||'WELCOME', b.step||'WELCOME', b.plataforma||'ZOOM']
-    );
-    created.academica.push(academicaResult.rows[0]);
+  if (titularEsBeneficiario) {
+    allBeneficiarios.push({
+      primerNombre: titular.primerNombre,
+      segundoNombre: titular.segundoNombre,
+      primerApellido: titular.primerApellido,
+      segundoApellido: titular.segundoApellido,
+      numeroId: titular.numeroId,
+      fechaNacimiento: titular.fechaNacimiento,
+      email: titular.email,
+      celular: titular.celular,
+    });
   }
 
-  // 3. Create FINANCIERO
-  if (financiero) {
+  if (beneficiarios?.length) {
+    allBeneficiarios.push(...beneficiarios);
+  }
+
+  // 3. Create each BENEFICIARIO in PEOPLE (sin nivel/step — se asigna manualmente después)
+  for (const b of allBeneficiarios) {
+    const benefId = ids.person();
+    const benefResult = await query(
+      `INSERT INTO "PEOPLE" ("_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
+        "email", "celular", "fechaNacimiento", "titularId",
+        "tipoUsuario", "contrato", "plataforma", "estadoInactivo",
+        "vigencia", "fechaContrato", "origen", "_createdDate", "_updatedDate")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'BENEFICIARIO',$11,$12,false,$13,NOW(),'POSTGRES',NOW(),NOW()) RETURNING *`,
+      [benefId, b.numeroId, b.primerNombre, b.segundoNombre || null,
+       b.primerApellido, b.segundoApellido || null,
+       b.email || null, b.celular || null, b.fechaNacimiento || null, titularId,
+       contrato, titular.plataforma || null, financial?.vigencia || null]
+    );
+    created.beneficiarios.push(benefResult.rows[0]);
+  }
+
+  // 4. Create FINANCIERO if financial data present
+  if (financial && financial.totalPlan) {
     const finResult = await query(
-      `INSERT INTO "FINANCIEROS" ("_id", "contrato", "valorTotal", "modalidad", "cuotas", "valorCuota",
-        "fechaPago", "proximoPago", "metodoPago", "estadoPago", "saldoPendiente",
-        "observaciones", "descuento", "valorDescuento", "valorFinal", "origen", "_createdDate", "_updatedDate")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'POSTGRES',NOW(),NOW()) RETURNING *`,
-      [ids.financial(), contrato, financiero.valorTotal||0, financiero.modalidad||'MENSUAL', financiero.cuotas||null,
-       financiero.valorCuota||null, financiero.fechaPago||null, financiero.proximoPago||null, financiero.metodoPago||null,
-       financiero.estadoPago||'PENDIENTE', financiero.saldoPendiente||financiero.valorTotal||0,
-       financiero.observaciones||null, financiero.descuento||null, financiero.valorDescuento||null,
-       financiero.valorFinal||financiero.valorTotal||0]
+      `INSERT INTO "FINANCIEROS" ("_id", "contrato", "totalPlan", "numeroCuotas", "valorCuota",
+        "pagoInscripcion", "saldo", "fechaPago", "medioPago", "vigencia",
+        "origen", "_createdDate", "_updatedDate")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'POSTGRES',NOW(),NOW()) RETURNING *`,
+      [ids.financial(), contrato, financial.totalPlan || 0, financial.numeroCuotas || 0,
+       financial.valorCuota || 0, financial.pagoInscripcion || 0, financial.saldo || 0,
+       financial.fechaPago || null, financial.medioPago || null, financial.vigencia || null]
     );
     created.financiero = finResult.rows[0];
   }
 
   return successResponse({
-    message: `Contract ${contrato} created successfully`,
-    contract: created,
-    summary: { contrato, titularCreated: true, beneficiariosCreated: created.beneficiarios.length,
-               academicaRecordsCreated: created.academica.length, financieroCreated: !!created.financiero },
+    message: `Contrato ${contrato} creado exitosamente`,
+    _id: titularId,
+    contractNumber: contrato,
+    data: { _id: titularId, contractNumber: contrato },
+    summary: {
+      contrato,
+      titularCreated: true,
+      beneficiariosCreated: created.beneficiarios.length,
+    },
   });
 });

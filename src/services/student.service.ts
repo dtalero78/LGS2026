@@ -132,7 +132,16 @@ export async function changeStep(
   id: string,
   newStep: string
 ) {
-  const person = await PeopleRepository.findByIdOrNumeroIdOrThrow(id);
+  // Try ACADEMICA first (the /student/[id] page uses ACADEMICA _id)
+  const academic = await AcademicaRepository.findByAnyId(id);
+
+  // Fall back to PEOPLE if not found in ACADEMICA
+  const person = academic
+    ? (academic.numeroId ? await PeopleRepository.findByIdOrNumeroId(academic.numeroId) : null)
+    : await PeopleRepository.findByIdOrNumeroId(id);
+
+  const numeroId = academic?.numeroId || person?.numeroId;
+  if (!academic && !person) throw new NotFoundError('Student', id);
 
   // Look up the nivel info for this step
   const { NivelesRepository } = await import('@/repositories/niveles.repository');
@@ -142,12 +151,15 @@ export async function changeStep(
   const isParallel = nivelInfo.esParalelo === true;
   const nivel = nivelInfo.code;
 
-  // Update PEOPLE
-  const updatedPerson = await PeopleRepository.updateStep(person._id, nivel, newStep, isParallel);
+  // Update ACADEMICA
+  if (numeroId) {
+    await AcademicaRepository.updateStep(numeroId, nivel, newStep, isParallel);
+  }
 
-  // Update ACADEMICA (uses numeroId)
-  if (person.numeroId) {
-    await AcademicaRepository.updateStep(person.numeroId, nivel, newStep, isParallel);
+  // Update PEOPLE
+  let updatedPerson = person;
+  if (person) {
+    updatedPerson = await PeopleRepository.updateStep(person._id, nivel, newStep, isParallel);
   }
 
   const fieldNames = isParallel
@@ -155,7 +167,7 @@ export async function changeStep(
     : { nivel, step: newStep };
 
   return {
-    student: updatedPerson,
+    student: updatedPerson || academic,
     isParallel,
     updatedFields: fieldNames,
   };

@@ -1,0 +1,832 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import DashboardLayout from '@/components/layout/DashboardLayout'
+import { PermissionGuard } from '@/components/permissions'
+import { ComercialPermission } from '@/types/permissions'
+import { api, handleApiError } from '@/hooks/use-api'
+import toast from 'react-hot-toast'
+import {
+  PencilIcon,
+  CheckIcon,
+  XMarkIcon,
+  ArrowLeftIcon,
+  UserIcon,
+  UsersIcon,
+  BanknotesIcon,
+  DocumentTextIcon,
+  PhoneIcon,
+  EyeIcon,
+  IdentificationIcon,
+  CalendarIcon,
+} from '@heroicons/react/24/outline'
+
+// ── Field definitions ──
+
+interface FieldDef {
+  campo: string
+  label: string
+  tipo?: 'text' | 'select' | 'readonly' | 'date'
+  opciones?: string[]
+  soloTitular?: boolean
+}
+
+const CAMPOS_TITULAR: FieldDef[] = [
+  { campo: 'contrato', label: 'Numero de Contrato', tipo: 'readonly' },
+  { campo: 'primerNombre', label: 'Primer Nombre' },
+  { campo: 'segundoNombre', label: 'Segundo Nombre' },
+  { campo: 'primerApellido', label: 'Primer Apellido' },
+  { campo: 'segundoApellido', label: 'Segundo Apellido' },
+  { campo: 'numeroId', label: 'Numero de ID' },
+  { campo: 'fechaNacimiento', label: 'Fecha de Nacimiento', tipo: 'date' },
+  { campo: 'plataforma', label: 'Plataforma', tipo: 'select', opciones: ['Chile', 'Colombia', 'Ecuador', 'Peru', 'Mosaico', 'Internacional'] },
+  { campo: 'domicilio', label: 'Domicilio' },
+  { campo: 'ciudad', label: 'Ciudad' },
+  { campo: 'celular', label: 'Celular' },
+  { campo: 'telefono', label: 'Telefono' },
+  { campo: 'email', label: 'Email' },
+  { campo: 'ingresos', label: 'Ingresos' },
+  { campo: 'empresa', label: 'Empresa' },
+  { campo: 'cargo', label: 'Cargo' },
+  { campo: 'genero', label: 'Genero', tipo: 'select', opciones: ['Masculino', 'Femenino', 'Otro'] },
+  { campo: 'medioPago', label: 'Medio de Pago' },
+  { campo: 'asesor', label: 'Asesor' },
+]
+
+const CAMPOS_REFERENCIAS: FieldDef[] = [
+  { campo: 'referenciaUno', label: 'Referencia 1' },
+  { campo: 'parentezcoRefUno', label: 'Parentesco Ref 1' },
+  { campo: 'telefonoRefUno', label: 'Telefono Ref 1' },
+  { campo: 'referenciaDos', label: 'Referencia 2' },
+  { campo: 'parentezcoRefDos', label: 'Parentesco Ref 2' },
+  { campo: 'telefonoRefDos', label: 'Telefono Ref 2' },
+]
+
+const CAMPOS_BENEFICIARIO: FieldDef[] = [
+  { campo: 'primerNombre', label: 'Primer Nombre' },
+  { campo: 'segundoNombre', label: 'Segundo Nombre' },
+  { campo: 'primerApellido', label: 'Primer Apellido' },
+  { campo: 'segundoApellido', label: 'Segundo Apellido' },
+  { campo: 'numeroId', label: 'Numero de ID' },
+  { campo: 'fechaNacimiento', label: 'Fecha de Nacimiento', tipo: 'date' },
+  { campo: 'celular', label: 'Celular' },
+  { campo: 'email', label: 'Email' },
+]
+
+const CAMPOS_FINANCIERO: FieldDef[] = [
+  { campo: 'totalPlan', label: 'Total del Plan' },
+  { campo: 'pagoInscripcion', label: 'Pago Inscripcion' },
+  { campo: 'saldo', label: 'Saldo' },
+  { campo: 'numeroCuotas', label: 'Numero de Cuotas' },
+  { campo: 'valorCuota', label: 'Valor Cuota' },
+  { campo: 'formaPago', label: 'Forma de Pago' },
+  { campo: 'fechaPago', label: 'Fecha de Pago', tipo: 'date' },
+  { campo: 'medioPago', label: 'Medio de Pago' },
+  { campo: 'vigencia', label: 'Vigencia' },
+]
+
+// ── Helpers ──
+
+function formatValue(value: any, tipo?: string): string {
+  if (value === null || value === undefined || value === '') return '—'
+  if (tipo === 'date' && typeof value === 'string') {
+    try {
+      const d = new Date(value)
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
+      }
+    } catch { /* ignore */ }
+  }
+  return String(value)
+}
+
+function formatDateForInput(value: any): string {
+  if (!value) return ''
+  try {
+    const d = new Date(value)
+    if (!isNaN(d.getTime())) return d.toISOString().split('T')[0]
+  } catch { /* ignore */ }
+  return String(value)
+}
+
+function fullName(person: any): string {
+  return [person?.primerNombre, person?.segundoNombre, person?.primerApellido, person?.segundoApellido]
+    .filter(Boolean).join(' ')
+}
+
+/**
+ * Fill a contract template with data, replacing {{placeholder}} tokens.
+ * Mirrors the Wix TemplateManager.buildData + fillTemplate logic.
+ */
+function fillContractTemplate(
+  template: string,
+  titular: any,
+  beneficiarios: any[],
+  financial: any
+): string {
+  // Build beneficiarios text block
+  const beneficiariosText = beneficiarios.length === 0
+    ? ''
+    : beneficiarios.map((b, i) =>
+        `Beneficiario ${i + 1}:\n` +
+        `- Numero de Contrato: ${b.contrato || 'Sin asignar'}\n` +
+        `- Nombre Completo: ${[b.primerNombre, b.segundoNombre, b.primerApellido, b.segundoApellido].filter(Boolean).join(' ')}\n` +
+        `- Documento: ${b.numeroId || ''}\n` +
+        `- Fecha de nacimiento: ${b.fechaNacimiento || ''}\n` +
+        `- Telefono: ${b.celular || ''}\n` +
+        `- Pais: ${b.plataforma || ''}\n` +
+        `- Ciudad: ${b.ciudad || ''}\n` +
+        `- Domicilio: ${b.domicilio || ''}\n` +
+        `- Email: ${b.email || ''}`
+      ).join('\n\n')
+
+  // Build data map
+  const data: Record<string, string> = {
+    contrato: titular?.contrato || '',
+    fecha: titular?._createdDate
+      ? new Date(titular._createdDate).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
+      : '',
+    primerNombre: titular?.primerNombre || '',
+    segundoNombre: titular?.segundoNombre || '',
+    primerApellido: titular?.primerApellido || '',
+    segundoApellido: titular?.segundoApellido || '',
+    numeroId: titular?.numeroId || '',
+    fechaNacimiento: titular?.fechaNacimiento || '',
+    domicilio: titular?.domicilio || '',
+    ciudad: titular?.ciudad || '',
+    celular: titular?.celular || '',
+    email: titular?.email || '',
+    ingresos: titular?.ingresos || '',
+    empresa: titular?.empresa || '',
+    cargo: titular?.cargo || '',
+    observaciones: titular?.observacionesContrato || '',
+    medioPago: financial?.medioPago || titular?.medioPago || '',
+    beneficiarios: beneficiariosText,
+    totalPlan: financial?.totalPlan != null ? String(financial.totalPlan) : '',
+    pagoInscripcion: financial?.pagoInscripcion != null ? String(financial.pagoInscripcion) : '',
+    saldo: financial?.saldo != null ? String(financial.saldo) : '',
+    numeroCuotas: financial?.numeroCuotas != null ? String(financial.numeroCuotas) : '',
+    valorCuota: financial?.valorCuota != null ? String(financial.valorCuota) : '',
+    formaPago: financial?.formaPago || '',
+    fechaPago: financial?.fechaPago || '',
+    referenciaUno: titular?.referenciaUno || '',
+    parentezcoRefUno: titular?.parentezcoRefUno || '',
+    telefonoRefUno: titular?.telefonoRefUno || '',
+    referenciaDos: titular?.referenciaDos || '',
+    parentezcoRefDos: titular?.parentezcoRefDos || '',
+    telefonoRefDos: titular?.telefonoRefDos || '',
+    firma: '',
+  }
+
+  // Replace all {{key}} placeholders
+  return template.replace(/\{\{(\w+)\}\}/g, (_match, key) => data[key] ?? '')
+}
+
+// ── Components ──
+
+function FieldDisplay({ field, value, editing, editValue, onEditChange }: {
+  field: FieldDef
+  value: any
+  editing: boolean
+  editValue: any
+  onEditChange: (campo: string, val: any) => void
+}) {
+  if (!editing || field.tipo === 'readonly') {
+    return (
+      <div>
+        <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">{field.label}</dt>
+        <dd className="mt-1 text-sm text-gray-900">{formatValue(value, field.tipo)}</dd>
+      </div>
+    )
+  }
+
+  if (field.tipo === 'select' && field.opciones) {
+    return (
+      <div>
+        <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">{field.label}</label>
+        <select
+          value={editValue ?? ''}
+          onChange={(e) => onEditChange(field.campo, e.target.value)}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+        >
+          <option value="">Seleccionar...</option>
+          {field.opciones.map((op) => (
+            <option key={op} value={op}>{op}</option>
+          ))}
+        </select>
+      </div>
+    )
+  }
+
+  if (field.tipo === 'date') {
+    return (
+      <div>
+        <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">{field.label}</label>
+        <input
+          type="date"
+          value={formatDateForInput(editValue)}
+          onChange={(e) => onEditChange(field.campo, e.target.value)}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">{field.label}</label>
+      <input
+        type="text"
+        value={editValue ?? ''}
+        onChange={(e) => onEditChange(field.campo, e.target.value)}
+        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+      />
+    </div>
+  )
+}
+
+function SectionCard({ title, icon: Icon, color, children }: {
+  title: string
+  icon: React.ElementType
+  color: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className={`px-4 py-3 ${color} flex items-center gap-2`}>
+        <Icon className="h-5 w-5" />
+        <h3 className="font-semibold text-sm">{title}</h3>
+      </div>
+      <div className="p-4">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+// ── Main Page ──
+
+export default function ContratoDetailPage() {
+  const params = useParams()
+  const router = useRouter()
+  const titularId = params.id as string
+
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [error, setError] = useState('')
+
+  // Data
+  const [titular, setTitular] = useState<any>(null)
+  const [beneficiarios, setBeneficiarios] = useState<any[]>([])
+  const [financial, setFinancial] = useState<any>(null)
+
+  // Edit state
+  const [editTitular, setEditTitular] = useState<Record<string, any>>({})
+  const [editBeneficiarios, setEditBeneficiarios] = useState<Record<string, Record<string, any>>>({})
+  const [editFinancial, setEditFinancial] = useState<Record<string, any>>({})
+
+  // Contract preview modal
+  const [showContractModal, setShowContractModal] = useState(false)
+  const [contractHtml, setContractHtml] = useState('')
+  const [loadingTemplate, setLoadingTemplate] = useState(false)
+
+  // WhatsApp sending
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false)
+  const [whatsAppStatus, setWhatsAppStatus] = useState<'idle' | 'sent' | 'error'>('idle')
+
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError('')
+      const data = await api.get(`/api/postgres/contracts/${titularId}`)
+      setTitular(data.titular)
+      setBeneficiarios(data.beneficiarios || [])
+      setFinancial(data.financial || null)
+    } catch (err: any) {
+      setError(err.message || 'Error cargando contrato')
+      handleApiError(err, 'Error cargando contrato')
+    } finally {
+      setLoading(false)
+    }
+  }, [titularId])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  // Open contract preview modal
+  const openContractPreview = async () => {
+    if (!titular?.plataforma) {
+      toast.error('El titular no tiene plataforma asignada')
+      return
+    }
+    try {
+      setLoadingTemplate(true)
+      setShowContractModal(true)
+      const data = await api.get(
+        `/api/postgres/contracts/template?plataforma=${encodeURIComponent(titular.plataforma)}`
+      )
+      const filled = fillContractTemplate(data.template, titular, beneficiarios, financial)
+      setContractHtml(filled)
+    } catch (err) {
+      handleApiError(err, 'Error cargando plantilla del contrato')
+      setShowContractModal(false)
+    } finally {
+      setLoadingTemplate(false)
+    }
+  }
+
+  // Send contract link via WhatsApp
+  const sendContractWhatsApp = async () => {
+    const celular = titular?.celular || titular?.telefono
+    if (!celular) {
+      toast.error('El titular no tiene numero de celular registrado')
+      return
+    }
+
+    try {
+      setSendingWhatsApp(true)
+      setWhatsAppStatus('idle')
+
+      // Build the contract URL - use the Wix contract page URL (same as original flow)
+      const contractUrl = `https://www.lgsplataforma.com/contrato/${titularId}`
+      const nombre = titular?.primerNombre || ''
+
+      const message =
+        `Hola ${nombre}: \n\n` +
+        `*Tu contrato con LetsGoSpeak esta listo!*\n\n` +
+        `Para revisarlo sigue este enlace:\n\n` +
+        `${contractUrl}\n\n` +
+        `Si tienes alguna pregunta, no dudes en contactarnos.`
+
+      await api.post('/api/wix/sendWhatsApp', {
+        toNumber: celular,
+        messageBody: message,
+      })
+
+      toast.success('Contrato enviado por WhatsApp')
+      setWhatsAppStatus('sent')
+    } catch (err) {
+      handleApiError(err, 'Error enviando WhatsApp')
+      setWhatsAppStatus('error')
+    } finally {
+      setSendingWhatsApp(false)
+    }
+  }
+
+  // Enter edit mode
+  const startEditing = () => {
+    // Seed edit state with current values
+    const titFields: Record<string, any> = {}
+    for (const f of [...CAMPOS_TITULAR, ...CAMPOS_REFERENCIAS]) {
+      if (f.tipo !== 'readonly') {
+        titFields[f.campo] = titular?.[f.campo] ?? ''
+      }
+    }
+    titFields['observacionesContrato'] = titular?.observacionesContrato ?? ''
+    setEditTitular(titFields)
+
+    const benEdits: Record<string, Record<string, any>> = {}
+    for (const ben of beneficiarios) {
+      const fields: Record<string, any> = {}
+      for (const f of CAMPOS_BENEFICIARIO) {
+        fields[f.campo] = ben[f.campo] ?? ''
+      }
+      benEdits[ben._id] = fields
+    }
+    setEditBeneficiarios(benEdits)
+
+    if (financial) {
+      const finFields: Record<string, any> = {}
+      for (const f of CAMPOS_FINANCIERO) {
+        finFields[f.campo] = financial[f.campo] ?? ''
+      }
+      setEditFinancial(finFields)
+    }
+
+    setEditing(true)
+  }
+
+  const cancelEditing = () => {
+    setEditing(false)
+    setEditTitular({})
+    setEditBeneficiarios({})
+    setEditFinancial({})
+  }
+
+  const saveChanges = async () => {
+    try {
+      setSaving(true)
+
+      // Build changes (only send fields that actually changed)
+      const titularChanges: Record<string, any> = {}
+      for (const [key, val] of Object.entries(editTitular)) {
+        const orig = titular?.[key]
+        if (val !== (orig ?? '')) {
+          titularChanges[key] = val === '' ? null : val
+        }
+      }
+
+      const beneficiariosChanges: any[] = []
+      for (const [benId, fields] of Object.entries(editBeneficiarios)) {
+        const original = beneficiarios.find((b: any) => b._id === benId)
+        if (!original) continue
+        const changes: Record<string, any> = { _id: benId }
+        let hasChanges = false
+        for (const [key, val] of Object.entries(fields)) {
+          if (val !== (original[key] ?? '')) {
+            changes[key] = val === '' ? null : val
+            hasChanges = true
+          }
+        }
+        if (hasChanges) beneficiariosChanges.push(changes)
+      }
+
+      const financialChanges: Record<string, any> = {}
+      if (financial) {
+        for (const [key, val] of Object.entries(editFinancial)) {
+          const orig = financial[key]
+          if (val !== (orig ?? '')) {
+            financialChanges[key] = val === '' ? null : val
+          }
+        }
+      }
+
+      const hasAnyChanges =
+        Object.keys(titularChanges).length > 0 ||
+        beneficiariosChanges.length > 0 ||
+        Object.keys(financialChanges).length > 0
+
+      if (!hasAnyChanges) {
+        toast('No hay cambios para guardar')
+        setEditing(false)
+        return
+      }
+
+      await api.put(`/api/postgres/contracts/${titularId}`, {
+        titular: Object.keys(titularChanges).length > 0 ? titularChanges : undefined,
+        beneficiarios: beneficiariosChanges.length > 0 ? beneficiariosChanges : undefined,
+        financial: Object.keys(financialChanges).length > 0 ? financialChanges : undefined,
+      })
+
+      toast.success('Contrato actualizado exitosamente')
+      setEditing(false)
+      await loadData()
+    } catch (err) {
+      handleApiError(err, 'Error guardando cambios')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // ── Render ──
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-6xl mx-auto animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4" />
+          <div className="h-4 bg-gray-200 rounded w-1/2 mb-8" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="h-64 bg-gray-100 rounded-lg" />
+            ))}
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (error || !titular) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-6xl mx-auto">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+            <h2 className="text-lg font-semibold text-red-700 mb-2">Error cargando contrato</h2>
+            <p className="text-red-600 mb-4">{error || 'No se encontro el titular'}</p>
+            <button
+              onClick={() => router.back()}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200"
+            >
+              <ArrowLeftIcon className="h-4 w-4" />
+              Volver
+            </button>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  return (
+    <DashboardLayout>
+      <PermissionGuard permission={ComercialPermission.MODIFICAR_CONTRATO}>
+        <div className="max-w-6xl mx-auto">
+          {/* Header */}
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <button
+                onClick={() => router.back()}
+                className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-2"
+              >
+                <ArrowLeftIcon className="h-4 w-4" />
+                Volver
+              </button>
+              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <DocumentTextIcon className="h-7 w-7 text-primary-600" />
+                Contrato {titular.contrato || '—'}
+              </h1>
+              <p className="text-gray-500 mt-1">
+                Titular: {fullName(titular)} &middot; {titular.numeroId}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={openContractPreview}
+                disabled={loadingTemplate}
+                className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm font-medium disabled:opacity-50"
+              >
+                <EyeIcon className="h-4 w-4" />
+                {loadingTemplate ? 'Cargando...' : 'Ver Contrato'}
+              </button>
+              {!editing ? (
+                <button
+                  onClick={startEditing}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 text-sm font-medium"
+                >
+                  <PencilIcon className="h-4 w-4" />
+                  Editar Contrato
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={cancelEditing}
+                    disabled={saving}
+                    className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm font-medium"
+                  >
+                    <XMarkIcon className="h-4 w-4" />
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={saveChanges}
+                    disabled={saving}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium disabled:opacity-50"
+                  >
+                    <CheckIcon className="h-4 w-4" />
+                    {saving ? 'Guardando...' : 'Guardar Cambios'}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Contract sections grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            {/* Titular - Datos Personales */}
+            <SectionCard
+              title="Datos del Titular"
+              icon={UserIcon}
+              color="bg-blue-50 text-blue-800"
+            >
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                {CAMPOS_TITULAR.map((field) => (
+                  <FieldDisplay
+                    key={field.campo}
+                    field={field}
+                    value={titular[field.campo]}
+                    editing={editing}
+                    editValue={editTitular[field.campo]}
+                    onEditChange={(campo, val) => setEditTitular(prev => ({ ...prev, [campo]: val }))}
+                  />
+                ))}
+              </dl>
+            </SectionCard>
+
+            {/* Referencias */}
+            <SectionCard
+              title="Referencias"
+              icon={PhoneIcon}
+              color="bg-purple-50 text-purple-800"
+            >
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                {CAMPOS_REFERENCIAS.map((field) => (
+                  <FieldDisplay
+                    key={field.campo}
+                    field={field}
+                    value={titular[field.campo]}
+                    editing={editing}
+                    editValue={editTitular[field.campo]}
+                    onEditChange={(campo, val) => setEditTitular(prev => ({ ...prev, [campo]: val }))}
+                  />
+                ))}
+              </dl>
+              {/* Observaciones */}
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <FieldDisplay
+                  field={{ campo: 'observacionesContrato', label: 'Observaciones del Contrato' }}
+                  value={titular.observacionesContrato}
+                  editing={editing}
+                  editValue={editTitular['observacionesContrato']}
+                  onEditChange={(campo, val) => setEditTitular(prev => ({ ...prev, [campo]: val }))}
+                />
+              </div>
+            </SectionCard>
+
+            {/* Beneficiarios */}
+            <SectionCard
+              title={`Beneficiarios (${beneficiarios.length})`}
+              icon={UsersIcon}
+              color="bg-green-50 text-green-800"
+            >
+              {beneficiarios.length === 0 ? (
+                <p className="text-sm text-gray-500 italic">No hay beneficiarios registrados</p>
+              ) : (
+                <div className="space-y-4">
+                  {beneficiarios.map((ben: any, idx: number) => (
+                    <div key={ben._id} className={idx > 0 ? 'pt-4 border-t border-gray-100' : ''}>
+                      <p className="text-xs font-semibold text-green-700 mb-2">
+                        Beneficiario {idx + 1}: {fullName(ben)}
+                      </p>
+                      <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                        {CAMPOS_BENEFICIARIO.map((field) => (
+                          <FieldDisplay
+                            key={`${ben._id}-${field.campo}`}
+                            field={field}
+                            value={ben[field.campo]}
+                            editing={editing}
+                            editValue={editBeneficiarios[ben._id]?.[field.campo]}
+                            onEditChange={(campo, val) =>
+                              setEditBeneficiarios(prev => ({
+                                ...prev,
+                                [ben._id]: { ...prev[ben._id], [campo]: val }
+                              }))
+                            }
+                          />
+                        ))}
+                      </dl>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </SectionCard>
+
+            {/* Financiero */}
+            <SectionCard
+              title="Informacion Financiera"
+              icon={BanknotesIcon}
+              color="bg-amber-50 text-amber-800"
+            >
+              {!financial ? (
+                <p className="text-sm text-gray-500 italic">No hay datos financieros registrados</p>
+              ) : (
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                  {CAMPOS_FINANCIERO.map((field) => (
+                    <FieldDisplay
+                      key={field.campo}
+                      field={field}
+                      value={financial[field.campo]}
+                      editing={editing}
+                      editValue={editFinancial[field.campo]}
+                      onEditChange={(campo, val) => setEditFinancial(prev => ({ ...prev, [campo]: val }))}
+                    />
+                  ))}
+                </dl>
+              )}
+            </SectionCard>
+
+          </div>
+
+          {/* Contract info footer */}
+          <div className="mt-6 bg-gray-50 rounded-lg border border-gray-200 p-4 text-xs text-gray-500">
+            <div className="flex flex-wrap gap-4">
+              {titular._createdDate && (
+                <span className="flex items-center gap-1">
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  Creado: {new Date(titular._createdDate).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </span>
+              )}
+              {titular._updatedDate && (
+                <span className="flex items-center gap-1">
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  Actualizado: {new Date(titular._updatedDate).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </span>
+              )}
+              <span className="flex items-center gap-1">
+                <IdentificationIcon className="h-3.5 w-3.5" />
+                ID: {titular._id}
+              </span>
+            </div>
+          </div>
+
+          {/* ── Contract Preview Modal ── */}
+          {showContractModal && (
+            <div className="fixed inset-0 z-50 overflow-y-auto">
+              <div className="flex min-h-full items-start justify-center p-4 pt-10">
+                {/* Backdrop */}
+                <div
+                  className="fixed inset-0 bg-black/50 transition-opacity"
+                  onClick={() => setShowContractModal(false)}
+                />
+
+                {/* Modal panel */}
+                <div className="relative w-full max-w-4xl bg-white rounded-xl shadow-2xl">
+                  {/* Modal header */}
+                  <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200 rounded-t-xl">
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900">
+                        Contrato {titular.contrato}
+                      </h2>
+                      <p className="text-sm text-gray-500">
+                        Plataforma: {titular.plataforma} &middot; {fullName(titular)}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setShowContractModal(false)}
+                      className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+                    >
+                      <XMarkIcon className="h-6 w-6" />
+                    </button>
+                  </div>
+
+                  {/* Modal body */}
+                  <div className="px-8 py-6 max-h-[75vh] overflow-y-auto">
+                    {loadingTemplate ? (
+                      <div className="flex items-center justify-center py-20">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
+                      </div>
+                    ) : (
+                      <div className="prose prose-sm max-w-none whitespace-pre-wrap font-serif text-gray-800 leading-relaxed">
+                        {contractHtml}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Modal footer */}
+                  <div className="sticky bottom-0 flex items-center justify-between px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-xl">
+                    {/* WhatsApp status */}
+                    <div className="text-sm">
+                      {whatsAppStatus === 'sent' && (
+                        <span className="text-green-600 font-medium">Enviado por WhatsApp</span>
+                      )}
+                      {whatsAppStatus === 'error' && (
+                        <span className="text-red-600 font-medium">Error al enviar</span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => {
+                          if (typeof window !== 'undefined') {
+                            const printWindow = window.open('', '_blank')
+                            if (printWindow) {
+                              printWindow.document.write(`
+                                <html>
+                                  <head>
+                                    <title>Contrato ${titular.contrato}</title>
+                                    <style>
+                                      body { font-family: Georgia, serif; padding: 40px; line-height: 1.6; white-space: pre-wrap; font-size: 14px; color: #1a1a1a; }
+                                      @media print { body { padding: 20px; } }
+                                    </style>
+                                  </head>
+                                  <body>${contractHtml.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</body>
+                                </html>
+                              `)
+                              printWindow.document.close()
+                              printWindow.print()
+                            }
+                          }
+                        }}
+                        className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 text-sm font-medium"
+                      >
+                        Imprimir
+                      </button>
+                      <button
+                        onClick={sendContractWhatsApp}
+                        disabled={sendingWhatsApp || !titular?.celular}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={!titular?.celular ? 'El titular no tiene celular registrado' : ''}
+                      >
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                        </svg>
+                        {sendingWhatsApp ? 'Enviando...' : 'Enviar Contrato'}
+                      </button>
+                      <button
+                        onClick={() => setShowContractModal(false)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 text-sm font-medium"
+                      >
+                        Cerrar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </PermissionGuard>
+    </DashboardLayout>
+  )
+}
