@@ -264,26 +264,33 @@ export default function ContratoDetailPage() {
     loadConsentStatus()
   }, [loadData, loadConsentStatus])
 
-  // Poll consent status every 15s — detect when customer signs on public page
-  const prevHasConsent = useRef(consentStatus?.hasConsent ?? false)
+  // Poll consent status — only after sending WhatsApp, stops after 10 min or when signed
+  const [pollingActive, setPollingActive] = useState(false)
+  const pollingStartRef = useRef<number>(0)
+  const POLLING_TIMEOUT_MS = 10 * 60 * 1000 // 10 minutes
+
   useEffect(() => {
-    // Only poll while consent is not yet verified
-    if (consentStatus?.hasConsent) {
-      prevHasConsent.current = true
+    if (!pollingActive || consentStatus?.hasConsent) {
+      setPollingActive(false)
       return
     }
     const interval = setInterval(async () => {
+      // Stop after 10 minutes
+      if (Date.now() - pollingStartRef.current > POLLING_TIMEOUT_MS) {
+        setPollingActive(false)
+        return
+      }
       try {
         const data = await api.get(`/api/consent/${titularId}/status`)
-        if (data?.hasConsent && !prevHasConsent.current) {
-          prevHasConsent.current = true
+        if (data?.hasConsent) {
           setConsentStatus(data)
+          setPollingActive(false)
           toast.success('El cliente ha firmado el consentimiento declarativo')
         }
       } catch { /* ignore polling errors */ }
     }, 15000)
     return () => clearInterval(interval)
-  }, [titularId, consentStatus?.hasConsent])
+  }, [titularId, pollingActive, consentStatus?.hasConsent])
 
   // Re-generate contract preview when consent status changes
   const templateCacheRef = useRef<string | null>(null)
@@ -350,6 +357,11 @@ export default function ContratoDetailPage() {
 
       toast.success('Contrato enviado por WhatsApp')
       setWhatsAppStatus('sent')
+      // Start polling for consent — customer may sign soon
+      if (!consentStatus?.hasConsent) {
+        pollingStartRef.current = Date.now()
+        setPollingActive(true)
+      }
     } catch (err) {
       handleApiError(err, 'Error enviando WhatsApp')
       setWhatsAppStatus('error')
