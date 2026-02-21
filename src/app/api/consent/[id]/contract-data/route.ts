@@ -39,7 +39,7 @@ export const GET = handler(async (_request, { params }) => {
   if (titular.contrato) {
     financial = await queryOne(
       `SELECT "totalPlan", "numeroCuotas", "valorCuota", "pagoInscripcion",
-              "saldo", "formaPago", "fechaPago", "medioPago", "vigencia"
+              "saldo", "fechaPago", "medioPago", "vigencia"
        FROM "FINANCIEROS" WHERE "contrato" = $1
        ORDER BY "_createdDate" DESC LIMIT 1`,
       [titular.contrato]
