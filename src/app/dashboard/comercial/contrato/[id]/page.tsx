@@ -299,7 +299,7 @@ export default function ContratoDetailPage() {
       setWhatsAppStatus('idle')
 
       // Build the contract URL - use the Wix contract page URL (same as original flow)
-      const contractUrl = `https://www.lgsplataforma.com/contrato/${titularId}`
+      const contractUrl = `https://talero.studio/contrato/${titularId}`
       const nombre = titular?.primerNombre || ''
 
       const message =
