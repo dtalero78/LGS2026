@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
@@ -264,6 +264,39 @@ export default function ContratoDetailPage() {
     loadConsentStatus()
   }, [loadData, loadConsentStatus])
 
+  // Poll consent status every 15s — detect when customer signs on public page
+  const prevHasConsent = useRef(consentStatus?.hasConsent ?? false)
+  useEffect(() => {
+    // Only poll while consent is not yet verified
+    if (consentStatus?.hasConsent) {
+      prevHasConsent.current = true
+      return
+    }
+    const interval = setInterval(async () => {
+      try {
+        const data = await api.get(`/api/consent/${titularId}/status`)
+        if (data?.hasConsent && !prevHasConsent.current) {
+          prevHasConsent.current = true
+          setConsentStatus(data)
+          toast.success('El cliente ha firmado el consentimiento declarativo')
+        }
+      } catch { /* ignore polling errors */ }
+    }, 15000)
+    return () => clearInterval(interval)
+  }, [titularId, consentStatus?.hasConsent])
+
+  // Re-generate contract preview when consent status changes
+  const templateCacheRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (showContractModal && templateCacheRef.current && consentStatus?.hasConsent) {
+      const filled = fillContractTemplate(
+        templateCacheRef.current, titular, beneficiarios, financial,
+        consentStatus || undefined
+      )
+      setContractHtml(filled)
+    }
+  }, [consentStatus, showContractModal, titular, beneficiarios, financial])
+
   // Open contract preview modal
   const openContractPreview = async () => {
     if (!titular?.plataforma) {
@@ -276,6 +309,7 @@ export default function ContratoDetailPage() {
       const data = await api.get(
         `/api/postgres/contracts/template?plataforma=${encodeURIComponent(titular.plataforma)}`
       )
+      templateCacheRef.current = data.template
       const filled = fillContractTemplate(data.template, titular, beneficiarios, financial, consentStatus || undefined)
       setContractHtml(filled)
     } catch (err) {
