@@ -20,7 +20,9 @@ import {
   EyeIcon,
   IdentificationIcon,
   CalendarIcon,
+  ShieldCheckIcon,
 } from '@heroicons/react/24/outline'
+import { fillContractTemplate, type ConsentDisplay } from '@/lib/contract-template-filler'
 
 // ── Field definitions ──
 
@@ -113,74 +115,6 @@ function formatDateForInput(value: any): string {
 function fullName(person: any): string {
   return [person?.primerNombre, person?.segundoNombre, person?.primerApellido, person?.segundoApellido]
     .filter(Boolean).join(' ')
-}
-
-/**
- * Fill a contract template with data, replacing {{placeholder}} tokens.
- * Mirrors the Wix TemplateManager.buildData + fillTemplate logic.
- */
-function fillContractTemplate(
-  template: string,
-  titular: any,
-  beneficiarios: any[],
-  financial: any
-): string {
-  // Build beneficiarios text block
-  const beneficiariosText = beneficiarios.length === 0
-    ? ''
-    : beneficiarios.map((b, i) =>
-        `Beneficiario ${i + 1}:\n` +
-        `- Numero de Contrato: ${b.contrato || 'Sin asignar'}\n` +
-        `- Nombre Completo: ${[b.primerNombre, b.segundoNombre, b.primerApellido, b.segundoApellido].filter(Boolean).join(' ')}\n` +
-        `- Documento: ${b.numeroId || ''}\n` +
-        `- Fecha de nacimiento: ${b.fechaNacimiento || ''}\n` +
-        `- Telefono: ${b.celular || ''}\n` +
-        `- Pais: ${b.plataforma || ''}\n` +
-        `- Ciudad: ${b.ciudad || ''}\n` +
-        `- Domicilio: ${b.domicilio || ''}\n` +
-        `- Email: ${b.email || ''}`
-      ).join('\n\n')
-
-  // Build data map
-  const data: Record<string, string> = {
-    contrato: titular?.contrato || '',
-    fecha: titular?._createdDate
-      ? new Date(titular._createdDate).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
-      : '',
-    primerNombre: titular?.primerNombre || '',
-    segundoNombre: titular?.segundoNombre || '',
-    primerApellido: titular?.primerApellido || '',
-    segundoApellido: titular?.segundoApellido || '',
-    numeroId: titular?.numeroId || '',
-    fechaNacimiento: titular?.fechaNacimiento || '',
-    domicilio: titular?.domicilio || '',
-    ciudad: titular?.ciudad || '',
-    celular: titular?.celular || '',
-    email: titular?.email || '',
-    ingresos: titular?.ingresos || '',
-    empresa: titular?.empresa || '',
-    cargo: titular?.cargo || '',
-    observaciones: titular?.observacionesContrato || '',
-    medioPago: financial?.medioPago || titular?.medioPago || '',
-    beneficiarios: beneficiariosText,
-    totalPlan: financial?.totalPlan != null ? String(financial.totalPlan) : '',
-    pagoInscripcion: financial?.pagoInscripcion != null ? String(financial.pagoInscripcion) : '',
-    saldo: financial?.saldo != null ? String(financial.saldo) : '',
-    numeroCuotas: financial?.numeroCuotas != null ? String(financial.numeroCuotas) : '',
-    valorCuota: financial?.valorCuota != null ? String(financial.valorCuota) : '',
-    formaPago: financial?.formaPago || '',
-    fechaPago: financial?.fechaPago || '',
-    referenciaUno: titular?.referenciaUno || '',
-    parentezcoRefUno: titular?.parentezcoRefUno || '',
-    telefonoRefUno: titular?.telefonoRefUno || '',
-    referenciaDos: titular?.referenciaDos || '',
-    parentezcoRefDos: titular?.parentezcoRefDos || '',
-    telefonoRefDos: titular?.telefonoRefDos || '',
-    firma: '',
-  }
-
-  // Replace all {{key}} placeholders
-  return template.replace(/\{\{(\w+)\}\}/g, (_match, key) => data[key] ?? '')
 }
 
 // ── Components ──
@@ -296,6 +230,19 @@ export default function ContratoDetailPage() {
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false)
   const [whatsAppStatus, setWhatsAppStatus] = useState<'idle' | 'sent' | 'error'>('idle')
 
+  // Consent status
+  const [consentStatus, setConsentStatus] = useState<ConsentDisplay | null>(null)
+  const [approvingConsent, setApprovingConsent] = useState(false)
+
+  const loadConsentStatus = useCallback(async () => {
+    try {
+      const data = await api.get(`/api/consent/${titularId}/status`)
+      setConsentStatus(data)
+    } catch {
+      // Consent status is optional — don't block the page
+    }
+  }, [titularId])
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true)
@@ -314,7 +261,8 @@ export default function ContratoDetailPage() {
 
   useEffect(() => {
     loadData()
-  }, [loadData])
+    loadConsentStatus()
+  }, [loadData, loadConsentStatus])
 
   // Open contract preview modal
   const openContractPreview = async () => {
@@ -328,7 +276,7 @@ export default function ContratoDetailPage() {
       const data = await api.get(
         `/api/postgres/contracts/template?plataforma=${encodeURIComponent(titular.plataforma)}`
       )
-      const filled = fillContractTemplate(data.template, titular, beneficiarios, financial)
+      const filled = fillContractTemplate(data.template, titular, beneficiarios, financial, consentStatus || undefined)
       setContractHtml(filled)
     } catch (err) {
       handleApiError(err, 'Error cargando plantilla del contrato')
@@ -373,6 +321,23 @@ export default function ContratoDetailPage() {
       setWhatsAppStatus('error')
     } finally {
       setSendingWhatsApp(false)
+    }
+  }
+
+  // Auto-approve consent
+  const autoApproveConsent = async () => {
+    if (!window.confirm('Aprobar consentimiento automaticamente?\n\nEsto registrara el consentimiento declarativo sin verificacion OTP del cliente.')) {
+      return
+    }
+    try {
+      setApprovingConsent(true)
+      await api.post(`/api/consent/${titularId}/auto-approve`)
+      toast.success('Consentimiento aprobado automaticamente')
+      await loadConsentStatus()
+    } catch (err) {
+      handleApiError(err, 'Error aprobando consentimiento')
+    } finally {
+      setApprovingConsent(false)
     }
   }
 
@@ -550,6 +515,16 @@ export default function ContratoDetailPage() {
                 <EyeIcon className="h-4 w-4" />
                 {loadingTemplate ? 'Cargando...' : 'Ver Contrato'}
               </button>
+              {!consentStatus?.hasConsent && (
+                <button
+                  onClick={autoApproveConsent}
+                  disabled={approvingConsent}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
+                >
+                  <ShieldCheckIcon className="h-4 w-4" />
+                  {approvingConsent ? 'Aprobando...' : 'Auto-Aprobar Consentimiento'}
+                </button>
+              )}
               {!editing ? (
                 <button
                   onClick={startEditing}
@@ -580,6 +555,51 @@ export default function ContratoDetailPage() {
               )}
             </div>
           </div>
+
+          {/* Consent status banner */}
+          {consentStatus?.hasConsent && consentStatus.consent && (
+            <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <ShieldCheckIcon className="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="text-sm font-bold text-blue-800 uppercase">
+                    Consentimiento Declarativo Verificado
+                    {consentStatus.consent.tipoAprobacion === 'AUTOMATICA' && (
+                      <span className="ml-2 text-xs font-normal bg-blue-200 text-blue-700 px-2 py-0.5 rounded-full">
+                        Aprobacion Automatica
+                      </span>
+                    )}
+                  </h3>
+                  <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs text-blue-700">
+                    {consentStatus.consent.numeroDocumento && (
+                      <div>
+                        <span className="font-medium">Documento:</span>{' '}
+                        {consentStatus.consent.numeroDocumento}
+                      </div>
+                    )}
+                    {consentStatus.consent.timestampAcceptacion && (
+                      <div>
+                        <span className="font-medium">Fecha:</span>{' '}
+                        {new Date(consentStatus.consent.timestampAcceptacion).toLocaleString('es-CO')}
+                      </div>
+                    )}
+                    {consentStatus.consent.celularValidado && (
+                      <div>
+                        <span className="font-medium">Celular:</span>{' '}
+                        {consentStatus.consent.celularValidado}
+                      </div>
+                    )}
+                    {consentStatus.hash && (
+                      <div>
+                        <span className="font-medium">Hash:</span>{' '}
+                        {consentStatus.hash.substring(0, 16)}...
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Contract sections grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

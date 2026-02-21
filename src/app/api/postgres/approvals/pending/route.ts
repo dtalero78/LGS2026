@@ -14,7 +14,7 @@ export const GET = handlerWithAuth(async (request) => {
   const { whereClause, values } = buildDynamicWhere(filters);
 
   const result = await query(
-    `SELECT a.*, p."primerNombre", p."primerApellido", p."email" as "studentEmail", p."numeroId"
+    `SELECT a.*, p."primerNombre", p."primerApellido", p."email" as "studentEmail", p."numeroId", p."hashConsentimiento"
      FROM "APROBACIONES" a
      LEFT JOIN "PEOPLE" p ON a."studentId" = p."_id" OR a."numeroId" = p."numeroId"
      ${whereClause}

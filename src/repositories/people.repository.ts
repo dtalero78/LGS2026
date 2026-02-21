@@ -274,6 +274,43 @@ class PeopleRepositoryClass extends BaseRepository {
     return this.parse(row);
   }
 
+  // ── Consent helpers ──
+
+  /**
+   * Get fields needed for consent operations
+   */
+  async getConsentData(id: string) {
+    return queryOne(
+      `SELECT "_id", "numeroId", "celular", "primerNombre", "plataforma", "contrato",
+              "consentimientoDeclarativo", "hashConsentimiento"
+       FROM "PEOPLE" WHERE "_id" = $1`,
+      [id]
+    );
+  }
+
+  /**
+   * Save declarative consent and hash
+   */
+  async saveConsent(
+    id: string,
+    consentJSON: string,
+    hash: string,
+    numeroDoc: string
+  ) {
+    const row = await queryOne(
+      `UPDATE "PEOPLE"
+       SET "consentimientoDeclarativo" = $1,
+           "hashConsentimiento" = $2,
+           "numeroDocumentoVerificado" = $3,
+           "inicioContrato" = NOW(),
+           "_updatedDate" = NOW()
+       WHERE "_id" = $4
+       RETURNING *`,
+      [consentJSON, hash, numeroDoc, id]
+    );
+    return this.parse(row);
+  }
+
   // ── Dashboard helpers ──
 
   async countActive(): Promise<number> {

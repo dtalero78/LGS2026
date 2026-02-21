@@ -80,6 +80,11 @@ export interface Person {
   fechaContrato?: string
   finalContrato?: string
   titularId?: string
+  // Consent fields
+  consentimientoDeclarativo?: string
+  hashConsentimiento?: string
+  numeroDocumentoVerificado?: string
+  inicioContrato?: string
 }
 
 export interface OnHoldHistoryEntry {
