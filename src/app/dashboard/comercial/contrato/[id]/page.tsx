@@ -557,13 +557,6 @@ export default function ContratoDetailPage() {
           {/* Header */}
           <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <button
-                onClick={() => router.back()}
-                className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-2"
-              >
-                <ArrowLeftIcon className="h-4 w-4" />
-                Volver
-              </button>
               <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                 <DocumentTextIcon className="h-7 w-7 text-primary-600" />
                 Contrato {titular.contrato || '—'}
