@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { fillContractTemplate, type ConsentDisplay } from '@/lib/contract-template-filler'
 
 type PageState = 'LOADING' | 'ERROR' | 'HAS_CONSENT' | 'DOCUMENT_ENTRY' | 'OTP_ENTRY' | 'VERIFIED'
 
 export default function ContratoPublicoPage() {
   const params = useParams()
+  const router = useRouter()
   const titularId = params.id as string
 
   const [pageState, setPageState] = useState<PageState>('LOADING')
@@ -72,6 +73,15 @@ export default function ContratoPublicoPage() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  // Redirect to LGS website after successful verification
+  useEffect(() => {
+    if (pageState !== 'VERIFIED') return
+    const timer = setTimeout(() => {
+      router.replace('https://letsgospeak.cl/')
+    }, 2000)
+    return () => clearTimeout(timer)
+  }, [pageState, router])
 
   // Resend cooldown timer
   useEffect(() => {
