@@ -27,7 +27,7 @@ export const POST = handler(async (_request, { params }) => {
   );
 
   const financial = await queryOne(
-    `SELECT * FROM "FINANCIEROS" WHERE "titular" = $1 LIMIT 1`,
+    `SELECT * FROM "FINANCIEROS" WHERE "titularId" = $1 LIMIT 1`,
     [titularId]
   );
 
