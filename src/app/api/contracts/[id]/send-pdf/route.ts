@@ -59,11 +59,11 @@ export const POST = handler(async (_request, { params }) => {
   <meta charset="UTF-8">
   <title>Contrato ${titular.contrato || ''}</title>
   <style>
-    @page { margin: 25mm 20mm 25mm 30mm; }
+    @page { margin: 15mm 15mm 15mm 20mm; }
     body {
       font-family: Georgia, 'Times New Roman', serif;
-      font-size: 12pt;
-      line-height: 1.6;
+      font-size: 10.5pt;
+      line-height: 1.5;
       color: #111;
       margin: 0;
       padding: 0;
