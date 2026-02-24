@@ -8,6 +8,7 @@ import PersonContact from './PersonContact'
 import PersonFinancial from './PersonFinancial'
 import PersonAdmin from './PersonAdmin'
 import PersonComments from './PersonComments'
+import PersonDocuments from './PersonDocuments'
 
 interface PersonTabsProps {
   person: Person
@@ -21,6 +22,7 @@ const tabs = [
   { id: 'financial', name: 'Financiera', icon: '💰' },
   { id: 'admin', name: 'Administración', icon: '⚙️' },
   { id: 'comments', name: 'Comentarios', icon: '💬' },
+  { id: 'docs', name: 'Documentación', icon: '📎' },
 ]
 
 export default function PersonTabs({ person, financialData, beneficiaries }: PersonTabsProps) {
@@ -38,6 +40,8 @@ export default function PersonTabs({ person, financialData, beneficiaries }: Per
         return <PersonAdmin person={person} beneficiaries={beneficiaries} />
       case 'comments':
         return <PersonComments personId={person._id} />
+      case 'docs':
+        return <PersonDocuments documents={person.documentacion || []} />
       default:
         return <PersonGeneral person={person} />
     }

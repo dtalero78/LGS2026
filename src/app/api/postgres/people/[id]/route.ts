@@ -29,6 +29,7 @@ export const GET = handler(async (
   const parsedPerson = parseJsonbFields(person, [
     'onHoldHistory',
     'extensionHistory',
+    'documentacion',
   ]);
 
   console.log('✅ [PostgreSQL People] Found person:', {

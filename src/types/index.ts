@@ -85,6 +85,8 @@ export interface Person {
   hashConsentimiento?: string
   numeroDocumentoVerificado?: string
   inicioContrato?: string
+  // Documents
+  documentacion?: Array<{ url: string; nombre: string; tipo?: string; fechaSubida?: string }>
 }
 
 export interface OnHoldHistoryEntry {
