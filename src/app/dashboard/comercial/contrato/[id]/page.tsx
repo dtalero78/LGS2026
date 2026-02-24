@@ -423,18 +423,20 @@ export default function ContratoDetailPage() {
     for (const file of files) {
       setUploadingFiles(prev => [...prev, file.name])
       try {
-        // 1. Get presigned URL
-        const { presignedUrl, publicUrl } = await api.get(
-          `/api/contracts/${titularId}/upload-url?filename=${encodeURIComponent(file.name)}&type=${encodeURIComponent(file.type)}`
-        )
-        // 2. Upload directly to DO Spaces
-        const uploadRes = await fetch(presignedUrl, {
-          method: 'PUT',
-          body: file,
-          headers: { 'Content-Type': file.type, 'x-amz-acl': 'public-read' },
+        // 1. Upload file through our API (avoids CORS with DO Spaces)
+        const formData = new FormData()
+        formData.append('file', file)
+        const uploadRes = await fetch(`/api/contracts/${titularId}/upload-url`, {
+          method: 'POST',
+          body: formData,
         })
-        if (!uploadRes.ok) throw new Error(`Upload failed: ${uploadRes.status}`)
-        // 3. Save URL to PEOPLE.documentacion
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json().catch(() => ({}))
+          throw new Error(err.error || `Upload failed: ${uploadRes.status}`)
+        }
+        const { publicUrl } = await uploadRes.json()
+
+        // 2. Save URL to PEOPLE.documentacion
         const saved = await api.post(`/api/contracts/${titularId}/documents`, {
           url: publicUrl,
           nombre: file.name,
@@ -1021,14 +1023,22 @@ export default function ContratoDetailPage() {
                 {/* Body */}
                 <div className="px-6 py-5 space-y-4">
                   {/* Upload zone */}
-                  <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-400 transition-colors cursor-pointer">
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,application/pdf"
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      onChange={(e) => handleFileUpload(Array.from(e.target.files || []))}
-                    />
+                  <div
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-400 transition-colors cursor-pointer"
+                    onClick={() => {
+                      const input = document.createElement('input')
+                      input.type = 'file'
+                      input.multiple = true
+                      input.accept = 'image/jpeg,image/jpg,image/png,image/webp,image/heic,application/pdf'
+                      input.style.display = 'none'
+                      document.body.appendChild(input)
+                      input.addEventListener('change', () => {
+                        handleFileUpload(Array.from(input.files || []))
+                        document.body.removeChild(input)
+                      })
+                      input.click()
+                    }}
+                  >
                     <ArrowUpTrayIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                     <p className="text-sm font-medium text-gray-700">Haz clic para subir archivos</p>
                     <p className="text-xs text-gray-400 mt-1">JPG, PNG, WEBP, HEIC, PDF · Máx 20 MB por archivo</p>
