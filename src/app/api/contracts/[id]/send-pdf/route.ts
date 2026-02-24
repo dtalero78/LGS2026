@@ -84,7 +84,6 @@ export const POST = handler(async (_request, { params }) => {
     body: JSON.stringify({
       html: htmlContent,
       options: { printBackground: true },
-      fileName: titular.contrato ? `Contrato-${titular.contrato}.pdf` : 'Contrato-LGS.pdf',
     }),
   });
 
@@ -121,8 +120,10 @@ export const POST = handler(async (_request, { params }) => {
 
   // 7. Send PDF via Whapi using permanent URL
   const phone = titular.celular.toString().replace(/\D/g, '');
-  const filename = titular.contrato
-    ? `Contrato-${titular.contrato}.pdf`
+  // Filename: primerNombre + primerApellido + numeroId
+  const nameParts = [titular.primerNombre, titular.primerApellido, titular.numeroId].filter(Boolean);
+  const filename = nameParts.length > 0
+    ? `${nameParts.join(' ')}.pdf`
     : `Contrato-LGS.pdf`;
 
   const whapiRes = await fetch('https://gate.whapi.cloud/messages/document', {

@@ -18,6 +18,18 @@ export interface ConsentDisplay {
   hash?: string | null;
 }
 
+/** Format any date value (Date object, ISO string, or YYYY-MM-DD) to Spanish long date. */
+function fmtDate(value: any): string {
+  if (!value) return '';
+  try {
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return String(value);
+    return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  } catch {
+    return String(value);
+  }
+}
+
 /**
  * Fill a contract template with data, replacing {{placeholder}} tokens.
  * Mirrors the Wix TemplateManager.buildData + fillTemplate logic.
@@ -37,7 +49,7 @@ export function fillContractTemplate(
         `- Numero de Contrato: ${b.contrato || 'Sin asignar'}\n` +
         `- Nombre Completo: ${[b.primerNombre, b.segundoNombre, b.primerApellido, b.segundoApellido].filter(Boolean).join(' ')}\n` +
         `- Documento: ${b.numeroId || ''}\n` +
-        `- Fecha de nacimiento: ${b.fechaNacimiento || ''}\n` +
+        `- Fecha de nacimiento: ${fmtDate(b.fechaNacimiento)}\n` +
         `- Telefono: ${b.celular || ''}\n` +
         `- Pais: ${b.plataforma || ''}\n` +
         `- Ciudad: ${b.ciudad || ''}\n` +
@@ -66,15 +78,13 @@ export function fillContractTemplate(
   // Build data map
   const data: Record<string, string> = {
     contrato: titular?.contrato || '',
-    fecha: titular?._createdDate
-      ? new Date(titular._createdDate).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
-      : '',
+    fecha: fmtDate(titular?._createdDate),
     primerNombre: titular?.primerNombre || '',
     segundoNombre: titular?.segundoNombre || '',
     primerApellido: titular?.primerApellido || '',
     segundoApellido: titular?.segundoApellido || '',
     numeroId: titular?.numeroId || '',
-    fechaNacimiento: titular?.fechaNacimiento || '',
+    fechaNacimiento: fmtDate(titular?.fechaNacimiento),
     domicilio: titular?.domicilio || '',
     ciudad: titular?.ciudad || '',
     celular: titular?.celular || '',
@@ -91,7 +101,7 @@ export function fillContractTemplate(
     numeroCuotas: financial?.numeroCuotas != null ? String(financial.numeroCuotas) : '',
     valorCuota: financial?.valorCuota != null ? String(financial.valorCuota) : '',
     formaPago: financial?.formaPago || '',
-    fechaPago: financial?.fechaPago || '',
+    fechaPago: fmtDate(financial?.fechaPago),
     referenciaUno: titular?.referenciaUno || '',
     parentezcoRefUno: titular?.parentezcoRefUno || '',
     telefonoRefUno: titular?.telefonoRefUno || '',
