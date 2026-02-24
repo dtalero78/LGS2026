@@ -6,6 +6,7 @@ import { queryOne } from '@/lib/postgres';
 const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
 const WHAPI_TOKEN = 'VSyDX4j7ooAJ7UGOhz8lGplUVDDs2EYj';
 const CONTRACT_BASE_URL = 'https://talero.studio/contrato';
+const BSL_UPLOAD_URL = 'https://bsl-utilidades-yp78a.ondigitalocean.app/subir-pdf-directo';
 
 export const POST = handler(async (_request, { params }) => {
   const titularId = params.id;
@@ -47,9 +48,29 @@ export const POST = handler(async (_request, { params }) => {
     throw new Error(`API2PDF falló: ${pdfData.error || 'Sin URL de PDF'}`);
   }
 
-  const pdfUrl: string = pdfData.pdf;
+  const tempPdfUrl: string = pdfData.pdf;
 
-  // 2. Send PDF via Whapi
+  // 2. Upload PDF to Drive via bsl-utilidades (permanent URL)
+  const uploadRes = await fetch(BSL_UPLOAD_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      pdfUrl: tempPdfUrl,
+      documento: titularId,
+      empresa: 'LGS',
+    }),
+  });
+
+  if (!uploadRes.ok) {
+    const err = await uploadRes.text();
+    throw new Error(`Drive upload error ${uploadRes.status}: ${err}`);
+  }
+
+  const uploadData = await uploadRes.json();
+  // Use permanent Drive URL if available, otherwise fall back to API2PDF temp URL
+  const pdfUrl: string = uploadData.url || uploadData.fileUrl || uploadData.link || tempPdfUrl;
+
+  // 3. Send PDF via Whapi using the permanent URL
   const phone = titular.celular.toString().replace(/\D/g, '');
   const filename = titular.contrato
     ? `Contrato-${titular.contrato}.pdf`
@@ -64,7 +85,7 @@ export const POST = handler(async (_request, { params }) => {
     },
     body: JSON.stringify({
       to: phone,
-      document: { link: pdfUrl },
+      media: pdfUrl,
       filename,
       caption: `Hola ${titular.primerNombre || ''}, adjunto encontrarás tu contrato con LetsGoSpeak. 📄`,
     }),
@@ -79,6 +100,7 @@ export const POST = handler(async (_request, { params }) => {
 
   return successResponse({
     pdfUrl,
+    driveUpload: uploadData,
     whatsapp: whapiData,
     sentTo: phone,
   });
