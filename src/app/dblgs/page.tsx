@@ -35,6 +35,31 @@ interface ColumnMeta {
   isPrimaryKey: boolean;
 }
 
+interface SavedView {
+  id: string;
+  name: string;
+  table: string;
+  filters: Record<string, string>;
+  search: string;
+  sortBy?: string;
+  sortDir: 'asc' | 'desc';
+}
+
+// ── Saved Views localStorage helpers ──────────────────────────────
+
+const VIEWS_STORAGE_KEY = 'dblgs-saved-views';
+
+function loadViews(): SavedView[] {
+  try {
+    const raw = localStorage.getItem(VIEWS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function persistViews(views: SavedView[]) {
+  try { localStorage.setItem(VIEWS_STORAGE_KEY, JSON.stringify(views)); } catch {}
+}
+
 // ── Helpers ────────────────────────────────────────────────────────
 
 function getTypeBadge(pgType: string): { label: string; className: string } {
@@ -146,6 +171,22 @@ function DblgsPage() {
   const [exporting, setExporting] = useState(false);
   const [deletingRowId, setDeletingRowId] = useState<string | null>(null);
 
+  // ── Saved views state ─────────────────────────────────────────
+  const [savedViews, setSavedViews] = useState<SavedView[]>([]);
+  const [activeViewId, setActiveViewId] = useState<string | null>(null);
+  const [renamingViewId, setRenamingViewId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [viewModalName, setViewModalName] = useState('');
+  const [viewModalFilters, setViewModalFilters] = useState<Array<{ column: string; value: string }>>([]);
+  const [viewModalSearch, setViewModalSearch] = useState('');
+  const [viewModalSortBy, setViewModalSortBy] = useState<string>('');
+  const [viewModalSortDir, setViewModalSortDir] = useState<'asc' | 'desc'>('asc');
+  const [editingViewId, setEditingViewId] = useState<string | null>(null); // null = creating new
+
+  // Load saved views from localStorage on mount
+  useEffect(() => { setSavedViews(loadViews()); }, []);
+
   // ── Debounce search ─────────────────────────────────────────────
   useEffect(() => {
     const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 400);
@@ -190,6 +231,8 @@ function DblgsPage() {
     setSelectedRows(new Set());
     setEditingCell(null);
     setNewRowData({});
+    setActiveViewId(null);
+    setRenamingViewId(null);
   }, []);
 
   // ── Sort handler ────────────────────────────────────────────────
@@ -263,6 +306,155 @@ function DblgsPage() {
       return next;
     });
   }, []);
+
+  // ── Saved views handlers ───────────────────────────────────────
+  const tableViews = savedViews.filter(v => v.table === selectedTable);
+
+  const applyView = useCallback((view: SavedView) => {
+    setFilters(view.filters);
+    setDebouncedFilters(view.filters);
+    setSearch(view.search);
+    setDebouncedSearch(view.search);
+    setSortBy(view.sortBy);
+    setSortDir(view.sortDir);
+    setActiveViewId(view.id);
+    setPage(1);
+  }, []);
+
+  const applyDefaultView = useCallback(() => {
+    setFilters({});
+    setDebouncedFilters({});
+    setSearch('');
+    setDebouncedSearch('');
+    setSortBy(undefined);
+    setSortDir('asc');
+    setActiveViewId(null);
+    setPage(1);
+  }, []);
+
+  // Open view modal for creating a new view (pre-fill with current state)
+  const openNewViewModal = useCallback(() => {
+    if (!selectedTable) return;
+    const currentFilterEntries = Object.entries(debouncedFilters).map(([column, value]) => ({ column, value }));
+    setViewModalName('');
+    setViewModalFilters(currentFilterEntries.length > 0 ? currentFilterEntries : [{ column: '', value: '' }]);
+    setViewModalSearch(debouncedSearch);
+    setViewModalSortBy(sortBy || '');
+    setViewModalSortDir(sortDir);
+    setEditingViewId(null);
+    setShowViewModal(true);
+  }, [selectedTable, debouncedFilters, debouncedSearch, sortBy, sortDir]);
+
+  // Open view modal for editing an existing view
+  const openEditViewModal = useCallback((view: SavedView) => {
+    const entries = Object.entries(view.filters).map(([column, value]) => ({ column, value }));
+    setViewModalName(view.name);
+    setViewModalFilters(entries.length > 0 ? entries : [{ column: '', value: '' }]);
+    setViewModalSearch(view.search);
+    setViewModalSortBy(view.sortBy || '');
+    setViewModalSortDir(view.sortDir);
+    setEditingViewId(view.id);
+    setShowViewModal(true);
+  }, []);
+
+  // Save view from modal (create or update)
+  const saveViewFromModal = useCallback(() => {
+    if (!selectedTable || !viewModalName.trim()) return;
+    // Build filters record from the modal rows
+    const filtersRecord: Record<string, string> = {};
+    viewModalFilters.forEach(f => {
+      if (f.column && f.value.trim()) filtersRecord[f.column] = f.value.trim();
+    });
+
+    if (editingViewId) {
+      // Update existing view
+      const updated = savedViews.map(v =>
+        v.id === editingViewId ? {
+          ...v,
+          name: viewModalName.trim(),
+          filters: filtersRecord,
+          search: viewModalSearch,
+          sortBy: viewModalSortBy || undefined,
+          sortDir: viewModalSortDir,
+        } : v
+      );
+      setSavedViews(updated);
+      persistViews(updated);
+      // Re-apply if this is the active view
+      if (activeViewId === editingViewId) {
+        setFilters(filtersRecord);
+        setDebouncedFilters(filtersRecord);
+        setSearch(viewModalSearch);
+        setDebouncedSearch(viewModalSearch);
+        setSortBy(viewModalSortBy || undefined);
+        setSortDir(viewModalSortDir);
+        setPage(1);
+      }
+      toast.success('Vista actualizada');
+    } else {
+      // Create new view
+      const newView: SavedView = {
+        id: `v_${Date.now()}`,
+        name: viewModalName.trim(),
+        table: selectedTable,
+        filters: filtersRecord,
+        search: viewModalSearch,
+        sortBy: viewModalSortBy || undefined,
+        sortDir: viewModalSortDir,
+      };
+      const updated = [...savedViews, newView];
+      setSavedViews(updated);
+      persistViews(updated);
+      setActiveViewId(newView.id);
+      // Apply the new view's filters immediately
+      setFilters(filtersRecord);
+      setDebouncedFilters(filtersRecord);
+      setSearch(viewModalSearch);
+      setDebouncedSearch(viewModalSearch);
+      setSortBy(viewModalSortBy || undefined);
+      setSortDir(viewModalSortDir);
+      setPage(1);
+      toast.success(`Vista "${newView.name}" creada`);
+    }
+    setShowViewModal(false);
+  }, [selectedTable, viewModalName, viewModalFilters, viewModalSearch, viewModalSortBy, viewModalSortDir, editingViewId, activeViewId, savedViews]);
+
+  // Add a filter row in the modal
+  const addViewModalFilter = useCallback(() => {
+    setViewModalFilters(prev => [...prev, { column: '', value: '' }]);
+  }, []);
+
+  // Remove a filter row in the modal
+  const removeViewModalFilter = useCallback((idx: number) => {
+    setViewModalFilters(prev => prev.filter((_, i) => i !== idx));
+  }, []);
+
+  // Update a filter row in the modal
+  const updateViewModalFilter = useCallback((idx: number, field: 'column' | 'value', val: string) => {
+    setViewModalFilters(prev => prev.map((f, i) => i === idx ? { ...f, [field]: val } : f));
+  }, []);
+
+  const deleteView = useCallback((viewId: string) => {
+    const updated = savedViews.filter(v => v.id !== viewId);
+    setSavedViews(updated);
+    persistViews(updated);
+    if (activeViewId === viewId) setActiveViewId(null);
+  }, [savedViews, activeViewId]);
+
+  const startRenameView = useCallback((viewId: string, currentName: string) => {
+    setRenamingViewId(viewId);
+    setRenameValue(currentName);
+  }, []);
+
+  const finishRenameView = useCallback(() => {
+    if (!renamingViewId || !renameValue.trim()) { setRenamingViewId(null); return; }
+    const updated = savedViews.map(v =>
+      v.id === renamingViewId ? { ...v, name: renameValue.trim() } : v
+    );
+    setSavedViews(updated);
+    persistViews(updated);
+    setRenamingViewId(null);
+  }, [renamingViewId, renameValue, savedViews]);
 
   // ── Export CSV ─────────────────────────────────────────────────
   const handleExportCSV = useCallback(async () => {
@@ -362,6 +554,114 @@ function DblgsPage() {
         </div>
       </div>
 
+      {/* ── Views Tab Bar ──────────────────────────────────────── */}
+      {selectedTable && (
+        <div className="bg-white border-b border-gray-200 px-4 py-1.5">
+          <div className="flex items-center gap-1 overflow-x-auto">
+            {/* Default "Tabla" tab */}
+            <button
+              onClick={applyDefaultView}
+              className={`px-3 py-1 text-sm rounded-md whitespace-nowrap transition-colors ${
+                activeViewId === null
+                  ? 'bg-blue-100 text-blue-800 font-medium'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              Tabla
+              <span className="ml-1.5 text-xs text-gray-400">{total.toLocaleString()}</span>
+            </button>
+
+            {/* Divider */}
+            {tableViews.length > 0 && (
+              <div className="w-px h-5 bg-gray-200 mx-1" />
+            )}
+
+            {/* Saved view tabs */}
+            {tableViews.map(view => {
+              const isActive = activeViewId === view.id;
+              const filterCount = Object.keys(view.filters).length + (view.search ? 1 : 0) + (view.sortBy ? 1 : 0);
+              const isRenaming = renamingViewId === view.id;
+
+              return (
+                <div
+                  key={view.id}
+                  className={`group flex items-center gap-1 px-3 py-1 rounded-md whitespace-nowrap transition-colors cursor-pointer ${
+                    isActive
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                  onClick={() => !isRenaming && applyView(view)}
+                >
+                  {isRenaming ? (
+                    <input
+                      autoFocus
+                      type="text"
+                      value={renameValue}
+                      onChange={e => setRenameValue(e.target.value)}
+                      onBlur={finishRenameView}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') finishRenameView();
+                        if (e.key === 'Escape') setRenamingViewId(null);
+                      }}
+                      onClick={e => e.stopPropagation()}
+                      className="px-1 py-0 text-sm border border-blue-400 rounded w-28 focus:ring-1 focus:ring-blue-500 bg-white"
+                    />
+                  ) : (
+                    <span
+                      className="text-sm font-medium"
+                      onDoubleClick={e => { e.stopPropagation(); startRenameView(view.id, view.name); }}
+                    >
+                      {view.name}
+                    </span>
+                  )}
+
+                  {filterCount > 0 && !isRenaming && (
+                    <span className="text-[10px] text-gray-400">{filterCount} filtro{filterCount !== 1 ? 's' : ''}</span>
+                  )}
+
+                  {/* Edit view button */}
+                  {!isRenaming && (
+                    <button
+                      onClick={e => { e.stopPropagation(); openEditViewModal(view); }}
+                      className="opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700 transition-opacity"
+                      title="Editar filtros de esta vista"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                  )}
+
+                  {/* Delete button */}
+                  {!isRenaming && (
+                    <button
+                      onClick={e => { e.stopPropagation(); deleteView(view.id); }}
+                      className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
+                      title="Eliminar vista"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* + Nueva vista */}
+            <button
+              onClick={openNewViewModal}
+              className="px-2.5 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-md whitespace-nowrap flex items-center gap-1 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Nueva vista
+            </button>
+          </div>
+        </div>
+      )}
+
       {!selectedTable ? (
         <div className="flex items-center justify-center h-[60vh]">
           <div className="text-center">
@@ -428,7 +728,7 @@ function DblgsPage() {
 
                 {activeFiltersCount > 0 && (
                   <button
-                    onClick={() => { setSearch(''); setDebouncedSearch(''); setFilters({}); setDebouncedFilters({}); setSortBy(undefined); setPage(1); }}
+                    onClick={applyDefaultView}
                     className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
                   >
                     Limpiar filtros ({activeFiltersCount})
@@ -834,6 +1134,150 @@ function DblgsPage() {
                 className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
               >
                 {deleteRowsMutation.isLoading ? 'Eliminando...' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── View Modal (Create / Edit) ─────────────────────────── */}
+      {showViewModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">
+                {editingViewId ? 'Editar vista' : 'Nueva vista'}
+              </h2>
+              <button onClick={() => setShowViewModal(false)} className="text-gray-400 hover:text-gray-600">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-4 overflow-y-auto flex-1 space-y-4">
+              {/* View name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de la vista</label>
+                <input
+                  autoFocus
+                  type="text"
+                  value={viewModalName}
+                  onChange={e => setViewModalName(e.target.value)}
+                  placeholder="Ej: Contratos recientes"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Filters */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-gray-700">Filtros</label>
+                  <button
+                    onClick={addViewModalFilter}
+                    className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-0.5"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Agregar filtro
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {viewModalFilters.map((f, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <select
+                        value={f.column}
+                        onChange={e => updateViewModalFilter(idx, 'column', e.target.value)}
+                        className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-lg bg-white focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="">Columna...</option>
+                        {columns.map(col => (
+                          <option key={col.name} value={col.name}>{col.name}</option>
+                        ))}
+                      </select>
+                      <span className="text-xs text-gray-400">contiene</span>
+                      <input
+                        type="text"
+                        value={f.value}
+                        onChange={e => updateViewModalFilter(idx, 'value', e.target.value)}
+                        placeholder="Valor..."
+                        className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500"
+                      />
+                      <button
+                        onClick={() => removeViewModalFilter(idx)}
+                        className="text-gray-400 hover:text-red-500 p-1"
+                        title="Quitar filtro"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                  {viewModalFilters.length === 0 && (
+                    <p className="text-xs text-gray-400 italic py-1">Sin filtros. Haz clic en "Agregar filtro" para agregar uno.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Global search */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Búsqueda global</label>
+                <input
+                  type="text"
+                  value={viewModalSearch}
+                  onChange={e => setViewModalSearch(e.target.value)}
+                  placeholder="Buscar en todos los campos de texto..."
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Sort */}
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ordenar por</label>
+                  <select
+                    value={viewModalSortBy}
+                    onChange={e => setViewModalSortBy(e.target.value)}
+                    className="w-full px-2 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="">Sin ordenar</option>
+                    {columns.map(col => (
+                      <option key={col.name} value={col.name}>{col.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="w-32">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+                  <select
+                    value={viewModalSortDir}
+                    onChange={e => setViewModalSortDir(e.target.value as 'asc' | 'desc')}
+                    className="w-full px-2 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="asc">Ascendente</option>
+                    <option value="desc">Descendente</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-2">
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={saveViewFromModal}
+                disabled={!viewModalName.trim()}
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {editingViewId ? 'Guardar cambios' : 'Crear vista'}
               </button>
             </div>
           </div>

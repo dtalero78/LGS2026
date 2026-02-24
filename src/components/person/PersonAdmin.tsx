@@ -112,10 +112,9 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Aprobando...' }))
 
     try {
-      const response = await fetch(`/api/postgres/people/${beneficiaryId}`, {
-        method: 'PATCH',
+      const response = await fetch(`/api/postgres/people/${beneficiaryId}/approve`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ aprobacion: 'Aprobado' })
       })
 
       const data = await response.json()
@@ -123,48 +122,39 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
       if (response.ok && data.success) {
         setCurrentBeneficiaries(prev =>
           prev.map(ben =>
-            ben._id === beneficiaryId ? { ...ben, estado: 'Aprobado' } : ben
+            ben._id === beneficiaryId ? { ...ben, estado: 'Aprobado', aprobacion: 'Aprobado' } : ben
           )
         )
 
-        // Enviar WhatsApp de bienvenida si el beneficiario tiene celular
-        const beneficiary = currentBeneficiaries.find(b => b._id === beneficiaryId)
-        if (beneficiary?.celular) {
-          setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Enviando WhatsApp...' }))
-          try {
-            const whatsappResponse = await fetch('/api/wix/sendWelcomeWhatsApp', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                celular: beneficiary.celular,
-                beneficiarioId: beneficiaryId,
-                nombre: beneficiary.nombre,
-              })
-            })
-            const whatsappResult = await whatsappResponse.json()
-            if (whatsappResponse.ok && whatsappResult.success) {
-              setCurrentBeneficiaries(prev =>
-                prev.map(ben => ben._id === beneficiaryId ? { ...ben, whatsappSent: true } : ben)
-              )
-              setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Completado ✅' }))
-            } else {
-              console.error('❌ Error enviando WhatsApp:', whatsappResult)
-              setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Aprobado (sin WhatsApp)' }))
-            }
-          } catch (whatsappError) {
-            console.error('❌ Error enviando WhatsApp:', whatsappError)
-            setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Aprobado (sin WhatsApp)' }))
-          }
-        } else {
-          setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Completado ✅' }))
+        // Build status message based on what the server did
+        const parts: string[] = ['Aprobado']
+        if (data.academicCreated) parts.push('+ Registro académico')
+        if (data.whatsappSent) parts.push('+ WhatsApp enviado ✅')
+        if (data.titularAutoApproved) parts.push('+ Titular aprobado')
+
+        // Show WhatsApp error prominently if it failed
+        if (data.whatsappError) {
+          parts.push('⚠️ WhatsApp NO enviado')
+          alert(`⚠️ Persona aprobada pero el WhatsApp NO se envió.\n\nError: ${data.whatsappError}\n\nDeberás enviar el mensaje manualmente.`)
+        } else if (!data.whatsappSent && !data.whatsappError) {
+          parts.push('(sin celular)')
+        }
+
+        setProcessStatus(prev => ({ ...prev, [beneficiaryId]: parts.join(' ') }))
+
+        // If titular was auto-approved, update the titular estado in the UI
+        if (data.titularAutoApproved) {
+          setSelectedEstado('Aprobado')
+          setOriginalEstado('Aprobado')
         }
 
         setTimeout(() => {
           setProcessStatus(prev => { const s = { ...prev }; delete s[beneficiaryId]; return s })
           setApprovingBeneficiaries(prev => { const s = new Set(prev); s.delete(beneficiaryId); return s })
-        }, 2000)
+        }, 5000)
       } else {
-        setProcessStatus(prev => ({ ...prev, [beneficiaryId]: 'Error ❌' }))
+        console.error('❌ Error aprobando beneficiario:', data.error)
+        setProcessStatus(prev => ({ ...prev, [beneficiaryId]: `Error: ${data.error || 'desconocido'} ❌` }))
         setTimeout(() => {
           setProcessStatus(prev => { const s = { ...prev }; delete s[beneficiaryId]; return s })
           setApprovingBeneficiaries(prev => { const s = new Set(prev); s.delete(beneficiaryId); return s })
@@ -273,21 +263,76 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     setIsUpdatingEstado(true)
 
     try {
-      const response = await fetch(`/api/postgres/people/${person._id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ aprobacion: pendingEstado })
-      })
+      let response: Response
+      let data: any
 
-      const data = await response.json()
+      if (pendingEstado === 'Aprobado') {
+        // Use the approve endpoint for full approval flow
+        // (creates ACADEMICA record + sends WhatsApp + auto-approves titular)
+        response = await fetch(`/api/postgres/people/${person._id}/approve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        })
+        data = await response.json()
+      } else {
+        // For other states, use the regular PATCH
+        response = await fetch(`/api/postgres/people/${person._id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aprobacion: pendingEstado })
+        })
+        data = await response.json()
+      }
 
       if (response.ok && data.success) {
         setSelectedEstado(pendingEstado as any)
         setOriginalEstado(pendingEstado as any)
         setShowEstadoModal(false)
         setPendingEstado(null)
+
+        // Show WhatsApp feedback for approve action
+        if (pendingEstado === 'Aprobado') {
+          // Build summary message
+          const lines: string[] = []
+
+          // Titular WhatsApp status
+          if (data.whatsappSent) {
+            lines.push('✅ Titular aprobado y WhatsApp enviado.')
+          } else if (data.whatsappError) {
+            lines.push(`⚠️ Titular aprobado pero WhatsApp NO enviado: ${data.whatsappError}`)
+          } else {
+            lines.push('✅ Titular aprobado (sin celular para WhatsApp).')
+          }
+
+          // Beneficiaries approved (when titular is approved)
+          if (data.beneficiariesApproved && data.beneficiariesApproved.length > 0) {
+            lines.push(`\n👥 ${data.beneficiariesApproved.length} beneficiario(s) aprobados:`)
+            for (const ben of data.beneficiariesApproved) {
+              if (ben.whatsappSent) {
+                lines.push(`  ✅ ${ben.nombre} - WhatsApp enviado`)
+              } else if (ben.whatsappError) {
+                lines.push(`  ⚠️ ${ben.nombre} - WhatsApp falló: ${ben.whatsappError}`)
+              } else {
+                lines.push(`  ✅ ${ben.nombre} - Aprobado (sin celular)`)
+              }
+            }
+
+            // Update all beneficiaries to Aprobado in the UI
+            setCurrentBeneficiaries(prev =>
+              prev.map(ben => {
+                const approved = data.beneficiariesApproved.find((b: any) => b.personId === ben._id)
+                return approved ? { ...ben, estado: 'Aprobado', aprobacion: 'Aprobado' } : ben
+              })
+            )
+          } else if (data.beneficiariesCount === 0) {
+            lines.push('\nNo hay beneficiarios pendientes por aprobar.')
+          }
+
+          alert(lines.join('\n'))
+        }
       } else {
         console.error('❌ Error al actualizar estado:', data.error)
+        alert(`❌ Error al actualizar estado: ${data.error || 'Error desconocido'}`)
         setSelectedEstado(originalEstado as any)
       }
     } catch (error) {
@@ -742,7 +787,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                       Modificar
                     </button>
                   </PermissionGuard>
-                  {(beneficiary.estado === 'Pendiente' || approvingBeneficiaries.has(beneficiary._id)) && (
+                  {((!beneficiary.estado || beneficiary.estado === 'Pendiente') || approvingBeneficiaries.has(beneficiary._id)) && (
                     <PermissionGuard permission={PersonPermission.APROBAR}>
                       <button
                         onClick={() => handleApproveSpecificBeneficiary(beneficiary._id)}

@@ -71,7 +71,7 @@ async function PersonContent({ personId }: { personId: string }) {
       nombre: person.nombreCompleto?.split(' ')[0] || '',
       apellido: person.nombreCompleto?.split(' ').slice(1).join(' ') || '',
       celular: person.celular || '',
-      estado: person.estadoInactivo ? 'Inactivo' : person.aprobacion,
+      estado: person.estadoInactivo ? 'Inactivo' : (person.aprobacion || 'Pendiente'),
       fechaCreacion: person._createdDate,
       nivel: person.nivel,
       existeEnAcademica: person.existeEnAcademica,

@@ -14,9 +14,10 @@ const WHAPI_TOKEN = process.env.WHAPI_TOKEN || 'VSyDX4j7ooAJ7UGOhz8lGplUVDDs2EYj
  * Format a phone number for WhatsApp: strip non-digits and validate length.
  */
 export function formatPhoneNumber(raw: string): string {
-  const digits = raw.replace(/\D/g, '');
+  const str = String(raw || '');
+  const digits = str.replace(/\D/g, '');
   if (digits.length < 10) {
-    throw new Error(`Invalid phone number (too short): ${raw}`);
+    throw new Error(`Número inválido (muy corto, ${digits.length} dígitos): ${str}`);
   }
   return digits;
 }
