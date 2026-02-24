@@ -99,26 +99,21 @@ export const POST = handler(async (_request, { params }) => {
 
   const tempPdfUrl: string = pdfData.pdf;
 
-  // 6. Upload PDF to Drive via bsl-utilidades (permanent URL)
-  const uploadRes = await fetch(BSL_UPLOAD_URL, {
+  // 6. Download PDF bytes from API2PDF and convert to base64 for Whapi
+  const pdfBytesRes = await fetch(tempPdfUrl);
+  if (!pdfBytesRes.ok) throw new Error(`No se pudo descargar el PDF de API2PDF: ${pdfBytesRes.status}`);
+  const pdfBuffer = await pdfBytesRes.arrayBuffer();
+  const pdfBase64 = Buffer.from(pdfBuffer).toString('base64');
+  const pdfDataUri = `data:application/pdf;base64,${pdfBase64}`;
+
+  // 7. Upload PDF to Drive via bsl-utilidades in parallel with WhatsApp send
+  const uploadPromise = fetch(BSL_UPLOAD_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      pdfUrl: tempPdfUrl,
-      documento: titularId,
-      empresa: 'LGS',
-    }),
-  });
+    body: JSON.stringify({ pdfUrl: tempPdfUrl, documento: titularId, empresa: 'LGS' }),
+  }).then(r => r.json()).catch(() => ({}));
 
-  if (!uploadRes.ok) {
-    const err = await uploadRes.text();
-    throw new Error(`Drive upload error ${uploadRes.status}: ${err}`);
-  }
-
-  const uploadData = await uploadRes.json();
-  const pdfUrl: string = uploadData.url || uploadData.fileUrl || uploadData.link || tempPdfUrl;
-
-  // 7. Send PDF via Whapi using permanent URL
+  // 8. Send PDF via Whapi using base64 (avoids Drive URL redirect issues)
   const phone = titular.celular.toString().replace(/\D/g, '');
   // Filename: primerNombre + primerApellido + numeroId
   const nameParts = [titular.primerNombre, titular.primerApellido, titular.numeroId].filter(Boolean);
@@ -135,11 +130,13 @@ export const POST = handler(async (_request, { params }) => {
     },
     body: JSON.stringify({
       to: phone,
-      media: pdfUrl,
+      media: pdfDataUri,
       filename,
       caption: `Hola ${titular.primerNombre || ''}, adjunto encontrarás tu contrato con LetsGoSpeak. 📄`,
     }),
   });
+
+  const uploadData = await uploadPromise;
 
   if (!whapiRes.ok) {
     const err = await whapiRes.text();
@@ -149,7 +146,7 @@ export const POST = handler(async (_request, { params }) => {
   const whapiData = await whapiRes.json();
 
   return successResponse({
-    pdfUrl,
+    pdfUrl: tempPdfUrl,
     driveUpload: uploadData,
     whatsapp: whapiData,
     sentTo: phone,
