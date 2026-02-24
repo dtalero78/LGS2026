@@ -242,7 +242,6 @@ export default function ContratoDetailPage() {
   const [docs, setDocs] = useState<any[]>([])
   const [loadingDocs, setLoadingDocs] = useState(false)
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([]) // filenames in progress
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Consent status
   const [consentStatus, setConsentStatus] = useState<ConsentDisplay | null>(null)
@@ -418,11 +417,8 @@ export default function ContratoDetailPage() {
     loadDocs()
   }
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
+  const handleFileUpload = async (files: File[]) => {
     if (!files.length) return
-    // reset input so same file can be re-selected
-    e.target.value = ''
 
     for (const file of files) {
       setUploadingFiles(prev => [...prev, file.name])
@@ -1025,21 +1021,17 @@ export default function ContratoDetailPage() {
                 {/* Body */}
                 <div className="px-6 py-5 space-y-4">
                   {/* Upload zone */}
-                  <div
-                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-400 transition-colors cursor-pointer"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <ArrowUpTrayIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm font-medium text-gray-700">Haz clic para subir archivos</p>
-                    <p className="text-xs text-gray-400 mt-1">JPG, PNG, WEBP, HEIC, PDF · Máx 20 MB por archivo</p>
+                  <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-400 transition-colors cursor-pointer">
                     <input
-                      ref={fileInputRef}
                       type="file"
                       multiple
                       accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,application/pdf"
-                      className="hidden"
-                      onChange={handleFileUpload}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={(e) => handleFileUpload(Array.from(e.target.files || []))}
                     />
+                    <ArrowUpTrayIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm font-medium text-gray-700">Haz clic para subir archivos</p>
+                    <p className="text-xs text-gray-400 mt-1">JPG, PNG, WEBP, HEIC, PDF · Máx 20 MB por archivo</p>
                   </div>
 
                   {/* Uploading progress */}
