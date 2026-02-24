@@ -21,6 +21,9 @@ import {
   IdentificationIcon,
   CalendarIcon,
   ShieldCheckIcon,
+  ArrowUpTrayIcon,
+  TrashIcon,
+  PaperClipIcon,
 } from '@heroicons/react/24/outline'
 import { fillContractTemplate, type ConsentDisplay } from '@/lib/contract-template-filler'
 
@@ -234,6 +237,13 @@ export default function ContratoDetailPage() {
   const [sendingPdf, setSendingPdf] = useState(false)
   const [pdfStatus, setPdfStatus] = useState<'idle' | 'sent' | 'error'>('idle')
 
+  // Documentación
+  const [showDocsModal, setShowDocsModal] = useState(false)
+  const [docs, setDocs] = useState<any[]>([])
+  const [loadingDocs, setLoadingDocs] = useState(false)
+  const [uploadingFiles, setUploadingFiles] = useState<string[]>([]) // filenames in progress
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   // Consent status
   const [consentStatus, setConsentStatus] = useState<ConsentDisplay | null>(null)
   const [approvingConsent, setApprovingConsent] = useState(false)
@@ -387,6 +397,71 @@ export default function ContratoDetailPage() {
       setPdfStatus('error')
     } finally {
       setSendingPdf(false)
+    }
+  }
+
+  // ── Documentación ──
+  const loadDocs = useCallback(async () => {
+    try {
+      setLoadingDocs(true)
+      const data = await api.get(`/api/contracts/${titularId}/documents`)
+      setDocs(data.documentacion || [])
+    } catch (err) {
+      handleApiError(err, 'Error cargando documentos')
+    } finally {
+      setLoadingDocs(false)
+    }
+  }, [titularId])
+
+  const openDocsModal = () => {
+    setShowDocsModal(true)
+    loadDocs()
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
+    // reset input so same file can be re-selected
+    e.target.value = ''
+
+    for (const file of files) {
+      setUploadingFiles(prev => [...prev, file.name])
+      try {
+        // 1. Get presigned URL
+        const { presignedUrl, publicUrl } = await api.get(
+          `/api/contracts/${titularId}/upload-url?filename=${encodeURIComponent(file.name)}&type=${encodeURIComponent(file.type)}`
+        )
+        // 2. Upload directly to DO Spaces
+        const uploadRes = await fetch(presignedUrl, {
+          method: 'PUT',
+          body: file,
+          headers: { 'Content-Type': file.type, 'x-amz-acl': 'public-read' },
+        })
+        if (!uploadRes.ok) throw new Error(`Upload failed: ${uploadRes.status}`)
+        // 3. Save URL to PEOPLE.documentacion
+        const saved = await api.post(`/api/contracts/${titularId}/documents`, {
+          url: publicUrl,
+          nombre: file.name,
+          tipo: file.type,
+        })
+        setDocs(saved.documentacion || [])
+        toast.success(`${file.name} subido`)
+      } catch (err) {
+        handleApiError(err, `Error subiendo ${file.name}`)
+      } finally {
+        setUploadingFiles(prev => prev.filter(n => n !== file.name))
+      }
+    }
+  }
+
+  const deleteDoc = async (url: string, nombre: string) => {
+    if (!confirm(`¿Eliminar "${nombre}"?`)) return
+    try {
+      const data = await api.delete(`/api/contracts/${titularId}/documents`, { url })
+      setDocs(data.documentacion || [])
+      toast.success('Documento eliminado')
+    } catch (err) {
+      handleApiError(err, 'Error eliminando documento')
     }
   }
 
@@ -584,6 +659,13 @@ export default function ContratoDetailPage() {
                   {approvingConsent ? 'Aprobando...' : 'Auto-Aprobar Consentimiento'}
                 </button>
               )}
+              <button
+                onClick={openDocsModal}
+                className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm font-medium"
+              >
+                <PaperClipIcon className="h-4 w-4" />
+                Subir documentación
+              </button>
               {!editing ? (
                 <button
                   onClick={startEditing}
@@ -922,6 +1004,102 @@ export default function ContratoDetailPage() {
             </div>
           )}
         </div>
+
+        {/* ── Documentación Modal ── */}
+        {showDocsModal && (
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex min-h-screen items-center justify-center p-4">
+              <div className="fixed inset-0 bg-black/50" onClick={() => setShowDocsModal(false)} />
+              <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl">
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                  <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <PaperClipIcon className="h-5 w-5 text-gray-500" />
+                    Documentación del contrato
+                  </h2>
+                  <button onClick={() => setShowDocsModal(false)} className="text-gray-400 hover:text-gray-600">
+                    <XMarkIcon className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {/* Body */}
+                <div className="px-6 py-5 space-y-4">
+                  {/* Upload zone */}
+                  <div
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-400 transition-colors cursor-pointer"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <ArrowUpTrayIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm font-medium text-gray-700">Haz clic para subir archivos</p>
+                    <p className="text-xs text-gray-400 mt-1">JPG, PNG, WEBP, HEIC, PDF · Máx 20 MB por archivo</p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,application/pdf"
+                      className="hidden"
+                      onChange={handleFileUpload}
+                    />
+                  </div>
+
+                  {/* Uploading progress */}
+                  {uploadingFiles.length > 0 && (
+                    <div className="space-y-1">
+                      {uploadingFiles.map(name => (
+                        <div key={name} className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 rounded px-3 py-2">
+                          <div className="animate-spin h-3 w-3 border-2 border-blue-400 border-t-transparent rounded-full flex-shrink-0" />
+                          Subiendo {name}…
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Document list */}
+                  {loadingDocs ? (
+                    <div className="flex justify-center py-6">
+                      <div className="animate-spin h-6 w-6 border-2 border-primary-500 border-t-transparent rounded-full" />
+                    </div>
+                  ) : docs.length === 0 ? (
+                    <p className="text-center text-sm text-gray-400 py-4">Sin documentos aún</p>
+                  ) : (
+                    <ul className="divide-y divide-gray-100">
+                      {docs.map((doc: any, i: number) => (
+                        <li key={i} className="flex items-center gap-3 py-2.5">
+                          {doc.tipo?.startsWith('image/') ? (
+                            <img src={doc.url} alt={doc.nombre} className="h-10 w-10 rounded object-cover flex-shrink-0 border border-gray-200" />
+                          ) : (
+                            <div className="h-10 w-10 rounded bg-red-50 flex items-center justify-center flex-shrink-0 border border-red-100">
+                              <DocumentTextIcon className="h-5 w-5 text-red-400" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-gray-800 hover:text-primary-600 truncate block">
+                              {doc.nombre}
+                            </a>
+                            <p className="text-xs text-gray-400">{new Date(doc.fechaSubida).toLocaleString('es-CO')}</p>
+                          </div>
+                          <button
+                            onClick={() => deleteDoc(doc.url, doc.nombre)}
+                            className="text-gray-300 hover:text-red-500 flex-shrink-0"
+                            title="Eliminar"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
+                  <button onClick={() => setShowDocsModal(false)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm font-medium">
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </PermissionGuard>
     </DashboardLayout>
   )
