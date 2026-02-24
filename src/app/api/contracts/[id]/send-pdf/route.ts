@@ -99,21 +99,14 @@ export const POST = handler(async (_request, { params }) => {
 
   const tempPdfUrl: string = pdfData.pdf;
 
-  // 6. Download PDF bytes from API2PDF and convert to base64 for Whapi
-  const pdfBytesRes = await fetch(tempPdfUrl);
-  if (!pdfBytesRes.ok) throw new Error(`No se pudo descargar el PDF de API2PDF: ${pdfBytesRes.status}`);
-  const pdfBuffer = await pdfBytesRes.arrayBuffer();
-  const pdfBase64 = Buffer.from(pdfBuffer).toString('base64');
-  const pdfDataUri = `data:application/pdf;base64,${pdfBase64}`;
-
-  // 7. Upload PDF to Drive via bsl-utilidades in parallel with WhatsApp send
+  // 6. Upload PDF to Drive via bsl-utilidades in parallel with WhatsApp send
   const uploadPromise = fetch(BSL_UPLOAD_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ pdfUrl: tempPdfUrl, documento: titularId, empresa: 'LGS' }),
   }).then(r => r.json()).catch(() => ({}));
 
-  // 8. Send PDF via Whapi using base64 (avoids Drive URL redirect issues)
+  // 7. Send PDF via Whapi using the API2PDF direct URL (clean S3 link, no redirects)
   const phone = titular.celular.toString().replace(/\D/g, '');
   // Filename: primerNombre + primerApellido + numeroId
   const nameParts = [titular.primerNombre, titular.primerApellido, titular.numeroId].filter(Boolean);
@@ -130,7 +123,7 @@ export const POST = handler(async (_request, { params }) => {
     },
     body: JSON.stringify({
       to: phone,
-      media: pdfDataUri,
+      media: tempPdfUrl,
       filename,
       caption: `Hola ${titular.primerNombre || ''}, adjunto encontrarás tu contrato con LetsGoSpeak. 📄`,
     }),
