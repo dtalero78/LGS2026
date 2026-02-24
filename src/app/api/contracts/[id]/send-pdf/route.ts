@@ -1,40 +1,90 @@
 import 'server-only';
 import { handler, successResponse } from '@/lib/api-helpers';
 import { NotFoundError, ValidationError } from '@/lib/errors';
-import { queryOne } from '@/lib/postgres';
+import { queryOne, queryMany } from '@/lib/postgres';
+import { fillContractTemplate } from '@/lib/contract-template-filler';
 
 const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
 const WHAPI_TOKEN = 'VSyDX4j7ooAJ7UGOhz8lGplUVDDs2EYj';
-const CONTRACT_BASE_URL = 'https://talero.studio/contrato';
 const BSL_UPLOAD_URL = 'https://bsl-utilidades-yp78a.ondigitalocean.app/subir-pdf-directo';
 
 export const POST = handler(async (_request, { params }) => {
   const titularId = params.id;
 
-  // Get celular from DB
+  // 1. Load full contract data
   const titular = await queryOne(
-    `SELECT "celular", "primerNombre", "contrato" FROM "PEOPLE" WHERE "_id" = $1`,
+    `SELECT * FROM "PEOPLE" WHERE "_id" = $1`,
     [titularId]
   );
   if (!titular) throw new NotFoundError('Titular', titularId);
   if (!titular.celular) throw new ValidationError('El titular no tiene celular registrado');
+  if (!titular.plataforma) throw new ValidationError('El titular no tiene plataforma asignada');
 
-  const contractUrl = `${CONTRACT_BASE_URL}/${titularId}`;
+  // Beneficiarios = all PEOPLE with same contrato number, excluding the titular
+  const beneficiarios = await queryMany(
+    `SELECT * FROM "PEOPLE" WHERE "contrato" = $1 AND "_id" != $2 ORDER BY "_createdDate" ASC`,
+    [titular.contrato, titularId]
+  );
 
-  // 1. Generate PDF with API2PDF (delay:10000 to let the page render)
-  const pdfRes = await fetch('https://v2018.api2pdf.com/chrome/url', {
+  const financial = await queryOne(
+    `SELECT * FROM "FINANCIEROS" WHERE "titular" = $1 LIMIT 1`,
+    [titularId]
+  );
+
+  // 2. Fetch contract template for this platform
+  let templateRow = await queryOne(
+    `SELECT "template" FROM "ContractTemplates" WHERE "plataforma" = $1`,
+    [titular.plataforma]
+  );
+  if (!templateRow) {
+    templateRow = await queryOne(
+      `SELECT "template" FROM "ContractTemplates" WHERE LOWER("plataforma") = LOWER($1)`,
+      [titular.plataforma]
+    );
+  }
+  if (!templateRow?.template) throw new NotFoundError('ContractTemplate', titular.plataforma);
+
+  // 3. Fill template with data (full contract text)
+  const contractText = fillContractTemplate(
+    templateRow.template,
+    titular,
+    beneficiarios,
+    financial
+  );
+
+  // 4. Wrap in HTML for PDF generation
+  const htmlContent = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Contrato ${titular.contrato || ''}</title>
+  <style>
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 12pt;
+      line-height: 1.7;
+      color: #111;
+      padding: 30mm 25mm;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    @page { margin: 20mm; }
+  </style>
+</head>
+<body>${contractText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</body>
+</html>`;
+
+  // 5. Generate PDF with API2PDF (HTML mode — no URL dependency)
+  const pdfRes = await fetch('https://v2018.api2pdf.com/chrome/html', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': API2PDF_KEY,
     },
     body: JSON.stringify({
-      url: contractUrl,
-      options: {
-        printBackground: true,
-        delay: 10000,
-        scale: 0.75,
-      },
+      html: htmlContent,
+      options: { printBackground: true },
+      fileName: titular.contrato ? `Contrato-${titular.contrato}.pdf` : 'Contrato-LGS.pdf',
     }),
   });
 
@@ -50,7 +100,7 @@ export const POST = handler(async (_request, { params }) => {
 
   const tempPdfUrl: string = pdfData.pdf;
 
-  // 2. Upload PDF to Drive via bsl-utilidades (permanent URL)
+  // 6. Upload PDF to Drive via bsl-utilidades (permanent URL)
   const uploadRes = await fetch(BSL_UPLOAD_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -67,10 +117,9 @@ export const POST = handler(async (_request, { params }) => {
   }
 
   const uploadData = await uploadRes.json();
-  // Use permanent Drive URL if available, otherwise fall back to API2PDF temp URL
   const pdfUrl: string = uploadData.url || uploadData.fileUrl || uploadData.link || tempPdfUrl;
 
-  // 3. Send PDF via Whapi using the permanent URL
+  // 7. Send PDF via Whapi using permanent URL
   const phone = titular.celular.toString().replace(/\D/g, '');
   const filename = titular.contrato
     ? `Contrato-${titular.contrato}.pdf`
