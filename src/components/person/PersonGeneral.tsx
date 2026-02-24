@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Person } from '@/types'
 import { formatDate } from '@/lib/utils'
-import { ArrowDownTrayIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
+import { ArrowDownTrayIcon, DocumentTextIcon, PhotoIcon } from '@heroicons/react/24/outline'
 import { PermissionGuard } from '@/components/permissions'
 import { PersonPermission } from '@/types/permissions'
 
@@ -29,7 +29,19 @@ export default function PersonGeneral({ person }: PersonGeneralProps) {
     setShowDocuments(true)
   }
 
-  const documentacion = (person as any).documentacion || []
+  const rawDocs: any[] = (person as any).documentacion || []
+  const documentacion = rawDocs.map((entry: any) => {
+    if (typeof entry === 'string') {
+      // Old Wix format: "wix:image://v1/{hash}/filename#..."
+      const urlMatch = entry.match(/wix:image:\/\/v1\/([^/]+)\//)
+      const url = urlMatch ? `https://static.wixstatic.com/media/${urlMatch[1]}` : entry
+      const nameMatch = entry.match(/\/([^/#]+?)(?:#|$)/)
+      const nombre = nameMatch ? decodeURIComponent(nameMatch[1]) : 'Documento'
+      const tipo = entry.includes('.pdf') ? 'application/pdf' : 'image/jpeg'
+      return { url, nombre, tipo }
+    }
+    return entry as { url: string; nombre: string; tipo?: string; fechaSubida?: string }
+  })
 
   return (
     <div className="space-y-8">
@@ -160,17 +172,21 @@ export default function PersonGeneral({ person }: PersonGeneralProps) {
               </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {documentacion.map((doc: any, index: number) => (
+              {documentacion.map((doc, index) => (
                 <div key={index} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
                   <div className="flex items-center space-x-3">
-                    <DocumentTextIcon className="h-8 w-8 text-gray-400" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">Documento {index + 1}</p>
-                      <p className="text-xs text-gray-500">PDF Document</p>
+                    {doc.tipo?.startsWith('image/') ? (
+                      <img src={doc.url} alt={doc.nombre} className="h-12 w-12 rounded object-cover flex-shrink-0 border border-gray-200" />
+                    ) : (
+                      <DocumentTextIcon className="h-8 w-8 text-red-400 flex-shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{doc.nombre}</p>
+                      <p className="text-xs text-gray-500">{doc.tipo?.startsWith('image/') ? 'Imagen' : 'PDF'}</p>
                     </div>
                   </div>
                   <a
-                    href={doc}
+                    href={doc.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-2 text-sm text-primary-600 hover:text-primary-800 block"
