@@ -2,7 +2,7 @@
 
 import { DocumentTextIcon } from '@heroicons/react/24/outline'
 
-interface Doc {
+interface DocObject {
   url: string
   nombre: string
   tipo?: string
@@ -10,7 +10,37 @@ interface Doc {
 }
 
 interface PersonDocumentsProps {
-  documents: Doc[]
+  documents: (string | DocObject)[]
+}
+
+/** Convert Wix image URI to a viewable URL */
+function resolveWixUrl(wixUri: string): string {
+  // wix:image://v1/{hash}~mv2.jpeg/filename#originWidth=...
+  const match = wixUri.match(/wix:image:\/\/v1\/([^/]+)\//)
+  if (match) {
+    return `https://static.wixstatic.com/media/${match[1]}`
+  }
+  return wixUri
+}
+
+/** Extract filename from Wix URI or return fallback */
+function extractName(wixUri: string): string {
+  // wix:image://v1/hash/Filename.jpeg#...
+  const match = wixUri.match(/\/([^/#]+?)(?:#|$)/)
+  if (match) return decodeURIComponent(match[1])
+  return 'Documento'
+}
+
+/** Normalize any doc entry to a uniform shape */
+function normalizeDoc(entry: string | DocObject): DocObject {
+  if (typeof entry === 'string') {
+    return {
+      url: resolveWixUrl(entry),
+      nombre: extractName(entry),
+      tipo: entry.includes('.pdf') ? 'application/pdf' : 'image/jpeg',
+    }
+  }
+  return entry
 }
 
 export default function PersonDocuments({ documents }: PersonDocumentsProps) {
@@ -23,13 +53,15 @@ export default function PersonDocuments({ documents }: PersonDocumentsProps) {
     )
   }
 
+  const docs = documents.map(normalizeDoc)
+
   return (
     <div>
       <h3 className="text-sm font-semibold text-gray-700 mb-3">
-        Documentos ({documents.length})
+        Documentos ({docs.length})
       </h3>
       <ul className="divide-y divide-gray-100">
-        {documents.map((doc, i) => (
+        {docs.map((doc, i) => (
           <li key={i} className="flex items-center gap-3 py-3">
             {doc.tipo?.startsWith('image/') ? (
               <img

@@ -86,7 +86,7 @@ export interface Person {
   numeroDocumentoVerificado?: string
   inicioContrato?: string
   // Documents
-  documentacion?: Array<{ url: string; nombre: string; tipo?: string; fechaSubida?: string }>
+  documentacion?: Array<string | { url: string; nombre: string; tipo?: string; fechaSubida?: string }>
 }
 
 export interface OnHoldHistoryEntry {
