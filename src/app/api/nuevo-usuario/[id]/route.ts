@@ -186,19 +186,19 @@ export const POST = handler(async (
         await query(
           `INSERT INTO "ACADEMICA_BOOKINGS" (
             "_id", "eventoId", "idEvento", "studentId", "idEstudiante",
-            "primerNombre", "primerApellido", "numeroId", "celular",
+            "primerNombre", "primerApellido",
             "nivel", "step", "advisor", "fecha", "fechaEvento", "hora",
             "tipo", "tipoEvento", "linkZoom", "nombreEvento", "tituloONivel",
             "asistio", "asistencia", "participacion", "noAprobo", "cancelo",
-            "agendadoPor", "origen", "plataforma",
+            "agendadoPor", "origen",
             "_createdDate", "_updatedDate"
           ) VALUES (
             $1, $2, $2, $3, $3,
-            $4, $5, $6, $7,
-            $8, $9, $10, $11, $11, $12,
-            $13, $13, $14, $15, $16,
+            $4, $5,
+            $6, $7, $8, $9, $9, $10,
+            $11, $11, $12, $13, $14,
             false, false, false, false, false,
-            'ESTUDIANTE', 'POSTGRES', $17,
+            'ESTUDIANTE', 'POSTGRES',
             NOW(), NOW()
           )`,
           [
@@ -207,8 +207,6 @@ export const POST = handler(async (
             academicId,
             student.primerNombre,
             student.primerApellido,
-            student.numeroId,
-            student.celular || null,
             student.nivel || 'WELCOME',
             student.step || 'WELCOME',
             event.advisor || null,
@@ -218,7 +216,6 @@ export const POST = handler(async (
             event.linkZoom || null,
             event.nombreEvento || event.titulo || 'WELCOME',
             event.tituloONivel || null,
-            student.plataforma || null,
           ]
         );
 

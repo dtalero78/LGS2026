@@ -43,6 +43,8 @@ export interface Student {
   // OnHold fields
   onHoldCount?: number
   onHoldHistory?: OnHoldHistoryEntry[]
+  // Documents
+  documentacion?: Array<string | { url: string; nombre: string; tipo?: string; fechaSubida?: string }>
 }
 
 // Person types

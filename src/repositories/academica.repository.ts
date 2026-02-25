@@ -69,16 +69,17 @@ class AcademicaRepositoryClass extends BaseRepository {
     const row = await queryOne(
       `SELECT a."_id", a."numeroId", a."primerNombre", a."segundoNombre", a."primerApellido", a."segundoApellido",
               p."celular", p."telefono", p."email", p."domicilio", p."ciudad", p."fechaNacimiento",
-              p."contrato", a."vigencia", a."fechaCreacion", p."tipoUsuario", a."plataforma",
+              p."contrato", a."fechaCreacion", p."tipoUsuario", a."plataforma",
               a."nivel", a."step", a."nivelParalelo", a."stepParalelo", p."aprobacion",
-              a."estadoInactivo", p."estado", p."fechaOnHold", p."fechaFinOnHold",
+              COALESCE(p."estadoInactivo", a."estadoInactivo") AS "estadoInactivo", p."estado", p."fechaOnHold", p."fechaFinOnHold",
               p."vigenciaOriginalPreOnHold", p."onHoldCount", p."onHoldHistory",
-              a."extensionCount", a."extensionHistory", a."fechaContrato", a."finalContrato",
-              p."titularId", a."asesor", a."usuarioId", p."ingresos", p."genero",
+              p."extensionCount", p."extensionHistory", p."fechaContrato", p."finalContrato",
+              COALESCE(p."vigencia", a."vigencia") AS "vigencia",
+              p."titularId", a."asesor", a."usuarioId", p."_id" AS "peopleId", p."ingresos", p."genero",
               COALESCE(a."clave", p."clave") AS "clave",
               p."empresa", p."cargo", p."referenciaUno", p."parentezcoRefUno", p."telefonoRefUno",
               p."referenciaDos", p."parentezcoRefDos", p."telefonoRefDos",
-              a."_createdDate", a."_updatedDate"
+              a."_createdDate", a."_updatedDate", p."documentacion"
        FROM "ACADEMICA" a
        LEFT JOIN "PEOPLE" p ON a."numeroId" = p."numeroId"
        WHERE a."_id" = $1`,
