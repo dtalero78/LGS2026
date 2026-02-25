@@ -16,6 +16,7 @@ import {
   AlertCircle,
   MessageCircle
 } from 'lucide-react'
+import { exportToExcel } from '@/lib/export-excel'
 
 interface Beneficiario {
   _id: string
@@ -181,29 +182,16 @@ export default function SinRegistroPage() {
     setEndDate('')
   }
 
-  const handleExportCSV = () => {
-    const csvContent = [
-      ['Nombre', 'Apellido', 'Documento', 'Email', 'Telefono', 'Contrato', 'Fecha Creacion'].join(','),
-      ...filteredBeneficiarios.map(b => [
-        `${b.primerNombre} ${b.segundoNombre || ''}`.trim(),
-        `${b.primerApellido} ${b.segundoApellido || ''}`.trim(),
-        b.numeroId,
-        b.email || '',
-        b.celular || b.telefono || '',
-        b.contrato || '',
-        new Date(b._createdDate).toLocaleDateString()
-      ].join(','))
-    ].join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `beneficiarios-sin-registro-${new Date().toISOString().split('T')[0]}.csv`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    window.URL.revokeObjectURL(url)
+  const handleExportExcel = () => {
+    exportToExcel(filteredBeneficiarios, [
+      { header: 'Nombre', accessor: (b) => `${b.primerNombre} ${b.segundoNombre || ''}`.trim() },
+      { header: 'Apellido', accessor: (b) => `${b.primerApellido} ${b.segundoApellido || ''}`.trim() },
+      { header: 'Documento', accessor: (b) => b.numeroId },
+      { header: 'Email', accessor: (b) => b.email },
+      { header: 'Teléfono', accessor: (b) => b.celular || b.telefono },
+      { header: 'Contrato', accessor: (b) => b.contrato },
+      { header: 'Fecha Creación', accessor: (b) => new Date(b._createdDate).toLocaleDateString() },
+    ], `beneficiarios-sin-registro-${new Date().toISOString().split('T')[0]}`)
   }
 
   return (
@@ -227,12 +215,12 @@ export default function SinRegistroPage() {
             </button>
 
             <button
-              onClick={handleExportCSV}
+              onClick={handleExportExcel}
               disabled={filteredBeneficiarios.length === 0}
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
             >
               <Download className="w-4 h-4" />
-              Exportar CSV
+              Exportar Excel
             </button>
           </div>
         </div>

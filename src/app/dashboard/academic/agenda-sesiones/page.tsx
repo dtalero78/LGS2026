@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
 import { AcademicoPermission } from '@/types/permissions'
+import { exportToExcel } from '@/lib/export-excel'
 import CalendarView from '@/components/calendar/CalendarView'
 import DailyAgenda from '@/components/calendar/DailyAgenda'
 import EventModal from '@/components/calendar/EventModal'
@@ -768,10 +769,21 @@ export default function AgendaSesionesPage() {
             </button>
 
             <button
-              onClick={() => window.open('/api/postgres/calendar/export-csv', '_blank')}
+              onClick={() => exportToExcel(events, [
+                { header: 'Fecha', accessor: (e) => e.dia ? format(new Date(e.dia), 'dd/MM/yyyy') : '' },
+                { header: 'Hora', accessor: (e) => e.dia ? format(new Date(e.dia), 'HH:mm') : '' },
+                { header: 'Tipo', accessor: (e) => e.evento || e.tipo || '' },
+                { header: 'Nivel', accessor: (e) => e.tituloONivel || e.nombreEvento || '' },
+                { header: 'Advisor', accessor: (e) => e.advisorNombre || getAdvisorName(e.advisor) },
+                { header: 'Inscritos', accessor: (e) => e.inscritos ?? 0 },
+                { header: 'Asistieron', accessor: (e) => e.asistieron ?? 0 },
+                { header: 'Límite', accessor: (e) => e.limiteUsuarios },
+                { header: 'Zoom', accessor: (e) => e.linkZoom },
+              ], `agenda-sesiones-${format(currentMonth, 'yyyy-MM')}`)}
+              disabled={events.length === 0}
               className="btn btn-secondary"
             >
-              📥 Exportar CSV
+              📥 Exportar Excel
             </button>
           </div>
         </div>

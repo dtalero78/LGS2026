@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { debounce } from 'lodash'
+import { exportToExcel } from '@/lib/export-excel'
 
 // Tipos
 interface Contrato {
@@ -287,6 +288,23 @@ export default function AprobacionPage() {
           </div>
 
           <div className="flex gap-3">
+            <button
+              onClick={() => exportToExcel(getFilteredData(), [
+                { header: 'Nombre', accessor: (c) => `${c.primerNombre} ${c.primerApellido}`.trim() },
+                { header: 'Documento', accessor: (c) => c.numeroId },
+                { header: 'Contrato', accessor: (c) => c.contrato },
+                { header: 'Plataforma', accessor: (c) => c.plataforma },
+                { header: 'Celular', accessor: (c) => c.celular },
+                { header: 'Email', accessor: (c) => c.email },
+                { header: 'Estado', accessor: (c) => getEstadoDisplay(c).text },
+                { header: 'Fecha', accessor: (c) => new Date(c._createdDate).toLocaleDateString() },
+              ], `aprobaciones-${new Date().toISOString().split('T')[0]}`)}
+              disabled={getFilteredData().length === 0}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              <Download className="w-4 h-4" />
+              Exportar Excel
+            </button>
             <button
               onClick={() => loadContratos()}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"

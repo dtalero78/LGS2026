@@ -7,6 +7,7 @@ import { AcademicoPermission } from '@/types/permissions'
 import EventDetailModal from '@/components/academic/EventDetailModal'
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, getHours, isToday, addWeeks, subWeeks } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { exportToExcel } from '@/lib/export-excel'
 
 interface CalendarEvent {
   _id: string
@@ -430,12 +431,31 @@ export default function AgendaAcademicaPage() {
         <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-medium text-gray-900">Filtros</h3>
-            <button
-              onClick={clearFilters}
-              className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700"
-            >
-              Limpiar filtros
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => exportToExcel(filteredEvents, [
+                  { header: 'Fecha', accessor: (e) => format(e.dia, 'yyyy-MM-dd') },
+                  { header: 'Hora', accessor: (e) => format(e.dia, 'HH:mm') },
+                  { header: 'Tipo', accessor: (e) => e.evento || e.tipo || '' },
+                  { header: 'Nivel', accessor: (e) => e.tituloONivel },
+                  { header: 'Evento', accessor: (e) => e.nombreEvento || '' },
+                  { header: 'Advisor', accessor: (e) => e.advisorNombreCompleto || e.advisorNombre || (typeof e.advisor === 'object' ? `${e.advisor.primerNombre} ${e.advisor.primerApellido}` : e.advisor) || '' },
+                  { header: 'Inscritos', accessor: (e) => e.inscritos || 0 },
+                  { header: 'Limite', accessor: (e) => e.limiteUsuarios },
+                  { header: 'Zoom', accessor: (e) => e.linkZoom || '' },
+                ], `agenda-academica-${new Date().toISOString().split('T')[0]}`)}
+                disabled={filteredEvents.length === 0}
+                className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded-md disabled:opacity-50"
+              >
+                Exportar Excel
+              </button>
+              <button
+                onClick={clearFilters}
+                className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700"
+              >
+                Limpiar filtros
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
