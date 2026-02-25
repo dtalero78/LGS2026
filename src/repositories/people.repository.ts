@@ -311,6 +311,33 @@ class PeopleRepositoryClass extends BaseRepository {
     return this.parse(row);
   }
 
+  // ── Comments helpers ──
+
+  /**
+   * Get the comentarios field for a person (cast to text[] so pg returns a JS array)
+   */
+  async getComments(id: string) {
+    return queryOne<{ comentarios: string[] | null }>(
+      `SELECT COALESCE("comentarios"::text[], ARRAY[]::text[]) AS "comentarios"
+       FROM "PEOPLE" WHERE "_id" = $1`,
+      [id]
+    );
+  }
+
+  /**
+   * Append a comment JSON string to the comentarios text[] field
+   */
+  async appendComment(id: string, commentJson: string) {
+    return queryOne(
+      `UPDATE "PEOPLE"
+       SET "comentarios" = array_append(COALESCE("comentarios"::text[], ARRAY[]::text[]), $1)::text,
+           "_updatedDate" = NOW()
+       WHERE "_id" = $2
+       RETURNING "comentarios"`,
+      [commentJson, id]
+    );
+  }
+
   // ── Dashboard helpers ──
 
   async countActive(): Promise<number> {

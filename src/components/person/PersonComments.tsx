@@ -25,8 +25,66 @@ const AREAS = [
   { value: 'Recaudos', label: 'Recaudos (Cobranza)', color: 'bg-green-100 text-green-800' },
 ]
 
+/**
+ * Parse the PEOPLE.comentarios field.
+ * Stored as PostgreSQL text[] where each element is a JSON string.
+ * Two formats:
+ *   New: {texto, usuario, fecha, areaDestinatario, areaRemitente, id}
+ *   Old: {fecha, comentario}
+ */
+function parseComments(raw: any): Comment[] {
+  if (!raw) return []
+
+  let items: string[] = []
+
+  if (Array.isArray(raw)) {
+    items = raw
+  } else if (typeof raw === 'string') {
+    // Try JSON array parse
+    try {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) items = parsed
+      else return []
+    } catch {
+      // Might be a plain text comment (legacy)
+      return [{
+        id: 'legacy_0',
+        usuario: 'Sistema',
+        fecha: '',
+        texto: raw,
+      }]
+    }
+  }
+
+  return items.map((item, idx) => {
+    if (typeof item === 'string') {
+      try {
+        const obj = JSON.parse(item)
+        return normalizeComment(obj, idx)
+      } catch {
+        return { id: `plain_${idx}`, usuario: 'Sistema', fecha: '', texto: item }
+      }
+    }
+    if (typeof item === 'object' && item !== null) {
+      return normalizeComment(item, idx)
+    }
+    return null
+  }).filter(Boolean) as Comment[]
+}
+
+function normalizeComment(obj: any, idx: number): Comment {
+  return {
+    id: obj.id || `comment_${idx}`,
+    usuario: obj.usuario || 'Sistema',
+    fecha: typeof obj.fecha === 'string' ? obj.fecha : (obj.fecha?.$date || ''),
+    texto: obj.texto || obj.comentario || '',
+    areaDestinatario: obj.areaDestinatario || undefined,
+    areaRemitente: obj.areaRemitente || undefined,
+  }
+}
+
 export default function PersonComments({ personId }: PersonCommentsProps) {
-  const { data: session, status } = useSession()
+  const { data: session } = useSession()
   const [comments, setComments] = useState<Comment[]>([])
   const [newComment, setNewComment] = useState('')
   const [areaDestinatario, setAreaDestinatario] = useState('General')
@@ -37,23 +95,20 @@ export default function PersonComments({ personId }: PersonCommentsProps) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    console.log('🔐 Session status:', status, 'Session data:', session)
-  }, [session, status])
-
-  useEffect(() => {
     loadComments()
   }, [personId])
 
   const loadComments = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`/api/postgres/people?id=${personId}`)
+      setError(null)
+      const response = await fetch(`/api/postgres/people/${personId}/comments`)
       const data = await response.json()
 
       if (data.success) {
-        setComments(data.comments || [])
+        setComments(parseComments(data.comments))
       } else {
-        setError(data.error)
+        setError(data.error || 'Error al cargar comentarios')
       }
     } catch (err) {
       console.error('Error loading comments:', err)
@@ -66,9 +121,7 @@ export default function PersonComments({ personId }: PersonCommentsProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!newComment.trim()) {
-      return
-    }
+    if (!newComment.trim()) return
 
     const userEmail = session?.user?.email || (session?.user as any)?.name || 'admin@lgs.com'
 
@@ -76,19 +129,14 @@ export default function PersonComments({ personId }: PersonCommentsProps) {
     setError(null)
 
     try {
-      const response = await fetch('/api/postgres/people', {
+      const response = await fetch(`/api/postgres/people/${personId}/comments`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          personId,
-          commentData: {
-            usuario: userEmail,
-            texto: newComment.trim(),
-            areaDestinatario: areaDestinatario,
-            areaRemitente: areaRemitente
-          }
+          texto: newComment.trim(),
+          usuario: userEmail,
+          areaDestinatario,
+          areaRemitente,
         })
       })
 
@@ -111,7 +159,9 @@ export default function PersonComments({ personId }: PersonCommentsProps) {
   }
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return ''
     const date = new Date(dateString)
+    if (isNaN(date.getTime())) return dateString
     return new Intl.DateTimeFormat('es-ES', {
       year: 'numeric',
       month: 'short',
@@ -127,7 +177,7 @@ export default function PersonComments({ personId }: PersonCommentsProps) {
 
   return (
     <div className="space-y-6 pb-32">
-      <h3 className="text-lg font-medium text-gray-900">💬 Sistema de Comentarios</h3>
+      <h3 className="text-lg font-medium text-gray-900">Sistema de Comentarios</h3>
 
       {/* Add Comment Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -238,8 +288,8 @@ export default function PersonComments({ personId }: PersonCommentsProps) {
           <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
             <p className="text-gray-500">
               {comments.length === 0
-                ? 'No hay comentarios aún. ¡Sé el primero en comentar!'
-                : `No hay comentarios para el área "${AREAS.find(a => a.value === filterArea)?.label}"`
+                ? 'No hay comentarios aun.'
+                : `No hay comentarios para el area "${AREAS.find(a => a.value === filterArea)?.label}"`
               }
             </p>
           </div>
@@ -259,7 +309,9 @@ export default function PersonComments({ personId }: PersonCommentsProps) {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-900">{comment.usuario}</p>
-                      <p className="text-xs text-gray-500">{formatDate(comment.fecha)}</p>
+                      {comment.fecha && (
+                        <p className="text-xs text-gray-500">{formatDate(comment.fecha)}</p>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-col items-end space-y-1">
@@ -267,14 +319,14 @@ export default function PersonComments({ personId }: PersonCommentsProps) {
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                         AREAS.find(a => a.value === comment.areaRemitente)?.color || 'bg-gray-100 text-gray-800'
                       }`}>
-                        📤 {AREAS.find(a => a.value === comment.areaRemitente)?.label || comment.areaRemitente}
+                        {AREAS.find(a => a.value === comment.areaRemitente)?.label || comment.areaRemitente}
                       </span>
                     )}
                     {comment.areaDestinatario && (
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                         AREAS.find(a => a.value === comment.areaDestinatario)?.color || 'bg-gray-100 text-gray-800'
                       }`}>
-                        📥 {AREAS.find(a => a.value === comment.areaDestinatario)?.label || comment.areaDestinatario}
+                        {AREAS.find(a => a.value === comment.areaDestinatario)?.label || comment.areaDestinatario}
                       </span>
                     )}
                   </div>
