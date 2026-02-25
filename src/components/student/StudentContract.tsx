@@ -122,9 +122,9 @@ export default function StudentContract({ student, contratoFinalizado = false }:
     setIsExtendingVigencia(true)
 
     try {
-      const data = await api.post('/api/postgres/students', {
-        studentId: student.peopleId || student._id,
-        nuevaFechaFinal,
+      const studentId = student.peopleId || student._id
+      const data = await api.post(`/api/postgres/students/${studentId}/extend`, {
+        diasExtension: diasExtendidos,
         motivo: motivoExtension
       })
 
