@@ -7,7 +7,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline'
 interface CalendarEvent {
   _id: string
   dia: Date
-  evento?: 'SESSION' | 'CLUB' | 'WELCOME'
+  evento?: 'SESSION' | 'CLUB'
   tipo?: string
   tituloONivel: string
   nombreEvento?: string
@@ -61,7 +61,7 @@ export default function EventModal({
   const [formData, setFormData] = useState({
     fecha: '',
     hora: '',
-    evento: 'SESSION' as 'SESSION' | 'CLUB' | 'WELCOME',
+    evento: 'SESSION' as 'SESSION' | 'CLUB',
     tituloONivel: '',
     nombreEvento: '',
     advisor: '',
@@ -156,7 +156,7 @@ export default function EventModal({
       setFormData({
         fecha: format(eventDate, 'yyyy-MM-dd'),
         hora: format(eventDate, 'HH:mm'),
-        evento: editingEvent.evento || editingEvent.tipo,
+        evento: (editingEvent.evento || editingEvent.tipo || 'SESSION') as 'SESSION' | 'CLUB',
         tituloONivel: editingEvent.tituloONivel,
         nombreEvento: nombreEventoValue,
         advisor: advisorId,
@@ -311,7 +311,7 @@ export default function EventModal({
         setShowClubStep(false)
         setShowNombreClub(true)
       } else {
-        // Si no es CLUB (SESSION, WELCOME), obtener los valores de steps
+        // Si no es CLUB (SESSION), obtener los valores de steps
         const steps = nivelEncontrado.steps || []
         opciones = steps.map(step => ({
           value: step,
@@ -362,7 +362,7 @@ export default function EventModal({
         setShowClubStep(false)
         setShowNombreClub(true)
       } else {
-        // Si no es CLUB (SESSION, WELCOME), obtener los valores de steps
+        // Si no es CLUB (SESSION), obtener los valores de steps
         const steps = nivelEncontrado.steps || []
         opciones = steps.map(step => ({
           value: step,
@@ -522,39 +522,27 @@ export default function EventModal({
               >
                 <option value="SESSION">Sesión</option>
                 <option value="CLUB">Club</option>
-                <option value="WELCOME">Welcome Event</option>
               </select>
             </div>
 
             {/* Título/Nivel */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {formData.evento === 'SESSION' || formData.evento === 'CLUB' ? 'Nivel' : 'Título'} *
+                Nivel *
               </label>
-              {formData.evento === 'SESSION' || formData.evento === 'CLUB' ? (
-                <select
-                  value={formData.tituloONivel}
-                  onChange={(e) => handleInputChange('tituloONivel', e.target.value)}
-                  className="input w-full"
-                  required
-                >
-                  <option value="">Seleccionar nivel</option>
-                  {codigosNivel.map((codigo) => (
-                    <option key={codigo} value={codigo}>
-                      {codigo}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  type="text"
-                  value={formData.tituloONivel}
-                  onChange={(e) => handleInputChange('tituloONivel', e.target.value)}
-                  className="input w-full"
-                  placeholder="Título del evento"
-                  required
-                />
-              )}
+              <select
+                value={formData.tituloONivel}
+                onChange={(e) => handleInputChange('tituloONivel', e.target.value)}
+                className="input w-full"
+                required
+              >
+                <option value="">Seleccionar nivel</option>
+                {codigosNivel.map((codigo) => (
+                  <option key={codigo} value={codigo}>
+                    {codigo}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Club Step (solo para CLUB) */}
@@ -610,21 +598,6 @@ export default function EventModal({
               </div>
             )}
 
-            {/* Nombre del Evento manual (solo para WELCOME) */}
-            {formData.evento === 'WELCOME' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nombre del Evento
-                </label>
-                <input
-                  type="text"
-                  value={formData.nombreEvento}
-                  onChange={(e) => handleInputChange('nombreEvento', e.target.value)}
-                  className="input w-full"
-                  placeholder="Nombre específico del evento"
-                />
-              </div>
-            )}
 
             {/* Advisor */}
             <div>

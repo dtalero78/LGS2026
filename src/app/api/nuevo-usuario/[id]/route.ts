@@ -55,7 +55,7 @@ export const GET = handler(async (
       `SELECT "_id", "dia", "hora", "advisor", "linkZoom", "limiteUsuarios", "inscritos",
               "titulo", "nombreEvento"
        FROM "CALENDARIO"
-       WHERE ("tipo" = 'WELCOME' OR "evento" = 'WELCOME' OR "nombreEvento" = 'WELCOME')
+       WHERE ("tipo" = 'WELCOME' OR "evento" = 'WELCOME' OR "nombreEvento" = 'WELCOME' OR "tituloONivel" = 'WELCOME')
          AND "dia" > NOW()
        ORDER BY "dia" ASC
        LIMIT 30`,

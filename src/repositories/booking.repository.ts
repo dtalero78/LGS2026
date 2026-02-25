@@ -245,7 +245,7 @@ class BookingRepositoryClass extends BaseRepository {
    * Returns one row per student booking (not per event).
    */
   async findWelcomeBookings(startDate?: string, endDate?: string) {
-    const conditions = [`COALESCE(ab."tipoEvento", ab."tipo") = 'WELCOME'`];
+    const conditions = [`(COALESCE(ab."tipoEvento", ab."tipo") = 'WELCOME' OR c."tituloONivel" = 'WELCOME')`];
     const params: any[] = [];
     let paramIdx = 1;
 

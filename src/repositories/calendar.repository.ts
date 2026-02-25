@@ -63,7 +63,12 @@ class CalendarioRepositoryClass extends BaseRepository {
       idx++;
     }
     if (filters.tipo) {
-      conditions.push(`COALESCE(c."tipo", c."evento") = $${idx}`);
+      if (filters.tipo === 'WELCOME') {
+        // WELCOME is a nivel, not a tipo — match both legacy tipo and tituloONivel
+        conditions.push(`(COALESCE(c."tipo", c."evento") = $${idx} OR c."tituloONivel" = $${idx})`);
+      } else {
+        conditions.push(`COALESCE(c."tipo", c."evento") = $${idx}`);
+      }
       params.push(filters.tipo);
       idx++;
     }
@@ -163,7 +168,11 @@ class CalendarioRepositoryClass extends BaseRepository {
       idx++;
     }
     if (filters.tipo) {
-      conditions.push(`COALESCE(c."tipo", c."evento") = $${idx}`);
+      if (filters.tipo === 'WELCOME') {
+        conditions.push(`(COALESCE(c."tipo", c."evento") = $${idx} OR c."tituloONivel" = $${idx})`);
+      } else {
+        conditions.push(`COALESCE(c."tipo", c."evento") = $${idx}`);
+      }
       params.push(filters.tipo);
       idx++;
     }
