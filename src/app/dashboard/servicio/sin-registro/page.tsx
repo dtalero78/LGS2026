@@ -69,9 +69,9 @@ export default function SinRegistroPage() {
       const data = await response.json()
       console.log('✅ Beneficiarios sin registro recibidos:', data)
 
-      if (data.success && data.data) {
-        setBeneficiarios(data.data.people || [])
-        setFilteredBeneficiarios(data.data.people || [])
+      if (data.success && data.beneficiarios) {
+        setBeneficiarios(data.beneficiarios)
+        setFilteredBeneficiarios(data.beneficiarios)
         if (data.stats) {
           setStats(data.stats)
         }

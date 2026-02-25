@@ -39,16 +39,10 @@ export default function ListaSesionesPage() {
     setError(null)
 
     try {
-      // Preparar parámetros de fecha si están definidos
-      const requestBody: { fechaInicio?: string; fechaFin?: string } = {}
-
-      if (startDate) {
-        requestBody.fechaInicio = startDate
-      }
-
-      if (endDate) {
-        requestBody.fechaFin = endDate
-      }
+      // Build query params for GET request
+      const params = new URLSearchParams()
+      if (startDate) params.set('startDate', startDate)
+      if (endDate) params.set('endDate', endDate)
 
       const hasDateFilter = startDate || endDate
       const logMessage = hasDateFilter
@@ -61,12 +55,8 @@ export default function ListaSesionesPage() {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 90000)
 
-      const response = await fetch('/api/postgres/events/sessions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
+      const qs = params.toString()
+      const response = await fetch(`/api/postgres/events/sessions${qs ? `?${qs}` : ''}`, {
         signal: controller.signal
       })
 
@@ -79,11 +69,11 @@ export default function ListaSesionesPage() {
       const data = await response.json()
       console.log('✅ Sesiones recibidas:', data)
 
-      if (data.success && data.sessions) {
-        setSessions(data.sessions)
+      if (data.success && data.events) {
+        setSessions(data.events)
 
         // Debug: Mostrar fechas únicas de las sesiones
-        const uniqueDates = [...new Set(data.sessions.map((e: ClassSession) => {
+        const uniqueDates = [...new Set(data.events.map((e: ClassSession) => {
           const d = new Date(e.fechaEvento)
           return d.toLocaleDateString('es-CO')
         }))].sort()
