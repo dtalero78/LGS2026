@@ -19,6 +19,7 @@ import { BookingRepository } from '@/repositories/booking.repository';
 import { NivelesRepository } from '@/repositories/niveles.repository';
 import { ForbiddenError, NotFoundError } from '@/lib/errors';
 import { generateReport } from '@/services/progress.service';
+import { getEffectiveStepNumber } from '@/services/student-booking.service';
 
 /**
  * Resolve the student from the session.
@@ -40,34 +41,52 @@ export async function resolveStudentFromSession(session: Session) {
     throw new ForbiddenError('No se encontró email en la sesión');
   }
 
-  const person = await PeopleRepository.findByEmail(email);
-  if (!person) {
-    throw new NotFoundError('Estudiante', email);
-  }
+  // Lookup chain:
+  // 1. PEOPLE by email → then ACADEMICA by PEOPLE.numeroId
+  // 2. Fallback: ACADEMICA by email → then PEOPLE by ACADEMICA.numeroId
+  let person = await PeopleRepository.findByEmail(email);
+  let academica = null;
 
-  // Look up ACADEMICA record (has nivel/step and is the ID used by bookings)
-  let academicaId: string | null = null;
-  let nivel: string | null = person.nivel || null;
-  let step: string | null = person.step || null;
-  let nivelParalelo: string | null = person.nivelParalelo || null;
-  let stepParalelo: string | null = person.stepParalelo || null;
-
-  if (person.numeroId) {
-    const academica = await AcademicaRepository.findByNumeroId(person.numeroId);
-    if (academica) {
-      academicaId = academica._id;
-      nivel = academica.nivel || nivel;
-      step = academica.step || step;
-      nivelParalelo = academica.nivelParalelo || nivelParalelo;
-      stepParalelo = academica.stepParalelo || stepParalelo;
+  if (person) {
+    if (person.numeroId) {
+      academica = await AcademicaRepository.findByNumeroId(person.numeroId);
+    }
+  } else {
+    // Email not in PEOPLE — try ACADEMICA directly (email stored there)
+    academica = await AcademicaRepository.findByEmail(email);
+    if (!academica) {
+      throw new NotFoundError('Estudiante', email);
+    }
+    // Try to find PEOPLE via ACADEMICA.numeroId
+    if (academica.numeroId) {
+      person = await PeopleRepository.findByIdOrNumeroId(academica.numeroId);
     }
   }
 
+  // Build a base object from whichever source we have
+  const base = person ?? academica;
+  if (!base) {
+    throw new NotFoundError('Estudiante', email);
+  }
+
+  const academicaId: string | null = academica?._id ?? null;
+  const nivel: string | null = academica?.nivel ?? (base as any).nivel ?? null;
+  const step: string | null = academica?.step ?? (base as any).step ?? null;
+  const nivelParalelo: string | null = academica?.nivelParalelo ?? (base as any).nivelParalelo ?? null;
+  const stepParalelo: string | null = academica?.stepParalelo ?? (base as any).stepParalelo ?? null;
+
+  // Calculate the effective step (first incomplete step based on real progress)
+  const effectiveStepNum = nivel
+    ? await getEffectiveStepNumber(academicaId ?? (base as any)._id, (base as any)._id, nivel)
+    : 0;
+  const effectiveStep = effectiveStepNum > 0 ? `Step ${effectiveStepNum}` : step;
+
   return {
-    ...person,
+    ...base,
     academicaId,  // ACADEMICA._id — use this for booking queries
     nivel,
     step,
+    effectiveStep, // First incomplete step (used for display in header/card)
     nivelParalelo,
     stepParalelo,
   };

@@ -23,6 +23,12 @@ import { NotFoundError } from '@/lib/errors';
 
 // --- Helpers ---
 
+/** Extract club type prefix from a step name: "TRAINING - Step 7" → "TRAINING", "Step 7" → null */
+function extractClubName(stepStr: string): string | null {
+  const match = stepStr?.match(/^(.+?)\s*-\s*Step\s*\d+/i);
+  return match ? match[1].trim() : null;
+}
+
 /** Extract the numeric part from a step name: "Step 7" → 7, "TRAINING - Step 7" → 7 */
 function extractStepNumber(stepName: string): number | null {
   const match = stepName.match(/Step\s*(\d+)/i);
@@ -135,6 +141,10 @@ export async function generateReport(studentId: string) {
     const clubs = clasesDelStep.filter((c) => getClassType(c) === 'CLUB');
     const sesionesExitosas = sesiones.filter(isExitosa).length;
     const clubsExitosos = clubs.filter(isExitosa).length;
+    const clubNombres = clubs
+      .filter(isExitosa)
+      .map((c) => extractClubName(c.step || '') || c.nombreEvento || 'CLUB')
+      .filter(Boolean);
     const tieneNoAprobo = clasesDelStep.some((c) => c.noAprobo === true);
 
     // Override has absolute priority
@@ -187,6 +197,7 @@ export async function generateReport(studentId: string) {
       sesionesExitosas,
       clubs: clubs.length,
       clubsExitosos,
+      clubNombres,
       noAprobo: tieneNoAprobo,
       completado,
       mensaje,

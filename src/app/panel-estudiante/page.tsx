@@ -136,8 +136,31 @@ function PanelEstudianteContent() {
         </div>
       </div>
 
+      {/* News Ticker Banner */}
+      <div className="bg-gray-900 overflow-hidden flex items-stretch">
+        <style>{`
+          @keyframes lgs-ticker {
+            0%   { transform: translateX(100vw); }
+            100% { transform: translateX(-100%); }
+          }
+          .lgs-ticker-text {
+            display: inline-block;
+            white-space: nowrap;
+            animation: lgs-ticker 35s linear infinite;
+          }
+        `}</style>
+        <div className="flex-shrink-0 bg-blue-600 flex items-center px-4 py-2 gap-2">
+          <span className="text-white text-xs font-black uppercase tracking-widest">📢 LGS</span>
+        </div>
+        <div className="flex-1 overflow-hidden flex items-center py-2">
+          <span className="lgs-ticker-text text-white text-sm font-medium px-8">
+            🎉&nbsp;&nbsp;Este es tu nuevo panel de usuario!&nbsp;&nbsp;•&nbsp;&nbsp;Recuerda que para avanzar de step debes participar cada semana en dos sesiones y en tu Training Session&nbsp;&nbsp;•&nbsp;&nbsp;Además, cuentas con dos Clubs opcionales para reforzar tu aprendizaje&nbsp;&nbsp;🌟
+          </span>
+        </div>
+      </div>
+
       {/* Main Content */}
-      <div className="px-6 py-6 space-y-6">
+      <div className="px-6 pt-8 pb-6 space-y-6">
         {/* 3. Student Info Card + Attendance Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Student Info Card */}
@@ -152,7 +175,7 @@ function PanelEstudianteContent() {
               <div className="space-y-3">
                 <div>
                   <p className="text-lg font-bold uppercase tracking-wide">Next Session</p>
-                  <p className="text-sm font-medium text-primary-200">{profile?.nivel || '---'} - {nextClass?.step || profile?.step || '---'}</p>
+                  <p className="text-sm font-medium text-primary-200">{profile?.nivel || '---'} - {nextClass?.step || profile?.effectiveStep || profile?.step || '---'}</p>
                 </div>
                 <div>
                   <span className="text-xs text-primary-200 uppercase tracking-wide">Asesor</span>

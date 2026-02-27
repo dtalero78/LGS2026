@@ -10,7 +10,7 @@ import { AcademicaRepository } from '@/repositories/academica.repository';
 import { PeopleRepository } from '@/repositories/people.repository';
 import { BookingRepository } from '@/repositories/booking.repository';
 import { NotFoundError, ValidationError } from '@/lib/errors';
-import { queryOne } from '@/lib/postgres';
+import { queryOne, queryMany } from '@/lib/postgres';
 
 /**
  * Get student profile.
@@ -121,6 +121,146 @@ export async function toggleStatus(id: string, active: boolean) {
     statusChanged: true,
     previousStatus: currentlyInactive,
     newStatus: wantInactive,
+  };
+}
+
+// --- Auto-advance helpers ---
+
+function extractStepNum(stepName: string): number | null {
+  const match = stepName?.match(/Step\s*(\d+)/i);
+  return match ? parseInt(match[1]) : null;
+}
+
+function isJumpStep(stepName: string): boolean {
+  const num = extractStepNum(stepName);
+  return num !== null && num > 0 && num % 5 === 0;
+}
+
+function isExitosa(c: any): boolean {
+  return c.asistio === true || c.asistencia === true || c.participacion === true;
+}
+
+function getClassType(c: any): 'SESSION' | 'CLUB' | 'OTHER' {
+  if (c.tipo === 'SESSION') return 'SESSION';
+  if (c.tipo === 'CLUB') return 'CLUB';
+  if (!c.tipo && c.step) {
+    if (/^TRAINING\s*-/i.test(c.step)) return 'CLUB';
+    if (/^Step\s+\d+$/i.test(c.step)) return 'SESSION';
+  }
+  return 'OTHER';
+}
+
+async function isCurrentStepComplete(
+  studentId: string,
+  nivel: string,
+  stepName: string,
+  overrideStudentId: string
+): Promise<boolean> {
+  const stepNum = extractStepNum(stepName);
+  if (stepNum === null) return false;
+
+  // Manual overrides have absolute priority
+  const { StepOverridesRepository } = await import('@/repositories/niveles.repository');
+  const override = await StepOverridesRepository.findByStudentAndStep(overrideStudentId, stepName);
+  if (override !== null) return override.isCompleted === true;
+
+  const esJump = isJumpStep(stepName);
+
+  const allNivelClasses = await queryMany(
+    `SELECT "tipo", "step", "asistio", "asistencia", "participacion", "noAprobo"
+     FROM "ACADEMICA_BOOKINGS"
+     WHERE ("idEstudiante" = $1 OR "studentId" = $1)
+       AND "nivel" = $2`,
+    [studentId, nivel]
+  );
+
+  const clasesDelStep = allNivelClasses.filter(
+    (c: any) => extractStepNum(c.step) === stepNum
+  );
+
+  const tieneNoAprobo = clasesDelStep.some((c: any) => c.noAprobo === true);
+
+  if (esJump) {
+    return clasesDelStep.length > 0 && !tieneNoAprobo;
+  }
+
+  const sesionesExitosas = clasesDelStep.filter((c: any) => getClassType(c) === 'SESSION' && isExitosa(c)).length;
+  const clubsExitosos = clasesDelStep.filter((c: any) => getClassType(c) === 'CLUB' && isExitosa(c)).length;
+  return sesionesExitosas >= 2 && clubsExitosos >= 1 && !tieneNoAprobo;
+}
+
+/**
+ * Auto-advance student to the next step if their current step is now complete.
+ * Called after an advisor saves an evaluation.
+ *
+ * Rules:
+ * - Only advances if the booking is for the student's CURRENT step (not a past step).
+ * - Skips WELCOME and ESS levels.
+ * - Respects STEP_OVERRIDES (manual overrides have absolute priority).
+ * - Returns null if no advancement happened, or details of the new step.
+ */
+export async function autoAdvanceStep(bookingId: string) {
+  const booking = await BookingRepository.findBookingById(bookingId);
+  if (!booking) return null;
+
+  const studentId = booking.studentId || booking.idEstudiante;
+  const bookingNivel = booking.nivel;
+  const bookingStep = booking.step;
+
+  if (!studentId || !bookingNivel || !bookingStep) return null;
+  if (bookingNivel === 'ESS' || bookingStep === 'WELCOME') return null;
+  if (extractStepNum(bookingStep) === null) return null;
+
+  // Get student's current nivel/step
+  let student: any = await AcademicaRepository.findByAnyId(studentId);
+  if (!student) student = await PeopleRepository.findByIdOrNumeroId(studentId);
+  if (!student) return null;
+
+  // Only advance if the booking is for the student's CURRENT step
+  if (student.nivel !== bookingNivel || student.step !== bookingStep) return null;
+
+  // Resolve overrideStudentId (STEP_OVERRIDES uses PEOPLE _id)
+  let overrideStudentId = student._id;
+  if (student.numeroId) {
+    const peopleRecord = await PeopleRepository.findByIdOrNumeroId(student.numeroId);
+    if (peopleRecord) overrideStudentId = peopleRecord._id;
+  }
+
+  const isComplete = await isCurrentStepComplete(
+    studentId,
+    bookingNivel,
+    bookingStep,
+    overrideStudentId
+  );
+  if (!isComplete) return null;
+
+  // Find next step
+  const nextStepName = `Step ${extractStepNum(bookingStep)! + 1}`;
+  const { NivelesRepository } = await import('@/repositories/niveles.repository');
+  const nextNivelInfo = await NivelesRepository.findByStepName(nextStepName);
+  if (!nextNivelInfo) {
+    // No next step — student has completed the entire program (e.g., Step 45).
+    // Block platform access by removing their login credentials from USUARIOS_ROLES.
+    if (student.email) {
+      await queryOne(
+        `DELETE FROM "USUARIOS_ROLES" WHERE "email" = $1 RETURNING "email"`,
+        [student.email]
+      );
+    }
+    return {
+      advanced: false,
+      graduated: true,
+      from: { nivel: bookingNivel, step: bookingStep },
+      message: 'Programa completado. Acceso a la plataforma bloqueado.',
+    };
+  }
+
+  await changeStep(studentId, nextStepName);
+
+  return {
+    advanced: true,
+    from: { nivel: bookingNivel, step: bookingStep },
+    to: { nivel: nextNivelInfo.code, step: nextStepName },
   };
 }
 

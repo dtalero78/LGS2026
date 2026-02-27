@@ -195,11 +195,11 @@ export default function BookingFlow({ onClose, initialTipo }: BookingFlowProps) 
                             <div className="flex items-center gap-2">
                               <ClockIcon className="h-4 w-4 text-gray-400" />
                               <span className="text-sm font-medium text-gray-900">
-                                {format(eventDate, 'HH:mm')} - {evt.tipo}
+                                {format(eventDate, 'HH:mm')} - {evt.tipo || evt.evento || '-'}
                               </span>
                             </div>
                             <div className="text-xs text-gray-500 mt-1">
-                              {evt.nivel} - {evt.step}
+                              {evt.nivel || evt.tituloONivel || '-'} - {evt.step || evt.nombreEvento || '-'}
                               {evt.advisorNombreCompleto && ` | ${evt.advisorNombreCompleto}`}
                             </div>
                           </div>
@@ -208,11 +208,7 @@ export default function BookingFlow({ onClose, initialTipo }: BookingFlowProps) 
                               <span className="text-xs font-medium text-blue-600">Ya inscrito</span>
                             ) : evt.cupoLleno ? (
                               <span className="text-xs font-medium text-red-600">Lleno</span>
-                            ) : (
-                              <span className="text-xs text-gray-400">
-                                {evt.inscritos}/{evt.limiteUsuarios || '~'}
-                              </span>
-                            )}
+                            ) : null}
                           </div>
                         </div>
                       </button>

@@ -1,6 +1,7 @@
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { BookingRepository } from '@/repositories/booking.repository';
 import { ValidationError, NotFoundError } from '@/lib/errors';
+import { autoAdvanceStep } from '@/services/student.service';
 
 const EVALUATION_FIELDS = [
   'calificacion', 'advisorAnotaciones', 'comentarios',
@@ -19,7 +20,9 @@ export const PUT = handlerWithAuth(async (request) => {
   const booking = await BookingRepository.updateFields(body.bookingId, body, EVALUATION_FIELDS);
   if (!booking) throw new NotFoundError('Booking', body.bookingId);
 
-  return successResponse({ booking });
+  const advancement = await autoAdvanceStep(body.bookingId);
+
+  return successResponse({ booking, advancement });
 });
 
 /**
@@ -41,8 +44,11 @@ export const POST = handlerWithAuth(async (request) => {
   const booking = await BookingRepository.updateFields(body.bookingId, data, allFields);
   if (!booking) throw new NotFoundError('Booking', body.bookingId);
 
+  const advancement = await autoAdvanceStep(body.bookingId);
+
   return successResponse({
     booking,
+    advancement,
     message: 'Evaluación y asistencia guardadas',
   });
 });

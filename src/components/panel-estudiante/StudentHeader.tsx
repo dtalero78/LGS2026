@@ -21,7 +21,7 @@ export default function StudentHeader({ profile, isLoading }: StudentHeaderProps
   const nombre = profile?.primerNombre || ''
   const apellido = profile?.primerApellido || ''
   const nivel = profile?.nivel || ''
-  const step = profile?.step || ''
+  const step = profile?.effectiveStep || profile?.step || ''
 
   return (
     <div className="bg-white border-b border-gray-200 px-4 py-3">

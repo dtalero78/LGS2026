@@ -20,7 +20,7 @@ function getTypeBadgeClass(tipoEvento: string): string {
 export default function ClassHistory({ data, isLoading }: ClassHistoryProps) {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-  const [attendanceFilter, setAttendanceFilter] = useState<'all' | 'attended' | 'not-attended'>('all')
+  const [attendanceFilter, setAttendanceFilter] = useState<'all' | 'attended' | 'not-attended' | 'cancelled'>('all')
   const [advisorFilter, setAdvisorFilter] = useState('')
   const [advisorNames, setAdvisorNames] = useState<{ [key: string]: string }>({})
 
@@ -77,6 +77,7 @@ export default function ClassHistory({ data, isLoading }: ClassHistoryProps) {
     }
     if (attendanceFilter === 'attended' && !item.asistencia) return false
     if (attendanceFilter === 'not-attended' && item.asistencia) return false
+    if (attendanceFilter === 'cancelled' && !item.cancelo) return false
     if (advisorFilter && item.advisor !== advisorFilter) return false
     return true
   })
@@ -115,6 +116,7 @@ export default function ClassHistory({ data, isLoading }: ClassHistoryProps) {
               <option value="all">Todos</option>
               <option value="attended">Asistió</option>
               <option value="not-attended">No asistió</option>
+              <option value="cancelled">Canceló</option>
             </select>
           </div>
           <div>
@@ -144,7 +146,13 @@ export default function ClassHistory({ data, isLoading }: ClassHistoryProps) {
       </div>
 
       {/* Table */}
-      <div className="table-container max-h-[450px] overflow-y-auto">
+      <style>{`
+        .history-scroll::-webkit-scrollbar { height: 8px; width: 8px; }
+        .history-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        .history-scroll::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+        .history-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
+      `}</style>
+      <div className="history-scroll table-container max-h-[450px] overflow-y-auto overflow-x-auto">
         <table className="table">
           <thead className="table-header sticky top-0 z-10 bg-gray-50">
             <tr>
@@ -181,7 +189,15 @@ export default function ClassHistory({ data, isLoading }: ClassHistoryProps) {
                     <div className="text-sm text-gray-900">{item.nivel}</div>
                   </td>
                   <td className="table-cell">
-                    <div className="text-sm text-gray-900">{item.step}</div>
+                    <div className="text-sm text-gray-900">
+                      {item.tipoEvento === 'CLUB' || /^(TRAINING|KARAOKE|CONVERSATION|GRAMMAR|LISTENING|PRONUNCIATION)/i.test(item.step || '')
+                        ? (() => {
+                            const s = item.step || item.nombreEvento || ''
+                            const match = s.match(/^(.+?)\s*-\s*Step\s*\d+/i)
+                            return match ? match[1].trim() : s
+                          })()
+                        : item.step}
+                    </div>
                   </td>
                   <td className="table-cell">
                     <span className={`badge ${item.asistencia ? 'badge-success' : 'badge-danger'}`}>

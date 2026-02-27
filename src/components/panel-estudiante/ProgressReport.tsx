@@ -85,7 +85,12 @@ export default function ProgressReport({ data, isLoading }: ProgressReportProps)
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-900">{s.step}</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {(() => {
+                      const match = s.step?.match(/^(.+?)\s*-\s*Step\s*\d+/i)
+                      return match ? match[1].trim() : s.step
+                    })()}
+                  </span>
                   {s.esJump && (
                     <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
                       JUMP
@@ -98,7 +103,12 @@ export default function ProgressReport({ data, isLoading }: ProgressReportProps)
                 {!s.esJump && (
                   <div className="flex gap-3 mt-1 text-xs text-gray-400">
                     <span>Sesiones: {s.sesionesExitosas}/2</span>
-                    <span>Clubs: {s.clubsExitosos}/1</span>
+                    <span>
+                      Club:{' '}
+                      {s.clubNombres && s.clubNombres.length > 0
+                        ? s.clubNombres.join(', ')
+                        : '0/1'}
+                    </span>
                   </div>
                 )}
               </div>

@@ -52,6 +52,17 @@ class AcademicaRepositoryClass extends BaseRepository {
   }
 
   /**
+   * Find by email
+   */
+  async findByEmail(email: string) {
+    const row = await queryOne(
+      `SELECT * FROM "ACADEMICA" WHERE LOWER("email") = LOWER($1) LIMIT 1`,
+      [email]
+    );
+    return this.parse(row);
+  }
+
+  /**
    * Check if a student has an academic record
    */
   async existsByNumeroId(numeroId: string): Promise<boolean> {

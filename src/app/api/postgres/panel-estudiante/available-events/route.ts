@@ -16,6 +16,7 @@ export const GET = handlerWithAuth(async (request, context, session) => {
   const step = student.step || '';
 
   const bookingId = student.academicaId || student._id;
-  const events = await getAvailableEvents(bookingId, nivel, step, date, tipo);
+  const peopleId = student._id; // PEOPLE _id for step overrides lookup
+  const events = await getAvailableEvents(bookingId, peopleId, nivel, step, date, tipo);
   return successResponse({ events });
 });
