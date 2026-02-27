@@ -91,17 +91,21 @@ export default function DailyAgenda({
     }
   }
 
+  // Extract base nivel code: "BN2 - Step 9" → "BN2", "P1 - TRAINING - Step 19" → "P1"
+  const extractNivelCode = (tituloONivel: string) =>
+    (tituloONivel || '').split(' - ')[0].trim()
+
   const availableNiveles = Array.from(
-    new Set(eventsForSelectedDay.map(e => e.tituloONivel))
+    new Set(eventsForSelectedDay.map(e => extractNivelCode(e.tituloONivel)))
   ).sort()
 
   // Filtrar eventos por nivel seleccionado
   const filteredEvents = selectedNivel === 'all'
     ? eventsForSelectedDay
-    : eventsForSelectedDay.filter(e => e.tituloONivel === selectedNivel)
+    : eventsForSelectedDay.filter(e => extractNivelCode(e.tituloONivel) === selectedNivel)
 
-  // Generar horas del día (0:00 AM - 11:00 PM - 24 horas completas)
-  const hours = Array.from({ length: 24 }, (_, i) => i)
+  // Generar horas del día desde las 6:00 AM hasta las 23:00
+  const hours = Array.from({ length: 18 }, (_, i) => i + 6)
 
   // Agrupar eventos por hora SOLO del día seleccionado y filtrados por nivel
   const eventsByHour = hours.map(hour => {
