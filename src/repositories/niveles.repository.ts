@@ -23,7 +23,7 @@ class NivelesRepositoryClass extends BaseRepository {
   async findAll() {
     const rows = await queryMany(
       `SELECT "_id", "code", "step", "description", "esParalelo", "material",
-              "clubs", "steps", "materiales", "orden", "_createdDate", "_updatedDate"
+              "clubs", "steps", "materiales", "orden", "videoUrl", "_createdDate", "_updatedDate"
        FROM "NIVELES"
        ORDER BY "orden" ASC NULLS LAST, "code" ASC`
     );
@@ -36,13 +36,25 @@ class NivelesRepositoryClass extends BaseRepository {
   async findByCode(code: string) {
     const rows = await queryMany(
       `SELECT "_id", "code", "step", "description", "esParalelo", "material",
-              "clubs", "steps", "materiales", "orden", "_createdDate", "_updatedDate"
+              "clubs", "steps", "materiales", "orden", "videoUrl", "_createdDate", "_updatedDate"
        FROM "NIVELES"
        WHERE "code" = $1
        ORDER BY "orden" ASC NULLS LAST, "step" ASC`,
       [code]
     );
     return this.parseMany(rows);
+  }
+
+  /**
+   * Get videoUrl for a specific nivel + step combination
+   */
+  async findVideoByNivelAndStep(nivel: string, step: string) {
+    return queryOne<{ videoUrl: string | null }>(
+      `SELECT "videoUrl" FROM "NIVELES"
+       WHERE "code" = $1 AND "step" = $2
+       LIMIT 1`,
+      [nivel, step]
+    );
   }
 
   /**
