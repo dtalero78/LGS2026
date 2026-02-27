@@ -8,11 +8,94 @@
 import 'server-only';
 import { CalendarioRepository } from '@/repositories/calendar.repository';
 import { BookingRepository } from '@/repositories/booking.repository';
+import { StepOverridesRepository } from '@/repositories/niveles.repository';
 import { ValidationError, ConflictError, NotFoundError, ForbiddenError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
+import { queryMany } from '@/lib/postgres';
+
+// --- Helpers (mirrors progress.service.ts logic) ---
+
+function extractStepNumber(stepName: string): number | null {
+  const match = stepName?.match(/Step\s*(\d+)/i);
+  return match ? parseInt(match[1]) : null;
+}
+
+function isExitosaBooking(c: any): boolean {
+  return c.asistio === true || c.asistencia === true || c.participacion === true;
+}
+
+function getClassTypeBooking(c: any): 'SESSION' | 'CLUB' | 'OTHER' {
+  if (c.tipo === 'SESSION') return 'SESSION';
+  if (c.tipo === 'CLUB') return 'CLUB';
+  if (!c.tipo && c.step) {
+    if (/^TRAINING\s*-/i.test(c.step)) return 'CLUB';
+    if (/^Step\s+\d+$/i.test(c.step)) return 'SESSION';
+  }
+  return 'OTHER';
+}
+
+/**
+ * Determines the first incomplete step number for a student in their current nivel.
+ * Returns 0 if all steps are complete or nivel has no steps in NIVELES.
+ */
+export async function getEffectiveStepNumber(
+  academicaId: string,
+  peopleId: string,
+  nivel: string
+): Promise<number> {
+  if (!nivel) return 0;
+
+  const stepsRows = await queryMany<{ step: string }>(
+    `SELECT DISTINCT "step" FROM "NIVELES" WHERE "code" = $1 AND "step" != 'WELCOME' ORDER BY "step"`,
+    [nivel]
+  );
+  if (stepsRows.length === 0) return 0;
+
+  const allSteps = stepsRows
+    .map(r => r.step)
+    .sort((a, b) => (extractStepNumber(a) ?? 0) - (extractStepNumber(b) ?? 0));
+
+  const classes = await queryMany(
+    `SELECT "step", "nombreEvento", "tipo", "asistio", "asistencia", "participacion", "noAprobo"
+     FROM "ACADEMICA_BOOKINGS"
+     WHERE ("idEstudiante" = $1 OR "studentId" = $1) AND "nivel" = $2`,
+    [academicaId, nivel]
+  );
+
+  const overrides = await StepOverridesRepository.findByStudentId(peopleId);
+  const overrideMap = new Map(overrides.map((o: any) => [o.step, o.isCompleted]));
+
+  for (const stepName of allSteps) {
+    const stepNum = extractStepNumber(stepName);
+    if (stepNum === null) continue;
+
+    const overrideVal = overrideMap.get(stepName);
+    if (overrideVal === true) continue;   // completed by override → next step
+    if (overrideVal === false) return stepNum; // forced incomplete
+
+    const clasesDelStep = classes.filter(c => {
+      const n = extractStepNumber(c.step || c.nombreEvento || '');
+      return n === stepNum;
+    });
+
+    const esJump = stepNum > 0 && stepNum % 5 === 0;
+
+    if (esJump) {
+      const tieneNoAprobo = clasesDelStep.some(c => c.noAprobo === true);
+      if (tieneNoAprobo || clasesDelStep.length === 0) return stepNum;
+    } else {
+      const sesionesExitosas = clasesDelStep.filter(c => getClassTypeBooking(c) === 'SESSION' && isExitosaBooking(c)).length;
+      const clubsExitosos = clasesDelStep.filter(c => getClassTypeBooking(c) === 'CLUB' && isExitosaBooking(c)).length;
+      if (sesionesExitosas < 2 || clubsExitosos < 1) return stepNum;
+    }
+  }
+
+  return 0; // all steps complete
+}
 
 const WEEKLY_SESSION_LIMIT = 2;
 const WEEKLY_CLUB_LIMIT = 3;
+const WEEKLY_TRAINING_LIMIT = 1;
 const CANCEL_DEADLINE_MINUTES = 60;
 const BOOKING_MIN_ADVANCE_MINUTES = 30;
 
@@ -23,6 +106,7 @@ const BOOKING_MIN_ADVANCE_MINUTES = 30;
  */
 export async function getAvailableEvents(
   studentId: string,
+  peopleId: string,
   nivel: string,
   step: string,
   date: string,
@@ -49,9 +133,14 @@ export async function getAvailableEvents(
   const bookedHours = await BookingRepository.findBookedHoursForDate(studentId, date);
   const bookedHoursSet = new Set(bookedHours);
 
-  // Check if student is on a jump step (multiples of 5)
-  const stepNum = parseInt(step?.replace(/\D/g, '') || '0', 10);
-  const isJumpStep = stepNum > 0 && stepNum % 5 === 0;
+  // Determine the effective step based on actual progress
+  const effectiveStepNum = await getEffectiveStepNumber(studentId, peopleId, nivel);
+
+  // Fallback to stored step if NIVELES has no data for this nivel
+  const fallbackStepNum = extractStepNumber(step) ?? 0;
+  const activeStepNum = effectiveStepNum > 0 ? effectiveStepNum : fallbackStepNum;
+
+  const isActiveJump = activeStepNum > 0 && activeStepNum % 5 === 0;
 
   const now = new Date();
 
@@ -74,15 +163,15 @@ export async function getAvailableEvents(
       const cupoLleno = evt.limiteUsuarios > 0 && activeCount >= evt.limiteUsuarios;
       const yaInscrito = enrolledEventIds.has(evt._id);
 
-      // If student is on a jump step, only show jump-compatible events
-      const evtStepNum = parseInt(evt.step?.replace(/\D/g, '') || '0', 10);
-      const isJumpEvent = evtStepNum > 0 && evtStepNum % 5 === 0;
-      if (isJumpStep && evt.step && !isJumpEvent) {
-        return null;
-      }
-      // If student is NOT on a jump step, hide jump events
-      if (!isJumpStep && isJumpEvent) {
-        return null;
+      const evtStepNum = extractStepNumber(evt.step || evt.nombreEvento || '');
+      const isJumpEvent = evtStepNum !== null && evtStepNum > 0 && evtStepNum % 5 === 0;
+
+      if (isActiveJump) {
+        // Student completed all regular steps → show ONLY the specific jump event
+        if (!isJumpEvent || evtStepNum !== activeStepNum) return null;
+      } else {
+        // Student is on a regular step → show all non-jump events, hide jump events
+        if (isJumpEvent) return null;
       }
 
       return {
@@ -187,6 +276,20 @@ export async function bookEvent(
     const currentClubs = weeklyMap['CLUB'] || 0;
     if (currentClubs >= WEEKLY_CLUB_LIMIT) {
       throw new ConflictError(`Límite semanal alcanzado: máximo ${WEEKLY_CLUB_LIMIT} clubs por semana`);
+    }
+
+    // TRAINING limit: max 1 per week
+    const eventName = event.nombreEvento || event.titulo || '';
+    const isTraining = /^TRAINING\s*-/i.test(eventName);
+    if (isTraining) {
+      const currentTrainings = await BookingRepository.countWeeklyTrainingBookings(
+        studentId,
+        weekStart.toISOString(),
+        weekEnd.toISOString()
+      );
+      if (currentTrainings >= WEEKLY_TRAINING_LIMIT) {
+        throw new ConflictError(`Límite semanal alcanzado: máximo ${WEEKLY_TRAINING_LIMIT} TRAINING por semana`);
+      }
     }
   }
 

@@ -263,22 +263,23 @@ class BookingRepositoryClass extends BaseRepository {
     return queryMany(
       `SELECT
          ab."_id",
-         COALESCE(ab."primerNombre", p."primerNombre", '') as "primerNombre",
-         COALESCE(ab."primerApellido", p."primerApellido", '') as "primerApellido",
-         COALESCE(p."segundoNombre", '') as "segundoNombre",
-         COALESCE(p."segundoApellido", '') as "segundoApellido",
-         COALESCE(p."celular", '') as "celular",
+         COALESCE(ab."primerNombre", a."primerNombre", p."primerNombre", '') as "primerNombre",
+         COALESCE(ab."primerApellido", a."primerApellido", p."primerApellido", '') as "primerApellido",
+         COALESCE(p."segundoNombre", a."segundoNombre", '') as "segundoNombre",
+         COALESCE(p."segundoApellido", a."segundoApellido", '') as "segundoApellido",
+         COALESCE(p."celular", a."celular", '') as "celular",
          c."dia" as "fechaEvento",
          ab."asistio" as "asistencia",
-         COALESCE(p."numeroId", '') as "numeroId",
+         COALESCE(p."numeroId", a."numeroId", '') as "numeroId",
          COALESCE(ab."studentId", ab."idEstudiante") as "idEstudiante",
          ab."nivel",
          ab."advisor",
-         COALESCE(p."plataforma", '') as "plataforma",
+         COALESCE(p."plataforma", a."plataforma", '') as "plataforma",
          COUNT(*) OVER (PARTITION BY COALESCE(ab."studentId", ab."idEstudiante")) as "totalSesionesWelcome"
        FROM "CALENDARIO" c
        INNER JOIN "ACADEMICA_BOOKINGS" ab ON c."_id" = COALESCE(ab."eventoId", ab."idEvento")
-       LEFT JOIN "PEOPLE" p ON COALESCE(ab."studentId", ab."idEstudiante") = p."_id"
+       LEFT JOIN "ACADEMICA" a ON COALESCE(ab."studentId", ab."idEstudiante") = a."_id"
+       LEFT JOIN "PEOPLE" p ON a."numeroId" = p."numeroId"
        WHERE ${conditions.join(' AND ')}
        ORDER BY c."dia" DESC, ab."primerApellido" ASC, ab."primerNombre" ASC`,
       params
@@ -343,6 +344,22 @@ class BookingRepositoryClass extends BaseRepository {
        GROUP BY COALESCE("tipo", "tipoEvento")`,
       [studentId, weekStart, weekEnd]
     );
+  }
+
+  async countWeeklyTrainingBookings(studentId: string, weekStart: string, weekEnd: string): Promise<number> {
+    const row = await queryOne<{ count: number }>(
+      `SELECT COUNT(*)::int as count
+       FROM "ACADEMICA_BOOKINGS"
+       WHERE ("idEstudiante" = $1 OR "studentId" = $1)
+         AND "fechaEvento" >= $2::timestamp
+         AND "fechaEvento" <= $3::timestamp
+         AND "cancelo" = false
+         AND (
+           COALESCE("nombreEvento", "step", '') ILIKE 'TRAINING%'
+         )`,
+      [studentId, weekStart, weekEnd]
+    );
+    return row?.count ?? 0;
   }
 
   async existsByStudentAndEvent(studentId: string, eventId: string): Promise<boolean> {
