@@ -104,7 +104,7 @@ class CalendarioRepositoryClass extends BaseRepository {
        FROM "CALENDARIO" c
        LEFT JOIN "ADVISORS" a ON c."advisor" = a."_id"
        ${whereClause}
-       ORDER BY c."dia" DESC
+       ORDER BY c."dia" ASC
        ${limitClause}`,
       params
     );

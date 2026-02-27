@@ -35,6 +35,17 @@ interface Advisor {
   zoom?: string
 }
 
+// Caché en memoria a nivel de módulo: sobrevive navegaciones dentro de la misma pestaña.
+// Sin límite de tamaño, sin serialización, acceso instantáneo.
+interface SessionCacheEntry {
+  events: CalendarEvent[]
+  advisors: Advisor[]
+  timestamp: number
+}
+const SESSION_CACHE = new Map<string, SessionCacheEntry>()
+const SESSION_CACHE_TTL = 4 * 60 * 60 * 1000 // 4 horas
+const CACHE_KEY_PREFIX = 'agenda_sesiones_'
+
 export default function AgendaSesionesPage() {
   // Estados principales
   const [events, setEvents] = useState<CalendarEvent[]>([])
@@ -47,9 +58,8 @@ export default function AgendaSesionesPage() {
   const [batchProcessing, setBatchProcessing] = useState(false)
   const [batchProgress, setBatchProgress] = useState<{current: number, total: number, eventsInBatch: number} | null>(null)
 
-  // Constantes para el caché
-  const CACHE_TTL = 4 * 60 * 60 * 1000 // 4 horas en millisegundos (caché más agresivo)
-  const CACHE_KEY_PREFIX = 'agenda_sesiones_'
+  // Constantes para el caché (local dentro del componente)
+  const CACHE_TTL = SESSION_CACHE_TTL
 
   // Función para obtener rango visible en calendario
   const getVisibleDateRange = (currentDate: Date) => {
@@ -77,101 +87,104 @@ export default function AgendaSesionesPage() {
   }
 
   const getFromCache = (month: Date) => {
+    const cacheKey = getCacheKey(month)
+    const now = Date.now()
+
+    // 1. Primero chequear caché en memoria (instantáneo, sin serialización)
+    const sessionEntry = SESSION_CACHE.get(cacheKey)
+    if (sessionEntry && now - sessionEntry.timestamp < CACHE_TTL) {
+      console.log('⚡ Datos cargados desde caché en memoria para:', month.toISOString().split('T')[0])
+      return { events: sessionEntry.events, advisors: sessionEntry.advisors }
+    }
+
+    // 2. Fallback: localStorage (persiste entre recargas)
     try {
-      const cacheKey = getCacheKey(month)
       const cached = localStorage.getItem(cacheKey)
       if (cached) {
         const data = JSON.parse(cached)
-        const now = Date.now()
         if (now - data.timestamp < CACHE_TTL) {
-          // Convertir fechas de string a Date
           const eventsWithDates = data.events.map((event: any) => ({
             ...event,
             dia: new Date(event.dia)
           }))
-          console.log('📦 Datos cargados desde caché para:', month.toISOString().split('T')[0])
+          // Promover al caché en memoria para próximos accesos
+          SESSION_CACHE.set(cacheKey, { events: eventsWithDates, advisors: data.advisors, timestamp: data.timestamp })
+          console.log('📦 Datos cargados desde localStorage para:', month.toISOString().split('T')[0])
           return { events: eventsWithDates, advisors: data.advisors }
         } else {
-          // Caché expirado, eliminarlo
           localStorage.removeItem(cacheKey)
-          console.log('🗑️ Caché expirado eliminado para:', month.toISOString().split('T')[0])
+          console.log('🗑️ Caché localStorage expirado eliminado para:', month.toISOString().split('T')[0])
         }
       }
     } catch (error) {
-      console.error('❌ Error leyendo caché:', error)
+      console.error('❌ Error leyendo localStorage:', error)
     }
     return null
   }
 
   const saveToCache = (month: Date, events: CalendarEvent[], advisors: Advisor[]) => {
+    const cacheKey = getCacheKey(month)
+    const timestamp = Date.now()
+
+    // Siempre guardar en memoria (sin límite de tamaño)
+    SESSION_CACHE.set(cacheKey, { events, advisors, timestamp })
+    console.log('⚡ Datos guardados en caché en memoria para:', month.toISOString().split('T')[0])
+
+    // Intentar guardar en localStorage como respaldo (puede fallar si hay muchos eventos)
     try {
-      const cacheKey = getCacheKey(month)
-      const data = {
-        timestamp: Date.now(),
-        events,
-        advisors
-      }
-      localStorage.setItem(cacheKey, JSON.stringify(data))
-      console.log('💾 Datos guardados en caché para:', month.toISOString().split('T')[0])
-    } catch (error) {
-      console.error('❌ Error guardando caché:', error)
+      localStorage.setItem(cacheKey, JSON.stringify({ timestamp, events, advisors }))
+    } catch {
+      // localStorage lleno o bloqueado — el caché en memoria es suficiente para esta sesión
     }
   }
 
   const clearAllCache = () => {
+    SESSION_CACHE.clear()
     try {
       const keysToRemove: string[] = []
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
-        if (key && key.startsWith(CACHE_KEY_PREFIX)) {
-          keysToRemove.push(key)
-        }
+        if (key && key.startsWith(CACHE_KEY_PREFIX)) keysToRemove.push(key)
       }
       keysToRemove.forEach(key => localStorage.removeItem(key))
-      if (keysToRemove.length > 0) {
-        console.log('🗑️ Cache completo limpiado:', keysToRemove.length, 'entradas eliminadas')
-      }
-    } catch (error) {
-      console.error('❌ Error limpiando cache completo:', error)
-    }
+    } catch { /* ignorar */ }
   }
 
-  // Nueva función: Invalidar caché solo del mes afectado (en lugar de todo)
+  // Invalidar caché del mes afectado (en memoria + localStorage)
   const clearCacheForMonth = (eventDate: Date) => {
+    const cacheKey = getCacheKey(eventDate)
+    SESSION_CACHE.delete(cacheKey)
     try {
-      const cacheKey = getCacheKey(eventDate)
       localStorage.removeItem(cacheKey)
-      console.log('🗑️ Caché invalidado solo para:', eventDate.toISOString().split('T')[0])
-    } catch (error) {
-      console.error('❌ Error invalidando caché del mes:', error)
-    }
+    } catch { /* ignorar */ }
+    console.log('🗑️ Caché invalidado para:', eventDate.toISOString().split('T')[0])
   }
 
   const clearExpiredCache = () => {
-    try {
-      const now = Date.now()
-      const keysToRemove: string[] = []
+    const now = Date.now()
 
+    // Limpiar caché en memoria expirado
+    SESSION_CACHE.forEach((entry, key) => {
+      if (now - entry.timestamp >= CACHE_TTL) {
+        SESSION_CACHE.delete(key)
+      }
+    })
+
+    // Limpiar localStorage expirado
+    try {
+      const keysToRemove: string[] = []
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
         if (key && key.startsWith(CACHE_KEY_PREFIX)) {
           const cached = localStorage.getItem(key)
           if (cached) {
             const data = JSON.parse(cached)
-            if (now - data.timestamp >= CACHE_TTL) {
-              keysToRemove.push(key)
-            }
+            if (now - data.timestamp >= CACHE_TTL) keysToRemove.push(key)
           }
         }
       }
-
       keysToRemove.forEach(key => localStorage.removeItem(key))
-      if (keysToRemove.length > 0) {
-        console.log('🧹 Limpieza de caché:', keysToRemove.length, 'entradas expiradas eliminadas')
-      }
-    } catch (error) {
-      console.error('❌ Error limpiando caché:', error)
-    }
+    } catch { /* ignorar */ }
   }
 
   // Cargar datos iniciales
@@ -316,16 +329,14 @@ export default function AgendaSesionesPage() {
 
       console.log(`✅ Frontend: Eventos ${typeLabel} actualizados con inscripciones`)
 
-      // Guardar en caché solo después de completar todo (background incluido)
-      if (!isPriority) {
-        setEvents(currentEvents => {
-          if (currentEvents.length > 0 && advisors.length > 0) {
-            saveToCache(currentMonth, currentEvents, advisors)
-            console.log('💾 Caché actualizado después de cargar TODOS los datos')
-          }
-          return currentEvents
-        })
-      }
+      // Guardar en caché después de cada fase (priority y background)
+      setEvents(currentEvents => {
+        if (currentEvents.length > 0 && advisors.length > 0) {
+          saveToCache(currentMonth, currentEvents, advisors)
+          console.log(`💾 Caché actualizado después de fase ${isPriority ? 'PRIORITY' : 'BACKGROUND'}`)
+        }
+        return currentEvents
+      })
 
     } catch (error) {
       console.error(`❌ Frontend: Error cargando inscripciones ${typeLabel}:`, error)
@@ -409,7 +420,7 @@ export default function AgendaSesionesPage() {
       // Use PostgreSQL calendar endpoint
       const startDateStr = format(startOfDay(calendarStart), 'yyyy-MM-dd')
       const endDateStr = format(endOfDay(calendarEnd), 'yyyy-MM-dd')
-      const eventsResponse = await fetch(`/api/postgres/calendar/events?startDate=${startDateStr}&endDate=${endDateStr}&limit=1000`)
+      const eventsResponse = await fetch(`/api/postgres/calendar/events?startDate=${startDateStr}&endDate=${endDateStr}`)
 
       if (eventsResponse.ok) {
         const eventsData = await eventsResponse.json()
@@ -503,7 +514,7 @@ export default function AgendaSesionesPage() {
       // Use PostgreSQL calendar endpoint
       const startDateStr = format(startOfDay(calendarStart), 'yyyy-MM-dd')
       const endDateStr = format(endOfDay(calendarEnd), 'yyyy-MM-dd')
-      const eventsResponse = await fetch(`/api/postgres/calendar/events?startDate=${startDateStr}&endDate=${endDateStr}&limit=1000`)
+      const eventsResponse = await fetch(`/api/postgres/calendar/events?startDate=${startDateStr}&endDate=${endDateStr}`)
 
       // Función local para obtener advisor name - ahora usa campos del JOIN
       const getAdvisorNameLocal = (event: any): string => {

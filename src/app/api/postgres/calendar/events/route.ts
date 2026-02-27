@@ -13,7 +13,8 @@ export const GET = handler(async (request) => {
   const tipo = searchParams.get('tipo');
   const advisor = searchParams.get('advisor');
   const nivel = searchParams.get('nivel');
-  const limit = parseInt(searchParams.get('limit') || '500');
+  const limitParam = searchParams.get('limit');
+  const limit = limitParam ? parseInt(limitParam) : undefined;
 
   let startDate = searchParams.get('startDate');
   let endDate = searchParams.get('endDate');
