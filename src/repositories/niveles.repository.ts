@@ -36,7 +36,7 @@ class NivelesRepositoryClass extends BaseRepository {
   async findByCode(code: string) {
     const rows = await queryMany(
       `SELECT "_id", "code", "step", "description", "esParalelo", "material",
-              "clubs", "steps", "materiales", "orden", "videoUrl", "_createdDate", "_updatedDate"
+              "clubs", "steps", "materiales", "materialUsuario", "orden", "videoUrl", "_createdDate", "_updatedDate"
        FROM "NIVELES"
        WHERE "code" = $1
        ORDER BY "orden" ASC NULLS LAST, "step" ASC`,

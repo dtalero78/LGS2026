@@ -24,11 +24,31 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
 
   // Collect all material items from all steps
   const allMaterials: { name: string; url: string; step: string }[] = []
+  const seen = new Set<string>()
+
   for (const row of materials) {
+    // materialUsuario: array of DO Spaces keys like "materials/Filename.pdf"
+    const userMats = row.materialUsuario || []
+    if (Array.isArray(userMats)) {
+      for (const key of userMats) {
+        if (typeof key === 'string' && key.startsWith('materials/') && !seen.has(key)) {
+          seen.add(key)
+          const filename = decodeURIComponent(key.split('/').pop() || key)
+          allMaterials.push({
+            name: filename.replace(/\.pdf$/i, ''),
+            url: `/api/postgres/niveles/material?key=${encodeURIComponent(key)}`,
+            step: row.step || '',
+          })
+        }
+      }
+    }
+
+    // Legacy: material/materiales with {name, url} objects
     const matList = row.material || row.materiales || []
     if (Array.isArray(matList)) {
       for (const m of matList) {
-        if (m && m.url) {
+        if (m && m.url && !seen.has(m.url)) {
+          seen.add(m.url)
           allMaterials.push({
             name: m.name || m.nombre || `Material ${allMaterials.length + 1}`,
             url: m.url,
