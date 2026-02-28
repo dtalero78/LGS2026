@@ -35,6 +35,8 @@ function PanelEstudianteContent() {
   const [showProgress, setShowProgress] = useState(false)
   const [showMaterials, setShowMaterials] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
+  const [videoOpen, setVideoOpen] = useState(false)
+  const [videoSrc, setVideoSrc] = useState<string | null>(null)
 
   // Queries
   const meQuery = useStudentMe()
@@ -66,6 +68,15 @@ function PanelEstudianteContent() {
   const openBooking = (tipo?: string) => {
     setBookingTipo(tipo)
     setShowBookingFlow(true)
+  }
+
+  const handleOpenVideo = () => {
+    const nivel = profile?.nivel
+    const step = nextClass?.step || profile?.effectiveStep || profile?.step
+    if (!nivel || !step) return
+    // Use the streaming endpoint directly as the video src (avoids CORS)
+    setVideoSrc(`/api/postgres/niveles/video?nivel=${encodeURIComponent(nivel)}&step=${encodeURIComponent(step)}`)
+    setVideoOpen(true)
   }
 
   const nextEventDate = nextClass ? new Date(nextClass.fechaEvento) : null
@@ -212,6 +223,7 @@ function PanelEstudianteContent() {
                 <div className="pt-2 border-t border-white/20">
                   <p className="text-sm text-primary-200 mb-2">Que aprenderas...</p>
                   <button
+                    onClick={handleOpenVideo}
                     className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/20 text-white text-sm font-medium rounded-lg hover:bg-white/30 transition-colors"
                   >
                     <VideoCameraIcon className="h-4 w-4" />
@@ -246,6 +258,40 @@ function PanelEstudianteContent() {
         {/* 5. Let's Go assistance */}
         <WhatsAppContacts />
       </div>
+
+      {/* Video Modal */}
+      {videoOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="relative w-full max-w-3xl bg-black rounded-xl overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between px-4 py-3 bg-gray-900">
+              <span className="text-white text-sm font-medium">
+                {profile?.nivel} — {nextClass?.step || profile?.effectiveStep || profile?.step}
+              </span>
+              <button
+                onClick={() => { setVideoOpen(false); setVideoSrc(null) }}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="aspect-video bg-black flex items-center justify-center">
+              {videoSrc ? (
+                <video
+                  src={videoSrc}
+                  controls
+                  autoPlay
+                  className="w-full h-full"
+                  controlsList="nodownload"
+                />
+              ) : (
+                <div className="text-gray-400 text-sm">
+                  No hay video disponible para esta clase.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modals */}
       {showBookingFlow && (
