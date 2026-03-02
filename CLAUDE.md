@@ -25,7 +25,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 
 ### Módulo Académico
 12. Agenda de Sesiones - Vista de calendario mensual con navegación mes anterior/siguiente
-13. Creación de eventos (SESSION, CLUB, WELCOME) con campos: día, hora, advisor, nivel, step, tipo, título, linkZoom, límite usuarios, club, observaciones
+13. Creación de eventos (SESSION, CLUB) con campos: día, hora, advisor, nivel, step, tipo, título, linkZoom, límite usuarios, club, observaciones. Eventos de bienvenida se crean como SESSION/CLUB con `tituloONivel=WELCOME` (WELCOME es un nivel, no un tipo)
 14. Edición de eventos existentes
 15. Eliminación de eventos con opción de eliminar bookings asociados
 16. Filtrado de eventos por advisor, tipo, nivel, step, rango de fechas
@@ -33,7 +33,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 18. Inscripción masiva de estudiantes en un evento (bulk enroll)
 19. Seguimiento de asistencia individual y masiva (bulk attendance)
 20. Vista de agenda diaria
-21. Exportación CSV de eventos con filtros
+21. Exportación Excel (CSV con UTF-8 BOM) de eventos con filtros
 22. Agenda Académica - Vista semanal de clases
 23. Lista de Advisors con estadísticas de rendimiento
 24. Creación de nuevos advisors
@@ -41,7 +41,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 26. Panel Advisor personal (calendario y métricas propias filtradas por email)
 27. Informe de Beneficiarios (reportes por rango de fechas con conteo de sesiones)
 28. Exportación PDF/CSV de informes de beneficiarios
-29. Leyenda de colores por tipo de evento (SESSION=azul, CLUB=verde, WELCOME=morado)
+29. Leyenda de colores por tipo de evento (SESSION=azul, CLUB=verde). Eventos de tipo WELCOME legacy se muestran en morado por compatibilidad
 30. Badges de capacidad en calendario (inscritos/límite, asistieron)
 31. Conteo batch de inscripciones para múltiples eventos en una sola query
 
@@ -54,7 +54,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 37. Creación de perfiles académicos para beneficiarios sin registro
 38. Integración con WhatsApp para mensajes (Whapi.cloud API)
 39. Envío de WhatsApp de bienvenida a nuevos beneficiarios
-40. Exportación CSV de datos de servicio
+40. Exportación Excel (CSV con UTF-8 BOM) de datos de servicio (welcome-session, lista-sesiones, sin-registro)
 
 ### Módulo Comercial
 41. Crear Contrato - Formulario wizard multi-paso (titular + beneficiarios + financiero)
@@ -172,50 +172,53 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 127. ESS excluido del diagnóstico "¿Cómo voy?" (pero incluido en estadísticas globales)
 
 ### Exportación de Datos
-128. Exportación CSV de eventos con filtros (fecha, advisor, nivel, tipo)
-129. Exportación CSV de estudiantes
-130. Exportación PDF de contratos (vía API2PDF)
-131. Exportación PDF/CSV de informes de beneficiarios
+128. Exportación Excel (CSV UTF-8 BOM) de eventos con filtros (fecha, advisor, nivel, tipo) — agenda-sesiones, agenda-académica
+129. Exportación Excel (CSV UTF-8 BOM) de datos de servicio (welcome-session, lista-sesiones, sin-registro)
+130. Exportación Excel (CSV UTF-8 BOM) de aprobaciones
+131. Exportación CSV de estudiantes
+132. Exportación PDF de contratos (vía API2PDF)
+133. Exportación PDF/CSV de informes de beneficiarios
+- **Utilidad compartida**: `src/lib/export-excel.ts` → `exportToExcel(data, columns, filename)` (client-side, genera CSV con BOM para compatibilidad con Excel y caracteres en español)
 
 ### Jobs Automáticos (Cron)
-132. Expiración automática de contratos (diario 12:00 UTC, marca como FINALIZADA + estadoInactivo)
-133. Reactivación automática de OnHold (diario 6:00 AM UTC, extiende contrato por días pausados)
-134. Autenticación de cron jobs con CRON_SECRET
+134. Expiración automática de contratos (diario 12:00 UTC, marca como FINALIZADA + estadoInactivo)
+135. Reactivación automática de OnHold (diario 6:00 AM UTC, extiende contrato por días pausados)
+136. Autenticación de cron jobs con CRON_SECRET
 
 ### Panel del Estudiante (Auto-Servicio)
-135. Portal de auto-servicio para estudiantes logueados (rol ESTUDIANTE)
-136. Ver perfil propio (merge PEOPLE + ACADEMICA)
-137. Ver progreso académico ("¿Cómo voy?" con barra de progreso, steps, porcentaje)
-138. Ver eventos próximos y disponibles (filtrados por nivel/step del estudiante)
-139. Auto-reserva de clases - Wizard 4 pasos: fecha (hoy/mañana) → tipo → evento → confirmación
-140. Validaciones de reserva: capacidad, no duplicado, no pending SESSION, límites semanales (2 sesiones/3 clubs), no misma hora, mínimo 30 min antes
-141. Cancelación de clases con deadline de 60 minutos antes del evento
-142. Estadísticas personales de asistencia (total, asistidas, ausentes, porcentaje)
-143. Historial completo de clases con detalles
-144. Material de estudio por nivel/step actual
-145. Comentarios de advisors (anotaciones y evaluaciones)
-146. Próxima clase destacada (card grande con fecha, advisor, Zoom link)
+137. Portal de auto-servicio para estudiantes logueados (rol ESTUDIANTE)
+138. Ver perfil propio (merge PEOPLE + ACADEMICA)
+139. Ver progreso académico ("¿Cómo voy?" con barra de progreso, steps, porcentaje)
+140. Ver eventos próximos y disponibles (filtrados por nivel/step del estudiante)
+141. Auto-reserva de clases - Wizard 4 pasos: fecha (hoy/mañana) → tipo → evento → confirmación
+142. Validaciones de reserva: capacidad, no duplicado, no pending SESSION, límites semanales (2 sesiones/3 clubs), no misma hora, mínimo 30 min antes
+143. Cancelación de clases con deadline de 60 minutos antes del evento
+144. Estadísticas personales de asistencia (total, asistidas, ausentes, porcentaje)
+145. Historial completo de clases con detalles
+146. Material de estudio por nivel/step actual
+147. Comentarios de advisors (anotaciones y evaluaciones)
+148. Próxima clase destacada (card grande con fecha, advisor, Zoom link)
 
 ### Contratos con Templates
-147. Plantillas de contrato configurables por plataforma
-148. Llenado dinámico de templates con {{placeholders}} (titular, beneficiarios, financiero, consentimiento)
-149. Detalle de contrato admin con edición inline por sección (titular, referencias, beneficiarios, financiero)
-150. Vista previa de contrato renderizado en modal
+149. Plantillas de contrato configurables por plataforma
+150. Llenado dinámico de templates con {{placeholders}} (titular, beneficiarios, financiero, consentimiento)
+151. Detalle de contrato admin con edición inline por sección (titular, referencias, beneficiarios, financiero)
+152. Vista previa de contrato renderizado en modal
 
 ### Visor de Base de Datos (dblgs)
-151. Herramienta de debug para ver tablas de PostgreSQL (solo SUPER_ADMIN/ADMIN)
-152. Lista de tablas con schema y conteo de registros
-153. Lectura paginada con ordenamiento y filtros dinámicos
-154. Edición de celdas individuales con coerción de tipos
-155. Creación de registros con auto-generación de _id
-156. Eliminación masiva de registros (máximo 100)
+153. Herramienta de debug para ver tablas de PostgreSQL (solo SUPER_ADMIN/ADMIN)
+154. Lista de tablas con schema y conteo de registros
+155. Lectura paginada con ordenamiento y filtros dinámicos
+156. Edición de celdas individuales con coerción de tipos
+157. Creación de registros con auto-generación de _id
+158. Eliminación masiva de registros (máximo 100)
 
 ### Caché y Rendimiento
-157. Caché client-side en localStorage con TTL para calendario (5 min, keys por mes)
-158. Caché server-side en memoria para permisos (5 min TTL, por rol)
-159. Invalidación automática de caché en operaciones CRUD
-160. Endpoint admin para invalidación manual de caché de permisos
-161. React Query con staleTime configurable por feature (5-30 min)
+159. Caché client-side en localStorage con TTL para calendario (5 min, keys por mes)
+160. Caché server-side en memoria para permisos (5 min TTL, por rol)
+161. Invalidación automática de caché en operaciones CRUD
+162. Endpoint admin para invalidación manual de caché de permisos
+163. React Query con staleTime configurable por feature (5-30 min)
 
 ## Architecture
 
@@ -309,7 +312,7 @@ src/
 │   ├── consent.service.ts       Consentimiento declarativo (OTP, verificación, hash SHA-256)
 │   └── dblgs.service.ts         Acceso dinámico a tablas de BD (visor/editor)
 │
-├── repositories/            ← REPOSITORIES - Acceso a datos / SQL (11 archivos)
+├── repositories/            ← REPOSITORIES - Acceso a datos / SQL (10 archivos)
 │   ├── base.repository.ts       Clase base: findById, findMany, updateFields, parseJsonb
 │   ├── people.repository.ts     Tabla PEOPLE (~10 rutas)
 │   ├── academica.repository.ts  Tabla ACADEMICA (~4 rutas)
@@ -319,10 +322,9 @@ src/
 │   ├── roles.repository.ts      Tablas ROL_PERMISOS + USUARIOS_ROLES (~4 rutas)
 │   ├── niveles.repository.ts    Tablas NIVELES + STEP_OVERRIDES (~4 rutas)
 │   ├── financial.repository.ts  Tabla FINANCIEROS (~2 rutas)
-│   ├── comments.repository.ts   Tabla COMENTARIOS (~2 rutas)
 │   └── dblgs.repository.ts      Consultas genéricas dinámicas por tabla (standalone, no extiende Base)
 │
-├── lib/                     ← UTILIDADES compartidas (15 archivos)
+├── lib/                     ← UTILIDADES compartidas (16 archivos)
 │   ├── errors.ts                Clases de error: NotFoundError, ValidationError, UnauthorizedError, ForbiddenError, ConflictError
 │   ├── api-helpers.ts           handler(), handlerWithAuth(), successResponse(), errorResponse()
 │   ├── query-builder.ts         buildDynamicUpdate(), buildDynamicWhere()
@@ -337,11 +339,12 @@ src/
 │   ├── whatsapp.ts              Envío de WhatsApp vía Whapi.cloud (formatPhoneNumber, sendWhatsAppMessage)
 │   ├── otp-store.ts             Almacén in-memory de OTP (generateOtp, saveOtp, verifyOtp, TTL 10 min)
 │   ├── contract-template-filler.ts  Llenado de templates de contrato con {{placeholders}} (titular, beneficiarios, financiero, consentimiento)
+│   ├── export-excel.ts          exportToExcel() - Genera CSV con UTF-8 BOM para compatibilidad con Excel (client-side)
 │   └── utils.ts                 Utilidades generales
 │
 ├── components/              ← COMPONENTES React organizados por feature (12 directorios)
 │   ├── layout/                  DashboardLayout, sidebar, navigation (1 archivo)
-│   ├── student/                 StudentTabs, StudentAcademic, StudentOnHold, StudentContract... (10 archivos)
+│   ├── student/                 StudentTabs, StudentAcademic, StudentOnHold, StudentContract, StudentGeneral... (10 archivos)
 │   ├── search/                  SearchBar (búsqueda global) (1 archivo)
 │   ├── calendar/                CalendarView, EventModal, EventForm... (4 archivos)
 │   ├── permissions/             PermissionGuard, PermissionGate, PermissionButton, ProtectedAction (4 archivos)
@@ -483,6 +486,18 @@ WHAPI_TOKEN=whapi_cloud_token
 - Do not install `@hookform/resolvers` - causes peer dependency conflicts
 - Only Zod schemas are supported
 
+### Sistema de Comentarios
+- Los comentarios de personas/titulares están en `PEOPLE.comentarios` (JSONB array), **no** en una tabla `COMENTARIOS` separada
+- La tabla `COMENTARIOS` no existe en producción; `comments.repository.ts` fue eliminado
+- `people.repository.ts` maneja comentarios con `getComments()` y `saveComments()` directamente sobre el campo JSONB
+- API: `GET/POST /api/postgres/people/[id]/comments` — lee y escribe el array en `PEOPLE.comentarios`
+
+### Compatibilidad Wix ↔ Admin en Bookings
+- Datos migrados de Wix usan `idEvento` como foreign key a CALENDARIO (nueva columna: `eventoId`)
+- El tipo de evento en datos Wix se almacena en `tipoEvento` (nueva: columna `tipo` en CALENDARIO)
+- Las queries de welcome sessions usan `COALESCE(b."eventoId", b."idEvento")` y `COALESCE(c."tipo", b."tipoEvento")` para soportar ambos formatos
+- Al crear nuevos bookings desde el admin, usar solo `eventoId` (sin `numeroId`, `celular`, `plataforma` que no existen en ACADEMICA_BOOKINGS)
+
 ### WhatsApp/OTP Issues
 - OTP store is in-memory: OTPs are lost on server restart
 - OTP has 10-minute TTL, one-time use (deleted after verification)
@@ -502,21 +517,21 @@ WHAPI_TOKEN=whapi_cloud_token
 - All SQL is parameterized ($1, $2, ...) to prevent injection
 - JSONB fields for flexible data: `onHoldHistory`, `extensionHistory`, `evaluacion`, `steps`, `consentimientoDeclarativo`, etc.
 - Key tables:
-  - `PEOPLE`: Personas (titulares y beneficiarios), contratos, OnHold, consentimiento declarativo
+  - `PEOPLE`: Personas (titulares y beneficiarios), contratos, OnHold, consentimiento declarativo, comentarios
     - Campos de consentimiento: `consentimientoDeclarativo` (JSONB), `hashConsentimiento` (text)
     - Campos OnHold: `estadoInactivo`, `fechaOnHold`, `fechaFinOnHold`, `onHoldCount`, `onHoldHistory` (JSONB)
-    - Campos extensión: `finalContrato`, `vigencia`, `extensionCount`, `extensionHistory` (JSONB)
+    - Campos extensión: `finalContrato`, `vigencia`, `extensionCount`, `extensionHistory` (JSONB) — **estos campos viven en PEOPLE, no en ACADEMICA**
     - Campos paralelos: `nivelParalelo`, `stepParalelo` (nullable)
-  - `ACADEMICA`: Registros académicos por estudiante (nivel, step, nivelParalelo, stepParalelo)
-  - `ACADEMICA_BOOKINGS`: Inscripciones a eventos (asistencia, evaluación, calificación, participación, comentarios)
-  - `CALENDARIO`: Eventos (SESSION, CLUB, WELCOME) con advisor, nivel, step, linkZoom, limiteUsuarios
+    - Campo comentarios: `comentarios` (JSONB array) — comentarios internos por persona, NO hay tabla COMENTARIOS separada
+  - `ACADEMICA`: Registros académicos por estudiante (nivel, step, nivelParalelo, stepParalelo). **No contiene** campos de contrato/extensión/onhold
+  - `ACADEMICA_BOOKINGS`: Inscripciones a eventos (asistencia, evaluación, calificación, participación, comentarios). Datos migrados de Wix usan columna `idEvento` (nueva: `eventoId`) y `tipoEvento` (queries usan COALESCE para compatibilidad)
+  - `CALENDARIO`: Eventos (SESSION, CLUB) con advisor, nivel, step, linkZoom, limiteUsuarios. Eventos de bienvenida se distinguen por `tituloONivel=WELCOME`. La columna `tipo=WELCOME` existe solo en datos legacy de Wix
   - `ADVISORS`: Profesores/advisors (nombre, email, zoom, activo)
   - `USUARIOS_ROLES`: Credenciales y roles de usuario (email, password bcrypt/plain, rol)
   - `ROL_PERMISOS`: Definiciones de roles con arrays de permisos (JSONB)
   - `NIVELES`: Niveles académicos con steps, material y clubs (esParalelo flag para ESS)
   - `STEP_OVERRIDES`: Overrides manuales de steps por estudiante
   - `FINANCIEROS`: Datos financieros (totalPlan, pagoInscripcion, saldo, cuotas, formaPago)
-  - `COMENTARIOS`: Comentarios internos por persona (comentario, tipo, prioridad, autor)
   - `CONTRACT_TEMPLATES`: Plantillas de contrato por plataforma (HTML con {{placeholders}})
 
 ## Migración Wix → PostgreSQL
