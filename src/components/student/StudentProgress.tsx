@@ -20,6 +20,7 @@ interface StepProgress {
   mensaje: string | null
   hasOverride: boolean
   overrideCompletado: boolean | null
+  complementariaEligible?: boolean
 }
 
 interface ProgressData {
@@ -244,6 +245,11 @@ export default function StudentProgress({ student }: StudentProgressProps) {
                       </td>
                       <td className="py-2 px-3 text-xs text-gray-500 italic">
                         {s.mensaje || (s.completado ? '' : '')}
+                        {s.complementariaEligible && (
+                          <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700 not-italic">
+                            Elegible Complementaria
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}

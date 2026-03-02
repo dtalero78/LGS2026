@@ -98,7 +98,27 @@ export default function ProgressReport({ data, isLoading }: ProgressReportProps)
                   )}
                 </div>
                 {!s.completado && s.mensaje && (
-                  <p className="text-xs text-gray-500 mt-0.5">{s.mensaje}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {s.complementariaEligible && s.mensaje.includes('complementaria')
+                      ? (() => {
+                          const parts = s.mensaje.split('actividad complementaria')
+                          return (
+                            <>
+                              {parts[0]}
+                              <a
+                                href={`/panel-estudiante/actividades-complementarias?step=${encodeURIComponent(s.step)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-medium text-blue-600 hover:text-blue-800 underline"
+                              >
+                                actividad complementaria
+                              </a>
+                              {parts[1]}
+                            </>
+                          )
+                        })()
+                      : s.mensaje}
+                  </p>
                 )}
                 {!s.esJump && (
                   <div className="flex gap-3 mt-1 text-xs text-gray-400">

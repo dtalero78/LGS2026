@@ -141,7 +141,7 @@ function isExitosa(c: any): boolean {
 }
 
 function getClassType(c: any): 'SESSION' | 'CLUB' | 'OTHER' {
-  if (c.tipo === 'SESSION') return 'SESSION';
+  if (c.tipo === 'SESSION' || c.tipo === 'COMPLEMENTARIA') return 'SESSION';
   if (c.tipo === 'CLUB') return 'CLUB';
   if (!c.tipo && c.step) {
     if (/^TRAINING\s*-/i.test(c.step)) return 'CLUB';

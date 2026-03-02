@@ -82,6 +82,19 @@ class NivelesRepositoryClass extends BaseRepository {
       [code]
     );
   }
+
+  /**
+   * Get step content for complementary activity question generation
+   */
+  async findContenidoByNivelAndStep(nivel: string, step: string): Promise<string | null> {
+    const row = await queryOne<{ contenido: string | null }>(
+      `SELECT "contenido" FROM "NIVELES"
+       WHERE "code" = $1 AND "step" = $2
+       LIMIT 1`,
+      [nivel, step]
+    );
+    return row?.contenido ?? null;
+  }
 }
 
 // ── STEP_OVERRIDES ──

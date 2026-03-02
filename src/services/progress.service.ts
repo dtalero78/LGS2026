@@ -55,7 +55,7 @@ function isExitosa(c: any): boolean {
  * When `tipo` is populated (e.g. events created via admin panel), use it directly.
  */
 function getClassType(c: any): 'SESSION' | 'CLUB' | 'OTHER' {
-  if (c.tipo === 'SESSION') return 'SESSION';
+  if (c.tipo === 'SESSION' || c.tipo === 'COMPLEMENTARIA') return 'SESSION';
   if (c.tipo === 'CLUB') return 'CLUB';
   if (c.tipo === 'WELCOME') return 'OTHER';
   // Infer from step name when tipo is null
@@ -178,9 +178,9 @@ export async function generateReport(studentId: string) {
         if (sesionesExitosas >= 2 && clubsExitosos === 0) {
           mensaje = 'Falta un TRAINING SESSION';
         } else if (sesionesExitosas === 1 && clubsExitosos === 0) {
-          mensaje = 'Falta una sesión (¿quieres realizar la actividad...)';
+          mensaje = 'Falta una sesión. Puedes realizar una actividad complementaria.';
         } else if (sesionesExitosas === 1 && clubsExitosos >= 1) {
-          mensaje = 'Falta una sesión para terminar. Realiza la prueba escrita...';
+          mensaje = 'Falta una sesión para terminar. Puedes realizar una actividad complementaria.';
         } else if (sesionesExitosas === 0 && clubsExitosos >= 1) {
           mensaje = 'Faltan dos sesiones';
         } else {
@@ -188,6 +188,9 @@ export async function generateReport(studentId: string) {
         }
       }
     }
+
+    // Eligible for complementary activity: normal step, not completed, has exactly 1 session
+    const complementariaEligible = !esJump && !completado && sesionesExitosas === 1 && overrideCompletado !== true;
 
     return {
       step: stepName,
@@ -203,6 +206,7 @@ export async function generateReport(studentId: string) {
       mensaje,
       hasOverride,
       overrideCompletado,
+      complementariaEligible,
     };
   });
 

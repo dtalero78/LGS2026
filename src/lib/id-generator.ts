@@ -30,4 +30,5 @@ export const ids = {
   comment: () => generateId('cmt'),
   person: () => generateId('prs'),
   academic: () => generateId('acd'),
+  complementaria: () => generateId('cmp'),
 };
