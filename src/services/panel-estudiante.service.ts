@@ -13,6 +13,7 @@
 
 import 'server-only';
 import { Session } from 'next-auth';
+import { query } from '@/lib/postgres';
 import { PeopleRepository } from '@/repositories/people.repository';
 import { AcademicaRepository } from '@/repositories/academica.repository';
 import { BookingRepository } from '@/repositories/booking.repository';
@@ -80,6 +81,114 @@ export async function resolveStudentFromSession(session: Session) {
     ? await getEffectiveStepNumber(academicaId ?? (base as any)._id, (base as any)._id, nivel)
     : 0;
   const effectiveStep = effectiveStepNum > 0 ? `Step ${effectiveStepNum}` : step;
+
+  // Check OnHold auto-reactivation: if fechaFinOnHold < today, deactivate OnHold + extend contract
+  const fechaFinOnHold = (base as any).fechaFinOnHold;
+  const fechaOnHold = (base as any).fechaOnHold;
+  if (fechaFinOnHold && fechaOnHold && (base as any).estadoInactivo) {
+    const endOnHold = new Date(fechaFinOnHold);
+    const todayOnHold = new Date();
+    todayOnHold.setHours(0, 0, 0, 0);
+    endOnHold.setHours(0, 0, 0, 0);
+
+    if (endOnHold < todayOnHold) {
+      console.log(`🟢 [Panel Estudiante] OnHold expirado (${fechaFinOnHold}). Reactivando estudiante y extendiendo contrato.`);
+
+      // Calculate paused days
+      const startOnHold = new Date(fechaOnHold);
+      const daysPaused = Math.ceil(
+        (endOnHold.getTime() - startOnHold.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      // Extend contract by paused days
+      const currentFinal = (base as any).finalContrato ? new Date((base as any).finalContrato) : null;
+      let newFinalStr: string | null = null;
+      let newVigencia = 0;
+
+      if (currentFinal) {
+        const newFinal = new Date(currentFinal);
+        newFinal.setDate(newFinal.getDate() + daysPaused);
+        newFinalStr = newFinal.toISOString().split('T')[0];
+        newVigencia = Math.ceil((newFinal.getTime() - todayOnHold.getTime()) / (1000 * 60 * 60 * 24));
+
+        // Build extension history
+        const currentExtHistory = Array.isArray((base as any).extensionHistory) ? (base as any).extensionHistory : [];
+        const extensionEntry = {
+          numero: ((base as any).extensionCount || 0) + 1,
+          fechaEjecucion: new Date().toISOString(),
+          vigenciaAnterior: currentFinal.toISOString().split('T')[0],
+          vigenciaNueva: newFinalStr,
+          diasExtendidos: daysPaused,
+          motivo: `Extensión automática por OnHold (${daysPaused} días pausados desde ${fechaOnHold} hasta ${fechaFinOnHold})`,
+        };
+        const updatedExtHistory = [...currentExtHistory, extensionEntry];
+
+        await query(
+          `UPDATE "PEOPLE"
+           SET "estadoInactivo" = false,
+               "fechaOnHold" = NULL,
+               "fechaFinOnHold" = NULL,
+               "finalContrato" = $1::date,
+               "vigencia" = $2,
+               "extensionCount" = COALESCE("extensionCount", 0) + 1,
+               "extensionHistory" = $3::jsonb,
+               "_updatedDate" = NOW()
+           WHERE "_id" = $4`,
+          [newFinalStr, newVigencia, JSON.stringify(updatedExtHistory), (base as any)._id]
+        );
+      } else {
+        // No contract date — just clear OnHold fields
+        await query(
+          `UPDATE "PEOPLE"
+           SET "estadoInactivo" = false,
+               "fechaOnHold" = NULL,
+               "fechaFinOnHold" = NULL,
+               "_updatedDate" = NOW()
+           WHERE "_id" = $1`,
+          [(base as any)._id]
+        );
+      }
+
+      (base as any).estadoInactivo = false;
+      (base as any).fechaOnHold = null;
+      (base as any).fechaFinOnHold = null;
+      if (newFinalStr) {
+        (base as any).finalContrato = newFinalStr;
+        (base as any).vigencia = newVigencia;
+      }
+    }
+  }
+
+  // Check contract expiration: if finalContrato < today, inactivate student + titular
+  const finalContrato = (base as any).finalContrato;
+  if (finalContrato && !((base as any).estadoInactivo)) {
+    const endDate = new Date(finalContrato);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    endDate.setHours(0, 0, 0, 0);
+
+    if (endDate < today) {
+      console.log(`🔴 [Panel Estudiante] Contrato expirado (${finalContrato}). Inactivando estudiante y titular.`);
+
+      // Inactivate this student
+      await query(
+        `UPDATE "PEOPLE" SET "estadoInactivo" = true, "aprobacion" = 'FINALIZADA', "_updatedDate" = NOW() WHERE "_id" = $1`,
+        [(base as any)._id]
+      );
+      (base as any).estadoInactivo = true;
+
+      // Inactivate the titular of this contract
+      const contrato = (base as any).contrato;
+      if (contrato) {
+        await query(
+          `UPDATE "PEOPLE"
+           SET "estadoInactivo" = true, "aprobacion" = 'FINALIZADA', "_updatedDate" = NOW()
+           WHERE "contrato" = $1 AND "tipoUsuario" = 'TITULAR' AND ("estadoInactivo" IS NULL OR "estadoInactivo" = false)`,
+          [contrato]
+        );
+      }
+    }
+  }
 
   return {
     ...base,

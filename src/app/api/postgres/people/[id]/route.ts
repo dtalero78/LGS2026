@@ -234,9 +234,33 @@ export const PATCH = handlerWithAuth(async (
     'extensionHistory',
   ]);
 
+  // If estado changed to Contrato nulo / Devuelto / Rechazado → inactivate titular + beneficiaries
+  const INACTIVE_STATES = ['Contrato nulo', 'Devuelto', 'Rechazado'];
+  let beneficiariesInactivated = 0;
+
+  if (body.aprobacion && INACTIVE_STATES.includes(body.aprobacion) && parsedPerson.contrato) {
+    // Mark the titular as inactive
+    await query(
+      `UPDATE "PEOPLE" SET "estadoInactivo" = true, "_updatedDate" = NOW() WHERE "_id" = $1`,
+      [personId]
+    );
+    parsedPerson.estadoInactivo = true;
+
+    // Mark all beneficiaries of this contract as inactive
+    const inactiveResult = await query(
+      `UPDATE "PEOPLE"
+       SET "estadoInactivo" = true, "_updatedDate" = NOW()
+       WHERE "contrato" = $1 AND "tipoUsuario" = 'BENEFICIARIO'`,
+      [parsedPerson.contrato]
+    );
+    beneficiariesInactivated = inactiveResult.rowCount || 0;
+
+    console.log(`🔴 [PostgreSQL People] Estado "${body.aprobacion}": titular + ${beneficiariesInactivated} beneficiarios marcados como inactivos`);
+  }
+
   console.log('✅ [PostgreSQL People] Person updated successfully');
 
-  return successResponse({ person: parsedPerson });
+  return successResponse({ person: parsedPerson, beneficiariesInactivated });
 });
 
 /**

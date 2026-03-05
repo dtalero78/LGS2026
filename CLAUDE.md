@@ -142,7 +142,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
      - Botón Editar (protegido por permisos)
      - Botón Eliminar con confirmación modal (solo tipo BENEFICIARIO)
 107. Agregar beneficiario - Formulario multi-paso: datos básicos → contacto (con selector de país) → dirección
-108. Control de estado de titular (dropdown: Aprobado, Contrato nulo, Devuelto, Pendiente, Rechazado) con confirmación
+108. Control de estado de titular (dropdown: Aprobado, Contrato nulo, Devuelto, Pendiente, Rechazado) con confirmación. Estados Contrato nulo/Devuelto/Rechazado inactivan automáticamente al titular y todos sus beneficiarios
 109. Comentarios internos con tipo, prioridad, autor y fecha
 
 ### Detalle de Advisor
@@ -198,27 +198,30 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 146. Material de estudio por nivel/step actual
 147. Comentarios de advisors (anotaciones y evaluaciones)
 148. Próxima clase destacada (card grande con fecha, advisor, Zoom link)
+149. Actividades Complementarias (AI quiz): estudiantes con 1 sesión exitosa en un step normal pueden tomar un quiz de 10 preguntas generado por OpenAI (gpt-4o-mini). ≥80% para aprobar, máximo 3 intentos. Al aprobar se crea booking COMPLEMENTARIA y se ejecuta auto-promoción
+150. Verificación de contrato expirado al login: al cargar el panel, si `finalContrato < hoy` se inactiva automáticamente al estudiante y su titular
+151. Auto-reactivación de OnHold al login: al cargar el panel, si `fechaFinOnHold < hoy` se desactiva OnHold automáticamente, se extiende el contrato por los días pausados y se crea entrada en extensionHistory
 
 ### Contratos con Templates
-149. Plantillas de contrato configurables por plataforma
-150. Llenado dinámico de templates con {{placeholders}} (titular, beneficiarios, financiero, consentimiento)
-151. Detalle de contrato admin con edición inline por sección (titular, referencias, beneficiarios, financiero)
-152. Vista previa de contrato renderizado en modal
+152. Plantillas de contrato configurables por plataforma
+153. Llenado dinámico de templates con {{placeholders}} (titular, beneficiarios, financiero, consentimiento)
+154. Detalle de contrato admin con edición inline por sección (titular, referencias, beneficiarios, financiero)
+155. Vista previa de contrato renderizado en modal
 
 ### Visor de Base de Datos (dblgs)
-153. Herramienta de debug para ver tablas de PostgreSQL (solo SUPER_ADMIN/ADMIN)
-154. Lista de tablas con schema y conteo de registros
-155. Lectura paginada con ordenamiento y filtros dinámicos
-156. Edición de celdas individuales con coerción de tipos
-157. Creación de registros con auto-generación de _id
-158. Eliminación masiva de registros (máximo 100)
+156. Herramienta de debug para ver tablas de PostgreSQL (solo SUPER_ADMIN/ADMIN)
+157. Lista de tablas con schema y conteo de registros
+158. Lectura paginada con ordenamiento y filtros dinámicos
+159. Edición de celdas individuales con coerción de tipos
+160. Creación de registros con auto-generación de _id
+161. Eliminación masiva de registros (máximo 100)
 
 ### Caché y Rendimiento
-159. Caché client-side en localStorage con TTL para calendario (5 min, keys por mes)
-160. Caché server-side en memoria para permisos (5 min TTL, por rol)
-161. Invalidación automática de caché en operaciones CRUD
-162. Endpoint admin para invalidación manual de caché de permisos
-163. React Query con staleTime configurable por feature (5-30 min)
+162. Caché client-side en localStorage con TTL para calendario (5 min, keys por mes)
+163. Caché server-side en memoria para permisos (5 min TTL, por rol)
+164. Invalidación automática de caché en operaciones CRUD
+165. Endpoint admin para invalidación manual de caché de permisos
+166. React Query con staleTime configurable por feature (5-30 min)
 
 ## Architecture
 
@@ -262,6 +265,7 @@ src/
 │   ├── use-search.ts            Búsqueda global con debounce
 │   ├── use-dblgs.ts             Visor de BD (tablas, schema, rows, CRUD)
 │   ├── use-panel-estudiante.ts  Panel estudiante (me, events, stats, progress)
+│   ├── use-complementaria.ts   Actividades complementarias (eligibility, generate, grade, attempts)
 │   └── usePermissions.ts        Permisos del usuario (hasPermission, hasAny, hasAll)
 │
 ├── app/api/                 ← API ROUTES - Adaptadores HTTP (~95 rutas)
@@ -310,6 +314,7 @@ src/
 │   ├── panel-estudiante.service.ts  Panel del estudiante (perfil, eventos, stats, progreso)
 │   ├── student-booking.service.ts   Auto-reserva de clases por estudiantes
 │   ├── consent.service.ts       Consentimiento declarativo (OTP, verificación, hash SHA-256)
+│   ├── complementaria.service.ts Actividades complementarias (OpenAI quiz generation, grading, auto-promotion)
 │   └── dblgs.service.ts         Acceso dinámico a tablas de BD (visor/editor)
 │
 ├── repositories/            ← REPOSITORIES - Acceso a datos / SQL (10 archivos)
@@ -322,6 +327,7 @@ src/
 │   ├── roles.repository.ts      Tablas ROL_PERMISOS + USUARIOS_ROLES (~4 rutas)
 │   ├── niveles.repository.ts    Tablas NIVELES + STEP_OVERRIDES (~5 rutas)
 │   ├── financial.repository.ts  Tabla FINANCIEROS (~2 rutas)
+│   ├── complementaria.repository.ts Tabla COMPLEMENTARIA_ATTEMPTS (attempts CRUD, eligibility checks)
 │   └── dblgs.repository.ts      Consultas genéricas dinámicas por tabla (standalone, no extiende Base)
 │
 ├── lib/                     ← UTILIDADES compartidas (16 archivos)
@@ -447,6 +453,7 @@ DATABASE_URL=postgresql://user:pass@host:port/dbname
 CRON_SECRET=secret_for_cron_job_auth
 API2PDF_KEY=api2pdf_api_key
 WHAPI_TOKEN=whapi_cloud_token
+OPENAI_API_KEY=openai_api_key_for_complementaria
 ```
 
 ### TypeScript Build Configuration
@@ -533,6 +540,7 @@ WHAPI_TOKEN=whapi_cloud_token
   - `STEP_OVERRIDES`: Overrides manuales de steps por estudiante
   - `FINANCIEROS`: Datos financieros (totalPlan, pagoInscripcion, saldo, cuotas, formaPago)
   - `CONTRACT_TEMPLATES`: Plantillas de contrato por plataforma (HTML con {{placeholders}})
+  - `COMPLEMENTARIA_ATTEMPTS`: Intentos de actividades complementarias (AI quiz). Campos: studentId, nivel, step, attemptNumber, questions (JSONB), answers (JSONB), score, passed, bookingId, status (IN_PROGRESS/PASSED/FAILED)
 
 ## Migración Wix → PostgreSQL
 
@@ -1124,6 +1132,59 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
 </PermissionGate>
 ```
 
+## Actividades Complementarias (AI Quiz)
+
+### Overview
+Students who have 1 successful session on a normal step (need 2) can take an AI-generated quiz to substitute the missing session. Uses OpenAI gpt-4o-mini to generate and grade questions based on `NIVELES.contenido`.
+
+### Rules
+- **Eligibility**: 1 exitosa session on a non-jump step, not already completed, no override
+- **Questions**: 10 per attempt (4 multiple choice, 1 true/false, 2 open-ended, 2 multiple choice, 1 any)
+- **Pass threshold**: ≥80%
+- **Max attempts**: 3 persistent attempts per step (stored in `COMPLEMENTARIA_ATTEMPTS` table)
+- **On pass**: Creates `ACADEMICA_BOOKINGS` record with `tipo=COMPLEMENTARIA` (counts as SESSION in `getClassType()`) and triggers `autoAdvanceStep()`
+
+### Implementation Files
+- **Service**: `src/services/complementaria.service.ts` (eligibility, generateQuestions, gradeAnswers)
+- **Repository**: `src/repositories/complementaria.repository.ts` (COMPLEMENTARIA_ATTEMPTS table)
+- **API Routes**: `src/app/api/postgres/panel-estudiante/complementaria/` (eligibility, generate, grade, attempts)
+- **Hook**: `src/hooks/use-complementaria.ts`
+- **Page**: `src/app/panel-estudiante/actividades-complementarias/page.tsx`
+- **Progress integration**: `src/services/progress.service.ts` adds `complementariaEligible` flag per step
+- **UI links**: ProgressReport.tsx (student panel, clickable "actividad complementaria" in diagnostic), StudentProgress.tsx (admin, "Elegible Complementaria" badge)
+
+### Content Source
+Questions are generated from `NIVELES.contenido` field (TEXT, markdown format with lesson objectives, vocabulary, grammar points, and evaluation criteria). Truncated to 4000 chars for the OpenAI prompt.
+
+## Contract Inactivation Rules
+
+### By Admin Estado Change
+When a titular's estado is changed to **Contrato nulo**, **Devuelto**, or **Rechazado** via `PATCH /api/postgres/people/[id]`:
+- The titular is marked as `estadoInactivo = true`
+- All beneficiaries of the same contract are marked as `estadoInactivo = true`
+- Implementation: `src/app/api/postgres/people/[id]/route.ts` (PATCH handler)
+
+### By Student Login (Contract Expiration)
+When a student with role ESTUDIANTE loads the panel (`resolveStudentFromSession`):
+- If `finalContrato < today` and student is not already inactive:
+  - Student is marked as `estadoInactivo = true`, `aprobacion = 'FINALIZADA'`
+  - The titular of the same contract is also marked as `estadoInactivo = true`, `aprobacion = 'FINALIZADA'`
+- Implementation: `src/services/panel-estudiante.service.ts` (resolveStudentFromSession)
+
+### By Student Login (OnHold Auto-Reactivation)
+When a student with role ESTUDIANTE loads the panel (`resolveStudentFromSession`):
+- If `fechaFinOnHold < today` and student is currently on hold (estadoInactivo + fechaOnHold set):
+  - Calculates paused days (`fechaFinOnHold - fechaOnHold`)
+  - Extends `finalContrato` by paused days
+  - Creates `extensionHistory` entry with motivo "Extensión automática por OnHold"
+  - Clears `fechaOnHold`, `fechaFinOnHold`, sets `estadoInactivo = false`
+- This mirrors `contractService.deactivateOnHold()` but triggered automatically at login
+- Implementation: `src/services/panel-estudiante.service.ts` (resolveStudentFromSession)
+
+### By Cron Job
+- Daily at 12:00 UTC, the cron job checks all contracts and marks expired ones as FINALIZADA + inactive
+- Implementation: `src/app/api/cron/expire-contracts/route.ts`
+
 ## Consent System (Consentimiento Declarativo - Firma Digital)
 
 ### Overview
@@ -1256,6 +1317,7 @@ interface ConsentData {
 | Contrato Público | `/contrato/[id]` | **Public** (no auth) |
 | Panel Advisor | `/panel-advisor` | ADVISOR role |
 | Panel Estudiante | `/panel-estudiante` | ESTUDIANTE role |
+| Actividad Complementaria | `/panel-estudiante/actividades-complementarias` | ESTUDIANTE role |
 | DB Viewer | `/dblgs` | SUPER_ADMIN/ADMIN only |
 
 ## ESS (English Speaking Sessions) como Nivel Paralelo
