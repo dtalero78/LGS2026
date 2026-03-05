@@ -320,7 +320,7 @@ src/
 │   ├── calendar.repository.ts   Tabla CALENDARIO (~6 rutas)
 │   ├── advisor.repository.ts    Tabla ADVISORS (~4 rutas)
 │   ├── roles.repository.ts      Tablas ROL_PERMISOS + USUARIOS_ROLES (~4 rutas)
-│   ├── niveles.repository.ts    Tablas NIVELES + STEP_OVERRIDES (~4 rutas)
+│   ├── niveles.repository.ts    Tablas NIVELES + STEP_OVERRIDES (~5 rutas)
 │   ├── financial.repository.ts  Tabla FINANCIEROS (~2 rutas)
 │   └── dblgs.repository.ts      Consultas genéricas dinámicas por tabla (standalone, no extiende Base)
 │
@@ -529,7 +529,7 @@ WHAPI_TOKEN=whapi_cloud_token
   - `ADVISORS`: Profesores/advisors (nombre, email, zoom, activo)
   - `USUARIOS_ROLES`: Credenciales y roles de usuario (email, password bcrypt/plain, rol)
   - `ROL_PERMISOS`: Definiciones de roles con arrays de permisos (JSONB)
-  - `NIVELES`: Niveles académicos con steps, material y clubs (esParalelo flag para ESS)
+  - `NIVELES`: Niveles académicos con steps, material, clubs y contenido (esParalelo flag para ESS, contenido TEXT para temario del step)
   - `STEP_OVERRIDES`: Overrides manuales de steps por estudiante
   - `FINANCIEROS`: Datos financieros (totalPlan, pagoInscripcion, saldo, cuotas, formaPago)
   - `CONTRACT_TEMPLATES`: Plantillas de contrato por plataforma (HTML con {{placeholders}})
@@ -1279,7 +1279,8 @@ ESS es un nivel **paralelo y opcional** que NO bloquea el avance en los niveles 
   esParalelo: true,     // Campo que identifica niveles paralelos
   description: "English Speaking Sessions (Opcional)",
   material: [...],
-  clubs: [...]
+  clubs: [...],
+  contenido: "..."      // Temario/contenido del step (TEXT, importado de Wix)
 }
 ```
 

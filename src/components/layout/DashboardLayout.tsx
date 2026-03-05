@@ -14,7 +14,8 @@ import {
   Bars3Icon,
   ChevronDownIcon,
   ChevronRightIcon,
-  ArrowRightOnRectangleIcon
+  ArrowRightOnRectangleIcon,
+  PuzzlePieceIcon,
 } from '@heroicons/react/24/outline'
 import { cn } from '@/lib/utils'
 import SearchBar from '@/components/search/SearchBar'
@@ -64,6 +65,15 @@ const getNavigation = (userEmail: string) => [
     name: 'Permisos',
     href: '/admin/permissions',
     icon: KeyIcon,
+  },
+  {
+    name: 'Juegos',
+    icon: PuzzlePieceIcon,
+    superAdminOnly: true,
+    children: [
+      { name: 'Architecture Quiz', href: '/game.html', external: true },
+      { name: 'Pac-Man Data Flow', href: '/game-pacman.html', external: true },
+    ],
   },
 ]
 
@@ -240,6 +250,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     // Permisos page - only for admins
     if (item.href === '/admin/permissions') {
       return hasFullAccess
+    }
+
+    // Super admin only items
+    if (item.superAdminOnly) {
+      return isRole('SUPER_ADMIN')
     }
 
     // Verificar si tiene permisos para esta sección
@@ -515,6 +530,16 @@ function SidebarContent({
                                     </ul>
                                   )}
                                 </div>
+                              ) : subItem.external ? (
+                                <a
+                                  href={subItem.href}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={onLinkClick}
+                                  className="block px-2 py-2 text-sm rounded-md transition-colors duration-200 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                                >
+                                  {subItem.name}
+                                </a>
                               ) : (
                                 <Link
                                   href={subItem.href}
