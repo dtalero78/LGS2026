@@ -53,7 +53,6 @@ const getNavigation = (userEmail: string) => [
     icon: UsersIcon,
     children: [
       { name: 'Crear Contrato', href: '/dashboard/comercial/crear-contrato' },
-      { name: 'Gestión de Prospectos', href: '/dashboard/comercial/prospectos' },
     ],
   },
   {
@@ -153,10 +152,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       ComercialPermission.DESCARGAR,
       ComercialPermission.APROBACION_AUTONOMA,
     ],
-    '/dashboard/comercial/prospectos': [
-      ComercialPermission.VER_PROSPECTOS,
-    ],
-
     // Aprobación
     '/dashboard/aprobacion': [
       AprobacionPermission.ACTUALIZAR,
