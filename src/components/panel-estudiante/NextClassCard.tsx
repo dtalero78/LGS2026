@@ -111,17 +111,23 @@ export default function NextClassCard({ events, isLoading }: NextClassCardProps)
             </div>
           )}
           <div className="flex items-center gap-2 pt-1">
-            {showZoom && zoomLink && (
+            {showZoom && zoomLink ? (
               <a
                 href={zoomLink}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                title="Entrar a Zoom"
               >
-                <VideoCameraIcon className="h-4 w-4" />
+                <VideoCameraIcon className="h-5 w-5" />
                 Entrar a Zoom
               </a>
-            )}
+            ) : zoomLink ? (
+              <span className="inline-flex items-center gap-2 text-sm text-gray-700 font-medium">
+                <VideoCameraIcon className="h-4 w-4 text-gray-400" />
+                Disponible 5 min antes
+              </span>
+            ) : null}
             <button
               onClick={handleOpenVideo}
               className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200"
