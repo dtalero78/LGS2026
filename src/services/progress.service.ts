@@ -267,7 +267,7 @@ export async function generateReport(studentId: string) {
       step: c.step,
       tipo: c.tipo,
       nombreEvento: c.nombreEvento,
-      advisor: c.advisor,
+      advisor: c.tipo === 'COMPLEMENTARIA' ? 'PLATAFORMA' : c.advisor,
       fechaEvento: c.fechaEvento,
       hora: c.hora,
       asistio: c.asistio,

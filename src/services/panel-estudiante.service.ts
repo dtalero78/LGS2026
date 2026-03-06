@@ -237,7 +237,11 @@ export async function getStudentProgress(academicaId: string) {
  * Get the student's full class history.
  */
 export async function getStudentHistory(academicaId: string) {
-  return BookingRepository.findByStudentId(academicaId, 500);
+  const bookings = await BookingRepository.findByStudentId(academicaId, 500);
+  return bookings.map((b: any) => ({
+    ...b,
+    advisor: b.tipo === 'COMPLEMENTARIA' ? 'PLATAFORMA' : b.advisor,
+  }));
 }
 
 /**

@@ -76,7 +76,7 @@ export const POST = handlerWithAuth(async (request) => {
     },
     byNivel: Object.values(byNivelMap),
     byTipo: Object.values(byTipoMap),
-    recentClasses: bookings.slice(0, 10),
-    allClasses: bookings,
+    recentClasses: bookings.slice(0, 10).map((b: any) => ({ ...b, advisor: b.tipo === 'COMPLEMENTARIA' ? 'PLATAFORMA' : b.advisor })),
+    allClasses: bookings.map((b: any) => ({ ...b, advisor: b.tipo === 'COMPLEMENTARIA' ? 'PLATAFORMA' : b.advisor })),
   });
 });
