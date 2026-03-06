@@ -36,7 +36,7 @@ export const POST = handlerWithAuth(async (request) => {
   // Try to get contenido for the student's current step
   const studentStep = student.step || 'Step 1';
   const studentNivel = student.nivel || nivel;
-  const contenido = await new NivelesRepository().findContenidoByNivelAndStep(studentNivel, studentStep);
+  const contenido = await NivelesRepository.findContenidoByNivelAndStep(studentNivel, studentStep);
 
   const studentName = `${student.primerNombre || ''} ${student.primerApellido || ''}`.trim();
 
