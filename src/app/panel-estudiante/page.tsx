@@ -37,6 +37,7 @@ function PanelEstudianteContent() {
   const [showHistory, setShowHistory] = useState(false)
   const [videoOpen, setVideoOpen] = useState(false)
   const [videoSrc, setVideoSrc] = useState<string | null>(null)
+  const [showInstructivos, setShowInstructivos] = useState(false)
 
   // Queries
   const meQuery = useStudentMe()
@@ -135,15 +136,13 @@ function PanelEstudianteContent() {
             <ChartBarIcon className="h-4 w-4" />
             Como voy?
           </button>
-          <a
-            href="#"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => setShowInstructivos(true)}
             className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1.5"
           >
-            <BookOpenIcon className="h-4 w-4" />
-            Instructivo
-          </a>
+            <VideoCameraIcon className="h-4 w-4" />
+            Instructivos
+          </button>
         </div>
       </div>
 
@@ -259,13 +258,67 @@ function PanelEstudianteContent() {
         <WhatsAppContacts />
       </div>
 
+      {/* Instructivos Selection Modal */}
+      {showInstructivos && (
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[85vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between rounded-t-2xl">
+              <h2 className="text-lg font-semibold text-gray-900">Instructivos</h2>
+              <button
+                onClick={() => setShowInstructivos(false)}
+                className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              <p className="text-sm text-gray-500 mb-2">Selecciona un instructivo para ver:</p>
+              <button
+                onClick={() => {
+                  setShowInstructivos(false)
+                  setVideoSrc('/instructivo1.mp4')
+                  setVideoOpen(true)
+                }}
+                className="w-full flex items-center gap-4 p-4 border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 transition-colors text-left"
+              >
+                <div className="flex-shrink-0 h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <VideoCameraIcon className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">Instructivo 1</p>
+                  <p className="text-sm text-gray-500">Cómo agendar tus clases</p>
+                </div>
+              </button>
+              <button
+                onClick={() => {
+                  setShowInstructivos(false)
+                  setVideoSrc('/instructivo2.mp4')
+                  setVideoOpen(true)
+                }}
+                className="w-full flex items-center gap-4 p-4 border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 transition-colors text-left"
+              >
+                <div className="flex-shrink-0 h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <VideoCameraIcon className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">Instructivo 2</p>
+                  <p className="text-sm text-gray-500">Cómo funciona la plataforma</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Video Modal */}
       {videoOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
           <div className="relative w-full max-w-3xl bg-black rounded-xl overflow-hidden shadow-2xl">
             <div className="flex items-center justify-between px-4 py-3 bg-gray-900">
               <span className="text-white text-sm font-medium">
-                {profile?.nivel} — {nextClass?.step || profile?.effectiveStep || profile?.step}
+                {videoSrc?.includes('instructivo')
+                  ? videoSrc.includes('instructivo1') ? 'Instructivo 1 — Cómo agendar tus clases' : 'Instructivo 2 — Cómo funciona la plataforma'
+                  : `${profile?.nivel} — ${nextClass?.step || profile?.effectiveStep || profile?.step}`}
               </span>
               <button
                 onClick={() => { setVideoOpen(false); setVideoSrc(null) }}

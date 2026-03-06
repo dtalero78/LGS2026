@@ -41,10 +41,11 @@ interface CalendarioEvent {
   asistieron?: number
 }
 
-interface MaterialUsuario {
-  index: number
+interface BookItem {
   name: string
   url: string
+  nivel: string
+  step: string
 }
 
 function PanelAdvisorContent() {
@@ -64,7 +65,7 @@ function PanelAdvisorContent() {
   const [showDayEventsModal, setShowDayEventsModal] = useState(false)
   const [dayEventsModalDate, setDayEventsModalDate] = useState<Date | null>(null)
   const [showBooksModal, setShowBooksModal] = useState(false)
-  const [books, setBooks] = useState<MaterialUsuario[]>([])
+  const [books, setBooks] = useState<BookItem[]>([])
   const [booksLoading, setBooksLoading] = useState(false)
 
   // Get email from URL query params
@@ -186,7 +187,7 @@ function PanelAdvisorContent() {
   const loadBooks = async () => {
     try {
       setBooksLoading(true)
-      const response = await fetch('/api/postgres/materials/usuario?step=Step 0')
+      const response = await fetch('/api/postgres/materials/books')
 
       if (!response.ok) {
         throw new Error('Error al cargar libros')
@@ -194,8 +195,8 @@ function PanelAdvisorContent() {
 
       const data = await response.json()
 
-      if (data.success && data.materials) {
-        setBooks(data.materials)
+      if (data.success && data.books) {
+        setBooks(data.books)
       }
     } catch (error) {
       console.error('Error loading books:', error)
@@ -482,9 +483,9 @@ function PanelAdvisorContent() {
               </div>
             ) : (
               <div className="space-y-3">
-                {books.map((book) => (
+                {books.map((book, idx) => (
                   <a
-                    key={book.index}
+                    key={idx}
                     href={book.url}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -498,7 +499,7 @@ function PanelAdvisorContent() {
                         {book.name}
                       </p>
                       <p className="text-xs text-gray-500">
-                        Clic para descargar
+                        {book.nivel} - {book.step}
                       </p>
                     </div>
                   </a>
