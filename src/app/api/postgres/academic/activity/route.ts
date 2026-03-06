@@ -1,82 +1,72 @@
+import 'server-only';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { PeopleRepository } from '@/repositories/people.repository';
+import { NivelesRepository } from '@/repositories/niveles.repository';
 import { ValidationError } from '@/lib/errors';
 import { queryMany } from '@/lib/postgres';
 
 /**
  * POST /api/postgres/academic/activity
  *
- * Generate student activity report with attendance stats.
+ * Generate a personalized AI activity suggestion for a student
+ * based on their level, step, and recent attendance.
  */
 export const POST = handlerWithAuth(async (request) => {
   const body = await request.json();
-  const { studentId, startDate, endDate, nivel } = body;
+  const { studentId, nivel } = body;
 
   if (!studentId) throw new ValidationError('studentId is required');
+  if (!nivel) throw new ValidationError('nivel is required');
 
   const student = await PeopleRepository.findByIdOrNumeroIdOrThrow(studentId);
 
-  // Build dynamic WHERE for bookings
-  const conditions: string[] = [`("idEstudiante" = $1 OR "studentId" = $1)`];
-  const values: any[] = [student._id];
-  let idx = 2;
-
-  if (startDate) { conditions.push(`"fechaEvento" >= $${idx}::timestamp with time zone`); values.push(startDate); idx++; }
-  if (endDate) { conditions.push(`"fechaEvento" <= $${idx}::timestamp with time zone`); values.push(endDate); idx++; }
-  if (nivel) { conditions.push(`"nivel" = $${idx}`); values.push(nivel); idx++; }
-
+  // Get recent bookings for context
   const bookings = await queryMany(
-    `SELECT "_id", "eventoId", "nivel", "step", "advisor", "fechaEvento", "hora",
-            "tipo", "nombreEvento", "asistio", "asistencia", "participacion",
-            "evaluacion", "comentarios", "noAprobo", "cancelo"
+    `SELECT "nivel", "step", "nombreEvento", "asistio", "noAprobo", "evaluacion"
      FROM "ACADEMICA_BOOKINGS"
-     WHERE ${conditions.join(' AND ')}
-     ORDER BY "fechaEvento" DESC`,
-    values
+     WHERE ("idEstudiante" = $1 OR "studentId" = $1)
+     ORDER BY "fechaEvento" DESC
+     LIMIT 15`,
+    [student._id]
   );
 
-  const totalClases = bookings.length;
-  const asistencias = bookings.filter((b) => b.asistio === true).length;
-  const ausencias = bookings.filter((b) => b.asistio === false).length;
-  const pendientes = bookings.filter((b) => b.asistio === null).length;
+  const asistencias = bookings.filter((b: any) => b.asistio === true).length;
+  const ausencias = bookings.filter((b: any) => b.asistio === false).length;
 
-  // Group by nivel
-  const byNivelMap: Record<string, any> = {};
-  const byTipoMap: Record<string, any> = {};
-  for (const b of bookings) {
-    if (b.nivel) {
-      if (!byNivelMap[b.nivel]) byNivelMap[b.nivel] = { nivel: b.nivel, totalClases: 0, asistencias: 0, ausencias: 0, pendientes: 0 };
-      byNivelMap[b.nivel].totalClases++;
-      if (b.asistio === true) byNivelMap[b.nivel].asistencias++;
-      if (b.asistio === false) byNivelMap[b.nivel].ausencias++;
-      if (b.asistio === null) byNivelMap[b.nivel].pendientes++;
-    }
-    if (b.tipo) {
-      if (!byTipoMap[b.tipo]) byTipoMap[b.tipo] = { tipo: b.tipo, totalClases: 0, asistencias: 0 };
-      byTipoMap[b.tipo].totalClases++;
-      if (b.asistio === true) byTipoMap[b.tipo].asistencias++;
-    }
-  }
+  // Try to get contenido for the student's current step
+  const studentStep = student.step || 'Step 1';
+  const studentNivel = student.nivel || nivel;
+  const contenido = await new NivelesRepository().findContenidoByNivelAndStep(studentNivel, studentStep);
 
-  return successResponse({
-    student: {
-      _id: student._id,
-      numeroId: student.numeroId,
-      nombre: `${student.primerNombre} ${student.primerApellido}`,
-      nivel: student.nivel,
-      step: student.step,
-    },
-    filters: { startDate: startDate || null, endDate: endDate || null, nivel: nivel || null },
-    stats: {
-      totalClases,
-      asistencias,
-      ausencias,
-      pendientes,
-      porcentajeAsistencia: totalClases > 0 ? Math.round((asistencias / totalClases) * 100) : 0,
-    },
-    byNivel: Object.values(byNivelMap),
-    byTipo: Object.values(byTipoMap),
-    recentClasses: bookings.slice(0, 10).map((b: any) => ({ ...b, advisor: b.tipo === 'COMPLEMENTARIA' ? 'PLATAFORMA' : b.advisor })),
-    allClasses: bookings.map((b: any) => ({ ...b, advisor: b.tipo === 'COMPLEMENTARIA' ? 'PLATAFORMA' : b.advisor })),
+  const studentName = `${student.primerNombre || ''} ${student.primerApellido || ''}`.trim();
+
+  const prompt = `Eres un advisor de inglés de la plataforma Let's Go Speak. Genera una actividad personalizada breve para un estudiante.
+
+Estudiante: ${studentName}
+Nivel: ${studentNivel}
+Step actual: ${studentStep}
+Asistencias recientes: ${asistencias} de ${bookings.length} clases
+${contenido ? `\nContenido del step:\n${contenido.slice(0, 2000)}` : ''}
+
+Genera UNA actividad práctica y concreta que el advisor pueda proponer al estudiante durante la clase. La actividad debe:
+- Ser apropiada para el nivel del estudiante
+- Durar entre 5-10 minutos
+- Ser interactiva y comunicativa
+- Incluir instrucciones claras para el advisor
+
+Responde SOLO con la actividad, sin preámbulos. Escribe en español. Máximo 200 palabras.`;
+
+  const OpenAI = (await import('openai')).default;
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+  const completion = await client.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [{ role: 'user', content: prompt }],
+    max_tokens: 500,
+    temperature: 0.8,
   });
+
+  const activity = completion.choices[0]?.message?.content?.trim() || 'No se pudo generar la actividad.';
+
+  return successResponse({ activity });
 });

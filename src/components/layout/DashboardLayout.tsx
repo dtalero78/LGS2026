@@ -36,7 +36,7 @@ const getNavigation = (userEmail: string) => [
       { name: 'Agenda Académica', href: '/dashboard/academic/agenda-academica' },
       { name: 'Advisors', href: '/dashboard/academic/advisors' },
       { name: 'Panel Advisor', href: `/panel-advisor?email=${encodeURIComponent(userEmail)}` },
-      { name: 'Informe Beneficiarios', href: '/dashboard/academic/informes/beneficiarios' },
+      { name: 'Informe Beneficiarios', href: '/dashboard/academic/informes/beneficiarios', superAdminOnly: true },
     ],
   },
   {
@@ -275,10 +275,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Also filter children of each navigation item based on page permissions
   const finalNavigation = filteredNavigation.map(item => {
-    if (!item.children || hasFullAccess) return item
+    if (!item.children) return item
 
     // Filtrar children basándose en permisos de página
     const filteredChildren = item.children.filter((child: any) => {
+      // Items restringidos a SUPER_ADMIN
+      if (child.superAdminOnly && !isRole('SUPER_ADMIN')) return false
+
+      // Full access users see everything (except superAdminOnly already filtered above)
+      if (hasFullAccess) return true
+
       const requiredPerms = pagePermissions[child.href]
       if (!requiredPerms) return true // Si no hay permisos definidos, mostrar por defecto
 
