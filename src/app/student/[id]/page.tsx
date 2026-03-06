@@ -79,6 +79,11 @@ async function StudentContent({ studentId }: { studentId: string }) {
                 <span className="badge badge-info">
                   BENEFICIARIO
                 </span>
+                {!student.existeEnAcademica && (
+                  <span className="badge bg-red-100 text-red-700">
+                    SIN REGISTRO ACADÉMICO
+                  </span>
+                )}
                 {student.plataforma && (
                   <span className="badge badge-success">
                     {student.plataforma}

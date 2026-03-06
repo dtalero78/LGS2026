@@ -20,11 +20,15 @@ import { queryOne, queryMany } from '@/lib/postgres';
 export async function getProfile(id: string) {
   // Try ACADEMICA first (has JOIN with PEOPLE for full profile)
   const profile = await AcademicaRepository.findProfileById(id);
-  if (profile) return enrichWithLoginPassword(profile);
+  if (profile) {
+    profile.existeEnAcademica = true;
+    return enrichWithLoginPassword(profile);
+  }
 
   // Fallback to PEOPLE (for titulares without academic record)
   const person = await PeopleRepository.findByIdOrNumeroId(id);
   if (!person) throw new NotFoundError('Student', id);
+  person.existeEnAcademica = false;
   return enrichWithLoginPassword(person);
 }
 

@@ -907,63 +907,79 @@ export default function CrearContratoPage() {
                           <TrashIcon className="h-5 w-5" />
                         </button>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <input
-                          type="text"
-                          placeholder="Primer nombre"
-                          value={beneficiario.primerNombre}
-                          onChange={(e) => updateBeneficiario(index, 'primerNombre', e.target.value)}
-                          className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Segundo nombre"
-                          value={beneficiario.segundoNombre}
-                          onChange={(e) => updateBeneficiario(index, 'segundoNombre', e.target.value)}
-                          className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Primer apellido"
-                          value={beneficiario.primerApellido}
-                          onChange={(e) => updateBeneficiario(index, 'primerApellido', e.target.value)}
-                          className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Segundo apellido"
-                          value={beneficiario.segundoApellido}
-                          onChange={(e) => updateBeneficiario(index, 'segundoApellido', e.target.value)}
-                          className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Número ID"
-                          value={beneficiario.numeroId}
-                          onChange={(e) => updateBeneficiario(index, 'numeroId', e.target.value)}
-                          className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-                        />
-                        <input
-                          type="date"
-                          placeholder="Fecha nacimiento"
-                          value={beneficiario.fechaNacimiento}
-                          onChange={(e) => updateBeneficiario(index, 'fechaNacimiento', e.target.value)}
-                          className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-                        />
-                        <input
-                          type="email"
-                          placeholder="Email"
-                          value={beneficiario.email}
-                          onChange={(e) => updateBeneficiario(index, 'email', e.target.value)}
-                          className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-                        />
-                        <input
-                          type="tel"
-                          placeholder="Celular"
-                          value={beneficiario.celular}
-                          onChange={(e) => updateBeneficiario(index, 'celular', e.target.value)}
-                          className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-                        />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Primer nombre *</label>
+                          <input
+                            type="text"
+                            value={beneficiario.primerNombre}
+                            onChange={(e) => updateBeneficiario(index, 'primerNombre', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Segundo nombre</label>
+                          <input
+                            type="text"
+                            value={beneficiario.segundoNombre}
+                            onChange={(e) => updateBeneficiario(index, 'segundoNombre', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Primer apellido *</label>
+                          <input
+                            type="text"
+                            value={beneficiario.primerApellido}
+                            onChange={(e) => updateBeneficiario(index, 'primerApellido', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Segundo apellido</label>
+                          <input
+                            type="text"
+                            value={beneficiario.segundoApellido}
+                            onChange={(e) => updateBeneficiario(index, 'segundoApellido', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Número ID *</label>
+                          <input
+                            type="text"
+                            value={beneficiario.numeroId}
+                            onChange={(e) => updateBeneficiario(index, 'numeroId', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de nacimiento</label>
+                          <input
+                            type="date"
+                            value={beneficiario.fechaNacimiento}
+                            onChange={(e) => updateBeneficiario(index, 'fechaNacimiento', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                          <input
+                            type="email"
+                            value={beneficiario.email}
+                            onChange={(e) => updateBeneficiario(index, 'email', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Celular *</label>
+                          <input
+                            type="tel"
+                            value={beneficiario.celular}
+                            onChange={(e) => updateBeneficiario(index, 'celular', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                          />
+                        </div>
                       </div>
                     </div>
                   ))}

@@ -23,25 +23,13 @@ export const GET = handler(async (request) => {
   const patron = `${codigoPais}-%-${anoActual}`;
 
   const result = await query(
-    `SELECT "contrato" FROM "PEOPLE"
-     WHERE "contrato" LIKE $1
-     ORDER BY "contrato" DESC
-     LIMIT 1`,
+    `SELECT MAX(CAST(SPLIT_PART("contrato", '-', 2) AS INTEGER)) AS max_num
+     FROM "PEOPLE"
+     WHERE "contrato" LIKE $1`,
     [patron]
   );
 
-  let maxNumero = 9999;
-
-  if (result.rowCount > 0 && result.rows[0].contrato) {
-    const partes = result.rows[0].contrato.split('-');
-    if (partes.length === 3) {
-      const num = parseInt(partes[1], 10);
-      if (!isNaN(num) && num > maxNumero) {
-        maxNumero = num;
-      }
-    }
-  }
-
+  const maxNumero = result.rows[0]?.max_num || 9999;
   const siguiente = (maxNumero + 1).toString().padStart(5, '0');
   const contrato = `${codigoPais}-${siguiente}-${anoActual}`;
 
