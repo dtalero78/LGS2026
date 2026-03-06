@@ -31,4 +31,5 @@ export const ids = {
   person: () => generateId('prs'),
   academic: () => generateId('acd'),
   complementaria: () => generateId('cmp'),
+  advisor: () => generateId('adv'),
 };
