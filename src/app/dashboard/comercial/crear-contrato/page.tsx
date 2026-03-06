@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
 import { ComercialPermission } from '@/types/permissions'
@@ -68,6 +69,7 @@ interface Beneficiario {
 }
 
 export default function CrearContratoPage() {
+  const searchParams = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -76,7 +78,7 @@ export default function CrearContratoPage() {
 
   // Form data
   const [titular, setTitular] = useState({
-    asesor: '',
+    asesor: searchParams.get('email') || '',
     primerNombre: '',
     segundoNombre: '',
     primerApellido: '',
