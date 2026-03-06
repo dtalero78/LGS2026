@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
@@ -69,6 +69,14 @@ interface Beneficiario {
 }
 
 export default function CrearContratoPage() {
+  return (
+    <Suspense fallback={null}>
+      <CrearContratoContent />
+    </Suspense>
+  );
+}
+
+function CrearContratoContent() {
   const searchParams = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
