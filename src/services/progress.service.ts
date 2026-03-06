@@ -91,13 +91,14 @@ export async function generateReport(studentId: string) {
 
   const nivelPrincipal = student.nivel;
 
-  // Get all classes for this student
+  // Get all classes for this student (exclude future sessions)
   const allClasses = await queryMany(
     `SELECT "_id", "eventoId", "nivel", "step", "advisor", "fechaEvento", "hora",
             "tipo", "nombreEvento", "asistio", "asistencia", "participacion",
             "calificacion", "comentarios", "noAprobo"
      FROM "ACADEMICA_BOOKINGS"
      WHERE ("idEstudiante" = $1 OR "studentId" = $1)
+       AND ("fechaEvento" IS NULL OR "fechaEvento"::date <= CURRENT_DATE)
      ORDER BY "fechaEvento" DESC`,
     [student._id]
   );
