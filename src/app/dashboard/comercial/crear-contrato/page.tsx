@@ -702,7 +702,7 @@ function CrearContratoContent() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Parentezco *
+                        Parentesco *
                       </label>
                       <input
                         type="text"
@@ -741,7 +741,7 @@ function CrearContratoContent() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Parentezco
+                        Parentesco
                       </label>
                       <input
                         type="text"
