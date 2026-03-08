@@ -79,7 +79,7 @@ class AcademicaRepositoryClass extends BaseRepository {
   async findProfileById(id: string) {
     const row = await queryOne(
       `SELECT a."_id", a."numeroId", a."primerNombre", a."segundoNombre", a."primerApellido", a."segundoApellido",
-              p."celular", p."telefono", p."email", p."domicilio", p."ciudad", p."fechaNacimiento",
+              p."celular", p."telefono", COALESCE(a."email", p."email") AS "email", p."domicilio", p."ciudad", p."fechaNacimiento",
               p."contrato", a."fechaCreacion", p."tipoUsuario", a."plataforma",
               a."nivel", a."step", a."nivelParalelo", a."stepParalelo", p."aprobacion",
               COALESCE(p."estadoInactivo", a."estadoInactivo"::boolean) AS "estadoInactivo", p."estado", p."fechaOnHold", p."fechaFinOnHold",
@@ -159,6 +159,13 @@ class AcademicaRepositoryClass extends BaseRepository {
 
   async countTotal(): Promise<number> {
     return this.count();
+  }
+
+  async updateClave(id: string, clave: string) {
+    return queryOne(
+      `UPDATE "ACADEMICA" SET "clave" = $1, "_updatedDate" = NOW() WHERE "_id" = $2 RETURNING "_id", "clave"`,
+      [clave, id]
+    );
   }
 }
 

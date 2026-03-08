@@ -47,6 +47,9 @@ export function useStudentPanelProgress() {
 export function useAvailableEvents(date: string, tipo?: string) {
   const params = new URLSearchParams({ date })
   if (tipo) params.set('tipo', tipo)
+  // Send client timezone offset so backend can compute correct date range
+  const tzOffset = new Date().getTimezoneOffset()
+  params.set('tzOffset', String(tzOffset))
   return useQuery(
     keys.availableEvents(date, tipo),
     () => api.get(`${BASE}/available-events?${params}`),

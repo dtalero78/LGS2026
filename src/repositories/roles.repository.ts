@@ -91,6 +91,16 @@ class UsuariosRolesRepositoryClass extends BaseRepository {
       [rol, email]
     );
   }
+
+  async updatePassword(email: string, password: string) {
+    return queryOne(
+      `UPDATE "USUARIOS_ROLES"
+       SET "password" = $1, "_updatedDate" = NOW()
+       WHERE LOWER("email") = LOWER($2)
+       RETURNING "email", "rol"`,
+      [password, email]
+    );
+  }
 }
 
 export const RolPermisosRepository = new RolPermisosRepositoryClass();

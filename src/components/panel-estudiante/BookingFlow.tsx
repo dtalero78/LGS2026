@@ -66,17 +66,19 @@ export default function BookingFlow({ onClose, initialTipo }: BookingFlowProps) 
     else if (step === 'confirm') { setStep('events') }
   }
 
-  // Only allow Today and Tomorrow
+  // Only allow Today and Tomorrow (using local timezone)
   const dates: { date: string; label: string }[] = []
   const today = new Date()
+  const localToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
   dates.push({
-    date: today.toISOString().split('T')[0],
+    date: localToday,
     label: 'Hoy',
   })
   const tomorrow = new Date()
   tomorrow.setDate(tomorrow.getDate() + 1)
+  const localTomorrow = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
   dates.push({
-    date: tomorrow.toISOString().split('T')[0],
+    date: localTomorrow,
     label: 'Mañana',
   })
 

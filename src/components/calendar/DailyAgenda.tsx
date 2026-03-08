@@ -117,9 +117,14 @@ export default function DailyAgenda({
 
     return {
       hour,
-      events: hourEvents.sort((a, b) =>
-        new Date(a.dia).getTime() - new Date(b.dia).getTime()
-      )
+      events: hourEvents.sort((a, b) => {
+        const timeA = new Date(a.dia).getTime()
+        const timeB = new Date(b.dia).getTime()
+        if (timeA !== timeB) return timeA - timeB
+        const createdA = a._createdDate ? new Date(a._createdDate).getTime() : 0
+        const createdB = b._createdDate ? new Date(b._createdDate).getTime() : 0
+        return createdA - createdB
+      })
     }
   })
 

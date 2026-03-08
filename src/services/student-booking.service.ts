@@ -110,11 +110,17 @@ export async function getAvailableEvents(
   nivel: string,
   step: string,
   date: string,
-  tipo?: string
+  tipo?: string,
+  tzOffset: number = 0
 ) {
-  // Build a date range for the selected day
-  const startDate = `${date}T00:00:00`;
-  const endDate = `${date}T23:59:59`;
+  // Build a date range for the selected day in the student's local timezone
+  // tzOffset is in minutes from UTC (e.g., Chile UTC-3 = 180, Colombia UTC-5 = 300)
+  const offsetMs = tzOffset * 60 * 1000;
+  const dayStart = new Date(`${date}T00:00:00`);
+  const dayEnd = new Date(`${date}T23:59:59`);
+  // Shift to UTC: local midnight + offset = UTC equivalent
+  const startDate = new Date(dayStart.getTime() + offsetMs).toISOString();
+  const endDate = new Date(dayEnd.getTime() + offsetMs).toISOString();
 
   const events = await CalendarioRepository.findEvents({
     startDate,

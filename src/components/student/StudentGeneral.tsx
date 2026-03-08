@@ -20,6 +20,11 @@ export default function StudentGeneral({ student }: StudentGeneralProps) {
   const [whatsAppError, setWhatsAppError] = useState<string | null>(null)
   const [showDocuments, setShowDocuments] = useState(false)
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([])
+  const [editingPassword, setEditingPassword] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false)
+  const [savingPassword, setSavingPassword] = useState(false)
+  const [displayPassword, setDisplayPassword] = useState(student.claveLogin || student.clave || '')
 
   // The PEOPLE _id for document API calls
   const peopleId = (student as any).peopleId || student._id
@@ -82,6 +87,26 @@ export default function StudentGeneral({ student }: StudentGeneralProps) {
       document.body.removeChild(input)
     })
     input.click()
+  }
+
+  const handlePasswordSave = async () => {
+    if (!newPassword || newPassword.length < 4) {
+      toast.error('La clave debe tener al menos 4 caracteres')
+      return
+    }
+    setSavingPassword(true)
+    try {
+      await api.put(`/api/postgres/students/${student._id}/change-password`, { password: newPassword })
+      setDisplayPassword(newPassword)
+      setEditingPassword(false)
+      setShowPasswordConfirm(false)
+      setNewPassword('')
+      toast.success('Clave actualizada correctamente')
+    } catch (err) {
+      handleApiError(err, 'Error actualizando clave')
+    } finally {
+      setSavingPassword(false)
+    }
   }
 
   const handleSendWhatsApp = async () => {
@@ -276,14 +301,48 @@ export default function StudentGeneral({ student }: StudentGeneralProps) {
               {student.step}
             </span>
           </div>
-          {(student.claveLogin || student.clave) && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Clave Login</label>
-              <span className="mt-1 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                {student.claveLogin || student.clave}
-              </span>
-            </div>
-          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Clave Login</label>
+            {editingPassword ? (
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  type="text"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Nueva clave"
+                  className="px-3 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  autoFocus
+                />
+                <button
+                  onClick={() => { if (newPassword.length >= 4) setShowPasswordConfirm(true); else toast.error('Mínimo 4 caracteres') }}
+                  className="px-3 py-1 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                >
+                  Guardar
+                </button>
+                <button
+                  onClick={() => { setEditingPassword(false); setNewPassword('') }}
+                  className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                >
+                  Cancelar
+                </button>
+              </div>
+            ) : (
+              <div className="mt-1 flex items-center gap-2">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                  {displayPassword || '—'}
+                </span>
+                <button
+                  onClick={() => { setEditingPassword(true); setNewPassword(displayPassword) }}
+                  className="p-1 text-gray-400 hover:text-primary-600 hover:bg-gray-100 rounded"
+                  title="Editar clave"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
           {student.asesor && (
             <div>
               <label className="block text-sm font-medium text-gray-700">Asesor</label>
@@ -368,6 +427,41 @@ export default function StudentGeneral({ student }: StudentGeneralProps) {
                 No hay documentos disponibles
               </p>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Password Change Confirmation Modal */}
+      {showPasswordConfirm && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Confirmar cambio de clave</h3>
+            <p className="text-sm text-gray-600 mb-1">
+              Vas a cambiar la clave de login de <strong>{student.primerNombre} {student.primerApellido}</strong>.
+            </p>
+            <p className="text-sm text-gray-600 mb-4">
+              Nueva clave: <strong className="font-mono">{newPassword}</strong>
+            </p>
+            <p className="text-xs text-amber-600 mb-4">
+              Esto actualizará la clave en ACADEMICA y en el sistema de login (USUARIOS_ROLES).
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowPasswordConfirm(false)}
+                disabled={savingPassword}
+                className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handlePasswordSave}
+                disabled={savingPassword}
+                className="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {savingPassword && <Loader2 className="h-4 w-4 animate-spin" />}
+                Confirmar
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -66,10 +66,13 @@ export default function CalendarView({
     return events
       .filter(event => isSameDay(new Date(event.dia), date))
       .sort((a, b) => {
-        // Ordenar por hora (más temprano primero)
+        // Ordenar por hora (más temprano primero), luego por orden de creación
         const timeA = new Date(a.dia).getTime()
         const timeB = new Date(b.dia).getTime()
-        return timeA - timeB
+        if (timeA !== timeB) return timeA - timeB
+        const createdA = a._createdDate ? new Date(a._createdDate).getTime() : 0
+        const createdB = b._createdDate ? new Date(b._createdDate).getTime() : 0
+        return createdA - createdB
       })
   }
 

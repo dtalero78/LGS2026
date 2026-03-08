@@ -12,11 +12,12 @@ export const GET = handlerWithAuth(async (request, context, session) => {
   if (!date) throw new ValidationError('El parámetro "date" es requerido');
 
   const tipo = searchParams.get('tipo') || undefined;
+  const tzOffset = searchParams.get('tzOffset') ? parseInt(searchParams.get('tzOffset')!) : 0;
   const nivel = student.nivel || '';
   const step = student.step || '';
 
   const bookingId = student.academicaId || student._id;
   const peopleId = student._id; // PEOPLE _id for step overrides lookup
-  const events = await getAvailableEvents(bookingId, peopleId, nivel, step, date, tipo);
+  const events = await getAvailableEvents(bookingId, peopleId, nivel, step, date, tipo, tzOffset);
   return successResponse({ events });
 });
