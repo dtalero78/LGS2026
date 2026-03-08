@@ -36,7 +36,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 21. Exportación Excel (CSV con UTF-8 BOM) de eventos con filtros
 22. Agenda Académica - Vista semanal de clases
 23. Lista de Advisors con estadísticas de rendimiento
-24. Creación de nuevos advisors
+24. Creación de nuevos advisors (página pública `/nuevo-advisor` con wizard 3 pasos + creación automática de cuenta USUARIOS_ROLES)
 25. Detalle de advisor (calendario, estadísticas, eventos asignados)
 26. Panel Advisor personal (calendario y métricas propias filtradas por email)
 27. Informe de Beneficiarios (reportes por rango de fechas con conteo de sesiones)
@@ -274,7 +274,7 @@ src/
 │   │   ├── calendar/            Eventos del calendario, CRUD
 │   │   ├── events/              Eventos, bookings, inscripciones, batch-counts, welcome, filtered, sessions
 │   │   ├── people/              PEOPLE CRUD, comments, beneficiarios-sin-registro
-│   │   ├── advisors/            Lista, stats, events, by-email, name
+│   │   ├── advisors/            Lista, stats, events, by-email, name, create (público)
 │   │   ├── search/              Búsqueda unificada (PEOPLE + ACADEMICA)
 │   │   ├── contracts/           Contratos, búsqueda, template, next-number, detalle editable
 │   │   ├── dashboard/           Estadísticas del inicio
@@ -285,7 +285,7 @@ src/
 │   │   ├── reports/             Reportes de asistencia
 │   │   ├── academic/            Historial académico, asistencia, evaluación, actividad
 │   │   ├── approvals/           Aprobaciones pendientes
-│   │   ├── materials/           Material por nivel y usuario
+│   │   ├── materials/           Material por nivel/step, books (DO Spaces proxy)
 │   │   ├── permissions/         Permisos del usuario actual
 │   │   ├── users/               Rol de usuario por email
 │   │   ├── panel-estudiante/    Panel del estudiante (me, events, stats, progress, book, cancel, materials, history, comments)
@@ -323,7 +323,7 @@ src/
 │   ├── academica.repository.ts  Tabla ACADEMICA (~4 rutas)
 │   ├── booking.repository.ts    Tabla ACADEMICA_BOOKINGS (~8 rutas)
 │   ├── calendar.repository.ts   Tabla CALENDARIO (~6 rutas)
-│   ├── advisor.repository.ts    Tabla ADVISORS (~4 rutas)
+│   ├── advisor.repository.ts    Tabla ADVISORS (~5 rutas, incluye create)
 │   ├── roles.repository.ts      Tablas ROL_PERMISOS + USUARIOS_ROLES (~4 rutas)
 │   ├── niveles.repository.ts    Tablas NIVELES + STEP_OVERRIDES (~5 rutas)
 │   ├── financial.repository.ts  Tabla FINANCIEROS (~2 rutas)
@@ -334,7 +334,7 @@ src/
 │   ├── errors.ts                Clases de error: NotFoundError, ValidationError, UnauthorizedError, ForbiddenError, ConflictError
 │   ├── api-helpers.ts           handler(), handlerWithAuth(), successResponse(), errorResponse()
 │   ├── query-builder.ts         buildDynamicUpdate(), buildDynamicWhere()
-│   ├── id-generator.ts          ids.event(), ids.booking(), ids.person(), ids.comment(), etc.
+│   ├── id-generator.ts          ids.event(), ids.booking(), ids.person(), ids.comment(), ids.advisor(), etc.
 │   ├── postgres.ts              Pool de conexión PostgreSQL (SSL, Digital Ocean)
 │   ├── auth.ts                  NextAuth.js config (legacy)
 │   ├── auth-postgres.ts         NextAuth.js config (PostgreSQL actual)
@@ -533,7 +533,7 @@ OPENAI_API_KEY=openai_api_key_for_complementaria
   - `ACADEMICA`: Registros académicos por estudiante (nivel, step, nivelParalelo, stepParalelo). **No contiene** campos de contrato/extensión/onhold
   - `ACADEMICA_BOOKINGS`: Inscripciones a eventos (asistencia, evaluación, calificación, participación, comentarios). Datos migrados de Wix usan columna `idEvento` (nueva: `eventoId`) y `tipoEvento` (queries usan COALESCE para compatibilidad)
   - `CALENDARIO`: Eventos (SESSION, CLUB) con advisor, nivel, step, linkZoom, limiteUsuarios. Eventos de bienvenida se distinguen por `tituloONivel=WELCOME`. La columna `tipo=WELCOME` existe solo en datos legacy de Wix
-  - `ADVISORS`: Profesores/advisors (nombre, email, zoom, activo)
+  - `ADVISORS`: Profesores/advisors (primerNombre, primerApellido, nombreCompleto, email, zoom, telefono, pais, activo). Creación vía página pública `/nuevo-advisor` + auto-insert en USUARIOS_ROLES con rol ADVISOR
   - `USUARIOS_ROLES`: Credenciales y roles de usuario (email, password bcrypt/plain, rol)
   - `ROL_PERMISOS`: Definiciones de roles con arrays de permisos (JSONB)
   - `NIVELES`: Niveles académicos con steps, material, clubs y contenido (esParalelo flag para ESS, contenido TEXT para temario del step)
@@ -560,7 +560,9 @@ migration/
     ├── 05-academica.js              ← ACADEMICA (~5K registros)
     ├── 06-calendario.js             ← CALENDARIO (~18K registros)
     ├── 07-academica-bookings.js     ← ACADEMICA_BOOKINGS (~100K registros)
-    └── 08-financieros.js            ← FINANCIEROS (endpoint Wix no existe aún)
+    ├── 08-financieros.js            ← FINANCIEROS (~2.6K registros)
+    ├── 09-populate-estudiantes.js   ← Popula USUARIOS_ROLES con estudiantes de ACADEMICA
+    └── 10-populate-advisors.js      ← Popula USUARIOS_ROLES con advisors
 ```
 
 ### Cómo ejecutar la migración
@@ -645,21 +647,22 @@ Cada exporter sigue el mismo patrón:
 | Parallel UPSERT (CONCURRENT=5-10) | ~12 rec/sec | Pool PG se agota después de ~2300 registros |
 | **Batch UPSERT (multi-row INSERT)** | **125-226 rec/sec** | **Estable, 0 fallos** |
 
-- **FINANCIEROS**: El endpoint Wix `/exportarContratos` falla porque la colección `CONTRATOS` no existe en Wix
+- **FINANCIEROS**: Endpoint Wix `/exportarFinanciera` funciona correctamente (2,626 registros migrados Mar 2026)
 - **CLUBS, NIVELES_MATERIAL, COMMENTS, STEP_OVERRIDES**: Endpoints Wix no implementados
 - **IP rotation**: El ISP rota IPs entre subredes completamente distintas. Por eso se necesita `0.0.0.0/0` en trusted sources durante la migración
 - **SSL**: El `?sslmode=require` de DATABASE_URL se stripea automáticamente en `config.js` (igual que en `src/lib/postgres.ts`), usando `ssl: { rejectUnauthorized: false }` en su lugar
 
-### Última migración exitosa: Feb 15, 2026
+### Última migración exitosa: Mar 7, 2026
 
 | Tabla | Registros | Última actualización |
 |---|---|---|
-| PEOPLE | 9,130 | 2026-02-15 |
-| ACADEMICA | 5,169 | 2026-02-15 |
-| CALENDARIO | 18,585 | 2026-02-15 |
-| ACADEMICA_BOOKINGS | 101,105 | 2026-02-15 |
+| PEOPLE | 9,747 | 2026-03-07 |
+| ACADEMICA | 5,413 | 2026-03-07 |
+| CALENDARIO | 19,971 | 2026-03-07 |
+| ACADEMICA_BOOKINGS | 114,366 | 2026-03-07 |
+| FINANCIEROS | 2,626 | 2026-03-07 |
 | ADVISORS | 45 | 2026-02-02 |
-| FINANCIEROS | 0 | N/A (endpoint falta) |
+| USUARIOS_ROLES (ESTUDIANTE) | 5,367 | 2026-03-07 |
 
 ## OnHold System with Automatic Contract Extension
 
@@ -1292,7 +1295,7 @@ interface ConsentData {
 - Consent hashed with SHA-256 for tamper detection
 - Cron jobs require CRON_SECRET header for authentication
 
-### Pages and Routes Summary (23 pages)
+### Pages and Routes Summary (24 pages)
 | Page | Route | Access |
 |---|---|---|
 | Login | `/login` | Public |
@@ -1315,6 +1318,7 @@ interface ConsentData {
 | Session Detail | `/sesion/[id]` | ACADEMICO.SESION permissions |
 | Advisor Detail | `/advisor/[id]` | Authenticated |
 | Contrato Público | `/contrato/[id]` | **Public** (no auth) |
+| Nuevo Advisor | `/nuevo-advisor` | **Public** (no auth) |
 | Panel Advisor | `/panel-advisor` | ADVISOR role |
 | Panel Estudiante | `/panel-estudiante` | ESTUDIANTE role |
 | Actividad Complementaria | `/panel-estudiante/actividades-complementarias` | ESTUDIANTE role |

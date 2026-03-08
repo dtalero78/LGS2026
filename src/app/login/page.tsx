@@ -112,10 +112,12 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-primary-100">
-            <span className="text-2xl">🎓</span>
-          </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <img
+            src="/logo.png"
+            alt="Let's Go Speak"
+            className="mx-auto h-24 w-auto"
+          />
+          <h2 className="mt-4 text-center text-3xl font-extrabold text-gray-900">
             LGS Admin Panel
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
