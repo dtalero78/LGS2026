@@ -114,7 +114,7 @@ async function approveOnePerson(personId: string, contrato: string | null): Prom
   if (celular) {
     try {
       const nombre = person.primerNombre || '';
-      const message = `Hola ${nombre} 👋:\n\n*¡Eres parte de Let's Go Speak!* 🎉 \n\nPara terminar tu registro y crear tu usuario sigue este enlace:\n\nhttps://talero.studio/nuevo-usuario/${academicId}\n\nSi tienes alguna pregunta, no dudes en contactarnos.\n\n¡Bienvenido a la familia LGS! 🚀`;
+      const message = `Hola ${nombre} 👋:\n\n*¡Eres parte de Let's Go Speak!* 🎉 \n\nPara terminar tu registro y crear tu usuario sigue este enlace:\n\nhttps://lgs-plataforma.com/nuevo-usuario/${academicId}\n\nSi tienes alguna pregunta, no dudes en contactarnos.\n\n¡Bienvenido a la familia LGS! 🚀`;
       console.log(`📤 [Approve] Enviando WhatsApp a: ${celular}`);
       const whatsappResult = await sendWhatsAppMessage(celular, message);
       whatsappSent = true;

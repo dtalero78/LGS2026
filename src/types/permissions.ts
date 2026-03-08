@@ -204,6 +204,7 @@ export type Permission =
 export interface PermissionDefinition {
   code: Permission;
   module: Module;
+  section: string;
   name: string;
   description: string;
 }

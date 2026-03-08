@@ -1,6 +1,7 @@
 /**
  * Definiciones de Permisos - LGS Admin Panel
  * Catálogo completo de permisos disponibles en el sistema
+ * Cada permiso indica exactamente qué componente, página o botón controla
  */
 
 import {
@@ -20,394 +21,546 @@ import {
 // ============================================================================
 
 export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
-  // ========== PERSON MODULE ==========
+  // ========== PERSON MODULE (Página: /person/[id]) ==========
   {
     code: PersonPermission.DESCARGAR_CONTRATO,
     module: Module.PERSON,
-    name: 'Descargar Contrato',
-    description: 'Permite descargar el contrato del usuario',
+    section: 'Información General',
+    name: 'Botón "Descargar Contrato"',
+    description: 'Botón para descargar el PDF del contrato del titular',
   },
   {
     code: PersonPermission.VER_DOCUMENTACION,
     module: Module.PERSON,
-    name: 'Ver Documentación',
-    description: 'Permite visualizar la documentación del usuario',
+    section: 'Información General',
+    name: 'Sección "Documentación"',
+    description: 'Visualizar la documentación adjunta del titular',
   },
   {
     code: PersonPermission.ADICION_DOCUMENTACION,
     module: Module.PERSON,
-    name: 'Adición Documentación',
-    description: 'Permite agregar nueva documentación',
+    section: 'Información General',
+    name: 'Botón "Agregar Documentación"',
+    description: 'Subir nueva documentación al perfil del titular',
   },
   {
     code: PersonPermission.ACTIVAR_DESACTIVAR,
     module: Module.PERSON,
-    name: 'Activar/Desactivar',
-    description: 'Permite activar o desactivar el perfil del usuario',
+    section: 'Administración',
+    name: 'Toggle "Activar/Desactivar"',
+    description: 'Activar o desactivar el perfil del titular',
   },
   {
     code: PersonPermission.CAMBIO_CELULAR,
     module: Module.PERSON,
-    name: 'Cambio Celular Titular',
-    description: 'Permite cambiar el número de celular del titular',
+    section: 'Contacto',
+    name: 'Editar "Celular Titular"',
+    description: 'Modificar el número de celular del titular',
   },
   {
     code: PersonPermission.CAMBIAR_ESTADO,
     module: Module.PERSON,
-    name: 'Cambiar Estado Actual',
-    description: 'Permite modificar el estado actual del usuario',
+    section: 'Administración',
+    name: 'Dropdown "Estado Actual"',
+    description: 'Cambiar estado: Aprobado, Contrato nulo, Devuelto, Pendiente, Rechazado',
   },
   {
     code: PersonPermission.APROBAR,
     module: Module.PERSON,
-    name: 'Aprobar',
-    description: 'Permite aprobar procesos o solicitudes',
+    section: 'Administración',
+    name: 'Botón "Aprobar Beneficiario"',
+    description: 'Aprobar un beneficiario (activa cuenta + envía WhatsApp)',
   },
   {
     code: PersonPermission.MODIFICAR,
     module: Module.PERSON,
-    name: 'Modificar',
-    description: 'Permite modificar información del usuario',
+    section: 'Información General',
+    name: 'Botón "Editar" campos',
+    description: 'Editar campos del perfil del titular (nombres, ID, etc.)',
   },
   {
     code: PersonPermission.ELIMINAR,
     module: Module.PERSON,
-    name: 'Eliminar',
-    description: 'Permite eliminar el registro del usuario',
+    section: 'Administración',
+    name: 'Botón "Eliminar Beneficiario"',
+    description: 'Eliminar un beneficiario del contrato',
   },
   {
     code: PersonPermission.AGREGAR_BENEFICIARIO,
     module: Module.PERSON,
-    name: 'Agregar Beneficiario',
-    description: 'Permite añadir un beneficiario al contrato',
+    section: 'Administración',
+    name: 'Botón "Agregar Beneficiario"',
+    description: 'Formulario para añadir nuevo beneficiario al contrato',
   },
   {
     code: PersonPermission.WHATSAPP,
     module: Module.PERSON,
-    name: 'WhatsApp',
-    description: 'Permite enviar mensaje o abrir chat de WhatsApp',
+    section: 'Contacto',
+    name: 'Botón "WhatsApp"',
+    description: 'Enviar mensaje o abrir chat de WhatsApp con el titular',
   },
 
-  // ========== STUDENT MODULE ==========
+  // ========== STUDENT MODULE (Página: /student/[id]) ==========
+  // -- Global --
+  {
+    code: StudentPermission.CONSULTA_CONTRATO,
+    module: Module.STUDENT,
+    section: 'Global',
+    name: 'Acceso "Consulta Contrato"',
+    description: 'Permite consultar datos del contrato desde el detalle del estudiante',
+  },
+  {
+    code: StudentPermission.GENERAR_ESTADO_CUENTA,
+    module: Module.STUDENT,
+    section: 'Global',
+    name: 'Acceso "Estado de Cuenta"',
+    description: 'Permite generar el estado de cuenta desde el detalle del estudiante',
+  },
+
+  // -- Tab: General --
   {
     code: StudentPermission.ENVIAR_MENSAJE,
     module: Module.STUDENT,
-    name: 'Enviar Mensaje',
-    description: 'Permite enviar mensaje al estudiante',
+    section: 'Tab General',
+    name: 'Botón "Enviar Mensaje WhatsApp"',
+    description: 'Enviar mensaje WhatsApp al estudiante (plantillas y personalizado)',
   },
   {
     code: StudentPermission.GUARDAR_PLANTILLA,
     module: Module.STUDENT,
-    name: 'Guardar Plantilla',
-    description: 'Permite guardar información como plantilla',
+    section: 'Tab General',
+    name: 'Botón "Guardar como Plantilla"',
+    description: 'Guardar un mensaje personalizado como plantilla reutilizable',
   },
+
+  // -- Tab: Académica --
   {
     code: StudentPermission.TABLA_FILTROS,
     module: Module.STUDENT,
-    name: 'Filtros (Asistencia)',
-    description: 'Permite filtrar la tabla de asistencia',
+    section: 'Tab Académica > Tabla Asistencia',
+    name: 'Filtros de la tabla',
+    description: 'Filtrar tabla de asistencia por fecha, estado, advisor',
   },
   {
     code: StudentPermission.TABLA_DESCARGAR,
     module: Module.STUDENT,
-    name: 'Descargar (Asistencia)',
-    description: 'Permite descargar la tabla de asistencia',
+    section: 'Tab Académica > Tabla Asistencia',
+    name: 'Botón "Descargar"',
+    description: 'Descargar tabla de asistencia como CSV',
   },
   {
     code: StudentPermission.COMO_VOY,
     module: Module.STUDENT,
-    name: 'Cómo voy',
-    description: 'Permite visualizar el diagnóstico académico del estudiante con estadísticas de asistencia, participación y progreso',
+    section: 'Tab Académica > Progreso',
+    name: 'Sección "¿Cómo voy?"',
+    description: 'Ver diagnóstico con barra de progreso, steps completados y porcentaje',
   },
   {
     code: StudentPermission.EVALUACION,
     module: Module.STUDENT,
-    name: 'Evaluación',
-    description: 'Permite acceder a la evaluación de la clase',
+    section: 'Tab Académica > Modal Clase',
+    name: 'Sección "Evaluación"',
+    description: 'Toggle asistencia, participación y calificación 0-10 en modal de clase',
   },
   {
     code: StudentPermission.ANOTACION_ADVISOR,
     module: Module.STUDENT,
-    name: 'Anotación Advisor',
-    description: 'Permite anotar observaciones del advisor',
+    section: 'Tab Académica > Modal Clase',
+    name: 'Sección "Anotación del Advisor"',
+    description: 'Campo de texto para observaciones del advisor en modal de clase',
   },
   {
     code: StudentPermission.COMENTARIOS_ESTUDIANTE,
     module: Module.STUDENT,
-    name: 'Comentarios Estudiante',
-    description: 'Permite visualizar/agregar comentarios del estudiante',
+    section: 'Tab Académica > Modal Clase',
+    name: 'Sección "Comentarios Estudiante"',
+    description: 'Comentarios visibles para el estudiante en modal de clase',
   },
   {
     code: StudentPermission.ELIMINAR_EVENTO,
     module: Module.STUDENT,
-    name: 'Eliminar Evento',
-    description: 'Permite eliminar el evento de clase',
+    section: 'Tab Académica > Modal Clase',
+    name: 'Botón "Eliminar Evento"',
+    description: 'Eliminar el evento desde el modal de detalles de clase',
   },
   {
     code: StudentPermission.AGENDAR_CLASE,
     module: Module.STUDENT,
-    name: 'Agendar Nueva Clase',
-    description: 'Permite agendar una nueva clase para el estudiante',
+    section: 'Tab Académica',
+    name: 'Botón "Agendar Nueva Clase"',
+    description: 'Wizard para agendar clase: tipo → día → hora',
   },
   {
     code: StudentPermission.MARCAR_STEP,
     module: Module.STUDENT,
-    name: 'Gestión de Steps (Marcar)',
-    description: 'Permite marcar un step como completado en la sección Gestión de Steps',
+    section: 'Tab Académica > Gestión Steps',
+    name: 'Toggles "Marcar Step"',
+    description: 'Marcar/desmarcar un step como completado (override manual)',
   },
   {
     code: StudentPermission.ASIGNAR_STEP,
     module: Module.STUDENT,
-    name: 'Gestión de Steps (Asignar)',
-    description: 'Permite asignar un nuevo step al estudiante en la sección Gestión de Steps',
+    section: 'Tab Académica > Gestión Steps',
+    name: 'Botón "Cambiar Step"',
+    description: 'Modal para asignar nuevo step/nivel al estudiante',
   },
+
+  // -- Tab: Contrato --
   {
     code: StudentPermission.CONSULTA,
     module: Module.STUDENT,
-    name: 'Consulta Contrato',
-    description: 'Permite consultar detalles del contrato',
+    section: 'Tab Contrato',
+    name: 'Sección "Información del Contrato"',
+    description: 'Ver fechas, estado y vigencia del contrato (con semáforo)',
   },
   {
     code: StudentPermission.ACTIVAR_HOLD,
     module: Module.STUDENT,
-    name: 'Activar/Desactivar HOLD',
-    description: 'Permite activar o desactivar el estado HOLD del estudiante',
+    section: 'Tab Contrato',
+    name: 'Botón "Activar/Desactivar OnHold"',
+    description: 'Pausar contrato con date pickers y reactivar con extensión automática',
   },
   {
     code: StudentPermission.EXTENDER_VIGENCIA,
     module: Module.STUDENT,
-    name: 'Extender Vigencia',
-    description: 'Permite extender la vigencia del contrato',
+    section: 'Tab Contrato',
+    name: 'Botón "Extender Vigencia"',
+    description: 'Extender manualmente la fecha de fin del contrato',
   },
+
+  // -- Tab: Financiera --
   {
     code: StudentPermission.GENERAR_ESTADO,
     module: Module.STUDENT,
-    name: 'Generar Estado Cuenta',
-    description: 'Permite generar el estado de cuenta del estudiante',
+    section: 'Tab Financiera',
+    name: 'Botón "Generar Estado de Cuenta"',
+    description: 'Generar resumen financiero del estudiante',
   },
   {
     code: StudentPermission.REGISTRAR_PAGO,
     module: Module.STUDENT,
-    name: 'Registrar Pago',
-    description: 'Permite registrar un nuevo pago',
+    section: 'Tab Financiera',
+    name: 'Botón "Registrar Pago"',
+    description: 'Registrar un nuevo pago del estudiante',
   },
   {
     code: StudentPermission.ENVIO_RECORDATORIO,
     module: Module.STUDENT,
-    name: 'Envío Recordatorio',
-    description: 'Permite enviar recordatorio de pago al estudiante',
+    section: 'Tab Financiera',
+    name: 'Botón "Enviar Recordatorio"',
+    description: 'Enviar recordatorio de pago por WhatsApp',
   },
 
   // ========== ACADEMICO MODULE ==========
+  // -- Página: Agenda Sesiones (/dashboard/academic/agenda-sesiones) --
+  {
+    code: AcademicoPermission.VER_CALENDARIO,
+    module: Module.ACADEMICO,
+    section: 'Agenda Sesiones',
+    name: 'Acceso "Calendario" (legacy)',
+    description: 'Permiso legacy para ver el calendario de sesiones',
+  },
+  {
+    code: AcademicoPermission.VER_AGENDA,
+    module: Module.ACADEMICO,
+    section: 'Agenda Sesiones',
+    name: 'Acceso "Agenda" (legacy)',
+    description: 'Permiso legacy para ver la agenda de sesiones',
+  },
   {
     code: AcademicoPermission.CALENDARIO_VER,
     module: Module.ACADEMICO,
-    name: 'Ver Calendario',
-    description: 'Permite visualizar el calendario de sesiones',
+    section: 'Agenda Sesiones',
+    name: 'Página "Agenda Sesiones"',
+    description: 'Acceso a la vista de calendario mensual de sesiones',
   },
   {
     code: AcademicoPermission.LISTA_VER,
     module: Module.ACADEMICO,
-    name: 'Ver Agenda',
-    description: 'Permite visualizar la lista/agenda de sesiones',
+    section: 'Agenda Sesiones',
+    name: 'Vista "Lista de Eventos"',
+    description: 'Ver eventos en formato lista (agenda diaria)',
   },
   {
     code: AcademicoPermission.FILTRO,
     module: Module.ACADEMICO,
-    name: 'Filtro',
-    description: 'Permite filtrar las sesiones en la agenda',
+    section: 'Agenda Sesiones',
+    name: 'Panel "Filtros"',
+    description: 'Filtrar por advisor, tipo, nivel, step, rango de fechas',
   },
   {
     code: AcademicoPermission.NUEVO_EVENTO,
     module: Module.ACADEMICO,
-    name: 'Nuevo Evento',
-    description: 'Permite crear un nuevo evento/sesión',
+    section: 'Agenda Sesiones',
+    name: 'Botón "Nuevo Evento"',
+    description: 'Abrir formulario para crear SESSION o CLUB',
   },
   {
     code: AcademicoPermission.EXPORTAR_CSV,
     module: Module.ACADEMICO,
-    name: 'Exportar CSV',
-    description: 'Permite exportar la agenda a formato CSV',
+    section: 'Agenda Sesiones',
+    name: 'Botón "Exportar CSV"',
+    description: 'Descargar eventos filtrados como archivo Excel/CSV',
   },
   {
     code: AcademicoPermission.EDITAR,
     module: Module.ACADEMICO,
-    name: 'Editar',
-    description: 'Permite editar un evento existente',
+    section: 'Agenda Sesiones',
+    name: 'Botón "Editar Evento"',
+    description: 'Editar un evento existente en el calendario',
   },
   {
     code: AcademicoPermission.CREAR_EVENTO,
     module: Module.ACADEMICO,
-    name: 'Crear Evento',
-    description: 'Permite crear evento (acción global)',
+    section: 'Agenda Sesiones',
+    name: 'Acción "Crear Evento" (global)',
+    description: 'Permiso general para crear eventos desde cualquier vista',
   },
+  {
+    code: AcademicoPermission.ELIMINAR,
+    module: Module.ACADEMICO,
+    section: 'Agenda Sesiones',
+    name: 'Botón "Eliminar Evento"',
+    description: 'Eliminar un evento del calendario',
+  },
+  {
+    code: AcademicoPermission.VER_AGENDA_ACADEMICA,
+    module: Module.ACADEMICO,
+    section: 'Agenda Sesiones',
+    name: 'Acceso "Agenda Académica" (legacy)',
+    description: 'Permiso legacy para acceder a la agenda académica',
+  },
+
+  // -- Página: Sesión Detalle (/sesion/[id]) --
   {
     code: AcademicoPermission.IR_A_SESION,
     module: Module.ACADEMICO,
-    name: 'Ir a la Sesión',
-    description: 'Permite acceder a la página de gestión de una sesión específica (tomar asistencia, evaluar, agregar comentarios)',
+    section: 'Detalle Sesión',
+    name: 'Página "Ir a la Sesión"',
+    description: 'Acceso a /sesion/[id]: tomar asistencia, evaluar, comentarios',
   },
+
+  // -- Página: Agenda Académica (/dashboard/academic/agenda-academica) --
   {
     code: AcademicoPermission.VER,
     module: Module.ACADEMICO,
-    name: 'Ver Agenda Académica',
-    description: 'Permite visualizar la agenda académica',
+    section: 'Agenda Académica',
+    name: 'Página "Agenda Académica"',
+    description: 'Acceso a la vista semanal de clases',
   },
   {
     code: AcademicoPermission.AGENDAMIENTO,
     module: Module.ACADEMICO,
-    name: 'Agendamiento',
-    description: 'Permite gestionar el agendamiento académico',
+    section: 'Agenda Académica',
+    name: 'Acción "Agendamiento"',
+    description: 'Gestionar el agendamiento desde agenda académica',
   },
   {
     code: AcademicoPermission.ACADEMICA_EXPORTAR_CSV,
     module: Module.ACADEMICO,
-    name: 'Exportar CSV (Académica)',
-    description: 'Permite exportar agenda académica a CSV',
+    section: 'Agenda Académica',
+    name: 'Botón "Exportar CSV"',
+    description: 'Descargar agenda académica como archivo Excel/CSV',
   },
   {
     code: AcademicoPermission.ESTADISTICAS,
     module: Module.ACADEMICO,
-    name: 'Estadísticas',
-    description: 'Permite visualizar estadísticas académicas',
+    section: 'Agenda Académica',
+    name: 'Sección "Estadísticas"',
+    description: 'Ver estadísticas académicas (asistencia, rendimiento)',
   },
   {
     code: AcademicoPermission.EXPORTAR_STATS_CSV,
     module: Module.ACADEMICO,
-    name: 'Exportar Estadísticas CSV',
-    description: 'Permite exportar estadísticas a CSV',
+    section: 'Agenda Académica',
+    name: 'Botón "Exportar Estadísticas CSV"',
+    description: 'Descargar estadísticas académicas como CSV',
   },
+
+  // -- Página: Advisors (/dashboard/academic/advisors) --
   {
     code: AcademicoPermission.LISTA_ADVISORS_VER,
     module: Module.ACADEMICO,
-    name: 'Ver Lista Advisors',
-    description: 'Permite visualizar la lista de advisors',
+    section: 'Advisors',
+    name: 'Página "Lista de Advisors"',
+    description: 'Acceso a /dashboard/academic/advisors con lista de profesores',
   },
   {
     code: AcademicoPermission.ADVISOR_VER_ENLACE,
     module: Module.ACADEMICO,
-    name: 'Botón Panel Advisor',
-    description: 'Permite visualizar el botón de acceso al Panel Advisor',
+    section: 'Advisors',
+    name: 'Botón "Panel Advisor"',
+    description: 'Link para abrir el panel personal del advisor',
   },
   {
     code: AcademicoPermission.AGREGAR,
     module: Module.ACADEMICO,
-    name: 'Agregar Advisor',
-    description: 'Permite añadir un nuevo advisor al sistema',
+    section: 'Advisors',
+    name: 'Botón "Agregar Advisor"',
+    description: 'Crear nuevo advisor en el sistema',
   },
   {
     code: AcademicoPermission.ESTADISTICA,
     module: Module.ACADEMICO,
-    name: 'Estadística Advisor',
-    description: 'Permite visualizar estadísticas de advisors',
+    section: 'Advisors',
+    name: 'Columna "Estadísticas"',
+    description: 'Ver estadísticas de rendimiento por advisor',
+  },
+
+  // -- Página: Informes (/dashboard/academic/informes) --
+  {
+    code: AcademicoPermission.VER_INFORMES,
+    module: Module.ACADEMICO,
+    section: 'Informes',
+    name: 'Página "Informes"',
+    description: 'Acceso al módulo de informes académicos',
+  },
+  {
+    code: AcademicoPermission.INFORME_BENEFICIARIOS,
+    module: Module.ACADEMICO,
+    section: 'Informes',
+    name: 'Informe "Beneficiarios"',
+    description: 'Generar informe de beneficiarios por rango de fechas',
+  },
+  {
+    code: AcademicoPermission.EXPORTAR_INFORMES,
+    module: Module.ACADEMICO,
+    section: 'Informes',
+    name: 'Botón "Exportar Informe"',
+    description: 'Descargar informe como PDF o CSV',
   },
 
   // ========== SERVICIO MODULE ==========
+  // -- Página: Welcome Session (/dashboard/servicio/welcome-session) --
   {
     code: ServicioPermission.WELCOME_CARGAR_EVENTOS,
     module: Module.SERVICIO,
-    name: 'Cargar Eventos (Welcome)',
-    description: 'Permite cargar eventos de welcome session',
+    section: 'Welcome Session',
+    name: 'Página "Welcome Session"',
+    description: 'Acceso a carga y gestión de eventos de bienvenida',
   },
   {
     code: ServicioPermission.WELCOME_EXPORTAR_CSV,
     module: Module.SERVICIO,
-    name: 'Exportar CSV (Welcome)',
-    description: 'Permite exportar welcome sessions a CSV',
+    section: 'Welcome Session',
+    name: 'Botón "Exportar CSV"',
+    description: 'Descargar welcome sessions como archivo Excel/CSV',
   },
+
+  // -- Página: Lista Sesiones (/dashboard/servicio/lista-sesiones) --
   {
     code: ServicioPermission.SESIONES_CARGAR_EVENTOS,
     module: Module.SERVICIO,
-    name: 'Cargar Eventos (Sesiones)',
-    description: 'Permite cargar eventos de sesiones',
+    section: 'Lista Sesiones',
+    name: 'Página "Lista de Sesiones"',
+    description: 'Acceso a lista de sesiones con filtros por fecha y estado',
   },
   {
     code: ServicioPermission.SESIONES_EXPORTAR_CSV,
     module: Module.SERVICIO,
-    name: 'Exportar CSV (Sesiones)',
-    description: 'Permite exportar lista de sesiones a CSV',
+    section: 'Lista Sesiones',
+    name: 'Botón "Exportar CSV"',
+    description: 'Descargar lista de sesiones como archivo Excel/CSV',
   },
+
+  // -- Página: Sin Registro (/dashboard/servicio/sin-registro) --
   {
     code: ServicioPermission.USUARIOS_ACTUALIZAR,
     module: Module.SERVICIO,
-    name: 'Actualizar',
-    description: 'Permite actualizar la lista de usuarios sin perfil',
+    section: 'Usuarios Sin Registro',
+    name: 'Página "Sin Registro"',
+    description: 'Ver y gestionar beneficiarios sin perfil académico',
   },
   {
     code: ServicioPermission.USUARIOS_EXPORTAR_CSV,
     module: Module.SERVICIO,
-    name: 'Exportar CSV (Usuarios)',
-    description: 'Permite exportar usuarios sin perfil a CSV',
+    section: 'Usuarios Sin Registro',
+    name: 'Botón "Exportar CSV"',
+    description: 'Descargar usuarios sin registro como archivo Excel/CSV',
   },
 
   // ========== COMERCIAL MODULE ==========
+  // -- Página: Contrato Detalle (/dashboard/comercial/contrato/[id]) --
   {
-    code: ComercialPermission.MODIFICAR,
+    code: ComercialPermission.MODIFICAR_CONTRATO,
     module: Module.COMERCIAL,
-    name: 'Modificar Contrato',
-    description: 'Permite modificar un contrato',
+    section: 'Detalle Contrato',
+    name: 'Edición inline del contrato',
+    description: 'Editar secciones del contrato: titular, referencias, beneficiarios, financiero',
   },
   {
     code: ComercialPermission.ENVIAR_PDF,
     module: Module.COMERCIAL,
-    name: 'Enviar PDF',
-    description: 'Permite enviar el contrato en formato PDF',
+    section: 'Detalle Contrato',
+    name: 'Botón "Enviar PDF por WhatsApp"',
+    description: 'Generar PDF del contrato vía API2PDF y enviar por WhatsApp',
   },
   {
     code: ComercialPermission.DESCARGAR,
     module: Module.COMERCIAL,
-    name: 'Descargar Contrato',
-    description: 'Permite descargar el contrato generado',
+    section: 'Detalle Contrato',
+    name: 'Botón "Descargar PDF"',
+    description: 'Descargar el contrato generado como PDF',
   },
   {
     code: ComercialPermission.APROBACION_AUTONOMA,
     module: Module.COMERCIAL,
-    name: 'Aprobación Autónoma',
-    description: 'Permite aprobar el contrato de forma autónoma',
+    section: 'Detalle Contrato',
+    name: 'Botón "Auto-aprobar Consentimiento"',
+    description: 'Aprobar consentimiento declarativo sin OTP del cliente',
   },
+
+  // -- Página: Prospectos (/dashboard/comercial/prospectos) --
   {
     code: ComercialPermission.VER_PROSPECTOS,
     module: Module.COMERCIAL,
-    name: 'Ver Prospectos',
-    description: 'Permite visualizar y gestionar prospectos',
+    section: 'Prospectos',
+    name: 'Página "Prospectos"',
+    description: 'Acceso al pipeline comercial de prospectos',
   },
 
-  // ========== APROBACION MODULE ==========
+  // ========== APROBACION MODULE (/dashboard/aprobacion) ==========
   {
     code: AprobacionPermission.ACTUALIZAR,
     module: Module.APROBACION,
-    name: 'Actualizar',
-    description: 'Permite actualizar la lista de contratos pendientes',
+    section: 'Lista de Aprobaciones',
+    name: 'Página "Aprobaciones"',
+    description: 'Acceso a la lista de contratos pendientes de aprobación',
   },
   {
     code: AprobacionPermission.EXPORTAR_CSV,
     module: Module.APROBACION,
-    name: 'Exportar CSV',
-    description: 'Permite exportar contratos pendientes a CSV',
+    section: 'Lista de Aprobaciones',
+    name: 'Botón "Exportar CSV"',
+    description: 'Descargar contratos pendientes como archivo Excel/CSV',
   },
   {
-    code: AprobacionPermission.MODIFICAR,
+    code: AprobacionPermission.VER_CONTRATO,
     module: Module.APROBACION,
-    name: 'Modificar Contrato',
-    description: 'Permite modificar un contrato pendiente de aprobación',
+    section: 'Detalle Aprobación',
+    name: 'Botón "Ver Contrato"',
+    description: 'Abrir detalle del contrato pendiente de aprobación',
   },
   {
     code: AprobacionPermission.ENVIAR_PDF,
     module: Module.APROBACION,
-    name: 'Enviar PDF',
-    description: 'Permite enviar el contrato en formato PDF',
+    section: 'Detalle Aprobación',
+    name: 'Botón "Enviar PDF"',
+    description: 'Enviar contrato por WhatsApp desde vista de aprobación',
   },
   {
     code: AprobacionPermission.DESCARGAR,
     module: Module.APROBACION,
-    name: 'Descargar Contrato',
-    description: 'Permite descargar el contrato pendiente',
+    section: 'Detalle Aprobación',
+    name: 'Botón "Descargar PDF"',
+    description: 'Descargar contrato pendiente como PDF',
   },
   {
     code: AprobacionPermission.APROBACION_AUTONOMA,
     module: Module.APROBACION,
-    name: 'Aprobación Autónoma',
-    description: 'Permite aprobar el contrato de forma autónoma',
+    section: 'Detalle Aprobación',
+    name: 'Botón "Aprobación Autónoma"',
+    description: 'Aprobar contrato sin verificación OTP del cliente',
   },
 ];
 
@@ -415,23 +568,14 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
 // FUNCIONES AUXILIARES
 // ============================================================================
 
-/**
- * Obtiene todos los permisos de un módulo específico
- */
 export function getPermissionsByModule(module: Module): PermissionDefinition[] {
   return PERMISSIONS_CATALOG.filter((p) => p.module === module);
 }
 
-/**
- * Obtiene la definición de un permiso por su código
- */
 export function getPermissionByCode(code: Permission): PermissionDefinition | undefined {
   return PERMISSIONS_CATALOG.find((p) => p.code === code);
 }
 
-/**
- * Obtiene todos los códigos de permisos disponibles
- */
 export function getAllPermissionCodes(): Permission[] {
   return PERMISSIONS_CATALOG.map((p) => p.code);
 }
