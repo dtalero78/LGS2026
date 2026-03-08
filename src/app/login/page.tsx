@@ -117,10 +117,7 @@ export default function LoginPage() {
             alt="Let's Go Speak"
             className="mx-auto h-24 w-auto"
           />
-          <h2 className="mt-4 text-center text-3xl font-extrabold text-gray-900">
-            LGS Admin Panel
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-4 text-center text-sm text-gray-600">
             Inicia sesión en tu cuenta
           </p>
         </div>
