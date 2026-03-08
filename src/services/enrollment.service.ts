@@ -43,7 +43,7 @@ export async function enrollStudents(input: EnrollInput) {
   // Using ACADEMICA _id is critical: historical bookings use ACADEMICA _id, not PEOPLE _id.
   const { queryMany } = await import('@/lib/postgres');
   let students = await queryMany(
-    `SELECT COALESCE(a."_id", p."_id") as "_id",
+    `SELECT DISTINCT ON (COALESCE(a."_id", p."_id")) COALESCE(a."_id", p."_id") as "_id",
             COALESCE(p."numeroId", a."numeroId") as "numeroId",
             COALESCE(p."primerNombre", a."primerNombre") as "primerNombre",
             COALESCE(p."primerApellido", a."primerApellido") as "primerApellido",
@@ -62,7 +62,7 @@ export async function enrollStudents(input: EnrollInput) {
     const missingIds = input.studentIds.filter(id => !foundIds.has(id));
     if (missingIds.length > 0) {
       const academicStudents = await queryMany(
-        `SELECT a."_id",
+        `SELECT DISTINCT ON (a."_id") a."_id",
                 COALESCE(p."numeroId", a."numeroId") as "numeroId",
                 COALESCE(p."primerNombre", a."primerNombre") as "primerNombre",
                 COALESCE(p."primerApellido", a."primerApellido") as "primerApellido",
@@ -89,9 +89,16 @@ export async function enrollStudents(input: EnrollInput) {
 
   await transaction(async (client) => {
     for (const student of students) {
-      // Skip if student already has an active (non-cancelled) booking for this event
-      const alreadyEnrolled = await BookingRepository.existsByStudentAndEvent(student._id, input.eventId);
-      if (alreadyEnrolled) {
+      // Check duplicate inside transaction using the transaction client
+      const dupCheck = await client.query(
+        `SELECT 1 FROM "ACADEMICA_BOOKINGS"
+         WHERE ("idEstudiante" = $1 OR "studentId" = $1)
+           AND ("eventoId" = $2 OR "idEvento" = $2)
+           AND "cancelo" = false
+         LIMIT 1`,
+        [student._id, input.eventId]
+      );
+      if (dupCheck.rows.length > 0) {
         throw new ConflictError(`El estudiante ya está inscrito en este evento`);
       }
       const bookingData: Record<string, any> = {
