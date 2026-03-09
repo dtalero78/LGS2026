@@ -42,25 +42,29 @@ export async function resolveStudentFromSession(session: Session) {
     throw new ForbiddenError('No se encontró email en la sesión');
   }
 
-  // Lookup chain:
-  // 1. PEOPLE by email → then ACADEMICA by PEOPLE.numeroId
-  // 2. Fallback: ACADEMICA by email → then PEOPLE by ACADEMICA.numeroId
-  let person = await PeopleRepository.findByEmail(email);
-  let academica = null;
+  // Lookup chain (ACADEMICA-first to avoid TITULAR/BENEFICIARIO email collision):
+  // 1. ACADEMICA by email → PEOPLE by ACADEMICA.numeroId (with BENEFICIARIO preference)
+  // 2. Fallback: PEOPLE by email → ACADEMICA by PEOPLE.numeroId
+  let person = null;
+  let academica = await AcademicaRepository.findByEmail(email);
 
-  if (person) {
-    if (person.numeroId) {
-      academica = await AcademicaRepository.findByNumeroId(person.numeroId);
+  if (academica) {
+    // Found academic record — find the matching PEOPLE (BENEFICIARIO) via numeroId
+    if (academica.numeroId) {
+      person = await PeopleRepository.findBeneficiarioByNumeroId(academica.numeroId);
+      if (!person) {
+        // Fallback: any PEOPLE with that numeroId
+        person = await PeopleRepository.findByIdOrNumeroId(academica.numeroId);
+      }
     }
   } else {
-    // Email not in PEOPLE — try ACADEMICA directly (email stored there)
-    academica = await AcademicaRepository.findByEmail(email);
-    if (!academica) {
-      throw new NotFoundError('Estudiante', email);
+    // ACADEMICA not found by email — try PEOPLE first, then ACADEMICA by numeroId
+    person = await PeopleRepository.findByEmail(email);
+    if (person && person.numeroId) {
+      academica = await AcademicaRepository.findByNumeroId(person.numeroId);
     }
-    // Try to find PEOPLE via ACADEMICA.numeroId
-    if (academica.numeroId) {
-      person = await PeopleRepository.findByIdOrNumeroId(academica.numeroId);
+    if (!person && !academica) {
+      throw new NotFoundError('Estudiante', email);
     }
   }
 

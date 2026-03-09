@@ -358,6 +358,13 @@ class PeopleRepositoryClass extends BaseRepository {
       [email]
     );
   }
+
+  async findBeneficiarioByNumeroId(numeroId: string) {
+    return this.rawQueryOne(
+      `SELECT * FROM "PEOPLE" WHERE "numeroId" = $1 AND "tipoUsuario" = 'BENEFICIARIO' LIMIT 1`,
+      [numeroId]
+    );
+  }
 }
 
 export const PeopleRepository = new PeopleRepositoryClass();
