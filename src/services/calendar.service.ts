@@ -142,8 +142,11 @@ export async function getEventBookings(eventId: string, includeStudent: boolean 
     : await BookingRepository.findByEventId(eventId);
 
   // Normalize: asistio is the source of truth (asistencia column has stale/inverted data from migration)
+  // Also map enriched PEOPLE fields when booking fields are empty
   const bookings = rawBookings.map((b: any) => ({
     ...b,
+    email: b.email && b.email !== 'No disponible' ? b.email : b.studentEmail || b.email,
+    plataforma: b.plataforma || b.studentPlataforma,
     asistencia: b.asistio != null ? b.asistio : b.asistencia,
   }));
 

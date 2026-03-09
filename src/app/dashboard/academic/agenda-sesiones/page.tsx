@@ -362,6 +362,11 @@ export default function AgendaSesionesPage() {
         setEvents(cachedData.events)
         console.log('✅ 📦 CACHÉ HIT - Eventos del mes cargados desde caché')
         console.log(`   → ${cachedData.events.length} eventos para ${currentMonth.toLocaleDateString('es-ES', {month: 'long', year: 'numeric'})}`)
+        // Refrescar inscritos en background para evitar datos stale
+        const eventIds = cachedData.events.map((e: any) => e._id)
+        if (eventIds.length > 0) {
+          setShouldUpdateInscritos({ eventIds, advisorsData: advisors })
+        }
         return
       }
 
@@ -463,6 +468,11 @@ export default function AgendaSesionesPage() {
         setLoading(false)
         console.log('✅ 📦 CACHÉ HIT - Datos cargados desde caché exitosamente')
         console.log(`   → ${cachedData.events.length} eventos, ${cachedData.advisors.length} advisors`)
+        // Refrescar inscritos en background para evitar datos stale
+        const eventIds = cachedData.events.map((e: any) => e._id)
+        if (eventIds.length > 0) {
+          setShouldUpdateInscritos({ eventIds, advisorsData: cachedData.advisors })
+        }
         return
       }
 

@@ -51,17 +51,34 @@ class BookingRepositoryClass extends BaseRepository {
   }
 
   /**
+   * Find a single booking by student ID and event ID
+   */
+  async findByStudentAndEvent(studentId: string, eventId: string) {
+    return queryOne(
+      `SELECT * FROM "ACADEMICA_BOOKINGS"
+       WHERE ("idEstudiante" = $1 OR "studentId" = $1)
+         AND ("eventoId" = $2 OR "idEvento" = $2)
+         AND "cancelo" = false
+       LIMIT 1`,
+      [studentId, eventId]
+    );
+  }
+
+  /**
    * Get bookings with extended student info
    */
   async findByEventIdWithStudentDetails(eventId: string) {
     return queryMany(
-      `SELECT b.*, p."email" as "studentEmail", p."plataforma" as "studentPlataforma",
+      `SELECT DISTINCT ON (b."_id") b.*,
+              COALESCE(a."email", p."email") as "studentEmail",
+              COALESCE(p."plataforma", a."plataforma") as "studentPlataforma",
               p."estadoInactivo" as "studentInactivo", p."vigencia" as "studentVigencia",
               p."finalContrato" as "studentFinalContrato"
        FROM "ACADEMICA_BOOKINGS" b
-       LEFT JOIN "PEOPLE" p ON b."idEstudiante" = p."_id"
+       LEFT JOIN "ACADEMICA" a ON b."idEstudiante" = a."_id"
+       LEFT JOIN "PEOPLE" p ON a."numeroId" = p."numeroId"
        WHERE b."eventoId" = $1 OR b."idEvento" = $1
-       ORDER BY b."primerApellido", b."primerNombre"`,
+       ORDER BY b."_id", b."primerApellido", b."primerNombre"`,
       [eventId]
     );
   }
