@@ -149,6 +149,23 @@ class DblgsRepositoryClass {
     offset: number
   ): Promise<any[]> {
     const paramIdx = whereValues.length + 1;
+
+    // Special case: USUARIOS_ROLES gets a LEFT JOIN with ACADEMICA to show academicaId
+    if (table === 'USUARIOS_ROLES') {
+      const wrappedWhere = whereClause
+        ? `WHERE ${whereClause.replace(/"(\w+)"/g, 'ur."$1"')}`
+        : '';
+      const orderRef = sortCol === 'academicaId' ? '"academicaId"' : `ur."${sortCol}"`;
+      const sql = `SELECT ur.*, a."_id" AS "academicaId"
+        FROM "USUARIOS_ROLES" ur
+        LEFT JOIN "ACADEMICA" a ON LOWER(a."email") = LOWER(ur."email")
+        ${wrappedWhere}
+        ORDER BY ${orderRef} ${sortDir} NULLS LAST
+        LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
+
+      return queryMany(sql, [...whereValues, limit, offset]);
+    }
+
     const sql = `SELECT * FROM "${table}"
       ${whereClause ? `WHERE ${whereClause}` : ''}
       ORDER BY "${sortCol}" ${sortDir} NULLS LAST

@@ -168,6 +168,23 @@ class DblgsServiceClass {
     }
   }
 
+  // ── Virtual columns for special tables ─────────────────────────
+
+  private injectVirtualColumns(table: string, columns: ColumnMeta[]): ColumnMeta[] {
+    if (table === 'USUARIOS_ROLES') {
+      return [...columns, {
+        name: 'academicaId',
+        type: 'text',
+        pgType: 'varchar',
+        nullable: true,
+        defaultValue: null,
+        maxLength: null,
+        isPrimaryKey: false,
+      }];
+    }
+    return columns;
+  }
+
   // ── Public methods ─────────────────────────────────────────────
 
   async listTables(): Promise<string[]> {
@@ -180,16 +197,19 @@ class DblgsServiceClass {
       DblgsRepository.getTableSchema(table),
       DblgsRepository.getRowCount(table),
     ]);
-    return { table, columns, rowCount };
+    // Inject virtual columns for special tables
+    const enrichedColumns = this.injectVirtualColumns(table, columns);
+    return { table, columns: enrichedColumns, rowCount };
   }
 
   async readRows(table: string, options: ReadOptions): Promise<PaginatedResult> {
     await this.assertValidTable(table);
 
     const schema = await DblgsRepository.getTableSchema(table);
+    const enrichedSchema = this.injectVirtualColumns(table, schema);
 
-    // Validate sortBy column
-    const sortCol = options.sortBy && schema.find(c => c.name === options.sortBy)
+    // Validate sortBy column (use enrichedSchema to allow sorting by virtual columns)
+    const sortCol = options.sortBy && enrichedSchema.find(c => c.name === options.sortBy)
       ? options.sortBy
       : (schema.find(c => c.isPrimaryKey)?.name || schema[0]?.name || '_id');
 
@@ -210,7 +230,7 @@ class DblgsServiceClass {
     return {
       table,
       rows,
-      columns: schema,
+      columns: enrichedSchema,
       total,
       page,
       pageSize,
