@@ -190,13 +190,7 @@ export default function ClassHistory({ data, isLoading }: ClassHistoryProps) {
                   </td>
                   <td className="table-cell">
                     <div className="text-sm text-gray-900">
-                      {item.tipoEvento === 'CLUB' || /^(TRAINING|KARAOKE|CONVERSATION|GRAMMAR|LISTENING|PRONUNCIATION)/i.test(item.step || '')
-                        ? (() => {
-                            const s = item.step || item.nombreEvento || ''
-                            const match = s.match(/^(.+?)\s*-\s*Step\s*\d+/i)
-                            return match ? match[1].trim() : s
-                          })()
-                        : item.step}
+                      {item.step}
                     </div>
                   </td>
                   <td className="table-cell">

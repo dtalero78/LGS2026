@@ -92,14 +92,19 @@ export async function generateReport(studentId: string) {
   const nivelPrincipal = student.nivel;
 
   // Get all classes for this student (exclude future sessions)
+  // JOIN with CALENDARIO to get the real step/nivel from the event
   const allClasses = await queryMany(
-    `SELECT "_id", "eventoId", "nivel", "step", "advisor", "fechaEvento", "hora",
-            "tipo", "nombreEvento", "asistio", "asistencia", "participacion",
-            "calificacion", "comentarios", "noAprobo"
-     FROM "ACADEMICA_BOOKINGS"
-     WHERE ("idEstudiante" = $1 OR "studentId" = $1)
-       AND ("fechaEvento" IS NULL OR "fechaEvento"::date <= CURRENT_DATE)
-     ORDER BY "fechaEvento" DESC`,
+    `SELECT b."_id", b."eventoId",
+            COALESCE(c."nivel", b."nivel") AS "nivel",
+            COALESCE(c."step", b."step") AS "step",
+            b."advisor", b."fechaEvento", b."hora",
+            b."tipo", b."nombreEvento", b."asistio", b."asistencia", b."participacion",
+            b."calificacion", b."comentarios", b."noAprobo"
+     FROM "ACADEMICA_BOOKINGS" b
+     LEFT JOIN "CALENDARIO" c ON c."_id" = COALESCE(b."eventoId", b."idEvento")
+     WHERE (b."idEstudiante" = $1 OR b."studentId" = $1)
+       AND (b."fechaEvento" IS NULL OR b."fechaEvento"::date <= CURRENT_DATE)
+     ORDER BY b."fechaEvento" DESC`,
     [student._id]
   );
 
@@ -179,9 +184,9 @@ export async function generateReport(studentId: string) {
         if (sesionesExitosas >= 2 && clubsExitosos === 0) {
           mensaje = 'Falta un TRAINING SESSION';
         } else if (sesionesExitosas === 1 && clubsExitosos === 0) {
-          mensaje = 'Falta una sesión. Puedes realizar una actividad complementaria.';
+          mensaje = 'Falta una sesión.';
         } else if (sesionesExitosas === 1 && clubsExitosos >= 1) {
-          mensaje = 'Falta una sesión para terminar. Puedes realizar una actividad complementaria.';
+          mensaje = 'Falta una sesión para terminar.';
         } else if (sesionesExitosas === 0 && clubsExitosos >= 1) {
           mensaje = 'Faltan dos sesiones';
         } else {
@@ -191,7 +196,22 @@ export async function generateReport(studentId: string) {
     }
 
     // Eligible for complementary activity: normal step, not completed, has exactly 1 session
-    const complementariaEligible = !esJump && !completado && sesionesExitosas === 1 && overrideCompletado !== true;
+    // BUT not if the student had a successful session THIS WEEK (Mon-Sun) — they can still book another regular session
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+    const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - mondayOffset);
+    const hadSessionThisWeek = sesiones.filter(isExitosa).some((c) => {
+      if (!c.fechaEvento) return false;
+      const fecha = new Date(c.fechaEvento);
+      return fecha >= startOfWeek;
+    });
+    const complementariaEligible = !esJump && !completado && sesionesExitosas === 1 && overrideCompletado !== true && !hadSessionThisWeek;
+
+    // Append complementaria hint only when eligible
+    if (complementariaEligible && mensaje) {
+      mensaje += ' Puedes realizar una actividad complementaria.';
+    }
 
     return {
       step: stepName,

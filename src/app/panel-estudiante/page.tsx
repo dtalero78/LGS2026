@@ -185,7 +185,7 @@ function PanelEstudianteContent() {
               <div className="space-y-3">
                 <div>
                   <p className="text-lg font-bold uppercase tracking-wide">Next Session</p>
-                  <p className="text-sm font-medium text-primary-200">{profile?.nivel || '---'} - {nextClass?.step || profile?.effectiveStep || profile?.step || '---'}</p>
+                  <p className="text-sm font-medium text-primary-200">{nextClass ? `${nextClass.nivel || profile?.nivel || '---'} - ${nextClass.step || '---'}` : '---'}</p>
                 </div>
                 <div>
                   <span className="text-xs text-primary-200 uppercase tracking-wide">Asesor</span>
