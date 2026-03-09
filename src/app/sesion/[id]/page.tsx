@@ -47,6 +47,7 @@ interface ClassRecord {
   idEvento: string
   asistencia: boolean
   participacion: boolean
+  noAprobo?: boolean
   calificacion?: string
   comentarios?: string
   advisorAnotaciones?: string
@@ -110,19 +111,48 @@ export default function SesionPage() {
       const bookingsData = await bookingsResponse.json()
 
       if (bookingsData.success && bookingsData.bookings) {
-        const studentsWithClasses: StudentWithClass[] = bookingsData.bookings.map((booking: any) => ({
-          _id: booking.idEstudiante,
-          primerNombre: booking.primerNombre,
-          primerApellido: booking.primerApellido,
-          email: booking.email,
-          plataforma: booking.plataforma,
-          edad: booking.edad,
-          pais: booking.pais,
-          hobbies: booking.hobbies || '',
-          classRecord: booking.classData
-        }))
+        // Map integer calificacion back to text labels for the dropdown
+        const calificacionReverseMap: Record<number, string> = {
+          10: 'Excelente', 8: 'Muy Bien', 6: 'Bien', 4: 'Regular', 2: 'Necesita Mejorar',
+        }
+
+        const studentsWithClasses: StudentWithClass[] = bookingsData.bookings.map((booking: any) => {
+          const calNum = typeof booking.calificacion === 'number' ? booking.calificacion : parseInt(booking.calificacion)
+          const calText = !isNaN(calNum) ? (calificacionReverseMap[calNum] || String(calNum)) : (booking.calificacion || '')
+
+          return {
+            _id: booking.idEstudiante,
+            primerNombre: booking.primerNombre,
+            primerApellido: booking.primerApellido,
+            email: booking.email,
+            plataforma: booking.plataforma,
+            edad: booking.edad,
+            pais: booking.pais,
+            hobbies: booking.hobbies || '',
+            classRecord: {
+              _id: booking._id,
+              idEstudiante: booking.idEstudiante,
+              idEvento: booking.eventoId || booking.idEvento,
+              asistencia: booking.asistio ?? booking.asistencia ?? false,
+              participacion: booking.participacion ?? false,
+              noAprobo: booking.noAprobo ?? false,
+              calificacion: calText,
+              comentarios: booking.comentarios || '',
+              advisorAnotaciones: booking.advisorAnotaciones || '',
+              actividadPropuesta: booking.actividadPropuesta || '',
+              nivel: booking.nivel,
+              step: booking.step,
+            },
+          }
+        })
 
         setStudents(studentsWithClasses)
+
+        // Update selectedStudent if it exists so the form reflects saved data
+        if (selectedStudent) {
+          const updated = studentsWithClasses.find((s: StudentWithClass) => s._id === selectedStudent._id)
+          if (updated) setSelectedStudent(updated)
+        }
       }
     } catch (err) {
       console.error('Error loading students:', err)
