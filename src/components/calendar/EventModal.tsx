@@ -11,6 +11,8 @@ interface CalendarEvent {
   tipo?: string
   tituloONivel: string
   nombreEvento?: string
+  nivel?: string
+  step?: string
   advisor: string
   observaciones?: string
   limiteUsuarios: number
@@ -153,11 +155,16 @@ export default function EventModal({
       setSavedNombreEvento(nombreEventoValue)
       setIsEditMode(true)
 
+      // Resolve nivel: prefer separate `nivel` field, fallback to parsing tituloONivel
+      const resolvedNivel = editingEvent.nivel
+        || editingEvent.tituloONivel?.split(' - ')[0]?.trim()
+        || editingEvent.tituloONivel
+
       setFormData({
         fecha: format(eventDate, 'yyyy-MM-dd'),
         hora: format(eventDate, 'HH:mm'),
         evento: (editingEvent.evento || editingEvent.tipo || 'SESSION') as 'SESSION' | 'CLUB',
-        tituloONivel: editingEvent.tituloONivel,
+        tituloONivel: resolvedNivel,
         nombreEvento: nombreEventoValue,
         advisor: advisorId,
         observaciones: editingEvent.observaciones || '',
@@ -174,13 +181,13 @@ export default function EventModal({
           loadCodigosNivel().then((loadedNiveles) => {
             // Luego cargar opciones de step/club con los niveles recién cargados
             if (eventType === 'SESSION' || eventType === 'CLUB') {
-              cargarNombreStepForEdit(editingEvent.tituloONivel, eventType, nombreEventoValue, loadedNiveles)
+              cargarNombreStepForEdit(resolvedNivel, eventType, nombreEventoValue, loadedNiveles)
             }
           })
         } else {
           // Si niveles ya está cargado, cargar directamente
           if (eventType === 'SESSION' || eventType === 'CLUB') {
-            cargarNombreStepForEdit(editingEvent.tituloONivel, eventType, nombreEventoValue, niveles)
+            cargarNombreStepForEdit(resolvedNivel, eventType, nombreEventoValue, niveles)
           }
         }
       }, 100)

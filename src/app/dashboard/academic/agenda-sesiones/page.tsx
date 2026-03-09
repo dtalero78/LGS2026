@@ -19,6 +19,8 @@ interface CalendarEvent {
   tipo?: string
   tituloONivel: string
   nombreEvento?: string
+  nivel?: string
+  step?: string
   advisor: string | Advisor
   advisorNombre?: string
   observaciones?: string
