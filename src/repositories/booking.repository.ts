@@ -88,16 +88,19 @@ class BookingRepositoryClass extends BaseRepository {
    */
   async findByStudentId(studentId: string, limit: number = 500) {
     return queryMany(
-      `SELECT "_id", "studentId", "eventoId", "tipo", "fecha", "hora", "advisor",
-              "nivel", "step", "asistencia", "asistio", "participacion", "noAprobo",
-              "cancelo", "calificacion", "anotaciones", "comentarios", "advisorAnotaciones",
-              "actividadPropuesta", "linkZoom", "asignadoPor", "origen",
-              "agendadoPor", "agendadoPorEmail", "agendadoPorRol",
-              "fechaAgendamiento", "fechaEvento", "tipoEvento", "nombreEvento", "tituloONivel",
-              "_createdDate", "_updatedDate"
-       FROM "ACADEMICA_BOOKINGS"
-       WHERE ("idEstudiante" = $1 OR "studentId" = $1)
-       ORDER BY "fechaEvento" DESC, "hora" DESC
+      `SELECT b."_id", b."studentId", b."eventoId", b."tipo", b."fecha", b."hora", b."advisor",
+              COALESCE(c."nivel", b."nivel") AS "nivel",
+              COALESCE(c."step", b."step") AS "step",
+              b."asistencia", b."asistio", b."participacion", b."noAprobo",
+              b."cancelo", b."calificacion", b."anotaciones", b."comentarios", b."advisorAnotaciones",
+              b."actividadPropuesta", b."linkZoom", b."asignadoPor", b."origen",
+              b."agendadoPor", b."agendadoPorEmail", b."agendadoPorRol",
+              b."fechaAgendamiento", b."fechaEvento", b."tipoEvento", b."nombreEvento", b."tituloONivel",
+              b."_createdDate", b."_updatedDate"
+       FROM "ACADEMICA_BOOKINGS" b
+       LEFT JOIN "CALENDARIO" c ON c."_id" = COALESCE(b."eventoId", b."idEvento")
+       WHERE (b."idEstudiante" = $1 OR b."studentId" = $1)
+       ORDER BY b."fechaEvento" DESC, b."hora" DESC
        LIMIT $2`,
       [studentId, limit]
     );
