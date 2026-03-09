@@ -317,7 +317,7 @@ class BookingRepositoryClass extends BaseRepository {
        LEFT JOIN "CALENDARIO" c ON COALESCE(ab."eventoId", ab."idEvento") = c."_id"
        WHERE (ab."idEstudiante" = $1 OR ab."studentId" = $1)
          AND ab."cancelo" = false
-         AND ab."fechaEvento" >= NOW()
+         AND ab."fechaEvento" >= NOW() - INTERVAL '15 minutes'
        ORDER BY ab."fechaEvento" ASC
        LIMIT $2`,
       [studentId, limit]
