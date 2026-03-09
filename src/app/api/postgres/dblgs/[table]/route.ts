@@ -40,9 +40,10 @@ export const GET = handlerWithAuth(async (request, { params }, session) => {
   const search = searchParams.get('search') || undefined;
   const filtersRaw = searchParams.get('filters');
   const filters = filtersRaw ? JSON.parse(filtersRaw) : undefined;
+  const isExport = searchParams.get('export') === 'true';
 
   const result = await DblgsService.readRows(table, {
-    page, pageSize, sortBy, sortDir, search, filters,
+    page, pageSize, sortBy, sortDir, search, filters, export: isExport,
   });
 
   return successResponse(result);

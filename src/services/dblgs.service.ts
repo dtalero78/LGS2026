@@ -18,6 +18,7 @@ export interface ReadOptions {
   sortDir: 'asc' | 'desc';
   search?: string;
   filters?: Record<string, string>;
+  export?: boolean;
 }
 
 export interface PaginatedResult {
@@ -215,11 +216,26 @@ class DblgsServiceClass {
 
     const sortDir = options.sortDir === 'desc' ? 'DESC' : 'ASC';
     const page = Math.max(1, options.page);
-    const pageSize = Math.min(Math.max(1, options.pageSize), 200);
+    const maxPageSize = options.export ? 50000 : 200;
+    const pageSize = Math.min(Math.max(1, options.pageSize), maxPageSize);
     const offset = (page - 1) * pageSize;
 
     // Build filters
     const { whereClause, values } = this.buildWhereClause(schema, options.filters, options.search);
+
+    // For exports, skip count query to reduce DB load
+    if (options.export) {
+      const rows = await DblgsRepository.readRows(table, whereClause, values, sortCol, sortDir as 'ASC' | 'DESC', pageSize, offset);
+      return {
+        table,
+        rows,
+        columns: enrichedSchema,
+        total: rows.length,
+        page,
+        pageSize,
+        totalPages: 1,
+      };
+    }
 
     // Execute queries in parallel
     const [rows, total] = await Promise.all([

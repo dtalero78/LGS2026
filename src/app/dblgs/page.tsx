@@ -461,10 +461,11 @@ function DblgsPage() {
     if (!selectedTable || columns.length === 0) return;
     setExporting(true);
     try {
-      // Fetch ALL filtered rows (no pagination)
+      // Fetch ALL filtered rows (no pagination limit)
       const params = new URLSearchParams();
       params.set('page', '1');
-      params.set('pageSize', '10000');
+      params.set('pageSize', '50000');
+      params.set('export', 'true');
       if (sortBy) params.set('sortBy', sortBy);
       if (sortDir) params.set('sortDir', sortDir);
       if (debouncedSearch) params.set('search', debouncedSearch);
