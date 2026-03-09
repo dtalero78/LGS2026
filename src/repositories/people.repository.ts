@@ -218,6 +218,7 @@ class PeopleRepositoryClass extends BaseRepository {
     const row = await queryOne(
       `UPDATE "PEOPLE"
        SET "estadoInactivo" = true,
+           "estado" = 'On Hold',
            "fechaOnHold" = $1::timestamp with time zone,
            "fechaFinOnHold" = $2::timestamp with time zone,
            "onHoldCount" = COALESCE("onHoldCount", 0) + 1,
@@ -242,6 +243,7 @@ class PeopleRepositoryClass extends BaseRepository {
     const row = await queryOne(
       `UPDATE "PEOPLE"
        SET "estadoInactivo" = false,
+           "estado" = 'ACTIVA',
            "fechaOnHold" = NULL,
            "fechaFinOnHold" = NULL,
            "finalContrato" = $1::timestamp with time zone,

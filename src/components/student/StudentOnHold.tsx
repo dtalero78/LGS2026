@@ -9,6 +9,8 @@ interface StudentOnHoldProps {
   peopleId: string | null
   numeroId: string
   estadoInactivo: boolean
+  currentFechaOnHold?: string | null
+  currentFechaFinOnHold?: string | null
   onHoldCount?: number
   onHoldHistory?: OnHoldHistoryEntry[]
 }
@@ -18,12 +20,16 @@ export default function StudentOnHold({
   peopleId,
   numeroId,
   estadoInactivo: initialEstadoInactivo,
+  currentFechaOnHold,
+  currentFechaFinOnHold,
   onHoldCount = 0,
   onHoldHistory = []
 }: StudentOnHoldProps) {
   const [showModal, setShowModal] = useState(false)
   const [showOnHoldHistory, setShowOnHoldHistory] = useState(false)
-  const [isOnHold, setIsOnHold] = useState(initialEstadoInactivo)
+  // A student is truly on hold only if estadoInactivo AND has active OnHold dates
+  const hasActiveOnHold = initialEstadoInactivo && !!currentFechaOnHold
+  const [isOnHold, setIsOnHold] = useState(hasActiveOnHold)
   const [fechaOnHold, setFechaOnHold] = useState('')
   const [fechaFinOnHold, setFechaFinOnHold] = useState('')
   const [motivoOnHold, setMotivoOnHold] = useState('')
@@ -31,8 +37,8 @@ export default function StudentOnHold({
 
   // Sincronizar con el prop inicial
   useEffect(() => {
-    setIsOnHold(initialEstadoInactivo)
-  }, [initialEstadoInactivo])
+    setIsOnHold(initialEstadoInactivo && !!currentFechaOnHold)
+  }, [initialEstadoInactivo, currentFechaOnHold])
 
   // DEBUG: Log de props recibidos
   useEffect(() => {

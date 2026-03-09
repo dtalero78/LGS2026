@@ -229,6 +229,8 @@ export default function StudentContract({ student, contratoFinalizado = false }:
               peopleId={student.peopleId}
               numeroId={student.numeroId}
               estadoInactivo={student.estadoInactivo || false}
+              currentFechaOnHold={student.fechaOnHold}
+              currentFechaFinOnHold={student.fechaFinOnHold}
               onHoldCount={student.onHoldCount}
               onHoldHistory={student.onHoldHistory}
             />
