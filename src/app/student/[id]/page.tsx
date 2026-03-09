@@ -103,8 +103,8 @@ async function StudentContent({ studentId }: { studentId: string }) {
                   </span>
                 )}
               </div>
-              {/* OnHold Indicator - Hide if contract is finalized */}
-              {!contratoFinalizado && student.estadoInactivo && (
+              {/* OnHold Indicator - Only show if student has active OnHold dates */}
+              {!contratoFinalizado && student.estadoInactivo && student.fechaOnHold && (
                 <span className="badge badge-warning">
                   ⏸️ OnHold
                 </span>

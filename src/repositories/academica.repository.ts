@@ -92,7 +92,12 @@ class AcademicaRepositoryClass extends BaseRepository {
               p."referenciaDos", p."parentezcoRefDos", p."telefonoRefDos",
               a."_createdDate", a."_updatedDate", p."documentacion"
        FROM "ACADEMICA" a
-       LEFT JOIN "PEOPLE" p ON a."numeroId" = p."numeroId"
+       LEFT JOIN LATERAL (
+         SELECT * FROM "PEOPLE" p2
+         WHERE p2."numeroId" = a."numeroId"
+         ORDER BY CASE WHEN p2."tipoUsuario" = 'BENEFICIARIO' THEN 0 ELSE 1 END
+         LIMIT 1
+       ) p ON true
        WHERE a."_id" = $1`,
       [id]
     );
@@ -110,7 +115,12 @@ class AcademicaRepositoryClass extends BaseRepository {
               p."primerNombre", p."segundoNombre", p."primerApellido", p."segundoApellido",
               p."tipoUsuario", p."email", p."contrato"
        FROM "ACADEMICA" a
-       INNER JOIN "PEOPLE" p ON a."numeroId" = p."numeroId"
+       INNER JOIN LATERAL (
+         SELECT * FROM "PEOPLE" p2
+         WHERE p2."numeroId" = a."numeroId"
+         ORDER BY CASE WHEN p2."tipoUsuario" = 'BENEFICIARIO' THEN 0 ELSE 1 END
+         LIMIT 1
+       ) p ON true
        WHERE (LOWER(p."primerNombre") LIKE LOWER($1)
            OR LOWER(p."primerApellido") LIKE LOWER($1)
            OR a."numeroId" LIKE $1
