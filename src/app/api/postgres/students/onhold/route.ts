@@ -8,7 +8,7 @@ import { ValidationError } from '@/lib/errors';
  * Activate or deactivate OnHold status for a student.
  * When deactivating, automatically extends the contract by the paused days.
  */
-export const POST = handlerWithAuth(async (request, { session }) => {
+export const POST = handlerWithAuth(async (request, context, session) => {
   const body = await request.json();
 
   if (!body.studentId) throw new ValidationError('studentId is required');
