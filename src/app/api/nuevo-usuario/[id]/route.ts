@@ -1,7 +1,7 @@
 import 'server-only';
 import { handler, successResponse } from '@/lib/api-helpers';
 import { query, queryOne, queryMany } from '@/lib/postgres';
-import { NotFoundError, ValidationError, ConflictError } from '@/lib/errors';
+import { NotFoundError, ValidationError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 
 // One-time migration: ensure columns exist (idempotent, runs once per server start)
@@ -127,6 +127,20 @@ export const POST = handler(async (
   if (!email?.trim()) throw new ValidationError('Email/usuario es requerido');
   if (!clave?.trim()) throw new ValidationError('Clave es requerida');
 
+  // Normalize email: lowercase, trim spaces
+  const normalizedEmail = email.trim().toLowerCase();
+
+  // Validate no uppercase or spaces remain (defensive)
+  if (normalizedEmail !== normalizedEmail.replace(/\s/g, '')) {
+    throw new ValidationError('El email no debe contener espacios');
+  }
+
+  // Basic email format validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(normalizedEmail)) {
+    throw new ValidationError('El formato del email no es válido. Ejemplo: usuario@correo.com');
+  }
+
   // Get ACADEMICA record
   const student = await queryOne(
     `SELECT "_id", "numeroId", "primerNombre", "primerApellido", "celular",
@@ -146,9 +160,19 @@ export const POST = handler(async (
          "foto" = COALESCE($5, "foto"),
          "_updatedDate" = NOW()
      WHERE "_id" = $6`,
-    [detallesPersonales.trim(), hobbies.trim(), email.trim(), clave.trim(), foto || null, academicId]
+    [detallesPersonales.trim(), hobbies.trim(), normalizedEmail, clave.trim(), foto || null, academicId]
   );
   console.log(`✅ [NuevoUsuario] ACADEMICA actualizado para ${student.primerNombre} ${student.primerApellido}`);
+
+  // Create USUARIOS_ROLES entry so the student can log in to panel-estudiante
+  const nombreCompleto = [student.primerNombre, student.primerApellido].filter(Boolean).join(' ');
+  await query(
+    `INSERT INTO "USUARIOS_ROLES" ("email", "password", "nombre", "rol", "activo", "_createdDate", "_updatedDate")
+     VALUES ($1, $2, $3, 'ESTUDIANTE', true, NOW(), NOW())
+     ON CONFLICT ("email") DO NOTHING`,
+    [normalizedEmail, clave.trim(), nombreCompleto]
+  );
+  console.log(`✅ [NuevoUsuario] USUARIOS_ROLES creado para ${normalizedEmail} (ESTUDIANTE)`);
 
   // Create WELCOME booking if event selected
   let bookingCreated = false;

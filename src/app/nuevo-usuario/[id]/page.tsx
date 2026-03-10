@@ -143,8 +143,15 @@ export default function NuevoUsuarioPage() {
     // Client-side validation
     if (!detallesPersonales.trim()) { setFormError('Por favor escribe algo sobre ti'); return }
     if (!hobbies.trim()) { setFormError('Por favor escribe tus hobbies'); return }
-    if (!email.trim()) { setFormError('Por favor ingresa tu email o nombre de usuario'); return }
+    if (!email.trim()) { setFormError('Por favor ingresa tu email'); return }
     if (!clave.trim()) { setFormError('Por favor crea una clave'); return }
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email.trim().toLowerCase())) {
+      setFormError('El formato del email no es válido. Ejemplo: usuario@correo.com')
+      return
+    }
 
     // If nivel is WELCOME and no event selected and events are available
     if (student?.nivel === 'WELCOME' && !hasWelcomeBooking && welcomeEvents.length > 0 && !selectedEvent) {
@@ -160,7 +167,7 @@ export default function NuevoUsuarioPage() {
         body: JSON.stringify({
           detallesPersonales: detallesPersonales.trim(),
           hobbies: hobbies.trim(),
-          email: email.trim(),
+          email: email.trim().toLowerCase(),
           clave: clave.trim(),
           foto: fotoUrl || null,
           welcomeEventId: selectedEvent || null,
@@ -297,8 +304,9 @@ export default function NuevoUsuarioPage() {
             <input
               type="text"
               value={email}
-              onChange={e => setEmail(e.target.value)}
+              onChange={e => setEmail(e.target.value.toLowerCase())}
               placeholder="tu@email.com"
+              autoCapitalize="none"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
