@@ -169,7 +169,7 @@ export const POST = handler(async (
   await query(
     `INSERT INTO "USUARIOS_ROLES" ("email", "password", "nombre", "rol", "activo", "_createdDate", "_updatedDate")
      VALUES ($1, $2, $3, 'ESTUDIANTE', true, NOW(), NOW())
-     ON CONFLICT ("email") DO NOTHING`,
+     ON CONFLICT ("email") DO UPDATE SET "password" = $2, "nombre" = $3, "_updatedDate" = NOW()`,
     [normalizedEmail, clave.trim(), nombreCompleto]
   );
   console.log(`✅ [NuevoUsuario] USUARIOS_ROLES creado para ${normalizedEmail} (ESTUDIANTE)`);
