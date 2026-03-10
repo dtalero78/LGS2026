@@ -9,7 +9,7 @@ import { ids } from '@/lib/id-generator';
  *
  * Mark a step as completed (override) for a student.
  */
-export const POST = handlerWithAuth(async (request, { params, session }) => {
+export const POST = handlerWithAuth(async (request, { params }, session) => {
   const body = await request.json();
   const { step, completado, nivel: nivelFromBody } = body;
 

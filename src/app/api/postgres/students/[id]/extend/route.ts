@@ -7,7 +7,7 @@ import { ValidationError } from '@/lib/errors';
  *
  * Extend student's contract vigencia (finalContrato)
  */
-export const POST = handlerWithAuth(async (request, { params, session }) => {
+export const POST = handlerWithAuth(async (request, { params }, session) => {
   const body = await request.json();
   const { diasExtension, motivo } = body;
 
