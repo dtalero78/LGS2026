@@ -204,7 +204,7 @@ export async function gradeAnswers(
       tituloONivel: attempt.nivel,
       agendadoPor: 'SISTEMA',
       agendadoPorRol: 'SISTEMA',
-      origen: 'COMPLEMENTARIA',
+      origen: 'COMP',
       fechaAgendamiento: new Date().toISOString(),
     });
 
