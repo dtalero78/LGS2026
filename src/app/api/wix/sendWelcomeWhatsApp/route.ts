@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create welcome message (similar to line 1061 in FICHA ADMINISTRATIVO)
-    const message = `Hola ${nombre || ''} 👋:\n\n*¡Eres parte de Let's Go Speak!* 🎉 \n\nPara terminar tu registro y crear tu usuario sigue este enlace:\n\nhttps://www.lgsplataforma.com/nuevo-usuario/${beneficiarioId}\n\nSi tienes alguna pregunta, no dudes en contactarnos.\n\n¡Bienvenido a la familia LGS! 🚀`
+    const message = `Hola ${nombre || ''} 👋:\n\n*¡Eres parte de Let's Go Speak!* 🎉 \n\nPara terminar tu registro y crear tu usuario sigue este enlace:\n\nhttps://lgs-plataforma.com/nuevo-usuario/${beneficiarioId}\n\nSi tienes alguna pregunta, no dudes en contactarnos.\n\n¡Bienvenido a la familia LGS! 🚀`
 
     console.log('📤 Sending Welcome WhatsApp to:', formattedNumber)
 
