@@ -18,6 +18,8 @@ interface EnrollInput {
   agendadoPorRol?: string;
 }
 
+const ROLES_SIN_LIMITE_CAPACIDAD = ['COORDINADOR_ACADEMICO', 'SERVICIO_JEFE', 'SUPER_ADMIN', 'ADMIN', 'ADMINISTRACION_JEFE'];
+
 /**
  * Enroll multiple students in an event.
  * Checks capacity, creates bookings, and updates inscritos count.
@@ -31,7 +33,9 @@ export async function enrollStudents(input: EnrollInput) {
   const event = await CalendarioRepository.findByIdWithAdvisor(input.eventId);
   if (!event) throw new NotFoundError('Event', input.eventId);
 
+  const skipCapacity = ROLES_SIN_LIMITE_CAPACIDAD.includes(input.agendadoPorRol || '');
   if (
+    !skipCapacity &&
     event.limiteUsuarios &&
     event.limiteUsuarios > 0 &&
     event.inscritos >= event.limiteUsuarios
