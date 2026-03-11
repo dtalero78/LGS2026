@@ -237,7 +237,8 @@ function DblgsPage() {
 
   // ── Lookup in PEOPLE or ACADEMICA ─────────────────────────────
   const lookupInTable = useCallback((targetTable: string, row: any) => {
-    const lookupId = row.numeroId || row._id || '';
+    // Priority: numeroId → academicaId (USUARIOS_ROLES) → studentId/idEstudiante (BOOKINGS) → _id
+    const lookupId = row.numeroId || row.academicaId || row.studentId || row.idEstudiante || row._id || '';
     if (!lookupId) return;
     setSelectedTable(targetTable);
     setPage(1);
