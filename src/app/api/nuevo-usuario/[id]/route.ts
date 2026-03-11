@@ -166,11 +166,12 @@ export const POST = handler(async (
 
   // Create USUARIOS_ROLES entry so the student can log in to panel-estudiante
   const nombreCompleto = [student.primerNombre, student.primerApellido].filter(Boolean).join(' ');
+  const usuarioId = ids.person();
   await query(
-    `INSERT INTO "USUARIOS_ROLES" ("email", "password", "nombre", "rol", "activo", "_createdDate", "_updatedDate")
-     VALUES ($1, $2, $3, 'ESTUDIANTE', true, NOW(), NOW())
-     ON CONFLICT ("email") DO UPDATE SET "password" = $2, "nombre" = $3, "_updatedDate" = NOW()`,
-    [normalizedEmail, clave.trim(), nombreCompleto]
+    `INSERT INTO "USUARIOS_ROLES" ("_id", "email", "password", "nombre", "rol", "activo", "_createdDate", "_updatedDate")
+     VALUES ($1, $2, $3, $4, 'ESTUDIANTE', true, NOW(), NOW())
+     ON CONFLICT ("email") DO UPDATE SET "password" = $3, "nombre" = $4, "_updatedDate" = NOW()`,
+    [usuarioId, normalizedEmail, clave.trim(), nombreCompleto]
   );
   console.log(`✅ [NuevoUsuario] USUARIOS_ROLES creado para ${normalizedEmail} (ESTUDIANTE)`);
 
