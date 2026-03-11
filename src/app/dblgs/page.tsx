@@ -235,6 +235,25 @@ function DblgsPage() {
     setRenamingViewId(null);
   }, []);
 
+  // ── Lookup in PEOPLE or ACADEMICA ─────────────────────────────
+  const lookupInTable = useCallback((targetTable: string, row: any) => {
+    const lookupId = row.numeroId || row._id || '';
+    if (!lookupId) return;
+    setSelectedTable(targetTable);
+    setPage(1);
+    setSortBy(undefined);
+    setSortDir('asc');
+    setSearch(String(lookupId));
+    setDebouncedSearch(String(lookupId));
+    setFilters({});
+    setDebouncedFilters({});
+    setSelectedRows(new Set());
+    setEditingCell(null);
+    setNewRowData({});
+    setActiveViewId(null);
+    setRenamingViewId(null);
+  }, []);
+
   // ── Sort handler ────────────────────────────────────────────────
   const handleSort = useCallback((colName: string) => {
     if (sortBy === colName) {
@@ -778,6 +797,8 @@ function DblgsPage() {
                   </th>
                   {/* Row number */}
                   <th className="px-2 py-2 w-12 text-left text-xs font-medium text-gray-400 bg-gray-50 sticky left-10 z-20 border-r border-gray-200">#</th>
+                  {/* Lookup buttons header */}
+                  <th className="px-1 py-2 w-16 text-center text-xs font-medium text-gray-400 bg-gray-50 border-r border-gray-200">Lookup</th>
                   {columns.map(col => {
                     const badge = getTypeBadge(col.pgType);
                     const isSorted = sortBy === col.name;
@@ -808,6 +829,7 @@ function DblgsPage() {
                 <tr className="border-b border-gray-300 bg-gray-50">
                   <td className="px-2 py-1 sticky left-0 z-20 bg-gray-50 border-r border-gray-200" />
                   <td className="px-2 py-1 sticky left-10 z-20 bg-gray-50 border-r border-gray-200" />
+                  <td className="px-1 py-1 bg-gray-50 border-r border-gray-200" />
                   {columns.map(col => (
                     <td key={col.name} className="px-1 py-1 border-r border-gray-100">
                       <input
@@ -828,13 +850,13 @@ function DblgsPage() {
               <tbody className="bg-white">
                 {rowsLoading && rows.length === 0 ? (
                   <tr>
-                    <td colSpan={columns.length + 3} className="px-4 py-12 text-center text-gray-400">
+                    <td colSpan={columns.length + 4} className="px-4 py-12 text-center text-gray-400">
                       Cargando datos...
                     </td>
                   </tr>
                 ) : rows.length === 0 ? (
                   <tr>
-                    <td colSpan={columns.length + 3} className="px-4 py-12 text-center text-gray-400">
+                    <td colSpan={columns.length + 4} className="px-4 py-12 text-center text-gray-400">
                       No se encontraron registros
                     </td>
                   </tr>
@@ -859,6 +881,25 @@ function DblgsPage() {
                         {/* Row number */}
                         <td className="px-2 py-1 text-xs text-gray-400 sticky left-10 z-10 bg-white border-r border-gray-200">
                           {(page - 1) * pageSize + rowIdx + 1}
+                        </td>
+                        {/* Lookup buttons */}
+                        <td className="px-1 py-1 border-r border-gray-200">
+                          <div className="flex gap-0.5 justify-center">
+                            <button
+                              onClick={() => lookupInTable('PEOPLE', row)}
+                              className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors"
+                              title="Buscar en PEOPLE"
+                            >
+                              P
+                            </button>
+                            <button
+                              onClick={() => lookupInTable('ACADEMICA', row)}
+                              className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors"
+                              title="Buscar en ACADEMICA"
+                            >
+                              A
+                            </button>
+                          </div>
                         </td>
                         {/* Data cells */}
                         {columns.map(col => {
