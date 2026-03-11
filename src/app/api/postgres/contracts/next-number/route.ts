@@ -25,7 +25,8 @@ export const GET = handler(async (request) => {
   const result = await query(
     `SELECT MAX(CAST(SPLIT_PART("contrato", '-', 2) AS INTEGER)) AS max_num
      FROM "PEOPLE"
-     WHERE "contrato" LIKE $1`,
+     WHERE "contrato" LIKE $1
+       AND SPLIT_PART("contrato", '-', 2) ~ '^[0-9]+$'`,
     [patron]
   );
 
