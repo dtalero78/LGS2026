@@ -4,13 +4,44 @@ import { query } from '@/lib/postgres';
 import { ValidationError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 
-export const POST = handlerWithAuth(async (request) => {
-  const { contrato, titular, financial, beneficiarios, titularEsBeneficiario } = await request.json();
+const CODIGOS_PAIS: Record<string, string> = {
+  'Chile': '01',
+  'Colombia': '02',
+  'Ecuador': '03',
+  'Perú': '04',
+};
 
-  if (!contrato) throw new ValidationError('contrato is required');
+/** Generate next contract number server-side (atomic, avoids race conditions) */
+async function generateContractNumber(plataforma: string): Promise<string> {
+  const codigoPais = CODIGOS_PAIS[plataforma];
+  if (!codigoPais) throw new ValidationError(`País no válido: ${plataforma}`);
+
+  const anoActual = new Date().getFullYear().toString().slice(-2);
+  const patron = `${codigoPais}-%-${anoActual}`;
+
+  const result = await query(
+    `SELECT MAX(CAST(SPLIT_PART("contrato", '-', 2) AS INTEGER)) AS max_num
+     FROM "PEOPLE"
+     WHERE "contrato" LIKE $1
+       AND SPLIT_PART("contrato", '-', 2) ~ '^[0-9]+$'`,
+    [patron]
+  );
+
+  const maxNumero = result.rows[0]?.max_num || 9999;
+  const siguiente = (maxNumero + 1).toString().padStart(5, '0');
+  return `${codigoPais}-${siguiente}-${anoActual}`;
+}
+
+export const POST = handlerWithAuth(async (request) => {
+  const { titular, financial, beneficiarios, titularEsBeneficiario } = await request.json();
+
+  if (!titular?.plataforma) throw new ValidationError('plataforma is required');
   if (!titular?.numeroId || !titular?.primerNombre || !titular?.primerApellido) {
     throw new ValidationError('titular with numeroId, primerNombre, and primerApellido is required');
   }
+
+  // Generate contract number server-side to avoid race conditions
+  const contrato = await generateContractNumber(titular.plataforma);
 
   const created: any = { contrato, titular: null, beneficiarios: [] };
 
