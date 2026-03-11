@@ -543,6 +543,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
         },
         body: JSON.stringify({
           asistencia: selectedClass.asistencia,
+          asistio: selectedClass.asistencia,
           participacion: selectedClass.participacion,
           calificacion: selectedClass.calificacion,
           advisorAnotaciones: (selectedClass as any).advisorAnotaciones || '',
