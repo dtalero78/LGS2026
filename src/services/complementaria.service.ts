@@ -71,13 +71,15 @@ export async function checkEligibility(
     return { eligible: false, reason: 'Has agotado los 3 intentos permitidos', attemptsUsed, maxAttempts: MAX_ATTEMPTS };
   }
 
-  // Check session count for this step
+  // Check session count for this step (JOIN CALENDARIO for real step/nivel)
   const classes = await queryMany(
-    `SELECT "tipo", "step", "asistio", "asistencia", "participacion"
-     FROM "ACADEMICA_BOOKINGS"
-     WHERE ("idEstudiante" = $1 OR "studentId" = $1)
-       AND "nivel" = $2
-       AND ("cancelo" IS NULL OR "cancelo" = false)`,
+    `SELECT b."tipo", COALESCE(c."step", b."step") AS "step",
+            b."asistio", b."asistencia", b."participacion"
+     FROM "ACADEMICA_BOOKINGS" b
+     LEFT JOIN "CALENDARIO" c ON c."_id" = COALESCE(b."eventoId", b."idEvento")
+     WHERE (b."idEstudiante" = $1 OR b."studentId" = $1)
+       AND COALESCE(c."nivel", b."nivel") = $2
+       AND (b."cancelo" IS NULL OR b."cancelo" = false)`,
     [studentId, nivel]
   );
 
