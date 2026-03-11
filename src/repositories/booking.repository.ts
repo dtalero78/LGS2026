@@ -327,9 +327,9 @@ class BookingRepositoryClass extends BaseRepository {
   async getStudentAttendanceStats(studentId: string) {
     return queryOne(
       `SELECT
-        COUNT(*)::int as total,
+        COUNT(CASE WHEN "fechaEvento" < NOW() THEN 1 END)::int as total,
         COUNT(CASE WHEN "asistio" = true THEN 1 END)::int as asistencias,
-        COUNT(CASE WHEN "asistio" = false AND "cancelo" = false THEN 1 END)::int as ausencias,
+        COUNT(CASE WHEN "asistio" = false AND "cancelo" = false AND "fechaEvento" < NOW() THEN 1 END)::int as ausencias,
         COUNT(CASE WHEN "cancelo" = true THEN 1 END)::int as canceladas
        FROM "ACADEMICA_BOOKINGS"
        WHERE ("idEstudiante" = $1 OR "studentId" = $1)`,
