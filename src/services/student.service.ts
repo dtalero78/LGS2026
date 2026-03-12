@@ -174,7 +174,8 @@ async function isCurrentStepComplete(
     `SELECT "tipo", "step", "asistio", "asistencia", "participacion", "noAprobo"
      FROM "ACADEMICA_BOOKINGS"
      WHERE ("idEstudiante" = $1 OR "studentId" = $1)
-       AND "nivel" = $2`,
+       AND "nivel" = $2
+       AND ("cancelo" IS NULL OR "cancelo" = false)`,
     [studentId, nivel]
   );
 
