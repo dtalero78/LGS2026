@@ -261,11 +261,6 @@ export default function DailyAgenda({
                             <span className="font-medium text-sm">
                               {event.tituloONivel}
                             </span>
-                            {event.nombreEvento && (
-                              <span className="text-sm text-gray-600">
-                                - {event.nombreEvento}
-                              </span>
-                            )}
                           </div>
 
                           <div className="text-sm text-gray-600 space-y-1">

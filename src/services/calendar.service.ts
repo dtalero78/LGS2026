@@ -100,7 +100,7 @@ export async function createEvent(data: {
 
 const ALLOWED_EVENT_FIELDS = [
   'dia', 'hora', 'advisor', 'nivel', 'step', 'tipo', 'evento', 'titulo',
-  'nombreEvento', 'linkZoom', 'limiteUsuarios', 'club', 'observaciones',
+  'nombreEvento', 'tituloONivel', 'linkZoom', 'limiteUsuarios', 'club', 'observaciones',
 ];
 
 /**
@@ -109,6 +109,22 @@ const ALLOWED_EVENT_FIELDS = [
 export async function updateEvent(eventId: string, data: Record<string, any>) {
   const event = await CalendarioRepository.findById(eventId);
   if (!event) throw new NotFoundError('Event', eventId);
+
+  // Derive nivel, step and tituloONivel from the modal data
+  if (data.tituloONivel && !data.nivel) {
+    data.nivel = data.tituloONivel;
+  }
+  if (data.nombreEvento && !data.step) {
+    // nombreEvento can be "Step 31" or "TRAINING - Step 12"
+    const stepMatch = data.nombreEvento.match(/Step\s*(\d+)/i);
+    if (stepMatch) {
+      data.step = `Step ${stepMatch[1]}`;
+    }
+  }
+  // Rebuild tituloONivel as "NIVEL - nombreEvento" for display consistency
+  if (data.tituloONivel && data.nombreEvento) {
+    data.tituloONivel = `${data.tituloONivel} - ${data.nombreEvento}`.trim();
+  }
 
   const updated = await CalendarioRepository.updateEvent(eventId, data, ALLOWED_EVENT_FIELDS);
   if (!updated) throw new ValidationError('No valid fields to update');
