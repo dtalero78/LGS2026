@@ -72,21 +72,31 @@ function getClassType(c: any): 'SESSION' | 'CLUB' | 'OTHER' {
  * Generate the full progress report for a student.
  */
 export async function generateReport(studentId: string) {
-  // Get student info (try PEOPLE first, fallback to ACADEMICA)
+  // Get student info — ACADEMICA is source of truth for nivel/step
   let student: any = await PeopleRepository.findByIdOrNumeroId(studentId);
-  // overrideStudentId: the PEOPLE _id used when writing STEP_OVERRIDES
   let overrideStudentId: string;
 
   if (!student) {
     student = await AcademicaRepository.findByAnyId(studentId);
     if (!student) throw new NotFoundError('Student', studentId);
-    // Overrides are stored with PEOPLE _id — resolve it via numeroId
     const peopleRecord = student.numeroId
       ? await PeopleRepository.findByIdOrNumeroId(student.numeroId)
       : null;
     overrideStudentId = peopleRecord?._id ?? student._id;
   } else {
     overrideStudentId = student._id;
+    // ACADEMICA is the source of truth for nivel/step (PEOPLE may be stale from Wix migration)
+    const academica = student.numeroId
+      ? await AcademicaRepository.findByAnyId(student.numeroId)
+      : null;
+    if (academica) {
+      student.nivel = academica.nivel ?? student.nivel;
+      student.step = academica.step ?? student.step;
+      student.nivelParalelo = academica.nivelParalelo ?? student.nivelParalelo;
+      student.stepParalelo = academica.stepParalelo ?? student.stepParalelo;
+      // Use ACADEMICA _id for booking queries
+      student._id = academica._id;
+    }
   }
 
   const nivelPrincipal = student.nivel;
