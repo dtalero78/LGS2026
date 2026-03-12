@@ -45,7 +45,7 @@ export default function AdvisorComments({ data, isLoading }: AdvisorCommentsProp
           <div className="space-y-3">
             {paged.map((c: any) => {
               const date = c.fechaEvento ? new Date(c.fechaEvento) : null
-              const comment = c.advisorAnotaciones || c.comentarios || ''
+              const comment = c.comentarios || ''
 
               return (
                 <div key={c._id} className="p-3 bg-gray-50 rounded-lg">
