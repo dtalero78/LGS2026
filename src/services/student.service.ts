@@ -212,13 +212,29 @@ export async function autoAdvanceStep(bookingId: string) {
   const bookingStep = booking.step;
 
   if (!studentId || !bookingNivel || !bookingStep) return null;
-  if (bookingNivel === 'ESS' || bookingStep === 'WELCOME') return null;
-  if (extractStepNum(bookingStep) === null) return null;
+  if (bookingNivel === 'ESS') return null;
 
   // Get student's current nivel/step
   let student: any = await AcademicaRepository.findByAnyId(studentId);
   if (!student) student = await PeopleRepository.findByIdOrNumeroId(studentId);
   if (!student) return null;
+
+  // ─── WELCOME → BN1 Step 1: promote on attendance ───
+  if (bookingStep === 'WELCOME' || bookingNivel === 'WELCOME') {
+    // Only promote if student is currently in WELCOME
+    if (student.nivel !== 'WELCOME' && student.step !== 'WELCOME') return null;
+    // Only promote if the booking has attendance marked
+    if (!booking.asistio && !booking.asistencia) return null;
+    console.log(`🎓 [AutoAdvance] WELCOME → BN1 Step 1 for student ${studentId}`);
+    await changeStep(studentId, 'Step 1');
+    return {
+      advanced: true,
+      from: { nivel: 'WELCOME', step: 'WELCOME' },
+      to: { nivel: 'BN1', step: 'Step 1' },
+    };
+  }
+
+  if (extractStepNum(bookingStep) === null) return null;
 
   // Only advance if the booking is for the student's CURRENT step
   if (student.nivel !== bookingNivel || student.step !== bookingStep) return null;

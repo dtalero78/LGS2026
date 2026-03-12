@@ -982,12 +982,13 @@ function CrearContratoContent() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Celular *</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Celular * ({getPhonePrefix()})</label>
                           <input
                             type="tel"
                             value={beneficiario.celular}
                             onChange={(e) => updateBeneficiario(index, 'celular', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                            placeholder="Número sin prefijo"
                           />
                         </div>
                       </div>
