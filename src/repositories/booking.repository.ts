@@ -240,7 +240,8 @@ class BookingRepositoryClass extends BaseRepository {
         COUNT(CASE WHEN b."asistio" = false THEN 1 END) as "ausencias",
         COUNT(CASE WHEN b."asistio" IS NULL THEN 1 END) as "pendientes"
       FROM "ACADEMICA_BOOKINGS" b
-      WHERE b."eventoId" = ANY($1::text[]) OR b."idEvento" = ANY($1::text[])
+      WHERE (b."eventoId" = ANY($1::text[]) OR b."idEvento" = ANY($1::text[]))
+        AND (b."cancelo" IS NULL OR b."cancelo" = false)
       GROUP BY COALESCE(b."eventoId", b."idEvento")`,
       [eventIds]
     );
