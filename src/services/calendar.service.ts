@@ -112,6 +112,19 @@ export async function updateEvent(eventId: string, data: Record<string, any>) {
 
   const updated = await CalendarioRepository.updateEvent(eventId, data, ALLOWED_EVENT_FIELDS);
   if (!updated) throw new ValidationError('No valid fields to update');
+
+  // Propagate advisor and linkZoom changes to existing bookings
+  if (data.advisor && data.advisor !== event.advisor) {
+    await BookingRepository.updateByEventId(eventId, {
+      advisor: data.advisor,
+      linkZoom: data.linkZoom || updated.linkZoom || null,
+    });
+  } else if (data.linkZoom && data.linkZoom !== event.linkZoom) {
+    await BookingRepository.updateByEventId(eventId, {
+      linkZoom: data.linkZoom,
+    });
+  }
+
   return updated;
 }
 

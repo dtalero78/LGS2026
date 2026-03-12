@@ -210,6 +210,23 @@ class BookingRepositoryClass extends BaseRepository {
   }
 
   /**
+   * Update fields on all bookings for an event (e.g. when advisor changes)
+   */
+  async updateByEventId(eventId: string, fields: Record<string, any>) {
+    const keys = Object.keys(fields).filter(k => fields[k] !== undefined);
+    if (keys.length === 0) return [];
+    const setClauses = keys.map((k, i) => `"${k}" = $${i + 2}`);
+    const values = keys.map(k => fields[k]);
+    const result = await query(
+      `UPDATE "ACADEMICA_BOOKINGS" SET ${setClauses.join(', ')}, "_updatedDate" = NOW()
+       WHERE "eventoId" = $1 OR "idEvento" = $1
+       RETURNING "_id"`,
+      [eventId, ...values]
+    );
+    return result.rows;
+  }
+
+  /**
    * Get booking counts for multiple events in a single query
    */
   async getBatchCounts(eventIds: string[]) {
