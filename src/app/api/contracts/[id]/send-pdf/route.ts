@@ -44,15 +44,23 @@ export const POST = handler(async (_request, { params }) => {
   }
   if (!templateRow?.template) throw new NotFoundError('ContractTemplate', titular.plataforma);
 
-  // 3. Fill template with data (full contract text)
+  // 3. Build consent data if available
+  const consentRaw = titular.consentimientoDeclarativo;
+  const consentObj = typeof consentRaw === 'string' ? JSON.parse(consentRaw) : consentRaw;
+  const consentData = consentObj?.aceptado || consentObj?.declaracionAceptada
+    ? { hasConsent: true, consent: consentObj, hash: titular.hashConsentimiento }
+    : { hasConsent: false };
+
+  // 4. Fill template with data (full contract text)
   const contractText = fillContractTemplate(
     templateRow.template,
     titular,
     beneficiarios,
-    financial
+    financial,
+    consentData
   );
 
-  // 4. Wrap in HTML for PDF generation
+  // 5. Wrap in HTML for PDF generation
   const htmlContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -72,10 +80,10 @@ export const POST = handler(async (_request, { params }) => {
     }
   </style>
 </head>
-<body>${contractText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</body>
+<body>${contractText}</body>
 </html>`;
 
-  // 5. Generate PDF with API2PDF (HTML mode — no URL dependency)
+  // 6. Generate PDF with API2PDF (HTML mode — no URL dependency)
   const pdfRes = await fetch('https://v2018.api2pdf.com/chrome/html', {
     method: 'POST',
     headers: {
@@ -100,14 +108,14 @@ export const POST = handler(async (_request, { params }) => {
 
   const tempPdfUrl: string = pdfData.pdf;
 
-  // 6. Upload PDF to Drive via bsl-utilidades in parallel with WhatsApp send
+  // 7. Upload PDF to Drive via bsl-utilidades in parallel with WhatsApp send
   const uploadPromise = fetch(BSL_UPLOAD_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ pdfUrl: tempPdfUrl, documento: titularId, empresa: 'LGS' }),
   }).then(r => r.json()).catch(() => ({}));
 
-  // 7. Send PDF via Whapi using the API2PDF direct URL (clean S3 link, no redirects)
+  // 8. Send PDF via Whapi using the API2PDF direct URL (clean S3 link, no redirects)
   const phone = titular.celular.toString().replace(/\D/g, '');
   // Filename: primerNombre + primerApellido + numeroId
   const nameParts = [titular.primerNombre, titular.primerApellido, titular.numeroId].filter(Boolean);
