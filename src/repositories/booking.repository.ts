@@ -44,7 +44,8 @@ class BookingRepositoryClass extends BaseRepository {
   async findByEventId(eventId: string) {
     return queryMany(
       `SELECT * FROM "ACADEMICA_BOOKINGS"
-       WHERE "eventoId" = $1 OR "idEvento" = $1
+       WHERE ("eventoId" = $1 OR "idEvento" = $1)
+         AND ("cancelo" IS NULL OR "cancelo" = false)
        ORDER BY "primerApellido", "primerNombre"`,
       [eventId]
     );
@@ -77,7 +78,8 @@ class BookingRepositoryClass extends BaseRepository {
        FROM "ACADEMICA_BOOKINGS" b
        LEFT JOIN "ACADEMICA" a ON b."idEstudiante" = a."_id"
        LEFT JOIN "PEOPLE" p ON a."numeroId" = p."numeroId"
-       WHERE b."eventoId" = $1 OR b."idEvento" = $1
+       WHERE (b."eventoId" = $1 OR b."idEvento" = $1)
+         AND (b."cancelo" IS NULL OR b."cancelo" = false)
        ORDER BY b."_id", b."primerApellido", b."primerNombre"`,
       [eventId]
     );
