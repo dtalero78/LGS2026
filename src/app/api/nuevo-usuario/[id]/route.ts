@@ -208,6 +208,7 @@ export const POST = handler(async (
         bookingCreated = false;
       } else {
         bookingId = ids.booking();
+        const eventType = event.tipo || event.evento || 'WELCOME';
         await query(
           `INSERT INTO "ACADEMICA_BOOKINGS" (
             "_id", "eventoId", "idEvento", "studentId", "idEstudiante",
@@ -218,29 +219,33 @@ export const POST = handler(async (
             "agendadoPor", "origen",
             "_createdDate", "_updatedDate"
           ) VALUES (
-            $1, $2, $2, $3, $3,
-            $4, $5,
-            $6, $7, $8, $9, $9, $10,
-            $11, $11, $12, $13, $14,
+            $1, $2, $3, $4, $5,
+            $6, $7,
+            $8, $9, $10, $11, $12, $13,
+            $14, $15, $16, $17, $18,
             false, false, false, false, false,
             'ESTUDIANTE', 'POSTGRES',
             NOW(), NOW()
           )`,
           [
             bookingId,
-            welcomeEventId,
-            academicId,
-            student.primerNombre,
-            student.primerApellido,
-            student.nivel || 'WELCOME',
-            student.step || 'WELCOME',
-            event.advisor || null,
-            event.dia,
-            event.hora || null,
-            event.tipo || event.evento || 'WELCOME',
-            event.linkZoom || null,
-            event.nombreEvento || event.titulo || 'WELCOME',
-            event.tituloONivel || null,
+            welcomeEventId,       // $2 eventoId
+            welcomeEventId,       // $3 idEvento
+            academicId,           // $4 studentId
+            academicId,           // $5 idEstudiante
+            student.primerNombre, // $6
+            student.primerApellido, // $7
+            student.nivel || 'WELCOME', // $8
+            student.step || 'WELCOME',  // $9
+            event.advisor || null,      // $10
+            event.dia,                  // $11 fecha
+            event.dia,                  // $12 fechaEvento
+            event.hora || null,         // $13
+            eventType,                  // $14 tipo
+            eventType,                  // $15 tipoEvento
+            event.linkZoom || null,     // $16
+            event.nombreEvento || event.titulo || 'WELCOME', // $17
+            event.tituloONivel || null, // $18
           ]
         );
 
