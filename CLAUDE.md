@@ -197,7 +197,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 145. Historial completo de clases con detalles
 146. Material de estudio por nivel/step actual
 147. Comentarios de advisors (anotaciones y evaluaciones)
-148. Próxima clase destacada (card grande con fecha, advisor, Zoom link)
+148. Próxima clase destacada (card grande con fecha, advisor, Zoom link). Muestra "---" cuando no hay evento agendado (no muestra el nivel/step del estudiante)
 149. Actividades Complementarias (AI quiz): estudiantes con 1 sesión exitosa en un step normal pueden tomar un quiz de 10 preguntas generado por OpenAI (gpt-4o-mini). ≥80% para aprobar, máximo 3 intentos. Al aprobar se crea booking COMPLEMENTARIA y se ejecuta auto-promoción
 150. Verificación de contrato expirado al login: al cargar el panel, si `finalContrato < hoy` se inactiva automáticamente al estudiante y su titular
 151. Auto-reactivación de OnHold al login: al cargar el panel, si `fechaFinOnHold < hoy` se desactiva OnHold automáticamente, se extiende el contrato por los días pausados y se crea entrada en extensionHistory
@@ -493,6 +493,22 @@ OPENAI_API_KEY=openai_api_key_for_complementaria
 - Do not install `@hookform/resolvers` - causes peer dependency conflicts
 - Only Zod schemas are supported
 
+### Duplicate PEOPLE Records y Login
+- Algunos estudiantes tienen registros duplicados en PEOPLE (uno como BENEFICIARIO, otro como TITULAR) con el mismo `numeroId`
+- **Login**: `resolveStudentFromSession()` en `panel-estudiante.service.ts` prioriza BENEFICIARIO sobre TITULAR cuando comparten email, ya que el panel estudiante es para beneficiarios
+- **ACADEMICA-PEOPLE JOIN**: `student.service.ts` prioriza BENEFICIARIO sobre TITULAR cuando hay duplicados con el mismo `numeroId` (ORDER BY tipoUsuario, BENEFICIARIO primero)
+- **Bookings duplicados**: `student-booking.service.ts` valida contra TODOS los `_id` del estudiante en PEOPLE para evitar bookings duplicados cuando hay registros duplicados
+
+### OnHold Edge Cases
+- La desactivación de OnHold distingue entre "real OnHold" (tiene fechaOnHold) y otros estados inactivos (estadoInactivo=true sin fechaOnHold)
+- Solo limpia campos de OnHold y extiende contrato si realmente estaba en OnHold
+- La reactivación automática al login del estudiante replica la misma lógica que `contractService.deactivateOnHold()`
+
+### Session Detail (Evaluación)
+- Al seleccionar un estudiante en el detalle de sesión (`/sesion/[id]`), se cargan los datos de evaluación previamente guardados (asistencia, participación, calificación, anotaciones, comentarios)
+- El cache de inscritos se invalida correctamente al enrollar/desenrollar estudiantes
+- El endpoint de grading (`/api/postgres/events/[id]/grade`) funciona para eventos individuales
+
 ### Sistema de Comentarios
 - Los comentarios de personas/titulares están en `PEOPLE.comentarios` (JSONB array), **no** en una tabla `COMENTARIOS` separada
 - La tabla `COMENTARIOS` no existe en producción; `comments.repository.ts` fue eliminado
@@ -504,6 +520,15 @@ OPENAI_API_KEY=openai_api_key_for_complementaria
 - El tipo de evento en datos Wix se almacena en `tipoEvento` (nueva: columna `tipo` en CALENDARIO)
 - Las queries de welcome sessions usan `COALESCE(b."eventoId", b."idEvento")` y `COALESCE(c."tipo", b."tipoEvento")` para soportar ambos formatos
 - Al crear nuevos bookings desde el admin, usar solo `eventoId` (sin `numeroId`, `celular`, `plataforma` que no existen en ACADEMICA_BOOKINGS)
+
+### CALENDARIO JOIN para Step/Nivel Correcto en Bookings
+- **Problema**: Los bookings almacenan el step del estudiante al momento de agendar, NO el step real del evento. Si un estudiante en Step 16 agenda una sesión de Step 17, el booking guarda "Step 16".
+- **Solución**: Todas las queries de bookings hacen `LEFT JOIN "CALENDARIO" c ON c."_id" = COALESCE(b."eventoId", b."idEvento")` y usan `COALESCE(c."step", b."step")` / `COALESCE(c."nivel", b."nivel")` para preferir el step/nivel del evento.
+- **Archivos afectados**:
+  - `booking.repository.ts` → `findByStudentId()` (historial del estudiante)
+  - `progress.service.ts` → query de `allClasses` (diagnóstico "¿Cómo voy?")
+  - `student-booking.service.ts` → `bookEvent()` ahora guarda el step del evento, no el del estudiante
+- **Historial de CLUBs**: En el panel estudiante, la columna Step muestra el nombre completo del step (ej: "TRAINING - Step 17") en vez de solo "TRAINING"
 
 ### WhatsApp/OTP Issues
 - OTP store is in-memory: OTPs are lost on server restart
@@ -1141,7 +1166,8 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
 Students who have 1 successful session on a normal step (need 2) can take an AI-generated quiz to substitute the missing session. Uses OpenAI gpt-4o-mini to generate and grade questions based on `NIVELES.contenido`.
 
 ### Rules
-- **Eligibility**: 1 exitosa session on a non-jump step, not already completed, no override
+- **Eligibility**: 1 exitosa session on a non-jump step, not already completed, no override, **AND no successful session this week (Mon-Sun)** for that step
+- **Week restriction**: If the student attended a successful session for that step during the current week (Monday to Sunday), complementaria is NOT offered. This prevents students from evading regular sessions when they still have time to book another one that week.
 - **Questions**: 10 per attempt (4 multiple choice, 1 true/false, 2 open-ended, 2 multiple choice, 1 any)
 - **Pass threshold**: ≥80%
 - **Max attempts**: 3 persistent attempts per step (stored in `COMPLEMENTARIA_ATTEMPTS` table)
@@ -1391,6 +1417,7 @@ ESS es un nivel **paralelo y opcional** que NO bloquea el avance en los niveles 
 - Usa solo `nivel` (nivel principal) para generar el diagnóstico
 - **EXCLUYE** explícitamente ESS y WELCOME del diagnóstico de steps
 - Incluye todas las clases (incluyendo ESS) en estadísticas globales y "Clases por Tipo"
+- **JOIN con CALENDARIO**: La query de clases usa `LEFT JOIN "CALENDARIO"` con `COALESCE(c."step", b."step")` para mostrar el step real del evento, no el step que tenía el estudiante al agendar
 
 ##### Lógica de completitud de Steps
 
@@ -1399,10 +1426,11 @@ ESS es un nivel **paralelo y opcional** que NO bloquea el avance en los niveles 
 - Una clase es "exitosa" si `asistio === true` OR `asistencia === true` OR `participacion === true`
 - Mensajes diagnósticos específicos según lo que falta:
   - `sesExitosas >= 2, clubs === 0` → "Falta un TRAINING SESSION"
-  - `sesExitosas === 1, clubs === 0` → "Falta una sesión (¿quieres realizar la actividad...)"
-  - `sesExitosas === 1, clubs >= 1` → "Falta una sesión para terminar. Realiza la prueba escrita..."
+  - `sesExitosas === 1, clubs === 0` → "Falta una sesión."
+  - `sesExitosas === 1, clubs >= 1` → "Falta una sesión para terminar."
   - `sesExitosas === 0, clubs >= 1` → "Faltan dos sesiones"
   - `sesExitosas === 0, clubs === 0` → "Faltan dos sesiones y un TRAINING SESSION"
+- Si `complementariaEligible` es true, se agrega al mensaje: " Puedes realizar una actividad complementaria."
 
 **2. Jump Steps (5, 10, 15, 20, 25, 30, 35, 40, 45) — múltiplos de 5**
 - Requiere **1 clase registrada** en el step + `noAprobo !== true`
@@ -1502,3 +1530,33 @@ export interface Person {
 - **ESS Step 0 especial**: Sigue usando lógica de 5 semanas para aprobación automática
 - **Campos opcionales**: `nivelParalelo` y `stepParalelo` son nullable en PostgreSQL
 - **Jump Steps**: Funcionan igual en niveles paralelos y principales
+
+## Recent Changes (March 2026)
+
+| Commit | Description |
+|---|---|
+| `0868616` | Progress report uses CALENDARIO JOIN for correct step counts, complementaria restricted by week (Mon-Sun), Next Session card shows "---" when no event |
+| `5d11520` | Student historial shows event's step from CALENDARIO instead of booking's stored step |
+| `84f55cb` | Student booking saves event's step (from CALENDARIO) instead of student's current step |
+| `5111cae` | ACADEMICA-PEOPLE JOIN prefers BENEFICIARIO over TITULAR when duplicate numeroId exists |
+| `f96fd2e` | Student login resolves to BENEFICIARIO instead of TITULAR when they share the same email |
+| `1e087f8` | OnHold deactivation properly clears estado and distinguishes real OnHold from other inactive states |
+| `431e4a2` | Load saved evaluation data when selecting student in session detail |
+| `fc319a0` | Fix stale inscritos cache, missing student info in event modal, and session grading endpoint |
+| `f2e8869` | Prevent duplicate bookings caused by duplicate PEOPLE records |
+| `02a8a8c` | Calendar ordering by creation date, timezone-aware booking, editable login password, email priority fix |
+| `ea3b9d6` | Truncate origen value for complementaria bookings (varchar(10) limit) |
+| `9daa60e` | Correct session parameter destructuring in onhold route |
+| `afa5cdb` | Correct session parameter destructuring in extend and step-override routes |
+| `07374d7` | Skip capacity limit for privileged roles and sync Role enum with DB |
+| `a67a5ad` | Auto-create USUARIOS_ROLES entry on student registration (`/nuevo-usuario/[id]`) + email validation (lowercase, regex) |
+| `d8e3e62` | Update welcome WhatsApp link to new platform domain (`lgs-plataforma.com`) |
+| `e1745e0` | Sync USUARIOS_ROLES password on student registration (ON CONFLICT DO UPDATE instead of DO NOTHING) |
+| `e6b92f0` | Sync `asistio` field when saving attendance from student class detail modal |
+| `3fae770` | Exclude future events from absence/total counts in student attendance stats |
+| `f21e1c2` | Use CALENDARIO JOIN in complementaria eligibility to match progress query |
+| `028a229` | Add PEOPLE/ACADEMICA lookup buttons (P/A) to dblgs table rows |
+| `300ae57` | Improve dblgs lookup to resolve across tables via academicaId, studentId, idEstudiante |
+| `9266622` | Handle non-numeric contract numbers in next-number endpoint (e.g. 10182A) |
+| `fc5466e` | Add missing `_id` to USUARIOS_ROLES INSERT in nuevo-usuario registration |
+| `742e54f` | Generate contract number server-side to prevent duplicates from race conditions |

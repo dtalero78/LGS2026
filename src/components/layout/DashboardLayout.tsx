@@ -53,6 +53,7 @@ const getNavigation = (userEmail: string) => [
     icon: UsersIcon,
     children: [
       { name: 'Crear Contrato', href: '/dashboard/comercial/crear-contrato' },
+      { name: 'Subir Lote', href: '/subir-lote' },
     ],
   },
   {
@@ -151,6 +152,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       ComercialPermission.ENVIAR_PDF,
       ComercialPermission.DESCARGAR,
       ComercialPermission.APROBACION_AUTONOMA,
+    ],
+    '/subir-lote': [
+      ComercialPermission.MODIFICAR_CONTRATO,
     ],
     // Aprobación
     '/dashboard/aprobacion': [
