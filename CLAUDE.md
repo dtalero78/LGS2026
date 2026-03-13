@@ -208,13 +208,23 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 154. Detalle de contrato admin con edición inline por sección (titular, referencias, beneficiarios, financiero)
 155. Vista previa de contrato renderizado en modal
 
+### Subir Lote (Importación Masiva de Personas)
+156. Carga de archivo CSV con drag & drop para crear/actualizar registros en PEOPLE
+157. Parseo client-side de CSV con aliases flexibles de columnas (ej: "Documento"→"numeroId", "Nombres"→"primerNombre", "Cédula"→"numeroId")
+158. Vista previa de datos parseados con tabla editable inline antes de importar
+159. Validación de campos obligatorios (numeroId, primerNombre, primerApellido) con resaltado visual
+160. UPSERT: si existe la combinación (numeroId + tipoUsuario), actualiza en vez de duplicar
+161. Soporte de formatos de fecha YYYY-MM-DD y DD/MM/YYYY
+162. Máximo 5000 registros por lote, reporte de éxitos/fallos/errores
+163. Acceso restringido a SUPER_ADMIN únicamente
+
 ### Visor de Base de Datos (dblgs)
-156. Herramienta de debug para ver tablas de PostgreSQL (solo SUPER_ADMIN/ADMIN)
-157. Lista de tablas con schema y conteo de registros
-158. Lectura paginada con ordenamiento y filtros dinámicos
-159. Edición de celdas individuales con coerción de tipos
-160. Creación de registros con auto-generación de _id
-161. Eliminación masiva de registros (máximo 100)
+164. Herramienta de debug para ver tablas de PostgreSQL (solo SUPER_ADMIN/ADMIN)
+165. Lista de tablas con schema y conteo de registros
+166. Lectura paginada con ordenamiento y filtros dinámicos
+167. Edición de celdas individuales con coerción de tipos
+168. Creación de registros con auto-generación de _id
+169. Eliminación masiva de registros (máximo 100)
 
 ### Caché y Rendimiento
 162. Caché client-side en localStorage con TTL para calendario (5 min, keys por mes)
@@ -273,7 +283,7 @@ src/
 │   │   ├── students/            Perfil, academic, step, toggle-status, onhold, extend, progress, contract
 │   │   ├── calendar/            Eventos del calendario, CRUD
 │   │   ├── events/              Eventos, bookings, inscripciones, batch-counts, welcome, filtered, sessions
-│   │   ├── people/              PEOPLE CRUD, comments, beneficiarios-sin-registro
+│   │   ├── people/              PEOPLE CRUD, comments, beneficiarios-sin-registro, bulk-import (CSV UPSERT)
 │   │   ├── advisors/            Lista, stats, events, by-email, name, create (público)
 │   │   ├── search/              Búsqueda unificada (PEOPLE + ACADEMICA)
 │   │   ├── contracts/           Contratos, búsqueda, template, next-number, detalle editable
@@ -1321,7 +1331,7 @@ interface ConsentData {
 - Consent hashed with SHA-256 for tamper detection
 - Cron jobs require CRON_SECRET header for authentication
 
-### Pages and Routes Summary (24 pages)
+### Pages and Routes Summary (25 pages)
 | Page | Route | Access |
 |---|---|---|
 | Login | `/login` | Public |
@@ -1348,6 +1358,7 @@ interface ConsentData {
 | Panel Advisor | `/panel-advisor` | ADVISOR role |
 | Panel Estudiante | `/panel-estudiante` | ESTUDIANTE role |
 | Actividad Complementaria | `/panel-estudiante/actividades-complementarias` | ESTUDIANTE role |
+| Subir Lote | `/subir-lote` | SUPER_ADMIN only |
 | DB Viewer | `/dblgs` | SUPER_ADMIN/ADMIN only |
 
 ## ESS (English Speaking Sessions) como Nivel Paralelo
@@ -1560,3 +1571,16 @@ export interface Person {
 | `9266622` | Handle non-numeric contract numbers in next-number endpoint (e.g. 10182A) |
 | `fc5466e` | Add missing `_id` to USUARIOS_ROLES INSERT in nuevo-usuario registration |
 | `742e54f` | Generate contract number server-side to prevent duplicates from race conditions |
+| `aa16e45` | Include consent data in PDF generation and remove HTML escaping |
+| `521e092` | Use separate SQL parameters in nuevo-usuario booking INSERT to avoid type inference errors |
+| `273869e` | Auto-promote WELCOME → BN1 Step 1 on attendance + show phone prefix for beneficiary |
+| `284c413` | Show only student-facing comments in panel, not advisor internal notes |
+| `e79eea3` | Propagate advisor and linkZoom changes to existing bookings when event is updated |
+| `a674b92` | Exclude cancelled bookings from event detail modal list and counts |
+| `a90642a` | Exclude cancelled bookings from batch counts (Inscritos badge in calendar) |
+| `65d08f5` | Sync nivel/step/tituloONivel on event edit and show only tituloONivel in agenda card |
+| `b41f91d` | Exclude cancelled bookings from step completion check to prevent incorrect promotions |
+| `4199975` | Add admin endpoint to sync PEOPLE nivel/step from ACADEMICA (massive sync) |
+| `ffca55e` | Progress report reads nivel/step from ACADEMICA instead of PEOPLE |
+| `20b81c4` | Add bulk CSV upload page for PEOPLE records (`/subir-lote`) with UPSERT API and sidebar link |
+| `b929d2f` | Restrict Subir Lote sidebar button to SUPER_ADMIN only |
