@@ -60,6 +60,26 @@ function persistViews(views: SavedView[]) {
   try { localStorage.setItem(VIEWS_STORAGE_KEY, JSON.stringify(views)); } catch {}
 }
 
+// ── Session state persistence (table + active view) ───────────────
+
+const SESSION_KEY = 'dblgs-session';
+
+interface DblgsSession {
+  table: string | null;
+  activeViewId: string | null;
+}
+
+function loadSession(): DblgsSession {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    return raw ? JSON.parse(raw) : { table: null, activeViewId: null };
+  } catch { return { table: null, activeViewId: null }; }
+}
+
+function persistSession(session: DblgsSession) {
+  try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch {}
+}
+
 // ── Helpers ────────────────────────────────────────────────────────
 
 function getTypeBadge(pgType: string): { label: string; className: string } {
@@ -153,7 +173,8 @@ function DblgsPage() {
   }, [session, status, router]);
 
   // ── State ───────────────────────────────────────────────────────
-  const [selectedTable, setSelectedTable] = useState<string | null>(null);
+  const restoredSession = typeof window !== 'undefined' ? loadSession() : { table: null, activeViewId: null };
+  const [selectedTable, setSelectedTable] = useState<string | null>(restoredSession.table);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [sortBy, setSortBy] = useState<string | undefined>(undefined);
@@ -184,8 +205,29 @@ function DblgsPage() {
   const [viewModalSortDir, setViewModalSortDir] = useState<'asc' | 'desc'>('asc');
   const [editingViewId, setEditingViewId] = useState<string | null>(null); // null = creating new
 
-  // Load saved views from localStorage on mount
-  useEffect(() => { setSavedViews(loadViews()); }, []);
+  // Load saved views from localStorage on mount + restore active view
+  useEffect(() => {
+    const views = loadViews();
+    setSavedViews(views);
+    const session = loadSession();
+    if (session.activeViewId && session.table) {
+      const view = views.find(v => v.id === session.activeViewId && v.table === session.table);
+      if (view) {
+        setFilters(view.filters);
+        setDebouncedFilters(view.filters);
+        setSearch(view.search);
+        setDebouncedSearch(view.search);
+        if (view.sortBy) setSortBy(view.sortBy);
+        if (view.sortDir) setSortDir(view.sortDir);
+        setActiveViewId(view.id);
+      }
+    }
+  }, []);
+
+  // Persist session when table or active view changes
+  useEffect(() => {
+    persistSession({ table: selectedTable, activeViewId });
+  }, [selectedTable, activeViewId]);
 
   // ── Debounce search ─────────────────────────────────────────────
   useEffect(() => {
