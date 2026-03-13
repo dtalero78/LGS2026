@@ -301,6 +301,14 @@ class DblgsServiceClass {
     await this.assertValidTable(table);
 
     const schema = await DblgsRepository.getTableSchema(table);
+    const enrichedSchema = this.injectVirtualColumns(table, schema);
+
+    // Check if this is a virtual column (exists in enriched but not in real schema)
+    const isVirtual = !schema.find(c => c.name === column) && enrichedSchema.find(c => c.name === column);
+    if (isVirtual) {
+      throw new ValidationError(`La columna "${column}" es de solo lectura (viene de un JOIN)`);
+    }
+
     const col = this.assertValidColumn(column, schema);
     const hasUpdatedDateCol = schema.some(c => c.name === '_updatedDate');
 
