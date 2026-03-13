@@ -9,7 +9,7 @@ const CONTACTS = [
   },
   {
     label: 'Soporte Academico',
-    phone: '56926209723',
+    phone: '56932631038',
     message: 'Hola, tengo una consulta academica.',
     color: 'bg-green-100 text-green-600',
   },
