@@ -37,12 +37,24 @@ async function gatherChartData() {
       [startDate]
     ),
 
-    // 2. Bookings by event type (current month)
+    // 2. Bookings by event type (current month) — infer type from CALENDARIO or step name for Wix data
     queryMany<{ tipo: string; total: number }>(
-      `SELECT COALESCE("tipo", 'SIN TIPO') AS tipo, COUNT(*) AS total
-       FROM "ACADEMICA_BOOKINGS"
-       WHERE "fechaEvento" >= $1
-       GROUP BY COALESCE("tipo", 'SIN TIPO')
+      `SELECT COALESCE(c."tipo", b."tipo",
+               CASE
+                 WHEN b."step" ILIKE 'TRAINING%' THEN 'CLUB'
+                 WHEN b."step" ILIKE 'Step%' THEN 'SESSION'
+                 ELSE 'OTRO'
+               END) AS tipo,
+              COUNT(*) AS total
+       FROM "ACADEMICA_BOOKINGS" b
+       LEFT JOIN "CALENDARIO" c ON c."_id" = COALESCE(b."eventoId", b."idEvento")
+       WHERE b."fechaEvento" >= $1
+       GROUP BY COALESCE(c."tipo", b."tipo",
+               CASE
+                 WHEN b."step" ILIKE 'TRAINING%' THEN 'CLUB'
+                 WHEN b."step" ILIKE 'Step%' THEN 'SESSION'
+                 ELSE 'OTRO'
+               END)
        ORDER BY total DESC`,
       [monthStart]
     ),
@@ -187,7 +199,8 @@ INSTRUCCIONES:
 
   if (!response.ok) {
     const err = await response.text();
-    throw new Error(`Claude API error ${response.status}: ${err}`);
+    console.error('[Charts] Claude API error:', response.status, err.slice(0, 500));
+    throw new Error(`Claude API error ${response.status}: ${err.slice(0, 200)}`);
   }
 
   const result = await response.json();
@@ -206,8 +219,11 @@ export const GET = handlerWithAuth(async () => {
     return successResponse({ ...cachedCharts, cached: true });
   }
 
+  console.log('[Charts] Cache miss, generating charts...');
   const data = await gatherChartData();
+  console.log('[Charts] Data gathered, calling Claude API...');
   const html = await generateChartsWithClaude(data);
+  console.log('[Charts] Charts generated, HTML length:', html.length);
 
   cachedCharts = { html, generatedAt: new Date().toISOString() };
   cacheTimestamp = Date.now();

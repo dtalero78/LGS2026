@@ -4,7 +4,6 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import DashboardStats from '@/components/dashboard/DashboardStats'
-import TopStudentsCard from '@/components/dashboard/TopStudentsCard'
 import DashboardCharts from '@/components/dashboard/DashboardCharts'
 import { isAuthDisabled } from '@/lib/utils'
 
@@ -41,12 +40,7 @@ export default async function HomePage() {
           <DashboardStats />
         </Suspense>
 
-        {/* Top Students */}
-        <Suspense fallback={<div className="card p-6 animate-pulse h-96" />}>
-          <TopStudentsCard />
-        </Suspense>
-
-        {/* AI-Generated Charts */}
+{/* AI-Generated Charts */}
         <Suspense fallback={<div className="card p-6 animate-pulse h-96" />}>
           <DashboardCharts />
         </Suspense>
