@@ -38,44 +38,33 @@ function ChartsIframe({ html }: { html: string }) {
     if (contentHeight > 100) setHeight(contentHeight + 20)
   }, [])
 
+  // Use srcdoc via blob URL to avoid doc.write re-declaration issues
   useEffect(() => {
     const iframe = iframeRef.current
     if (!iframe) return
+
+    const blob = new Blob([html], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    iframe.src = url
 
     const handleLoad = () => {
       updateHeight()
-      // Re-measure after animations settle
-      const t1 = setTimeout(updateHeight, 500)
-      const t2 = setTimeout(updateHeight, 1500)
-      return () => { clearTimeout(t1); clearTimeout(t2) }
+      setTimeout(updateHeight, 500)
+      setTimeout(updateHeight, 1500)
     }
 
     iframe.addEventListener('load', handleLoad)
-    return () => iframe.removeEventListener('load', handleLoad)
-  }, [updateHeight])
-
-  // Write HTML content to iframe
-  useEffect(() => {
-    const iframe = iframeRef.current
-    if (!iframe) return
-
-    const doc = iframe.contentDocument
-    if (!doc) return
-
-    doc.open()
-    doc.write(html)
-    doc.close()
-
-    // Measure after write
-    setTimeout(updateHeight, 300)
-    setTimeout(updateHeight, 1000)
+    return () => {
+      iframe.removeEventListener('load', handleLoad)
+      URL.revokeObjectURL(url)
+    }
   }, [html, updateHeight])
 
   return (
     <iframe
       ref={iframeRef}
       style={{ width: '100%', height: `${height}px`, border: 'none', overflow: 'hidden' }}
-      sandbox="allow-scripts allow-same-origin"
+      sandbox="allow-scripts"
       title="Dashboard Charts"
     />
   )
