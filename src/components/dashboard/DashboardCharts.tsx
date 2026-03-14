@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery } from 'react-query'
 import { ChartBarIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 
@@ -26,6 +26,61 @@ async function regenerateCharts(): Promise<ChartsData> {
   return { html: data.html, generatedAt: data.generatedAt, cached: data.cached }
 }
 
+/** Renders interactive HTML in a sandboxed iframe that auto-resizes to content height */
+function ChartsIframe({ html }: { html: string }) {
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [height, setHeight] = useState(800)
+
+  const updateHeight = useCallback(() => {
+    const iframe = iframeRef.current
+    if (!iframe?.contentDocument?.body) return
+    const contentHeight = iframe.contentDocument.body.scrollHeight
+    if (contentHeight > 100) setHeight(contentHeight + 20)
+  }, [])
+
+  useEffect(() => {
+    const iframe = iframeRef.current
+    if (!iframe) return
+
+    const handleLoad = () => {
+      updateHeight()
+      // Re-measure after animations settle
+      const t1 = setTimeout(updateHeight, 500)
+      const t2 = setTimeout(updateHeight, 1500)
+      return () => { clearTimeout(t1); clearTimeout(t2) }
+    }
+
+    iframe.addEventListener('load', handleLoad)
+    return () => iframe.removeEventListener('load', handleLoad)
+  }, [updateHeight])
+
+  // Write HTML content to iframe
+  useEffect(() => {
+    const iframe = iframeRef.current
+    if (!iframe) return
+
+    const doc = iframe.contentDocument
+    if (!doc) return
+
+    doc.open()
+    doc.write(html)
+    doc.close()
+
+    // Measure after write
+    setTimeout(updateHeight, 300)
+    setTimeout(updateHeight, 1000)
+  }, [html, updateHeight])
+
+  return (
+    <iframe
+      ref={iframeRef}
+      style={{ width: '100%', height: `${height}px`, border: 'none', overflow: 'hidden' }}
+      sandbox="allow-scripts allow-same-origin"
+      title="Dashboard Charts"
+    />
+  )
+}
+
 export default function DashboardCharts() {
   const [regenerating, setRegenerating] = useState(false)
 
@@ -42,8 +97,8 @@ export default function DashboardCharts() {
   const handleRegenerate = async () => {
     setRegenerating(true)
     try {
-      const newData = await regenerateCharts()
-      refetch() // refresh cache
+      await regenerateCharts()
+      refetch()
     } catch (err) {
       console.error('Error regenerating charts:', err)
     } finally {
@@ -107,11 +162,8 @@ export default function DashboardCharts() {
         </div>
       </div>
 
-      {/* Charts HTML */}
-      <div
-        className="charts-container"
-        dangerouslySetInnerHTML={{ __html: data.html }}
-      />
+      {/* Interactive Charts in iframe */}
+      <ChartsIframe html={data.html} />
     </div>
   )
 }

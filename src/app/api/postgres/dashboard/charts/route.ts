@@ -160,8 +160,15 @@ INSTRUCCIONES:
   6. **Carga de advisors**: Barras horizontales con nombre del advisor y número de sesiones.
 - Todos los SVGs deben tener width="100%" y un viewBox adecuado para ser responsive.
 - Los textos deben ser legibles (font-size mínimo 11px).
-- NO uses JavaScript ni scripts. Solo HTML+CSS+SVG inline.
-- El CSS debe estar inline o en un <style> tag al inicio.
+- INTERACTIVIDAD: Usa JavaScript para hacer las gráficas interactivas:
+  - Tooltips al hacer hover sobre barras/segmentos mostrando el valor exacto.
+  - Efecto hover en barras (cambio de opacidad o color).
+  - Animación suave de entrada (CSS transitions o requestAnimationFrame).
+  - En la gráfica de donut/pie, resaltar el segmento al hover.
+  - En barras horizontales, highlight row al hover.
+- Genera un documento HTML completo con <!DOCTYPE html>, <html>, <head> con <style>, y <body>.
+- El body debe tener font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; y background: transparent.
+- Los scripts deben ir en un <script> tag al final del body.
 - Si un dataset está vacío, muestra un mensaje "Sin datos disponibles" en la tarjeta correspondiente.`;
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
