@@ -20,8 +20,9 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 
 ### Dashboard (Inicio)
 9. Tarjetas de estadísticas (Total Usuarios, Inactivos, Sesiones Hoy, Inscritos Hoy, Advisors Hoy)
-10. Top 5 estudiantes del mes (por asistencia)
+10. Gráficas interactivas generadas por IA (Claude API) con 6 visualizaciones: sesiones/día, bookings por tipo, estudiantes por nivel, tasa de asistencia, top estudiantes, carga de advisors
 11. Auto-refresh de estadísticas (5 min stale, 10 min refresh)
+12. Caché server-side de gráficas (30 min TTL) con regeneración manual
 
 ### Módulo Académico
 12. Agenda de Sesiones - Vista de calendario mensual con navegación mes anterior/siguiente
@@ -287,7 +288,7 @@ src/
 │   │   ├── advisors/            Lista, stats, events, by-email, name, create (público)
 │   │   ├── search/              Búsqueda unificada (PEOPLE + ACADEMICA)
 │   │   ├── contracts/           Contratos, búsqueda, template, next-number, detalle editable
-│   │   ├── dashboard/           Estadísticas del inicio
+│   │   ├── dashboard/           Estadísticas del inicio, gráficas IA (charts vía Claude API)
 │   │   ├── roles/               CRUD de roles y permisos
 │   │   ├── niveles/             Niveles y steps
 │   │   ├── financial/           Datos financieros
@@ -369,7 +370,7 @@ src/
 │   ├── advisor/                 Detalle de advisor (3 archivos)
 │   ├── advisors/                Lista de advisors (3 archivos)
 │   ├── session/                 Detalle de sesión (4 archivos)
-│   ├── dashboard/               Componentes del dashboard (2 archivos)
+│   ├── dashboard/               Componentes del dashboard (2 archivos: DashboardStats, DashboardCharts)
 │   └── academic/                Componentes académicos (1 archivo)
 │
 └── types/                   ← TypeScript definitions (4 archivos)
@@ -464,6 +465,7 @@ CRON_SECRET=secret_for_cron_job_auth
 API2PDF_KEY=api2pdf_api_key
 WHAPI_TOKEN=whapi_cloud_token
 OPENAI_API_KEY=openai_api_key_for_complementaria
+ANTHROPIC_API_KEY=anthropic_api_key_for_dashboard_charts
 ```
 
 ### TypeScript Build Configuration
@@ -1584,3 +1586,11 @@ export interface Person {
 | `ffca55e` | Progress report reads nivel/step from ACADEMICA instead of PEOPLE |
 | `20b81c4` | Add bulk CSV upload page for PEOPLE records (`/subir-lote`) with UPSERT API and sidebar link |
 | `b929d2f` | Restrict Subir Lote sidebar button to SUPER_ADMIN only |
+| `b385f55` | Update Soporte Academico WhatsApp phone number (56926209723 → 56932631038) |
+| `9208de7` | Prevent editing virtual columns (JOIN-derived) in dblgs viewer |
+| `370e4f7` | Persist dblgs selected table and active view across page reloads (localStorage) |
+| `543eabc` | Add AI-generated SVG dashboard charts via Claude API (6 visualizations, 30-min cache) |
+| `c6a378d` | Resolve student and advisor names in chart queries (JOIN ACADEMICA/ADVISORS) |
+| `e565494` | Make dashboard charts interactive with tooltips, hover effects, and animations (iframe renderer) |
+| `3fe1bbb` | Use blob URL instead of doc.write to prevent duplicate variable declarations in charts iframe |
+| `54c3221` | Remove Top Students card from dashboard, infer booking type from CALENDARIO/step name |
