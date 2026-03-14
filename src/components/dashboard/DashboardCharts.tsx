@@ -2,34 +2,70 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery } from 'react-query'
-import { ChartBarIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
+import {
+  ChartBarIcon,
+  ArrowPathIcon,
+  CalendarDaysIcon,
+  ChartPieIcon,
+  AcademicCapIcon,
+  CheckCircleIcon,
+  TrophyIcon,
+  UserGroupIcon,
+} from '@heroicons/react/24/outline'
 
-interface ChartsData {
+interface ChartOption {
+  key: string
+  label: string
+  description: string
+}
+
+interface ChartData {
   html: string
   generatedAt: string
   cached: boolean
 }
 
-async function fetchCharts(): Promise<ChartsData> {
+const CHART_ICONS: Record<string, typeof ChartBarIcon> = {
+  'sessions-trend': CalendarDaysIcon,
+  'bookings-type': ChartPieIcon,
+  'students-level': AcademicCapIcon,
+  'attendance-rate': CheckCircleIcon,
+  'top-students': TrophyIcon,
+  'advisor-load': UserGroupIcon,
+}
+
+async function fetchChartOptions(): Promise<ChartOption[]> {
   const res = await fetch('/api/postgres/dashboard/charts')
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const data = await res.json()
-  if (!data.success) throw new Error(data.error || 'Failed to fetch charts')
+  if (!data.success) throw new Error(data.error || 'Failed')
+  return data.options || []
+}
+
+async function fetchChart(key: string): Promise<ChartData> {
+  const res = await fetch(`/api/postgres/dashboard/charts?chart=${key}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const data = await res.json()
+  if (!data.success) throw new Error(data.error || 'Failed')
   return { html: data.html, generatedAt: data.generatedAt, cached: data.cached }
 }
 
-async function regenerateCharts(): Promise<ChartsData> {
-  const res = await fetch('/api/postgres/dashboard/charts', { method: 'POST' })
+async function regenerateChart(key: string): Promise<ChartData> {
+  const res = await fetch('/api/postgres/dashboard/charts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chart: key }),
+  })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const data = await res.json()
-  if (!data.success) throw new Error(data.error || 'Failed to regenerate charts')
+  if (!data.success) throw new Error(data.error || 'Failed')
   return { html: data.html, generatedAt: data.generatedAt, cached: data.cached }
 }
 
 /** Renders interactive HTML in a sandboxed iframe that auto-resizes to content height */
 function ChartsIframe({ html }: { html: string }) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const [height, setHeight] = useState(800)
+  const [height, setHeight] = useState(400)
 
   const updateHeight = useCallback(() => {
     const iframe = iframeRef.current
@@ -38,7 +74,6 @@ function ChartsIframe({ html }: { html: string }) {
     if (contentHeight > 100) setHeight(contentHeight + 20)
   }, [])
 
-  // Use srcdoc via blob URL to avoid doc.write re-declaration issues
   useEffect(() => {
     const iframe = iframeRef.current
     if (!iframe) return
@@ -65,20 +100,19 @@ function ChartsIframe({ html }: { html: string }) {
       ref={iframeRef}
       style={{ width: '100%', height: `${height}px`, border: 'none', overflow: 'hidden' }}
       sandbox="allow-scripts"
-      title="Dashboard Charts"
+      title="Dashboard Chart"
     />
   )
 }
 
-export default function DashboardCharts() {
+function ChartViewer({ chartKey, onBack }: { chartKey: string; onBack: () => void }) {
   const [regenerating, setRegenerating] = useState(false)
 
-  const { data, isLoading, error, refetch } = useQuery<ChartsData>(
-    'dashboard-charts',
-    fetchCharts,
+  const { data, isLoading, error, refetch } = useQuery<ChartData>(
+    ['dashboard-chart', chartKey],
+    () => fetchChart(chartKey),
     {
-      staleTime: 30 * 60 * 1000, // 30 min
-      refetchInterval: 30 * 60 * 1000,
+      staleTime: 30 * 60 * 1000,
       retry: 1,
     }
   )
@@ -86,25 +120,47 @@ export default function DashboardCharts() {
   const handleRegenerate = async () => {
     setRegenerating(true)
     try {
-      await regenerateCharts()
+      await regenerateChart(chartKey)
       refetch()
     } catch (err) {
-      console.error('Error regenerating charts:', err)
+      console.error('Error regenerating chart:', err)
     } finally {
       setRegenerating(false)
     }
   }
 
   if (isLoading) {
-    return <ChartsLoading />
+    return (
+      <div className="space-y-3">
+        <button
+          onClick={onBack}
+          className="text-sm text-primary-600 hover:text-primary-800 font-medium"
+        >
+          &larr; Volver
+        </button>
+        <div className="card p-6 animate-pulse">
+          <div className="h-5 bg-gray-200 rounded w-1/3 mb-4" />
+          <div className="h-64 bg-gray-100 rounded" />
+        </div>
+        <p className="text-center text-xs text-gray-400 animate-pulse">
+          Generando visualización con IA...
+        </p>
+      </div>
+    )
   }
 
   if (error) {
     return (
-      <div className="card p-6">
-        <div className="text-center py-8">
+      <div className="space-y-3">
+        <button
+          onClick={onBack}
+          className="text-sm text-primary-600 hover:text-primary-800 font-medium"
+        >
+          &larr; Volver
+        </button>
+        <div className="card p-6 text-center py-8">
           <ChartBarIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 mb-3">No se pudieron cargar las gráficas</p>
+          <p className="text-gray-500 mb-3">No se pudo generar la gráfica</p>
           <button
             onClick={() => refetch()}
             className="text-sm text-primary-600 hover:text-primary-800 font-medium"
@@ -127,23 +183,24 @@ export default function DashboardCharts() {
 
   return (
     <div className="space-y-3">
-      {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <ChartBarIcon className="h-5 w-5 text-gray-500" />
-          <h3 className="text-lg font-semibold text-gray-900">Visualizaciones</h3>
-        </div>
+        <button
+          onClick={onBack}
+          className="text-sm text-primary-600 hover:text-primary-800 font-medium"
+        >
+          &larr; Volver a visualizaciones
+        </button>
         <div className="flex items-center gap-3">
           {generatedDate && (
             <span className="text-xs text-gray-400">
-              Generado: {generatedDate} {data.cached && '(caché)'}
+              {data.cached ? 'Caché' : 'Generado'}: {generatedDate}
             </span>
           )}
           <button
             onClick={handleRegenerate}
             disabled={regenerating}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
-            title="Regenerar gráficas con datos actualizados"
+            title="Regenerar con datos actualizados"
           >
             <ArrowPathIcon className={`h-3.5 w-3.5 ${regenerating ? 'animate-spin' : ''}`} />
             {regenerating ? 'Generando...' : 'Actualizar'}
@@ -151,30 +208,64 @@ export default function DashboardCharts() {
         </div>
       </div>
 
-      {/* Interactive Charts in iframe */}
       <ChartsIframe html={data.html} />
     </div>
   )
 }
 
-function ChartsLoading() {
+export default function DashboardCharts() {
+  const [selectedChart, setSelectedChart] = useState<string | null>(null)
+
+  const { data: options, isLoading } = useQuery<ChartOption[]>(
+    'dashboard-chart-options',
+    fetchChartOptions,
+    {
+      staleTime: 60 * 60 * 1000, // 1 hour — options rarely change
+      retry: 1,
+    }
+  )
+
+  if (selectedChart) {
+    return <ChartViewer chartKey={selectedChart} onBack={() => setSelectedChart(null)} />
+  }
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <div className="h-5 w-5 bg-gray-200 rounded animate-pulse" />
-        <div className="h-5 w-32 bg-gray-200 rounded animate-pulse" />
+        <ChartBarIcon className="h-5 w-5 text-gray-500" />
+        <h3 className="text-lg font-semibold text-gray-900">Visualizaciones</h3>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="card p-6 animate-pulse">
-            <div className="h-5 bg-gray-200 rounded w-1/2 mb-4" />
-            <div className="h-48 bg-gray-100 rounded" />
-          </div>
-        ))}
-      </div>
-      <p className="text-center text-xs text-gray-400 animate-pulse">
-        Generando visualizaciones con IA... esto puede tomar unos segundos
-      </p>
+
+      {isLoading ? (
+        <div className="flex flex-wrap gap-3">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="h-20 w-56 bg-gray-100 rounded-xl animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-3">
+          {(options || []).map((opt) => {
+            const Icon = CHART_ICONS[opt.key] || ChartBarIcon
+            return (
+              <button
+                key={opt.key}
+                onClick={() => setSelectedChart(opt.key)}
+                className="group flex items-center gap-3 px-5 py-3.5 bg-white border border-gray-200 rounded-xl hover:border-primary-300 hover:bg-primary-50 hover:shadow-sm transition-all text-left"
+              >
+                <Icon className="h-5 w-5 text-gray-400 group-hover:text-primary-500 transition-colors flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-gray-700 group-hover:text-primary-700 transition-colors">
+                    {opt.label}
+                  </p>
+                  <p className="text-xs text-gray-400 group-hover:text-primary-400 transition-colors">
+                    {opt.description}
+                  </p>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
