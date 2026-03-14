@@ -58,14 +58,20 @@ async function gatherChartData() {
       []
     ),
 
-    // 4. Top 10 students this month
+    // 4. Top 10 students this month (JOIN with ACADEMICA for names)
     queryMany<{ nombre: string; asistencias: number; nivel: string }>(
-      `SELECT b."primerNombre" || ' ' || b."primerApellido" AS nombre,
+      `SELECT COALESCE(a."primerNombre" || ' ' || a."primerApellido",
+                       b."primerNombre" || ' ' || b."primerApellido",
+                       'Desconocido') AS nombre,
               COUNT(*) AS asistencias,
-              COALESCE(b."nivel", '') AS nivel
+              COALESCE(a."nivel", b."nivel", '') AS nivel
        FROM "ACADEMICA_BOOKINGS" b
+       LEFT JOIN "ACADEMICA" a ON a."_id" = COALESCE(b."idEstudiante", b."studentId")
        WHERE b."asistio" = true AND b."fechaEvento" >= $1
-       GROUP BY b."primerNombre", b."primerApellido", b."nivel"
+       GROUP BY COALESCE(a."primerNombre" || ' ' || a."primerApellido",
+                         b."primerNombre" || ' ' || b."primerApellido",
+                         'Desconocido'),
+                COALESCE(a."nivel", b."nivel", '')
        ORDER BY asistencias DESC
        LIMIT 10`,
       [monthStart]
@@ -83,12 +89,18 @@ async function gatherChartData() {
       []
     ),
 
-    // 6. Advisor workload (current month, top 10)
+    // 6. Advisor workload (current month, top 10) — JOIN with ADVISORS for names
     queryMany<{ advisor: string; sesiones: number }>(
-      `SELECT "advisor", COUNT(*) AS sesiones
-       FROM "CALENDARIO"
-       WHERE "dia" >= $1 AND "advisor" IS NOT NULL AND "advisor" != ''
-       GROUP BY "advisor"
+      `SELECT COALESCE(adv."nombreCompleto",
+                       adv."primerNombre" || ' ' || adv."primerApellido",
+                       c."advisor") AS advisor,
+              COUNT(*) AS sesiones
+       FROM "CALENDARIO" c
+       LEFT JOIN "ADVISORS" adv ON adv."_id" = c."advisor"
+       WHERE c."dia" >= $1 AND c."advisor" IS NOT NULL AND c."advisor" != ''
+       GROUP BY COALESCE(adv."nombreCompleto",
+                         adv."primerNombre" || ' ' || adv."primerApellido",
+                         c."advisor")
        ORDER BY sesiones DESC
        LIMIT 10`,
       [monthStart]
