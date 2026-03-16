@@ -10,7 +10,7 @@ import { AcademicaRepository } from '@/repositories/academica.repository';
 import { PeopleRepository } from '@/repositories/people.repository';
 import { BookingRepository } from '@/repositories/booking.repository';
 import { NotFoundError, ValidationError } from '@/lib/errors';
-import { queryOne, queryMany } from '@/lib/postgres';
+import { query, queryOne, queryMany } from '@/lib/postgres';
 
 /**
  * Get student profile.
@@ -120,6 +120,31 @@ export async function toggleStatus(id: string, active: boolean) {
   }
 
   const updated = await PeopleRepository.toggleStatus(id, wantInactive);
+
+  // Sync estadoInactivo in ACADEMICA (match by numeroId)
+  if (person.numeroId) {
+    try {
+      await query(
+        `UPDATE "ACADEMICA" SET "estadoInactivo" = $1, "_updatedDate" = NOW() WHERE "numeroId" = $2`,
+        [wantInactive, person.numeroId]
+      );
+    } catch (err) {
+      console.warn('⚠️ Could not sync ACADEMICA.estadoInactivo for', person.numeroId, err);
+    }
+  }
+
+  // Sync login access in USUARIOS_ROLES
+  if (person.email) {
+    try {
+      await query(
+        `UPDATE "USUARIOS_ROLES" SET "activo" = $1, "_updatedDate" = NOW() WHERE LOWER("email") = LOWER($2)`,
+        [!wantInactive, person.email]
+      );
+    } catch (err) {
+      console.warn('⚠️ Could not sync USUARIOS_ROLES.activo for', person.email, err);
+    }
+  }
+
   return {
     student: updated,
     statusChanged: true,

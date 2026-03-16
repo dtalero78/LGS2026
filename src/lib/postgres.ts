@@ -20,8 +20,8 @@ const getDatabaseConfig = () => {
     const urlWithoutSslMode = process.env.DATABASE_URL.replace(/[?&]sslmode=[^&]*/g, '');
     return {
       connectionString: urlWithoutSslMode,
-      max: 20,
-      idleTimeoutMillis: 30000,
+      max: 10,
+      idleTimeoutMillis: 15000,
       connectionTimeoutMillis: 10000,
       ssl: {
         rejectUnauthorized: false,
@@ -51,7 +51,12 @@ if (!process.env.DATABASE_URL) {
   });
 }
 
-const pool = new Pool(poolConfig);
+// Reuse pool across hot reloads in development (prevents "too many clients" errors)
+const globalForPg = globalThis as unknown as { _pgPool?: Pool };
+const pool = globalForPg._pgPool ?? new Pool(poolConfig);
+if (process.env.NODE_ENV !== 'production') {
+  globalForPg._pgPool = pool;
+}
 
 // Resolve database name for logging
 const _resolvedDbName = (() => {

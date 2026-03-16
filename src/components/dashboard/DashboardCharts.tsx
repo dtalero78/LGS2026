@@ -6,11 +6,6 @@ import {
   ChartBarIcon,
   ArrowPathIcon,
   CalendarDaysIcon,
-  ChartPieIcon,
-  AcademicCapIcon,
-  CheckCircleIcon,
-  TrophyIcon,
-  UserGroupIcon,
 } from '@heroicons/react/24/outline'
 
 interface ChartOption {
@@ -26,12 +21,7 @@ interface ChartData {
 }
 
 const CHART_ICONS: Record<string, typeof ChartBarIcon> = {
-  'sessions-trend': CalendarDaysIcon,
-  'bookings-type': ChartPieIcon,
-  'students-level': AcademicCapIcon,
-  'attendance-rate': CheckCircleIcon,
-  'top-students': TrophyIcon,
-  'advisor-load': UserGroupIcon,
+  'sessions-vs-attendance': CalendarDaysIcon,
 }
 
 async function fetchChartOptions(): Promise<ChartOption[]> {

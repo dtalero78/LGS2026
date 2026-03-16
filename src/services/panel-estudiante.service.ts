@@ -160,6 +160,18 @@ export async function resolveStudentFromSession(session: Session) {
         (base as any).finalContrato = newFinalStr;
         (base as any).vigencia = newVigencia;
       }
+
+      // Restore login access in USUARIOS_ROLES
+      if ((base as any).email) {
+        try {
+          await query(
+            `UPDATE "USUARIOS_ROLES" SET "activo" = true, "_updatedDate" = NOW() WHERE LOWER("email") = LOWER($1)`,
+            [(base as any).email]
+          );
+        } catch (err) {
+          console.warn('⚠️ Could not sync USUARIOS_ROLES on OnHold auto-reactivation:', err);
+        }
+      }
     }
   }
 
@@ -181,8 +193,31 @@ export async function resolveStudentFromSession(session: Session) {
       );
       (base as any).estadoInactivo = true;
 
-      // Inactivate the titular of this contract
+      // Block login in USUARIOS_ROLES for this student and all contract members
       const contrato = (base as any).contrato;
+      try {
+        // Block this student's login
+        if ((base as any).email) {
+          await query(
+            `UPDATE "USUARIOS_ROLES" SET "activo" = false, "_updatedDate" = NOW() WHERE LOWER("email") = LOWER($1)`,
+            [(base as any).email]
+          );
+        }
+        // Block all contract members' login
+        if (contrato) {
+          await query(
+            `UPDATE "USUARIOS_ROLES" SET "activo" = false, "_updatedDate" = NOW()
+             WHERE LOWER("email") IN (
+               SELECT LOWER("email") FROM "PEOPLE" WHERE "contrato" = $1 AND "email" IS NOT NULL
+             )`,
+            [contrato]
+          );
+        }
+      } catch (err) {
+        console.warn('⚠️ Could not sync USUARIOS_ROLES on contract expiration:', err);
+      }
+
+      // Inactivate the titular of this contract
       if (contrato) {
         await query(
           `UPDATE "PEOPLE"

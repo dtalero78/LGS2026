@@ -7,6 +7,7 @@
 import 'server-only';
 import { PeopleRepository } from '@/repositories/people.repository';
 import { ValidationError, NotFoundError } from '@/lib/errors';
+import { query } from '@/lib/postgres';
 
 // ── Contract Extension ──
 
@@ -146,6 +147,18 @@ export async function activateOnHold(input: ActivateOnHoldInput) {
     updatedHistory
   );
 
+  // Sync: block login in USUARIOS_ROLES
+  if (person.email) {
+    try {
+      await query(
+        `UPDATE "USUARIOS_ROLES" SET "activo" = false, "_updatedDate" = NOW() WHERE LOWER("email") = LOWER($1)`,
+        [person.email]
+      );
+    } catch (err) {
+      console.warn('⚠️ Could not sync USUARIOS_ROLES.activo on OnHold activate for', person.email, err);
+    }
+  }
+
   return { student, onHoldEntry };
 }
 
@@ -195,6 +208,18 @@ export async function deactivateOnHold(studentId: string) {
     newVigencia,
     updatedExtHistory
   );
+
+  // Sync: restore login in USUARIOS_ROLES
+  if (person.email) {
+    try {
+      await query(
+        `UPDATE "USUARIOS_ROLES" SET "activo" = true, "_updatedDate" = NOW() WHERE LOWER("email") = LOWER($1)`,
+        [person.email]
+      );
+    } catch (err) {
+      console.warn('⚠️ Could not sync USUARIOS_ROLES.activo on OnHold deactivate for', person.email, err);
+    }
+  }
 
   return {
     student,

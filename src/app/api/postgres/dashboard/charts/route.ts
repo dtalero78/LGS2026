@@ -18,158 +18,32 @@ interface ChartDef {
 
 const CHART_DEFS: ChartDef[] = [
   {
-    key: 'sessions-trend',
-    label: 'Sesiones por Día',
-    description: 'Tendencia de sesiones agendadas en los últimos 14 días',
+    key: 'sessions-vs-attendance',
+    label: 'Sesiones vs. Asistencia',
+    description: 'Sesiones agendadas por mes vs. atendidas y canceladas',
     gatherData: async () => {
-      const now = new Date();
-      const fourteenDaysAgo = new Date(now);
-      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 13);
-      const startDate = fourteenDaysAgo.toISOString().split('T')[0];
-      return queryMany<{ dia: string; total: number }>(
-        `SELECT "dia"::date::text AS dia, COUNT(*) AS total
-         FROM "CALENDARIO"
-         WHERE "dia"::date >= $1::date
-         GROUP BY "dia"::date
-         ORDER BY "dia"::date`,
-        [startDate]
-      );
-    },
-    buildPrompt: (data) => `Genera una gráfica de BARRAS VERTICALES para "Sesiones por Día (últimos 14 días)".
-Datos: ${JSON.stringify(data)}
-- Eje X: fechas en formato dd/mm. Muestra el valor encima de cada barra.
-- Color principal: #3B82F6 (azul).
-- Barras con bordes redondeados arriba.`,
-  },
-  {
-    key: 'bookings-type',
-    label: 'Distribución por Tipo',
-    description: 'Bookings del mes actual agrupados por tipo de evento',
-    gatherData: async () => {
-      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-      return queryMany<{ tipo: string; total: number }>(
-        `SELECT COALESCE(c."tipo", b."tipo",
-                 CASE
-                   WHEN b."step" ILIKE 'TRAINING%' THEN 'CLUB'
-                   WHEN b."step" ILIKE 'Step%' THEN 'SESSION'
-                   ELSE 'OTRO'
-                 END) AS tipo,
-                COUNT(*) AS total
-         FROM "ACADEMICA_BOOKINGS" b
-         LEFT JOIN "CALENDARIO" c ON c."_id" = COALESCE(b."eventoId", b."idEvento")
-         WHERE b."fechaEvento" >= $1
-         GROUP BY COALESCE(c."tipo", b."tipo",
-                 CASE
-                   WHEN b."step" ILIKE 'TRAINING%' THEN 'CLUB'
-                   WHEN b."step" ILIKE 'Step%' THEN 'SESSION'
-                   ELSE 'OTRO'
-                 END)
-         ORDER BY total DESC`,
-        [monthStart]
-      );
-    },
-    buildPrompt: (data) => `Genera una gráfica de DONUT/PIE para "Distribución por Tipo de Evento (mes actual)".
-Datos: ${JSON.stringify(data)}
-- Incluye leyenda con porcentajes.
-- Colores: SESSION=#3B82F6, CLUB=#10B981, WELCOME=#8B5CF6, OTRO=#9CA3AF.`,
-  },
-  {
-    key: 'students-level',
-    label: 'Estudiantes por Nivel',
-    description: 'Distribución de estudiantes activos por nivel académico',
-    gatherData: async () => {
-      return queryMany<{ nivel: string; total: number }>(
-        `SELECT COALESCE(a."nivel", 'SIN NIVEL') AS nivel, COUNT(*) AS total
-         FROM "ACADEMICA" a
-         WHERE a."estadoInactivo" IS NOT TRUE
-         GROUP BY COALESCE(a."nivel", 'SIN NIVEL')
-         ORDER BY total DESC
-         LIMIT 10`,
-        []
-      );
-    },
-    buildPrompt: (data) => `Genera una gráfica de BARRAS HORIZONTALES para "Estudiantes Activos por Nivel".
-Datos: ${JSON.stringify(data)}
-- Nombre del nivel a la izquierda, barra al centro, valor a la derecha.
-- Gradiente de colores azul (#3B82F6 → #93C5FD).`,
-  },
-  {
-    key: 'attendance-rate',
-    label: 'Tasa de Asistencia',
-    description: 'Porcentaje de asistencia en los últimos 30 días',
-    gatherData: async () => {
-      return queryOne<{ total: number; asistieron: number; ausentes: number }>(
+      return queryMany<{ mes: string; agendadas: number; atendidas: number; canceladas: number }>(
         `SELECT
-           COUNT(*) AS total,
-           COUNT(*) FILTER (WHERE "asistio" = true) AS asistieron,
-           COUNT(*) FILTER (WHERE "asistio" = false) AS ausentes
-         FROM "ACADEMICA_BOOKINGS"
-         WHERE "fechaEvento" >= NOW() - INTERVAL '30 days'
-           AND "fechaEvento" <= NOW()`,
-        []
-      ) || { total: 0, asistieron: 0, ausentes: 0 };
-    },
-    buildPrompt: (data) => `Genera un GAUGE/INDICADOR CIRCULAR grande para "Tasa de Asistencia (últimos 30 días)".
-Datos: ${JSON.stringify(data)}
-- Muestra el porcentaje de asistencia en el centro del gauge.
-- Labels debajo: Asistieron (verde #10B981), Ausentes (rojo #EF4444), Pendientes (gris #9CA3AF).
-- Pendientes = total - asistieron - ausentes.`,
-  },
-  {
-    key: 'top-students',
-    label: 'Top 10 Estudiantes',
-    description: 'Estudiantes con más asistencias este mes',
-    gatherData: async () => {
-      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-      return queryMany<{ nombre: string; asistencias: number; nivel: string }>(
-        `SELECT COALESCE(a."primerNombre" || ' ' || a."primerApellido",
-                         b."primerNombre" || ' ' || b."primerApellido",
-                         'Desconocido') AS nombre,
-                COUNT(*) AS asistencias,
-                COALESCE(a."nivel", b."nivel", '') AS nivel
+           TO_CHAR(b."fechaEvento"::date, 'YYYY-MM') AS mes,
+           COUNT(*) AS agendadas,
+           COUNT(*) FILTER (WHERE b."asistio" = true) AS atendidas,
+           COUNT(*) FILTER (WHERE b."cancelado" = true) AS canceladas
          FROM "ACADEMICA_BOOKINGS" b
-         LEFT JOIN "ACADEMICA" a ON a."_id" = COALESCE(b."idEstudiante", b."studentId")
-         WHERE b."asistio" = true AND b."fechaEvento" >= $1
-         GROUP BY COALESCE(a."primerNombre" || ' ' || a."primerApellido",
-                           b."primerNombre" || ' ' || b."primerApellido",
-                           'Desconocido'),
-                  COALESCE(a."nivel", b."nivel", '')
-         ORDER BY asistencias DESC
-         LIMIT 10`,
-        [monthStart]
+         WHERE b."fechaEvento" >= NOW() - INTERVAL '6 months'
+           AND b."fechaEvento" <= NOW()
+         GROUP BY TO_CHAR(b."fechaEvento"::date, 'YYYY-MM')
+         ORDER BY mes`,
+        []
       );
     },
-    buildPrompt: (data) => `Genera una gráfica de BARRAS HORIZONTALES para "Top 10 Estudiantes del Mes".
+    buildPrompt: (data) => `Genera una gráfica de BARRAS AGRUPADAS para "Sesiones Agendadas vs. Atendidas vs. Canceladas por Mes".
 Datos: ${JSON.stringify(data)}
-- Cada barra muestra: nombre del estudiante, nivel entre paréntesis, y conteo de asistencias.
-- Color: gradiente dorado (#F59E0B → #FBBF24) para los primeros 3, azul (#3B82F6) para el resto.`,
-  },
-  {
-    key: 'advisor-load',
-    label: 'Carga de Advisors',
-    description: 'Top 10 advisors con más sesiones este mes',
-    gatherData: async () => {
-      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-      return queryMany<{ advisor: string; sesiones: number }>(
-        `SELECT COALESCE(adv."nombreCompleto",
-                         adv."primerNombre" || ' ' || adv."primerApellido",
-                         c."advisor") AS advisor,
-                COUNT(*) AS sesiones
-         FROM "CALENDARIO" c
-         LEFT JOIN "ADVISORS" adv ON adv."_id" = c."advisor"
-         WHERE c."dia" >= $1 AND c."advisor" IS NOT NULL AND c."advisor" != ''
-         GROUP BY COALESCE(adv."nombreCompleto",
-                           adv."primerNombre" || ' ' || adv."primerApellido",
-                           c."advisor")
-         ORDER BY sesiones DESC
-         LIMIT 10`,
-        [monthStart]
-      );
-    },
-    buildPrompt: (data) => `Genera una gráfica de BARRAS HORIZONTALES para "Carga de Advisors (mes actual)".
-Datos: ${JSON.stringify(data)}
-- Nombre del advisor a la izquierda, barra al centro, número de sesiones a la derecha.
-- Color: verde (#10B981 → #34D399).`,
+- Eje X: meses en formato "Mes Año" (ej: "Ene 2026"). Agrupa 3 barras por mes.
+- Colores: Agendadas=#3B82F6 (azul), Atendidas=#10B981 (verde), Canceladas=#EF4444 (rojo).
+- Muestra el valor encima de cada barra.
+- Incluye leyenda con los 3 colores.
+- Barras con bordes redondeados arriba.
+- La gráfica debe ser amplia para acomodar los meses.`,
   },
 ];
 

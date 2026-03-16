@@ -20,9 +20,9 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 
 ### Dashboard (Inicio)
 9. Tarjetas de estadísticas (Total Usuarios, Inactivos, Sesiones Hoy, Inscritos Hoy, Advisors Hoy)
-10. Gráficas interactivas generadas por IA (Claude API) con 6 visualizaciones: sesiones/día, bookings por tipo, estudiantes por nivel, tasa de asistencia, top estudiantes, carga de advisors
+10. Gráficas interactivas generadas por IA (Claude API) con UI de suggestion chips: el usuario elige qué visualización generar (sesiones agendadas vs atendidas/canceladas, bookings por tipo, estudiantes por nivel, tasa de asistencia, carga de advisors). Cada gráfica se genera individualmente on-demand en iframe con tooltips, hover effects y animaciones
 11. Auto-refresh de estadísticas (5 min stale, 10 min refresh)
-12. Caché server-side de gráficas (30 min TTL) con regeneración manual
+12. Caché server-side individual por tipo de gráfica (30 min TTL) con regeneración manual
 
 ### Módulo Académico
 12. Agenda de Sesiones - Vista de calendario mensual con navegación mes anterior/siguiente
@@ -211,10 +211,11 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 
 ### Subir Lote (Importación Masiva de Personas)
 156. Carga de archivo CSV con drag & drop para crear/actualizar registros en PEOPLE
-157. Parseo client-side de CSV con aliases flexibles de columnas (ej: "Documento"→"numeroId", "Nombres"→"primerNombre", "Cédula"→"numeroId")
-158. Vista previa de datos parseados con tabla editable inline antes de importar
+157. Parseo client-side de CSV con aliases flexibles de columnas (ej: "Documento"→"numeroId", "Nombres"→"primerNombre", "Cédula"→"numeroId"). Soporta separadores `,` y `;`
+158. Campo mapping CSV→DB: `pais`→`plataforma`, `direccion`→`domicilio`
+159. Vista previa de datos parseados con tabla editable inline antes de importar
 159. Validación de campos obligatorios (numeroId, primerNombre, primerApellido) con resaltado visual
-160. UPSERT: si existe la combinación (numeroId + tipoUsuario), actualiza en vez de duplicar
+160. UPSERT: busca por (numeroId + tipoUsuario), si existe UPDATE, si no INSERT (sin ON CONFLICT ya que PEOPLE no tiene unique constraint en esos campos)
 161. Soporte de formatos de fecha YYYY-MM-DD y DD/MM/YYYY
 162. Máximo 5000 registros por lote, reporte de éxitos/fallos/errores
 163. Acceso restringido a SUPER_ADMIN únicamente
@@ -346,7 +347,7 @@ src/
 │   ├── api-helpers.ts           handler(), handlerWithAuth(), successResponse(), errorResponse()
 │   ├── query-builder.ts         buildDynamicUpdate(), buildDynamicWhere()
 │   ├── id-generator.ts          ids.event(), ids.booking(), ids.person(), ids.comment(), ids.advisor(), etc.
-│   ├── postgres.ts              Pool de conexión PostgreSQL (SSL, Digital Ocean)
+│   ├── postgres.ts              Pool de conexión PostgreSQL (SSL, Digital Ocean, globalThis cache para hot reload)
 │   ├── auth.ts                  NextAuth.js config (legacy)
 │   ├── auth-postgres.ts         NextAuth.js config (PostgreSQL actual)
 │   ├── middleware-permissions.ts Cache de permisos server-side (5 min TTL)
@@ -405,6 +406,7 @@ npm run start                 # Start production server on port 3001
 - Uses NextAuth.js with credentials from PostgreSQL `USUARIOS_ROLES` table
 - Supports both bcrypt hashed passwords and plain text (legacy compatibility)
 - User credentials and roles stored in PostgreSQL
+- **Login blocked by `USUARIOS_ROLES.activo = false`**: When a student/contract is inactivated (toggle, OnHold, contract expiration), `activo` is set to `false` to prevent login. Reactivation restores `activo = true`
 - Admin fallback credentials via environment variables: `ADMIN_EMAIL`, `ADMIN_PASSWORD`
 - Implementation: `src/lib/auth-postgres.ts` (actual), `src/lib/auth.ts` (legacy)
 - Password verification: Checks PostgreSQL first, then falls back to test users
@@ -557,7 +559,8 @@ ANTHROPIC_API_KEY=anthropic_api_key_for_dashboard_charts
 
 ## Database Architecture
 - **PostgreSQL** (Digital Ocean Managed Database) as sole data store
-- Connection: `src/lib/postgres.ts` with connection pool and SSL (`ssl: { rejectUnauthorized: false }`)
+- Connection: `src/lib/postgres.ts` with connection pool (`max: 10`, `idleTimeoutMillis: 15000`) and SSL (`ssl: { rejectUnauthorized: false }`)
+- Pool cached in `globalThis` to prevent connection exhaustion during Next.js hot reloads in development
 - All SQL is parameterized ($1, $2, ...) to prevent injection
 - JSONB fields for flexible data: `onHoldHistory`, `extensionHistory`, `evaluacion`, `steps`, `consentimientoDeclarativo`, etc.
 - Key tables:
@@ -1199,17 +1202,35 @@ Questions are generated from `NIVELES.contenido` field (TEXT, markdown format wi
 
 ## Contract Inactivation Rules
 
+### Inactivation Sync Across Tables
+All inactivation/reactivation flows update **3 tables** in sync:
+- **PEOPLE** → `estadoInactivo` (primary status)
+- **ACADEMICA** → `estadoInactivo` (matched by `numeroId`)
+- **USUARIOS_ROLES** → `activo` (matched by `email`, controls login access)
+
+### By Admin Toggle (PersonAdmin)
+When an admin toggles the contract status via the Estado del Contrato toggle in `/person/[id]`:
+- Calls `POST /api/postgres/students/{id}/toggle-status` sequentially for titular + all beneficiaries
+- `toggleStatus()` in `student.service.ts` updates PEOPLE, ACADEMICA, and USUARIOS_ROLES
+- Implementation: `src/components/person/PersonAdmin.tsx`, `src/services/student.service.ts`
+
 ### By Admin Estado Change
 When a titular's estado is changed to **Contrato nulo**, **Devuelto**, or **Rechazado** via `PATCH /api/postgres/people/[id]`:
 - The titular is marked as `estadoInactivo = true`
 - All beneficiaries of the same contract are marked as `estadoInactivo = true`
 - Implementation: `src/app/api/postgres/people/[id]/route.ts` (PATCH handler)
 
+### By OnHold Activation/Deactivation
+- **Activate OnHold**: Sets `USUARIOS_ROLES.activo = false` (blocks login)
+- **Deactivate OnHold**: Sets `USUARIOS_ROLES.activo = true` (restores login)
+- Implementation: `src/services/contract.service.ts` (`activateOnHold`, `deactivateOnHold`)
+
 ### By Student Login (Contract Expiration)
 When a student with role ESTUDIANTE loads the panel (`resolveStudentFromSession`):
 - If `finalContrato < today` and student is not already inactive:
   - Student is marked as `estadoInactivo = true`, `aprobacion = 'FINALIZADA'`
   - The titular of the same contract is also marked as `estadoInactivo = true`, `aprobacion = 'FINALIZADA'`
+  - All contract members' `USUARIOS_ROLES.activo` set to `false` (blocks login)
 - Implementation: `src/services/panel-estudiante.service.ts` (resolveStudentFromSession)
 
 ### By Student Login (OnHold Auto-Reactivation)
@@ -1219,6 +1240,7 @@ When a student with role ESTUDIANTE loads the panel (`resolveStudentFromSession`
   - Extends `finalContrato` by paused days
   - Creates `extensionHistory` entry with motivo "Extensión automática por OnHold"
   - Clears `fechaOnHold`, `fechaFinOnHold`, sets `estadoInactivo = false`
+  - Sets `USUARIOS_ROLES.activo = true` (restores login)
 - This mirrors `contractService.deactivateOnHold()` but triggered automatically at login
 - Implementation: `src/services/panel-estudiante.service.ts` (resolveStudentFromSession)
 
@@ -1594,3 +1616,4 @@ export interface Person {
 | `e565494` | Make dashboard charts interactive with tooltips, hover effects, and animations (iframe renderer) |
 | `3fe1bbb` | Use blob URL instead of doc.write to prevent duplicate variable declarations in charts iframe |
 | `54c3221` | Remove Top Students card from dashboard, infer booking type from CALENDARIO/step name |
+| `e111903` | Redesign dashboard charts as suggestion chips — individual on-demand generation instead of all-at-once |

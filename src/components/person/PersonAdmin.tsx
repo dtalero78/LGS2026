@@ -382,28 +382,25 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     setIsTogglingContract(true)
 
     try {
-      const response = await fetch('/api/postgres/students', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contrato: person.contrato,
-          titularId: person._id,
-          beneficiaryIds: currentBeneficiaries.map(b => b._id),
-          setInactive
+      // Toggle titular + all beneficiaries (sequential to avoid exhausting DB pool)
+      const allIds = [person._id, ...currentBeneficiaries.map(b => b._id)]
+      let failures = 0
+      for (const id of allIds) {
+        const res = await fetch(`/api/postgres/students/${id}/toggle-status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ active: newStatus })
         })
-      })
+        const data = await res.json()
+        if (!data.success) failures++
+      }
 
-      const data = await response.json()
-
-      if (data.success) {
+      if (failures === 0) {
         alert(`✅ Contrato ${newStatus ? 'activado' : 'inactivado'} exitosamente\n\n` +
-              `Usuarios actualizados: ${data.updatedCount || affectedUsers.length}`)
-        // Hard reload to bypass Next.js cache
+              `Usuarios actualizados: ${allIds.length}`)
         window.location.href = window.location.href
       } else {
-        alert(`❌ Error al cambiar estado del contrato: ${data.error || 'Error desconocido'}`)
+        alert(`❌ Error al cambiar estado: ${failures} de ${allIds.length} fallaron`)
       }
     } catch (error) {
       console.error('Error al cambiar estado del contrato:', error)

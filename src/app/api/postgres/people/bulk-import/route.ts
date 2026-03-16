@@ -1,14 +1,20 @@
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { ValidationError } from '@/lib/errors';
-import { query } from '@/lib/postgres';
+import { query, queryOne } from '@/lib/postgres';
 import { ids } from '@/lib/id-generator';
 
 const ALLOWED_FIELDS = [
   'numeroId', 'primerNombre', 'segundoNombre', 'primerApellido', 'segundoApellido',
-  'tipoUsuario', 'email', 'celular', 'pais', 'ciudad', 'direccion',
+  'tipoUsuario', 'email', 'celular', 'ciudad', 'domicilio',
   'contrato', 'plataforma', 'nivel', 'step',
   'fechaNacimiento', 'inicioContrato', 'finalContrato',
 ];
+
+// Map CSV field names to DB column names
+const FIELD_MAP: Record<string, string> = {
+  pais: 'plataforma',
+  direccion: 'domicilio',
+};
 
 export const POST = handlerWithAuth(async (request) => {
   const body = await request.json();
@@ -34,36 +40,69 @@ export const POST = handlerWithAuth(async (request) => {
         continue;
       }
 
-      const _id = ids.person();
-      const fields: string[] = ['"_id"', '"fechaCreacion"', '"_createdDate"', '"_updatedDate"'];
-      const placeholders: string[] = ['$1', 'NOW()', 'NOW()', 'NOW()'];
-      const values: any[] = [_id];
-      let paramIdx = 2;
-
-      for (const field of ALLOWED_FIELDS) {
-        const val = reg[field];
-        if (val !== undefined && val !== null && val !== '') {
-          fields.push(`"${field}"`);
-          placeholders.push(`$${paramIdx}`);
-          values.push(val);
-          paramIdx++;
+      // Remap CSV field names to DB column names
+      for (const [from, to] of Object.entries(FIELD_MAP)) {
+        if (reg[from] !== undefined) {
+          if (!reg[to]) reg[to] = reg[from];
+          delete reg[from];
         }
       }
 
-      // UPSERT: if numeroId + tipoUsuario already exists, update
       const tipoUsuario = reg.tipoUsuario || 'BENEFICIARIO';
-      const updateClauses = ALLOWED_FIELDS
-        .filter(f => f !== 'numeroId')
-        .map(f => `"${f}" = COALESCE(EXCLUDED."${f}", "${f}")`)
-        .join(', ');
 
-      await query(
-        `INSERT INTO "PEOPLE" (${fields.join(', ')})
-         VALUES (${placeholders.join(', ')})
-         ON CONFLICT ("numeroId", "tipoUsuario")
-         DO UPDATE SET ${updateClauses}, "_updatedDate" = NOW()`,
-        values
+      // Check if record exists by numeroId + tipoUsuario
+      const existing = await queryOne(
+        `SELECT "_id" FROM "PEOPLE" WHERE "numeroId" = $1 AND "tipoUsuario" = $2`,
+        [reg.numeroId, tipoUsuario]
       );
+
+      if (existing) {
+        // UPDATE existing record
+        const setClauses: string[] = [];
+        const values: any[] = [];
+        let paramIdx = 1;
+
+        for (const field of ALLOWED_FIELDS) {
+          if (field === 'numeroId') continue;
+          const val = reg[field];
+          if (val !== undefined && val !== null && val !== '') {
+            setClauses.push(`"${field}" = $${paramIdx}`);
+            values.push(val);
+            paramIdx++;
+          }
+        }
+
+        if (setClauses.length > 0) {
+          setClauses.push(`"_updatedDate" = NOW()`);
+          values.push(existing._id);
+          await query(
+            `UPDATE "PEOPLE" SET ${setClauses.join(', ')} WHERE "_id" = $${paramIdx}`,
+            values
+          );
+        }
+      } else {
+        // INSERT new record
+        const _id = ids.person();
+        const fields: string[] = ['"_id"', '"fechaCreacion"', '"_createdDate"', '"_updatedDate"'];
+        const placeholders: string[] = ['$1', 'NOW()', 'NOW()', 'NOW()'];
+        const values: any[] = [_id];
+        let paramIdx = 2;
+
+        for (const field of ALLOWED_FIELDS) {
+          const val = reg[field];
+          if (val !== undefined && val !== null && val !== '') {
+            fields.push(`"${field}"`);
+            placeholders.push(`$${paramIdx}`);
+            values.push(val);
+            paramIdx++;
+          }
+        }
+
+        await query(
+          `INSERT INTO "PEOPLE" (${fields.join(', ')}) VALUES (${placeholders.join(', ')})`,
+          values
+        );
+      }
 
       exitosos++;
     } catch (err: any) {

@@ -166,7 +166,16 @@ function parseDate(val: string): string {
 
 export default function SubirLotePage() {
   const [file, setFile] = useState<File | null>(null);
-  const [registros, setRegistros] = useState<RegistroPeople[]>([]);
+  const [registros, _setRegistros] = useState<RegistroPeople[]>([]);
+  const registrosRef = useRef<RegistroPeople[]>([]);
+  const setRegistros = (val: RegistroPeople[] | ((prev: RegistroPeople[]) => RegistroPeople[])) => {
+    if (typeof val === 'function') {
+      _setRegistros(prev => { const next = val(prev); registrosRef.current = next; return next; });
+    } else {
+      registrosRef.current = val;
+      _setRegistros(val);
+    }
+  };
   const [errores, setErrores] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -260,9 +269,10 @@ export default function SubirLotePage() {
     });
   }, []);
 
-  const importar = useCallback(async () => {
-    if (registros.length === 0) return;
-    if (!confirm(`¿Importar ${registros.length} registros a PEOPLE?`)) return;
+  const importar = async () => {
+    const regs = registrosRef.current;
+    console.log('importar() registros:', regs.length);
+    if (regs.length === 0) { alert('No hay registros'); return; }
 
     setLoading(true);
     setImportResult(null);
@@ -271,7 +281,7 @@ export default function SubirLotePage() {
       const response = await fetch('/api/postgres/people/bulk-import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ registros }),
+        body: JSON.stringify({ registros: regs }),
       });
 
       const data = await response.json();
@@ -285,7 +295,7 @@ export default function SubirLotePage() {
     } finally {
       setLoading(false);
     }
-  }, [registros]);
+  };
 
   const reset = useCallback(() => {
     setFile(null);
@@ -551,7 +561,33 @@ export default function SubirLotePage() {
             {/* Action buttons */}
             <div style={{ display: 'flex', gap: 12 }}>
               <button
-                onClick={importar}
+                type="button"
+                onClick={async () => {
+                  const regs = registrosRef.current;
+                  if (regs.length === 0) return;
+                  const btn = document.getElementById('btn-importar') as HTMLButtonElement;
+                  if (btn) { btn.disabled = true; btn.textContent = 'Importando...'; }
+                  try {
+                    const res = await fetch('/api/postgres/people/bulk-import', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ registros: regs }),
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                      const msg = `Importación: ${data.exitosos} exitosos, ${data.fallidos} fallidos de ${data.total}` +
+                        (data.errores?.length ? '\n\nErrores:\n' + data.errores.join('\n') : '');
+                      alert(msg);
+                      if (data.exitosos > 0) window.location.reload();
+                    } else {
+                      alert('Error: ' + data.error);
+                    }
+                  } catch (err: any) {
+                    alert('Error de conexión: ' + err.message);
+                  }
+                  if (btn) { btn.disabled = false; btn.textContent = `Aprobar e Importar (${regs.length} registros)`; }
+                }}
+                id="btn-importar"
                 disabled={loading || registros.length === 0}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 8,
