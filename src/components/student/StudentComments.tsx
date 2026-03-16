@@ -86,11 +86,18 @@ export default function StudentComments({ studentId, usuarioId }: StudentComment
   const loadComments = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`/api/postgres/people?id=${activeUsuarioId}`)
+      const response = await fetch(`/api/postgres/people/${activeUsuarioId}/comments`)
       const data = await response.json()
 
       if (data.success) {
-        setComments(data.comments || [])
+        // comentarios is a text[] of JSON strings
+        const parsed = (data.comments || []).map((c: any) => {
+          if (typeof c === 'string') {
+            try { return JSON.parse(c) } catch { return null }
+          }
+          return c
+        }).filter(Boolean)
+        setComments(parsed)
       } else {
         setError(data.error)
       }
@@ -115,19 +122,16 @@ export default function StudentComments({ studentId, usuarioId }: StudentComment
     setError(null)
 
     try {
-      const response = await fetch('/api/postgres/people', {
+      const response = await fetch(`/api/postgres/people/${activeUsuarioId}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          personId: activeUsuarioId,
-          commentData: {
-            usuario: userEmail,
-            texto: newComment.trim(),
-            areaDestinatario: areaDestinatario,
-            areaRemitente: areaRemitente
-          }
+          usuario: userEmail,
+          texto: newComment.trim(),
+          areaDestinatario: areaDestinatario,
+          areaRemitente: areaRemitente
         })
       })
 
