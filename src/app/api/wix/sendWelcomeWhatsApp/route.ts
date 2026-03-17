@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'accept': 'application/json',
-        'authorization': 'Bearer VSyDX4j7ooAJ7UGOhz8lGplUVDDs2EYj',
+        'authorization': `Bearer ${process.env.WHAPI_TOKEN || 'I1s8u9FihgMttIDRvRDoMpOJB1LzPgtx'}`,
         'content-type': 'application/json'
       },
       body: JSON.stringify({
