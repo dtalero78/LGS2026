@@ -1,26 +1,21 @@
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
-import { getEvents } from '@/services/calendar.service';
+import { BookingRepository } from '@/repositories/booking.repository';
 
 /**
  * GET /api/postgres/events/sessions
  *
- * Get all SESSION-type events with optional filters.
+ * Get all SESSION/CLUB bookings with student names resolved from ACADEMICA/PEOPLE.
  */
 export const GET = handlerWithAuth(async (request) => {
   const { searchParams } = new URL(request.url);
 
-  const events = await getEvents({
-    tipo: 'SESSION',
-    startDate: searchParams.get('startDate') || undefined,
-    endDate: searchParams.get('endDate') || undefined,
-    advisor: searchParams.get('advisor') || undefined,
-    nivel: searchParams.get('nivel') || undefined,
-    includeBookingCounts: searchParams.get('includeBookings') === 'true',
-  });
+  const startDate = searchParams.get('startDate') || undefined;
+  const endDate = searchParams.get('endDate') || undefined;
+
+  const events = await BookingRepository.findSessionBookings(startDate, endDate);
 
   return successResponse({
     events,
     count: events.length,
-    tipo: 'SESSION',
   });
 });

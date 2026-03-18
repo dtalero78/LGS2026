@@ -65,7 +65,7 @@ class CalendarioRepositoryClass extends BaseRepository {
     if (filters.tipo) {
       if (filters.tipo === 'WELCOME') {
         // WELCOME is a nivel, not a tipo — match both legacy tipo and tituloONivel
-        conditions.push(`(COALESCE(c."tipo", c."evento") = $${idx} OR c."tituloONivel" = $${idx})`);
+        conditions.push(`(COALESCE(c."tipo", c."evento") = $${idx} OR c."tituloONivel" LIKE '%WELCOME%')`);
       } else {
         conditions.push(`COALESCE(c."tipo", c."evento") = $${idx}`);
       }
@@ -169,7 +169,7 @@ class CalendarioRepositoryClass extends BaseRepository {
     }
     if (filters.tipo) {
       if (filters.tipo === 'WELCOME') {
-        conditions.push(`(COALESCE(c."tipo", c."evento") = $${idx} OR c."tituloONivel" = $${idx})`);
+        conditions.push(`(COALESCE(c."tipo", c."evento") = $${idx} OR c."tituloONivel" LIKE '%WELCOME%')`);
       } else {
         conditions.push(`COALESCE(c."tipo", c."evento") = $${idx}`);
       }

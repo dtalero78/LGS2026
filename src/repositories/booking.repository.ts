@@ -285,7 +285,7 @@ class BookingRepositoryClass extends BaseRepository {
    * Returns one row per student booking (not per event).
    */
   async findWelcomeBookings(startDate?: string, endDate?: string) {
-    const conditions = [`(COALESCE(ab."tipoEvento", ab."tipo") = 'WELCOME' OR c."tituloONivel" = 'WELCOME')`];
+    const conditions = [`(COALESCE(ab."tipoEvento", ab."tipo") = 'WELCOME' OR c."tituloONivel" LIKE '%WELCOME%')`];
     const params: any[] = [];
     let paramIdx = 1;
 
@@ -325,6 +325,56 @@ class BookingRepositoryClass extends BaseRepository {
       params
     );
   }
+
+  /**
+   * Get SESSION bookings with student names resolved from ACADEMICA/PEOPLE
+   */
+  async findSessionBookings(startDate?: string, endDate?: string) {
+    const conditions = [
+      `(c."tituloONivel" IS NULL OR c."tituloONivel" NOT LIKE '%WELCOME%')`,
+      `(ab."cancelo" IS NULL OR ab."cancelo" = false)`
+    ];
+    const params: any[] = [];
+    let paramIdx = 1;
+
+    if (startDate) {
+      conditions.push(`c."dia" >= $${paramIdx}::timestamp`);
+      params.push(startDate);
+      paramIdx++;
+    }
+    if (endDate) {
+      conditions.push(`c."dia" < $${paramIdx}::timestamp`);
+      params.push(endDate);
+      paramIdx++;
+    }
+
+    return queryMany(
+      `SELECT
+         ab."_id",
+         COALESCE(ab."primerNombre", a."primerNombre", p."primerNombre", '') as "primerNombre",
+         COALESCE(ab."primerApellido", a."primerApellido", p."primerApellido", '') as "primerApellido",
+         COALESCE(p."segundoNombre", a."segundoNombre", '') as "segundoNombre",
+         COALESCE(p."segundoApellido", a."segundoApellido", '') as "segundoApellido",
+         COALESCE(p."celular", a."celular", '') as "celular",
+         c."dia" as "fechaEvento",
+         ab."asistio" as "asistencia",
+         COALESCE(p."numeroId", a."numeroId", '') as "numeroId",
+         COALESCE(ab."studentId", ab."idEstudiante") as "idEstudiante",
+         COALESCE(c."nivel", ab."nivel") as "nivel",
+         COALESCE(c."step", ab."step") as "step",
+         COALESCE(adv."nombreCompleto", adv."primerNombre" || ' ' || adv."primerApellido", c."advisor") as "advisor",
+         COALESCE(p."plataforma", a."plataforma", '') as "plataforma"
+       FROM "CALENDARIO" c
+       INNER JOIN "ACADEMICA_BOOKINGS" ab ON c."_id" = COALESCE(ab."eventoId", ab."idEvento")
+       LEFT JOIN "ACADEMICA" a ON COALESCE(ab."studentId", ab."idEstudiante") = a."_id"
+       LEFT JOIN "PEOPLE" p ON a."numeroId" = p."numeroId" AND p."tipoUsuario" = 'BENEFICIARIO'
+       LEFT JOIN "ADVISORS" adv ON c."advisor" = adv."_id"
+       WHERE ${conditions.join(' AND ')}
+       ORDER BY c."dia" DESC, ab."primerApellido" ASC, ab."primerNombre" ASC`,
+      params
+    );
+  }
+
   // ── Panel Estudiante helpers ──
 
   async findUpcomingByStudentId(studentId: string, limit: number = 10) {
