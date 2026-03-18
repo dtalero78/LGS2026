@@ -27,7 +27,7 @@ const CHART_DEFS: ChartDef[] = [
            TO_CHAR(b."fechaEvento"::date, 'YYYY-MM') AS mes,
            COUNT(*) AS agendadas,
            COUNT(*) FILTER (WHERE b."asistio" = true) AS atendidas,
-           COUNT(*) FILTER (WHERE b."cancelado" = true) AS canceladas
+           COUNT(*) FILTER (WHERE b."cancelo" = true) AS canceladas
          FROM "ACADEMICA_BOOKINGS" b
          WHERE b."fechaEvento" >= NOW() - INTERVAL '6 months'
            AND b."fechaEvento" <= NOW()
