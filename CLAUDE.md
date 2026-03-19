@@ -138,7 +138,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 104. Contacto y referencias (teléfonos, emails, dirección, emergencia, referencias personales/comerciales)
 105. Información financiera (número de contrato, estado de pago, resumen financiero)
 106. Administración de beneficiarios:
-     - Lista de beneficiarios con nombre, ID, estado (badge)
+     - Lista de beneficiarios con nombre (link clickeable → `/student/[id]`), ID, estado (badge)
      - Botón Aprobar con seguimiento de estado (Aprobando → Enviando WhatsApp → Completado)
      - Botón Editar (protegido por permisos)
      - Botón Eliminar con confirmación modal (solo tipo BENEFICIARIO)
@@ -1570,6 +1570,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `local` | Beneficiary names in PersonAdmin are clickable links to `/student/[id]` |
 | `0868616` | Progress report uses CALENDARIO JOIN for correct step counts, complementaria restricted by week (Mon-Sun), Next Session card shows "---" when no event |
 | `5d11520` | Student historial shows event's step from CALENDARIO instead of booking's stored step |
 | `84f55cb` | Student booking saves event's step (from CALENDARIO) instead of student's current step |
