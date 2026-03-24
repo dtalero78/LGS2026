@@ -176,13 +176,20 @@ export async function generateReport(studentId: string) {
       completado = false;
       mensaje = 'Marcado como incompleto por administrador';
     } else if (esJump) {
-      // Jump Step: 1 class registered + noAprobo !== true
-      if (tieneNoAprobo) {
-        completado = false;
-        mensaje = 'No aprobó el jump';
-      } else if (clasesDelStep.length === 0) {
+      // Jump Step rules:
+      // - noAprobo = true → failed, stays in jump step
+      // - no attendance (asistio = false or cancelled) → stays in jump step
+      // - attended (exitosa) AND noAprobo != true → completed
+      const tieneAsistenciaExitosa = clasesDelStep.some((c) => isExitosa(c));
+      if (clasesDelStep.length === 0) {
         completado = false;
         mensaje = 'Falta la clase del jump';
+      } else if (tieneNoAprobo) {
+        completado = false;
+        mensaje = 'No aprobó el jump';
+      } else if (!tieneAsistenciaExitosa) {
+        completado = false;
+        mensaje = 'Falta asistir al jump';
       } else {
         completado = true;
       }

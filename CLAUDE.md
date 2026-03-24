@@ -1468,9 +1468,13 @@ ESS es un nivel **paralelo y opcional** que NO bloquea el avance en los niveles 
 - Si `complementariaEligible` es true, se agrega al mensaje: " Puedes realizar una actividad complementaria."
 
 **2. Jump Steps (5, 10, 15, 20, 25, 30, 35, 40, 45) — múltiplos de 5**
-- Requiere **1 clase registrada** en el step + `noAprobo !== true`
-- Si `noAprobo === true` → "No aprobó el jump"
-- Si no hay clases → "Falta la clase del jump"
+- Requiere **1 clase con asistencia exitosa** (`asistio/asistencia/participacion = true`) Y `noAprobo !== true`
+- El estudiante **permanece en el Jump Step** si:
+  - No hay clases registradas → "Falta la clase del jump"
+  - El advisor marcó `noAprobo = true` → "No aprobó el jump"
+  - Tiene clase registrada pero no asistió o canceló → "Falta asistir al jump"
+- El step se completa automáticamente cuando el estudiante **asistió exitosamente** y el advisor **no marcó `noAprobo = true`**
+- El advisor solo necesita marcar `noAprobo = true` si el estudiante reprobó; si no marca nada y el estudiante asistió, el step se completa
 
 **3. Overrides manuales**
 - Tienen **prioridad absoluta** sobre toda la lógica
@@ -1570,6 +1574,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `local` | Jump Step completion requires attendance (asistio exitoso) + noAprobo != true; non-attendance and cancellation keep student in jump step |
 | `local` | Beneficiary names in PersonAdmin are clickable links to `/student/[id]` |
 | `0868616` | Progress report uses CALENDARIO JOIN for correct step counts, complementaria restricted by week (Mon-Sun), Next Session card shows "---" when no event |
 | `5d11520` | Student historial shows event's step from CALENDARIO instead of booking's stored step |
