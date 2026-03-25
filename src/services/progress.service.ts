@@ -109,7 +109,7 @@ export async function generateReport(studentId: string) {
             COALESCE(c."step", b."step") AS "step",
             b."advisor", b."fechaEvento", b."hora",
             b."tipo", b."nombreEvento", b."asistio", b."asistencia", b."participacion",
-            b."calificacion", b."comentarios", b."noAprobo"
+            b."calificacion", b."comentarios", b."noAprobo", b."cancelo"
      FROM "ACADEMICA_BOOKINGS" b
      LEFT JOIN "CALENDARIO" c ON c."_id" = COALESCE(b."eventoId", b."idEvento")
      WHERE (b."idEstudiante" = $1 OR b."studentId" = $1)
@@ -177,13 +177,21 @@ export async function generateReport(studentId: string) {
       mensaje = 'Marcado como incompleto por administrador';
     } else if (esJump) {
       // Jump Step rules:
-      // - noAprobo = true → failed, stays in jump step
-      // - no attendance (asistio = false or cancelled) → stays in jump step
-      // - attended (exitosa) AND noAprobo != true → completed
-      const tieneAsistenciaExitosa = clasesDelStep.some((c) => isExitosa(c));
+      // - no classes registered → stays in jump step
+      // - all classes cancelled → stays in jump step
+      // - has class but no exitosa attendance → stays in jump step
+      // - noAprobo = true → stays in jump step
+      // - exitosa attendance AND noAprobo != true → completed
+      const clasesNoCancel = clasesDelStep.filter((c) => !c.cancelo);
+      const todasCanceladas = clasesDelStep.length > 0 && clasesNoCancel.length === 0;
+      const tieneAsistenciaExitosa = clasesNoCancel.some((c) => isExitosa(c));
+
       if (clasesDelStep.length === 0) {
         completado = false;
         mensaje = 'Falta la clase del jump';
+      } else if (todasCanceladas) {
+        completado = false;
+        mensaje = 'Canceló la clase del jump, debe reagendarla';
       } else if (tieneNoAprobo) {
         completado = false;
         mensaje = 'No aprobó el jump';
