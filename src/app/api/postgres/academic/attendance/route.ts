@@ -1,6 +1,7 @@
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { BookingRepository } from '@/repositories/booking.repository';
 import { ValidationError, NotFoundError } from '@/lib/errors';
+import { autoAdvanceStep } from '@/services/student.service';
 
 /**
  * POST /api/postgres/academic/attendance
@@ -16,8 +17,15 @@ export const POST = handlerWithAuth(async (request) => {
   const booking = await BookingRepository.markAttendance(body.bookingId, body.asistio, body.fecha);
   if (!booking) throw new NotFoundError('Booking', body.bookingId);
 
+  // Trigger auto-advance if attendance was marked as present
+  let advancement = null;
+  if (body.asistio === true) {
+    advancement = await autoAdvanceStep(body.bookingId);
+  }
+
   return successResponse({
     booking,
+    advancement,
     message: booking.asistio ? 'Asistencia marcada' : 'Ausencia marcada',
   });
 });
@@ -36,8 +44,18 @@ export const PUT = handlerWithAuth(async (request) => {
 
   const results = await BookingRepository.markAttendanceBulk(body.bookings);
 
+  // Trigger auto-advance for each booking marked as attended
+  const attendedIds = body.bookings
+    .filter((b: any) => b.asistio === true)
+    .map((b: any) => b.bookingId);
+
+  const advancements = await Promise.all(
+    attendedIds.map((id: string) => autoAdvanceStep(id).catch(() => null))
+  );
+
   return successResponse({
     updated: results.length,
     bookings: results,
+    advancements: advancements.filter(Boolean),
   });
 });
