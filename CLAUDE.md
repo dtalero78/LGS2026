@@ -1601,6 +1601,9 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `local` | Login shows specific modal per failure reason: "Acceso bloqueado" (activo=false), "Contrato vencido" (finalContrato < hoy), or toast "Credenciales inválidas" (wrong password/user not found) |
+| `6afa966` | Show PLATAFORMA instead of advisor link for COMPLEMENTARIA type classes in student academic tab |
+| `53292ce` | Zoom link unavailable text changed to "Enlace disponible 5 min antes, recuerde refrescar el navegador" |
 | `1d16cac` | Fix: trigger autoAdvanceStep on attendance endpoints (individual + bulk) — root cause of students getting stuck at wrong step |
 | `411b353` | Fix: Jump Step requires exitosa attendance + noAprobo != true; non-attendance and cancellation keep student in jump step |
 | `local` | Beneficiary names in PersonAdmin are clickable links to `/student/[id]` |

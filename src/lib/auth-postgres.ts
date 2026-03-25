@@ -18,7 +18,10 @@ interface UserRole {
 }
 
 /**
- * Verify user credentials against PostgreSQL
+ * Verify user credentials against PostgreSQL.
+ * Throws 'BLOCKED' if user is inactive (admin disabled).
+ * Throws 'EXPIRED' if user is inactive due to expired contract.
+ * Returns null for wrong password or user not found.
  */
 async function verifyUserPostgres(email: string, password: string) {
   try {
@@ -37,8 +40,23 @@ async function verifyUserPostgres(email: string, password: string) {
     }
 
     if (!user.activo) {
-      console.log('⚠️ [PostgreSQL] Usuario inactivo');
-      return null;
+      console.log('⚠️ [PostgreSQL] Usuario inactivo — verificando motivo');
+      // Check if inactivity is due to expired contract
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const peopleRecord = await queryOne<{ finalContrato: string | null }>(
+        `SELECT "finalContrato" FROM "PEOPLE" WHERE LOWER("email") = LOWER($1) LIMIT 1`,
+        [email]
+      );
+      if (peopleRecord?.finalContrato) {
+        const expiry = new Date(peopleRecord.finalContrato);
+        expiry.setHours(0, 0, 0, 0);
+        if (expiry < today) {
+          console.log('⚠️ [PostgreSQL] Contrato vencido:', peopleRecord.finalContrato);
+          throw new Error('EXPIRED');
+        }
+      }
+      throw new Error('BLOCKED');
     }
 
     console.log('✅ [PostgreSQL] Usuario encontrado:', {
@@ -80,6 +98,10 @@ async function verifyUserPostgres(email: string, password: string) {
       return null;
     }
   } catch (error) {
+    // Re-throw our custom errors so authorize() can propagate them to the client
+    if (error instanceof Error && (error.message === 'BLOCKED' || error.message === 'EXPIRED')) {
+      throw error;
+    }
     console.error('❌ [PostgreSQL] Error:', error instanceof Error ? error.message : String(error));
     return null;
   }

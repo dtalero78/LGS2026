@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@/lib/zod-resolver'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
+import { XMarkIcon, LockClosedIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -15,8 +16,11 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>
 
+type LoginErrorType = 'BLOCKED' | 'EXPIRED' | null
+
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
+  const [loginError, setLoginError] = useState<LoginErrorType>(null)
   const router = useRouter()
 
   const {
@@ -71,7 +75,13 @@ export default function LoginPage() {
       })
 
       if (result?.error) {
-        toast.error('Credenciales inválidas')
+        if (result.error === 'BLOCKED') {
+          setLoginError('BLOCKED')
+        } else if (result.error === 'EXPIRED') {
+          setLoginError('EXPIRED')
+        } else {
+          toast.error('Credenciales inválidas, verifique el usuario o la clave')
+        }
       } else {
         toast.success('Inicio de sesión exitoso')
 
@@ -109,6 +119,55 @@ export default function LoginPage() {
   }
 
   return (
+    <>
+    {/* Blocked Modal */}
+    {loginError === 'BLOCKED' && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-shrink-0 bg-red-100 rounded-full p-2">
+              <LockClosedIcon className="h-6 w-6 text-red-600" />
+            </div>
+            <h2 className="text-lg font-semibold text-gray-900">Acceso bloqueado</h2>
+          </div>
+          <p className="text-sm text-gray-600 mb-5">
+            Tu cuenta ha sido desactivada. Por favor contacta al administrador para más información.
+          </p>
+          <button
+            type="button"
+            onClick={() => setLoginError(null)}
+            className="w-full py-2 px-4 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            Entendido
+          </button>
+        </div>
+      </div>
+    )}
+
+    {/* Expired Contract Modal */}
+    {loginError === 'EXPIRED' && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-shrink-0 bg-amber-100 rounded-full p-2">
+              <ExclamationTriangleIcon className="h-6 w-6 text-amber-600" />
+            </div>
+            <h2 className="text-lg font-semibold text-gray-900">Contrato vencido</h2>
+          </div>
+          <p className="text-sm text-gray-600 mb-5">
+            Tu contrato ha vencido y el acceso ha sido desactivado. Comunícate con Let's Go Speak para renovar tu plan.
+          </p>
+          <button
+            type="button"
+            onClick={() => setLoginError(null)}
+            className="w-full py-2 px-4 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            Entendido
+          </button>
+        </div>
+      </div>
+    )}
+
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
@@ -173,5 +232,6 @@ export default function LoginPage() {
         </form>
       </div>
     </div>
+    </>
   )
 }
