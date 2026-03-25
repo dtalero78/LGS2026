@@ -1200,6 +1200,33 @@ Students who have 1 successful session on a normal step (need 2) can take an AI-
 ### Content Source
 Questions are generated from `NIVELES.contenido` field (TEXT, markdown format with lesson objectives, vocabulary, grammar points, and evaluation criteria). Truncated to 4000 chars for the OpenAI prompt.
 
+## Auto-Avance de Steps (autoAdvanceStep)
+
+### Descripción
+`autoAdvanceStep(bookingId)` en `src/services/student.service.ts` avanza automáticamente el step del estudiante cuando completa el step actual. Se llama tras guardar asistencia o evaluación.
+
+### Reglas
+- Solo avanza si el booking es del **step actual** del estudiante en ACADEMICA (`student.step === bookingStep`)
+- Avanza **un step a la vez** — no puede recuperar steps saltados
+- WELCOME → BN1 Step 1: se dispara con cualquier asistencia marcada
+- Steps normales: verifica `isCurrentStepComplete()` antes de avanzar
+- ESS: ignorado (nunca avanza)
+- Overrides manuales tienen prioridad absoluta
+
+### Endpoints que disparan autoAdvanceStep
+| Endpoint | Dispara auto-advance |
+|---|---|
+| `POST /api/postgres/academic/attendance` | ✅ Sí (cuando `asistio=true`) |
+| `PUT /api/postgres/academic/attendance` (bulk) | ✅ Sí (por cada booking con `asistio=true`) |
+| `PUT/POST /api/postgres/academic/evaluation` | ✅ Sí |
+| `POST /api/postgres/academic-record` | ✅ Sí |
+| Complementaria (al aprobar quiz) | ✅ Sí |
+
+### Problema conocido: estudiantes "pegados"
+Si un advisor marca asistencia por un medio que no disparaba `autoAdvanceStep` (antes del fix de marzo 2026), el estudiante queda en un step anterior al real. Como el auto-advance valida `student.step === bookingStep`, los steps siguientes nunca disparan el avance.
+
+**Solución para estudiantes pegados**: cambiar manualmente el step vía "Cambiar Step" en el panel de administración (Tab Académica del estudiante).
+
 ## Contract Inactivation Rules
 
 ### Inactivation Sync Across Tables
@@ -1574,7 +1601,8 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
-| `local` | Jump Step completion requires attendance (asistio exitoso) + noAprobo != true; non-attendance and cancellation keep student in jump step |
+| `1d16cac` | Fix: trigger autoAdvanceStep on attendance endpoints (individual + bulk) — root cause of students getting stuck at wrong step |
+| `411b353` | Fix: Jump Step requires exitosa attendance + noAprobo != true; non-attendance and cancellation keep student in jump step |
 | `local` | Beneficiary names in PersonAdmin are clickable links to `/student/[id]` |
 | `0868616` | Progress report uses CALENDARIO JOIN for correct step counts, complementaria restricted by week (Mon-Sun), Next Session card shows "---" when no event |
 | `5d11520` | Student historial shows event's step from CALENDARIO instead of booking's stored step |
