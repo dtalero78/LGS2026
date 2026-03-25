@@ -211,7 +211,12 @@ async function isCurrentStepComplete(
   const tieneNoAprobo = clasesDelStep.some((c: any) => c.noAprobo === true);
 
   if (esJump) {
-    return clasesDelStep.length > 0 && !tieneNoAprobo;
+    // Jump Step requires: at least 1 exitosa attendance AND noAprobo != true
+    // (same rule as progress.service.ts — must match exactly)
+    const tieneAsistenciaExitosa = clasesDelStep.some(
+      (c: any) => c.asistio === true || c.asistencia === true || c.participacion === true
+    );
+    return clasesDelStep.length > 0 && tieneAsistenciaExitosa && !tieneNoAprobo;
   }
 
   const sesionesExitosas = clasesDelStep.filter((c: any) => getClassType(c) === 'SESSION' && isExitosa(c)).length;
