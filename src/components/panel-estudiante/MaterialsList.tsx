@@ -1,6 +1,21 @@
 'use client'
 
-import { ArrowDownTrayIcon, BookOpenIcon } from '@heroicons/react/24/outline'
+import { ArrowDownTrayIcon, BookOpenIcon, GlobeAltIcon } from '@heroicons/react/24/outline'
+
+const INTERACTIVE_MATERIAL_URLS: Record<string, string> = {
+  'F3': 'https://www.lgsplataforma.com/material-f3',
+  'P1': 'https://www.lgsplataforma.com/material-p1',
+  'P2': 'https://www.lgsplataforma.com/material-p2',
+  'P3': 'https://www.lgsplataforma.com/material-p3',
+  'BN1': 'https://www.lgsplataforma.com/material-bn1',
+  'BN2': 'https://www.lgsplataforma.com/material-bn2',
+  'BN3': 'https://www.lgsplataforma.com/material-bn3',
+}
+
+function getInteractiveMaterialUrl(nivel: string): string | null {
+  const base = nivel?.replace(/\s*JUMP\s*/i, '').trim().toUpperCase()
+  return INTERACTIVE_MATERIAL_URLS[base] || null
+}
 
 interface MaterialsListProps {
   data: any
@@ -64,6 +79,22 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
       <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
         Material - {nivel}
       </h3>
+      {getInteractiveMaterialUrl(nivel) && (
+        <a
+          href={getInteractiveMaterialUrl(nivel)!}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 p-3 mb-3 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors group border border-indigo-200"
+        >
+          <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-200">
+            <GlobeAltIcon className="h-5 w-5 text-indigo-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-indigo-900">Material Interactivo</p>
+            <p className="text-xs text-indigo-500">{nivel}</p>
+          </div>
+        </a>
+      )}
       {allMaterials.length === 0 ? (
         <div className="text-center py-8 text-gray-400">
           <BookOpenIcon className="h-10 w-10 mx-auto mb-2 text-gray-300" />
