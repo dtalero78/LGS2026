@@ -758,7 +758,9 @@ export default function StudentAcademic({ student, classes: initialClasses, view
                   </td>
                   <td className="table-cell">
                     <div className="text-sm text-gray-900">
-                      {classItem.advisor ? (
+                      {classItem.advisor === 'COMPLEMENTARIA' ? (
+                        <span className="text-gray-500">PLATAFORMA</span>
+                      ) : classItem.advisor ? (
                         <Link
                           href={`/advisor/${classItem.advisor}`}
                           className="text-blue-600 hover:text-blue-800 hover:underline"
