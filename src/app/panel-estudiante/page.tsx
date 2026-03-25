@@ -215,7 +215,7 @@ function PanelEstudianteContent() {
                     </a>
                   ) : (
                     <p className="text-sm text-primary-200">
-                      {zoomLink ? 'Disponible 5 min antes' : '---'}
+                      {zoomLink ? 'Enlace disponible 5 min antes, recuerde refrescar el navegador' : '---'}
                     </p>
                   )}
                 </div>

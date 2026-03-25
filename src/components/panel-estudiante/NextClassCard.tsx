@@ -125,7 +125,7 @@ export default function NextClassCard({ events, isLoading }: NextClassCardProps)
             ) : zoomLink ? (
               <span className="inline-flex items-center gap-2 text-sm text-gray-700 font-medium">
                 <VideoCameraIcon className="h-4 w-4 text-gray-400" />
-                Disponible 5 min antes
+                Enlace disponible 5 min antes, recuerde refrescar el navegador
               </span>
             ) : null}
             <button
