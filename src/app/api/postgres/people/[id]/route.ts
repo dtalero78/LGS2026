@@ -111,7 +111,7 @@ export const GET = handler(async (
           .join(' ');
 
         relatedPersons.push({
-          _id: ben._id,
+          _id: academicCheck?._id || ben._id,
           numeroId: ben.numeroId,
           nombreCompleto,
           celular: ben.celular || ben.telefono || '',
