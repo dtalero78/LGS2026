@@ -1602,6 +1602,7 @@ export interface Person {
 | Commit | Description |
 |---|---|
 | `9783aa8` | Fix: revert booking logic to original; add visual "Jump" suffix to step display in booking flow for steps that are multiples of 5 (e.g. "BN1 - Step 5 Jump") |
+| `local` | Login diferenciado: BLOCKED (activo=false) lanza modal "Acceso bloqueado", EXPIRED (finalContrato < hoy) lanza modal "Contrato vencido", credenciales inválidas muestra toast |
 | `f36fc36` | Fix: Jump Step stays when class is cancelled — progress.service shows "Canceló la clase del jump, debe reagendarla"; autoAdvanceStep now also requires exitosa attendance (was missing) |
 | `1e073e8` | Login shows specific modal per failure reason: "Acceso bloqueado" (activo=false), "Contrato vencido" (finalContrato < hoy), or toast "Credenciales inválidas" (wrong password/user not found) |
 | `6afa966` | Show PLATAFORMA instead of advisor link for COMPLEMENTARIA type classes in student academic tab |
