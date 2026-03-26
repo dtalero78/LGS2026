@@ -1601,6 +1601,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `6955e5b` | Feat: booking flow shows ALL jump steps (5-45) across all niveles (BN1-F3) when student is on any jump step, instead of only their current nivel |
 | `f36fc36` | Fix: Jump Step stays when class is cancelled — progress.service shows "Canceló la clase del jump, debe reagendarla"; autoAdvanceStep now also requires exitosa attendance (was missing) |
 | `1e073e8` | Login shows specific modal per failure reason: "Acceso bloqueado" (activo=false), "Contrato vencido" (finalContrato < hoy), or toast "Credenciales inválidas" (wrong password/user not found) |
 | `6afa966` | Show PLATAFORMA instead of advisor link for COMPLEMENTARIA type classes in student academic tab |
