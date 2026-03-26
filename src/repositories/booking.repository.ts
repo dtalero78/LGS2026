@@ -92,7 +92,9 @@ class BookingRepositoryClass extends BaseRepository {
     return queryMany(
       `SELECT b."_id", b."studentId", b."eventoId", b."tipo", b."fecha", b."hora", b."advisor",
               COALESCE(c."nivel", b."nivel") AS "nivel",
-              COALESCE(c."step", b."step") AS "step",
+              CASE WHEN b."step" ~ '^[A-Z]+ - Step' THEN b."step"
+                   ELSE COALESCE(c."step", b."step")
+              END AS "step",
               b."asistencia", b."asistio", b."participacion", b."noAprobo",
               b."cancelo", b."calificacion", b."anotaciones", b."comentarios", b."advisorAnotaciones",
               b."actividadPropuesta", b."linkZoom", b."asignadoPor", b."origen",
