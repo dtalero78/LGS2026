@@ -201,7 +201,12 @@ export default function BookingFlow({ onClose, initialTipo }: BookingFlowProps) 
                               </span>
                             </div>
                             <div className="text-xs text-gray-500 mt-1">
-                              {evt.nivel || evt.tituloONivel || '-'} - {evt.step || evt.nombreEvento || '-'}
+                              {(() => {
+                                const stepStr = evt.step || evt.nombreEvento || '-'
+                                const stepNum = stepStr.match(/Step\s*(\d+)/i)?.[1]
+                                const isJump = stepNum && parseInt(stepNum) % 5 === 0
+                                return `${evt.nivel || evt.tituloONivel || '-'} - ${stepStr}${isJump ? ' Jump' : ''}`
+                              })()}
                               {evt.advisorNombreCompleto && ` | ${evt.advisorNombreCompleto}`}
                             </div>
                           </div>
