@@ -4,6 +4,7 @@ import crypto from 'crypto'
 
 const CRM_BRIDGE_SECRET = process.env.CRM_BRIDGE_SECRET || ''
 const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || ''
+const BASE_URL = process.env.NEXTAUTH_URL || 'https://lgs-plataforma.com'
 const TOKEN_MAX_AGE_MS = 5 * 60 * 1000 // 5 minutes
 
 function verifyHmac(email: string, ts: string, token: string): boolean {
@@ -48,15 +49,15 @@ export async function GET(request: NextRequest) {
     secret: NEXTAUTH_SECRET,
   })
 
-  // Build redirect URL with email param
-  const redirectUrl = new URL(redirect, request.url)
+  // Build redirect URL with email param using the public base URL
+  const redirectUrl = new URL(redirect, BASE_URL)
   redirectUrl.searchParams.set('email', email)
 
   const response = NextResponse.redirect(redirectUrl)
 
   // Set the NextAuth session cookie
   // In production (HTTPS), NextAuth uses __Secure- prefix
-  const isSecure = request.url.startsWith('https')
+  const isSecure = BASE_URL.startsWith('https')
   const cookieName = isSecure
     ? '__Secure-next-auth.session-token'
     : 'next-auth.session-token'
