@@ -122,19 +122,10 @@ export async function getAvailableEvents(
   const startDate = new Date(dayStart.getTime() + offsetMs).toISOString();
   const endDate = new Date(dayEnd.getTime() + offsetMs).toISOString();
 
-  // Determine the effective step BEFORE querying events
-  // so we can decide whether to remove the nivel filter (jump step case)
-  const effectiveStepNum = await getEffectiveStepNumber(studentId, peopleId, nivel);
-  const fallbackStepNum = extractStepNumber(step) ?? 0;
-  const activeStepNum = effectiveStepNum > 0 ? effectiveStepNum : fallbackStepNum;
-  const isActiveJump = activeStepNum > 0 && activeStepNum % 5 === 0;
-
-  // If student is on a Jump Step: fetch events from ALL niveles (no nivel filter)
-  // so we can show all jump steps from 5 to 45 across BN1, BN2, ..., F3
   const events = await CalendarioRepository.findEvents({
     startDate,
     endDate,
-    nivel: isActiveJump ? undefined : nivel,
+    nivel,
     tipo,
   });
 
@@ -148,7 +139,15 @@ export async function getAvailableEvents(
   const bookedHours = await BookingRepository.findBookedHoursForDate(studentId, date);
   const bookedHoursSet = new Set(bookedHours);
 
-  const JUMP_STEP_MAX = 45;
+  // Determine the effective step based on actual progress
+  const effectiveStepNum = await getEffectiveStepNumber(studentId, peopleId, nivel);
+
+  // Fallback to stored step if NIVELES has no data for this nivel
+  const fallbackStepNum = extractStepNumber(step) ?? 0;
+  const activeStepNum = effectiveStepNum > 0 ? effectiveStepNum : fallbackStepNum;
+
+  const isActiveJump = activeStepNum > 0 && activeStepNum % 5 === 0;
+
   const now = new Date();
 
   // Annotate events
@@ -174,10 +173,10 @@ export async function getAvailableEvents(
       const isJumpEvent = evtStepNum !== null && evtStepNum > 0 && evtStepNum % 5 === 0;
 
       if (isActiveJump) {
-        // Student is on a Jump Step → show ALL jump steps from 5 to 45 (BN1 to F3)
-        if (!isJumpEvent || evtStepNum === null || evtStepNum > JUMP_STEP_MAX) return null;
+        // Student completed all regular steps → show ONLY the specific jump event
+        if (!isJumpEvent || evtStepNum !== activeStepNum) return null;
       } else {
-        // Student is on a regular step → show all non-jump events for their nivel
+        // Student is on a regular step → show all non-jump events, hide jump events
         if (isJumpEvent) return null;
       }
 
