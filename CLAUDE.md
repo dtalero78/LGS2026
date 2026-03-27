@@ -1603,6 +1603,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `e0db017` | Refactor: standardize non-standard API endpoints — permissions/route + user/permissions use RolPermisosRepository; permissions/update + roles/create use direct repo instead of fetch() proxies with VALID_PERMISSIONS validation; dashboard/stats uses dashboardService.getStats(); all /api/wix/* endpoints protected with WIX_SECRET header auth |
 | `0ada99f` | Fix: /admin/permissions — confirmation dialog when saving role with 0 permissions; backend validates all permission codes against known enums before saving |
 | `ecffec0` | Fix: PATCH /api/postgres/people/[id] now syncs email and celular to ACADEMICA (by numeroId) and email to USUARIOS_ROLES (by old email) when modified via Modificar beneficiario |
 | `3182cb9` | Fix: PersonAdmin beneficiary list now returns both _id (PEOPLE, for inactivate/delete ops) and academicaId (ACADEMICA, for /student navigation link) — fixes 404 on Inactivar button |

@@ -1,5 +1,4 @@
-import { NextResponse } from 'next/server';
-import { handlerWithAuth } from '@/lib/api-helpers';
+import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { query } from '@/lib/postgres';
 
 export const POST = handlerWithAuth(async () => {
@@ -32,19 +31,13 @@ export const POST = handlerWithAuth(async () => {
       nombre: `${row.primerNombre || ''} ${row.primerApellido || ''}`.trim(),
       nivel: row.nivel || 'N/A',
       plataforma: row.plataforma || 'N/A',
-      asistencias: parseInt(row.asistencias || '0')
+      asistencias: parseInt(row.asistencias || '0'),
     }));
 
-    console.log('🏆 Top Students: PostgreSQL results:', topStudents);
-
-    return NextResponse.json({ success: true, topStudents, source: 'postgres' });
+    console.log('🏆 Top Students:', topStudents.length, 'results');
+    return successResponse({ topStudents, source: 'postgres' });
   } catch (error: any) {
     console.error('🏆 Top Students Error:', error.message);
-    return NextResponse.json({
-      success: true,
-      topStudents: [],
-      source: 'fallback',
-      error: error.message
-    });
+    return successResponse({ topStudents: [], source: 'fallback' });
   }
 });

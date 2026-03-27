@@ -1,54 +1,26 @@
-import { NextResponse } from 'next/server';
-import { handlerWithAuth } from '@/lib/api-helpers';
-import { query } from '@/lib/postgres';
+import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
+import { getStats } from '@/services/dashboard.service';
 
 export const POST = handlerWithAuth(async () => {
   try {
     console.log('📊 Dashboard Stats: Fetching from PostgreSQL');
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const [
-      totalUsuariosResult,
-      totalInactivosResult,
-      sesionesHoyResult,
-      usuariosInscritosHoyResult,
-      advisorsHoyResult
-    ] = await Promise.all([
-      query(`SELECT COUNT(*) as count FROM "ACADEMICA"`),
-      query(`SELECT COUNT(*) as count FROM "ACADEMICA" WHERE "estadoInactivo" = false OR "estadoInactivo" IS NULL`),
-      query(`SELECT COUNT(*) as count FROM "CALENDARIO" WHERE "dia" >= $1 AND "dia" < $2`, [today.toISOString(), tomorrow.toISOString()]),
-      query(`SELECT COUNT(*) as count FROM "ACADEMICA_BOOKINGS" WHERE "_createdDate" >= $1 AND "_createdDate" < $2`, [today.toISOString(), tomorrow.toISOString()]),
-      query(`SELECT COUNT(DISTINCT "advisor") as count FROM "CALENDARIO" WHERE "dia" >= $1 AND "dia" < $2`, [today.toISOString(), tomorrow.toISOString()])
-    ]);
+    const data = await getStats();
 
     const stats = {
-      totalUsuarios: parseInt(totalUsuariosResult.rows[0]?.count || '0'),
-      totalInactivos: parseInt(totalInactivosResult.rows[0]?.count || '0'),
-      sesionesHoy: parseInt(sesionesHoyResult.rows[0]?.count || '0'),
-      usuariosInscritosHoy: parseInt(usuariosInscritosHoyResult.rows[0]?.count || '0'),
-      advisorsHoy: parseInt(advisorsHoyResult.rows[0]?.count || '0')
+      totalUsuarios: data.totalUsers,
+      totalInactivos: data.inactiveUsers,
+      sesionesHoy: data.eventsToday,
+      usuariosInscritosHoy: data.enrollmentsToday,
+      advisorsHoy: data.uniqueAdvisorsToday,
     };
 
-    console.log('📊 Dashboard Stats: PostgreSQL results:', stats);
-
-    return NextResponse.json({ success: true, stats, source: 'postgres' });
+    console.log('📊 Dashboard Stats:', stats);
+    return successResponse({ stats, source: 'postgres' });
   } catch (error: any) {
     console.error('📊 Dashboard Stats Error:', error.message);
-    return NextResponse.json({
-      success: true,
-      stats: {
-        totalUsuarios: 0,
-        totalInactivos: 0,
-        sesionesHoy: 0,
-        usuariosInscritosHoy: 0,
-        advisorsHoy: 0
-      },
+    return successResponse({
+      stats: { totalUsuarios: 0, totalInactivos: 0, sesionesHoy: 0, usuariosInscritosHoy: 0, advisorsHoy: 0 },
       source: 'fallback',
-      error: error.message
     });
   }
 });
