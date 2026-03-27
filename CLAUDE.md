@@ -1603,6 +1603,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `0d7ccaa` | Fix: WELCOME sessions with attendance (asistio/asistencia=true) excluded from weekly SESSION limit (max 2/week) — student can attend WELCOME + 2 regular sessions same week |
 | `f875c7c` | feat: auto-save contract draft to localStorage (72h TTL) — prevents data loss on accidental browser close; shows restore banner with continue/discard options |
 | `bb78a51` | feat: add Material Interactivo button in student panel MaterialsList — links to lgsplataforma.com/material-{nivel} for BN1-BN3, P1-P3, F3 |
 | `efe358b` | Fix: zoom unavailable text changed to "recuerda refrescar el navegador" (was "recuerde"), color set to white for visibility on blue background (panel-estudiante/page.tsx + NextClassCard.tsx) |
