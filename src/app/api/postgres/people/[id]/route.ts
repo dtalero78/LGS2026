@@ -220,6 +220,13 @@ export const PATCH = handlerWithAuth(async (
 
   console.log('🔄 [PostgreSQL People] Updating person:', personId);
 
+  // Fetch current person before update (needed for old email to update USUARIOS_ROLES)
+  const currentPerson = await queryOne(
+    `SELECT "email", "numeroId" FROM "PEOPLE" WHERE "_id" = $1`,
+    [personId]
+  );
+  if (!currentPerson) throw new NotFoundError('Person', personId);
+
   const built = buildDynamicUpdate('PEOPLE', body, PEOPLE_UPDATE_FIELDS);
   if (!built) throw new ValidationError('No valid fields to update');
 
@@ -234,6 +241,31 @@ export const PATCH = handlerWithAuth(async (
     'onHoldHistory',
     'extensionHistory',
   ]);
+
+  // Sync email and celular to ACADEMICA and USUARIOS_ROLES
+  const syncingEmail = body.email && body.email !== currentPerson.email;
+  const syncingCelular = body.celular !== undefined;
+
+  if ((syncingEmail || syncingCelular) && currentPerson.numeroId) {
+    const academicaFields: string[] = [];
+    const academicaValues: any[] = [];
+    if (syncingEmail) { academicaFields.push(`"email" = $${academicaFields.length + 1}`); academicaValues.push(body.email); }
+    if (syncingCelular) { academicaFields.push(`"celular" = $${academicaFields.length + 1}`); academicaValues.push(body.celular); }
+    academicaValues.push(currentPerson.numeroId);
+    await query(
+      `UPDATE "ACADEMICA" SET ${academicaFields.join(', ')}, "_updatedDate" = NOW() WHERE "numeroId" = $${academicaValues.length}`,
+      academicaValues
+    );
+    console.log('🔄 [PostgreSQL People] Synced to ACADEMICA');
+  }
+
+  if (syncingEmail && currentPerson.email) {
+    await query(
+      `UPDATE "USUARIOS_ROLES" SET "email" = $1 WHERE LOWER("email") = LOWER($2)`,
+      [body.email, currentPerson.email]
+    );
+    console.log('🔄 [PostgreSQL People] Synced email to USUARIOS_ROLES');
+  }
 
   // If estado changed to Contrato nulo / Devuelto / Rechazado → inactivate titular + beneficiaries
   const INACTIVE_STATES = ['Contrato nulo', 'Devuelto', 'Rechazado'];
