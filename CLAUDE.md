@@ -70,6 +70,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 50. Búsqueda de contratos por número (exact match o patrón)
 51. Numeración automática secuencial de contratos (next-number)
 52. Smart polling - Auto-actualización del contrato admin cuando el cliente firma consentimiento (timeout 10 min)
+52b. Auto-guardado de borrador en Crear Contrato — guarda estado del formulario en localStorage con TTL de 72h; al volver muestra banner para continuar o descartar
 
 ### Consentimiento Declarativo (Firma Digital)
 53. Página pública de contrato para el cliente (`/contrato/[id]`)
@@ -1602,6 +1603,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `f875c7c` | feat: auto-save contract draft to localStorage (72h TTL) — prevents data loss on accidental browser close; shows restore banner with continue/discard options |
 | `bb78a51` | feat: add Material Interactivo button in student panel MaterialsList — links to lgsplataforma.com/material-{nivel} for BN1-BN3, P1-P3, F3 |
 | `efe358b` | Fix: zoom unavailable text changed to "recuerda refrescar el navegador" (was "recuerde"), color set to white for visibility on blue background (panel-estudiante/page.tsx + NextClassCard.tsx) |
 | `6b6afec` | Fix: beneficiary links in /person/[id] use ACADEMICA _id (falls back to PEOPLE _id if no academic record); booking.repository preserves prefixed step names (e.g. 'TRAINING - Step 7') |
