@@ -1601,7 +1601,8 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
-| `local` | Fix: PATCH /api/postgres/people/[id] now syncs email and celular to ACADEMICA (by numeroId) and email to USUARIOS_ROLES (by old email) when modified via Modificar beneficiario |
+| `local` | Fix: /admin/permissions — confirmation dialog when saving role with 0 permissions; backend validates all permission codes against known enums before saving |
+| `ecffec0` | Fix: PATCH /api/postgres/people/[id] now syncs email and celular to ACADEMICA (by numeroId) and email to USUARIOS_ROLES (by old email) when modified via Modificar beneficiario |
 | `3182cb9` | Fix: PersonAdmin beneficiary list now returns both _id (PEOPLE, for inactivate/delete ops) and academicaId (ACADEMICA, for /student navigation link) — fixes 404 on Inactivar button |
 | `0d7ccaa` | Fix: WELCOME sessions with attendance (asistio/asistencia=true) excluded from weekly SESSION limit (max 2/week) — student can attend WELCOME + 2 regular sessions same week |
 | `efe358b` | Fix: zoom unavailable text changed to "recuerda refrescar el navegador" (was "recuerde"), color set to white for visibility on blue background (panel-estudiante/page.tsx + NextClassCard.tsx) |
