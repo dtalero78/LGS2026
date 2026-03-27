@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
@@ -56,6 +56,9 @@ const PAYMENT_OPTIONS: Record<string, { label: string; value: string }[]> = {
     { label: "Niubiz", value: "Niubiz" }
   ]
 };
+
+const DRAFT_KEY = 'crear-contrato-draft'
+const DRAFT_TTL_MS = 72 * 60 * 60 * 1000 // 72 horas
 
 interface Beneficiario {
   primerNombre: string;
@@ -127,6 +130,69 @@ function CrearContratoContent() {
   const [titularEsBeneficiario, setTitularEsBeneficiario] = useState(false);
   const [contrato, setContrato] = useState('');
   const [loadingContrato, setLoadingContrato] = useState(false);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+  const draftRestored = useRef(false);
+  const saveTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // Auto-save draft to localStorage (debounced 500ms)
+  useEffect(() => {
+    if (!draftRestored.current) return // Don't save until initial load is done
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({
+          titular, financial, beneficiarios, titularEsBeneficiario, currentStep, contrato,
+          savedAt: Date.now()
+        }))
+      } catch {}
+    }, 500)
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
+  }, [titular, financial, beneficiarios, titularEsBeneficiario, currentStep, contrato])
+
+  // Restore draft on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY)
+      if (raw) {
+        const draft = JSON.parse(raw)
+        if (draft.savedAt && Date.now() - draft.savedAt < DRAFT_TTL_MS) {
+          setShowDraftBanner(true)
+          // Store draft temporarily so we can restore on accept
+          draftRestored.current = false
+          ;(window as any).__contractDraft = draft
+        } else {
+          localStorage.removeItem(DRAFT_KEY)
+          draftRestored.current = true
+        }
+      } else {
+        draftRestored.current = true
+      }
+    } catch {
+      draftRestored.current = true
+    }
+  }, [])
+
+  const restoreDraft = () => {
+    const draft = (window as any).__contractDraft
+    if (draft) {
+      if (draft.titular) setTitular(draft.titular)
+      if (draft.financial) setFinancial(draft.financial)
+      if (draft.beneficiarios) setBeneficiarios(draft.beneficiarios)
+      if (draft.titularEsBeneficiario !== undefined) setTitularEsBeneficiario(draft.titularEsBeneficiario)
+      if (draft.currentStep) setCurrentStep(draft.currentStep)
+      if (draft.contrato) setContrato(draft.contrato)
+      delete (window as any).__contractDraft
+    }
+    setShowDraftBanner(false)
+    draftRestored.current = true
+  }
+
+  const discardDraft = () => {
+    localStorage.removeItem(DRAFT_KEY)
+    delete (window as any).__contractDraft
+    setShowDraftBanner(false)
+    draftRestored.current = true
+  }
 
   // Auto-generate contract number when plataforma changes
   const fetchNextContractNumber = useCallback(async (plataforma: string) => {
@@ -335,6 +401,7 @@ function CrearContratoContent() {
       const data = await response.json();
       setContractNumber(data.contractNumber);
       setSuccess(`Contrato creado exitosamente. Número de contrato: ${data.contractNumber}`);
+      localStorage.removeItem(DRAFT_KEY);
 
       // Redirect to contract detail page
       if (data._id) {
@@ -360,6 +427,39 @@ function CrearContratoContent() {
           <h1 className="text-3xl font-bold text-gray-900">Crear Contrato</h1>
           <p className="mt-2 text-gray-600">Complete el formulario para crear un nuevo contrato</p>
         </div>
+
+        {/* Draft restore banner */}
+        {showDraftBanner && (
+          <div className="mb-6 bg-amber-50 border border-amber-300 rounded-lg p-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="font-medium text-amber-800">Tienes un contrato en progreso</p>
+              <p className="text-sm text-amber-600">
+                {(() => {
+                  const d = (window as any).__contractDraft
+                  const name = d?.titular ? `${d.titular.primerNombre || ''} ${d.titular.primerApellido || ''}`.trim() : ''
+                  const ago = d?.savedAt ? Math.round((Date.now() - d.savedAt) / 3600000) : 0
+                  return name
+                    ? `Para ${name} — guardado hace ${ago < 1 ? 'menos de 1 hora' : `${ago}h`}`
+                    : `Guardado hace ${ago < 1 ? 'menos de 1 hora' : `${ago}h`}`
+                })()}
+              </p>
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+              <button
+                onClick={discardDraft}
+                className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Descartar
+              </button>
+              <button
+                onClick={restoreDraft}
+                className="px-3 py-1.5 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700"
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Progress bar */}
         <div className="mb-8">
