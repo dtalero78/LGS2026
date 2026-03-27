@@ -197,6 +197,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 144. Estadísticas personales de asistencia (total, asistidas, ausentes, porcentaje)
 145. Historial completo de clases con detalles
 146. Material de estudio por nivel/step actual
+146b. Botón "Material Interactivo" — enlace a lgsplataforma.com/material-{nivel} para niveles BN1-BN3, P1-P3, F3 (solo visible si el nivel tiene URL asignada)
 147. Comentarios de advisors (anotaciones y evaluaciones)
 148. Próxima clase destacada (card grande con fecha, advisor, Zoom link). Muestra "---" cuando no hay evento agendado (no muestra el nivel/step del estudiante). Cuando el Zoom aún no está disponible muestra: "Enlace disponible 5 min antes, recuerde refrescar el navegador"
 149. Actividades Complementarias (AI quiz): estudiantes con 1 sesión exitosa en un step normal pueden tomar un quiz de 10 preguntas generado por OpenAI (gpt-4o-mini). ≥80% para aprobar, máximo 3 intentos. Al aprobar se crea booking COMPLEMENTARIA y se ejecuta auto-promoción
@@ -304,7 +305,7 @@ src/
 │   │   └── dblgs/               Visor/editor de base de datos
 │   ├── consent/                 Consentimiento declarativo (status, contract-data, send-otp, verify, auto-approve)
 │   ├── contracts/               Generación y envío de PDF de contrato (send-pdf)
-│   ├── auth/                    NextAuth handler, logout
+│   ├── auth/                    NextAuth handler, logout, CRM bridge (cross-app SSO via HMAC)
 │   ├── cron/                    Jobs automáticos (expire-contracts, reactivate-onhold)
 │   ├── wix/                     Integraciones WhatsApp, CRUD beneficiarios, estado titular
 │   ├── admin/                   Invalidar cache de permisos
@@ -1601,8 +1602,12 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `bb78a51` | feat: add Material Interactivo button in student panel MaterialsList — links to lgsplataforma.com/material-{nivel} for BN1-BN3, P1-P3, F3 |
 | `efe358b` | Fix: zoom unavailable text changed to "recuerda refrescar el navegador" (was "recuerde"), color set to white for visibility on blue background (panel-estudiante/page.tsx + NextClassCard.tsx) |
 | `6b6afec` | Fix: beneficiary links in /person/[id] use ACADEMICA _id (falls back to PEOPLE _id if no academic record); booking.repository preserves prefixed step names (e.g. 'TRAINING - Step 7') |
+| `f7cb0b0` | Fix: use NEXTAUTH_URL for server-side redirect instead of internal request.url |
+| `d72036c` | feat: add CRM bridge endpoint for cross-app authentication |
+| `3e51a11` | Fix: revert booking logic in main — show only student's specific jump step |
 | `9783aa8` | Fix: revert booking logic to original; add visual "Jump" suffix to step display in booking flow for steps that are multiples of 5 (e.g. "BN1 - Step 5 Jump") |
 | `local` | Login diferenciado: BLOCKED (activo=false) lanza modal "Acceso bloqueado", EXPIRED (finalContrato < hoy) lanza modal "Contrato vencido", credenciales inválidas muestra toast |
 | `f36fc36` | Fix: Jump Step stays when class is cancelled — progress.service shows "Canceló la clase del jump, debe reagendarla"; autoAdvanceStep now also requires exitosa attendance (was missing) |
