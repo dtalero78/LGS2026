@@ -433,6 +433,11 @@ class BookingRepositoryClass extends BaseRepository {
          AND "fechaEvento" >= $2::timestamp
          AND "fechaEvento" <= $3::timestamp
          AND "cancelo" = false
+         AND NOT (
+           COALESCE("nivel", "tituloONivel") = 'WELCOME'
+           AND COALESCE("tipo", "tipoEvento") = 'SESSION'
+           AND ("asistio" = true OR "asistencia" = true)
+         )
        GROUP BY COALESCE("tipo", "tipoEvento")`,
       [studentId, weekStart, weekEnd]
     );
