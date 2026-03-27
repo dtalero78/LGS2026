@@ -214,8 +214,8 @@ function PanelEstudianteContent() {
                       Entrar a Zoom
                     </a>
                   ) : (
-                    <p className="text-sm text-primary-200">
-                      {zoomLink ? 'Enlace disponible 5 min antes, recuerde refrescar el navegador' : '---'}
+                    <p className="text-sm text-white">
+                      {zoomLink ? 'Enlace disponible 5 min antes, recuerda refrescar el navegador' : '---'}
                     </p>
                   )}
                 </div>

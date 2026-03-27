@@ -123,9 +123,9 @@ export default function NextClassCard({ events, isLoading }: NextClassCardProps)
                 Entrar a Zoom
               </a>
             ) : zoomLink ? (
-              <span className="inline-flex items-center gap-2 text-sm text-gray-700 font-medium">
-                <VideoCameraIcon className="h-4 w-4 text-gray-400" />
-                Enlace disponible 5 min antes, recuerde refrescar el navegador
+              <span className="inline-flex items-center gap-2 text-sm text-white font-medium">
+                <VideoCameraIcon className="h-4 w-4 text-white" />
+                Enlace disponible 5 min antes, recuerda refrescar el navegador
               </span>
             ) : null}
             <button
