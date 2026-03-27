@@ -7,8 +7,17 @@
 import { NextResponse } from 'next/server';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { ForbiddenError, ValidationError } from '@/lib/errors';
-import { Role } from '@/types/permissions';
+import { Role, PersonPermission, StudentPermission, AcademicoPermission, ServicioPermission, ComercialPermission, AprobacionPermission } from '@/types/permissions';
 import { invalidatePermissionsCache } from '@/config/roles';
+
+const VALID_PERMISSIONS = new Set<string>([
+  ...Object.values(PersonPermission),
+  ...Object.values(StudentPermission),
+  ...Object.values(AcademicoPermission),
+  ...Object.values(ServicioPermission),
+  ...Object.values(ComercialPermission),
+  ...Object.values(AprobacionPermission),
+]);
 
 export const POST = handlerWithAuth(async (req, _ctx, session) => {
   const userRole = (session.user as any).role as Role;
@@ -37,6 +46,14 @@ export const POST = handlerWithAuth(async (req, _ctx, session) => {
     console.error('❌ Permisos inválidos detectados:', invalidPerms);
     throw new ValidationError(
       `Algunos permisos son inválidos: ${invalidPerms.length} de ${permissions.length} total`
+    );
+  }
+
+  const unknownPerms = permissions.filter((p: string) => !VALID_PERMISSIONS.has(p));
+  if (unknownPerms.length > 0) {
+    console.error('❌ Permisos desconocidos detectados:', unknownPerms);
+    throw new ValidationError(
+      `Permisos no reconocidos: ${unknownPerms.join(', ')}`
     );
   }
 
