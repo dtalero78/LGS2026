@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
+  const wixSecret = request.headers.get('x-wix-secret');
+  if (!process.env.WIX_SECRET || wixSecret !== process.env.WIX_SECRET) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await request.json()
     const { celular, beneficiarioId, nombre } = body

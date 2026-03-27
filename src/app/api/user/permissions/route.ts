@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server';
 import { handlerWithAuth } from '@/lib/api-helpers';
 import { ValidationError } from '@/lib/errors';
 import { Role } from '@/types/permissions';
-import { query } from '@/lib/postgres';
+import { RolPermisosRepository } from '@/repositories/roles.repository';
 
 const NO_CACHE_HEADERS = {
   'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
@@ -25,12 +25,9 @@ export const GET = handlerWithAuth(async (_req, _ctx, session) => {
   console.log(`🔐 [PostgreSQL] Cargando permisos para rol: ${userRole}`);
 
   try {
-    const result = await query(
-      `SELECT "permisos", "descripcion" FROM "ROL_PERMISOS" WHERE "rol" = $1`,
-      [userRole]
-    );
+    const roleData = await RolPermisosRepository.findByRol(userRole);
 
-    if (result.rowCount === 0) {
+    if (!roleData) {
       console.warn(`⚠️ [PostgreSQL] Rol ${userRole} no encontrado`);
       return NextResponse.json(
         { success: true, source: 'postgres', role: userRole, permissions: [], count: 0 },
@@ -38,7 +35,6 @@ export const GET = handlerWithAuth(async (_req, _ctx, session) => {
       );
     }
 
-    const roleData = result.rows[0];
     const permissions = roleData.permisos || [];
 
     console.log(`✅ [PostgreSQL] Permisos cargados para ${userRole}:`, permissions.length);
