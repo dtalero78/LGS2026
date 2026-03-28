@@ -17,11 +17,22 @@ interface TickerConfig {
   updatedAt: string | null
 }
 
+const DEFAULT_TICKER: TickerConfig = {
+  message: '🎉\u00a0\u00a0Este es tu nuevo panel de usuario!\u00a0\u00a0•\u00a0\u00a0Recuerda que para avanzar de step debes participar cada semana en dos sesiones y en tu Training Session\u00a0\u00a0•\u00a0\u00a0Además, cuentas con dos Clubs opcionales para reforzar tu aprendizaje\u00a0\u00a0🌟',
+  color: '#ffffff',
+  updatedBy: null,
+  updatedAt: null,
+}
+
 async function fetchTicker(): Promise<TickerConfig> {
-  const res = await fetch('/api/postgres/config/ticker')
-  const json = await res.json()
-  if (!json.success) throw new Error('Error al cargar el ticker')
-  return json.data
+  try {
+    const res = await fetch('/api/postgres/config/ticker')
+    const json = await res.json()
+    if (json.success && json.data?.message) return json.data
+    return DEFAULT_TICKER
+  } catch {
+    return DEFAULT_TICKER
+  }
 }
 
 async function saveTicker(payload: { message: string; color: string }): Promise<TickerConfig> {
