@@ -18,7 +18,7 @@ interface TickerConfig {
 }
 
 const DEFAULT_TICKER: TickerConfig = {
-  message: '🎉\u00a0\u00a0Este es tu nuevo panel de usuario!\u00a0\u00a0•\u00a0\u00a0Recuerda que para avanzar de step debes participar cada semana en dos sesiones y en tu Training Session\u00a0\u00a0•\u00a0\u00a0Además, cuentas con dos Clubs opcionales para reforzar tu aprendizaje\u00a0\u00a0🌟',
+  message: '📢 Usuarios Ecuador 🇪🇨 y Chile 🇨🇱: viernes 3 y sábado 4 de abril no habra sesiones por Semana Santa ✝️. ¡Disfruten su descanso! 🌿✨ | Usuarios Colombia 🇨🇴: sábado 4 de abril habrán sesiones normales 👍',
   color: '#ffffff',
   updatedBy: null,
   updatedAt: null,
