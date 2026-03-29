@@ -58,11 +58,12 @@ export default function TickerPage() {
   const [mode, setMode] = useState<'replace' | 'append'>('replace')
   const [newText, setNewText] = useState('')
   const [color, setColor] = useState('#ffffff')
+  const [colorTouched, setColorTouched] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  // Sync color from DB when loaded
+  // Sync color from DB only on first load (don't overwrite user selection)
   useEffect(() => {
-    if (current?.color) setColor(current.color)
+    if (current?.color && !colorTouched) setColor(current.color)
   }, [current?.color])
 
   const previewMessage =
@@ -199,13 +200,13 @@ export default function TickerPage() {
               <input
                 type="color"
                 value={color}
-                onChange={(e) => setColor(e.target.value)}
+                onChange={(e) => { setColor(e.target.value); setColorTouched(true) }}
                 className="h-9 w-16 rounded cursor-pointer border border-gray-300"
                 title="Seleccionar color"
               />
               <span className="text-sm text-gray-500 font-mono">{color}</span>
               <button
-                onClick={() => setColor('#ffffff')}
+                onClick={() => { setColor('#ffffff'); setColorTouched(true) }}
                 className="text-xs text-gray-500 hover:text-gray-700 underline"
               >
                 Restablecer blanco
