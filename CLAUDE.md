@@ -1602,10 +1602,12 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `06ff35e` | Fix: /api/wix/* endpoints now accept NextAuth session OR WIX_SECRET header — fixes 401 Unauthorized when admin panel calls sendWhatsApp/sendWelcomeWhatsApp internally |
+| `b050c43` | Fix: ticker color picker selection no longer overwritten by useEffect after save (colorTouched flag prevents re-sync once user has interacted) |
 | `5043e94` | fix: default ticker message updated to Semana Santa notice (Ecuador/Chile/Colombia); APP_CONFIG table created in production DB with initial record |
 | `1118a96` | fix: ticker editor shows default hardcoded message when APP_CONFIG table not yet created (fetchTicker catches error and returns DEFAULT_TICKER) |
 | `86f3a36` | feat: Ticker editor — SUPER_ADMIN can manage student panel banner from /admin/ticker (replace/append, color picker, live preview, confirm dialog); message stored in APP_CONFIG table; panel-estudiante reads from DB with fallback |
-| `e0db017` | Refactor: standardize non-standard API endpoints — permissions/route + user/permissions use RolPermisosRepository; permissions/update + roles/create use direct repo instead of fetch() proxies with VALID_PERMISSIONS validation; dashboard/stats uses dashboardService.getStats(); all /api/wix/* endpoints protected with WIX_SECRET header auth |
+| `e0db017` | Refactor: standardize non-standard API endpoints — permissions/route + user/permissions use RolPermisosRepository; permissions/update + roles/create use direct repo instead of fetch() proxies with VALID_PERMISSIONS validation; dashboard/stats uses dashboardService.getStats(); /api/wix/* endpoints protected with WIX_SECRET or NextAuth session (dual auth) |
 | `local` | Fix: /admin/permissions — confirmation dialog when saving role with 0 permissions; backend validates all permission codes against known enums before saving |
 | `ecffec0` | Fix: PATCH /api/postgres/people/[id] now syncs email and celular to ACADEMICA (by numeroId) and email to USUARIOS_ROLES (by old email) when modified via Modificar beneficiario |
 | `3182cb9` | Fix: PersonAdmin beneficiary list now returns both _id (PEOPLE, for inactivate/delete ops) and academicaId (ACADEMICA, for /student navigation link) — fixes 404 on Inactivar button |
