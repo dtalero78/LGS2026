@@ -1604,6 +1604,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `local` | fix: banner overlay del login cubre solo el card del formulario (max-w-md), no toda la pantalla |
 | `local` | feat: Banner del login — SUPER_ADMIN sube imagen desde /admin/banner (toggle activo/inactivo, preview, eliminar); imagen guardada en APP_CONFIG (banner_image/banner_active); login muestra overlay con imagen y botón cerrar; se omite en misma sesión via sessionStorage |
 | `local` | feat: Ticker y Banner agrupados bajo nuevo submenú Avisos (SUPER_ADMIN only) en sidebar |
 | `local` | fix: lower complementaria pass threshold from 80% to 50% (`PASS_THRESHOLD = 50` in `complementaria.service.ts`) |
