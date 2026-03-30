@@ -9,6 +9,8 @@ import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { XMarkIcon, LockClosedIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 
+const BANNER_DISMISSED_KEY = 'lgs_banner_dismissed'
+
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(4, 'La contraseña debe tener al menos 4 caracteres'),
@@ -21,7 +23,30 @@ type LoginErrorType = 'BLOCKED' | 'EXPIRED' | null
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [loginError, setLoginError] = useState<LoginErrorType>(null)
+  const [bannerImage, setBannerImage] = useState<string | null>(null)
+  const [bannerVisible, setBannerVisible] = useState(false)
   const router = useRouter()
+
+  // Cargar banner al montar (GET público, sin auth)
+  useEffect(() => {
+    const dismissed = sessionStorage.getItem(BANNER_DISMISSED_KEY)
+    if (dismissed) return
+
+    fetch('/api/postgres/config/banner')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.active && data?.image) {
+          setBannerImage(data.image)
+          setBannerVisible(true)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const handleDismissBanner = () => {
+    setBannerVisible(false)
+    sessionStorage.setItem(BANNER_DISMISSED_KEY, '1')
+  }
 
   const {
     register,
@@ -120,6 +145,34 @@ export default function LoginPage() {
 
   return (
     <>
+    {/* Banner Overlay */}
+    {bannerVisible && bannerImage && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
+        <div className="relative max-w-2xl w-full">
+          <button
+            type="button"
+            onClick={handleDismissBanner}
+            className="absolute -top-3 -right-3 z-10 bg-white rounded-full p-1.5 shadow-lg hover:bg-gray-100 transition-colors"
+            title="Cerrar"
+          >
+            <XMarkIcon className="h-5 w-5 text-gray-700" />
+          </button>
+          <img
+            src={bannerImage}
+            alt="Aviso"
+            className="w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+          />
+          <button
+            type="button"
+            onClick={handleDismissBanner}
+            className="mt-4 w-full py-2 px-4 bg-white hover:bg-gray-100 text-gray-800 text-sm font-medium rounded-lg transition-colors shadow"
+          >
+            Cerrar y continuar al login
+          </button>
+        </div>
+      </div>
+    )}
+
     {/* Blocked Modal */}
     {loginError === 'BLOCKED' && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

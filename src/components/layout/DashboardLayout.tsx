@@ -68,10 +68,13 @@ const getNavigation = (userEmail: string) => [
     icon: KeyIcon,
   },
   {
-    name: 'Ticker',
-    href: '/admin/ticker',
+    name: 'Avisos',
     icon: MegaphoneIcon,
     superAdminOnly: true,
+    children: [
+      { name: 'Ticker', href: '/admin/ticker' },
+      { name: 'Banner', href: '/admin/banner' },
+    ],
   },
   {
     name: 'Juegos',
