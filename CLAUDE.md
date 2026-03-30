@@ -199,7 +199,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 146. Material de estudio por nivel/step actual
 147. Comentarios de advisors (anotaciones y evaluaciones)
 148. Próxima clase destacada (card grande con fecha, advisor, Zoom link). Muestra "---" cuando no hay evento agendado (no muestra el nivel/step del estudiante). Cuando el Zoom aún no está disponible muestra: "Enlace disponible 5 min antes, recuerde refrescar el navegador"
-149. Actividades Complementarias (AI quiz): estudiantes con 1 sesión exitosa en un step normal pueden tomar un quiz de 10 preguntas generado por OpenAI (gpt-4o-mini). ≥80% para aprobar, máximo 3 intentos. Al aprobar se crea booking COMPLEMENTARIA y se ejecuta auto-promoción
+149. Actividades Complementarias (AI quiz): estudiantes con 1 sesión exitosa en un step normal pueden tomar un quiz de 10 preguntas generado por OpenAI (gpt-4o-mini). ≥50% para aprobar, máximo 3 intentos. Al aprobar se crea booking COMPLEMENTARIA y se ejecuta auto-promoción
 150. Verificación de contrato expirado al login: al cargar el panel, si `finalContrato < hoy` se inactiva automáticamente al estudiante y su titular
 151. Auto-reactivación de OnHold al login: al cargar el panel, si `fechaFinOnHold < hoy` se desactiva OnHold automáticamente, se extiende el contrato por los días pausados y se crea entrada en extensionHistory
 
@@ -581,7 +581,7 @@ ANTHROPIC_API_KEY=anthropic_api_key_for_dashboard_charts
   - `FINANCIEROS`: Datos financieros (totalPlan, pagoInscripcion, saldo, cuotas, formaPago)
   - `CONTRACT_TEMPLATES`: Plantillas de contrato por plataforma (HTML con {{placeholders}})
   - `COMPLEMENTARIA_ATTEMPTS`: Intentos de actividades complementarias (AI quiz). Campos: studentId, nivel, step, attemptNumber, questions (JSONB), answers (JSONB), score, passed, bookingId, status (IN_PROGRESS/PASSED/FAILED)
-  - `APP_CONFIG`: Configuración de la aplicación (clave/valor). Campos: key (PK), value (TEXT), color (VARCHAR 20, default '#ffffff'), updatedBy, _updatedDate. Registro actual: `ticker_message` — mensaje del banner animado en el panel del estudiante
+  - `APP_CONFIG`: Configuración de la aplicación (clave/valor). Campos: key (PK), value (TEXT), color (VARCHAR 20, default '#ffffff'), updatedBy, _updatedDate. Registros: `ticker_message` (banner animado panel estudiante), `banner_image` (base64 imagen banner login), `banner_active` ('true'/'false' visibilidad banner login)
 
 ## Migración Wix → PostgreSQL
 
@@ -1185,7 +1185,7 @@ Students who have 1 successful session on a normal step (need 2) can take an AI-
 - **Eligibility**: 1 exitosa session on a non-jump step, not already completed, no override, **AND no successful session this week (Mon-Sun)** for that step
 - **Week restriction**: If the student attended a successful session for that step during the current week (Monday to Sunday), complementaria is NOT offered. This prevents students from evading regular sessions when they still have time to book another one that week.
 - **Questions**: 10 per attempt (4 multiple choice, 1 true/false, 2 open-ended, 2 multiple choice, 1 any)
-- **Pass threshold**: ≥80%
+- **Pass threshold**: ≥50%
 - **Max attempts**: 3 persistent attempts per step (stored in `COMPLEMENTARIA_ATTEMPTS` table)
 - **On pass**: Creates `ACADEMICA_BOOKINGS` record with `tipo=COMPLEMENTARIA` (counts as SESSION in `getClassType()`) and triggers `autoAdvanceStep()`
 
@@ -1602,6 +1602,9 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `local` | feat: Banner del login — SUPER_ADMIN sube imagen desde /admin/banner (toggle activo/inactivo, preview, eliminar); imagen guardada en APP_CONFIG (banner_image/banner_active); login muestra overlay con imagen y botón cerrar; se omite en misma sesión via sessionStorage |
+| `local` | feat: Ticker y Banner agrupados bajo nuevo submenú Avisos (SUPER_ADMIN only) en sidebar |
+| `local` | fix: lower complementaria pass threshold from 80% to 50% (`PASS_THRESHOLD = 50` in `complementaria.service.ts`) |
 | `06ff35e` | Fix: /api/wix/* endpoints now accept NextAuth session OR WIX_SECRET header — fixes 401 Unauthorized when admin panel calls sendWhatsApp/sendWelcomeWhatsApp internally |
 | `b050c43` | Fix: ticker color picker selection no longer overwritten by useEffect after save (colorTouched flag prevents re-sync once user has interacted) |
 | `5043e94` | fix: default ticker message updated to Semana Santa notice (Ecuador/Chile/Colombia); APP_CONFIG table created in production DB with initial record |
