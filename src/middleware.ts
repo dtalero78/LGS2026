@@ -92,7 +92,13 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  return NextResponse.next()
+  // Agregar headers anti-caché para rutas protegidas autenticadas
+  // Esto evita que el navegador muestre páginas cacheadas al presionar "atrás" después de logout
+  const response = NextResponse.next()
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+  response.headers.set('Pragma', 'no-cache')
+  response.headers.set('Expires', '0')
+  return response
 }
 
 export const config = {
