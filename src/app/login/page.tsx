@@ -145,33 +145,6 @@ export default function LoginPage() {
 
   return (
     <>
-    {/* Banner Overlay */}
-    {bannerVisible && bannerImage && (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
-        <div className="relative max-w-2xl w-full">
-          <button
-            type="button"
-            onClick={handleDismissBanner}
-            className="absolute -top-3 -right-3 z-10 bg-white rounded-full p-1.5 shadow-lg hover:bg-gray-100 transition-colors"
-            title="Cerrar"
-          >
-            <XMarkIcon className="h-5 w-5 text-gray-700" />
-          </button>
-          <img
-            src={bannerImage}
-            alt="Aviso"
-            className="w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
-          />
-          <button
-            type="button"
-            onClick={handleDismissBanner}
-            className="mt-4 w-full py-2 px-4 bg-white hover:bg-gray-100 text-gray-800 text-sm font-medium rounded-lg transition-colors shadow"
-          >
-            Cerrar y continuar al login
-          </button>
-        </div>
-      </div>
-    )}
 
     {/* Blocked Modal */}
     {loginError === 'BLOCKED' && (
@@ -222,7 +195,35 @@ export default function LoginPage() {
     )}
 
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+      <div className="relative max-w-md w-full space-y-8">
+
+        {/* Banner Overlay — cubre solo el card del login */}
+        {bannerVisible && bannerImage && (
+          <div className="absolute inset-0 z-10 flex flex-col rounded-xl overflow-hidden shadow-2xl">
+            <button
+              type="button"
+              onClick={handleDismissBanner}
+              className="absolute top-2 right-2 z-20 bg-white rounded-full p-1.5 shadow-lg hover:bg-gray-100 transition-colors"
+              title="Cerrar"
+              aria-label="Cerrar banner"
+            >
+              <XMarkIcon className="h-5 w-5 text-gray-700" />
+            </button>
+            <img
+              src={bannerImage}
+              alt="Aviso"
+              className="w-full h-full object-cover"
+            />
+            <button
+              type="button"
+              onClick={handleDismissBanner}
+              className="flex-shrink-0 w-full py-2.5 px-4 bg-white hover:bg-gray-100 text-gray-800 text-sm font-medium transition-colors"
+            >
+              Cerrar y continuar al login
+            </button>
+          </div>
+        )}
+
         <div>
           <img
             src="/logo.png"
