@@ -16,6 +16,7 @@ import {
   ChevronRightIcon,
   ArrowRightOnRectangleIcon,
   PuzzlePieceIcon,
+  MegaphoneIcon,
 } from '@heroicons/react/24/outline'
 import { cn } from '@/lib/utils'
 import SearchBar from '@/components/search/SearchBar'
@@ -65,6 +66,12 @@ const getNavigation = (userEmail: string) => [
     name: 'Permisos',
     href: '/admin/permissions',
     icon: KeyIcon,
+  },
+  {
+    name: 'Ticker',
+    href: '/admin/ticker',
+    icon: MegaphoneIcon,
+    superAdminOnly: true,
   },
   {
     name: 'Juegos',
@@ -243,17 +250,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     // Always show Dashboard home
     if (item.href === '/') return true
 
+    // Items exclusivos de SUPER_ADMIN (verificar ANTES de hasFullAccess)
+    if (item.superAdminOnly) return isRole('SUPER_ADMIN')
+
     // Full access users see everything
     if (hasFullAccess) return true
 
     // Permisos page - only for admins
     if (item.href === '/admin/permissions') {
       return hasFullAccess
-    }
-
-    // Super admin only items
-    if (item.superAdminOnly) {
-      return isRole('SUPER_ADMIN')
     }
 
     // Verificar si tiene permisos para esta sección

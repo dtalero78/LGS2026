@@ -8,6 +8,7 @@ import {
   VideoCameraIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline'
+import { useQuery } from 'react-query'
 import {
   useStudentMe,
   useStudentEvents,
@@ -38,6 +39,15 @@ function PanelEstudianteContent() {
   const [videoOpen, setVideoOpen] = useState(false)
   const [videoSrc, setVideoSrc] = useState<string | null>(null)
   const [showInstructivos, setShowInstructivos] = useState(false)
+
+  // Ticker
+  const tickerQuery = useQuery(
+    'ticker-config',
+    () => fetch('/api/postgres/config/ticker').then(r => r.json()).then(j => j.data),
+    { staleTime: 5 * 60 * 1000 }
+  )
+  const tickerMessage = tickerQuery.data?.message ?? '📢 Usuarios Ecuador 🇪🇨 y Chile 🇨🇱: viernes 3 y sábado 4 de abril no habra sesiones por Semana Santa ✝️. ¡Disfruten su descanso! 🌿✨ | Usuarios Colombia 🇨🇴: sábado 4 de abril habrán sesiones normales 👍'
+  const tickerColor = tickerQuery.data?.color ?? '#ffffff'
 
   // Queries
   const meQuery = useStudentMe()
@@ -163,8 +173,8 @@ function PanelEstudianteContent() {
           <span className="text-white text-xs font-black uppercase tracking-widest">📢 LGS</span>
         </div>
         <div className="flex-1 overflow-hidden flex items-center py-2">
-          <span className="lgs-ticker-text text-white text-sm font-medium px-8">
-            🎉&nbsp;&nbsp;Este es tu nuevo panel de usuario!&nbsp;&nbsp;•&nbsp;&nbsp;Recuerda que para avanzar de step debes participar cada semana en dos sesiones y en tu Training Session&nbsp;&nbsp;•&nbsp;&nbsp;Además, cuentas con dos Clubs opcionales para reforzar tu aprendizaje&nbsp;&nbsp;🌟
+          <span className="lgs-ticker-text text-sm font-medium px-8" style={{ color: tickerColor }}>
+            {tickerMessage}
           </span>
         </div>
       </div>

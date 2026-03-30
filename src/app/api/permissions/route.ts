@@ -10,7 +10,7 @@ import { Role } from '@/types/permissions';
 import { ROLE_PERMISSIONS_MATRIX } from '@/config/roles';
 import { PERMISSIONS_CATALOG } from '@/config/permissions';
 import { getPermissionsForRole } from '@/lib/custom-permissions';
-import { query } from '@/lib/postgres';
+import { RolPermisosRepository } from '@/repositories/roles.repository';
 
 const NO_CACHE_HEADERS = {
   'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
@@ -29,19 +29,15 @@ export const GET = handlerWithAuth(async (_req, _ctx, session) => {
   console.log('📊 [PostgreSQL] Cargando permisos...');
 
   try {
-    const result = await query(
-      `SELECT "rol", "permisos", "descripcion", "activo"
-       FROM "ROL_PERMISOS"
-       ORDER BY "rol" ASC`
-    );
+    const rows = await RolPermisosRepository.findAll();
 
-    if (result.rowCount === 0) {
+    if (rows.length === 0) {
       throw new Error('No roles found in database');
     }
 
-    console.log(`✅ [PostgreSQL] Cargados ${result.rowCount} roles`);
+    console.log(`✅ [PostgreSQL] Cargados ${rows.length} roles`);
 
-    const matrix = result.rows.map((row: any) => ({
+    const matrix = rows.map((row: any) => ({
       role: row.rol,
       permissions: row.permisos || [],
       count: (row.permisos || []).length,
@@ -49,7 +45,7 @@ export const GET = handlerWithAuth(async (_req, _ctx, session) => {
       activo: row.activo,
     }));
 
-    const roles = result.rows.map((r: any) => r.rol);
+    const roles = rows.map((r: any) => r.rol);
 
     return NextResponse.json(
       { success: true, source: 'postgres', data: { roles, permissions: PERMISSIONS_CATALOG, matrix } },

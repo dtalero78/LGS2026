@@ -583,6 +583,7 @@ ANTHROPIC_API_KEY=anthropic_api_key_for_dashboard_charts
   - `FINANCIEROS`: Datos financieros (totalPlan, pagoInscripcion, saldo, cuotas, formaPago)
   - `CONTRACT_TEMPLATES`: Plantillas de contrato por plataforma (HTML con {{placeholders}})
   - `COMPLEMENTARIA_ATTEMPTS`: Intentos de actividades complementarias (AI quiz). Campos: studentId, nivel, step, attemptNumber, questions (JSONB), answers (JSONB), score, passed, bookingId, status (IN_PROGRESS/PASSED/FAILED)
+  - `APP_CONFIG`: Configuración de la aplicación (clave/valor). Campos: key (PK), value (TEXT), color (VARCHAR 20, default '#ffffff'), updatedBy, _updatedDate. Registro actual: `ticker_message` — mensaje del banner animado en el panel del estudiante
 
 ## Migración Wix → PostgreSQL
 
@@ -1605,6 +1606,16 @@ export interface Person {
 |---|---|
 | `f875c7c` | feat: auto-save contract draft to localStorage (72h TTL) — prevents data loss on accidental browser close; shows restore banner with continue/discard options |
 | `bb78a51` | feat: add Material Interactivo button in student panel MaterialsList — links to lgsplataforma.com/material-{nivel} for BN1-BN3, P1-P3, F3 |
+| `06ff35e` | Fix: /api/wix/* endpoints now accept NextAuth session OR WIX_SECRET header — fixes 401 Unauthorized when admin panel calls sendWhatsApp/sendWelcomeWhatsApp internally |
+| `b050c43` | Fix: ticker color picker selection no longer overwritten by useEffect after save (colorTouched flag prevents re-sync once user has interacted) |
+| `5043e94` | fix: default ticker message updated to Semana Santa notice (Ecuador/Chile/Colombia); APP_CONFIG table created in production DB with initial record |
+| `1118a96` | fix: ticker editor shows default hardcoded message when APP_CONFIG table not yet created (fetchTicker catches error and returns DEFAULT_TICKER) |
+| `86f3a36` | feat: Ticker editor — SUPER_ADMIN can manage student panel banner from /admin/ticker (replace/append, color picker, live preview, confirm dialog); message stored in APP_CONFIG table; panel-estudiante reads from DB with fallback |
+| `e0db017` | Refactor: standardize non-standard API endpoints — permissions/route + user/permissions use RolPermisosRepository; permissions/update + roles/create use direct repo instead of fetch() proxies with VALID_PERMISSIONS validation; dashboard/stats uses dashboardService.getStats(); /api/wix/* endpoints protected with WIX_SECRET or NextAuth session (dual auth) |
+| `local` | Fix: /admin/permissions — confirmation dialog when saving role with 0 permissions; backend validates all permission codes against known enums before saving |
+| `ecffec0` | Fix: PATCH /api/postgres/people/[id] now syncs email and celular to ACADEMICA (by numeroId) and email to USUARIOS_ROLES (by old email) when modified via Modificar beneficiario |
+| `3182cb9` | Fix: PersonAdmin beneficiary list now returns both _id (PEOPLE, for inactivate/delete ops) and academicaId (ACADEMICA, for /student navigation link) — fixes 404 on Inactivar button |
+| `0d7ccaa` | Fix: WELCOME sessions with attendance (asistio/asistencia=true) excluded from weekly SESSION limit (max 2/week) — student can attend WELCOME + 2 regular sessions same week |
 | `efe358b` | Fix: zoom unavailable text changed to "recuerda refrescar el navegador" (was "recuerde"), color set to white for visibility on blue background (panel-estudiante/page.tsx + NextClassCard.tsx) |
 | `6b6afec` | Fix: beneficiary links in /person/[id] use ACADEMICA _id (falls back to PEOPLE _id if no academic record); booking.repository preserves prefixed step names (e.g. 'TRAINING - Step 7') |
 | `f7cb0b0` | Fix: use NEXTAUTH_URL for server-side redirect instead of internal request.url |

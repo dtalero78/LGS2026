@@ -233,6 +233,13 @@ export default function PermissionsAdminPage() {
         .map(([key]) => key as Permission)
         .filter(p => p && p !== 'undefined');
 
+      if (permissions.length === 0) {
+        const confirmed = window.confirm(
+          `⚠️ Estás a punto de guardar el rol "${selectedRole}" sin ningún permiso.\n\nEsto dejará al rol sin acceso a ninguna funcionalidad del sistema.\n\n¿Deseas continuar?`
+        );
+        if (!confirmed) { setSaving(false); return; }
+      }
+
       const response = await fetch('/api/permissions/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

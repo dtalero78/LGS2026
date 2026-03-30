@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+
+async function isAuthorized(request: NextRequest): Promise<boolean> {
+  const wixSecret = request.headers.get('x-wix-secret');
+  if (process.env.WIX_SECRET && wixSecret === process.env.WIX_SECRET) return true;
+  const session = await getServerSession(authOptions);
+  return !!session;
+}
 
 export async function POST(request: NextRequest) {
+  if (!await isAuthorized(request)) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await request.json()
     const { celular, beneficiarioId, nombre } = body
