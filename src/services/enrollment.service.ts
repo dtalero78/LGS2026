@@ -115,6 +115,7 @@ export async function enrollStudents(input: EnrollInput) {
         primerApellido: student.primerApellido,
         numeroId: student.numeroId,
         celular: student.celular,
+        plataforma: student.plataforma || null,
         nivel: event.nivel || event.tituloONivel || student.nivel,
         step: event.step || event.nombreEvento || student.step,
         advisor: event.advisor,
