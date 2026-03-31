@@ -1605,6 +1605,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `local` | fix: beneficiary link en PersonAdmin usa /student/[academicaId] si tiene registro en ACADEMICA, o /person/[_id] si no tiene |
 | `local` | fix: middleware — noCacheNext() helper aplica headers no-store a TODOS los returns protegidos (SUPER_ADMIN, alwaysAllowedRoutes, panel-estudiante) — fix definitivo del back-button bypass post-logout |
 | `local` | fix: banner overlay del login cubre solo el card del formulario (max-w-md), no toda la pantalla |
 | `local` | feat: Banner del login — SUPER_ADMIN sube imagen desde /admin/banner (toggle activo/inactivo, preview, eliminar); imagen guardada en APP_CONFIG (banner_image/banner_active); login muestra overlay con imagen y botón cerrar; se omite en misma sesión via sessionStorage |
