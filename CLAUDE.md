@@ -1602,7 +1602,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
-| `local` | fix: middleware agrega headers Cache-Control: no-store en todas las rutas protegidas — evita que el navegador muestre páginas cacheadas al presionar "atrás" después de logout |
+| `local` | fix: middleware — noCacheNext() helper aplica headers no-store a TODOS los returns protegidos (SUPER_ADMIN, alwaysAllowedRoutes, panel-estudiante) — fix definitivo del back-button bypass post-logout |
 | `local` | fix: banner overlay del login cubre solo el card del formulario (max-w-md), no toda la pantalla |
 | `local` | feat: Banner del login — SUPER_ADMIN sube imagen desde /admin/banner (toggle activo/inactivo, preview, eliminar); imagen guardada en APP_CONFIG (banner_image/banner_active); login muestra overlay con imagen y botón cerrar; se omite en misma sesión via sessionStorage |
 | `local` | feat: Ticker y Banner agrupados bajo nuevo submenú Avisos (SUPER_ADMIN only) en sidebar |

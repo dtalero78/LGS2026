@@ -5,10 +5,20 @@ import { isAuthDisabled } from '@/lib/utils'
 import { Role } from '@/types/permissions'
 import { getPermissionsForRoleFromWix, hasAccessToRoute } from '@/lib/middleware-permissions'
 
+// Respuesta con headers anti-caché aplicados a todas las rutas protegidas.
+// Evita que el navegador muestre páginas cacheadas al presionar "atrás" después de logout.
+function noCacheNext(): NextResponse {
+  const res = NextResponse.next()
+  res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+  res.headers.set('Pragma', 'no-cache')
+  res.headers.set('Expires', '0')
+  return res
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Skip middleware for API auth routes and static files
+  // Skip middleware para rutas públicas y archivos estáticos (sin headers anti-caché)
   if (
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/_next') ||
@@ -56,14 +66,14 @@ export async function middleware(request: NextRequest) {
     // SUPER_ADMIN y ADMIN tienen acceso total
     if (userRole === Role.SUPER_ADMIN || userRole === Role.ADMIN || userRole === 'admin') {
       console.log(`✅ [Middleware] Full access granted to ${pathname} for ${userRole}`);
-      return NextResponse.next();
+      return noCacheNext();
     }
 
     // Rutas que siempre están permitidas (búsqueda de personas/estudiantes, panel de advisor)
     const alwaysAllowedRoutes = ['/person', '/student', '/sesion', '/advisor', '/panel-advisor', '/panel-estudiante'];
     if (alwaysAllowedRoutes.some(route => pathname.startsWith(route))) {
       console.log(`✅ [Middleware] Access granted to ${pathname} (always allowed route)`);
-      return NextResponse.next();
+      return noCacheNext();
     }
 
     // Para otras rutas, cargar permisos desde Wix
@@ -92,13 +102,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Agregar headers anti-caché para rutas protegidas autenticadas
-  // Esto evita que el navegador muestre páginas cacheadas al presionar "atrás" después de logout
-  const response = NextResponse.next()
-  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
-  response.headers.set('Pragma', 'no-cache')
-  response.headers.set('Expires', '0')
-  return response
+  return noCacheNext()
 }
 
 export const config = {
