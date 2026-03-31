@@ -129,16 +129,20 @@ export async function updateEvent(eventId: string, data: Record<string, any>) {
   const updated = await CalendarioRepository.updateEvent(eventId, data, ALLOWED_EVENT_FIELDS);
   if (!updated) throw new ValidationError('No valid fields to update');
 
-  // Propagate advisor and linkZoom changes to existing bookings
-  if (data.advisor && data.advisor !== event.advisor) {
-    await BookingRepository.updateByEventId(eventId, {
-      advisor: data.advisor,
-      linkZoom: data.linkZoom || updated.linkZoom || null,
-    });
-  } else if (data.linkZoom && data.linkZoom !== event.linkZoom) {
-    await BookingRepository.updateByEventId(eventId, {
-      linkZoom: data.linkZoom,
-    });
+  // Propagate relevant field changes to existing bookings
+  const bookingUpdates: Record<string, any> = {};
+
+  if (data.advisor && data.advisor !== event.advisor) bookingUpdates.advisor = data.advisor;
+  if (data.linkZoom && data.linkZoom !== event.linkZoom) bookingUpdates.linkZoom = updated.linkZoom || data.linkZoom;
+  if (data.nombreEvento && data.nombreEvento !== event.nombreEvento) bookingUpdates.nombreEvento = data.nombreEvento;
+  if (data.titulo && data.titulo !== event.titulo) bookingUpdates.titulo = data.titulo;
+  if (data.nivel && data.nivel !== event.nivel) bookingUpdates.nivel = data.nivel;
+  if (data.step && data.step !== event.step) bookingUpdates.step = data.step;
+  if (data.tituloONivel && data.tituloONivel !== event.tituloONivel) bookingUpdates.tituloONivel = data.tituloONivel;
+  if (data.tipo && data.tipo !== event.tipo) { bookingUpdates.tipo = data.tipo; bookingUpdates.tipoEvento = data.tipo; }
+
+  if (Object.keys(bookingUpdates).length > 0) {
+    await BookingRepository.updateByEventId(eventId, bookingUpdates);
   }
 
   return updated;

@@ -777,7 +777,11 @@ export default function StudentAcademic({ student, classes: initialClasses, view
                     <div className="text-sm text-gray-900">{classItem.nivel}</div>
                   </td>
                   <td className="table-cell">
-                    <div className="text-sm text-gray-900">{classItem.step}</div>
+                    <div className="text-sm text-gray-900">
+                      {(classItem as any).tipo === 'CLUB' && (classItem as any).nombreEvento
+                        ? (classItem as any).nombreEvento
+                        : classItem.step}
+                    </div>
                   </td>
                   <td className="table-cell">
                     {(classItem as any).linkZoom ? (
