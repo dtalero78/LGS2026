@@ -5,8 +5,7 @@ import { ForbiddenError, ValidationError } from '@/lib/errors';
 const BATCH_SIZE = 2000;
 
 /**
- * Whitelist of tables and fields allowed for sync operations.
- * Prevents SQL injection by rejecting any name not in this list.
+ * Whitelist of tables allowed for sync operations.
  */
 const ALLOWED_TABLES = new Set([
   'ACADEMICA',
@@ -20,7 +19,6 @@ const ALLOWED_TABLES = new Set([
   'STEP_OVERRIDES',
 ]);
 
-/** Validates that a SQL identifier only contains safe characters */
 function isValidIdentifier(name: string): boolean {
   return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name);
 }
@@ -39,41 +37,30 @@ function validateField(name: string, label: string) {
 /**
  * POST /api/admin/sync-field
  *
- * Generic field sync between two tables.
- * Copies a field from sourceTable into targetTable where the join keys match.
- * Only updates rows in targetTable that currently have null/empty value for the field.
+ * Generic field sync — two modes:
  *
- * Body:
+ * ── MODE 1: Cross-table sync (sourceTable ≠ targetTable) ──────────────────
+ * Copies `field` from sourceTable into targetTable via a JOIN on key fields.
  * {
- *   sourceTable:  string          — table to read from (e.g. "ACADEMICA")
- *   targetTable:  string          — table to write to (e.g. "ACADEMICA_BOOKINGS")
- *   field:        string          — field name to sync (e.g. "plataforma")
- *   sourceKey:    string          — join key in sourceTable (e.g. "_id")
- *   targetKeys:   string[]        — one or more join keys in targetTable (OR condition)
- *                                   e.g. ["studentId", "idEstudiante"]
- *   overwrite?:   boolean         — if true, also update rows that already have a value
- *                                   (default: false — only fills null/empty)
+ *   sourceTable:  string     — table to read from        (e.g. "ACADEMICA")
+ *   targetTable:  string     — table to write to         (e.g. "ACADEMICA_BOOKINGS")
+ *   field:        string     — field to sync             (e.g. "plataforma")
+ *   sourceKey:    string     — join key in sourceTable   (e.g. "_id")
+ *   targetKeys:   string[]   — join keys in targetTable  (e.g. ["studentId","idEstudiante"])
+ *   overwrite?:   boolean    — also update non-empty rows (default: false)
+ * }
+ *
+ * ── MODE 2: Same-table field copy (sourceTable === targetTable) ────────────
+ * Copies `sourceField` into `field` within the same table, row by row.
+ * {
+ *   sourceTable:  string     — same as targetTable       (e.g. "ACADEMICA_BOOKINGS")
+ *   targetTable:  string     — same as sourceTable       (e.g. "ACADEMICA_BOOKINGS")
+ *   field:        string     — destination field         (e.g. "nombreEvento")
+ *   sourceField:  string     — source field              (e.g. "step")
+ *   overwrite?:   boolean    — also update non-empty rows (default: false)
  * }
  *
  * Restricted to SUPER_ADMIN only.
- *
- * Example — sync plataforma from ACADEMICA to ACADEMICA_BOOKINGS:
- * {
- *   sourceTable: "ACADEMICA",
- *   targetTable: "ACADEMICA_BOOKINGS",
- *   field: "plataforma",
- *   sourceKey: "_id",
- *   targetKeys: ["studentId", "idEstudiante"]
- * }
- *
- * Example — sync nivel from ACADEMICA to PEOPLE (by numeroId):
- * {
- *   sourceTable: "ACADEMICA",
- *   targetTable: "PEOPLE",
- *   field: "nivel",
- *   sourceKey: "numeroId",
- *   targetKeys: ["numeroId"]
- * }
  */
 export const POST = handlerWithAuth(async (request, context, session) => {
   const role = (session?.user as any)?.role;
@@ -86,40 +73,108 @@ export const POST = handlerWithAuth(async (request, context, session) => {
     sourceTable,
     targetTable,
     field,
+    sourceField,
     sourceKey,
     targetKeys,
     overwrite = false,
-  }: {
+  } = body as {
     sourceTable: string;
     targetTable: string;
     field: string;
-    sourceKey: string;
-    targetKeys: string[];
+    sourceField?: string;
+    sourceKey?: string;
+    targetKeys?: string[];
     overwrite?: boolean;
-  } = body;
+  };
 
-  // Validate all inputs
   validateTable(sourceTable, 'sourceTable');
   validateTable(targetTable, 'targetTable');
   validateField(field, 'field');
-  validateField(sourceKey, 'sourceKey');
 
+  const isSameTable = sourceTable === targetTable;
+
+  // ── MODE 2: Same-table field copy ─────────────────────────────────────────
+  if (isSameTable) {
+    if (!sourceField) throw new ValidationError('sourceField es requerido cuando sourceTable === targetTable');
+    validateField(sourceField, 'sourceField');
+
+    const nullCondition = overwrite ? '' : `AND ("${field}" IS NULL OR "${field}" = '')`;
+
+    // Preview
+    const preview = await queryMany(`
+      SELECT "${sourceField}" AS value, COUNT(*) AS rows
+      FROM "${targetTable}"
+      WHERE "${sourceField}" IS NOT NULL AND "${sourceField}" != ''
+        ${nullCondition}
+      GROUP BY "${sourceField}"
+      ORDER BY rows DESC
+      LIMIT 50
+    `);
+
+    const totalToUpdate = preview.reduce((sum: number, r: any) => sum + parseInt(r.rows), 0);
+
+    if (totalToUpdate === 0) {
+      return successResponse({
+        message: 'No hay registros que actualizar — ya están sincronizados',
+        updatedCount: 0,
+        byValue: [],
+      });
+    }
+
+    // Update in batches
+    let totalUpdated = 0;
+    let batchCount = 0;
+
+    while (true) {
+      const result = await queryOne<{ updated: string }>(`
+        WITH batch AS (
+          SELECT "_id"
+          FROM "${targetTable}"
+          WHERE "${sourceField}" IS NOT NULL AND "${sourceField}" != ''
+            ${nullCondition}
+          LIMIT ${BATCH_SIZE}
+        ),
+        updated AS (
+          UPDATE "${targetTable}" t
+          SET "${field}" = t2."${sourceField}",
+              "_updatedDate" = NOW()
+          FROM "${targetTable}" t2, batch
+          WHERE t."_id" = batch."_id" AND t2."_id" = batch."_id"
+          RETURNING 1
+        )
+        SELECT COUNT(*) AS updated FROM updated
+      `);
+
+      const n = parseInt((result as any)?.updated ?? '0');
+      totalUpdated += n;
+      batchCount++;
+      if (n < BATCH_SIZE) break;
+    }
+
+    return successResponse({
+      message: `Sincronización completada: ${totalUpdated} registros actualizados en ${batchCount} lote(s)`,
+      updatedCount: totalUpdated,
+      batches: batchCount,
+      mode: 'same-table',
+      table: targetTable,
+      sourceField,
+      targetField: field,
+      overwrite,
+      byValue: preview,
+    });
+  }
+
+  // ── MODE 1: Cross-table sync ───────────────────────────────────────────────
+  if (!sourceKey) throw new ValidationError('sourceKey es requerido para sync entre tablas distintas');
   if (!Array.isArray(targetKeys) || targetKeys.length === 0) {
     throw new ValidationError('targetKeys debe ser un array con al menos un elemento');
   }
+  validateField(sourceKey, 'sourceKey');
   for (const k of targetKeys) validateField(k, `targetKey "${k}"`);
 
-  // Build the JOIN condition: t.targetKey1 = s.sourceKey OR t.targetKey2 = s.sourceKey ...
-  const joinCondition = targetKeys
-    .map(k => `t."${k}" = s."${sourceKey}"`)
-    .join(' OR ');
+  const joinCondition = targetKeys.map(k => `t."${k}" = s."${sourceKey}"`).join(' OR ');
+  const nullCondition = overwrite ? '' : `AND (t."${field}" IS NULL OR t."${field}" = '')`;
 
-  // Condition to only update null/empty rows (unless overwrite=true)
-  const nullCondition = overwrite
-    ? ''
-    : `AND (t."${field}" IS NULL OR t."${field}" = '')`;
-
-  // 1. Preview: count + breakdown by value
   const preview = await queryMany(`
     SELECT s."${field}" AS value, COUNT(*) AS rows
     FROM "${targetTable}" t
@@ -128,6 +183,7 @@ export const POST = handlerWithAuth(async (request, context, session) => {
       ${nullCondition}
     GROUP BY s."${field}"
     ORDER BY rows DESC
+    LIMIT 50
   `);
 
   const totalToUpdate = preview.reduce((sum: number, r: any) => sum + parseInt(r.rows), 0);
@@ -140,7 +196,6 @@ export const POST = handlerWithAuth(async (request, context, session) => {
     });
   }
 
-  // 2. Update in batches to avoid connection timeouts
   let totalUpdated = 0;
   let batchCount = 0;
 
@@ -169,7 +224,6 @@ export const POST = handlerWithAuth(async (request, context, session) => {
     const n = parseInt((result as any)?.updated ?? '0');
     totalUpdated += n;
     batchCount++;
-
     if (n < BATCH_SIZE) break;
   }
 
@@ -177,6 +231,7 @@ export const POST = handlerWithAuth(async (request, context, session) => {
     message: `Sincronización completada: ${totalUpdated} registros actualizados en ${batchCount} lote(s)`,
     updatedCount: totalUpdated,
     batches: batchCount,
+    mode: 'cross-table',
     sourceTable,
     targetTable,
     field,
