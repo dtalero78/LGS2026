@@ -1607,10 +1607,11 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
-| `local` | fix: middleware — noCacheNext() helper aplica headers no-store a TODOS los returns protegidos (SUPER_ADMIN, alwaysAllowedRoutes, panel-estudiante) — fix definitivo del back-button bypass post-logout |
-| `local` | fix: banner overlay del login cubre solo el card del formulario (max-w-md), no toda la pantalla |
-| `local` | feat: Banner del login — SUPER_ADMIN sube imagen desde /admin/banner (toggle activo/inactivo, preview, eliminar); imagen guardada en APP_CONFIG (banner_image/banner_active); login muestra overlay con imagen y botón cerrar; se omite en misma sesión via sessionStorage |
-| `local` | feat: Ticker y Banner agrupados bajo nuevo submenú Avisos (SUPER_ADMIN only) en sidebar |
+| `32999ed` | fix: beneficiary link en PersonAdmin usa /student/[academicaId] si tiene registro en ACADEMICA, o /person/[_id] si no tiene |
+| `e2c50bc` | fix: middleware — noCacheNext() helper aplica headers no-store a TODOS los returns protegidos (SUPER_ADMIN, alwaysAllowedRoutes, panel-estudiante) — fix definitivo del back-button bypass post-logout |
+| `7dc95fd` | fix: banner overlay cubre solo el card del login, no toda la pantalla |
+| `7920c6f` | feat: Banner del login — SUPER_ADMIN sube imagen desde /admin/banner (toggle activo/inactivo, preview, eliminar); imagen guardada en APP_CONFIG (banner_image/banner_active); login muestra overlay con imagen y botón cerrar; se omite en misma sesión via sessionStorage |
+| `b6f9c5b` | feat: Ticker y Banner agrupados bajo nuevo submenú Avisos (SUPER_ADMIN only) en sidebar |
 | `local` | fix: lower complementaria pass threshold from 80% to 50% (`PASS_THRESHOLD = 50` in `complementaria.service.ts`) |
 | `f875c7c` | feat: auto-save contract draft to localStorage (72h TTL) — prevents data loss on accidental browser close; shows restore banner with continue/discard options |
 | `bb78a51` | feat: add Material Interactivo button in student panel MaterialsList — links to lgsplataforma.com/material-{nivel} for BN1-BN3, P1-P3, F3 |

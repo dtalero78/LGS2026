@@ -7,7 +7,7 @@
  * - Student must have exactly 1 successful SESSION for the step (needs 2)
  * - Not available for Jump Steps (multiples of 5)
  * - Max 3 persistent attempts per step
- * - Pass threshold: ≥80%
+ * - Pass threshold: ≥50%
  * - On pass: creates ACADEMICA_BOOKINGS record (tipo=COMPLEMENTARIA) and triggers auto-promotion
  */
 
@@ -21,7 +21,7 @@ import { ids } from '@/lib/id-generator';
 import { autoAdvanceStep } from '@/services/student.service';
 
 const MAX_ATTEMPTS = 3;
-const PASS_THRESHOLD = 80;
+const PASS_THRESHOLD = 50;
 
 // ── Helpers ──
 
