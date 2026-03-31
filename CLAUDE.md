@@ -1610,7 +1610,9 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
-| `local` | fix: step completion now requires specifically a TRAINING club (name starts with "TRAINING -"). PRONUNCIATION, GRAMMAR, LISTENING no longer count. Added `isTrainingClub()` helper in `progress.service.ts`; updated `isCurrentStepComplete` in `student.service.ts` and `getEffectiveStepNumber` in `student-booking.service.ts`. All 3 functions now use CALENDARIO JOIN for real step names and filter cancelled bookings. Jump step logic in `getEffectiveStepNumber` aligned with `progress.service.ts`. |
+| `ea4ae58` | fix: save plataforma field in ACADEMICA_BOOKINGS on enrollment — enrollment.service.ts and student-booking.service.ts now include student.plataforma when creating bookings |
+| `0f59e82` | fix: remove clickable link from beneficiary names in PersonAdmin — names are now plain text |
+| `f0f35e5` | fix: step completion now requires specifically a TRAINING club (name starts with "TRAINING -"). PRONUNCIATION, GRAMMAR, LISTENING no longer count. Added `isTrainingClub()` helper in `progress.service.ts`; updated `isCurrentStepComplete` in `student.service.ts` and `getEffectiveStepNumber` in `student-booking.service.ts`. All 3 functions now use CALENDARIO JOIN for real step names and filter cancelled bookings. Jump step logic in `getEffectiveStepNumber` aligned with `progress.service.ts`. |
 | `32999ed` | fix: beneficiary link en PersonAdmin usa /student/[academicaId] si tiene registro en ACADEMICA, o /person/[_id] si no tiene |
 | `e2c50bc` | fix: middleware — noCacheNext() helper aplica headers no-store a TODOS los returns protegidos (SUPER_ADMIN, alwaysAllowedRoutes, panel-estudiante) — fix definitivo del back-button bypass post-logout |
 | `7dc95fd` | fix: banner overlay cubre solo el card del login, no toda la pantalla |
