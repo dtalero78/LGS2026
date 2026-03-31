@@ -135,6 +135,7 @@ export async function enrollStudents(input: EnrollInput) {
         agendadoPor: input.agendadoPor || '',
         agendadoPorEmail: input.agendadoPorEmail || '',
         agendadoPorRol: input.agendadoPorRol || '',
+        fechaAgendamiento: new Date().toISOString(),
         origen: 'POSTGRES',
       };
 
