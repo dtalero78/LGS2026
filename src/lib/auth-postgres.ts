@@ -193,7 +193,16 @@ export const authOptions: NextAuthOptions = {
           inputEmail: credentials.email,
         })
 
-        // Try PostgreSQL only (no fallbacks)
+        // Check env-var admin fallback (for local dev)
+        const adminEmail = process.env.ADMIN_EMAIL;
+        const adminPassword = process.env.ADMIN_PASSWORD;
+        if (adminEmail && adminPassword &&
+            credentials.email === adminEmail && credentials.password === adminPassword) {
+          console.log('✅ [EnvFallback] Admin login via env vars');
+          return { id: 'env-admin', email: adminEmail, name: 'Super Admin', role: 'SUPER_ADMIN' };
+        }
+
+        // Try PostgreSQL
         const pgUser = await verifyUserPostgres(credentials.email, credentials.password);
         if (pgUser) {
           return pgUser;
