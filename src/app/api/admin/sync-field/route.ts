@@ -60,6 +60,17 @@ function validateField(name: string, label: string) {
  *   overwrite?:   boolean    — also update non-empty rows (default: false)
  * }
  *
+ * ── MODE 3: Same-table field concatenation ────────────────────────────────
+ * Concatenates multiple fields into `field` within the same table.
+ * {
+ *   sourceTable:  string     — same as targetTable       (e.g. "ACADEMICA")
+ *   targetTable:  string     — same as sourceTable       (e.g. "ACADEMICA")
+ *   field:        string     — destination field         (e.g. "tituloONivel")
+ *   sourceFields: string[]   — fields to concatenate     (e.g. ["nivel", "step"])
+ *   separator?:   string     — separator string          (default: " - ")
+ *   overwrite?:   boolean    — also update non-empty rows (default: false)
+ * }
+ *
  * Restricted to SUPER_ADMIN only.
  */
 export const POST = handlerWithAuth(async (request, context, session) => {
@@ -74,6 +85,8 @@ export const POST = handlerWithAuth(async (request, context, session) => {
     targetTable,
     field,
     sourceField,
+    sourceFields,
+    separator = ' - ',
     sourceKey,
     targetKeys,
     overwrite = false,
@@ -82,6 +95,8 @@ export const POST = handlerWithAuth(async (request, context, session) => {
     targetTable: string;
     field: string;
     sourceField?: string;
+    sourceFields?: string[];
+    separator?: string;
     sourceKey?: string;
     targetKeys?: string[];
     overwrite?: boolean;
@@ -92,6 +107,79 @@ export const POST = handlerWithAuth(async (request, context, session) => {
   validateField(field, 'field');
 
   const isSameTable = sourceTable === targetTable;
+
+  // ── MODE 3: Same-table field concatenation ────────────────────────────────
+  if (isSameTable && Array.isArray(sourceFields) && sourceFields.length > 0) {
+    if (sourceFields.length < 2) throw new ValidationError('sourceFields debe tener al menos 2 campos para concatenar');
+    for (const f of sourceFields) validateField(f, `sourceField "${f}"`);
+
+    const nullCondition = overwrite ? '' : `AND ("${field}" IS NULL OR "${field}" = '')`;
+    const concatExpr = sourceFields.map(f => `"${f}"`).join(`, '${separator.replace(/'/g, "''")}', `);
+    const notNullCondition = sourceFields.map(f => `"${f}" IS NOT NULL AND "${f}" != ''`).join(' AND ');
+
+    // Preview
+    const preview = await queryMany(`
+      SELECT CONCAT_WS('${separator.replace(/'/g, "''")}', ${sourceFields.map(f => `"${f}"`).join(', ')}) AS value, COUNT(*) AS rows
+      FROM "${targetTable}"
+      WHERE ${notNullCondition}
+        ${nullCondition}
+      GROUP BY ${sourceFields.map(f => `"${f}"`).join(', ')}
+      ORDER BY rows DESC
+      LIMIT 50
+    `);
+
+    const totalToUpdate = preview.reduce((sum: number, r: any) => sum + parseInt(r.rows), 0);
+
+    if (totalToUpdate === 0) {
+      return successResponse({
+        message: 'No hay registros que actualizar — ya están sincronizados',
+        updatedCount: 0,
+        byValue: [],
+      });
+    }
+
+    let totalUpdated = 0;
+    let batchCount = 0;
+
+    while (true) {
+      const result = await queryOne<{ updated: string }>(`
+        WITH batch AS (
+          SELECT "_id"
+          FROM "${targetTable}"
+          WHERE ${notNullCondition}
+            ${nullCondition}
+          LIMIT ${BATCH_SIZE}
+        ),
+        updated AS (
+          UPDATE "${targetTable}" t
+          SET "${field}" = CONCAT_WS('${separator.replace(/'/g, "''")}', ${sourceFields.map(f => `t."${f}"`).join(', ')}),
+              "_updatedDate" = NOW()
+          FROM batch
+          WHERE t."_id" = batch."_id"
+          RETURNING 1
+        )
+        SELECT COUNT(*) AS updated FROM updated
+      `);
+
+      const n = parseInt((result as any)?.updated ?? '0');
+      totalUpdated += n;
+      batchCount++;
+      if (n < BATCH_SIZE) break;
+    }
+
+    return successResponse({
+      message: `Sincronización completada: ${totalUpdated} registros actualizados en ${batchCount} lote(s)`,
+      updatedCount: totalUpdated,
+      batches: batchCount,
+      mode: 'concat',
+      table: targetTable,
+      sourceFields,
+      separator,
+      targetField: field,
+      overwrite,
+      byValue: preview,
+    });
+  }
 
   // ── MODE 2: Same-table field copy ─────────────────────────────────────────
   if (isSameTable) {
