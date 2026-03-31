@@ -503,6 +503,7 @@ ANTHROPIC_API_KEY=anthropic_api_key_for_dashboard_charts
 - Verify TTL calculations are working correctly
 - Cache is automatically invalidated on event CRUD operations
 - Permissions cache can be manually invalidated via `/api/admin/invalidate-permissions-cache`
+- **Back-button bypass after logout**: El middleware aplica `Cache-Control: no-store` via `noCacheNext()` a **todos** los returns de rutas protegidas (incluyendo `alwaysAllowedRoutes` como `/panel-estudiante`). Si se agrega un nuevo `return NextResponse.next()` en el middleware, debe reemplazarse por `return noCacheNext()` para mantener esta protección
 
 ### Form Validation Issues
 - Use the custom `zodResolver` from `src/lib/zod-resolver.ts`
@@ -1403,6 +1404,8 @@ interface ConsentData {
 | Prospectos | `/dashboard/comercial/prospectos` | COMERCIAL permissions |
 | Aprobación | `/dashboard/aprobacion` | APROBACION permissions |
 | Permisos Admin | `/admin/permissions` | SUPER_ADMIN/ADMIN only |
+| Ticker Editor | `/admin/ticker` | SUPER_ADMIN only |
+| Banner Editor | `/admin/banner` | SUPER_ADMIN only |
 | Student Detail | `/student/[id]` | Authenticated |
 | Person Detail | `/person/[id]` | Authenticated |
 | Session Detail | `/sesion/[id]` | ACADEMICO.SESION permissions |
