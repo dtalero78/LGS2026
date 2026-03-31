@@ -580,7 +580,7 @@ ANTHROPIC_API_KEY=anthropic_api_key_for_dashboard_charts
   - `USUARIOS_ROLES`: Credenciales y roles de usuario (email, password bcrypt/plain, rol)
   - `ROL_PERMISOS`: Definiciones de roles con arrays de permisos (JSONB)
   - `NIVELES`: Niveles académicos con steps, material, clubs y contenido (esParalelo flag para ESS, contenido TEXT para temario del step)
-  - `STEP_OVERRIDES`: Overrides manuales de steps por estudiante
+  - `STEP_OVERRIDES`: Overrides manuales de steps por estudiante. El campo `studentId` guarda el ACADEMICA `_id` (no el PEOPLE `_id`). Si el estudiante tiene duplicados en ACADEMICA, el endpoint retorna error "USUARIO duplicado en ACADEMICA"
   - `FINANCIEROS`: Datos financieros (totalPlan, pagoInscripcion, saldo, cuotas, formaPago)
   - `CONTRACT_TEMPLATES`: Plantillas de contrato por plataforma (HTML con {{placeholders}})
   - `COMPLEMENTARIA_ATTEMPTS`: Intentos de actividades complementarias (AI quiz). Campos: studentId, nivel, step, attemptNumber, questions (JSONB), answers (JSONB), score, passed, bookingId, status (IN_PROGRESS/PASSED/FAILED)
@@ -1517,6 +1517,8 @@ ESS es un nivel **paralelo y opcional** que NO bloquea el avance en los niveles 
 - `overrideCompletado === true` → completado sin importar clases
 - `overrideCompletado === false` → incompleto, "Marcado como incompleto por administrador"
 - Se almacenan en tabla `STEP_OVERRIDES` vía `StepOverridesRepository`
+- **`studentId` en STEP_OVERRIDES = ACADEMICA `_id`** (no PEOPLE `_id`). El endpoint `step-override/route.ts` resuelve el ACADEMICA `_id` y verifica duplicados antes de guardar. `progress.service.ts` y `student-booking.service.ts` usan ACADEMICA `_id` para buscar overrides
+- El badge **"✎ Override ✓"** (morado) o **"✎ Override ✗"** (naranja) aparece en ¿Cómo voy? (admin) cuando un step tiene override manual
 
 **4. Completitud del nivel**
 - Un nivel se considera completado cuando **todos sus steps** están completados
@@ -1610,6 +1612,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `local` | fix: STEP_OVERRIDES now uses ACADEMICA _id (not PEOPLE _id) — step-override route resolves ACADEMICA _id + detects duplicates with "USUARIO duplicado en ACADEMICA" error; progress.service and student-booking.service updated accordingly; peopleId param removed from getEffectiveStepNumber/getAvailableEvents; override badge shown in ¿Cómo voy? (admin) — "✎ Override ✓" purple / "✎ Override ✗" orange |
 | `ea4ae58` | fix: save plataforma field in ACADEMICA_BOOKINGS on enrollment — enrollment.service.ts and student-booking.service.ts now include student.plataforma when creating bookings |
 | `0f59e82` | fix: remove clickable link from beneficiary names in PersonAdmin — names are now plain text |
 | `f0f35e5` | fix: step completion now requires specifically a TRAINING club (name starts with "TRAINING -"). PRONUNCIATION, GRAMMAR, LISTENING no longer count. Added `isTrainingClub()` helper in `progress.service.ts`; updated `isCurrentStepComplete` in `student.service.ts` and `getEffectiveStepNumber` in `student-booking.service.ts`. All 3 functions now use CALENDARIO JOIN for real step names and filter cancelled bookings. Jump step logic in `getEffectiveStepNumber` aligned with `progress.service.ts`. |

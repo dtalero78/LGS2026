@@ -86,12 +86,9 @@ export async function generateReport(studentId: string) {
   if (!student) {
     student = await AcademicaRepository.findByAnyId(studentId);
     if (!student) throw new NotFoundError('Student', studentId);
-    const peopleRecord = student.numeroId
-      ? await PeopleRepository.findByIdOrNumeroId(student.numeroId)
-      : null;
-    overrideStudentId = peopleRecord?._id ?? student._id;
-  } else {
+    // STEP_OVERRIDES uses ACADEMICA _id
     overrideStudentId = student._id;
+  } else {
     // ACADEMICA is the source of truth for nivel/step (PEOPLE may be stale from Wix migration)
     const academica = student.numeroId
       ? await AcademicaRepository.findByAnyId(student.numeroId)
@@ -101,9 +98,10 @@ export async function generateReport(studentId: string) {
       student.step = academica.step ?? student.step;
       student.nivelParalelo = academica.nivelParalelo ?? student.nivelParalelo;
       student.stepParalelo = academica.stepParalelo ?? student.stepParalelo;
-      // Use ACADEMICA _id for booking queries
+      // Use ACADEMICA _id for booking queries and STEP_OVERRIDES
       student._id = academica._id;
     }
+    overrideStudentId = student._id;
   }
 
   const nivelPrincipal = student.nivel;
@@ -143,7 +141,7 @@ export async function generateReport(studentId: string) {
     .sort((a, b) => (extractStepNumber(a) ?? 0) - (extractStepNumber(b) ?? 0));
 
   // Get all overrides for this student at once (avoid N+1)
-  // Use overrideStudentId (PEOPLE _id) to match how step-override route stores them
+  // Uses ACADEMICA _id — matches how step-override route stores them
   const overrides = await StepOverridesRepository.findByStudentId(overrideStudentId);
   const overrideMap = new Map(
     overrides.map((o: any) => [o.step, o.isCompleted])

@@ -41,7 +41,7 @@ class AcademicaRepositoryClass extends BaseRepository {
   }
 
   /**
-   * Find by numeroId
+   * Find by numeroId (returns first match)
    */
   async findByNumeroId(numeroId: string) {
     const row = await queryOne(
@@ -49,6 +49,19 @@ class AcademicaRepositoryClass extends BaseRepository {
       [numeroId]
     );
     return this.parse(row);
+  }
+
+  /**
+   * Find all records with the same numeroId (duplicate detection)
+   */
+  async findManyByNumeroId(numeroId: string) {
+    return queryMany(
+      `SELECT "_id", "numeroId", "primerNombre", "primerApellido", "nivel", "step"
+       FROM "ACADEMICA"
+       WHERE "numeroId" = $1
+       ORDER BY "_createdDate" ASC`,
+      [numeroId]
+    );
   }
 
   /**

@@ -1,13 +1,35 @@
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
-import { PeopleRepository } from '@/repositories/people.repository';
+import { AcademicaRepository } from '@/repositories/academica.repository';
 import { StepOverridesRepository } from '@/repositories/niveles.repository';
-import { ValidationError, NotFoundError } from '@/lib/errors';
+import { ValidationError, NotFoundError, ConflictError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
+
+/**
+ * Resolves the canonical ACADEMICA _id for a student.
+ * Throws ConflictError if the student has duplicate records in ACADEMICA.
+ * Throws NotFoundError if not found.
+ */
+async function resolveAcademicaId(paramsId: string): Promise<{ academicaId: string; nivel: string }> {
+  // Try direct ACADEMICA lookup first (_id, studentId, peopleId, or numeroId)
+  const record = await AcademicaRepository.findByAnyId(paramsId);
+  if (!record) throw new NotFoundError('Registro académico', paramsId);
+
+  // Check for duplicates using the resolved numeroId
+  if (record.numeroId) {
+    const duplicates = await AcademicaRepository.findManyByNumeroId(record.numeroId);
+    if (duplicates.length > 1) {
+      throw new ConflictError(`USUARIO duplicado en ACADEMICA (${duplicates.length} registros con numeroId ${record.numeroId})`);
+    }
+  }
+
+  return { academicaId: record._id, nivel: record.nivel || '' };
+}
 
 /**
  * POST /api/postgres/students/[id]/step-override
  *
- * Mark a step as completed (override) for a student.
+ * Mark a step as completed/incomplete (override) for a student.
+ * Uses ACADEMICA _id as studentId in STEP_OVERRIDES.
  */
 export const POST = handlerWithAuth(async (request, { params }, session) => {
   const body = await request.json();
@@ -15,8 +37,8 @@ export const POST = handlerWithAuth(async (request, { params }, session) => {
 
   if (!step) throw new ValidationError('step is required');
 
-  const student = await PeopleRepository.findByIdOrNumeroIdOrThrow(params.id);
-  const existing = await StepOverridesRepository.findByStudentAndStep(student._id, step);
+  const { academicaId, nivel } = await resolveAcademicaId(params.id);
+  const existing = await StepOverridesRepository.findByStudentAndStep(academicaId, step);
 
   if (existing) {
     const override = await StepOverridesRepository.update(existing._id, completado);
@@ -25,8 +47,8 @@ export const POST = handlerWithAuth(async (request, { params }, session) => {
 
   const override = await StepOverridesRepository.create({
     _id: ids.override(),
-    studentId: student._id,
-    nivel: student.nivel || nivelFromBody || '',
+    studentId: academicaId,
+    nivel: nivel || nivelFromBody || '',
     step,
     isCompleted: completado,
   });
@@ -43,8 +65,8 @@ export const DELETE = handlerWithAuth(async (request, { params }) => {
 
   if (!step) throw new ValidationError('step query parameter is required');
 
-  const student = await PeopleRepository.findByIdOrNumeroIdOrThrow(params.id);
-  const deleted = await StepOverridesRepository.deleteByStudentAndStep(student._id, step);
+  const { academicaId } = await resolveAcademicaId(params.id);
+  const deleted = await StepOverridesRepository.deleteByStudentAndStep(academicaId, step);
 
   if (!deleted) throw new NotFoundError('Override', `${params.id}/${step}`);
 
@@ -58,13 +80,13 @@ export const GET = handlerWithAuth(async (request, { params }) => {
   const { searchParams } = new URL(request.url);
   const step = searchParams.get('step');
 
-  const student = await PeopleRepository.findByIdOrNumeroIdOrThrow(params.id);
+  const { academicaId } = await resolveAcademicaId(params.id);
 
   if (step) {
-    const override = await StepOverridesRepository.findByStudentAndStep(student._id, step);
+    const override = await StepOverridesRepository.findByStudentAndStep(academicaId, step);
     return successResponse({ overrides: override ? [override] : [], count: override ? 1 : 0 });
   }
 
-  const overrides = await StepOverridesRepository.findByStudentId(student._id);
+  const overrides = await StepOverridesRepository.findByStudentId(academicaId);
   return successResponse({ overrides, count: overrides.length });
 });

@@ -40,7 +40,6 @@ function getClassTypeBooking(c: any): 'SESSION' | 'CLUB' | 'OTHER' {
  */
 export async function getEffectiveStepNumber(
   academicaId: string,
-  peopleId: string,
   nivel: string
 ): Promise<number> {
   if (!nivel) return 0;
@@ -66,7 +65,8 @@ export async function getEffectiveStepNumber(
     [academicaId, nivel]
   );
 
-  const overrides = await StepOverridesRepository.findByStudentId(peopleId);
+  // STEP_OVERRIDES uses ACADEMICA _id (academicaId)
+  const overrides = await StepOverridesRepository.findByStudentId(academicaId);
   const overrideMap = new Map(overrides.map((o: any) => [o.step, o.isCompleted]));
 
   for (const stepName of allSteps) {
@@ -116,7 +116,6 @@ const BOOKING_MIN_ADVANCE_MINUTES = 30;
  */
 export async function getAvailableEvents(
   studentId: string,
-  peopleId: string,
   nivel: string,
   step: string,
   date: string,
@@ -150,7 +149,7 @@ export async function getAvailableEvents(
   const bookedHoursSet = new Set(bookedHours);
 
   // Determine the effective step based on actual progress
-  const effectiveStepNum = await getEffectiveStepNumber(studentId, peopleId, nivel);
+  const effectiveStepNum = await getEffectiveStepNumber(studentId, nivel);
 
   // Fallback to stored step if NIVELES has no data for this nivel
   const fallbackStepNum = extractStepNumber(step) ?? 0;

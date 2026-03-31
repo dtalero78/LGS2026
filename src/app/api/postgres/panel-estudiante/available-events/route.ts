@@ -17,7 +17,6 @@ export const GET = handlerWithAuth(async (request, context, session) => {
   const step = student.step || '';
 
   const bookingId = student.academicaId || student._id;
-  const peopleId = student._id; // PEOPLE _id for step overrides lookup
-  const events = await getAvailableEvents(bookingId, peopleId, nivel, step, date, tipo, tzOffset);
+  const events = await getAvailableEvents(bookingId, nivel, step, date, tipo, tzOffset);
   return successResponse({ events });
 });

@@ -222,26 +222,37 @@ export default function StudentProgress({ student }: StudentProgressProps) {
                         )}
                       </td>
                       <td className="py-2 px-3 text-center">
-                        {s.completado ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            Completado
-                          </span>
-                        ) : s.noAprobo ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            No aprobó
-                          </span>
-                        ) : s.totalClases > 0 ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                            En progreso
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                            Pendiente
-                          </span>
-                        )}
-                        {s.hasOverride && (
-                          <span className="ml-1 text-xs text-blue-500" title="Override manual">*</span>
-                        )}
+                        <div className="flex flex-col items-center gap-1">
+                          {s.completado ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              Completado
+                            </span>
+                          ) : s.noAprobo ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              No aprobó
+                            </span>
+                          ) : s.totalClases > 0 ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                              En progreso
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                              Pendiente
+                            </span>
+                          )}
+                          {s.hasOverride && (
+                            <span
+                              className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                s.overrideCompletado === true
+                                  ? 'bg-purple-100 text-purple-700'
+                                  : 'bg-orange-100 text-orange-700'
+                              }`}
+                              title={s.overrideCompletado === true ? 'Completado manualmente por administrador' : 'Marcado como incompleto por administrador'}
+                            >
+                              ✎ {s.overrideCompletado === true ? 'Override ✓' : 'Override ✗'}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-2 px-3 text-xs text-gray-500 italic">
                         {s.mensaje || (s.completado ? '' : '')}

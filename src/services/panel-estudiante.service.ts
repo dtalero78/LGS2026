@@ -82,7 +82,7 @@ export async function resolveStudentFromSession(session: Session) {
 
   // Calculate the effective step (first incomplete step based on real progress)
   const effectiveStepNum = nivel
-    ? await getEffectiveStepNumber(academicaId ?? (base as any)._id, (base as any)._id, nivel)
+    ? await getEffectiveStepNumber(academicaId ?? (base as any)._id, nivel)
     : 0;
   const effectiveStep = effectiveStepNum > 0 ? `Step ${effectiveStepNum}` : step;
 
