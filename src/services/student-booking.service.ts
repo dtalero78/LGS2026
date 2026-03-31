@@ -329,6 +329,7 @@ export async function bookEvent(
     primerApellido: studentData.primerApellido,
     numeroId: studentData.numeroId,
     celular: studentData.celular || '',
+    plataforma: studentData.plataforma || null,
     nivel: event.nivel || event.tituloONivel || studentData.nivel,
     step: event.step || studentData.step,
     advisor: event.advisor,
