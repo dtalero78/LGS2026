@@ -66,6 +66,13 @@ function getClassType(c: any): 'SESSION' | 'CLUB' | 'OTHER' {
   return 'OTHER';
 }
 
+// A TRAINING club is a CLUB whose step/event name starts with "TRAINING -"
+function isTrainingClub(c: any): boolean {
+  if (getClassType(c) !== 'CLUB') return false;
+  const name = c.step || c.nombreEvento || '';
+  return /^TRAINING\s*-/i.test(name);
+}
+
 // --- Main ---
 
 /**
@@ -157,6 +164,8 @@ export async function generateReport(studentId: string) {
     const clubs = clasesDelStep.filter((c) => getClassType(c) === 'CLUB');
     const sesionesExitosas = sesiones.filter(isExitosa).length;
     const clubsExitosos = clubs.filter(isExitosa).length;
+    // Only TRAINING clubs count toward step completion
+    const trainingClubsExitosos = clubs.filter((c) => isTrainingClub(c) && isExitosa(c)).length;
     const clubNombres = clubs
       .filter(isExitosa)
       .map((c) => extractClubName(c.step || '') || c.nombreEvento || 'CLUB')
@@ -202,20 +211,21 @@ export async function generateReport(studentId: string) {
         completado = true;
       }
     } else {
-      // Normal Step: 2 sesiones exitosas + 1 club exitoso
-      completado = sesionesExitosas >= 2 && clubsExitosos >= 1;
+      // Normal Step: 2 sesiones exitosas + 1 TRAINING club exitoso
+      // OR: 1 sesión exitosa + 1 complementaria aprobada (tipo=COMPLEMENTARIA cuenta como SESSION) + 1 TRAINING club exitoso
+      completado = sesionesExitosas >= 2 && trainingClubsExitosos >= 1;
 
       if (!completado) {
-        if (sesionesExitosas >= 2 && clubsExitosos === 0) {
-          mensaje = 'Falta un TRAINING SESSION';
-        } else if (sesionesExitosas === 1 && clubsExitosos === 0) {
-          mensaje = 'Falta una sesión.';
-        } else if (sesionesExitosas === 1 && clubsExitosos >= 1) {
-          mensaje = 'Falta una sesión para terminar.';
-        } else if (sesionesExitosas === 0 && clubsExitosos >= 1) {
+        if (sesionesExitosas >= 2 && trainingClubsExitosos === 0) {
+          mensaje = 'Falta el TRAINING club del step';
+        } else if (sesionesExitosas === 1 && trainingClubsExitosos === 0) {
+          mensaje = 'Falta una sesión y el TRAINING club';
+        } else if (sesionesExitosas === 1 && trainingClubsExitosos >= 1) {
+          mensaje = 'Falta una sesión para terminar';
+        } else if (sesionesExitosas === 0 && trainingClubsExitosos >= 1) {
           mensaje = 'Faltan dos sesiones';
         } else {
-          mensaje = 'Faltan dos sesiones y un TRAINING SESSION';
+          mensaje = 'Faltan dos sesiones y el TRAINING club';
         }
       }
     }
@@ -246,6 +256,7 @@ export async function generateReport(studentId: string) {
       sesionesExitosas,
       clubs: clubs.length,
       clubsExitosos,
+      trainingClubsExitosos,
       clubNombres,
       noAprobo: tieneNoAprobo,
       completado,

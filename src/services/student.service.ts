@@ -196,11 +196,13 @@ async function isCurrentStepComplete(
   const esJump = isJumpStep(stepName);
 
   const allNivelClasses = await queryMany(
-    `SELECT "tipo", "step", "asistio", "asistencia", "participacion", "noAprobo"
-     FROM "ACADEMICA_BOOKINGS"
-     WHERE ("idEstudiante" = $1 OR "studentId" = $1)
-       AND "nivel" = $2
-       AND ("cancelo" IS NULL OR "cancelo" = false)`,
+    `SELECT b."tipo", b."nombreEvento", b."asistio", b."asistencia", b."participacion", b."noAprobo",
+            COALESCE(c."step", b."step") AS "step"
+     FROM "ACADEMICA_BOOKINGS" b
+     LEFT JOIN "CALENDARIO" c ON c."_id" = COALESCE(b."eventoId", b."idEvento")
+     WHERE (b."idEstudiante" = $1 OR b."studentId" = $1)
+       AND COALESCE(c."nivel", b."nivel") = $2
+       AND (b."cancelo" IS NULL OR b."cancelo" = false)`,
     [studentId, nivel]
   );
 
@@ -212,7 +214,6 @@ async function isCurrentStepComplete(
 
   if (esJump) {
     // Jump Step requires: at least 1 exitosa attendance AND noAprobo != true
-    // (same rule as progress.service.ts — must match exactly)
     const tieneAsistenciaExitosa = clasesDelStep.some(
       (c: any) => c.asistio === true || c.asistencia === true || c.participacion === true
     );
@@ -220,8 +221,13 @@ async function isCurrentStepComplete(
   }
 
   const sesionesExitosas = clasesDelStep.filter((c: any) => getClassType(c) === 'SESSION' && isExitosa(c)).length;
-  const clubsExitosos = clasesDelStep.filter((c: any) => getClassType(c) === 'CLUB' && isExitosa(c)).length;
-  return sesionesExitosas >= 2 && clubsExitosos >= 1 && !tieneNoAprobo;
+  // Only TRAINING clubs count toward step completion
+  const trainingClubsExitosos = clasesDelStep.filter((c: any) => {
+    if (getClassType(c) !== 'CLUB') return false;
+    const name = c.step || c.nombreEvento || '';
+    return /^TRAINING\s*-/i.test(name) && isExitosa(c);
+  }).length;
+  return sesionesExitosas >= 2 && trainingClubsExitosos >= 1 && !tieneNoAprobo;
 }
 
 /**

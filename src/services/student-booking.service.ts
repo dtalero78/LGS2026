@@ -56,9 +56,13 @@ export async function getEffectiveStepNumber(
     .sort((a, b) => (extractStepNumber(a) ?? 0) - (extractStepNumber(b) ?? 0));
 
   const classes = await queryMany(
-    `SELECT "step", "nombreEvento", "tipo", "asistio", "asistencia", "participacion", "noAprobo"
-     FROM "ACADEMICA_BOOKINGS"
-     WHERE ("idEstudiante" = $1 OR "studentId" = $1) AND "nivel" = $2`,
+    `SELECT b."tipo", b."nombreEvento", b."asistio", b."asistencia", b."participacion", b."noAprobo",
+            COALESCE(c."step", b."step") AS "step"
+     FROM "ACADEMICA_BOOKINGS" b
+     LEFT JOIN "CALENDARIO" c ON c."_id" = COALESCE(b."eventoId", b."idEvento")
+     WHERE (b."idEstudiante" = $1 OR b."studentId" = $1)
+       AND COALESCE(c."nivel", b."nivel") = $2
+       AND (b."cancelo" IS NULL OR b."cancelo" = false)`,
     [academicaId, nivel]
   );
 
@@ -74,7 +78,7 @@ export async function getEffectiveStepNumber(
     if (overrideVal === false) return stepNum; // forced incomplete
 
     const clasesDelStep = classes.filter(c => {
-      const n = extractStepNumber(c.step || c.nombreEvento || '');
+      const n = extractStepNumber(c.step || '');
       return n === stepNum;
     });
 
@@ -82,11 +86,17 @@ export async function getEffectiveStepNumber(
 
     if (esJump) {
       const tieneNoAprobo = clasesDelStep.some(c => c.noAprobo === true);
-      if (tieneNoAprobo || clasesDelStep.length === 0) return stepNum;
+      const tieneAsistenciaExitosa = clasesDelStep.some(c => isExitosaBooking(c));
+      if (clasesDelStep.length === 0 || tieneNoAprobo || !tieneAsistenciaExitosa) return stepNum;
     } else {
       const sesionesExitosas = clasesDelStep.filter(c => getClassTypeBooking(c) === 'SESSION' && isExitosaBooking(c)).length;
-      const clubsExitosos = clasesDelStep.filter(c => getClassTypeBooking(c) === 'CLUB' && isExitosaBooking(c)).length;
-      if (sesionesExitosas < 2 || clubsExitosos < 1) return stepNum;
+      // Only TRAINING clubs count toward step completion
+      const trainingClubsExitosos = clasesDelStep.filter(c => {
+        if (getClassTypeBooking(c) !== 'CLUB') return false;
+        const name = c.step || c.nombreEvento || '';
+        return /^TRAINING\s*-/i.test(name) && isExitosaBooking(c);
+      }).length;
+      if (sesionesExitosas < 2 || trainingClubsExitosos < 1) return stepNum;
     }
   }
 

@@ -1490,15 +1490,18 @@ ESS es un nivel **paralelo y opcional** que NO bloquea el avance en los niveles 
 ##### Lógica de completitud de Steps
 
 **1. Normal Steps (1-4, 6-9, 11-14, etc.)**
-- Requiere **2 sesiones exitosas** (tipo SESSION) + **1 TRAINING club exitoso** (tipo CLUB)
+- **Opción A**: 2 sesiones exitosas (tipo SESSION) + 1 TRAINING club exitoso del step
+- **Opción B**: 1 sesión exitosa + 1 complementaria aprobada (tipo=COMPLEMENTARIA cuenta como SESSION) + 1 TRAINING club exitoso del step
+- Solo clubs cuyo nombre empieza con `TRAINING -` cuentan. PRONUNCIATION, GRAMMAR, LISTENING y otros clubs NO satisfacen el requisito de club.
 - Una clase es "exitosa" si `asistio === true` OR `asistencia === true` OR `participacion === true`
-- Mensajes diagnósticos específicos según lo que falta:
-  - `sesExitosas >= 2, clubs === 0` → "Falta un TRAINING SESSION"
-  - `sesExitosas === 1, clubs === 0` → "Falta una sesión."
-  - `sesExitosas === 1, clubs >= 1` → "Falta una sesión para terminar."
-  - `sesExitosas === 0, clubs >= 1` → "Faltan dos sesiones"
-  - `sesExitosas === 0, clubs === 0` → "Faltan dos sesiones y un TRAINING SESSION"
+- Mensajes diagnósticos según lo que falta:
+  - `sesExitosas >= 2, trainingClubs === 0` → "Falta el TRAINING club del step"
+  - `sesExitosas === 1, trainingClubs === 0` → "Falta una sesión y el TRAINING club"
+  - `sesExitosas === 1, trainingClubs >= 1` → "Falta una sesión para terminar"
+  - `sesExitosas === 0, trainingClubs >= 1` → "Faltan dos sesiones"
+  - `sesExitosas === 0, trainingClubs === 0` → "Faltan dos sesiones y el TRAINING club"
 - Si `complementariaEligible` es true, se agrega al mensaje: " Puedes realizar una actividad complementaria."
+- **Archivos afectados**: `progress.service.ts` (`isTrainingClub()` helper, `trainingClubsExitosos`), `student.service.ts` (`isCurrentStepComplete`), `student-booking.service.ts` (`getEffectiveStepNumber`)
 
 **2. Jump Steps (5, 10, 15, 20, 25, 30, 35, 40, 45) — múltiplos de 5**
 - Requiere **1 clase con asistencia exitosa** (`asistio/asistencia/participacion = true`) Y `noAprobo !== true`
@@ -1607,6 +1610,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `local` | fix: step completion now requires specifically a TRAINING club (name starts with "TRAINING -"). PRONUNCIATION, GRAMMAR, LISTENING no longer count. Added `isTrainingClub()` helper in `progress.service.ts`; updated `isCurrentStepComplete` in `student.service.ts` and `getEffectiveStepNumber` in `student-booking.service.ts`. All 3 functions now use CALENDARIO JOIN for real step names and filter cancelled bookings. Jump step logic in `getEffectiveStepNumber` aligned with `progress.service.ts`. |
 | `32999ed` | fix: beneficiary link en PersonAdmin usa /student/[academicaId] si tiene registro en ACADEMICA, o /person/[_id] si no tiene |
 | `e2c50bc` | fix: middleware — noCacheNext() helper aplica headers no-store a TODOS los returns protegidos (SUPER_ADMIN, alwaysAllowedRoutes, panel-estudiante) — fix definitivo del back-button bypass post-logout |
 | `7dc95fd` | fix: banner overlay cubre solo el card del login, no toda la pantalla |
