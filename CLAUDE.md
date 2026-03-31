@@ -70,6 +70,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 50. Búsqueda de contratos por número (exact match o patrón)
 51. Numeración automática secuencial de contratos (next-number)
 52. Smart polling - Auto-actualización del contrato admin cuando el cliente firma consentimiento (timeout 10 min)
+52b. Auto-guardado de borrador en Crear Contrato — guarda estado del formulario en localStorage con TTL de 72h; al volver muestra banner para continuar o descartar
 
 ### Consentimiento Declarativo (Firma Digital)
 53. Página pública de contrato para el cliente (`/contrato/[id]`)
@@ -197,6 +198,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 144. Estadísticas personales de asistencia (total, asistidas, ausentes, porcentaje)
 145. Historial completo de clases con detalles
 146. Material de estudio por nivel/step actual
+146b. Botón "Material Interactivo" — enlace a lgsplataforma.com/material-{nivel} para niveles BN1-BN3, P1-P3, F3 (solo visible si el nivel tiene URL asignada)
 147. Comentarios de advisors (anotaciones y evaluaciones)
 148. Próxima clase destacada (card grande con fecha, advisor, Zoom link). Muestra "---" cuando no hay evento agendado (no muestra el nivel/step del estudiante). Cuando el Zoom aún no está disponible muestra: "Enlace disponible 5 min antes, recuerde refrescar el navegador"
 149. Actividades Complementarias (AI quiz): estudiantes con 1 sesión exitosa en un step normal pueden tomar un quiz de 10 preguntas generado por OpenAI (gpt-4o-mini). ≥50% para aprobar, máximo 3 intentos. Al aprobar se crea booking COMPLEMENTARIA y se ejecuta auto-promoción
@@ -304,7 +306,7 @@ src/
 │   │   └── dblgs/               Visor/editor de base de datos
 │   ├── consent/                 Consentimiento declarativo (status, contract-data, send-otp, verify, auto-approve)
 │   ├── contracts/               Generación y envío de PDF de contrato (send-pdf)
-│   ├── auth/                    NextAuth handler, logout
+│   ├── auth/                    NextAuth handler, logout, CRM bridge (cross-app SSO via HMAC)
 │   ├── cron/                    Jobs automáticos (expire-contracts, reactivate-onhold)
 │   ├── wix/                     Integraciones WhatsApp, CRUD beneficiarios, estado titular
 │   ├── admin/                   Invalidar cache de permisos
@@ -1611,18 +1613,23 @@ export interface Person {
 | `local` | feat: Banner del login — SUPER_ADMIN sube imagen desde /admin/banner (toggle activo/inactivo, preview, eliminar); imagen guardada en APP_CONFIG (banner_image/banner_active); login muestra overlay con imagen y botón cerrar; se omite en misma sesión via sessionStorage |
 | `local` | feat: Ticker y Banner agrupados bajo nuevo submenú Avisos (SUPER_ADMIN only) en sidebar |
 | `local` | fix: lower complementaria pass threshold from 80% to 50% (`PASS_THRESHOLD = 50` in `complementaria.service.ts`) |
+| `f875c7c` | feat: auto-save contract draft to localStorage (72h TTL) — prevents data loss on accidental browser close; shows restore banner with continue/discard options |
+| `bb78a51` | feat: add Material Interactivo button in student panel MaterialsList — links to lgsplataforma.com/material-{nivel} for BN1-BN3, P1-P3, F3 |
 | `06ff35e` | Fix: /api/wix/* endpoints now accept NextAuth session OR WIX_SECRET header — fixes 401 Unauthorized when admin panel calls sendWhatsApp/sendWelcomeWhatsApp internally |
 | `b050c43` | Fix: ticker color picker selection no longer overwritten by useEffect after save (colorTouched flag prevents re-sync once user has interacted) |
 | `5043e94` | fix: default ticker message updated to Semana Santa notice (Ecuador/Chile/Colombia); APP_CONFIG table created in production DB with initial record |
 | `1118a96` | fix: ticker editor shows default hardcoded message when APP_CONFIG table not yet created (fetchTicker catches error and returns DEFAULT_TICKER) |
 | `86f3a36` | feat: Ticker editor — SUPER_ADMIN can manage student panel banner from /admin/ticker (replace/append, color picker, live preview, confirm dialog); message stored in APP_CONFIG table; panel-estudiante reads from DB with fallback |
 | `e0db017` | Refactor: standardize non-standard API endpoints — permissions/route + user/permissions use RolPermisosRepository; permissions/update + roles/create use direct repo instead of fetch() proxies with VALID_PERMISSIONS validation; dashboard/stats uses dashboardService.getStats(); /api/wix/* endpoints protected with WIX_SECRET or NextAuth session (dual auth) |
-| `local` | Fix: /admin/permissions — confirmation dialog when saving role with 0 permissions; backend validates all permission codes against known enums before saving |
+| `0ada99f` | Fix: /admin/permissions — confirmation dialog when saving role with 0 permissions; backend validates all permission codes against known enums before saving |
 | `ecffec0` | Fix: PATCH /api/postgres/people/[id] now syncs email and celular to ACADEMICA (by numeroId) and email to USUARIOS_ROLES (by old email) when modified via Modificar beneficiario |
 | `3182cb9` | Fix: PersonAdmin beneficiary list now returns both _id (PEOPLE, for inactivate/delete ops) and academicaId (ACADEMICA, for /student navigation link) — fixes 404 on Inactivar button |
 | `0d7ccaa` | Fix: WELCOME sessions with attendance (asistio/asistencia=true) excluded from weekly SESSION limit (max 2/week) — student can attend WELCOME + 2 regular sessions same week |
 | `efe358b` | Fix: zoom unavailable text changed to "recuerda refrescar el navegador" (was "recuerde"), color set to white for visibility on blue background (panel-estudiante/page.tsx + NextClassCard.tsx) |
 | `6b6afec` | Fix: beneficiary links in /person/[id] use ACADEMICA _id (falls back to PEOPLE _id if no academic record); booking.repository preserves prefixed step names (e.g. 'TRAINING - Step 7') |
+| `f7cb0b0` | Fix: use NEXTAUTH_URL for server-side redirect instead of internal request.url |
+| `d72036c` | feat: add CRM bridge endpoint for cross-app authentication |
+| `3e51a11` | Fix: revert booking logic in main — show only student's specific jump step |
 | `9783aa8` | Fix: revert booking logic to original; add visual "Jump" suffix to step display in booking flow for steps that are multiples of 5 (e.g. "BN1 - Step 5 Jump") |
 | `local` | Login diferenciado: BLOCKED (activo=false) lanza modal "Acceso bloqueado", EXPIRED (finalContrato < hoy) lanza modal "Contrato vencido", credenciales inválidas muestra toast |
 | `f36fc36` | Fix: Jump Step stays when class is cancelled — progress.service shows "Canceló la clase del jump, debe reagendarla"; autoAdvanceStep now also requires exitosa attendance (was missing) |
