@@ -758,11 +758,9 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3">
-                    <Link href={`/student/${(beneficiary as any).academicaId || beneficiary._id}`}>
-                      <h4 className="font-medium text-blue-700 hover:text-blue-900 hover:underline cursor-pointer">
-                        {beneficiary.nombre} {beneficiary.apellido}
-                      </h4>
-                    </Link>
+                    <h4 className="font-medium text-gray-900">
+                      {beneficiary.nombre} {beneficiary.apellido}
+                    </h4>
                     <span className={`badge ${getEstadoBadgeClass(beneficiary.estado)}`}>
                       {beneficiary.estado}
                     </span>
