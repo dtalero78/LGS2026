@@ -532,6 +532,17 @@ ANTHROPIC_API_KEY=anthropic_api_key_for_dashboard_charts
 - `people.repository.ts` maneja comentarios con `getComments()` y `saveComments()` directamente sobre el campo JSONB
 - API: `GET/POST /api/postgres/people/[id]/comments` — lee y escribe el array en `PEOPLE.comentarios`
 
+### Propagación de cambios de CALENDARIO a ACADEMICA_BOOKINGS
+
+Cuando se edita un evento en CALENDARIO, `calendar.service.updateEvent()` propaga automáticamente los siguientes campos a todos los bookings del evento:
+- `advisor`, `linkZoom` — siempre propagados si cambian
+- `nombreEvento`, `titulo` — nombre del evento
+- `nivel`, `step` — nivel y step del evento
+- `tituloONivel` — título combinado
+- `tipo` / `tipoEvento` — tipo de evento
+
+Esto garantiza que los bookings existentes reflejen siempre el estado actual del evento en CALENDARIO.
+
 ### Compatibilidad Wix ↔ Admin en Bookings
 - Datos migrados de Wix usan `idEvento` como foreign key a CALENDARIO (nueva columna: `eventoId`)
 - El tipo de evento en datos Wix se almacena en `tipoEvento` (nueva: columna `tipo` en CALENDARIO)
@@ -1612,7 +1623,10 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
-| `local` | fix: STEP_OVERRIDES now uses ACADEMICA _id (not PEOPLE _id) — step-override route resolves ACADEMICA _id + detects duplicates with "USUARIO duplicado en ACADEMICA" error; progress.service and student-booking.service updated accordingly; peopleId param removed from getEffectiveStepNumber/getAvailableEvents; override badge shown in ¿Cómo voy? (admin) — "✎ Override ✓" purple / "✎ Override ✗" orange |
+| `1542bab` | fix: save fechaAgendamiento in admin panel bookings — enrollment.service.ts now saves `fechaAgendamiento: new Date().toISOString()` when admin enrolls students (origen: POSTGRES). Previously only PANEL_EST bookings had this field populated |
+| `5da80c1` | fix: propagate event field changes to bookings on update + show club name in attendance table — calendar.service updateEvent now propagates nombreEvento, titulo, nivel, step, tituloONivel, tipo/tipoEvento to ACADEMICA_BOOKINGS (in addition to advisor/linkZoom); StudentAcademic Step column shows nombreEvento for CLUB rows |
+| `882bb82` | feat: add sync-plataforma-bookings admin endpoint + env var auth fallback — POST /api/admin/sync-plataforma-bookings copies plataforma from ACADEMICA to ACADEMICA_BOOKINGS in batches of 2000 (SUPER_ADMIN only); auth-postgres.ts checks ADMIN_EMAIL/ADMIN_PASSWORD env vars before PostgreSQL (local dev) |
+| `73ad32d` | fix: STEP_OVERRIDES uses ACADEMICA _id — step-override route resolves ACADEMICA _id + detects duplicates ("USUARIO duplicado en ACADEMICA"); progress.service and student-booking.service updated; peopleId param removed from getEffectiveStepNumber/getAvailableEvents; override badge in ¿Cómo voy? admin: "✎ Override ✓" purple / "✎ Override ✗" orange |
 | `ea4ae58` | fix: save plataforma field in ACADEMICA_BOOKINGS on enrollment — enrollment.service.ts and student-booking.service.ts now include student.plataforma when creating bookings |
 | `0f59e82` | fix: remove clickable link from beneficiary names in PersonAdmin — names are now plain text |
 | `f0f35e5` | fix: step completion now requires specifically a TRAINING club (name starts with "TRAINING -"). PRONUNCIATION, GRAMMAR, LISTENING no longer count. Added `isTrainingClub()` helper in `progress.service.ts`; updated `isCurrentStepComplete` in `student.service.ts` and `getEffectiveStepNumber` in `student-booking.service.ts`. All 3 functions now use CALENDARIO JOIN for real step names and filter cancelled bookings. Jump step logic in `getEffectiveStepNumber` aligned with `progress.service.ts`. |
