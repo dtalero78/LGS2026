@@ -89,6 +89,8 @@ export const POST = handlerWithAuth(async (request, context, session) => {
     separator = ' - ',
     sourceKey,
     targetKeys,
+    filterField,
+    filterValue,
     overwrite = false,
   } = body as {
     sourceTable: string;
@@ -99,8 +101,12 @@ export const POST = handlerWithAuth(async (request, context, session) => {
     separator?: string;
     sourceKey?: string;
     targetKeys?: string[];
+    filterField?: string;
+    filterValue?: string;
     overwrite?: boolean;
   };
+
+  if (filterField) validateField(filterField, 'filterField');
 
   validateTable(sourceTable, 'sourceTable');
   validateTable(targetTable, 'targetTable');
@@ -114,8 +120,8 @@ export const POST = handlerWithAuth(async (request, context, session) => {
     for (const f of sourceFields) validateField(f, `sourceField "${f}"`);
 
     const nullCondition = overwrite ? '' : `AND ("${field}" IS NULL OR "${field}" = '')`;
-    const concatExpr = sourceFields.map(f => `"${f}"`).join(`, '${separator.replace(/'/g, "''")}', `);
     const notNullCondition = sourceFields.map(f => `"${f}" IS NOT NULL AND "${f}" != ''`).join(' AND ');
+    const filterCondition = filterField && filterValue ? `AND "${filterField}" = '${filterValue.replace(/'/g, "''")}'` : '';
 
     // Preview
     const preview = await queryMany(`
@@ -123,6 +129,7 @@ export const POST = handlerWithAuth(async (request, context, session) => {
       FROM "${targetTable}"
       WHERE ${notNullCondition}
         ${nullCondition}
+        ${filterCondition}
       GROUP BY ${sourceFields.map(f => `"${f}"`).join(', ')}
       ORDER BY rows DESC
       LIMIT 50
@@ -148,6 +155,7 @@ export const POST = handlerWithAuth(async (request, context, session) => {
           FROM "${targetTable}"
           WHERE ${notNullCondition}
             ${nullCondition}
+            ${filterCondition}
           LIMIT ${BATCH_SIZE}
         ),
         updated AS (
