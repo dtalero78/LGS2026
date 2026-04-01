@@ -1405,7 +1405,7 @@ interface ConsentData {
 | Agenda Sesiones | `/dashboard/academic/agenda-sesiones` | ACADEMICO permissions |
 | Agenda Académica | `/dashboard/academic/agenda-academica` | ACADEMICO permissions |
 | Advisors | `/dashboard/academic/advisors` | ACADEMICO.ADVISOR permissions |
-| Informe Beneficiarios | `/dashboard/academic/informes/beneficiarios` | ACADEMICO permissions |
+| Informe Beneficiarios | `/dashboard/academic/informes/beneficiarios` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
 | Welcome Session | `/dashboard/servicio/welcome-session` | SERVICIO permissions |
 | Servicio Main | `/dashboard/servicio` | SERVICIO permissions |
 | Lista Sesiones | `/dashboard/servicio/lista-sesiones` | SERVICIO permissions |
@@ -1623,6 +1623,9 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `444e419` | feat: move Informe Beneficiarios out of Académico into new Informes group — sidebar now has a dedicated "Informes" section (ChartBarIcon) below Avisos with "Informe Beneficiarios" inside; sectionPermissions updated accordingly |
+| `ca4412b` | fix: findBookingById uses CALENDARIO JOIN for correct step/nivel — prevents autoAdvanceStep from using booking's stored step (student's step at booking time) instead of the event's real step; fixes incorrect advances when student was enrolled in a jump step while at an earlier step |
+| `135882f` | fix: participacion only counts as exitosa for JUMP steps (multiples of 5) — normal steps: asistio OR asistencia; jump steps: asistio OR asistencia OR participacion. Affects progress.service, student.service, student-booking.service, booking.repository attendance stats SQL |
 | `ba4652b` | feat: remove WhatsApp help bubble from student panel header — StudentHeader.tsx no longer renders the "Necesitas ayuda?" WhatsApp link; header now shows only greeting + nivel/step badge + logout button |
 | `bd217bd` | feat: sync-field endpoint — Mode 3 concat now supports `filterField`/`filterValue` to restrict update to a specific subset (e.g. `filterField:"nivel", filterValue:"F2"`). Allows level-by-level tituloONivel repairs |
 | `e36d9a5` | feat: sync-field endpoint — Mode 3 concat: `sourceFields` (string[]) + `separator` concatenates multiple fields into one (e.g. nivel + " - " + nombreEvento → tituloONivel). Operates in batches of 2000 with `overwrite` support |
