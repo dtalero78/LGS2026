@@ -149,6 +149,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       AcademicoPermission.INFORME_BENEFICIARIOS,
       AcademicoPermission.EXPORTAR_INFORMES,
     ],
+    '/dashboard/informes/general': [
+      AcademicoPermission.VER_INFORMES,
+      AcademicoPermission.INFORME_BENEFICIARIOS,
+      AcademicoPermission.EXPORTAR_INFORMES,
+    ],
 
     // Servicio
     '/dashboard/servicio/welcome-session': [
