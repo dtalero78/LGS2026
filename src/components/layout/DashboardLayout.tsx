@@ -17,6 +17,7 @@ import {
   ArrowRightOnRectangleIcon,
   PuzzlePieceIcon,
   MegaphoneIcon,
+  ChartBarIcon,
 } from '@heroicons/react/24/outline'
 import { cn } from '@/lib/utils'
 import SearchBar from '@/components/search/SearchBar'
@@ -37,7 +38,6 @@ const getNavigation = (userEmail: string) => [
       { name: 'Agenda Académica', href: '/dashboard/academic/agenda-academica' },
       { name: 'Advisors', href: '/dashboard/academic/advisors' },
       { name: 'Panel Advisor', href: `/panel-advisor?email=${encodeURIComponent(userEmail)}` },
-      { name: 'Informe Beneficiarios', href: '/dashboard/academic/informes/beneficiarios', superAdminOnly: true },
     ],
   },
   {
@@ -74,6 +74,13 @@ const getNavigation = (userEmail: string) => [
     children: [
       { name: 'Ticker', href: '/admin/ticker' },
       { name: 'Banner', href: '/admin/banner' },
+    ],
+  },
+  {
+    name: 'Informes',
+    icon: ChartBarIcon,
+    children: [
+      { name: 'Informe Beneficiarios', href: '/dashboard/academic/informes/beneficiarios' },
     ],
   },
   {
@@ -203,7 +210,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       AcademicoPermission.ADVISOR_VER_ENLACE,
       AcademicoPermission.AGREGAR,
       AcademicoPermission.ESTADISTICA,
-      // ACADEMICO.INFORMES.*
+    ],
+    'Informes': [
       AcademicoPermission.VER_INFORMES,
       AcademicoPermission.INFORME_BENEFICIARIOS,
       AcademicoPermission.EXPORTAR_INFORMES,
