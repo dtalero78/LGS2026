@@ -1406,6 +1406,7 @@ interface ConsentData {
 | Agenda Académica | `/dashboard/academic/agenda-academica` | ACADEMICO permissions |
 | Advisors | `/dashboard/academic/advisors` | ACADEMICO.ADVISOR permissions |
 | Informe Beneficiarios | `/dashboard/academic/informes/beneficiarios` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Reporte General | `/dashboard/informes/general` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
 | Welcome Session | `/dashboard/servicio/welcome-session` | SERVICIO permissions |
 | Servicio Main | `/dashboard/servicio` | SERVICIO permissions |
 | Lista Sesiones | `/dashboard/servicio/lista-sesiones` | SERVICIO permissions |
@@ -1623,6 +1624,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `41e6987` | feat: Reporte General dashboard — GET /api/postgres/reports/general?startDate&endDate runs 5 parallel queries (resumen eventos SESSION/CLUB, complementarias, asistencia por país pivoteada, rendimiento por advisor sorted desc, usuarios activos/inactivos por país); PowerBI-style component with stat cards, progress bars, CSV export per section; page at /dashboard/informes/general; sidebar link added to Informes group |
 | `444e419` | feat: move Informe Beneficiarios out of Académico into new Informes group — sidebar now has a dedicated "Informes" section (ChartBarIcon) below Avisos with "Informe Beneficiarios" inside; sectionPermissions updated accordingly |
 | `ca4412b` | fix: findBookingById uses CALENDARIO JOIN for correct step/nivel — prevents autoAdvanceStep from using booking's stored step (student's step at booking time) instead of the event's real step; fixes incorrect advances when student was enrolled in a jump step while at an earlier step |
 | `135882f` | fix: participacion only counts as exitosa for JUMP steps (multiples of 5) — normal steps: asistio OR asistencia; jump steps: asistio OR asistencia OR participacion. Affects progress.service, student.service, student-booking.service, booking.repository attendance stats SQL |
