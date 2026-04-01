@@ -1623,6 +1623,10 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `bd217bd` | feat: sync-field endpoint — Mode 3 concat now supports `filterField`/`filterValue` to restrict update to a specific subset (e.g. `filterField:"nivel", filterValue:"F2"`). Allows level-by-level tituloONivel repairs |
+| `e36d9a5` | feat: sync-field endpoint — Mode 3 concat: `sourceFields` (string[]) + `separator` concatenates multiple fields into one (e.g. nivel + " - " + nombreEvento → tituloONivel). Operates in batches of 2000 with `overwrite` support |
+| `734c5f4` | feat: sync-field endpoint — Mode 2 same-table field copy: `sourceField` copies one column into another within the same table (e.g. step → nombreEvento in ACADEMICA_BOOKINGS) |
+| `27b0da3` | feat: generic POST /api/admin/sync-field endpoint (SUPER_ADMIN only) — Mode 1: cross-table JOIN sync copies a field from sourceTable to targetTable via configurable keys. Replaces sync-plataforma-bookings with a parametrizable approach. SQL injection protection via table whitelist + identifier regex |
 | `1542bab` | fix: save fechaAgendamiento in admin panel bookings — enrollment.service.ts now saves `fechaAgendamiento: new Date().toISOString()` when admin enrolls students (origen: POSTGRES). Previously only PANEL_EST bookings had this field populated |
 | `5da80c1` | fix: propagate event field changes to bookings on update + show club name in attendance table — calendar.service updateEvent now propagates nombreEvento, titulo, nivel, step, tituloONivel, tipo/tipoEvento to ACADEMICA_BOOKINGS (in addition to advisor/linkZoom); StudentAcademic Step column shows nombreEvento for CLUB rows |
 | `882bb82` | feat: add sync-plataforma-bookings admin endpoint + env var auth fallback — POST /api/admin/sync-plataforma-bookings copies plataforma from ACADEMICA to ACADEMICA_BOOKINGS in batches of 2000 (SUPER_ADMIN only); auth-postgres.ts checks ADMIN_EMAIL/ADMIN_PASSWORD env vars before PostgreSQL (local dev) |
