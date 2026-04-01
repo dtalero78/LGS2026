@@ -188,7 +188,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 136. Autenticación de cron jobs con CRON_SECRET
 
 ### Panel del Estudiante (Auto-Servicio)
-137. Portal de auto-servicio para estudiantes logueados (rol ESTUDIANTE)
+137. Portal de auto-servicio para estudiantes logueados (rol ESTUDIANTE). Header muestra: saludo con nombre + badge nivel/step + botón logout. El botón de ayuda WhatsApp fue eliminado del header.
 138. Ver perfil propio (merge PEOPLE + ACADEMICA)
 139. Ver progreso académico ("¿Cómo voy?" con barra de progreso, steps, porcentaje)
 140. Ver eventos próximos y disponibles (filtrados por nivel/step del estudiante)
@@ -1623,6 +1623,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `ba4652b` | feat: remove WhatsApp help bubble from student panel header — StudentHeader.tsx no longer renders the "Necesitas ayuda?" WhatsApp link; header now shows only greeting + nivel/step badge + logout button |
 | `bd217bd` | feat: sync-field endpoint — Mode 3 concat now supports `filterField`/`filterValue` to restrict update to a specific subset (e.g. `filterField:"nivel", filterValue:"F2"`). Allows level-by-level tituloONivel repairs |
 | `e36d9a5` | feat: sync-field endpoint — Mode 3 concat: `sourceFields` (string[]) + `separator` concatenates multiple fields into one (e.g. nivel + " - " + nombreEvento → tituloONivel). Operates in batches of 2000 with `overwrite` support |
 | `734c5f4` | feat: sync-field endpoint — Mode 2 same-table field copy: `sourceField` copies one column into another within the same table (e.g. step → nombreEvento in ACADEMICA_BOOKINGS) |
