@@ -501,7 +501,13 @@ class BookingRepositoryClass extends BaseRepository {
 
   async findBookingById(bookingId: string) {
     return queryOne(
-      `SELECT * FROM "ACADEMICA_BOOKINGS" WHERE "_id" = $1`,
+      `SELECT b.*,
+              COALESCE(c."step", b."step") AS "step",
+              COALESCE(c."nivel", b."nivel") AS "nivel",
+              COALESCE(c."tipo", b."tipoEvento") AS "tipo"
+       FROM "ACADEMICA_BOOKINGS" b
+       LEFT JOIN "CALENDARIO" c ON c."_id" = COALESCE(b."eventoId", b."idEvento")
+       WHERE b."_id" = $1`,
       [bookingId]
     );
   }
