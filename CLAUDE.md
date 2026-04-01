@@ -1624,6 +1624,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `46aee55` | feat: add Reporte General to pagePermissions — /dashboard/informes/general now restricted to roles with INFORMES permissions in sidebar; SUPER_ADMIN/ADMIN bypass via hasFullAccess |
 | `41e6987` | feat: Reporte General dashboard — GET /api/postgres/reports/general?startDate&endDate runs 5 parallel queries (resumen eventos SESSION/CLUB, complementarias, asistencia por país pivoteada, rendimiento por advisor sorted desc, usuarios activos/inactivos por país); PowerBI-style component with stat cards, progress bars, CSV export per section; page at /dashboard/informes/general; sidebar link added to Informes group |
 | `444e419` | feat: move Informe Beneficiarios out of Académico into new Informes group — sidebar now has a dedicated "Informes" section (ChartBarIcon) below Avisos with "Informe Beneficiarios" inside; sectionPermissions updated accordingly |
 | `ca4412b` | fix: findBookingById uses CALENDARIO JOIN for correct step/nivel — prevents autoAdvanceStep from using booking's stored step (student's step at booking time) instead of the event's real step; fixes incorrect advances when student was enrolled in a jump step while at an earlier step |
