@@ -400,8 +400,23 @@ class BookingRepositoryClass extends BaseRepository {
     return queryOne(
       `SELECT
         COUNT(CASE WHEN "fechaEvento" < NOW() THEN 1 END)::int as total,
-        COUNT(CASE WHEN "asistio" = true THEN 1 END)::int as asistencias,
-        COUNT(CASE WHEN "asistio" = false AND "cancelo" = false AND "fechaEvento" < NOW() THEN 1 END)::int as ausencias,
+        COUNT(CASE WHEN
+          "asistio" = true OR "asistencia" = true
+          OR (
+            (NULLIF(REGEXP_REPLACE(COALESCE("step", "nombreEvento", ''), '[^0-9]', '', 'g'), '')::int % 5 = 0)
+            AND "participacion" = true
+          )
+        THEN 1 END)::int as asistencias,
+        COUNT(CASE WHEN
+          ("asistio" IS NULL OR "asistio" = false)
+          AND ("asistencia" IS NULL OR "asistencia" = false)
+          AND NOT (
+            (NULLIF(REGEXP_REPLACE(COALESCE("step", "nombreEvento", ''), '[^0-9]', '', 'g'), '')::int % 5 = 0)
+            AND "participacion" = true
+          )
+          AND ("cancelo" IS NULL OR "cancelo" = false)
+          AND "fechaEvento" < NOW()
+        THEN 1 END)::int as ausencias,
         COUNT(CASE WHEN "cancelo" = true THEN 1 END)::int as canceladas
        FROM "ACADEMICA_BOOKINGS"
        WHERE ("idEstudiante" = $1 OR "studentId" = $1)`,

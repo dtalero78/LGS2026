@@ -166,7 +166,9 @@ function isJumpStep(stepName: string): boolean {
 }
 
 function isExitosa(c: any): boolean {
-  return c.asistio === true || c.asistencia === true || c.participacion === true;
+  const stepName = c.step || c.nombreEvento || '';
+  const esJump = isJumpStep(stepName);
+  return c.asistio === true || c.asistencia === true || (esJump && c.participacion === true);
 }
 
 function getClassType(c: any): 'SESSION' | 'CLUB' | 'OTHER' {
@@ -214,9 +216,7 @@ async function isCurrentStepComplete(
 
   if (esJump) {
     // Jump Step requires: at least 1 exitosa attendance AND noAprobo != true
-    const tieneAsistenciaExitosa = clasesDelStep.some(
-      (c: any) => c.asistio === true || c.asistencia === true || c.participacion === true
-    );
+    const tieneAsistenciaExitosa = clasesDelStep.some((c: any) => isExitosa(c));
     return clasesDelStep.length > 0 && tieneAsistenciaExitosa && !tieneNoAprobo;
   }
 

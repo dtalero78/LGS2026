@@ -21,7 +21,10 @@ function extractStepNumber(stepName: string): number | null {
 }
 
 function isExitosaBooking(c: any): boolean {
-  return c.asistio === true || c.asistencia === true || c.participacion === true;
+  const stepName = c.step || c.nombreEvento || '';
+  const num = extractStepNumber(stepName);
+  const esJump = num !== null && num > 0 && num % 5 === 0;
+  return c.asistio === true || c.asistencia === true || (esJump && c.participacion === true);
 }
 
 function getClassTypeBooking(c: any): 'SESSION' | 'CLUB' | 'OTHER' {

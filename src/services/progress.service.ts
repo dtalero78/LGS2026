@@ -6,8 +6,9 @@
  *
  * Step completion rules:
  *   1. Normal Steps (1-4, 6-9, 11-14, etc.):
- *      - 2 sesiones exitosas (tipo SESSION, asistio/asistencia/participacion = true)
- *      - 1 TRAINING club exitoso (tipo CLUB, asistio/asistencia/participacion = true)
+ *      - 2 sesiones exitosas (tipo SESSION, asistio/asistencia = true)
+ *      - 1 TRAINING club exitoso (tipo CLUB, asistio/asistencia = true)
+ *      - participacion solo cuenta como exitosa en JUMP steps (múltiplos de 5)
  *   2. Jump Steps (5, 10, 15, 20, 25, 30, 35, 40, 45):
  *      - 1 clase registrada en ese step
  *      - noAprobo !== true
@@ -41,9 +42,14 @@ function isJumpStep(stepName: string): boolean {
   return num !== null && num > 0 && num % 5 === 0;
 }
 
-/** A class counts as "exitosa" if student attended or participated */
+/**
+ * A class counts as "exitosa" if student attended.
+ * participacion only counts for JUMP steps (multiples of 5: Step 5, 10, 15, ..., 45).
+ */
 function isExitosa(c: any): boolean {
-  return c.asistio === true || c.asistencia === true || c.participacion === true;
+  const stepName = c.step || c.nombreEvento || '';
+  const esJump = isJumpStep(stepName);
+  return c.asistio === true || c.asistencia === true || (esJump && c.participacion === true);
 }
 
 /**
