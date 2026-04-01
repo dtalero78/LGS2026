@@ -81,6 +81,7 @@ const getNavigation = (userEmail: string) => [
     icon: ChartBarIcon,
     children: [
       { name: 'Informe Beneficiarios', href: '/dashboard/academic/informes/beneficiarios' },
+      { name: 'Reporte General', href: '/dashboard/informes/general' },
     ],
   },
   {
