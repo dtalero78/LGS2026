@@ -2,7 +2,7 @@ import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { queryMany, queryOne } from '@/lib/postgres';
 import { ForbiddenError, ValidationError } from '@/lib/errors';
 
-const BATCH_SIZE = 2000;
+const BATCH_SIZE = 500;
 
 /**
  * Whitelist of tables allowed for sync operations.
@@ -92,6 +92,7 @@ export const POST = handlerWithAuth(async (request, context, session) => {
     filterField,
     filterValue,
     overwrite = false,
+    singleBatch = false,
   } = body as {
     sourceTable: string;
     targetTable: string;
@@ -104,6 +105,7 @@ export const POST = handlerWithAuth(async (request, context, session) => {
     filterField?: string;
     filterValue?: string;
     overwrite?: boolean;
+    singleBatch?: boolean;
   };
 
   if (filterField) validateField(filterField, 'filterField');
@@ -172,12 +174,16 @@ export const POST = handlerWithAuth(async (request, context, session) => {
       const n = parseInt((result as any)?.updated ?? '0');
       totalUpdated += n;
       batchCount++;
-      if (n < BATCH_SIZE) break;
+      if (n < BATCH_SIZE || singleBatch) break;
     }
 
+    const hasMore = singleBatch && totalUpdated >= BATCH_SIZE;
     return successResponse({
-      message: `Sincronización completada: ${totalUpdated} registros actualizados en ${batchCount} lote(s)`,
+      message: hasMore
+        ? `Lote procesado: ${totalUpdated} registros. Hay más pendientes — vuelva a ejecutar.`
+        : `Sincronización completada: ${totalUpdated} registros actualizados en ${batchCount} lote(s)`,
       updatedCount: totalUpdated,
+      hasMore,
       batches: batchCount,
       mode: 'concat',
       table: targetTable,
