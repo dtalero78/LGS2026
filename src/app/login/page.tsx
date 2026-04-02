@@ -197,9 +197,9 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="relative max-w-md w-full space-y-8">
 
-        {/* Banner Overlay — cubre solo el card del login */}
+        {/* Banner Overlay — full-screen en mobile, cubre solo el card en sm+ */}
         {bannerVisible && bannerImage && (
-          <div className="absolute inset-0 z-10 flex flex-col rounded-xl overflow-hidden shadow-2xl">
+          <div className="fixed inset-0 z-50 flex flex-col sm:absolute sm:inset-0 sm:z-10 sm:rounded-xl overflow-hidden shadow-2xl">
             <button
               type="button"
               onClick={handleDismissBanner}
@@ -212,7 +212,7 @@ export default function LoginPage() {
             <img
               src={bannerImage}
               alt="Aviso"
-              className="w-full h-full object-cover"
+              className="w-full flex-1 min-h-0 object-cover object-top"
             />
             <button
               type="button"
