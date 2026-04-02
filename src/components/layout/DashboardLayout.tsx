@@ -80,8 +80,8 @@ const getNavigation = (userEmail: string) => [
     name: 'Informes',
     icon: ChartBarIcon,
     children: [
-      { name: 'Informe Beneficiarios', href: '/dashboard/academic/informes/beneficiarios' },
-      { name: 'Reporte General', href: '/dashboard/informes/general' },
+      { name: 'Informe Beneficiarios', href: '/dashboard/academic/informes/beneficiarios', newTab: true },
+      { name: 'Reporte General', href: '/dashboard/informes/general', newTab: true },
     ],
   },
   {
@@ -571,6 +571,8 @@ function SidebarContent({
                                 <Link
                                   href={subItem.href}
                                   onClick={onLinkClick}
+                                  target={subItem.newTab ? '_blank' : undefined}
+                                  rel={subItem.newTab ? 'noopener noreferrer' : undefined}
                                   className={cn(
                                     "block px-2 py-2 text-sm rounded-md transition-colors duration-200",
                                     isCurrentPath(subItem.href)
