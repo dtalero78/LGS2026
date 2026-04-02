@@ -135,7 +135,7 @@ export default function ReporteGeneral() {
       )
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Error al generar el reporte')
-      setData(json.data)
+      setData(json)
     } catch (e: any) {
       setError(e.message)
     } finally {
