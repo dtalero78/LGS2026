@@ -82,6 +82,7 @@ const getNavigation = (userEmail: string) => [
     children: [
       { name: 'Informe Beneficiarios', href: '/dashboard/academic/informes/beneficiarios', newTab: true },
       { name: 'Reporte General', href: '/dashboard/informes/general', newTab: true },
+      { name: 'Mensuales', href: '/dashboard/informes/mensuales', newTab: true },
     ],
   },
   {
@@ -150,6 +151,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       AcademicoPermission.EXPORTAR_INFORMES,
     ],
     '/dashboard/informes/general': [
+      AcademicoPermission.VER_INFORMES,
+      AcademicoPermission.INFORME_BENEFICIARIOS,
+      AcademicoPermission.EXPORTAR_INFORMES,
+    ],
+    '/dashboard/informes/mensuales': [
       AcademicoPermission.VER_INFORMES,
       AcademicoPermission.INFORME_BENEFICIARIOS,
       AcademicoPermission.EXPORTAR_INFORMES,
