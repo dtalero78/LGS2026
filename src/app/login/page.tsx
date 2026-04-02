@@ -197,31 +197,53 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="relative max-w-md w-full space-y-8">
 
-        {/* Banner Overlay — full-screen en mobile, cubre solo el card en sm+ */}
+        {/* Banner Overlay */}
         {bannerVisible && bannerImage && (
-          <div className="fixed inset-0 z-50 flex flex-col sm:absolute sm:inset-0 sm:z-10 sm:rounded-xl overflow-hidden shadow-2xl">
-            <button
-              type="button"
-              onClick={handleDismissBanner}
-              className="absolute top-2 right-2 z-20 bg-white rounded-full p-1.5 shadow-lg hover:bg-gray-100 transition-colors"
-              title="Cerrar"
-              aria-label="Cerrar banner"
-            >
-              <XMarkIcon className="h-5 w-5 text-gray-700" />
-            </button>
-            <img
-              src={bannerImage}
-              alt="Aviso"
-              className="w-full flex-1 min-h-0 object-cover object-top"
-            />
-            <button
-              type="button"
-              onClick={handleDismissBanner}
-              className="flex-shrink-0 w-full py-2.5 px-4 bg-white hover:bg-gray-100 text-gray-800 text-sm font-medium transition-colors"
-            >
-              Cerrar y continuar al login
-            </button>
-          </div>
+          <>
+            {/* Mobile: card centrado con backdrop — imagen a tamaño natural, sin distorsión */}
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 sm:hidden">
+              <div className="relative w-[88vw] max-w-sm rounded-xl overflow-hidden shadow-2xl bg-white">
+                <button
+                  type="button"
+                  onClick={handleDismissBanner}
+                  className="absolute top-2 right-2 z-20 bg-white rounded-full p-1.5 shadow-lg hover:bg-gray-100 transition-colors"
+                  title="Cerrar"
+                  aria-label="Cerrar banner"
+                >
+                  <XMarkIcon className="h-5 w-5 text-gray-700" />
+                </button>
+                <img src={bannerImage} alt="Aviso" className="w-full h-auto block" />
+                <button
+                  type="button"
+                  onClick={handleDismissBanner}
+                  className="w-full py-2.5 px-4 bg-white hover:bg-gray-100 text-gray-800 text-sm font-medium transition-colors"
+                >
+                  Cerrar y continuar al login
+                </button>
+              </div>
+            </div>
+
+            {/* Desktop (sm+): overlay sobre el card del login */}
+            <div className="hidden sm:flex absolute inset-0 z-10 flex-col rounded-xl overflow-hidden shadow-2xl">
+              <button
+                type="button"
+                onClick={handleDismissBanner}
+                className="absolute top-2 right-2 z-20 bg-white rounded-full p-1.5 shadow-lg hover:bg-gray-100 transition-colors"
+                title="Cerrar"
+                aria-label="Cerrar banner"
+              >
+                <XMarkIcon className="h-5 w-5 text-gray-700" />
+              </button>
+              <img src={bannerImage} alt="Aviso" className="w-full flex-1 min-h-0 object-cover object-top" />
+              <button
+                type="button"
+                onClick={handleDismissBanner}
+                className="flex-shrink-0 w-full py-2.5 px-4 bg-white hover:bg-gray-100 text-gray-800 text-sm font-medium transition-colors"
+              >
+                Cerrar y continuar al login
+              </button>
+            </div>
+          </>
         )}
 
         <div>
