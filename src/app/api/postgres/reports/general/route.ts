@@ -81,21 +81,17 @@ export const GET = handlerWithAuth(async (req) => {
       return row;
     }, null),
 
-    // 3. Asistencia por país — JOIN via ACADEMICA para obtener plataforma
+    // 3. Asistencia por país — usa b."plataforma" directamente (ya sincronizado en ACADEMICA_BOOKINGS)
     safeQuery('asistenciaPorPais', () => queryMany(
       `SELECT
-         COALESCE(p."plataforma", 'Sin país')                          AS pais,
-         COALESCE(c."tipo", b."tipoEvento")                            AS tipo,
-         COUNT(DISTINCT COALESCE(b."studentId", b."idEstudiante"))     AS usuarios_distintos,
+         COALESCE(b."plataforma", 'Sin país')                               AS pais,
+         COALESCE(c."tipo", b."tipoEvento")                                 AS tipo,
+         COUNT(DISTINCT COALESCE(b."studentId", b."idEstudiante"))          AS usuarios_distintos,
          COUNT(*) FILTER (WHERE b."asistio" = true OR b."asistencia" = true) AS asistencias,
-         COUNT(*)                                                       AS total_inscritos
+         COUNT(*)                                                            AS total_inscritos
        FROM "ACADEMICA_BOOKINGS" b
        LEFT JOIN "CALENDARIO" c
          ON c."_id" = COALESCE(b."eventoId", b."idEvento")
-       LEFT JOIN "ACADEMICA" a
-         ON a."_id" = COALESCE(b."studentId", b."idEstudiante")
-       LEFT JOIN "PEOPLE" p
-         ON p."numeroId" = a."numeroId" AND p."tipoUsuario" = 'BENEFICIARIO'
        WHERE b."fechaEvento" >= $1::timestamp AND b."fechaEvento" <= $2::timestamp
          AND (b."cancelo" IS NULL OR b."cancelo" = false)
          AND COALESCE(c."tipo", b."tipoEvento") IN ('SESSION', 'CLUB')
@@ -104,10 +100,10 @@ export const GET = handlerWithAuth(async (req) => {
       [startDateFull, endDateFull]
     ), []),
 
-    // 4. Rendimiento por advisor
+    // 4. Rendimiento por advisor — JOIN ADVISORS para obtener nombreCompleto
     safeQuery('rendimientoAdvisors', () => queryMany(
       `SELECT
-         b."advisor",
+         COALESCE(adv."nombreCompleto", b."advisor") AS advisor,
          COUNT(*) AS agendados,
          COUNT(*) FILTER (WHERE b."asistio" = true OR b."asistencia" = true) AS asistieron,
          COUNT(*) FILTER (
@@ -117,12 +113,13 @@ export const GET = handlerWithAuth(async (req) => {
          ) AS ausentes,
          COUNT(*) FILTER (WHERE b."cancelo" = true) AS cancelados
        FROM "ACADEMICA_BOOKINGS" b
+       LEFT JOIN "ADVISORS" adv ON adv."_id" = b."advisor"
        LEFT JOIN "CALENDARIO" c
          ON c."_id" = COALESCE(b."eventoId", b."idEvento")
        WHERE b."fechaEvento" >= $1::timestamp AND b."fechaEvento" <= $2::timestamp
          AND b."advisor" IS NOT NULL AND b."advisor" != ''
          AND COALESCE(c."tipo", b."tipoEvento") IN ('SESSION', 'CLUB')
-       GROUP BY b."advisor"
+       GROUP BY b."advisor", adv."nombreCompleto"
        ORDER BY agendados DESC`,
       [startDateFull, endDateFull]
     ), []),
