@@ -1407,6 +1407,7 @@ interface ConsentData {
 | Advisors | `/dashboard/academic/advisors` | ACADEMICO.ADVISOR permissions |
 | Informe Beneficiarios | `/dashboard/academic/informes/beneficiarios` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
 | Reporte General | `/dashboard/informes/general` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Reporte Mensuales | `/dashboard/informes/mensuales` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
 | Welcome Session | `/dashboard/servicio/welcome-session` | SERVICIO permissions |
 | Servicio Main | `/dashboard/servicio` | SERVICIO permissions |
 | Lista Sesiones | `/dashboard/servicio/lista-sesiones` | SERVICIO permissions |
@@ -1624,6 +1625,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `2e7b1c1` | feat: Reporte Mensuales — GET /api/postgres/reports/mensuales?startDate&endDate runs 7 parallel safeQuery calls (sesiones/TRAINING/JUMP from CALENDARIO by nivel BN1-F3, bookings sesiones/TRAINING/otros-clubs from ACADEMICA_BOOKINGS by nivel, bookings by país); component with horizontal bar charts, dual-bars for asistencia rate, país table; each section CSV-exportable; sidebar Informes adds 'Mensuales' (new tab) |
 | `371d2e1` | feat: open Informes sidebar items in new tab — newTab: true flag on Informe Beneficiarios and Reporte General nav items; Link renders with target="_blank" + rel="noopener noreferrer" when newTab is set |
 | `46aee55` | feat: add Reporte General to pagePermissions — /dashboard/informes/general now restricted to roles with INFORMES permissions in sidebar; SUPER_ADMIN/ADMIN bypass via hasFullAccess |
 | `41e6987` | feat: Reporte General dashboard — GET /api/postgres/reports/general?startDate&endDate runs 5 parallel queries (resumen eventos SESSION/CLUB, complementarias, asistencia por país pivoteada, rendimiento por advisor sorted desc, usuarios activos/inactivos por país); PowerBI-style component with stat cards, progress bars, CSV export per section; page at /dashboard/informes/general; sidebar link added to Informes group |
