@@ -81,17 +81,19 @@ export const GET = handlerWithAuth(async (req) => {
       return row;
     }, null),
 
-    // 3. Asistencia por país — usa b."plataforma" directamente (ya sincronizado en ACADEMICA_BOOKINGS)
+    // 3. Asistencia por país — COALESCE b."plataforma" → PEOPLE → ACADEMICA para cubrir datos Wix
     safeQuery('asistenciaPorPais', () => queryMany(
       `SELECT
-         COALESCE(b."plataforma", 'Sin país')                               AS pais,
-         COALESCE(c."tipo", b."tipoEvento")                                 AS tipo,
-         COUNT(DISTINCT COALESCE(b."studentId", b."idEstudiante"))          AS usuarios_distintos,
-         COUNT(*) FILTER (WHERE b."asistio" = true OR b."asistencia" = true) AS asistencias,
-         COUNT(*)                                                            AS total_inscritos
+         COALESCE(b."plataforma", p."plataforma", a."plataforma", 'Sin país') AS pais,
+         COALESCE(c."tipo", b."tipoEvento")                                    AS tipo,
+         COUNT(DISTINCT COALESCE(b."studentId", b."idEstudiante"))             AS usuarios_distintos,
+         COUNT(*) FILTER (WHERE b."asistio" = true OR b."asistencia" = true)  AS asistencias,
+         COUNT(*)                                                               AS total_inscritos
        FROM "ACADEMICA_BOOKINGS" b
        LEFT JOIN "CALENDARIO" c
          ON c."_id" = COALESCE(b."eventoId", b."idEvento")
+       LEFT JOIN "ACADEMICA" a ON COALESCE(b."studentId", b."idEstudiante") = a."_id"
+       LEFT JOIN "PEOPLE" p ON a."numeroId" = p."numeroId" AND p."tipoUsuario" = 'BENEFICIARIO'
        WHERE b."fechaEvento" >= $1::timestamp AND b."fechaEvento" <= $2::timestamp
          AND (b."cancelo" IS NULL OR b."cancelo" = false)
          AND COALESCE(c."tipo", b."tipoEvento") IN ('SESSION', 'CLUB')
