@@ -14,10 +14,20 @@ import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { ValidationError } from '@/lib/errors';
 import { queryMany, queryOne } from '@/lib/postgres';
 
+async function safeQuery<T>(label: string, fn: () => Promise<T>, fallback: T): Promise<{ data: T; error?: string }> {
+  try {
+    const data = await fn();
+    return { data };
+  } catch (err: any) {
+    console.error(`❌ [reports/general] ${label}:`, err?.message || err);
+    return { data: fallback, error: `${label}: ${err?.message || 'unknown error'}` };
+  }
+}
+
 export const GET = handlerWithAuth(async (req) => {
   const { searchParams } = new URL(req.url);
   const startDate = searchParams.get('startDate');
-  const endDate = searchParams.get('endDate');
+  const endDate   = searchParams.get('endDate');
 
   if (!startDate || !endDate) {
     throw new ValidationError('startDate y endDate son requeridos');
@@ -26,16 +36,17 @@ export const GET = handlerWithAuth(async (req) => {
   const startDateFull = `${startDate}T00:00:00`;
   const endDateFull   = `${endDate}T23:59:59`;
 
-  // Run all queries in parallel; wrap complementarias separately to isolate errors
+  // Run all sections in parallel, each isolated so one failure doesn't kill the rest
   const [
-    resumenEventos,
-    asistenciaPorPais,
-    rendimientoAdvisors,
-    usuariosPorPais,
+    q1,
+    q2,
+    q3,
+    q4,
+    q5,
   ] = await Promise.all([
 
     // 1. Resumen de eventos (SESSION + CLUB) desde CALENDARIO
-    queryMany(
+    safeQuery('resumenEventos', () => queryMany(
       `SELECT
          c."tipo",
          COUNT(DISTINCT c."_id") AS total_eventos,
@@ -53,18 +64,31 @@ export const GET = handlerWithAuth(async (req) => {
        GROUP BY c."tipo"
        ORDER BY c."tipo"`,
       [startDateFull, endDateFull]
-    ),
+    ), []),
 
-    // 2. Asistencia por país — JOIN via ACADEMICA para obtener plataforma correctamente
-    queryMany(
+    // 2. Complementarias (COMPLEMENTARIA_ATTEMPTS)
+    safeQuery('complementarias', async () => {
+      const row = await queryOne(
+        `SELECT
+           COUNT(*) AS total_solicitadas,
+           COUNT(*) FILTER (WHERE status = 'PASSED')      AS aprobadas,
+           COUNT(*) FILTER (WHERE status = 'FAILED')      AS reprobadas,
+           COUNT(*) FILTER (WHERE status = 'IN_PROGRESS') AS en_progreso
+         FROM "COMPLEMENTARIA_ATTEMPTS"
+         WHERE "_createdDate" >= $1::timestamp AND "_createdDate" <= $2::timestamp`,
+        [startDateFull, endDateFull]
+      );
+      return row;
+    }, null),
+
+    // 3. Asistencia por país — JOIN via ACADEMICA para obtener plataforma
+    safeQuery('asistenciaPorPais', () => queryMany(
       `SELECT
-         COALESCE(p."plataforma", 'Sin país')            AS pais,
-         COALESCE(c."tipo", b."tipoEvento")              AS tipo,
-         COUNT(DISTINCT COALESCE(b."studentId", b."idEstudiante")) AS usuarios_distintos,
-         COUNT(*) FILTER (
-           WHERE b."asistio" = true OR b."asistencia" = true
-         ) AS asistencias,
-         COUNT(*) AS total_inscritos
+         COALESCE(p."plataforma", 'Sin país')                          AS pais,
+         COALESCE(c."tipo", b."tipoEvento")                            AS tipo,
+         COUNT(DISTINCT COALESCE(b."studentId", b."idEstudiante"))     AS usuarios_distintos,
+         COUNT(*) FILTER (WHERE b."asistio" = true OR b."asistencia" = true) AS asistencias,
+         COUNT(*)                                                       AS total_inscritos
        FROM "ACADEMICA_BOOKINGS" b
        LEFT JOIN "CALENDARIO" c
          ON c."_id" = COALESCE(b."eventoId", b."idEvento")
@@ -78,16 +102,14 @@ export const GET = handlerWithAuth(async (req) => {
        GROUP BY pais, tipo
        ORDER BY asistencias DESC`,
       [startDateFull, endDateFull]
-    ),
+    ), []),
 
-    // 3. Rendimiento por advisor
-    queryMany(
+    // 4. Rendimiento por advisor
+    safeQuery('rendimientoAdvisors', () => queryMany(
       `SELECT
          b."advisor",
          COUNT(*) AS agendados,
-         COUNT(*) FILTER (
-           WHERE b."asistio" = true OR b."asistencia" = true
-         ) AS asistieron,
+         COUNT(*) FILTER (WHERE b."asistio" = true OR b."asistencia" = true) AS asistieron,
          COUNT(*) FILTER (
            WHERE b."asistio" = false
              AND (b."asistencia" IS NULL OR b."asistencia" = false)
@@ -103,12 +125,12 @@ export const GET = handlerWithAuth(async (req) => {
        GROUP BY b."advisor"
        ORDER BY agendados DESC`,
       [startDateFull, endDateFull]
-    ),
+    ), []),
 
-    // 4. Usuarios académicos activos/inactivos por país (estado actual)
-    queryMany(
+    // 5. Usuarios académicos activos/inactivos por país (estado actual)
+    safeQuery('usuariosPorPais', () => queryMany(
       `SELECT
-         COALESCE(p."plataforma", 'Sin país') AS pais,
+         COALESCE(p."plataforma", 'Sin país')                             AS pais,
          COUNT(*) FILTER (WHERE p."estadoInactivo" IS DISTINCT FROM true) AS activos,
          COUNT(*) FILTER (WHERE p."estadoInactivo" = true)                AS inactivos,
          COUNT(*)                                                          AS total
@@ -117,52 +139,43 @@ export const GET = handlerWithAuth(async (req) => {
        GROUP BY p."plataforma"
        ORDER BY total DESC`,
       []
-    ),
+    ), []),
   ]);
 
-  // Complementarias in a separate try-catch to avoid bringing down the whole report
-  let complementarias = { totalSolicitadas: 0, aprobadas: 0, reprobadas: 0, enProgreso: 0 };
-  try {
-    const row = await queryOne(
-      `SELECT
-         COUNT(*) AS total_solicitadas,
-         COUNT(*) FILTER (WHERE status = 'PASSED')      AS aprobadas,
-         COUNT(*) FILTER (WHERE status = 'FAILED')      AS reprobadas,
-         COUNT(*) FILTER (WHERE status = 'IN_PROGRESS') AS en_progreso
-       FROM "COMPLEMENTARIA_ATTEMPTS"
-       WHERE "_createdDate" >= $1::timestamp AND "_createdDate" <= $2::timestamp`,
-      [startDateFull, endDateFull]
-    );
-    if (row) {
-      complementarias = {
-        totalSolicitadas: parseInt((row as any).total_solicitadas) || 0,
-        aprobadas:        parseInt((row as any).aprobadas)         || 0,
-        reprobadas:       parseInt((row as any).reprobadas)        || 0,
-        enProgreso:       parseInt((row as any).en_progreso)       || 0,
-      };
-    }
-  } catch {
-    // Table may not exist in all environments — return zeros
-  }
+  // Collect any section errors for debugging (visible in response, not thrown)
+  const sectionErrors = [q1, q2, q3, q4, q5]
+    .map(q => q.error)
+    .filter(Boolean);
 
-  // Normalize types
-  const normResumen = (resumenEventos as any[]).map((r) => ({
-    tipo:          r.tipo,
-    totalEventos:  parseInt(r.total_eventos)  || 0,
-    totalInscritos: parseInt(r.total_inscritos) || 0,
-    asistieron:    parseInt(r.asistieron)     || 0,
-    cancelados:    parseInt(r.cancelados)     || 0,
+  // Normalize resumenEventos
+  const normResumen = (q1.data as any[]).map((r) => ({
+    tipo:           r.tipo,
+    totalEventos:   parseInt(r.total_eventos)   || 0,
+    totalInscritos: parseInt(r.total_inscritos)  || 0,
+    asistieron:     parseInt(r.asistieron)       || 0,
+    cancelados:     parseInt(r.cancelados)       || 0,
   }));
 
-  const normAsistenciaPorPais = (asistenciaPorPais as any[]).map((r) => ({
-    pais:             r.pais,
-    tipo:             r.tipo,
+  // Normalize complementarias
+  const compRow = q2.data as any;
+  const normComplementarias = {
+    totalSolicitadas: parseInt(compRow?.total_solicitadas) || 0,
+    aprobadas:        parseInt(compRow?.aprobadas)         || 0,
+    reprobadas:       parseInt(compRow?.reprobadas)        || 0,
+    enProgreso:       parseInt(compRow?.en_progreso)       || 0,
+  };
+
+  // Normalize asistencia por país
+  const normAsistenciaPorPais = (q3.data as any[]).map((r) => ({
+    pais:              r.pais,
+    tipo:              r.tipo,
     usuariosDistintos: parseInt(r.usuarios_distintos) || 0,
-    asistencias:      parseInt(r.asistencias)         || 0,
-    totalInscritos:   parseInt(r.total_inscritos)     || 0,
+    asistencias:       parseInt(r.asistencias)         || 0,
+    totalInscritos:    parseInt(r.total_inscritos)      || 0,
   }));
 
-  const normAdvisors = (rendimientoAdvisors as any[]).map((r) => {
+  // Normalize advisors
+  const normAdvisors = (q4.data as any[]).map((r) => {
     const agendados  = parseInt(r.agendados)  || 0;
     const asistieron = parseInt(r.asistieron) || 0;
     return {
@@ -175,7 +188,8 @@ export const GET = handlerWithAuth(async (req) => {
     };
   });
 
-  const normUsuariosPorPais = (usuariosPorPais as any[]).map((r) => ({
+  // Normalize usuarios por país
+  const normUsuariosPorPais = (q5.data as any[]).map((r) => ({
     pais:      r.pais,
     activos:   parseInt(r.activos)   || 0,
     inactivos: parseInt(r.inactivos) || 0,
@@ -184,10 +198,11 @@ export const GET = handlerWithAuth(async (req) => {
 
   return successResponse({
     filters: { startDate, endDate },
-    resumenEventos:     normResumen,
-    complementarias,
-    asistenciaPorPais:  normAsistenciaPorPais,
+    resumenEventos:      normResumen,
+    complementarias:     normComplementarias,
+    asistenciaPorPais:   normAsistenciaPorPais,
     rendimientoAdvisors: normAdvisors,
-    usuariosPorPais:    normUsuariosPorPais,
+    usuariosPorPais:     normUsuariosPorPais,
+    ...(sectionErrors.length > 0 && { _errors: sectionErrors }),
   });
 });
