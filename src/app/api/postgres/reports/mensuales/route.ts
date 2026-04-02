@@ -157,15 +157,16 @@ export const GET = handlerWithAuth(async (req) => {
     // 7. ACADEMICA_BOOKINGS — Agendamientos sesiones y clubes por país
     safeQuery('bookingsPorPais', () => queryMany(
       `SELECT
-         COALESCE(b."plataforma", p."plataforma", a."plataforma", 'Sin país') AS pais,
+         COALESCE(b."plataforma", p."plataforma", a."plataforma", p2."plataforma", 'Sin país') AS pais,
          COALESCE(c."tipo", b."tipoEvento")   AS tipo,
          COUNT(*)::int                        AS total,
          COUNT(*) FILTER (WHERE b."asistio" = true OR b."asistencia" = true)::int AS asistieron,
          COUNT(*) FILTER (WHERE b."cancelo" = true)::int AS cancelados
        FROM "ACADEMICA_BOOKINGS" b
-       LEFT JOIN "CALENDARIO" c ON c."_id" = COALESCE(b."eventoId", b."idEvento")
-       LEFT JOIN "ACADEMICA" a ON COALESCE(b."studentId", b."idEstudiante") = a."_id"
-       LEFT JOIN "PEOPLE" p ON a."numeroId" = p."numeroId" AND p."tipoUsuario" = 'BENEFICIARIO'
+       LEFT JOIN "CALENDARIO" c  ON c."_id" = COALESCE(b."eventoId", b."idEvento")
+       LEFT JOIN "ACADEMICA" a   ON COALESCE(b."studentId", b."idEstudiante") = a."_id"
+       LEFT JOIN "PEOPLE"    p   ON a."numeroId" = p."numeroId" AND p."tipoUsuario" = 'BENEFICIARIO'
+       LEFT JOIN "PEOPLE"    p2  ON COALESCE(b."studentId", b."idEstudiante") = p2."_id"
        WHERE b."fechaEvento" >= $1::timestamp AND b."fechaEvento" <= $2::timestamp
          AND COALESCE(c."tipo", b."tipoEvento") IN ('SESSION', 'CLUB')
        GROUP BY pais, tipo
