@@ -1625,6 +1625,8 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `015a3ae` | fix: Mensuales por país usa b.plataforma directo de ACADEMICA_BOOKINGS — campo plataforma no es null; se eliminan JOINs a ACADEMICA y PEOPLE innecesarios |
+| `69f696e` | fix: Mensuales por país — elimina filtro AND tipo IN ('SESSION','CLUB') que excluía registros con tipo NULL (datos Wix); categoriza con CASE WHEN tituloONivel ILIKE WELCOME→WELCOME, tipo=CLUB→CLUB, resto→SESSION; tabla añade columnas Welcome agendadas/asistidas/% |
 | `9548593` | fix: ticker reads from root JSON — successResponse() spreads at root ({success, message, color}), not nested under data. Panel estudiante y editor de ticker usaban j.data (undefined); ahora usan j directamente. Botones Reemplazar/Agregar y animación del ticker ahora funcionan correctamente |
 | `36cdca2` | fix: add direct PEOPLE JOIN for plataforma fallback in reports general and mensuales — cuando studentId/idEstudiante es PEOPLE._id (datos Wix), se agrega LEFT JOIN PEOPLE p2 directo. Cadena: b.plataforma → p.plataforma (via ACADEMICA) → a.plataforma → p2.plataforma → 'Sin país' |
 | `43e7cd8` | fix: resolve plataforma via ACADEMICA→PEOPLE JOIN in reports mensuales and general — b."plataforma" vacío en datos Wix; usa COALESCE con LEFT JOIN ACADEMICA + PEOPLE (tipoUsuario=BENEFICIARIO) |
