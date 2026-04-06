@@ -165,17 +165,18 @@ export default function ReporteMensuales() {
   }
 
   // ── Pivot país ─────────────────────────────────────────────────────────────
-  type PaisPivot = { pais: string; sesiones: number; clubs: number; asistSesiones: number; asistClubs: number }
+  type PaisPivot = { pais: string; sesiones: number; welcome: number; clubs: number; asistSesiones: number; asistWelcome: number; asistClubs: number }
   const paisPivot: PaisPivot[] = []
   if (data) {
     const map = new Map<string, PaisPivot>()
     for (const r of data.bookingsPorPais) {
-      if (!map.has(r.pais)) map.set(r.pais, { pais: r.pais, sesiones: 0, clubs: 0, asistSesiones: 0, asistClubs: 0 })
+      if (!map.has(r.pais)) map.set(r.pais, { pais: r.pais, sesiones: 0, welcome: 0, clubs: 0, asistSesiones: 0, asistWelcome: 0, asistClubs: 0 })
       const e = map.get(r.pais)!
       if (r.tipo === 'SESSION') { e.sesiones += r.total; e.asistSesiones += r.asistieron }
+      if (r.tipo === 'WELCOME') { e.welcome  += r.total; e.asistWelcome  += r.asistieron }
       if (r.tipo === 'CLUB')    { e.clubs    += r.total; e.asistClubs    += r.asistieron }
     }
-    paisPivot.push(...Array.from(map.values()).sort((a, b) => (b.sesiones + b.clubs) - (a.sesiones + a.clubs)))
+    paisPivot.push(...Array.from(map.values()).sort((a, b) => (b.sesiones + b.welcome + b.clubs) - (a.sesiones + a.welcome + a.clubs)))
   }
 
   // ── CSV exports ────────────────────────────────────────────────────────────
@@ -346,29 +347,31 @@ export default function ReporteMensuales() {
               <span className="h-3 w-3 rounded-full bg-teal-600 inline-block" />
               Agendamientos por País
             </h2>
-            <Section title="Sesiones y Clubes por País"
+            <Section title="Sesiones, Welcome y Clubes por País"
               subtitle="Total agendados y asistencias discriminados por plataforma"
               color="bg-teal-600"
               onExport={() => exp('bookings-por-pais', paisPivot, [
-                { header: 'País',              accessor: (r: PaisPivot) => r.pais },
+                { header: 'País',               accessor: (r: PaisPivot) => r.pais },
                 { header: 'Sesiones Agendadas', accessor: (r: PaisPivot) => r.sesiones },
                 { header: 'Sesiones Asistidas', accessor: (r: PaisPivot) => r.asistSesiones },
+                { header: 'Welcome Agendadas',  accessor: (r: PaisPivot) => r.welcome },
+                { header: 'Welcome Asistidas',  accessor: (r: PaisPivot) => r.asistWelcome },
                 { header: 'Clubs Agendados',    accessor: (r: PaisPivot) => r.clubs },
                 { header: 'Clubs Asistidos',    accessor: (r: PaisPivot) => r.asistClubs },
-                { header: 'Total',              accessor: (r: PaisPivot) => r.sesiones + r.clubs },
+                { header: 'Total',              accessor: (r: PaisPivot) => r.sesiones + r.welcome + r.clubs },
               ])}>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm divide-y divide-gray-100">
                   <thead className="bg-gray-50">
                     <tr>
-                      {['País', 'Ses. Agendadas', 'Ses. Asistidas', '% Ses.', 'Clubs Agendados', 'Clubs Asistidos', '% Clubs'].map(h => (
+                      {['País', 'Ses. Agendadas', 'Ses. Asistidas', '% Ses.', 'Welcome Agend.', 'Welcome Asist.', '% Welcome', 'Clubs Agendados', 'Clubs Asistidos', '% Clubs'].map(h => (
                         <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {paisPivot.length === 0 && (
-                      <tr><td colSpan={7} className="px-3 py-6 text-center text-gray-400 text-xs">Sin datos</td></tr>
+                      <tr><td colSpan={10} className="px-3 py-6 text-center text-gray-400 text-xs">Sin datos</td></tr>
                     )}
                     {paisPivot.map((r, i) => (
                       <tr key={i} className="hover:bg-gray-50">
@@ -376,6 +379,9 @@ export default function ReporteMensuales() {
                         <td className="px-3 py-2 text-gray-700">{r.sesiones.toLocaleString()}</td>
                         <td className="px-3 py-2 text-emerald-700 font-semibold">{r.asistSesiones.toLocaleString()}</td>
                         <td className="px-3 py-2 text-gray-500">{r.sesiones > 0 ? Math.round((r.asistSesiones / r.sesiones) * 100) : 0}%</td>
+                        <td className="px-3 py-2 text-gray-700">{r.welcome.toLocaleString()}</td>
+                        <td className="px-3 py-2 text-purple-700 font-semibold">{r.asistWelcome.toLocaleString()}</td>
+                        <td className="px-3 py-2 text-gray-500">{r.welcome > 0 ? Math.round((r.asistWelcome / r.welcome) * 100) : 0}%</td>
                         <td className="px-3 py-2 text-gray-700">{r.clubs.toLocaleString()}</td>
                         <td className="px-3 py-2 text-emerald-700 font-semibold">{r.asistClubs.toLocaleString()}</td>
                         <td className="px-3 py-2 text-gray-500">{r.clubs > 0 ? Math.round((r.asistClubs / r.clubs) * 100) : 0}%</td>
@@ -386,6 +392,9 @@ export default function ReporteMensuales() {
                         <td className="px-3 py-2">TOTAL</td>
                         <td className="px-3 py-2">{paisPivot.reduce((s,r)=>s+r.sesiones,0).toLocaleString()}</td>
                         <td className="px-3 py-2 text-emerald-700">{paisPivot.reduce((s,r)=>s+r.asistSesiones,0).toLocaleString()}</td>
+                        <td className="px-3 py-2" />
+                        <td className="px-3 py-2">{paisPivot.reduce((s,r)=>s+r.welcome,0).toLocaleString()}</td>
+                        <td className="px-3 py-2 text-purple-700">{paisPivot.reduce((s,r)=>s+r.asistWelcome,0).toLocaleString()}</td>
                         <td className="px-3 py-2" />
                         <td className="px-3 py-2">{paisPivot.reduce((s,r)=>s+r.clubs,0).toLocaleString()}</td>
                         <td className="px-3 py-2 text-emerald-700">{paisPivot.reduce((s,r)=>s+r.asistClubs,0).toLocaleString()}</td>
