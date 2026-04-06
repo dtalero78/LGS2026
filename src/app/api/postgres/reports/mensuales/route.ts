@@ -150,7 +150,9 @@ export const GET = handlerWithAuth(async (req) => {
            AND COALESCE(c."nombreEvento", b."step", b."nombreEvento", '') NOT ILIKE 'TRAINING%'
        ) t
        GROUP BY clase, nivel
-       ORDER BY total DESC`,
+       ORDER BY
+         SPLIT_PART(clase, ' - ', 1),
+         NULLIF(REGEXP_REPLACE(SPLIT_PART(clase, 'Step ', 2), '[^0-9].*', ''), '')::int NULLS LAST`,
       [s, e]
     ), []),
 
