@@ -1625,6 +1625,9 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `9548593` | fix: ticker reads from root JSON — successResponse() spreads at root ({success, message, color}), not nested under data. Panel estudiante y editor de ticker usaban j.data (undefined); ahora usan j directamente. Botones Reemplazar/Agregar y animación del ticker ahora funcionan correctamente |
+| `36cdca2` | fix: add direct PEOPLE JOIN for plataforma fallback in reports general and mensuales — cuando studentId/idEstudiante es PEOPLE._id (datos Wix), se agrega LEFT JOIN PEOPLE p2 directo. Cadena: b.plataforma → p.plataforma (via ACADEMICA) → a.plataforma → p2.plataforma → 'Sin país' |
+| `43e7cd8` | fix: resolve plataforma via ACADEMICA→PEOPLE JOIN in reports mensuales and general — b."plataforma" vacío en datos Wix; usa COALESCE con LEFT JOIN ACADEMICA + PEOPLE (tipoUsuario=BENEFICIARIO) |
 | `2e7b1c1` | feat: Reporte Mensuales — GET /api/postgres/reports/mensuales?startDate&endDate runs 7 parallel safeQuery calls (sesiones/TRAINING/JUMP from CALENDARIO by nivel BN1-F3, bookings sesiones/TRAINING/otros-clubs from ACADEMICA_BOOKINGS by nivel, bookings by país); component with horizontal bar charts, dual-bars for asistencia rate, país table; each section CSV-exportable; sidebar Informes adds 'Mensuales' (new tab) |
 | `371d2e1` | feat: open Informes sidebar items in new tab — newTab: true flag on Informe Beneficiarios and Reporte General nav items; Link renders with target="_blank" + rel="noopener noreferrer" when newTab is set |
 | `46aee55` | feat: add Reporte General to pagePermissions — /dashboard/informes/general now restricted to roles with INFORMES permissions in sidebar; SUPER_ADMIN/ADMIN bypass via hasFullAccess |
