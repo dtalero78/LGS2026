@@ -28,7 +28,7 @@ async function fetchTicker(): Promise<TickerConfig> {
   try {
     const res = await fetch('/api/postgres/config/ticker')
     const json = await res.json()
-    if (json.success && json.data?.message) return json.data
+    if (json.success && json.message) return json
     return DEFAULT_TICKER
   } catch {
     return DEFAULT_TICKER

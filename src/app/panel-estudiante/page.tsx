@@ -43,7 +43,7 @@ function PanelEstudianteContent() {
   // Ticker
   const tickerQuery = useQuery(
     'ticker-config',
-    () => fetch('/api/postgres/config/ticker').then(r => r.json()).then(j => j.data),
+    () => fetch('/api/postgres/config/ticker').then(r => r.json()),
     { staleTime: 5 * 60 * 1000 }
   )
   const tickerMessage = tickerQuery.data?.message ?? '📢 Usuarios Ecuador 🇪🇨 y Chile 🇨🇱: viernes 3 y sábado 4 de abril no habra sesiones por Semana Santa ✝️. ¡Disfruten su descanso! 🌿✨ | Usuarios Colombia 🇨🇴: sábado 4 de abril habrán sesiones normales 👍'
