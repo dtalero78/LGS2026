@@ -1625,6 +1625,8 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `local` | fix: dblgs USUARIOS_ROLES — LEFT JOIN ACADEMICA usaba email directo causando filas duplicadas cuando el usuario tiene múltiples registros en ACADEMICA; corregido con DISTINCT ON (LOWER(email)) para traer solo un registro de ACADEMICA por email |
+| `local` | fix: PersonAdmin no mostraba beneficiarios con tipoUsuario='BENEFICIARIA' (valor incorrecto en datos Wix); se corrige editando el dato directamente en DBLGS a 'BENEFICIARIO' |
 | `015a3ae` | fix: Mensuales por país usa b.plataforma directo de ACADEMICA_BOOKINGS — campo plataforma no es null; se eliminan JOINs a ACADEMICA y PEOPLE innecesarios |
 | `69f696e` | fix: Mensuales por país — elimina filtro AND tipo IN ('SESSION','CLUB') que excluía registros con tipo NULL (datos Wix); categoriza con CASE WHEN tituloONivel ILIKE WELCOME→WELCOME, tipo=CLUB→CLUB, resto→SESSION; tabla añade columnas Welcome agendadas/asistidas/% |
 | `9548593` | fix: ticker reads from root JSON — successResponse() spreads at root ({success, message, color}), not nested under data. Panel estudiante y editor de ticker usaban j.data (undefined); ahora usan j directamente. Botones Reemplazar/Agregar y animación del ticker ahora funcionan correctamente |

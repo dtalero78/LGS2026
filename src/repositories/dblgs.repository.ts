@@ -158,7 +158,11 @@ class DblgsRepositoryClass {
       const orderRef = sortCol === 'academicaId' ? '"academicaId"' : `ur."${sortCol}"`;
       const sql = `SELECT ur.*, a."_id" AS "academicaId"
         FROM "USUARIOS_ROLES" ur
-        LEFT JOIN "ACADEMICA" a ON LOWER(a."email") = LOWER(ur."email")
+        LEFT JOIN (
+          SELECT DISTINCT ON (LOWER("email")) "_id", "email"
+          FROM "ACADEMICA"
+          ORDER BY LOWER("email"), "_id"
+        ) a ON LOWER(a."email") = LOWER(ur."email")
         ${wrappedWhere}
         ORDER BY ${orderRef} ${sortDir} NULLS LAST
         LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
