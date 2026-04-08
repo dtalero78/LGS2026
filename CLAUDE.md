@@ -1625,6 +1625,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `29b99fc` | fix: extendByDays reactiva estudiante en PEOPLE, ACADEMICA y USUARIOS_ROLES — al extender vigencia sincroniza: PEOPLE.estadoInactivo=false, ACADEMICA.estadoInactivo=false (por numeroId), USUARIOS_ROLES.activo=true (por email) |
 | `fc364a7` | fix: add missing _id to USUARIOS_ROLES INSERT in nuevo-advisor — mismo bug que fc5466e en nuevo-usuario; columna _id no tiene default y causaba Database error al crear advisor |
 | `d2b40b9` | fix: dblgs USUARIOS_ROLES — LEFT JOIN ACADEMICA usaba email directo causando filas duplicadas cuando el usuario tiene múltiples registros en ACADEMICA; corregido con DISTINCT ON (LOWER(email)) para traer solo un registro de ACADEMICA por email |
 | `local` | fix: PersonAdmin no mostraba beneficiarios con tipoUsuario='BENEFICIARIA' (valor incorrecto en datos Wix); se corrige editando el dato directamente en DBLGS a 'BENEFICIARIO' |
