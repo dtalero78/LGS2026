@@ -61,6 +61,28 @@ export async function extendByDays(input: ExtendByDaysInput) {
     updatedHistory
   );
 
+  // Reactivar: PEOPLE estadoInactivo = false
+  await query(
+    `UPDATE "PEOPLE" SET "estadoInactivo" = false, "_updatedDate" = NOW() WHERE "_id" = $1`,
+    [input.studentId]
+  );
+
+  // Reactivar: ACADEMICA estadoInactivo = false (por numeroId)
+  if (person.numeroId) {
+    await query(
+      `UPDATE "ACADEMICA" SET "estadoInactivo" = false, "_updatedDate" = NOW() WHERE "numeroId" = $1`,
+      [person.numeroId]
+    );
+  }
+
+  // Reactivar: USUARIOS_ROLES activo = true (por email)
+  if (person.email) {
+    await query(
+      `UPDATE "USUARIOS_ROLES" SET "activo" = true, "_updatedDate" = NOW() WHERE LOWER("email") = LOWER($1)`,
+      [person.email]
+    );
+  }
+
   return {
     student,
     extension: {
