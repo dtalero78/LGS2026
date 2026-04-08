@@ -37,10 +37,10 @@ export const POST = handler(async (request: Request) => {
   // Also create USUARIOS_ROLES entry so the advisor can log in
   const password = body.clave?.trim() || 'LGS2026';
   await queryOne(
-    `INSERT INTO "USUARIOS_ROLES" ("email", "password", "nombre", "rol", "activo", "_createdDate", "_updatedDate")
-     VALUES ($1, $2, $3, 'ADVISOR', true, NOW(), NOW())
+    `INSERT INTO "USUARIOS_ROLES" ("_id", "email", "password", "nombre", "rol", "activo", "_createdDate", "_updatedDate")
+     VALUES ($1, $2, $3, $4, 'ADVISOR', true, NOW(), NOW())
      ON CONFLICT ("email") DO NOTHING`,
-    [email.trim().toLowerCase(), password, nombreCompleto]
+    [ids.advisor(), email.trim().toLowerCase(), password, nombreCompleto]
   );
 
   return successResponse({ advisor, message: 'Advisor creado exitosamente' });
