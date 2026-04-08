@@ -174,19 +174,19 @@ export default function NuevoAdvisorPage() {
           {step === 1 && (
             <div className="space-y-4">
               <Field
-                label="Primer Nombre"
+                label="Nombres"
                 value={form.primerNombre}
                 onChange={v => updateField('primerNombre', v)}
                 error={errors.primerNombre}
-                placeholder="Ej: Juan"
+                placeholder="Ej: Juan Carlos"
                 required
               />
               <Field
-                label="Primer Apellido"
+                label="Apellidos"
                 value={form.primerApellido}
                 onChange={v => updateField('primerApellido', v)}
                 error={errors.primerApellido}
-                placeholder="Ej: Perez"
+                placeholder="Ej: Perez Garcia"
                 required
               />
             </div>
