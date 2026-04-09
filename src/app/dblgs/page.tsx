@@ -369,6 +369,33 @@ function DblgsPage() {
     });
   }, []);
 
+  // ── Date range filter (clears null sentinel for that col) ────────
+  const handleDateRangeChange = useCallback((colName: string, suffix: '__gte' | '__lte', value: string) => {
+    setFilters(prev => {
+      const next = { ...prev };
+      delete next[colName]; // clear any null filter on this col
+      const key = colName + suffix;
+      if (value) next[key] = value; else delete next[key];
+      return next;
+    });
+  }, []);
+
+  // ── Null/empty toggle (clears date range for date cols) ──────────
+  const toggleNullFilter = useCallback((colName: string) => {
+    setFilters(prev => {
+      const next = { ...prev };
+      const isActive = next[colName] === '__NULL__' || next[colName] === '__EMPTY__';
+      if (isActive) {
+        delete next[colName];
+      } else {
+        delete next[colName + '__gte'];
+        delete next[colName + '__lte'];
+        next[colName] = '__EMPTY__';
+      }
+      return next;
+    });
+  }, []);
+
   // ── Saved views handlers ───────────────────────────────────────
   const tableViews = savedViews.filter(v => v.table === selectedTable);
 
@@ -586,7 +613,11 @@ function DblgsPage() {
     );
   }
 
-  const activeFiltersCount = Object.keys(debouncedFilters).length + (debouncedSearch ? 1 : 0) + (sortBy ? 1 : 0);
+  // Count __gte/__lte pairs for the same column as a single filter
+  const uniqueFilterCols = new Set(
+    Object.keys(debouncedFilters).map(k => k.replace(/__gte$|__lte$/, ''))
+  );
+  const activeFiltersCount = uniqueFilterCols.size + (debouncedSearch ? 1 : 0) + (sortBy ? 1 : 0);
 
   // ── Render ──────────────────────────────────────────────────────
   return (
@@ -873,17 +904,61 @@ function DblgsPage() {
                   <td className="px-2 py-1 sticky left-0 z-20 bg-gray-50 border-r border-gray-200" />
                   <td className="px-2 py-1 sticky left-10 z-20 bg-gray-50 border-r border-gray-200" />
                   <td className="px-1 py-1 bg-gray-50 border-r border-gray-200" />
-                  {columns.map(col => (
-                    <td key={col.name} className="px-1 py-1 border-r border-gray-100">
-                      <input
-                        type="text"
-                        placeholder="Filtrar..."
-                        value={filters[col.name] || ''}
-                        onChange={e => handleFilterChange(col.name, e.target.value)}
-                        className="w-full px-1.5 py-0.5 text-xs border border-gray-200 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                      />
-                    </td>
-                  ))}
+                  {columns.map(col => {
+                    const isDateCol = ['timestamp', 'timestamptz', 'date'].includes(col.pgType);
+                    const isNullActive = filters[col.name] === '__NULL__' || filters[col.name] === '__EMPTY__';
+                    const gteVal = filters[col.name + '__gte'] || '';
+                    const lteVal = filters[col.name + '__lte'] || '';
+                    return (
+                      <td key={col.name} className="px-1 py-1 border-r border-gray-100">
+                        {isDateCol ? (
+                          <div className="flex flex-col gap-0.5 min-w-[112px]">
+                            <input
+                              type="date"
+                              title="Desde (≥)"
+                              value={gteVal}
+                              onChange={e => handleDateRangeChange(col.name, '__gte', e.target.value)}
+                              className="w-full px-1 py-0.5 text-xs border border-gray-200 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                            />
+                            <input
+                              type="date"
+                              title="Hasta (≤)"
+                              value={lteVal}
+                              onChange={e => handleDateRangeChange(col.name, '__lte', e.target.value)}
+                              className="w-full px-1 py-0.5 text-xs border border-gray-200 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => toggleNullFilter(col.name)}
+                              title={isNullActive ? 'Quitar filtro nulo' : 'Mostrar solo registros nulos'}
+                              className={`px-1 py-0.5 text-[10px] rounded border transition-colors ${isNullActive ? 'bg-amber-100 border-amber-400 text-amber-700 font-medium' : 'border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600'}`}
+                            >
+                              ∅ nulo
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-0.5">
+                            <input
+                              type="text"
+                              placeholder="Filtrar..."
+                              value={isNullActive ? '' : (filters[col.name] || '')}
+                              disabled={isNullActive}
+                              onChange={e => handleFilterChange(col.name, e.target.value)}
+                              className={`w-full px-1.5 py-0.5 text-xs border rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${isNullActive ? 'bg-gray-100 border-gray-200 text-gray-400' : 'bg-white border-gray-200'}`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => toggleNullFilter(col.name)}
+                              title={isNullActive ? 'Quitar filtro nulo' : 'Mostrar solo registros nulos/vacíos'}
+                              className={`shrink-0 px-1.5 py-0.5 text-[11px] font-medium rounded border transition-colors ${isNullActive ? 'bg-amber-100 border-amber-400 text-amber-700' : 'border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600'}`}
+                            >
+                              ∅
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
                   {/* Actions filter spacer */}
                   <td className="px-2 py-1" />
                 </tr>

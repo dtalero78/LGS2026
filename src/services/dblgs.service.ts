@@ -88,8 +88,46 @@ class DblgsServiceClass {
       for (const [colName, filterVal] of Object.entries(filters)) {
         if (!filterVal || filterVal.trim() === '') continue;
 
+        // ── Date range: colName__gte → col >= date ──────────────
+        if (colName.endsWith('__gte')) {
+          const realName = colName.slice(0, -5);
+          const col = schema.find(c => c.name === realName);
+          if (!col) continue;
+          conditions.push(`"${col.name}" >= $${paramIdx}::date`);
+          values.push(filterVal);
+          paramIdx++;
+          continue;
+        }
+
+        // ── Date range: colName__lte → col < date + 1 day ───────
+        if (colName.endsWith('__lte')) {
+          const realName = colName.slice(0, -5);
+          const col = schema.find(c => c.name === realName);
+          if (!col) continue;
+          conditions.push(`"${col.name}" < ($${paramIdx}::date + INTERVAL '1 day')`);
+          values.push(filterVal);
+          paramIdx++;
+          continue;
+        }
+
         const col = schema.find(c => c.name === colName);
         if (!col) continue; // skip invalid columns silently in filters
+
+        // ── NULL sentinel ────────────────────────────────────────
+        if (filterVal === '__NULL__') {
+          conditions.push(`"${col.name}" IS NULL`);
+          continue;
+        }
+
+        // ── EMPTY sentinel: NULL or empty string ─────────────────
+        if (filterVal === '__EMPTY__') {
+          if (col.type === 'text') {
+            conditions.push(`("${col.name}" IS NULL OR "${col.name}" = '')`);
+          } else {
+            conditions.push(`"${col.name}" IS NULL`);
+          }
+          continue;
+        }
 
         if (col.type === 'text') {
           conditions.push(`"${col.name}" ILIKE $${paramIdx}`);
