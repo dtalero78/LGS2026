@@ -1405,8 +1405,10 @@ interface ConsentData {
 | Agenda Sesiones | `/dashboard/academic/agenda-sesiones` | ACADEMICO permissions |
 | Agenda Académica | `/dashboard/academic/agenda-academica` | ACADEMICO permissions |
 | Advisors | `/dashboard/academic/advisors` | ACADEMICO.ADVISOR permissions |
-| Asistencia - Sesiones & Clubes | `/dashboard/informes/asistencia/sesiones-clubes` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Asistencia - Sesiones & Jumps | `/dashboard/informes/asistencia/sesiones-clubes` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Asistencia - Clubes (Training + Clubs) | `/dashboard/informes/asistencia/clubes` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
 | Asistencia - Complementarias | `/dashboard/informes/asistencia/complementarias` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Asistencia - Welcome Session | `/dashboard/informes/asistencia/welcome-session` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
 | Sesiones - Programadas | `/dashboard/informes/sesiones/programadas` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
 | Sesiones - Advisor | `/dashboard/informes/sesiones/advisor` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
 | Usuarios | `/dashboard/informes/usuarios` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
@@ -1627,10 +1629,11 @@ export interface Person {
 - **Campos opcionales**: `nivelParalelo` y `stepParalelo` son nullable en PostgreSQL
 - **Jump Steps**: Funcionan igual en niveles paralelos y principales
 
-## Recent Changes (March 2026)
+## Recent Changes (April 2026)
 
 | Commit | Description |
 |---|---|
+| `pending` | feat: Informes Asistencia — 4 páginas de informes bajo Asistencia: (1) Sesiones & Jumps (`/sesiones-clubes`) con filtros independientes por sección, donut charts, CSV; (2) Clubes (`/clubes`) con Training Session (donut) + Clubs por tipo (barras horizontales), filtros independientes, filtro adicional Tipo de Club; (3) Welcome Session (`/welcome-session`) con donut chart; (4) APIs independientes: `/api/reports/asistencia/sesiones`, `/jumps`, `/clubes`, `/training`, `/welcome`. Todos los informes abren en nueva pestaña. Botón Limpiar filtros y Descargar CSV en cada sección. Accesibilidad: htmlFor/id en todos los inputs. |
 | `9c420fb` | feat: restructurar Informes en sidebar con 3 niveles — reemplaza Informe Beneficiarios/Reporte General/Mensuales por: Asistencia (Sesiones & Clubes, Complementarias), Sesiones (Programadas, Advisor), Usuarios, Contratos, Planta (Advisors, Administrativos), Estadísticas; páginas placeholder creadas; archivos obsoletos eliminados |
 | `29b99fc` | fix: extendByDays reactiva estudiante en PEOPLE, ACADEMICA y USUARIOS_ROLES — al extender vigencia sincroniza: PEOPLE.estadoInactivo=false, ACADEMICA.estadoInactivo=false (por numeroId), USUARIOS_ROLES.activo=true (por email) |
 | `fc364a7` | fix: add missing _id to USUARIOS_ROLES INSERT in nuevo-advisor — mismo bug que fc5466e en nuevo-usuario; columna _id no tiene default y causaba Database error al crear advisor |
