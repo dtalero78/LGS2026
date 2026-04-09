@@ -82,7 +82,8 @@ const getNavigation = (userEmail: string) => [
     children: [
       {
         name: 'Asistencia', isSubmenu: true, children: [
-          { name: 'Sesiones & Clubes', href: '/dashboard/informes/asistencia/sesiones-clubes', newTab: true },
+          { name: 'Sesiones', href: '/dashboard/informes/asistencia/sesiones-clubes', newTab: true },
+          { name: 'Clubes', href: '/dashboard/informes/asistencia/clubes', newTab: true },
           { name: 'Actividades Complementarias', href: '/dashboard/informes/asistencia/complementarias', newTab: true },
         ]
       },
@@ -164,6 +165,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       AcademicoPermission.ADVISOR_VER_ENLACE,
     ],
     '/dashboard/informes/asistencia/sesiones-clubes': [AcademicoPermission.VER_INFORMES],
+    '/dashboard/informes/asistencia/clubes': [AcademicoPermission.VER_INFORMES],
     '/dashboard/informes/asistencia/complementarias': [AcademicoPermission.VER_INFORMES],
     '/dashboard/informes/sesiones/programadas': [AcademicoPermission.VER_INFORMES],
     '/dashboard/informes/sesiones/advisor': [AcademicoPermission.VER_INFORMES],
