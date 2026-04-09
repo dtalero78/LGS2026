@@ -49,8 +49,28 @@ export const GET = handler(async (request: Request) => {
     )
   `
 
+  const dateParams = [startDate, endDate]
+
+  // WHERE base para plataforma breakdown (solo filtra por fecha, sin plataforma/nivel)
+  const platWhereBase = `
+    "fechaEvento" >= $1::date
+    AND "fechaEvento" <= $2::date
+    AND COALESCE("tipo", "tipoEvento") = 'SESSION'
+    AND "nivel" NOT ILIKE '%JUMP%'
+    AND COALESCE("nivel", '') != 'WELCOME'
+    AND COALESCE("nivel", '') != 'DONE'
+  `
+  const PLAT_SELECT = `
+    SELECT
+      COALESCE("plataforma", 'Sin plataforma') AS plataforma,
+      COUNT(*)::int                                                                              AS total,
+      COALESCE(SUM(CASE WHEN "asistencia" = true OR "asistio" = true THEN 1 ELSE 0 END), 0)::int  AS asistieron,
+      COALESCE(SUM(CASE WHEN "cancelo" = true THEN 1 ELSE 0 END), 0)::int                        AS cancelaron
+    FROM "ACADEMICA_BOOKINGS"
+  `
+
   // ── SESIONES: steps no múltiplos de 5 + ESS Step 0 ──────────────────
-  const [sesiones, jumps, plataformas, niveles] = await Promise.all([
+  const [sesiones, jumps, plataformas, niveles, sesPorPlataforma, jmpPorPlataforma] = await Promise.all([
 
     safeQuery(() => queryOne<any>(`
       SELECT
@@ -87,6 +107,35 @@ export const GET = handler(async (request: Request) => {
     `, params), { total: 0, asistieron: 0, cancelaron: 0, noAprobaron: 0, aprobaron: 0 }),
 
     // ── Filtros dinámicos ─────────────────────────────────────────────────
+    safeQuery(() => queryMany<{ plataforma: string; total: number; asistieron: number; cancelaron: number }>(
+      `${PLAT_SELECT}
+       WHERE ${platWhereBase}
+         AND (
+           COALESCE("nivel", '') = 'ESS'
+           OR (
+             COALESCE("nombreEvento", "step", '') ~* 'step\\s+[0-9]+'
+             AND ${STEP_EXTRACT} BETWEEN 1 AND 45
+           )
+         )
+         AND (
+           COALESCE("nivel", '') = 'ESS'
+           OR ${STEP_EXTRACT} % 5 != 0
+         )
+       GROUP BY COALESCE("plataforma", 'Sin plataforma')
+       ORDER BY total DESC`, dateParams
+    ), []),
+
+    safeQuery(() => queryMany<{ plataforma: string; total: number; asistieron: number; cancelaron: number }>(
+      `${PLAT_SELECT}
+       WHERE ${platWhereBase}
+         AND COALESCE("nivel", '') != 'ESS'
+         AND COALESCE("nombreEvento", "step", '') ~* 'step\\s+[0-9]+'
+         AND ${STEP_EXTRACT} BETWEEN 1 AND 45
+         AND ${STEP_EXTRACT} % 5 = 0
+       GROUP BY COALESCE("plataforma", 'Sin plataforma')
+       ORDER BY total DESC`, dateParams
+    ), []),
+
     safeQuery(() => queryMany<{ plataforma: string }>(
       `SELECT DISTINCT "plataforma"
        FROM "ACADEMICA_BOOKINGS"
@@ -122,5 +171,7 @@ export const GET = handler(async (request: Request) => {
     jumps,
     plataformas: plataformas.map((r: any) => r.plataforma),
     niveles: sortedNiveles,
+    sesPorPlataforma,
+    jmpPorPlataforma,
   })
 })
