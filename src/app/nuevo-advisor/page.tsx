@@ -12,6 +12,7 @@ const PAISES = [
 interface FormData {
   primerNombre: string
   primerApellido: string
+  numberid: string
   email: string
   clave: string
   telefono: string
@@ -26,6 +27,7 @@ export default function NuevoAdvisorPage() {
   const [form, setForm] = useState<FormData>({
     primerNombre: '',
     primerApellido: '',
+    numberid: '',
     email: '',
     clave: '',
     telefono: '',

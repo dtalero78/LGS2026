@@ -80,9 +80,27 @@ const getNavigation = (userEmail: string) => [
     name: 'Informes',
     icon: ChartBarIcon,
     children: [
-      { name: 'Informe Beneficiarios', href: '/dashboard/academic/informes/beneficiarios', newTab: true },
-      { name: 'Reporte General', href: '/dashboard/informes/general', newTab: true },
-      { name: 'Mensuales', href: '/dashboard/informes/mensuales', newTab: true },
+      {
+        name: 'Asistencia', isSubmenu: true, children: [
+          { name: 'Sesiones & Clubes', href: '/dashboard/informes/asistencia/sesiones-clubes', newTab: true },
+          { name: 'Actividades Complementarias', href: '/dashboard/informes/asistencia/complementarias', newTab: true },
+        ]
+      },
+      {
+        name: 'Sesiones', isSubmenu: true, children: [
+          { name: 'Programadas', href: '/dashboard/informes/sesiones/programadas', newTab: true },
+          { name: 'Advisor', href: '/dashboard/informes/sesiones/advisor', newTab: true },
+        ]
+      },
+      { name: 'Usuarios', href: '/dashboard/informes/usuarios', newTab: true },
+      { name: 'Contratos', href: '/dashboard/informes/contratos', newTab: true },
+      {
+        name: 'Planta', isSubmenu: true, children: [
+          { name: 'Advisors', href: '/dashboard/informes/planta/advisors', newTab: true },
+          { name: 'Administrativos', href: '/dashboard/informes/planta/administrativos', newTab: true },
+        ]
+      },
+      { name: 'Estadísticas', href: '/dashboard/informes/estadisticas', newTab: true },
     ],
   },
   {
@@ -145,21 +163,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/panel-advisor': [
       AcademicoPermission.ADVISOR_VER_ENLACE,
     ],
-    '/dashboard/academic/informes/beneficiarios': [
-      AcademicoPermission.VER_INFORMES,
-      AcademicoPermission.INFORME_BENEFICIARIOS,
-      AcademicoPermission.EXPORTAR_INFORMES,
-    ],
-    '/dashboard/informes/general': [
-      AcademicoPermission.VER_INFORMES,
-      AcademicoPermission.INFORME_BENEFICIARIOS,
-      AcademicoPermission.EXPORTAR_INFORMES,
-    ],
-    '/dashboard/informes/mensuales': [
-      AcademicoPermission.VER_INFORMES,
-      AcademicoPermission.INFORME_BENEFICIARIOS,
-      AcademicoPermission.EXPORTAR_INFORMES,
-    ],
+    '/dashboard/informes/asistencia/sesiones-clubes': [AcademicoPermission.VER_INFORMES],
+    '/dashboard/informes/asistencia/complementarias': [AcademicoPermission.VER_INFORMES],
+    '/dashboard/informes/sesiones/programadas': [AcademicoPermission.VER_INFORMES],
+    '/dashboard/informes/sesiones/advisor': [AcademicoPermission.VER_INFORMES],
+    '/dashboard/informes/usuarios': [AcademicoPermission.VER_INFORMES],
+    '/dashboard/informes/contratos': [AcademicoPermission.VER_INFORMES],
+    '/dashboard/informes/planta/advisors': [AcademicoPermission.VER_INFORMES],
+    '/dashboard/informes/planta/administrativos': [AcademicoPermission.VER_INFORMES],
+    '/dashboard/informes/estadisticas': [AcademicoPermission.VER_INFORMES],
 
     // Servicio
     '/dashboard/servicio/welcome-session': [

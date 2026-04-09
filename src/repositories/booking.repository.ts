@@ -103,7 +103,14 @@ class BookingRepositoryClass extends BaseRepository {
               b."_createdDate", b."_updatedDate"
        FROM "ACADEMICA_BOOKINGS" b
        LEFT JOIN "CALENDARIO" c ON c."_id" = COALESCE(b."eventoId", b."idEvento")
-       WHERE (b."idEstudiante" = $1 OR b."studentId" = $1)
+       WHERE (b."idEstudiante" = $1 OR b."studentId" = $1
+         OR b."idEstudiante" IN (
+           SELECT p."_id" FROM "PEOPLE" p
+           WHERE p."numeroId" = (
+             SELECT a."numeroId" FROM "ACADEMICA" a WHERE a."_id" = $1 LIMIT 1
+           )
+         )
+       )
        ORDER BY b."fechaEvento" DESC, b."hora" DESC
        LIMIT $2`,
       [studentId, limit]
