@@ -1,0 +1,340 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import DashboardLayout from '@/components/layout/DashboardLayout'
+import { exportToExcel } from '@/lib/export-excel'
+
+// ── Types ──────────────────────────────────────────────────────────────
+interface PlatRow {
+  plataforma: string; total: number; asistieron: number; cancelaron: number
+  aprobaron?: number; noAprobaron?: number
+}
+interface Section {
+  total: number; asistieron: number; cancelaron: number
+  aprobaron: number; noAprobaron: number
+  porPlataforma: PlatRow[]
+}
+interface XPaisResponse {
+  sesiones: Section; jumps: Section; training: Section
+  clubes: Section; welcome: Section; complementarias: Section
+}
+
+const today       = new Date().toISOString().split('T')[0]
+const firstOfYear = `${new Date().getFullYear()}-01-01`
+
+// ── Color palette per platform ─────────────────────────────────────────
+const COLORS = [
+  '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6',
+  '#ef4444', '#06b6d4', '#f97316', '#ec4899', '#84cc16',
+]
+const color = (i: number) => COLORS[i % COLORS.length]
+
+// ── Donut + Legend by platform ─────────────────────────────────────────
+function PlatDonut({ rows, metricKey = 'asistieron', metricLabel = 'Asist.' }: {
+  rows: PlatRow[]; metricKey?: string; metricLabel?: string
+}) {
+  const metric = (r: PlatRow) => (r as any)[metricKey] ?? 0
+  const totalMetric = rows.reduce((s, r) => s + metric(r), 0)
+  const r = 50, cx = 65, cy = 65, sw = 20, circ = 2 * Math.PI * r
+  let offset = 0
+
+  return (
+    <div className="flex gap-5 items-start">
+      {/* Donut */}
+      <svg width="130" height="130" viewBox="0 0 130 130" className="flex-shrink-0">
+        {totalMetric === 0
+          ? <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e5e7eb" strokeWidth={sw} />
+          : rows.map((row, i) => {
+              const val  = metric(row)
+              const pct  = val / totalMetric
+              const dash = pct * circ
+              const rot  = offset * 360 - 90; offset += pct
+              return (
+                <circle key={i} cx={cx} cy={cy} r={r} fill="none"
+                  stroke={color(i)} strokeWidth={sw}
+                  strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="butt"
+                  transform={`rotate(${rot} ${cx} ${cy})`} />
+              )
+            })
+        }
+        <text x={cx} y={cy - 7} textAnchor="middle" fontSize="17" fontWeight="bold" fill="#1f2937">
+          {totalMetric.toLocaleString()}
+        </text>
+        <text x={cx} y={cy + 9} textAnchor="middle" fontSize="8" fill="#6b7280">TOTAL</text>
+      </svg>
+
+      {/* Legend table */}
+      <div className="flex-1 min-w-0">
+        {rows.length === 0
+          ? <p className="text-xs text-gray-400 py-6">Sin datos</p>
+          : (
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-gray-400 border-b border-gray-100">
+                  <th className="text-left font-medium pb-1.5 pr-3">País</th>
+                  <th className="text-right font-medium pb-1.5 pr-3">Total</th>
+                  <th className="text-right font-medium pb-1.5 pr-3">{metricLabel}</th>
+                  <th className="text-right font-medium pb-1.5">%</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, i) => {
+                  const val = metric(row)
+                  const pct = row.total > 0 ? ((val / row.total) * 100).toFixed(0) : '0'
+                  return (
+                    <tr key={row.plataforma} className="border-b border-gray-50 last:border-0">
+                      <td className="py-1.5 pr-3">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color(i) }} />
+                          <span className="text-gray-700 font-medium">{row.plataforma}</span>
+                        </div>
+                      </td>
+                      <td className="py-1.5 pr-3 text-right text-gray-500">{row.total.toLocaleString()}</td>
+                      <td className="py-1.5 pr-3 text-right font-bold" style={{ color: color(i) }}>{val.toLocaleString()}</td>
+                      <td className="py-1.5 text-right text-gray-400">{pct}%</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )
+        }
+      </div>
+    </div>
+  )
+}
+
+// ── Platform stat cards ────────────────────────────────────────────────
+function PlatCards({ rows, metricKey = 'asistieron' }: {
+  rows: PlatRow[]; metricKey?: string
+}) {
+  if (!rows.length) return null
+  return (
+    <div className="mt-4 flex justify-end flex-wrap gap-2">
+      {rows.map((row, i) => {
+        const val = (row as any)[metricKey] ?? 0
+        const pct = row.total > 0 ? ((val / row.total) * 100).toFixed(0) : '0'
+        return (
+          <div key={row.plataforma} className="rounded-lg px-3 py-2 text-center min-w-[86px]"
+            style={{ backgroundColor: color(i) + '18' }}>
+            <p className="text-base font-bold leading-tight" style={{ color: color(i) }}>
+              {val.toLocaleString()}
+            </p>
+            <p className="text-xs text-gray-600 mt-0.5 truncate max-w-[100px]">{row.plataforma}</p>
+            <p className="text-xs text-gray-400">{pct}%</p>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Stat Row ───────────────────────────────────────────────────────────
+function StatRow({ label, value, color: c }: { label: string; value: number; color: string }) {
+  return (
+    <div className="flex justify-between items-center py-1.5 border-b border-gray-100 last:border-0">
+      <div className="flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: c }} />
+        <span className="text-sm text-gray-600">{label}</span>
+      </div>
+      <span className="text-sm font-semibold text-gray-900">{value.toLocaleString()}</span>
+    </div>
+  )
+}
+
+// ── Section Card ───────────────────────────────────────────────────────
+function SectionCard({ title, subtitle, section, metricKey = 'asistieron', metricLabel = 'Asist.',
+  loading, isComplementaria = false }: {
+  title: string; subtitle: string; section: Section
+  metricKey?: string; metricLabel?: string; loading: boolean; isComplementaria?: boolean
+}) {
+  const totalComp = section.asistieron
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide">{title}</h3>
+          <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>
+        </div>
+        {loading && <span className="text-xs text-gray-400 animate-pulse">Cargando...</span>}
+      </div>
+
+      <PlatDonut rows={section.porPlataforma} metricKey={metricKey} metricLabel={metricLabel} />
+
+      {isComplementaria ? (
+        <div className="mt-4 flex justify-end">
+          <div className="rounded-lg px-5 py-3 text-center" style={{ backgroundColor: '#10b981' + '18' }}>
+            <p className="text-2xl font-bold" style={{ color: '#10b981' }}>{totalComp.toLocaleString()}</p>
+            <p className="text-xs text-gray-500 mt-1">Generadas</p>
+          </div>
+        </div>
+      ) : (
+        <PlatCards rows={section.porPlataforma} metricKey={metricKey} />
+      )}
+    </div>
+  )
+}
+
+// ── Main Page ──────────────────────────────────────────────────────────
+export default function InformeXPaisPage() {
+  const [startDate, setStartDate] = useState(firstOfYear)
+  const [endDate, setEndDate]     = useState(today)
+  const [data, setData]           = useState<XPaisResponse | null>(null)
+  const [loading, setLoading]     = useState(true)
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const qs = new URLSearchParams({ startDate, endDate })
+      const res = await fetch(`/api/postgres/reports/asistencia/x-pais?${qs}`)
+      const json = await res.json()
+      if (json.success) setData(json)
+    } catch (e) { console.error(e) }
+    finally { setLoading(false) }
+  }, [startDate, endDate])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  const ses  = data?.sesiones        ?? { total: 0, asistieron: 0, cancelaron: 0, aprobaron: 0, noAprobaron: 0, porPlataforma: [] }
+  const jmp  = data?.jumps           ?? { total: 0, asistieron: 0, cancelaron: 0, aprobaron: 0, noAprobaron: 0, porPlataforma: [] }
+  const tr   = data?.training        ?? { total: 0, asistieron: 0, cancelaron: 0, aprobaron: 0, noAprobaron: 0, porPlataforma: [] }
+  const cl   = data?.clubes          ?? { total: 0, asistieron: 0, cancelaron: 0, aprobaron: 0, noAprobaron: 0, porPlataforma: [] }
+  const wel  = data?.welcome         ?? { total: 0, asistieron: 0, cancelaron: 0, aprobaron: 0, noAprobaron: 0, porPlataforma: [] }
+  const comp = data?.complementarias ?? { total: 0, asistieron: 0, cancelaron: 0, aprobaron: 0, noAprobaron: 0, porPlataforma: [] }
+
+  const handleCSV = () => {
+    type Row = { sec: string; cat: string; v: number | string; p: string }
+    const rows: Row[] = [
+      { sec: 'Filtros', cat: 'Fecha inicial', v: startDate, p: '' },
+      { sec: 'Filtros', cat: 'Fecha final',   v: endDate,   p: '' },
+    ]
+    const addSection = (label: string, s: Section, mKey: string, mLabel: string) => {
+      const mTotal = s.porPlataforma.reduce((acc, r) => acc + ((r as any)[mKey] ?? 0), 0)
+      rows.push({ sec: label, cat: mLabel, v: mTotal, p: '' })
+      s.porPlataforma.forEach((r, i) => {
+        const val = (r as any)[mKey] ?? 0
+        rows.push({
+          sec: `${label} — ${r.plataforma}`,
+          cat: mLabel,
+          v: val,
+          p: r.total > 0 ? `${((val / r.total) * 100).toFixed(1)}%` : '0%',
+        })
+      })
+    }
+    addSection('SESIONES',        ses,  'asistieron', 'Asistieron')
+    addSection('JUMPS',           jmp,  'aprobaron',  'Aprobaron')
+    addSection('TRAINING',        tr,   'asistieron', 'Asistieron')
+    addSection('CLUBES',          cl,   'asistieron', 'Asistieron')
+    addSection('WELCOME',         wel,  'asistieron', 'Asistieron')
+    addSection('COMPLEMENTARIAS', comp, 'asistieron', 'Generadas')
+    exportToExcel(rows, [
+      { header: 'Sección',    accessor: r => r.sec },
+      { header: 'Categoría',  accessor: r => r.cat },
+      { header: 'Cantidad',   accessor: r => r.v },
+      { header: 'Porcentaje', accessor: r => r.p },
+    ], `asistencia-x-pais_${startDate}_${endDate}`)
+  }
+
+  return (
+    <DashboardLayout>
+      <div className="flex gap-5 min-h-screen">
+
+        {/* ── Left Panel ── */}
+        <aside className="w-56 flex-shrink-0">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sticky top-4">
+            <h2 className="text-base font-bold text-gray-900 mb-1">Resumen</h2>
+            <p className="text-xs text-gray-400 mb-4">{startDate} → {endDate}</p>
+
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Sesiones</p>
+            <StatRow label="Total"      value={ses.total}      color="#6b7280" />
+            <StatRow label="Asistieron" value={ses.asistieron} color="#3b82f6" />
+
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-4 mb-2">Jumps</p>
+            <StatRow label="Total"     value={jmp.total}     color="#6b7280" />
+            <StatRow label="Aprobaron" value={jmp.aprobaron} color="#10b981" />
+
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-4 mb-2">Training</p>
+            <StatRow label="Total"      value={tr.total}      color="#6b7280" />
+            <StatRow label="Asistieron" value={tr.asistieron} color="#3b82f6" />
+
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-4 mb-2">Clubes</p>
+            <StatRow label="Total"      value={cl.total}      color="#6b7280" />
+            <StatRow label="Asistieron" value={cl.asistieron} color="#3b82f6" />
+
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-4 mb-2">Welcome</p>
+            <StatRow label="Total"      value={wel.total}      color="#6b7280" />
+            <StatRow label="Asistieron" value={wel.asistieron} color="#8b5cf6" />
+
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-4 mb-2">Complementarias</p>
+            <StatRow label="Total"     value={comp.total}      color="#6b7280" />
+            <StatRow label="Generadas" value={comp.asistieron} color="#10b981" />
+          </div>
+        </aside>
+
+        {/* ── Main Content ── */}
+        <div className="flex-1 space-y-5">
+
+          {/* ── Filter Bar ── */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label htmlFor="xp-start" className="block text-xs text-gray-500 mb-1">Fecha inicial</label>
+                <input id="xp-start" type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label htmlFor="xp-end" className="block text-xs text-gray-500 mb-1">Fecha final</label>
+                <input id="xp-end" type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="flex gap-2 ml-auto">
+                <button type="button" onClick={() => { setStartDate(firstOfYear); setEndDate(today) }}
+                  className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
+                  Limpiar filtros
+                </button>
+                <button type="button" onClick={handleCSV} disabled={loading}
+                  className="px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                  </svg>
+                  Descargar CSV
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <SectionCard title="Sesiones"
+            subtitle="SESSION — Step 0–45 excluyendo múltiplos de 5"
+            section={ses} metricKey="asistieron" metricLabel="Asist."
+            loading={loading} />
+
+          <SectionCard title="Jumps"
+            subtitle="SESSION — Steps múltiplos de 5 (5, 10, 15 … 45)"
+            section={jmp} metricKey="aprobaron" metricLabel="Aprob."
+            loading={loading} />
+
+          <SectionCard title="Training"
+            subtitle="CLUB — TRAINING – Step X"
+            section={tr} metricKey="asistieron" metricLabel="Asist."
+            loading={loading} />
+
+          <SectionCard title="Clubes"
+            subtitle="CLUB — GRAMMAR / LISTENING / KARAOKE / PRONUNCIATION / CONVERSATION"
+            section={cl} metricKey="asistieron" metricLabel="Asist."
+            loading={loading} />
+
+          <SectionCard title="Welcome"
+            subtitle="Nivel WELCOME — sesiones de bienvenida"
+            section={wel} metricKey="asistieron" metricLabel="Asist."
+            loading={loading} />
+
+          <SectionCard title="Complementarias"
+            subtitle="Actividades complementarias — tipo COMPLEMENTARIA"
+            section={comp} metricKey="asistieron" metricLabel="Generadas"
+            loading={loading} isComplementaria />
+
+        </div>
+      </div>
+    </DashboardLayout>
+  )
+}
