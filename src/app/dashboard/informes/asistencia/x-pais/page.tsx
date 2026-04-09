@@ -22,83 +22,119 @@ interface XPaisResponse {
 const today       = new Date().toISOString().split('T')[0]
 const firstOfYear = `${new Date().getFullYear()}-01-01`
 
-// ── Donut Chart ────────────────────────────────────────────────────────
-function DonutChart({ segments }: { segments: { label: string; value: number; color: string }[] }) {
-  const total = segments.reduce((s, d) => s + d.value, 0)
-  const r = 55, cx = 70, cy = 70, sw = 22, circ = 2 * Math.PI * r
+// ── Color palette per platform ─────────────────────────────────────────
+const COLORS = [
+  '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6',
+  '#ef4444', '#06b6d4', '#f97316', '#ec4899', '#84cc16',
+]
+const color = (i: number) => COLORS[i % COLORS.length]
+
+// ── Donut + Legend by platform ─────────────────────────────────────────
+function PlatDonut({ rows, metricKey = 'asistieron', metricLabel = 'Asist.' }: {
+  rows: PlatRow[]; metricKey?: string; metricLabel?: string
+}) {
+  const metric = (r: PlatRow) => (r as any)[metricKey] ?? 0
+  const totalMetric = rows.reduce((s, r) => s + metric(r), 0)
+  const r = 50, cx = 65, cy = 65, sw = 20, circ = 2 * Math.PI * r
   let offset = 0
+
   return (
-    <div className="flex items-center gap-6">
-      <svg width="140" height="140" viewBox="0 0 140 140">
-        {total === 0
+    <div className="flex gap-5 items-start">
+      {/* Donut */}
+      <svg width="130" height="130" viewBox="0 0 130 130" className="flex-shrink-0">
+        {totalMetric === 0
           ? <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e5e7eb" strokeWidth={sw} />
-          : segments.map((seg, i) => {
-              const pct = seg.value / total
+          : rows.map((row, i) => {
+              const val  = metric(row)
+              const pct  = val / totalMetric
               const dash = pct * circ
-              const rot = offset * 360 - 90; offset += pct
-              return <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={seg.color}
-                strokeWidth={sw} strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="butt"
-                transform={`rotate(${rot} ${cx} ${cy})`} />
+              const rot  = offset * 360 - 90; offset += pct
+              return (
+                <circle key={i} cx={cx} cy={cy} r={r} fill="none"
+                  stroke={color(i)} strokeWidth={sw}
+                  strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="butt"
+                  transform={`rotate(${rot} ${cx} ${cy})`} />
+              )
             })
         }
-        <text x={cx} y={cy - 8} textAnchor="middle" fontSize="20" fontWeight="bold" fill="#1f2937">{total.toLocaleString()}</text>
-        <text x={cx} y={cy + 10} textAnchor="middle" fontSize="9" fill="#6b7280">TOTAL</text>
+        <text x={cx} y={cy - 7} textAnchor="middle" fontSize="17" fontWeight="bold" fill="#1f2937">
+          {totalMetric.toLocaleString()}
+        </text>
+        <text x={cx} y={cy + 9} textAnchor="middle" fontSize="8" fill="#6b7280">TOTAL</text>
       </svg>
-      <div className="space-y-2">
-        {segments.map((seg, i) => (
-          <div key={i} className="flex items-center gap-2 text-sm">
-            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: seg.color }} />
-            <span className="text-gray-600 w-28">{seg.label}</span>
-            <span className="font-semibold text-gray-900">{seg.value.toLocaleString()}</span>
-            <span className="text-gray-400 text-xs">{total > 0 ? `${((seg.value / total) * 100).toFixed(1)}%` : '0%'}</span>
-          </div>
-        ))}
+
+      {/* Legend table */}
+      <div className="flex-1 min-w-0">
+        {rows.length === 0
+          ? <p className="text-xs text-gray-400 py-6">Sin datos</p>
+          : (
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-gray-400 border-b border-gray-100">
+                  <th className="text-left font-medium pb-1.5 pr-3">País</th>
+                  <th className="text-right font-medium pb-1.5 pr-3">Total</th>
+                  <th className="text-right font-medium pb-1.5 pr-3">{metricLabel}</th>
+                  <th className="text-right font-medium pb-1.5">%</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, i) => {
+                  const val = metric(row)
+                  const pct = row.total > 0 ? ((val / row.total) * 100).toFixed(0) : '0'
+                  return (
+                    <tr key={row.plataforma} className="border-b border-gray-50 last:border-0">
+                      <td className="py-1.5 pr-3">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color(i) }} />
+                          <span className="text-gray-700 font-medium">{row.plataforma}</span>
+                        </div>
+                      </td>
+                      <td className="py-1.5 pr-3 text-right text-gray-500">{row.total.toLocaleString()}</td>
+                      <td className="py-1.5 pr-3 text-right font-bold" style={{ color: color(i) }}>{val.toLocaleString()}</td>
+                      <td className="py-1.5 text-right text-gray-400">{pct}%</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )
+        }
       </div>
     </div>
   )
 }
 
-// ── Country Table ──────────────────────────────────────────────────────
-function CountryTable({ rows, metricKey = 'asistieron', metricLabel = 'Asistieron' }: {
-  rows: PlatRow[]; metricKey?: string; metricLabel?: string
+// ── Platform stat cards ────────────────────────────────────────────────
+function PlatCards({ rows, metricKey = 'asistieron' }: {
+  rows: PlatRow[]; metricKey?: string
 }) {
-  if (!rows || rows.length === 0) return <p className="text-xs text-gray-400 py-4 text-center">Sin datos por plataforma</p>
+  if (!rows.length) return null
   return (
-    <div className="overflow-auto max-h-48">
-      <table className="w-full text-xs">
-        <thead className="sticky top-0 bg-white">
-          <tr className="text-gray-400 border-b border-gray-100">
-            <th className="text-left font-medium pb-1.5 pr-3">País</th>
-            <th className="text-right font-medium pb-1.5 pr-2">Total</th>
-            <th className="text-right font-medium pb-1.5 pr-2 text-blue-400">{metricLabel}</th>
-            <th className="text-right font-medium pb-1.5">%</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(row => {
-            const metric = (row as any)[metricKey] ?? 0
-            const pct = row.total > 0 ? ((metric / row.total) * 100).toFixed(0) : '0'
-            return (
-              <tr key={row.plataforma} className="border-b border-gray-50 last:border-0">
-                <td className="py-1.5 pr-3 text-gray-700 font-medium">{row.plataforma}</td>
-                <td className="py-1.5 pr-2 text-right text-gray-500">{row.total.toLocaleString()}</td>
-                <td className="py-1.5 pr-2 text-right text-blue-600 font-semibold">{metric.toLocaleString()}</td>
-                <td className="py-1.5 text-right text-gray-400">{pct}%</td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+    <div className="mt-4 flex justify-end flex-wrap gap-2">
+      {rows.map((row, i) => {
+        const val = (row as any)[metricKey] ?? 0
+        const pct = row.total > 0 ? ((val / row.total) * 100).toFixed(0) : '0'
+        return (
+          <div key={row.plataforma} className="rounded-lg px-3 py-2 text-center min-w-[86px]"
+            style={{ backgroundColor: color(i) + '18' }}>
+            <p className="text-base font-bold leading-tight" style={{ color: color(i) }}>
+              {val.toLocaleString()}
+            </p>
+            <p className="text-xs text-gray-600 mt-0.5 truncate max-w-[100px]">{row.plataforma}</p>
+            <p className="text-xs text-gray-400">{pct}%</p>
+          </div>
+        )
+      })}
     </div>
   )
 }
 
 // ── Stat Row ───────────────────────────────────────────────────────────
-function StatRow({ label, value, color }: { label: string; value: number; color: string }) {
+function StatRow({ label, value, color: c }: { label: string; value: number; color: string }) {
   return (
     <div className="flex justify-between items-center py-1.5 border-b border-gray-100 last:border-0">
       <div className="flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: c }} />
         <span className="text-sm text-gray-600">{label}</span>
       </div>
       <span className="text-sm font-semibold text-gray-900">{value.toLocaleString()}</span>
@@ -107,13 +143,12 @@ function StatRow({ label, value, color }: { label: string; value: number; color:
 }
 
 // ── Section Card ───────────────────────────────────────────────────────
-function SectionCard({ title, subtitle, segments, statCards, porPlataforma, metricKey, metricLabel, loading }: {
-  title: string; subtitle: string
-  segments: { label: string; value: number; color: string }[]
-  statCards: { label: string; value: number; color: string }[]
-  porPlataforma: PlatRow[]
-  metricKey?: string; metricLabel?: string; loading: boolean
+function SectionCard({ title, subtitle, section, metricKey = 'asistieron', metricLabel = 'Asist.',
+  loading, isComplementaria = false }: {
+  title: string; subtitle: string; section: Section
+  metricKey?: string; metricLabel?: string; loading: boolean; isComplementaria?: boolean
 }) {
+  const totalComp = section.asistieron
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
       <div className="flex items-center justify-between mb-4">
@@ -123,25 +158,19 @@ function SectionCard({ title, subtitle, segments, statCards, porPlataforma, metr
         </div>
         {loading && <span className="text-xs text-gray-400 animate-pulse">Cargando...</span>}
       </div>
-      <div className="flex gap-6">
-        {/* Donut + stat cards */}
-        <div className="flex-1 min-w-0">
-          <DonutChart segments={segments} />
-          <div className={`mt-4 grid gap-3 grid-cols-${Math.min(statCards.length, 4)}`}>
-            {statCards.map(card => (
-              <div key={card.label} className="rounded-lg p-3 text-center" style={{ backgroundColor: card.color + '15' }}>
-                <p className="text-xl font-bold" style={{ color: card.color }}>{card.value.toLocaleString()}</p>
-                <p className="text-xs text-gray-500 mt-1">{card.label}</p>
-              </div>
-            ))}
+
+      <PlatDonut rows={section.porPlataforma} metricKey={metricKey} metricLabel={metricLabel} />
+
+      {isComplementaria ? (
+        <div className="mt-4 flex justify-end">
+          <div className="rounded-lg px-5 py-3 text-center" style={{ backgroundColor: '#10b981' + '18' }}>
+            <p className="text-2xl font-bold" style={{ color: '#10b981' }}>{totalComp.toLocaleString()}</p>
+            <p className="text-xs text-gray-500 mt-1">Generadas</p>
           </div>
         </div>
-        {/* Country table */}
-        <div className="border-l border-gray-100 pl-5 w-64 flex-shrink-0">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Por País</p>
-          <CountryTable rows={porPlataforma} metricKey={metricKey} metricLabel={metricLabel} />
-        </div>
-      </div>
+      ) : (
+        <PlatCards rows={section.porPlataforma} metricKey={metricKey} />
+      )}
     </div>
   )
 }
@@ -173,26 +202,23 @@ export default function InformeXPaisPage() {
   const wel  = data?.welcome         ?? { total: 0, asistieron: 0, cancelaron: 0, aprobaron: 0, noAprobaron: 0, porPlataforma: [] }
   const comp = data?.complementarias ?? { total: 0, asistieron: 0, cancelaron: 0, aprobaron: 0, noAprobaron: 0, porPlataforma: [] }
 
-  // Helpers para calcular segmentos
-  const noAsi = (s: Section) => Math.max(0, s.total - s.asistieron - s.cancelaron)
-  const jmpSinReg = Math.max(0, jmp.asistieron - jmp.aprobaron - jmp.noAprobaron)
-
-  // CSV export
   const handleCSV = () => {
     type Row = { sec: string; cat: string; v: number | string; p: string }
     const rows: Row[] = [
       { sec: 'Filtros', cat: 'Fecha inicial', v: startDate, p: '' },
       { sec: 'Filtros', cat: 'Fecha final',   v: endDate,   p: '' },
     ]
-    const addSection = (label: string, s: Section, metric: string, metricLabel: string) => {
-      const m = (s as any)[metric] ?? s.asistieron
-      rows.push(
-        { sec: label, cat: 'Total',       v: s.total,       p: '' },
-        { sec: label, cat: metricLabel,   v: m,             p: s.total > 0 ? `${((m / s.total) * 100).toFixed(1)}%` : '0%' },
-      )
-      s.porPlataforma.forEach(r => {
-        const rm = (r as any)[metric] ?? r.asistieron
-        rows.push({ sec: `${label} — ${r.plataforma}`, cat: metricLabel, v: rm, p: r.total > 0 ? `${((rm / r.total) * 100).toFixed(1)}%` : '0%' })
+    const addSection = (label: string, s: Section, mKey: string, mLabel: string) => {
+      const mTotal = s.porPlataforma.reduce((acc, r) => acc + ((r as any)[mKey] ?? 0), 0)
+      rows.push({ sec: label, cat: mLabel, v: mTotal, p: '' })
+      s.porPlataforma.forEach((r, i) => {
+        const val = (r as any)[mKey] ?? 0
+        rows.push({
+          sec: `${label} — ${r.plataforma}`,
+          cat: mLabel,
+          v: val,
+          p: r.total > 0 ? `${((val / r.total) * 100).toFixed(1)}%` : '0%',
+        })
       })
     }
     addSection('SESIONES',        ses,  'asistieron', 'Asistieron')
@@ -200,7 +226,7 @@ export default function InformeXPaisPage() {
     addSection('TRAINING',        tr,   'asistieron', 'Asistieron')
     addSection('CLUBES',          cl,   'asistieron', 'Asistieron')
     addSection('WELCOME',         wel,  'asistieron', 'Asistieron')
-    addSection('COMPLEMENTARIAS', comp, 'asistieron', 'Asistieron')
+    addSection('COMPLEMENTARIAS', comp, 'asistieron', 'Generadas')
     exportToExcel(rows, [
       { header: 'Sección',    accessor: r => r.sec },
       { header: 'Categoría',  accessor: r => r.cat },
@@ -213,8 +239,8 @@ export default function InformeXPaisPage() {
     <DashboardLayout>
       <div className="flex gap-5 min-h-screen">
 
-        {/* ── Left Panel: RESUMEN ── */}
-        <aside className="w-60 flex-shrink-0">
+        {/* ── Left Panel ── */}
+        <aside className="w-56 flex-shrink-0">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sticky top-4">
             <h2 className="text-base font-bold text-gray-900 mb-1">Resumen</h2>
             <p className="text-xs text-gray-400 mb-4">{startDate} → {endDate}</p>
@@ -237,11 +263,11 @@ export default function InformeXPaisPage() {
 
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-4 mb-2">Welcome</p>
             <StatRow label="Total"      value={wel.total}      color="#6b7280" />
-            <StatRow label="Asistieron" value={wel.asistieron} color="#3b82f6" />
+            <StatRow label="Asistieron" value={wel.asistieron} color="#8b5cf6" />
 
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-4 mb-2">Complementarias</p>
-            <StatRow label="Total"      value={comp.total}      color="#6b7280" />
-            <StatRow label="Asistieron" value={comp.asistieron} color="#8b5cf6" />
+            <StatRow label="Total"     value={comp.total}      color="#6b7280" />
+            <StatRow label="Generadas" value={comp.asistieron} color="#10b981" />
           </div>
         </aside>
 
@@ -277,121 +303,38 @@ export default function InformeXPaisPage() {
             </div>
           </div>
 
-          {/* ── SESIONES ── */}
-          <SectionCard
-            title="Sesiones" subtitle="SESSION — Step 0–45 excl. múltiplos de 5"
-            loading={loading}
-            segments={[
-              { label: 'Asistieron',    value: ses.asistieron,     color: '#3b82f6' },
-              { label: 'No asistieron', value: noAsi(ses),          color: '#f59e0b' },
-              { label: 'Cancelaron',    value: ses.cancelaron,      color: '#ef4444' },
-            ]}
-            statCards={[
-              { label: 'Asistieron',    value: ses.asistieron,     color: '#3b82f6' },
-              { label: 'No asistieron', value: noAsi(ses),          color: '#f59e0b' },
-              { label: 'Cancelaron',    value: ses.cancelaron,      color: '#ef4444' },
-            ]}
-            porPlataforma={ses.porPlataforma}
-            metricKey="asistieron" metricLabel="Asistieron"
-          />
+          <SectionCard title="Sesiones"
+            subtitle="SESSION — Step 0–45 excluyendo múltiplos de 5"
+            section={ses} metricKey="asistieron" metricLabel="Asist."
+            loading={loading} />
 
-          {/* ── JUMPS ── */}
-          <SectionCard
-            title="Jumps" subtitle="SESSION — Steps múltiplos de 5 (5, 10, 15 … 45)"
-            loading={loading}
-            segments={[
-              { label: 'Aprobaron',     value: jmp.aprobaron,   color: '#10b981' },
-              { label: 'No aprobaron',  value: jmp.noAprobaron, color: '#f59e0b' },
-              { label: 'Cancelaron',    value: jmp.cancelaron,  color: '#ef4444' },
-              { label: 'Sin registrar', value: jmpSinReg,        color: '#6b7280' },
-            ]}
-            statCards={[
-              { label: 'Aprobaron',     value: jmp.aprobaron,   color: '#10b981' },
-              { label: 'No aprobaron',  value: jmp.noAprobaron, color: '#f59e0b' },
-              { label: 'Cancelaron',    value: jmp.cancelaron,  color: '#ef4444' },
-              { label: 'Sin registrar', value: jmpSinReg,        color: '#6b7280' },
-            ]}
-            porPlataforma={jmp.porPlataforma}
-            metricKey="aprobaron" metricLabel="Aprobaron"
-          />
+          <SectionCard title="Jumps"
+            subtitle="SESSION — Steps múltiplos de 5 (5, 10, 15 … 45)"
+            section={jmp} metricKey="aprobaron" metricLabel="Aprob."
+            loading={loading} />
 
-          {/* ── TRAINING ── */}
-          <SectionCard
-            title="Training" subtitle="CLUB — TRAINING – Step X"
-            loading={loading}
-            segments={[
-              { label: 'Asistieron',    value: tr.asistieron, color: '#3b82f6' },
-              { label: 'No asistieron', value: noAsi(tr),      color: '#f59e0b' },
-              { label: 'Cancelaron',    value: tr.cancelaron,  color: '#ef4444' },
-            ]}
-            statCards={[
-              { label: 'Asistieron',    value: tr.asistieron, color: '#3b82f6' },
-              { label: 'No asistieron', value: noAsi(tr),      color: '#f59e0b' },
-              { label: 'Cancelaron',    value: tr.cancelaron,  color: '#ef4444' },
-            ]}
-            porPlataforma={tr.porPlataforma}
-            metricKey="asistieron" metricLabel="Asistieron"
-          />
+          <SectionCard title="Training"
+            subtitle="CLUB — TRAINING – Step X"
+            section={tr} metricKey="asistieron" metricLabel="Asist."
+            loading={loading} />
 
-          {/* ── CLUBES ── */}
-          <SectionCard
-            title="Clubes" subtitle="CLUB — GRAMMAR / LISTENING / KARAOKE / PRONUNCIATION / CONVERSATION"
-            loading={loading}
-            segments={[
-              { label: 'Asistieron',    value: cl.asistieron, color: '#3b82f6' },
-              { label: 'No asistieron', value: noAsi(cl),      color: '#f59e0b' },
-              { label: 'Cancelaron',    value: cl.cancelaron,  color: '#ef4444' },
-            ]}
-            statCards={[
-              { label: 'Asistieron',    value: cl.asistieron, color: '#3b82f6' },
-              { label: 'No asistieron', value: noAsi(cl),      color: '#f59e0b' },
-              { label: 'Cancelaron',    value: cl.cancelaron,  color: '#ef4444' },
-            ]}
-            porPlataforma={cl.porPlataforma}
-            metricKey="asistieron" metricLabel="Asistieron"
-          />
+          <SectionCard title="Clubes"
+            subtitle="CLUB — GRAMMAR / LISTENING / KARAOKE / PRONUNCIATION / CONVERSATION"
+            section={cl} metricKey="asistieron" metricLabel="Asist."
+            loading={loading} />
 
-          {/* ── WELCOME ── */}
-          <SectionCard
-            title="Welcome" subtitle="Nivel WELCOME — sesiones de bienvenida"
-            loading={loading}
-            segments={[
-              { label: 'Asistieron',    value: wel.asistieron, color: '#8b5cf6' },
-              { label: 'No asistieron', value: noAsi(wel),      color: '#f59e0b' },
-              { label: 'Cancelaron',    value: wel.cancelaron,  color: '#ef4444' },
-            ]}
-            statCards={[
-              { label: 'Asistieron',    value: wel.asistieron, color: '#8b5cf6' },
-              { label: 'No asistieron', value: noAsi(wel),      color: '#f59e0b' },
-              { label: 'Cancelaron',    value: wel.cancelaron,  color: '#ef4444' },
-            ]}
-            porPlataforma={wel.porPlataforma}
-            metricKey="asistieron" metricLabel="Asistieron"
-          />
+          <SectionCard title="Welcome"
+            subtitle="Nivel WELCOME — sesiones de bienvenida"
+            section={wel} metricKey="asistieron" metricLabel="Asist."
+            loading={loading} />
 
-          {/* ── COMPLEMENTARIAS ── */}
-          <SectionCard
-            title="Complementarias" subtitle="Actividades complementarias (tipo COMPLEMENTARIA)"
-            loading={loading}
-            segments={[
-              { label: 'Asistieron',    value: comp.asistieron, color: '#10b981' },
-              { label: 'No asistieron', value: noAsi(comp),      color: '#f59e0b' },
-              { label: 'Cancelaron',    value: comp.cancelaron,  color: '#ef4444' },
-            ]}
-            statCards={[
-              { label: 'Asistieron',    value: comp.asistieron, color: '#10b981' },
-              { label: 'No asistieron', value: noAsi(comp),      color: '#f59e0b' },
-              { label: 'Cancelaron',    value: comp.cancelaron,  color: '#ef4444' },
-            ]}
-            porPlataforma={comp.porPlataforma}
-            metricKey="asistieron" metricLabel="Asistieron"
-          />
+          <SectionCard title="Complementarias"
+            subtitle="Actividades complementarias — tipo COMPLEMENTARIA"
+            section={comp} metricKey="asistieron" metricLabel="Generadas"
+            loading={loading} isComplementaria />
 
         </div>
       </div>
     </DashboardLayout>
   )
 }
-
-// Local type alias needed after component definitions
-type Section = XPaisResponse['sesiones']
