@@ -229,6 +229,8 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 167. Edición de celdas individuales con coerción de tipos
 168. Creación de registros con auto-generación de _id
 169. Eliminación masiva de registros (máximo 100)
+170. Filtro por NULL/vacío: botón `∅` por columna → filtra `IS NULL OR = ''` (texto) o `IS NULL` (otros tipos)
+171. Filtro por rango de fechas: columnas tipo fecha/timestamp muestran dos date pickers (Desde ≥ / Hasta ≤) con botón `∅ nulo`; backend usa `__gte`/`__lte` como sufijos de clave en filters
 
 ### Caché y Rendimiento
 162. Caché client-side en localStorage con TTL para calendario (5 min, keys por mes)
@@ -1634,6 +1636,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `a47f65d` | feat: dblgs — filtros nulo/vacío (botón ∅) y rangos de fecha (date pickers Desde/Hasta) en fila de filtros; backend buildWhereClause maneja __gte/__lte y __NULL__/__EMPTY__ sentinels |
 | `478773b` | feat: X País — donut por plataforma con tarjetas al extremo derecho — donut segmentado por país con paleta de 9 colores, leyenda País/Total/Métrica/% a la derecha, tarjetas inferiores alineadas a la derecha con valor+país+%, Complementarias muestra solo "Generadas" (asistieron), Jumps usa métrica aprobaron |
 | `e05dd40` | feat: Informe Asistencia X País — 6 secciones con desglose por plataforma: SESIONES (SESSION step 0-45 excl. ×5), JUMPS (SESSION ×5, aprobaron=asistio+participacion+!noAprobo), TRAINING (CLUB TRAINING-Step), CLUBES (CLUB GRAMMAR/LISTENING/KARAOKE/PRONUNCIATION/CONVERSATION), WELCOME (nivel=WELCOME), COMPLEMENTARIAS (tipo=COMPLEMENTARIA); panel izquierdo RESUMEN; API `/api/postgres/reports/asistencia/x-pais` con 6 queries paralelas sobre ACADEMICA_BOOKINGS filtradas por fechaEvento |
 | `48a8b31` | feat: agregar item X País en sidebar Asistencia — nuevo ítem al final del grupo Asistencia (después de Welcome Session), abre en nueva pestaña, permiso VER_INFORMES |

@@ -567,6 +567,8 @@ function SidebarContent({
                                           <Link
                                             href={nestedItem.href}
                                             onClick={onLinkClick}
+                                            target={nestedItem.newTab ? '_blank' : undefined}
+                                            rel={nestedItem.newTab ? 'noopener noreferrer' : undefined}
                                             className={cn(
                                               "block px-2 py-2 text-sm rounded-md transition-colors duration-200",
                                               isCurrentPath(nestedItem.href)
