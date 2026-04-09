@@ -27,7 +27,6 @@ export const GET = handler(async (request: Request) => {
   const nivel      = searchParams.get('nivel')      || ''
 
   const params = [startDate, endDate, plataforma, nivel]
-  const dateParams = [startDate, endDate]
 
   // TRAINING SESSION: registros cuyo nombre empieza con "TRAINING - Step X"
   // steps no múltiplos de 5, excluye ESS/WELCOME/DONE/JUMP
@@ -45,7 +44,7 @@ export const GET = handler(async (request: Request) => {
     AND ${STEP_EXTRACT} % 5 != 0
   `
 
-  const [training, plataformas, niveles, porPlataforma] = await Promise.all([
+  const [training, plataformas, niveles] = await Promise.all([
 
     safeQuery(() => queryOne<any>(`
       SELECT
@@ -79,32 +78,11 @@ export const GET = handler(async (request: Request) => {
          WHEN 'F1'  THEN 7 WHEN 'F2'  THEN 8 WHEN 'F3'  THEN 9
          ELSE 99 END`, []
     ), []),
-
-    safeQuery(() => queryMany<{ plataforma: string; total: number; asistieron: number; cancelaron: number }>(
-      `SELECT
-         COALESCE("plataforma", 'Sin plataforma') AS plataforma,
-         COUNT(*)::int                                                                              AS total,
-         COALESCE(SUM(CASE WHEN "asistencia" = true OR "asistio" = true THEN 1 ELSE 0 END), 0)::int  AS asistieron,
-         COALESCE(SUM(CASE WHEN "cancelo" = true THEN 1 ELSE 0 END), 0)::int                        AS cancelaron
-       FROM "ACADEMICA_BOOKINGS"
-       WHERE "fechaEvento" >= $1::date
-         AND "fechaEvento" <= $2::date
-         AND COALESCE("nivel", '') != 'ESS'
-         AND COALESCE("nivel", '') != 'WELCOME'
-         AND COALESCE("nivel", '') != 'DONE'
-         AND "nivel" NOT ILIKE '%JUMP%'
-         AND COALESCE("nombreEvento", "step", '') ILIKE 'TRAINING - Step%'
-         AND ${STEP_EXTRACT} BETWEEN 1 AND 45
-         AND ${STEP_EXTRACT} % 5 != 0
-       GROUP BY COALESCE("plataforma", 'Sin plataforma')
-       ORDER BY total DESC`, dateParams
-    ), []),
   ])
 
   return successResponse({
     training,
     plataformas: plataformas.map((r: any) => r.plataforma),
     niveles: niveles.map((r: any) => r.nivel),
-    porPlataforma,
   })
 })

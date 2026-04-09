@@ -11,15 +11,8 @@ interface SesionesData {
 interface JumpsData {
   total: number; asistieron: number; cancelaron: number; aprobaron: number; noAprobaron: number
 }
-interface PlatRow { plataforma: string; total: number; asistieron: number; cancelaron: number }
-interface SesResponse {
-  sesiones: SesionesData; plataformas: string[]; niveles: string[]
-  sesPorPlataforma: PlatRow[]; jmpPorPlataforma: PlatRow[]
-}
-interface JmpResponse {
-  jumps: JumpsData; plataformas: string[]; niveles: string[]
-  porPlataforma: PlatRow[]
-}
+interface SesResponse { sesiones: SesionesData; plataformas: string[]; niveles: string[] }
+interface JmpResponse { jumps: JumpsData;     plataformas: string[]; niveles: string[] }
 
 const today       = new Date().toISOString().split('T')[0]
 const firstOfYear = `${new Date().getFullYear()}-01-01`
@@ -60,39 +53,6 @@ function DonutChart({ segments }: { segments: { label: string; value: number; co
           </div>
         ))}
       </div>
-    </div>
-  )
-}
-
-// ── Platform Table ─────────────────────────────────────────────────────
-function PlatTable({ data }: { data: PlatRow[] }) {
-  if (data.length === 0) return null
-  return (
-    <div className="border-l border-gray-100 pl-5 flex-shrink-0 w-52">
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Por plataforma</p>
-      <p className="text-xs text-gray-300 mb-3">Solo varía con filtro de fecha</p>
-      <table className="w-full">
-        <thead>
-          <tr className="text-xs text-gray-400 border-b border-gray-100">
-            <th className="text-left font-medium pb-1.5">País</th>
-            <th className="text-right font-medium pb-1.5">Total</th>
-            <th className="text-right font-medium pb-1.5 text-blue-400">Asist.</th>
-            <th className="text-right font-medium pb-1.5">%</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map(row => (
-            <tr key={row.plataforma} className="border-b border-gray-50 text-xs last:border-0">
-              <td className="py-1.5 text-gray-700 font-medium">{row.plataforma}</td>
-              <td className="py-1.5 text-right text-gray-500">{row.total.toLocaleString()}</td>
-              <td className="py-1.5 text-right text-blue-600 font-semibold">{row.asistieron.toLocaleString()}</td>
-              <td className="py-1.5 text-right text-gray-400">
-                {row.total > 0 ? `${((row.asistieron / row.total) * 100).toFixed(0)}%` : '0%'}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   )
 }
@@ -314,19 +274,14 @@ export default function InformeSesionesPage() {
               </div>
               {sesLoading && <span className="text-xs text-gray-400 animate-pulse">Cargando...</span>}
             </div>
-            <div className="flex gap-6">
-              <div className="flex-1 min-w-0">
-                <DonutChart segments={sesSegments} />
-                <div className="mt-4 grid grid-cols-3 gap-3">
-                  {sesSegments.map(seg => (
-                    <div key={seg.label} className="rounded-lg p-3 text-center" style={{ backgroundColor: seg.color + '15' }}>
-                      <p className="text-2xl font-bold" style={{ color: seg.color }}>{seg.value.toLocaleString()}</p>
-                      <p className="text-xs text-gray-500 mt-1">{seg.label}</p>
-                    </div>
-                  ))}
+            <DonutChart segments={sesSegments} />
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              {sesSegments.map(seg => (
+                <div key={seg.label} className="rounded-lg p-3 text-center" style={{ backgroundColor: seg.color + '15' }}>
+                  <p className="text-2xl font-bold" style={{ color: seg.color }}>{seg.value.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 mt-1">{seg.label}</p>
                 </div>
-              </div>
-              <PlatTable data={sesData?.sesPorPlataforma ?? []} />
+              ))}
             </div>
           </div>
 
@@ -349,23 +304,18 @@ export default function InformeSesionesPage() {
               </div>
               {jmpLoading && <span className="text-xs text-gray-400 animate-pulse">Cargando...</span>}
             </div>
-            <div className="flex gap-6">
-              <div className="flex-1 min-w-0">
-                <DonutChart segments={jumpSegments} />
-                <div className="mt-4 grid grid-cols-4 gap-3">
-                  {jumpSegments.map(seg => (
-                    <div key={seg.label} className="rounded-lg p-3 text-center" style={{ backgroundColor: seg.color + '15' }}>
-                      <p className="text-2xl font-bold" style={{ color: seg.color }}>{seg.value.toLocaleString()}</p>
-                      <p className="text-xs text-gray-500 mt-1">{seg.label}</p>
-                    </div>
-                  ))}
+            <DonutChart segments={jumpSegments} />
+            <div className="mt-4 grid grid-cols-4 gap-3">
+              {jumpSegments.map(seg => (
+                <div key={seg.label} className="rounded-lg p-3 text-center" style={{ backgroundColor: seg.color + '15' }}>
+                  <p className="text-2xl font-bold" style={{ color: seg.color }}>{seg.value.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 mt-1">{seg.label}</p>
                 </div>
-                <div className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-6 text-sm">
-                  <span className="text-gray-500">Total programados:</span>
-                  <span className="font-bold text-gray-900 text-lg">{j.total.toLocaleString()}</span>
-                </div>
-              </div>
-              <PlatTable data={jmpData?.porPlataforma ?? []} />
+              ))}
+            </div>
+            <div className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-6 text-sm">
+              <span className="text-gray-500">Total programados:</span>
+              <span className="font-bold text-gray-900 text-lg">{j.total.toLocaleString()}</span>
             </div>
           </div>
 

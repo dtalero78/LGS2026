@@ -29,7 +29,6 @@ export const GET = handler(async (request: Request) => {
     AND "nivel" NOT ILIKE '%JUMP%'
     AND COALESCE("tipo", "tipoEvento") = 'CLUB'
     AND COALESCE("nombreEvento", "step", '') NOT ILIKE 'TRAINING%'
-    AND COALESCE("nombreEvento", "step", '') NOT ~* '^[Ss]tep\s+[0-9]+'
     AND ($5 = '' OR COALESCE("nombreEvento", "step", '') ILIKE ($5 || '%'))
   `
 
@@ -38,7 +37,7 @@ export const GET = handler(async (request: Request) => {
     TRIM(REGEXP_REPLACE(COALESCE("nombreEvento", "step", ''), '\\s*-\\s*[Ss]tep.*$', ''))
   `
 
-  const [clubesTotals, clubesPorTipo, sinTipo, tiposClub, plataformas, niveles] = await Promise.all([
+  const [clubesTotals, clubesPorTipo, tiposClub, plataformas, niveles] = await Promise.all([
 
     // Totales agregados
     safeQuery(() => queryOne<any>(`
@@ -71,24 +70,6 @@ export const GET = handler(async (request: Request) => {
       ORDER BY total DESC
     `, params), []),
 
-    // Clubs sin tipo: tipoEvento=CLUB pero nombreEvento es solo "Step X" (datos mal clasificados)
-    safeQuery(() => queryOne<{ count: number }>(
-      `SELECT COUNT(*)::int AS count
-       FROM "ACADEMICA_BOOKINGS"
-       WHERE "fechaEvento" >= $1::date
-         AND "fechaEvento" <= $2::date
-         AND ($3 = '' OR "plataforma" = $3)
-         AND ($4 = '' OR "nivel" = $4)
-         AND COALESCE("nivel", '') != 'ESS'
-         AND COALESCE("nivel", '') != 'WELCOME'
-         AND COALESCE("nivel", '') != 'DONE'
-         AND "nivel" NOT ILIKE '%JUMP%'
-         AND COALESCE("tipo", "tipoEvento") = 'CLUB'
-         AND COALESCE("nombreEvento", "step", '') NOT ILIKE 'TRAINING%'
-         AND COALESCE("nombreEvento", "step", '') ~* '^[Ss]tep\s+[0-9]+'`,
-      [startDate, endDate, plataforma, nivel]
-    ), { count: 0 }),
-
     // Tipos de club disponibles (para el filtro dropdown)
     safeQuery(() => queryMany<{ tipoClub: string }>(
       `SELECT DISTINCT
@@ -96,7 +77,6 @@ export const GET = handler(async (request: Request) => {
        FROM "ACADEMICA_BOOKINGS"
        WHERE COALESCE("tipo", "tipoEvento") = 'CLUB'
          AND COALESCE("nombreEvento", "step", '') NOT ILIKE 'TRAINING%'
-         AND COALESCE("nombreEvento", "step", '') NOT ~* '^[Ss]tep\s+[0-9]+'
          AND TRIM(REGEXP_REPLACE(COALESCE("nombreEvento", "step", ''), '\\s*-\\s*[Ss]tep.*$', '')) != ''
        ORDER BY 1`, []
     ), []),
@@ -125,7 +105,6 @@ export const GET = handler(async (request: Request) => {
   return successResponse({
     clubesTotals,
     clubesPorTipo,
-    sinTipo: (sinTipo as any)?.count ?? 0,
     tiposClub: tiposClub.map((r: any) => r.tipoClub).filter(Boolean),
     plataformas: plataformas.map((r: any) => r.plataforma),
     niveles: niveles.map((r: any) => r.nivel),

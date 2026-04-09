@@ -7,9 +7,8 @@ import { exportToExcel } from '@/lib/export-excel'
 // ── Types ──────────────────────────────────────────────────────────────
 interface Stats { total: number; asistieron: number; noAsistieron: number; cancelaron: number }
 interface ClubType extends Stats { tipoClub: string }
-interface PlatRow { plataforma: string; total: number; asistieron: number; cancelaron: number }
-interface TrainingResp { training: Stats; plataformas: string[]; niveles: string[]; porPlataforma: PlatRow[] }
-interface ClubesResp  { clubesTotals: Stats; clubesPorTipo: ClubType[]; sinTipo: number; tiposClub: string[]; plataformas: string[]; niveles: string[] }
+interface TrainingResp { training: Stats; plataformas: string[]; niveles: string[] }
+interface ClubesResp  { clubesTotals: Stats; clubesPorTipo: ClubType[]; tiposClub: string[]; plataformas: string[]; niveles: string[] }
 
 const today       = new Date().toISOString().split('T')[0]
 const firstOfYear = `${new Date().getFullYear()}-01-01`
@@ -80,39 +79,6 @@ function HorizontalBarChart({ data }: { data: ClubType[] }) {
           </div>
         )
       })}
-    </div>
-  )
-}
-
-// ── Platform Table ─────────────────────────────────────────────────────
-function PlatTable({ data }: { data: PlatRow[] }) {
-  if (data.length === 0) return null
-  return (
-    <div className="border-l border-gray-100 pl-5 flex-shrink-0 w-52">
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Por plataforma</p>
-      <p className="text-xs text-gray-300 mb-3">Solo varía con filtro de fecha</p>
-      <table className="w-full">
-        <thead>
-          <tr className="text-xs text-gray-400 border-b border-gray-100">
-            <th className="text-left font-medium pb-1.5">País</th>
-            <th className="text-right font-medium pb-1.5">Total</th>
-            <th className="text-right font-medium pb-1.5 text-blue-400">Asist.</th>
-            <th className="text-right font-medium pb-1.5">%</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map(row => (
-            <tr key={row.plataforma} className="border-b border-gray-50 text-xs last:border-0">
-              <td className="py-1.5 text-gray-700 font-medium">{row.plataforma}</td>
-              <td className="py-1.5 text-right text-gray-500">{row.total.toLocaleString()}</td>
-              <td className="py-1.5 text-right text-blue-600 font-semibold">{row.asistieron.toLocaleString()}</td>
-              <td className="py-1.5 text-right text-gray-400">
-                {row.total > 0 ? `${((row.asistieron / row.total) * 100).toFixed(0)}%` : '0%'}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   )
 }
@@ -308,19 +274,14 @@ export default function InformeClubesPage() {
               </div>
               {trLoading && <span className="text-xs text-gray-400 animate-pulse">Cargando...</span>}
             </div>
-            <div className="flex gap-6">
-              <div className="flex-1 min-w-0">
-                <DonutChart segments={trSegments} />
-                <div className="mt-4 grid grid-cols-3 gap-3">
-                  {trSegments.map(seg => (
-                    <div key={seg.label} className="rounded-lg p-3 text-center" style={{ backgroundColor: seg.color + '15' }}>
-                      <p className="text-2xl font-bold" style={{ color: seg.color }}>{seg.value.toLocaleString()}</p>
-                      <p className="text-xs text-gray-500 mt-1">{seg.label}</p>
-                    </div>
-                  ))}
+            <DonutChart segments={trSegments} />
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              {trSegments.map(seg => (
+                <div key={seg.label} className="rounded-lg p-3 text-center" style={{ backgroundColor: seg.color + '15' }}>
+                  <p className="text-2xl font-bold" style={{ color: seg.color }}>{seg.value.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 mt-1">{seg.label}</p>
                 </div>
-              </div>
-              <PlatTable data={trData?.porPlataforma ?? []} />
+              ))}
             </div>
           </div>
 
@@ -383,19 +344,6 @@ export default function InformeClubesPage() {
               {clLoading && <span className="text-xs text-gray-400 animate-pulse">Cargando...</span>}
             </div>
             <HorizontalBarChart data={clData?.clubesPorTipo ?? []} />
-            {(clData?.sinTipo ?? 0) > 0 && (
-              <div className="mt-4 flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                </svg>
-                <div className="flex-1">
-                  <span className="text-sm font-semibold text-amber-800">Clubs sin tipo: </span>
-                  <span className="text-sm font-bold text-amber-900">{(clData?.sinTipo ?? 0).toLocaleString()} registros</span>
-                  <span className="text-xs text-amber-600 block mt-0.5">Registros con tipoEvento=CLUB pero nombreEvento="Step X" — requieren corrección en la BD</span>
-                </div>
-              </div>
-            )}
-
             <div className="mt-5 pt-4 border-t border-gray-100 grid grid-cols-4 gap-3">
               {[
                 { label: 'Total',         value: ct.total,        color: '#6b7280' },
