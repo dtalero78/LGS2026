@@ -1405,9 +1405,15 @@ interface ConsentData {
 | Agenda Sesiones | `/dashboard/academic/agenda-sesiones` | ACADEMICO permissions |
 | Agenda Académica | `/dashboard/academic/agenda-academica` | ACADEMICO permissions |
 | Advisors | `/dashboard/academic/advisors` | ACADEMICO.ADVISOR permissions |
-| Informe Beneficiarios | `/dashboard/academic/informes/beneficiarios` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
-| Reporte General | `/dashboard/informes/general` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
-| Reporte Mensuales | `/dashboard/informes/mensuales` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Asistencia - Sesiones & Clubes | `/dashboard/informes/asistencia/sesiones-clubes` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Asistencia - Complementarias | `/dashboard/informes/asistencia/complementarias` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Sesiones - Programadas | `/dashboard/informes/sesiones/programadas` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Sesiones - Advisor | `/dashboard/informes/sesiones/advisor` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Usuarios | `/dashboard/informes/usuarios` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Contratos | `/dashboard/informes/contratos` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Planta - Advisors | `/dashboard/informes/planta/advisors` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Planta - Administrativos | `/dashboard/informes/planta/administrativos` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Estadísticas | `/dashboard/informes/estadisticas` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
 | Welcome Session | `/dashboard/servicio/welcome-session` | SERVICIO permissions |
 | Servicio Main | `/dashboard/servicio` | SERVICIO permissions |
 | Lista Sesiones | `/dashboard/servicio/lista-sesiones` | SERVICIO permissions |
@@ -1625,6 +1631,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `9c420fb` | feat: restructurar Informes en sidebar con 3 niveles — reemplaza Informe Beneficiarios/Reporte General/Mensuales por: Asistencia (Sesiones & Clubes, Complementarias), Sesiones (Programadas, Advisor), Usuarios, Contratos, Planta (Advisors, Administrativos), Estadísticas; páginas placeholder creadas; archivos obsoletos eliminados |
 | `29b99fc` | fix: extendByDays reactiva estudiante en PEOPLE, ACADEMICA y USUARIOS_ROLES — al extender vigencia sincroniza: PEOPLE.estadoInactivo=false, ACADEMICA.estadoInactivo=false (por numeroId), USUARIOS_ROLES.activo=true (por email) |
 | `fc364a7` | fix: add missing _id to USUARIOS_ROLES INSERT in nuevo-advisor — mismo bug que fc5466e en nuevo-usuario; columna _id no tiene default y causaba Database error al crear advisor |
 | `d2b40b9` | fix: dblgs USUARIOS_ROLES — LEFT JOIN ACADEMICA usaba email directo causando filas duplicadas cuando el usuario tiene múltiples registros en ACADEMICA; corregido con DISTINCT ON (LOWER(email)) para traer solo un registro de ACADEMICA por email |
