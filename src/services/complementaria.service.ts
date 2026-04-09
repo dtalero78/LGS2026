@@ -106,7 +106,8 @@ export async function checkEligibility(
 export async function generateQuestions(
   studentId: string,
   nivel: string,
-  step: string
+  step: string,
+  plataforma?: string
 ): Promise<{ attemptId: string; questions: any[]; attemptNumber: number }> {
   const elig = await checkEligibility(studentId, nivel, step);
   if (!elig.eligible) {
@@ -144,6 +145,7 @@ export async function generateQuestions(
     attemptNumber,
     questions: JSON.stringify(questions),
     status: 'IN_PROGRESS',
+    ...(plataforma ? { plataforma } : {}),
   });
 
   return { attemptId, questions, attemptNumber };
