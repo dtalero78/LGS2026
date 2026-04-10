@@ -1407,25 +1407,25 @@ interface ConsentData {
 | Agenda Sesiones | `/dashboard/academic/agenda-sesiones` | ACADEMICO permissions |
 | Agenda Académica | `/dashboard/academic/agenda-academica` | ACADEMICO permissions |
 | Advisors | `/dashboard/academic/advisors` | ACADEMICO.ADVISOR permissions |
-| Asistencia - Sesiones & Jumps | `/dashboard/informes/asistencia/sesiones-clubes` | ACADEMICO.INFORMES.ASISTENCIA |
-| Asistencia - Clubes (Training + Clubs) | `/dashboard/informes/asistencia/clubes` | ACADEMICO.INFORMES.ASISTENCIA |
-| Asistencia - Complementarias | `/dashboard/informes/asistencia/complementarias` | ACADEMICO.INFORMES.ASISTENCIA |
-| Asistencia - Welcome Session | `/dashboard/informes/asistencia/welcome-session` | ACADEMICO.INFORMES.ASISTENCIA |
-| Asistencia - X País | `/dashboard/informes/asistencia/x-pais` | ACADEMICO.INFORMES.ASISTENCIA |
-| Programación - Sesiones | `/dashboard/informes/sesiones/programadas` | ACADEMICO.INFORMES.PROGRAMACION |
-| Programación - Clubes | `/dashboard/informes/sesiones/clubes` | ACADEMICO.INFORMES.PROGRAMACION |
-| Programación - Welcome | `/dashboard/informes/sesiones/welcome` | ACADEMICO.INFORMES.PROGRAMACION |
-| Advisors - Sesiones | `/dashboard/informes/advisors/sesiones` | ACADEMICO.INFORMES.ADVISORS |
-| Advisors - Jumps | `/dashboard/informes/advisors/jumps` | ACADEMICO.INFORMES.ADVISORS |
-| Advisors - Training | `/dashboard/informes/advisors/training` | ACADEMICO.INFORMES.ADVISORS |
-| Advisors - Clubes | `/dashboard/informes/advisors/clubes` | ACADEMICO.INFORMES.ADVISORS |
-| Advisors - Welcome | `/dashboard/informes/advisors/welcome` | ACADEMICO.INFORMES.ADVISORS |
-| Advisors - Resumen | `/dashboard/informes/advisors/resumen` | ACADEMICO.INFORMES.ADVISORS |
-| Usuarios | `/dashboard/informes/usuarios` | ACADEMICO.INFORMES.USUARIOS |
-| Contratos | `/dashboard/informes/contratos` | ACADEMICO.INFORMES.CONTRATOS |
-| Planta - Advisors | `/dashboard/informes/planta/advisors` | ACADEMICO.INFORMES.PLANTA |
-| Planta - Administrativos | `/dashboard/informes/planta/administrativos` | ACADEMICO.INFORMES.PLANTA |
-| Estadísticas | `/dashboard/informes/estadisticas` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Asistencia - Sesiones & Jumps | `/dashboard/informes/asistencia/sesiones-clubes` | INFORMES.ASISTENCIA |
+| Asistencia - Clubes (Training + Clubs) | `/dashboard/informes/asistencia/clubes` | INFORMES.ASISTENCIA |
+| Asistencia - Complementarias | `/dashboard/informes/asistencia/complementarias` | INFORMES.ASISTENCIA |
+| Asistencia - Welcome Session | `/dashboard/informes/asistencia/welcome-session` | INFORMES.ASISTENCIA |
+| Asistencia - X País | `/dashboard/informes/asistencia/x-pais` | INFORMES.ASISTENCIA |
+| Programación - Sesiones | `/dashboard/informes/sesiones/programadas` | INFORMES.PROGRAMACION |
+| Programación - Clubes | `/dashboard/informes/sesiones/clubes` | INFORMES.PROGRAMACION |
+| Programación - Welcome | `/dashboard/informes/sesiones/welcome` | INFORMES.PROGRAMACION |
+| Advisors - Sesiones | `/dashboard/informes/advisors/sesiones` | INFORMES.ADVISORS |
+| Advisors - Jumps | `/dashboard/informes/advisors/jumps` | INFORMES.ADVISORS |
+| Advisors - Training | `/dashboard/informes/advisors/training` | INFORMES.ADVISORS |
+| Advisors - Clubes | `/dashboard/informes/advisors/clubes` | INFORMES.ADVISORS |
+| Advisors - Welcome | `/dashboard/informes/advisors/welcome` | INFORMES.ADVISORS |
+| Advisors - Resumen | `/dashboard/informes/advisors/resumen` | INFORMES.ADVISORS |
+| Usuarios | `/dashboard/informes/usuarios` | INFORMES.USUARIOS |
+| Contratos | `/dashboard/informes/contratos` | INFORMES.CONTRATOS |
+| Planta - Advisors | `/dashboard/informes/planta/advisors` | INFORMES.PLANTA |
+| Planta - Administrativos | `/dashboard/informes/planta/administrativos` | INFORMES.PLANTA |
+| Estadísticas | `/dashboard/informes/estadisticas` | INFORMES.ESTADISTICAS |
 | Welcome Session | `/dashboard/servicio/welcome-session` | SERVICIO permissions |
 | Servicio Main | `/dashboard/servicio` | SERVICIO permissions |
 | Lista Sesiones | `/dashboard/servicio/lista-sesiones` | SERVICIO permissions |
@@ -1643,6 +1643,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `d5f6716` | feat: extraer Informes de módulo Académico — nuevo InformesPermission enum (INFORMES.*), Module.INFORMES, middleware rutas /dashboard/informes/*, ROL_PERMISOS renombrado en PostgreSQL; VALID_PERMISSIONS actualizado |
 | `96e7f24` | feat: permisos granulares por grupo de Informes — 7 nuevos permisos (INFORMES_ASISTENCIA, INFORMES_PROGRAMACION, INFORMES_ADVISORS, INFORMES_USUARIOS, INFORMES_CONTRATOS, INFORMES_PLANTA, INFORMES_ESTADISTICAS); visibles en matriz /admin/permissions; ROL_PERMISOS actualizado para SUPER_ADMIN y ADMIN |
 | `e628c86` | feat: sidebar Informes — grupo 'Sesiones' renombrado a 'Programación' (Sesiones, Clubes, Welcome); nuevo grupo 'Advisors' con 6 ítems (Sesiones, Jumps, Training, Clubes, Welcome, Resumen); todos abren en nueva pestaña con permiso VER_INFORMES |
 | `a47f65d` | feat: dblgs — filtros nulo/vacío (botón ∅) y rangos de fecha (date pickers Desde/Hasta) en fila de filtros; backend buildWhereClause maneja __gte/__lte y __NULL__/__EMPTY__ sentinels |
