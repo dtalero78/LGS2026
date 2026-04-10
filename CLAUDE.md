@@ -1412,8 +1412,15 @@ interface ConsentData {
 | Asistencia - Complementarias | `/dashboard/informes/asistencia/complementarias` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
 | Asistencia - Welcome Session | `/dashboard/informes/asistencia/welcome-session` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
 | Asistencia - X País | `/dashboard/informes/asistencia/x-pais` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
-| Sesiones - Programadas | `/dashboard/informes/sesiones/programadas` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
-| Sesiones - Advisor | `/dashboard/informes/sesiones/advisor` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Programación - Sesiones | `/dashboard/informes/sesiones/programadas` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Programación - Clubes | `/dashboard/informes/sesiones/clubes` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Programación - Welcome | `/dashboard/informes/sesiones/welcome` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Advisors - Sesiones | `/dashboard/informes/advisors/sesiones` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Advisors - Jumps | `/dashboard/informes/advisors/jumps` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Advisors - Training | `/dashboard/informes/advisors/training` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Advisors - Clubes | `/dashboard/informes/advisors/clubes` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Advisors - Welcome | `/dashboard/informes/advisors/welcome` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
+| Advisors - Resumen | `/dashboard/informes/advisors/resumen` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
 | Usuarios | `/dashboard/informes/usuarios` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
 | Contratos | `/dashboard/informes/contratos` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
 | Planta - Advisors | `/dashboard/informes/planta/advisors` | ACADEMICO.INFORMES permissions (sidebar group: Informes) |
@@ -1636,6 +1643,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `e628c86` | feat: sidebar Informes — grupo 'Sesiones' renombrado a 'Programación' (Sesiones, Clubes, Welcome); nuevo grupo 'Advisors' con 6 ítems (Sesiones, Jumps, Training, Clubes, Welcome, Resumen); todos abren en nueva pestaña con permiso VER_INFORMES |
 | `a47f65d` | feat: dblgs — filtros nulo/vacío (botón ∅) y rangos de fecha (date pickers Desde/Hasta) en fila de filtros; backend buildWhereClause maneja __gte/__lte y __NULL__/__EMPTY__ sentinels |
 | `478773b` | feat: X País — donut por plataforma con tarjetas al extremo derecho — donut segmentado por país con paleta de 9 colores, leyenda País/Total/Métrica/% a la derecha, tarjetas inferiores alineadas a la derecha con valor+país+%, Complementarias muestra solo "Generadas" (asistieron), Jumps usa métrica aprobaron |
 | `e05dd40` | feat: Informe Asistencia X País — 6 secciones con desglose por plataforma: SESIONES (SESSION step 0-45 excl. ×5), JUMPS (SESSION ×5, aprobaron=asistio+participacion+!noAprobo), TRAINING (CLUB TRAINING-Step), CLUBES (CLUB GRAMMAR/LISTENING/KARAOKE/PRONUNCIATION/CONVERSATION), WELCOME (nivel=WELCOME), COMPLEMENTARIAS (tipo=COMPLEMENTARIA); panel izquierdo RESUMEN; API `/api/postgres/reports/asistencia/x-pais` con 6 queries paralelas sobre ACADEMICA_BOOKINGS filtradas por fechaEvento |
