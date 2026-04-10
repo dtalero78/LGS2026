@@ -86,17 +86,19 @@ export default function HorariosPage() {
   const [endDate, setEndDate]     = useState(today)
   const [data, setData]           = useState<HorariosResponse | null>(null)
   const [loading, setLoading]     = useState(true)
+  // Detecta la zona horaria local del navegador del usuario (IANA, ej: "America/Santiago")
+  const [clientTz] = useState<string>(() => Intl.DateTimeFormat().resolvedOptions().timeZone)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const qs  = new URLSearchParams({ startDate, endDate })
+      const qs  = new URLSearchParams({ startDate, endDate, tz: clientTz })
       const res = await fetch(`/api/postgres/reports/estadisticas/horarios?${qs}`)
       const json = await res.json()
       if (json.success) setData(json)
     } catch (e) { console.error(e) }
     finally     { setLoading(false) }
-  }, [startDate, endDate])
+  }, [startDate, endDate, clientTz])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -159,7 +161,8 @@ export default function HorariosPage() {
         <div>
           <h1 className="text-xl font-bold text-gray-900">Horarios de Agendamiento</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Análisis de cuándo los estudiantes realizan sus reservas · Horario Colombia / Ecuador (UTC-5)
+            Análisis de cuándo los estudiantes realizan sus reservas ·{' '}
+            <span className="font-medium text-blue-600">{clientTz}</span>
           </p>
         </div>
 
@@ -467,7 +470,9 @@ export default function HorariosPage() {
           Los registros migrados de Wix no tienen fecha de agendamiento confiable y se excluyen.
           Se excluyen sesiones de tipo <code className="bg-blue-100 px-1 rounded">COMPLEMENTARIA</code> y
           nivel <code className="bg-blue-100 px-1 rounded">WELCOME</code>, y agendamientos fuera del horario
-          operativo <code className="bg-blue-100 px-1 rounded">06:00–22:00</code> (hora Colombia/Ecuador UTC-5).
+          operativo <code className="bg-blue-100 px-1 rounded">06:00–22:00</code>.
+          Todos los horarios se muestran en la zona horaria de su navegador:{' '}
+          <code className="bg-blue-100 px-1 rounded font-semibold">{clientTz}</code>.
         </div>
 
       </div>
