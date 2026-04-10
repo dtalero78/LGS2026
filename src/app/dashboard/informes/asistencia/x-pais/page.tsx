@@ -30,8 +30,8 @@ const COLORS = [
 const color = (i: number) => COLORS[i % COLORS.length]
 
 // ── Donut + Legend by platform ─────────────────────────────────────────
-function PlatDonut({ rows, metricKey = 'asistieron', metricLabel = 'Asist.' }: {
-  rows: PlatRow[]; metricKey?: string; metricLabel?: string
+function PlatDonut({ rows, metricKey = 'asistieron', metricLabel = 'Asist.', hideAbsences = false }: {
+  rows: PlatRow[]; metricKey?: string; metricLabel?: string; hideAbsences?: boolean
 }) {
   const metric = (r: PlatRow) => (r as any)[metricKey] ?? 0
   const totalMetric = rows.reduce((s, r) => s + metric(r), 0)
@@ -74,8 +74,8 @@ function PlatDonut({ rows, metricKey = 'asistieron', metricLabel = 'Asist.' }: {
                   <th className="text-left font-medium pb-1.5 pr-2">País</th>
                   <th className="text-right font-medium pb-1.5 pr-2">Total</th>
                   <th className="text-right font-medium pb-1.5 pr-2">{metricLabel}</th>
-                  <th className="text-right font-medium pb-1.5 pr-2">Inasist.</th>
-                  <th className="text-right font-medium pb-1.5 pr-2">Cancel.</th>
+                  {!hideAbsences && <th className="text-right font-medium pb-1.5 pr-2">Inasist.</th>}
+                  {!hideAbsences && <th className="text-right font-medium pb-1.5 pr-2">Cancel.</th>}
                   <th className="text-right font-medium pb-1.5">%</th>
                 </tr>
               </thead>
@@ -94,8 +94,8 @@ function PlatDonut({ rows, metricKey = 'asistieron', metricLabel = 'Asist.' }: {
                       </td>
                       <td className="py-1.5 pr-2 text-right text-gray-500">{row.total.toLocaleString()}</td>
                       <td className="py-1.5 pr-2 text-right font-bold" style={{ color: color(i) }}>{val.toLocaleString()}</td>
-                      <td className="py-1.5 pr-2 text-right font-medium text-orange-500">{inasist.toLocaleString()}</td>
-                      <td className="py-1.5 pr-2 text-right text-gray-400">{(row.cancelaron ?? 0).toLocaleString()}</td>
+                      {!hideAbsences && <td className="py-1.5 pr-2 text-right font-medium text-orange-500">{inasist.toLocaleString()}</td>}
+                      {!hideAbsences && <td className="py-1.5 pr-2 text-right text-gray-400">{(row.cancelaron ?? 0).toLocaleString()}</td>}
                       <td className="py-1.5 text-right font-semibold text-gray-600">{pct}%</td>
                     </tr>
                   )
@@ -165,7 +165,7 @@ function SectionCard({ title, subtitle, section, metricKey = 'asistieron', metri
         {loading && <span className="text-xs text-gray-400 animate-pulse">Cargando...</span>}
       </div>
 
-      <PlatDonut rows={section.porPlataforma} metricKey={metricKey} metricLabel={metricLabel} />
+      <PlatDonut rows={section.porPlataforma} metricKey={metricKey} metricLabel={metricLabel} hideAbsences={isComplementaria} />
 
       {isComplementaria ? (
         <div className="mt-4 flex justify-end">
