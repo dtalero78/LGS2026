@@ -146,6 +146,27 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
     'COMERCIAL.PROSPECTOS.VER' as Permission,
   ],
 
+  // Informes — rutas específicas por grupo
+  '/dashboard/informes/asistencia/sesiones-clubes': ['INFORMES.ASISTENCIA' as Permission],
+  '/dashboard/informes/asistencia/clubes': ['INFORMES.ASISTENCIA' as Permission],
+  '/dashboard/informes/asistencia/complementarias': ['INFORMES.ASISTENCIA' as Permission],
+  '/dashboard/informes/asistencia/welcome-session': ['INFORMES.ASISTENCIA' as Permission],
+  '/dashboard/informes/asistencia/x-pais': ['INFORMES.ASISTENCIA' as Permission],
+  '/dashboard/informes/sesiones/programadas': ['INFORMES.PROGRAMACION' as Permission],
+  '/dashboard/informes/sesiones/clubes': ['INFORMES.PROGRAMACION' as Permission],
+  '/dashboard/informes/sesiones/welcome': ['INFORMES.PROGRAMACION' as Permission],
+  '/dashboard/informes/advisors/sesiones': ['INFORMES.ADVISORS' as Permission],
+  '/dashboard/informes/advisors/jumps': ['INFORMES.ADVISORS' as Permission],
+  '/dashboard/informes/advisors/training': ['INFORMES.ADVISORS' as Permission],
+  '/dashboard/informes/advisors/clubes': ['INFORMES.ADVISORS' as Permission],
+  '/dashboard/informes/advisors/welcome': ['INFORMES.ADVISORS' as Permission],
+  '/dashboard/informes/advisors/resumen': ['INFORMES.ADVISORS' as Permission],
+  '/dashboard/informes/usuarios': ['INFORMES.USUARIOS' as Permission],
+  '/dashboard/informes/contratos': ['INFORMES.CONTRATOS' as Permission],
+  '/dashboard/informes/planta/advisors': ['INFORMES.PLANTA' as Permission],
+  '/dashboard/informes/planta/administrativos': ['INFORMES.PLANTA' as Permission],
+  '/dashboard/informes/estadisticas': ['INFORMES.ESTADISTICAS' as Permission],
+
   // Aprobación
   '/dashboard/aprobacion': [
     'APROBACION.MODIFICAR.ACTUALIZAR' as Permission,
@@ -202,6 +223,20 @@ export const GENERIC_ROUTE_ACCESS: Record<string, Permission[]> = {
     'COMERCIAL.CONTRATO.DESCARGAR' as Permission,
     'COMERCIAL.CONTRATO.APROBACION_AUTONOMA' as Permission,
     'COMERCIAL.PROSPECTOS.VER' as Permission,
+  ],
+
+  '/dashboard/informes': [
+    // Cualquier permiso INFORMES.* da acceso a la sección
+    'INFORMES.VER' as Permission,
+    'INFORMES.BENEFICIARIOS' as Permission,
+    'INFORMES.EXPORTAR' as Permission,
+    'INFORMES.ASISTENCIA' as Permission,
+    'INFORMES.PROGRAMACION' as Permission,
+    'INFORMES.ADVISORS' as Permission,
+    'INFORMES.USUARIOS' as Permission,
+    'INFORMES.CONTRATOS' as Permission,
+    'INFORMES.PLANTA' as Permission,
+    'INFORMES.ESTADISTICAS' as Permission,
   ],
 };
 
