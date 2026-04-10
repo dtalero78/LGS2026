@@ -21,6 +21,7 @@ export const GET = handler(async (req) => {
     AND "origen" IN ('PANEL_EST', 'POSTGRES', 'COMP')
     AND COALESCE("tipo", "tipoEvento", '') NOT IN ('COMPLEMENTARIA', 'WELCOME')
     AND COALESCE("nivel", '') != 'WELCOME'
+    AND EXTRACT(HOUR FROM "fechaAgendamiento" AT TIME ZONE 'America/Bogota') BETWEEN 6 AND 22
   `
 
   const [porHora, porDia, heatmap, porPlataforma] = await Promise.all([

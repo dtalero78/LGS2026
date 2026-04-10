@@ -101,7 +101,8 @@ export default function HorariosPage() {
   useEffect(() => { fetchData() }, [fetchData])
 
   // ── Derived data ──────────────────────────────────────────────────────
-  const horaChart = Array.from({ length: 24 }, (_, h) => {
+  const horaChart = Array.from({ length: 17 }, (_, i) => {
+    const h   = i + 6  // 06 → 22
     const row = data?.porHora.find(r => r.hora === h)
     return { hora: `${h.toString().padStart(2, '0')}:00`, total: row?.total ?? 0 }
   })
@@ -237,7 +238,7 @@ export default function HorariosPage() {
               <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
                 Distribución por Hora del Día
               </h3>
-              <p className="text-xs text-gray-400 mt-0.5">Cantidad de agendamientos por hora (00:00 – 23:00)</p>
+              <p className="text-xs text-gray-400 mt-0.5">Cantidad de agendamientos por hora (06:00 – 22:00)</p>
             </div>
             {loading && <span className="text-xs text-gray-400 animate-pulse">Cargando...</span>}
           </div>
@@ -464,9 +465,9 @@ export default function HorariosPage() {
           el panel administrativo (<code className="bg-blue-100 px-1 rounded">POSTGRES</code>) y
           actividades complementarias (<code className="bg-blue-100 px-1 rounded">COMP</code>).
           Los registros migrados de Wix no tienen fecha de agendamiento confiable y se excluyen.
-          Se excluyen también sesiones de tipo <code className="bg-blue-100 px-1 rounded">COMPLEMENTARIA</code> y
-          nivel <code className="bg-blue-100 px-1 rounded">WELCOME</code>.
-          Todos los horarios están en zona horaria Colombia / Ecuador (UTC-5).
+          Se excluyen sesiones de tipo <code className="bg-blue-100 px-1 rounded">COMPLEMENTARIA</code> y
+          nivel <code className="bg-blue-100 px-1 rounded">WELCOME</code>, y agendamientos fuera del horario
+          operativo <code className="bg-blue-100 px-1 rounded">06:00–22:00</code> (hora Colombia/Ecuador UTC-5).
         </div>
 
       </div>
