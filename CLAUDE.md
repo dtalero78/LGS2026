@@ -1425,7 +1425,8 @@ interface ConsentData {
 | Contratos | `/dashboard/informes/contratos` | INFORMES.CONTRATOS |
 | Planta - Advisors | `/dashboard/informes/planta/advisors` | INFORMES.PLANTA |
 | Planta - Administrativos | `/dashboard/informes/planta/administrativos` | INFORMES.PLANTA |
-| Estadísticas | `/dashboard/informes/estadisticas` | INFORMES.ESTADISTICAS |
+| Estadísticas - General | `/dashboard/informes/estadisticas` | INFORMES.ESTADISTICAS |
+| Estadísticas - Horarios | `/dashboard/informes/estadisticas/horarios` | INFORMES.ESTADISTICAS |
 | Welcome Session | `/dashboard/servicio/welcome-session` | SERVICIO permissions |
 | Servicio Main | `/dashboard/servicio` | SERVICIO permissions |
 | Lista Sesiones | `/dashboard/servicio/lista-sesiones` | SERVICIO permissions |
@@ -1643,6 +1644,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `local` | feat: Estadísticas - Horarios — nueva página `/dashboard/informes/estadisticas/horarios` con filtros de fecha; API `/api/postgres/reports/estadisticas/horarios` (4 queries paralelas: por hora, día semana, heatmap hora×día, por plataforma); Recharts BarChart + heatmap personalizado + barras horizontales por día; KPI cards (total, hora pico, día pico, país principal); sidebar Estadísticas convertido a submenu con General y Horarios |
 | `d5f6716` | feat: extraer Informes de módulo Académico — nuevo InformesPermission enum (INFORMES.*), Module.INFORMES, middleware rutas /dashboard/informes/*, ROL_PERMISOS renombrado en PostgreSQL; VALID_PERMISSIONS actualizado |
 | `96e7f24` | feat: permisos granulares por grupo de Informes — 7 nuevos permisos (INFORMES_ASISTENCIA, INFORMES_PROGRAMACION, INFORMES_ADVISORS, INFORMES_USUARIOS, INFORMES_CONTRATOS, INFORMES_PLANTA, INFORMES_ESTADISTICAS); visibles en matriz /admin/permissions; ROL_PERMISOS actualizado para SUPER_ADMIN y ADMIN |
 | `e628c86` | feat: sidebar Informes — grupo 'Sesiones' renombrado a 'Programación' (Sesiones, Clubes, Welcome); nuevo grupo 'Advisors' con 6 ítems (Sesiones, Jumps, Training, Clubes, Welcome, Resumen); todos abren en nueva pestaña con permiso VER_INFORMES |
