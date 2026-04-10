@@ -71,27 +71,32 @@ function PlatDonut({ rows, metricKey = 'asistieron', metricLabel = 'Asist.' }: {
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-gray-400 border-b border-gray-100">
-                  <th className="text-left font-medium pb-1.5 pr-3">País</th>
-                  <th className="text-right font-medium pb-1.5 pr-3">Total</th>
-                  <th className="text-right font-medium pb-1.5 pr-3">{metricLabel}</th>
+                  <th className="text-left font-medium pb-1.5 pr-2">País</th>
+                  <th className="text-right font-medium pb-1.5 pr-2">Total</th>
+                  <th className="text-right font-medium pb-1.5 pr-2">{metricLabel}</th>
+                  <th className="text-right font-medium pb-1.5 pr-2">Inasist.</th>
+                  <th className="text-right font-medium pb-1.5 pr-2">Cancel.</th>
                   <th className="text-right font-medium pb-1.5">%</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row, i) => {
-                  const val = metric(row)
-                  const pct = row.total > 0 ? ((val / row.total) * 100).toFixed(0) : '0'
+                  const val     = metric(row)
+                  const inasist = Math.max(0, row.total - row.asistieron - (row.cancelaron ?? 0))
+                  const pct     = row.total > 0 ? ((row.asistieron / row.total) * 100).toFixed(0) : '0'
                   return (
                     <tr key={row.plataforma} className="border-b border-gray-50 last:border-0">
-                      <td className="py-1.5 pr-3">
+                      <td className="py-1.5 pr-2">
                         <div className="flex items-center gap-1.5">
                           <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color(i) }} />
                           <span className="text-gray-700 font-medium">{row.plataforma}</span>
                         </div>
                       </td>
-                      <td className="py-1.5 pr-3 text-right text-gray-500">{row.total.toLocaleString()}</td>
-                      <td className="py-1.5 pr-3 text-right font-bold" style={{ color: color(i) }}>{val.toLocaleString()}</td>
-                      <td className="py-1.5 text-right text-gray-400">{pct}%</td>
+                      <td className="py-1.5 pr-2 text-right text-gray-500">{row.total.toLocaleString()}</td>
+                      <td className="py-1.5 pr-2 text-right font-bold" style={{ color: color(i) }}>{val.toLocaleString()}</td>
+                      <td className="py-1.5 pr-2 text-right font-medium text-orange-500">{inasist.toLocaleString()}</td>
+                      <td className="py-1.5 pr-2 text-right text-gray-400">{(row.cancelaron ?? 0).toLocaleString()}</td>
+                      <td className="py-1.5 text-right font-semibold text-gray-600">{pct}%</td>
                     </tr>
                   )
                 })}
@@ -203,21 +208,34 @@ export default function InformeXPaisPage() {
   const comp = data?.complementarias ?? { total: 0, asistieron: 0, cancelaron: 0, aprobaron: 0, noAprobaron: 0, porPlataforma: [] }
 
   const handleCSV = () => {
-    type Row = { sec: string; cat: string; v: number | string; p: string }
+    type Row = {
+      sec: string; pais: string; total: number | string
+      metrica: number | string; metricaLabel: string
+      inasist: number | string; cancel: number | string; pct: string
+    }
     const rows: Row[] = [
-      { sec: 'Filtros', cat: 'Fecha inicial', v: startDate, p: '' },
-      { sec: 'Filtros', cat: 'Fecha final',   v: endDate,   p: '' },
+      { sec: 'Filtros', pais: 'Fecha inicial', total: startDate, metrica: '', metricaLabel: '', inasist: '', cancel: '', pct: '' },
+      { sec: 'Filtros', pais: 'Fecha final',   total: endDate,   metrica: '', metricaLabel: '', inasist: '', cancel: '', pct: '' },
     ]
     const addSection = (label: string, s: Section, mKey: string, mLabel: string) => {
-      const mTotal = s.porPlataforma.reduce((acc, r) => acc + ((r as any)[mKey] ?? 0), 0)
-      rows.push({ sec: label, cat: mLabel, v: mTotal, p: '' })
-      s.porPlataforma.forEach((r, i) => {
-        const val = (r as any)[mKey] ?? 0
+      const totTotal   = s.porPlataforma.reduce((a, r) => a + r.total, 0)
+      const totMetrica = s.porPlataforma.reduce((a, r) => a + ((r as any)[mKey] ?? 0), 0)
+      const totAsist   = s.porPlataforma.reduce((a, r) => a + r.asistieron, 0)
+      const totCancel  = s.porPlataforma.reduce((a, r) => a + (r.cancelaron ?? 0), 0)
+      const totInasist = Math.max(0, totTotal - totAsist - totCancel)
+      rows.push({
+        sec: label, pais: 'TOTAL', total: totTotal, metrica: totMetrica, metricaLabel: mLabel,
+        inasist: totInasist, cancel: totCancel,
+        pct: totTotal > 0 ? `${((totAsist / totTotal) * 100).toFixed(1)}%` : '0%',
+      })
+      s.porPlataforma.forEach(r => {
+        const val     = (r as any)[mKey] ?? 0
+        const inasist = Math.max(0, r.total - r.asistieron - (r.cancelaron ?? 0))
         rows.push({
-          sec: `${label} — ${r.plataforma}`,
-          cat: mLabel,
-          v: val,
-          p: r.total > 0 ? `${((val / r.total) * 100).toFixed(1)}%` : '0%',
+          sec: label, pais: r.plataforma, total: r.total,
+          metrica: val, metricaLabel: mLabel,
+          inasist, cancel: r.cancelaron ?? 0,
+          pct: r.total > 0 ? `${((r.asistieron / r.total) * 100).toFixed(1)}%` : '0%',
         })
       })
     }
@@ -228,10 +246,13 @@ export default function InformeXPaisPage() {
     addSection('WELCOME',         wel,  'asistieron', 'Asistieron')
     addSection('COMPLEMENTARIAS', comp, 'asistieron', 'Generadas')
     exportToExcel(rows, [
-      { header: 'Sección',    accessor: r => r.sec },
-      { header: 'Categoría',  accessor: r => r.cat },
-      { header: 'Cantidad',   accessor: r => r.v },
-      { header: 'Porcentaje', accessor: r => r.p },
+      { header: 'Sección',        accessor: r => r.sec           },
+      { header: 'País',           accessor: r => r.pais          },
+      { header: 'Total',          accessor: r => r.total         },
+      { header: 'Métrica',        accessor: r => r.metrica       },
+      { header: 'Inasistencias',  accessor: r => r.inasist       },
+      { header: 'Canceladas',     accessor: r => r.cancel        },
+      { header: '% Asistencia',   accessor: r => r.pct           },
     ], `asistencia-x-pais_${startDate}_${endDate}`)
   }
 
