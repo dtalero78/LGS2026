@@ -90,9 +90,20 @@ const getNavigation = (userEmail: string) => [
         ]
       },
       {
-        name: 'Sesiones', isSubmenu: true, children: [
-          { name: 'Programadas', href: '/dashboard/informes/sesiones/programadas', newTab: true },
-          { name: 'Advisor', href: '/dashboard/informes/sesiones/advisor', newTab: true },
+        name: 'Programación', isSubmenu: true, children: [
+          { name: 'Sesiones', href: '/dashboard/informes/sesiones/programadas', newTab: true },
+          { name: 'Clubes', href: '/dashboard/informes/sesiones/clubes', newTab: true },
+          { name: 'Welcome', href: '/dashboard/informes/sesiones/welcome', newTab: true },
+        ]
+      },
+      {
+        name: 'Advisors', isSubmenu: true, children: [
+          { name: 'Sesiones', href: '/dashboard/informes/advisors/sesiones', newTab: true },
+          { name: 'Jumps', href: '/dashboard/informes/advisors/jumps', newTab: true },
+          { name: 'Training', href: '/dashboard/informes/advisors/training', newTab: true },
+          { name: 'Clubes', href: '/dashboard/informes/advisors/clubes', newTab: true },
+          { name: 'Welcome', href: '/dashboard/informes/advisors/welcome', newTab: true },
+          { name: 'Resumen', href: '/dashboard/informes/advisors/resumen', newTab: true },
         ]
       },
       { name: 'Usuarios', href: '/dashboard/informes/usuarios', newTab: true },
@@ -173,6 +184,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/dashboard/informes/asistencia/x-pais': [AcademicoPermission.VER_INFORMES],
     '/dashboard/informes/sesiones/programadas': [AcademicoPermission.VER_INFORMES],
     '/dashboard/informes/sesiones/advisor': [AcademicoPermission.VER_INFORMES],
+    '/dashboard/informes/sesiones/clubes': [AcademicoPermission.VER_INFORMES],
+    '/dashboard/informes/sesiones/welcome': [AcademicoPermission.VER_INFORMES],
+    '/dashboard/informes/advisors/sesiones': [AcademicoPermission.VER_INFORMES],
+    '/dashboard/informes/advisors/jumps': [AcademicoPermission.VER_INFORMES],
+    '/dashboard/informes/advisors/training': [AcademicoPermission.VER_INFORMES],
+    '/dashboard/informes/advisors/clubes': [AcademicoPermission.VER_INFORMES],
+    '/dashboard/informes/advisors/welcome': [AcademicoPermission.VER_INFORMES],
+    '/dashboard/informes/advisors/resumen': [AcademicoPermission.VER_INFORMES],
     '/dashboard/informes/usuarios': [AcademicoPermission.VER_INFORMES],
     '/dashboard/informes/contratos': [AcademicoPermission.VER_INFORMES],
     '/dashboard/informes/planta/advisors': [AcademicoPermission.VER_INFORMES],
