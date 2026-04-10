@@ -464,6 +464,8 @@ export default function HorariosPage() {
           el panel administrativo (<code className="bg-blue-100 px-1 rounded">POSTGRES</code>) y
           actividades complementarias (<code className="bg-blue-100 px-1 rounded">COMP</code>).
           Los registros migrados de Wix no tienen fecha de agendamiento confiable y se excluyen.
+          Se excluyen también sesiones de tipo <code className="bg-blue-100 px-1 rounded">COMPLEMENTARIA</code> y
+          nivel <code className="bg-blue-100 px-1 rounded">WELCOME</code>.
           Todos los horarios están en zona horaria Colombia / Ecuador (UTC-5).
         </div>
 
