@@ -83,7 +83,7 @@ function PlatDonut({ rows, metricKey = 'asistieron', metricLabel = 'Asist.' }: {
                 {rows.map((row, i) => {
                   const val     = metric(row)
                   const inasist = Math.max(0, row.total - row.asistieron - (row.cancelaron ?? 0))
-                  const pct     = row.total > 0 ? ((row.asistieron / row.total) * 100).toFixed(0) : '0'
+                  const pct     = totalMetric > 0 ? ((val / totalMetric) * 100).toFixed(0) : '0'
                   return (
                     <tr key={row.plataforma} className="border-b border-gray-50 last:border-0">
                       <td className="py-1.5 pr-2">
@@ -114,11 +114,12 @@ function PlatCards({ rows, metricKey = 'asistieron' }: {
   rows: PlatRow[]; metricKey?: string
 }) {
   if (!rows.length) return null
+  const totalMetric = rows.reduce((s, r) => s + ((r as any)[metricKey] ?? 0), 0)
   return (
     <div className="mt-4 flex justify-end flex-wrap gap-2">
       {rows.map((row, i) => {
         const val = (row as any)[metricKey] ?? 0
-        const pct = row.total > 0 ? ((val / row.total) * 100).toFixed(0) : '0'
+        const pct = totalMetric > 0 ? ((val / totalMetric) * 100).toFixed(0) : '0'
         return (
           <div key={row.plataforma} className="rounded-lg px-3 py-2 text-center min-w-[86px]"
             style={{ backgroundColor: color(i) + '18' }}>
@@ -218,15 +219,14 @@ export default function InformeXPaisPage() {
       { sec: 'Filtros', pais: 'Fecha final',   total: endDate,   metrica: '', metricaLabel: '', inasist: '', cancel: '', pct: '' },
     ]
     const addSection = (label: string, s: Section, mKey: string, mLabel: string) => {
-      const totTotal   = s.porPlataforma.reduce((a, r) => a + r.total, 0)
-      const totMetrica = s.porPlataforma.reduce((a, r) => a + ((r as any)[mKey] ?? 0), 0)
-      const totAsist   = s.porPlataforma.reduce((a, r) => a + r.asistieron, 0)
-      const totCancel  = s.porPlataforma.reduce((a, r) => a + (r.cancelaron ?? 0), 0)
-      const totInasist = Math.max(0, totTotal - totAsist - totCancel)
+      const totTotal    = s.porPlataforma.reduce((a, r) => a + r.total, 0)
+      const totMetrica  = s.porPlataforma.reduce((a, r) => a + ((r as any)[mKey] ?? 0), 0)
+      const totAsist    = s.porPlataforma.reduce((a, r) => a + r.asistieron, 0)
+      const totCancel   = s.porPlataforma.reduce((a, r) => a + (r.cancelaron ?? 0), 0)
+      const totInasist  = Math.max(0, totTotal - totAsist - totCancel)
       rows.push({
         sec: label, pais: 'TOTAL', total: totTotal, metrica: totMetrica, metricaLabel: mLabel,
-        inasist: totInasist, cancel: totCancel,
-        pct: totTotal > 0 ? `${((totAsist / totTotal) * 100).toFixed(1)}%` : '0%',
+        inasist: totInasist, cancel: totCancel, pct: '100%',
       })
       s.porPlataforma.forEach(r => {
         const val     = (r as any)[mKey] ?? 0
@@ -235,7 +235,7 @@ export default function InformeXPaisPage() {
           sec: label, pais: r.plataforma, total: r.total,
           metrica: val, metricaLabel: mLabel,
           inasist, cancel: r.cancelaron ?? 0,
-          pct: r.total > 0 ? `${((r.asistieron / r.total) * 100).toFixed(1)}%` : '0%',
+          pct: totMetrica > 0 ? `${((val / totMetrica) * 100).toFixed(1)}%` : '0%',
         })
       })
     }
