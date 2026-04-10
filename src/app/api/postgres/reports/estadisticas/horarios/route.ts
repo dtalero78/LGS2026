@@ -19,6 +19,8 @@ export const GET = handler(async (req) => {
     AND "fechaAgendamiento" < ($2::date + INTERVAL '1 day')
     AND ("cancelo" IS NULL OR "cancelo" = false)
     AND "origen" IN ('PANEL_EST', 'POSTGRES', 'COMP')
+    AND COALESCE("tipo", "tipoEvento", '') NOT IN ('COMPLEMENTARIA', 'WELCOME')
+    AND COALESCE("nivel", '') != 'WELCOME'
   `
 
   const [porHora, porDia, heatmap, porPlataforma] = await Promise.all([
