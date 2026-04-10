@@ -165,7 +165,8 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/dashboard/informes/contratos': ['INFORMES.CONTRATOS' as Permission],
   '/dashboard/informes/planta/advisors': ['INFORMES.PLANTA' as Permission],
   '/dashboard/informes/planta/administrativos': ['INFORMES.PLANTA' as Permission],
-  '/dashboard/informes/estadisticas': ['INFORMES.ESTADISTICAS' as Permission],
+  '/dashboard/informes/estadisticas':          ['INFORMES.ESTADISTICAS' as Permission],
+  '/dashboard/informes/estadisticas/horarios': ['INFORMES.ESTADISTICAS' as Permission],
 
   // Aprobación
   '/dashboard/aprobacion': [

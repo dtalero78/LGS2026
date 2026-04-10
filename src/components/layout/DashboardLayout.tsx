@@ -114,7 +114,12 @@ const getNavigation = (userEmail: string) => [
           { name: 'Administrativos', href: '/dashboard/informes/planta/administrativos', newTab: true },
         ]
       },
-      { name: 'Estadísticas', href: '/dashboard/informes/estadisticas', newTab: true },
+      {
+        name: 'Estadísticas', isSubmenu: true, children: [
+          { name: 'General',  href: '/dashboard/informes/estadisticas',         newTab: true },
+          { name: 'Horarios', href: '/dashboard/informes/estadisticas/horarios', newTab: true },
+        ]
+      },
     ],
   },
   {
@@ -196,7 +201,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/dashboard/informes/contratos': [InformesPermission.CONTRATOS],
     '/dashboard/informes/planta/advisors': [InformesPermission.PLANTA],
     '/dashboard/informes/planta/administrativos': [InformesPermission.PLANTA],
-    '/dashboard/informes/estadisticas': [InformesPermission.ESTADISTICAS],
+    '/dashboard/informes/estadisticas':         [InformesPermission.ESTADISTICAS],
+    '/dashboard/informes/estadisticas/horarios': [InformesPermission.ESTADISTICAS],
 
     // Servicio
     '/dashboard/servicio/welcome-session': [
