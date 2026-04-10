@@ -207,7 +207,11 @@ function PanelEstudianteContent() {
                   <span className="text-xs text-primary-200 uppercase tracking-wide">Fecha</span>
                   <p className="text-sm font-medium">
                     {nextEventDate
-                      ? nextEventDate.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+                      ? nextEventDate.toLocaleString('es', {
+                          weekday: 'short', day: 'numeric', month: 'short',
+                          hour: '2-digit', minute: '2-digit',
+                          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                        })
                       : '---'}
                   </p>
                 </div>
