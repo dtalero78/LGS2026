@@ -22,7 +22,7 @@ import {
 import { cn } from '@/lib/utils'
 import SearchBar from '@/components/search/SearchBar'
 import { usePermissions } from '@/hooks/usePermissions'
-import { ServicioPermission, AcademicoPermission, ComercialPermission, AprobacionPermission, Permission } from '@/types/permissions'
+import { ServicioPermission, AcademicoPermission, InformesPermission, ComercialPermission, AprobacionPermission, Permission } from '@/types/permissions'
 
 const getNavigation = (userEmail: string) => [
   {
@@ -177,26 +177,26 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/panel-advisor': [
       AcademicoPermission.ADVISOR_VER_ENLACE,
     ],
-    '/dashboard/informes/asistencia/sesiones-clubes': [AcademicoPermission.INFORMES_ASISTENCIA],
-    '/dashboard/informes/asistencia/clubes': [AcademicoPermission.INFORMES_ASISTENCIA],
-    '/dashboard/informes/asistencia/complementarias': [AcademicoPermission.INFORMES_ASISTENCIA],
-    '/dashboard/informes/asistencia/welcome-session': [AcademicoPermission.INFORMES_ASISTENCIA],
-    '/dashboard/informes/asistencia/x-pais': [AcademicoPermission.INFORMES_ASISTENCIA],
-    '/dashboard/informes/sesiones/programadas': [AcademicoPermission.INFORMES_PROGRAMACION],
-    '/dashboard/informes/sesiones/advisor': [AcademicoPermission.INFORMES_PROGRAMACION],
-    '/dashboard/informes/sesiones/clubes': [AcademicoPermission.INFORMES_PROGRAMACION],
-    '/dashboard/informes/sesiones/welcome': [AcademicoPermission.INFORMES_PROGRAMACION],
-    '/dashboard/informes/advisors/sesiones': [AcademicoPermission.INFORMES_ADVISORS],
-    '/dashboard/informes/advisors/jumps': [AcademicoPermission.INFORMES_ADVISORS],
-    '/dashboard/informes/advisors/training': [AcademicoPermission.INFORMES_ADVISORS],
-    '/dashboard/informes/advisors/clubes': [AcademicoPermission.INFORMES_ADVISORS],
-    '/dashboard/informes/advisors/welcome': [AcademicoPermission.INFORMES_ADVISORS],
-    '/dashboard/informes/advisors/resumen': [AcademicoPermission.INFORMES_ADVISORS],
-    '/dashboard/informes/usuarios': [AcademicoPermission.INFORMES_USUARIOS],
-    '/dashboard/informes/contratos': [AcademicoPermission.INFORMES_CONTRATOS],
-    '/dashboard/informes/planta/advisors': [AcademicoPermission.INFORMES_PLANTA],
-    '/dashboard/informes/planta/administrativos': [AcademicoPermission.INFORMES_PLANTA],
-    '/dashboard/informes/estadisticas': [AcademicoPermission.INFORMES_ESTADISTICAS],
+    '/dashboard/informes/asistencia/sesiones-clubes': [InformesPermission.ASISTENCIA],
+    '/dashboard/informes/asistencia/clubes': [InformesPermission.ASISTENCIA],
+    '/dashboard/informes/asistencia/complementarias': [InformesPermission.ASISTENCIA],
+    '/dashboard/informes/asistencia/welcome-session': [InformesPermission.ASISTENCIA],
+    '/dashboard/informes/asistencia/x-pais': [InformesPermission.ASISTENCIA],
+    '/dashboard/informes/sesiones/programadas': [InformesPermission.PROGRAMACION],
+    '/dashboard/informes/sesiones/advisor': [InformesPermission.PROGRAMACION],
+    '/dashboard/informes/sesiones/clubes': [InformesPermission.PROGRAMACION],
+    '/dashboard/informes/sesiones/welcome': [InformesPermission.PROGRAMACION],
+    '/dashboard/informes/advisors/sesiones': [InformesPermission.ADVISORS],
+    '/dashboard/informes/advisors/jumps': [InformesPermission.ADVISORS],
+    '/dashboard/informes/advisors/training': [InformesPermission.ADVISORS],
+    '/dashboard/informes/advisors/clubes': [InformesPermission.ADVISORS],
+    '/dashboard/informes/advisors/welcome': [InformesPermission.ADVISORS],
+    '/dashboard/informes/advisors/resumen': [InformesPermission.ADVISORS],
+    '/dashboard/informes/usuarios': [InformesPermission.USUARIOS],
+    '/dashboard/informes/contratos': [InformesPermission.CONTRATOS],
+    '/dashboard/informes/planta/advisors': [InformesPermission.PLANTA],
+    '/dashboard/informes/planta/administrativos': [InformesPermission.PLANTA],
+    '/dashboard/informes/estadisticas': [InformesPermission.ESTADISTICAS],
 
     // Servicio
     '/dashboard/servicio/welcome-session': [
@@ -261,16 +261,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       AcademicoPermission.ESTADISTICA,
     ],
     'Informes': [
-      AcademicoPermission.VER_INFORMES,
-      AcademicoPermission.INFORME_BENEFICIARIOS,
-      AcademicoPermission.EXPORTAR_INFORMES,
-      AcademicoPermission.INFORMES_ASISTENCIA,
-      AcademicoPermission.INFORMES_PROGRAMACION,
-      AcademicoPermission.INFORMES_ADVISORS,
-      AcademicoPermission.INFORMES_USUARIOS,
-      AcademicoPermission.INFORMES_CONTRATOS,
-      AcademicoPermission.INFORMES_PLANTA,
-      AcademicoPermission.INFORMES_ESTADISTICAS,
+      InformesPermission.VER,
+      InformesPermission.BENEFICIARIOS,
+      InformesPermission.EXPORTAR,
+      InformesPermission.ASISTENCIA,
+      InformesPermission.PROGRAMACION,
+      InformesPermission.ADVISORS,
+      InformesPermission.USUARIOS,
+      InformesPermission.CONTRATOS,
+      InformesPermission.PLANTA,
+      InformesPermission.ESTADISTICAS,
     ],
     'Servicio': [
       // SERVICIO.WELCOME.*
