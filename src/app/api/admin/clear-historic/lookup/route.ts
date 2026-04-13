@@ -3,14 +3,13 @@ import { handlerWithAuth, successResponse } from '@/lib/api-helpers'
 import { queryOne, queryMany } from '@/lib/postgres'
 import { ForbiddenError, ValidationError } from '@/lib/errors'
 
-/** Run a count query and return 0 if the table doesn't exist */
+/** Run a count query — returns 0 on any error (missing table, missing column, etc.) */
 async function safeCount(sql: string, params: any[]): Promise<number> {
   try {
     const row = await queryOne<{ count: string }>(sql, params)
     return parseInt(row?.count ?? '0', 10)
   } catch (err: any) {
-    // Table might not exist in local dev — return 0 instead of crashing
-    console.warn('[clear-historic/lookup] safeCount error:', err.message)
+    console.warn('[clear-historic/lookup] safeCount:', err.message)
     return 0
   }
 }
@@ -28,30 +27,33 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     throw new ValidationError('numeroId es requerido')
   }
 
-  // Check PEOPLE
-  const peopleRows = await queryMany<{
-    _id: string
-    primerNombre: string
-    primerApellido: string
-    tipoUsuario: string
-  }>(
-    `SELECT "_id", "primerNombre", "primerApellido", "tipoUsuario"
-     FROM "PEOPLE"
-     WHERE "numeroId" = $1`,
-    [numeroId]
-  )
+  // ── PEOPLE ──────────────────────────────────────────────────────────
+  let peopleRows: { _id: string; primerNombre: string; primerApellido: string; tipoUsuario: string }[] = []
+  try {
+    peopleRows = await queryMany(
+      `SELECT "_id", "primerNombre", "primerApellido", "tipoUsuario"
+       FROM "PEOPLE"
+       WHERE "numeroId" = $1`,
+      [numeroId]
+    )
+  } catch (err: any) {
+    console.error('[clear-historic/lookup] PEOPLE query error:', err.message)
+    throw new ValidationError(`Error consultando PEOPLE: ${err.message}`)
+  }
 
-  // Check ACADEMICA
-  const academicaRows = await queryMany<{
-    _id: string
-    nivel: string
-    step: string
-  }>(
-    `SELECT "_id", "nivel", "step"
-     FROM "ACADEMICA"
-     WHERE "numeroId" = $1`,
-    [numeroId]
-  )
+  // ── ACADEMICA ────────────────────────────────────────────────────────
+  let academicaRows: { _id: string; nivel: string; step: string }[] = []
+  try {
+    academicaRows = await queryMany(
+      `SELECT "_id", "nivel", "step"
+       FROM "ACADEMICA"
+       WHERE "numeroId" = $1`,
+      [numeroId]
+    )
+  } catch (err: any) {
+    console.error('[clear-historic/lookup] ACADEMICA query error:', err.message)
+    throw new ValidationError(`Error consultando ACADEMICA: ${err.message}`)
+  }
 
   const inPeople = peopleRows.length > 0
   const inAcademica = academicaRows.length > 0
@@ -78,10 +80,9 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     .filter(Boolean)
     .join(' ')
 
-  // Collect all ACADEMICA _ids for this numeroId
   const academicaIds = academicaRows.map(r => r._id)
 
-  // Count ACADEMICA_BOOKINGS (excluding WELCOME)
+  // ── Counts (safe — 0 on error) ───────────────────────────────────────
   const bookingsCount = await safeCount(
     `SELECT COUNT(*)::text AS count
      FROM "ACADEMICA_BOOKINGS" ab
@@ -94,7 +95,6 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     [academicaIds]
   )
 
-  // Count COMPLEMENTARIA_ATTEMPTS
   const complementariaCount = await safeCount(
     `SELECT COUNT(*)::text AS count
      FROM "COMPLEMENTARIA_ATTEMPTS"
@@ -102,7 +102,6 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     [academicaIds]
   )
 
-  // Count STEP_OVERRIDES (studentId = ACADEMICA _id per CLAUDE.md)
   const stepOverridesCount = await safeCount(
     `SELECT COUNT(*)::text AS count
      FROM "STEP_OVERRIDES"
