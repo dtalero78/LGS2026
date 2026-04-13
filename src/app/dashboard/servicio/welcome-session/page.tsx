@@ -136,13 +136,10 @@ export default function WelcomeSessionPage() {
   }
 
   const handleRowClick = (event: WelcomeEvent) => {
-    console.log('🔍 Evento seleccionado:', event)
     if (event.idEstudiante) {
-      // Navegar directamente usando el idEstudiante (que es el _id del registro ACADEMICA)
-      console.log('🔗 Navegando a estudiante:', event.idEstudiante)
-      window.location.href = `/student/${event.idEstudiante}`
-    } else {
-      console.log('⚠️ No se encontró idEstudiante para el evento:', event.numeroId)
+      window.open(`/student/${event.idEstudiante}`, '_blank', 'noopener,noreferrer')
+    } else if (event._id) {
+      window.open(`/person/${event._id}`, '_blank', 'noopener,noreferrer')
     }
   }
 
