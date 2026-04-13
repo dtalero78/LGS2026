@@ -3,6 +3,18 @@ import { handlerWithAuth, successResponse } from '@/lib/api-helpers'
 import { queryOne, queryMany } from '@/lib/postgres'
 import { ForbiddenError, ValidationError } from '@/lib/errors'
 
+/** Run a count query and return 0 if the table doesn't exist */
+async function safeCount(sql: string, params: any[]): Promise<number> {
+  try {
+    const row = await queryOne<{ count: string }>(sql, params)
+    return parseInt(row?.count ?? '0', 10)
+  } catch (err: any) {
+    // Table might not exist in local dev — return 0 instead of crashing
+    console.warn('[clear-historic/lookup] safeCount error:', err.message)
+    return 0
+  }
+}
+
 export const GET = handlerWithAuth(async (req, session) => {
   if (session.user.role !== 'SUPER_ADMIN') {
     throw new ForbiddenError('Solo SUPER_ADMIN puede ejecutar operaciones de limpieza')
@@ -69,7 +81,7 @@ export const GET = handlerWithAuth(async (req, session) => {
   const academicaIds = academicaRows.map(r => r._id)
 
   // Count ACADEMICA_BOOKINGS (excluding WELCOME)
-  const bookingsCountRow = await queryOne<{ count: string }>(
+  const bookingsCount = await safeCount(
     `SELECT COUNT(*)::text AS count
      FROM "ACADEMICA_BOOKINGS" ab
      WHERE COALESCE(ab."studentId", ab."idEstudiante") = ANY($1::text[])
@@ -82,7 +94,7 @@ export const GET = handlerWithAuth(async (req, session) => {
   )
 
   // Count COMPLEMENTARIA_ATTEMPTS
-  const complementariaCountRow = await queryOne<{ count: string }>(
+  const complementariaCount = await safeCount(
     `SELECT COUNT(*)::text AS count
      FROM "COMPLEMENTARIA_ATTEMPTS"
      WHERE "studentId" = ANY($1::text[])`,
@@ -90,7 +102,7 @@ export const GET = handlerWithAuth(async (req, session) => {
   )
 
   // Count STEP_OVERRIDES (studentId = ACADEMICA _id per CLAUDE.md)
-  const stepOverridesCountRow = await queryOne<{ count: string }>(
+  const stepOverridesCount = await safeCount(
     `SELECT COUNT(*)::text AS count
      FROM "STEP_OVERRIDES"
      WHERE "studentId" = ANY($1::text[])`,
@@ -105,9 +117,9 @@ export const GET = handlerWithAuth(async (req, session) => {
     numeroId,
     academicaIds,
     counts: {
-      bookings: parseInt(bookingsCountRow?.count ?? '0', 10),
-      complementaria: parseInt(complementariaCountRow?.count ?? '0', 10),
-      stepOverrides: parseInt(stepOverridesCountRow?.count ?? '0', 10),
+      bookings: bookingsCount,
+      complementaria: complementariaCount,
+      stepOverrides: stepOverridesCount,
     },
   })
 })
