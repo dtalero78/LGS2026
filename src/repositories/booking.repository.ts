@@ -294,17 +294,34 @@ class BookingRepositoryClass extends BaseRepository {
    * Returns one row per student booking (not per event).
    */
   async findWelcomeBookings(startDate?: string, endDate?: string) {
-    const conditions = [`(COALESCE(ab."tipoEvento", ab."tipo") = 'WELCOME' OR c."tituloONivel" LIKE '%WELCOME%')`];
+    // Partimos desde ACADEMICA_BOOKINGS para incluir todos los bookings WELCOME,
+    // incluidos los históricos de Wix que no tienen enlace a CALENDARIO.
+    // LEFT JOIN a CALENDARIO en lugar de INNER JOIN para no perder esos registros.
+    const conditions = [
+      `(
+        COALESCE(ab."tipoEvento", ab."tipo") = 'WELCOME'
+        OR (c."tituloONivel" IS NOT NULL AND c."tituloONivel" ILIKE '%WELCOME%')
+        OR c."tipo" = 'WELCOME'
+        OR c."nivel" = 'WELCOME'
+        OR ab."nivel" = 'WELCOME'
+        OR (ab."tituloONivel" IS NOT NULL AND ab."tituloONivel" ILIKE '%WELCOME%')
+      )`,
+      `(ab."cancelo" IS NULL OR ab."cancelo" = false)`,
+    ];
     const params: any[] = [];
     let paramIdx = 1;
 
+    // Fecha se filtra por COALESCE(c."dia", ab."fechaEvento") para cubrir
+    // tanto bookings con CALENDARIO enlazado como los sin enlace.
     if (startDate) {
-      conditions.push(`c."dia" >= $${paramIdx}::timestamp`);
+      // ISO string con offset UTC enviado desde el cliente → inicio del día en hora local
+      conditions.push(`COALESCE(c."dia", ab."fechaEvento") >= $${paramIdx}::timestamptz`);
       params.push(startDate);
       paramIdx++;
     }
     if (endDate) {
-      conditions.push(`c."dia" < $${paramIdx}::timestamp`);
+      // ISO string con offset UTC enviado desde el cliente → fin del día en hora local (23:59:59)
+      conditions.push(`COALESCE(c."dia", ab."fechaEvento") <= $${paramIdx}::timestamptz`);
       params.push(endDate);
       paramIdx++;
     }
@@ -317,7 +334,7 @@ class BookingRepositoryClass extends BaseRepository {
          COALESCE(p."segundoNombre", a."segundoNombre", '') as "segundoNombre",
          COALESCE(p."segundoApellido", a."segundoApellido", '') as "segundoApellido",
          COALESCE(p."celular", a."celular", '') as "celular",
-         c."dia" as "fechaEvento",
+         COALESCE(c."dia", ab."fechaEvento") as "fechaEvento",
          ab."asistio" as "asistencia",
          COALESCE(p."numeroId", a."numeroId", '') as "numeroId",
          COALESCE(ab."studentId", ab."idEstudiante") as "idEstudiante",
@@ -325,12 +342,13 @@ class BookingRepositoryClass extends BaseRepository {
          ab."advisor",
          COALESCE(p."plataforma", a."plataforma", '') as "plataforma",
          COUNT(*) OVER (PARTITION BY COALESCE(ab."studentId", ab."idEstudiante")) as "totalSesionesWelcome"
-       FROM "CALENDARIO" c
-       INNER JOIN "ACADEMICA_BOOKINGS" ab ON c."_id" = COALESCE(ab."eventoId", ab."idEvento")
+       FROM "ACADEMICA_BOOKINGS" ab
+       LEFT JOIN "CALENDARIO" c ON c."_id" = COALESCE(ab."eventoId", ab."idEvento")
        LEFT JOIN "ACADEMICA" a ON COALESCE(ab."studentId", ab."idEstudiante") = a."_id"
        LEFT JOIN "PEOPLE" p ON a."numeroId" = p."numeroId"
+         AND (p."tipoUsuario" = 'BENEFICIARIO' OR p."tipoUsuario" = 'BENEFICIARIA')
        WHERE ${conditions.join(' AND ')}
-       ORDER BY c."dia" DESC, ab."primerApellido" ASC, ab."primerNombre" ASC`,
+       ORDER BY COALESCE(c."dia", ab."fechaEvento") ASC, ab."primerApellido" ASC, ab."primerNombre" ASC`,
       params
     );
   }

@@ -42,12 +42,14 @@ export default function WelcomeSessionPage() {
     try {
       // Build query params
       const params = new URLSearchParams()
-      if (startDate) params.set('startDate', startDate)
+      if (startDate) {
+        // Inicio del día seleccionado en la zona horaria local del cliente → convierte a UTC
+        params.set('startDate', new Date(startDate + 'T00:00:00').toISOString())
+      }
       if (endDate) {
-        // Add one day to endDate to include the full selected day (backend filters with <)
-        const endDateObj = new Date(endDate)
-        endDateObj.setDate(endDateObj.getDate() + 1)
-        params.set('endDate', endDateObj.toISOString().split('T')[0])
+        // Fin del día seleccionado en la zona horaria local del cliente → convierte a UTC
+        // Cubre eventos hasta las 23:59:59 hora local (ej: 8 PM Colombia = 01:00 UTC día siguiente)
+        params.set('endDate', new Date(endDate + 'T23:59:59').toISOString())
       }
       const qs = params.toString()
 
@@ -120,10 +122,10 @@ export default function WelcomeSessionPage() {
       return true
     })
     .sort((a, b) => {
-      // Ordenar por fecha más reciente primero (descendente)
+      // Ordenar por hora del evento: más temprano primero (ascendente)
       const dateA = new Date(a.fechaEvento).getTime()
       const dateB = new Date(b.fechaEvento).getTime()
-      return dateB - dateA
+      return dateA - dateB
     })
 
   console.log(`📊 Total eventos: ${welcomeEvents.length}, Filtrados: ${filteredEvents.length}`)
