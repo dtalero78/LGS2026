@@ -1644,6 +1644,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `local` | fix: Welcome Session — click en fila abre `/student/[idEstudiante]` en nueva pestaña; fallback a `/person/[_id]` si no tiene registro académico; usa `window.open(..., '_blank', 'noopener,noreferrer')` |
 | `8f134c3` | fix: panel-estudiante — `toLocaleDateString` → `toLocaleString` con `Intl.DateTimeFormat().resolvedOptions().timeZone`; la hora de la próxima clase ahora se muestra correctamente según el timezone del cliente; locale genérico `'es'` en lugar de hardcoded `'es-CO'` |
 | `884faeb` | feat: Horarios — timezone dinámico según zona horaria del cliente; frontend detecta `Intl.DateTimeFormat().resolvedOptions().timeZone` y lo envía como `?tz=`; API valida con regex IANA y usa `AT TIME ZONE tz` en los 4 queries; subtítulo muestra el tz detectado |
 | `b72a0ac` | fix: Horarios — filtrar horario operativo 06:00–22:00 en timezone del cliente; excluir COMPLEMENTARIA y WELCOME; chart x-axis solo muestra 17 barras (06–22) |
