@@ -1,0 +1,63 @@
+import 'server-only'
+import { handlerWithAuth, successResponse } from '@/lib/api-helpers'
+import { queryOne } from '@/lib/postgres'
+import { ForbiddenError, ValidationError } from '@/lib/errors'
+
+export const DELETE = handlerWithAuth(async (req, session) => {
+  if (session.user.role !== 'SUPER_ADMIN') {
+    throw new ForbiddenError('Solo SUPER_ADMIN puede ejecutar operaciones de limpieza')
+  }
+
+  const body = await req.json()
+  const { academicaIds, numeroId } = body as { academicaIds?: string[]; numeroId?: string }
+
+  if (!academicaIds || academicaIds.length === 0) {
+    throw new ValidationError('academicaIds es requerido')
+  }
+  if (!numeroId) {
+    throw new ValidationError('numeroId es requerido')
+  }
+
+  // Delete ACADEMICA_BOOKINGS (excluding WELCOME records)
+  const bookingsResult = await queryOne<{ count: string }>(
+    `WITH del AS (
+      DELETE FROM "ACADEMICA_BOOKINGS"
+      WHERE COALESCE("studentId", "idEstudiante") = ANY($1::text[])
+        AND "nivel" IS DISTINCT FROM 'WELCOME'
+        AND ("step" IS NULL OR "step" NOT ILIKE '%WELCOME%')
+        AND COALESCE("tipoEvento", "tipo") IS DISTINCT FROM 'WELCOME'
+        AND ("tituloONivel" IS NULL OR "tituloONivel" NOT ILIKE '%WELCOME%')
+        AND ("nombreEvento" IS NULL OR "nombreEvento" NOT ILIKE '%WELCOME%')
+      RETURNING 1
+    ) SELECT COUNT(*)::text AS count FROM del`,
+    [academicaIds]
+  )
+
+  // Delete COMPLEMENTARIA_ATTEMPTS
+  const complementariaResult = await queryOne<{ count: string }>(
+    `WITH del AS (
+      DELETE FROM "COMPLEMENTARIA_ATTEMPTS"
+      WHERE "studentId" = ANY($1::text[])
+      RETURNING 1
+    ) SELECT COUNT(*)::text AS count FROM del`,
+    [academicaIds]
+  )
+
+  // Delete STEP_OVERRIDES (studentId = ACADEMICA _id per CLAUDE.md)
+  const stepOverridesResult = await queryOne<{ count: string }>(
+    `WITH del AS (
+      DELETE FROM "STEP_OVERRIDES"
+      WHERE "studentId" = ANY($1::text[])
+      RETURNING 1
+    ) SELECT COUNT(*)::text AS count FROM del`,
+    [academicaIds]
+  )
+
+  return successResponse({
+    deleted: {
+      bookings: parseInt(bookingsResult?.count ?? '0', 10),
+      complementaria: parseInt(complementariaResult?.count ?? '0', 10),
+      stepOverrides: parseInt(stepOverridesResult?.count ?? '0', 10),
+    },
+  })
+})
