@@ -1644,6 +1644,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `local` | feat: sidebar Mantenimiento — nuevo grupo (SUPER_ADMIN) que agrupa Permisos, Avisos (Ticker/Banner), Juegos y nuevo item Clear Historic (`/admin/clear-historic`); página Clear Historic con operaciones destructivas confirmadas por texto; API `DELETE /api/admin/clear-historic?type=` con validación de rol |
 | `local` | fix: Welcome Session — filtro de fecha timezone-aware: `startDate` y `endDate` se envían como ISO con offset UTC del cliente (`T00:00:00` / `T23:59:59` locales → `.toISOString()`); backend usa `::timestamptz` y `<=` para cubrir eventos hasta fin de día local (ej: 8 PM Colombia = 01:00 UTC día siguiente). Además: JOIN invertido (`ACADEMICA_BOOKINGS` LEFT JOIN `CALENDARIO`) para incluir bookings históricos Wix sin enlace a CALENDARIO; fix duplicados PEOPLE (`tipoUsuario IN BENEFICIARIO/BENEFICIARIA`); WHERE más robusto con `ab."nivel" = 'WELCOME'` y `ab."tituloONivel" ILIKE '%WELCOME%'` |
 | `local` | fix: Welcome Session — click en fila abre `/student/[idEstudiante]` en nueva pestaña; fallback a `/person/[_id]` si no tiene registro académico; usa `window.open(..., '_blank', 'noopener,noreferrer')` |
 | `8f134c3` | fix: panel-estudiante — `toLocaleDateString` → `toLocaleString` con `Intl.DateTimeFormat().resolvedOptions().timeZone`; la hora de la próxima clase ahora se muestra correctamente según el timezone del cliente; locale genérico `'es'` en lugar de hardcoded `'es-CO'` |
