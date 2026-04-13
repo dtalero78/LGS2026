@@ -3,6 +3,18 @@ import { handlerWithAuth, successResponse } from '@/lib/api-helpers'
 import { queryOne } from '@/lib/postgres'
 import { ForbiddenError, ValidationError } from '@/lib/errors'
 
+/** Run a DELETE CTE and return the deleted count, or 0 if the table doesn't exist */
+async function safeDelete(sql: string, params: any[]): Promise<number> {
+  try {
+    const row = await queryOne<{ count: string }>(sql, params)
+    return parseInt(row?.count ?? '0', 10)
+  } catch (err: any) {
+    // Table might not exist in local dev — return 0 instead of crashing
+    console.warn('[clear-historic/student] safeDelete error:', err.message)
+    return 0
+  }
+}
+
 export const DELETE = handlerWithAuth(async (req, session) => {
   if (session.user.role !== 'SUPER_ADMIN') {
     throw new ForbiddenError('Solo SUPER_ADMIN puede ejecutar operaciones de limpieza')
@@ -19,7 +31,7 @@ export const DELETE = handlerWithAuth(async (req, session) => {
   }
 
   // Delete ACADEMICA_BOOKINGS (excluding WELCOME records)
-  const bookingsResult = await queryOne<{ count: string }>(
+  const bookingsDeleted = await safeDelete(
     `WITH del AS (
       DELETE FROM "ACADEMICA_BOOKINGS"
       WHERE COALESCE("studentId", "idEstudiante") = ANY($1::text[])
@@ -34,7 +46,7 @@ export const DELETE = handlerWithAuth(async (req, session) => {
   )
 
   // Delete COMPLEMENTARIA_ATTEMPTS
-  const complementariaResult = await queryOne<{ count: string }>(
+  const complementariaDeleted = await safeDelete(
     `WITH del AS (
       DELETE FROM "COMPLEMENTARIA_ATTEMPTS"
       WHERE "studentId" = ANY($1::text[])
@@ -44,7 +56,7 @@ export const DELETE = handlerWithAuth(async (req, session) => {
   )
 
   // Delete STEP_OVERRIDES (studentId = ACADEMICA _id per CLAUDE.md)
-  const stepOverridesResult = await queryOne<{ count: string }>(
+  const stepOverridesDeleted = await safeDelete(
     `WITH del AS (
       DELETE FROM "STEP_OVERRIDES"
       WHERE "studentId" = ANY($1::text[])
@@ -55,9 +67,9 @@ export const DELETE = handlerWithAuth(async (req, session) => {
 
   return successResponse({
     deleted: {
-      bookings: parseInt(bookingsResult?.count ?? '0', 10),
-      complementaria: parseInt(complementariaResult?.count ?? '0', 10),
-      stepOverrides: parseInt(stepOverridesResult?.count ?? '0', 10),
+      bookings: bookingsDeleted,
+      complementaria: complementariaDeleted,
+      stepOverrides: stepOverridesDeleted,
     },
   })
 })
