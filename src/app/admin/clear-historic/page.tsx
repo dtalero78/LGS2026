@@ -71,7 +71,7 @@ export default function ClearHistoricPage() {
     try {
       const res = await fetch(`/api/admin/clear-historic/lookup?numeroId=${encodeURIComponent(id)}`)
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Error al buscar')
+      if (!res.ok) throw new Error(data.details || data.error || 'Error al buscar')
       const result: LookupResult = data.data ?? data
       setLookupResult(result)
       setStep(result.found ? 'found' : 'not_found')

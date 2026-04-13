@@ -16,7 +16,8 @@ async function safeDelete(sql: string, params: any[]): Promise<number> {
 }
 
 export const DELETE = handlerWithAuth(async (req, session) => {
-  if (session.user.role !== 'SUPER_ADMIN') {
+  const role = (session.user as any)?.role
+  if (role !== 'SUPER_ADMIN') {
     throw new ForbiddenError('Solo SUPER_ADMIN puede ejecutar operaciones de limpieza')
   }
 
