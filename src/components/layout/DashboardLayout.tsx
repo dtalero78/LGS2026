@@ -18,6 +18,7 @@ import {
   PuzzlePieceIcon,
   MegaphoneIcon,
   ChartBarIcon,
+  WrenchScrewdriverIcon,
 } from '@heroicons/react/24/outline'
 import { cn } from '@/lib/utils'
 import SearchBar from '@/components/search/SearchBar'
@@ -61,20 +62,6 @@ const getNavigation = (userEmail: string) => [
     name: 'Aprobación',
     href: '/dashboard/aprobacion',
     icon: ShieldCheckIcon,
-  },
-  {
-    name: 'Permisos',
-    href: '/admin/permissions',
-    icon: KeyIcon,
-  },
-  {
-    name: 'Avisos',
-    icon: MegaphoneIcon,
-    superAdminOnly: true,
-    children: [
-      { name: 'Ticker', href: '/admin/ticker' },
-      { name: 'Banner', href: '/admin/banner' },
-    ],
   },
   {
     name: 'Informes',
@@ -123,12 +110,28 @@ const getNavigation = (userEmail: string) => [
     ],
   },
   {
-    name: 'Juegos',
-    icon: PuzzlePieceIcon,
+    name: 'Mantenimiento',
+    icon: WrenchScrewdriverIcon,
     superAdminOnly: true,
     children: [
-      { name: 'Architecture Quiz', href: '/game.html', external: true },
-      { name: 'Pac-Man Data Flow', href: '/game-pacman.html', external: true },
+      { name: 'Permisos', href: '/admin/permissions' },
+      {
+        name: 'Avisos',
+        isSubmenu: true,
+        children: [
+          { name: 'Ticker', href: '/admin/ticker' },
+          { name: 'Banner', href: '/admin/banner' },
+        ],
+      },
+      {
+        name: 'Juegos',
+        isSubmenu: true,
+        children: [
+          { name: 'Architecture Quiz', href: '/game.html', external: true },
+          { name: 'Pac-Man Data Flow', href: '/game-pacman.html', external: true },
+        ],
+      },
+      { name: 'Clear Historic', href: '/admin/clear-historic' },
     ],
   },
 ]
