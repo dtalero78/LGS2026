@@ -131,7 +131,7 @@ const getNavigation = (userEmail: string) => [
           { name: 'Pac-Man Data Flow', href: '/game-pacman.html', external: true },
         ],
       },
-      { name: 'Clear Historic', href: '/admin/clear-historic' },
+      { name: 'Clear Historic', href: '/admin/clear-historic', newTab: true },
     ],
   },
 ]
