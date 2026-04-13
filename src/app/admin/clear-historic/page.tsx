@@ -14,15 +14,6 @@ import toast from 'react-hot-toast'
 
 /* ─────────────────────────────── types ─────────────────────────────── */
 
-interface ClearOption {
-  id: string
-  label: string
-  description: string
-  warning: string
-  endpoint: string
-  confirmText: string
-}
-
 interface LookupResult {
   found: boolean
   inPeople: boolean
@@ -54,69 +45,16 @@ interface DeletedCounts {
   stepOverrides: number
 }
 
-/* ─────────────────────────────── constants ─────────────────────────── */
-
-const CLEAR_OPTIONS: ClearOption[] = [
-  {
-    id: 'bookings_cancelled',
-    label: 'Bookings Cancelados',
-    description: 'Elimina todos los registros de ACADEMICA_BOOKINGS donde cancelo = true.',
-    warning: 'Esta acción es irreversible. Los bookings cancelados se eliminarán permanentemente.',
-    endpoint: '/api/admin/clear-historic?type=bookings_cancelled',
-    confirmText: 'ELIMINAR CANCELADOS',
-  },
-  {
-    id: 'otp_expired',
-    label: 'OTP Expirados',
-    description: 'Limpia el almacén en memoria de OTP expirados (se limpian automáticamente, pero fuerza una limpieza inmediata).',
-    warning: 'Los OTP activos no se verán afectados.',
-    endpoint: '/api/admin/clear-historic?type=otp_expired',
-    confirmText: 'LIMPIAR OTP',
-  },
-]
-
 /* ─────────────────────────────── component ─────────────────────────── */
 
 export default function ClearHistoricPage() {
-  /* ── bulk ops state ── */
-  const [confirming, setConfirming] = useState<string | null>(null)
-  const [confirmInput, setConfirmInput] = useState('')
-  const [loading, setLoading] = useState<string | null>(null)
-  const selected = CLEAR_OPTIONS.find(o => o.id === confirming)
-
-  /* ── student cleaner state ── */
   const [numeroId, setNumeroId] = useState('')
   const [step, setStep] = useState<StudentStep>('idle')
   const [lookupResult, setLookupResult] = useState<LookupResult | null>(null)
   const [deletedCounts, setDeletedCounts] = useState<DeletedCounts | null>(null)
-  const [progress, setProgress] = useState(0) // 0-100
-
+  const [progress, setProgress] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  /* ── bulk ops handlers ── */
-  async function handleExecute() {
-    if (!selected || confirmInput !== selected.confirmText) return
-    setLoading(selected.id)
-    try {
-      const res = await fetch(selected.endpoint, { method: 'DELETE' })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Error al ejecutar')
-      toast.success(data.message || 'Operación completada')
-      setConfirming(null)
-      setConfirmInput('')
-    } catch (err: any) {
-      toast.error(err.message || 'Error inesperado')
-    } finally {
-      setLoading(null)
-    }
-  }
-
-  function handleCancel() {
-    setConfirming(null)
-    setConfirmInput('')
-  }
-
-  /* ── student cleaner handlers ── */
   function resetStudent() {
     setStep('idle')
     setNumeroId('')
@@ -148,7 +86,6 @@ export default function ClearHistoricPage() {
     setStep('deleting')
     setProgress(10)
 
-    // Animate progress in steps
     const tick = (target: number) =>
       new Promise<void>(resolve => {
         const interval = setInterval(() => {
@@ -173,7 +110,7 @@ export default function ClearHistoricPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al eliminar')
       await tick(100)
-      setDeletedCounts(data.data?.deleted ?? data.deleted)
+      setDeletedCounts(data.deleted ?? data.data?.deleted)
       setStep('done')
     } catch (err: any) {
       toast.error(err.message || 'Error inesperado')
@@ -182,7 +119,11 @@ export default function ClearHistoricPage() {
     }
   }
 
-  /* ── render ── */
+  const totalCount =
+    (lookupResult?.counts?.bookings ?? 0) +
+    (lookupResult?.counts?.complementaria ?? 0) +
+    (lookupResult?.counts?.stepOverrides ?? 0)
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-2xl mx-auto space-y-6">
@@ -202,7 +143,7 @@ export default function ClearHistoricPage() {
               Clear Historic
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Limpieza de datos históricos. Solo SUPER_ADMIN puede ejecutar estas operaciones.
+              Limpieza de historial académico de estudiantes. Solo SUPER_ADMIN.
             </p>
           </div>
         </div>
@@ -216,7 +157,7 @@ export default function ClearHistoricPage() {
           </p>
         </div>
 
-        {/* ────────── Student Historic Cleaner ────────── */}
+        {/* Student Historic Cleaner */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 space-y-4">
           <div>
             <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
@@ -225,11 +166,11 @@ export default function ClearHistoricPage() {
             </h2>
             <p className="text-sm text-gray-500 mt-1">
               Elimina el historial académico de un estudiante (Bookings, Actividades Complementarias
-              y Step Overrides) excluyendo los registros WELCOME.
+              y Step Overrides). Los registros WELCOME se conservan.
             </p>
           </div>
 
-          {/* Input row */}
+          {/* Input */}
           <div className="flex gap-2">
             <input
               ref={inputRef}
@@ -245,15 +186,14 @@ export default function ClearHistoricPage() {
               type="button"
               onClick={step === 'idle' ? handleSearch : resetStudent}
               disabled={step === 'searching' || step === 'deleting'}
-              className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed
-                bg-gray-700 hover:bg-gray-800 text-white"
+              className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-700 hover:bg-gray-800 text-white"
             >
               {step === 'idle' || step === 'not_found' ? (
                 <><MagnifyingGlassIcon className="h-4 w-4" /> Buscar</>
               ) : step === 'searching' ? (
                 <><span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" /> Buscando...</>
               ) : (
-                <><XMarkIcon className="h-4 w-4" /> Limpiar</>
+                <><XMarkIcon className="h-4 w-4" /> Nueva búsqueda</>
               )}
             </button>
           </div>
@@ -265,7 +205,7 @@ export default function ClearHistoricPage() {
               <div>
                 <p className="text-sm font-semibold text-yellow-800">Estudiante no encontrado</p>
                 <p className="text-sm text-yellow-700 mt-0.5">{lookupResult.message}</p>
-                <ul className="text-xs text-yellow-600 mt-1 space-y-0.5">
+                <ul className="text-xs text-yellow-600 mt-2 space-y-0.5">
                   <li>PEOPLE: {lookupResult.inPeople ? '✅ Encontrado' : '❌ No encontrado'}</li>
                   <li>ACADEMICA: {lookupResult.inAcademica ? '✅ Encontrado' : '❌ No encontrado'}</li>
                 </ul>
@@ -279,11 +219,11 @@ export default function ClearHistoricPage() {
               <div className="flex items-center gap-2">
                 <CheckCircleIcon className="h-5 w-5 text-blue-500" />
                 <p className="text-sm font-semibold text-blue-800">
-                  Estudiante encontrado: {lookupResult.nombreCompleto}
-                  <span className="font-normal text-blue-600 ml-2">(ID: {lookupResult.numeroId})</span>
+                  {lookupResult.nombreCompleto}
+                  <span className="font-normal text-blue-600 ml-2">— ID: {lookupResult.numeroId}</span>
                 </p>
               </div>
-              <div className="grid grid-cols-3 gap-2 text-sm">
+              <div className="grid grid-cols-3 gap-2">
                 <div className="bg-white rounded-lg p-3 text-center border border-blue-100">
                   <p className="text-2xl font-bold text-gray-800">{lookupResult.counts?.bookings ?? 0}</p>
                   <p className="text-xs text-gray-500 mt-0.5">Bookings</p>
@@ -297,7 +237,7 @@ export default function ClearHistoricPage() {
                   <p className="text-xs text-gray-500 mt-0.5">Step Overrides</p>
                 </div>
               </div>
-              <p className="text-xs text-gray-500">* Los registros con nivel/tipo WELCOME se conservarán.</p>
+              <p className="text-xs text-gray-400">* Registros con nivel/tipo WELCOME se conservarán.</p>
               {step === 'found' && (
                 <button
                   type="button"
@@ -330,11 +270,9 @@ export default function ClearHistoricPage() {
             <div className="p-4 bg-green-50 border border-green-200 rounded-lg space-y-3">
               <div className="flex items-center gap-2">
                 <CheckCircleIcon className="h-5 w-5 text-green-500" />
-                <p className="text-sm font-semibold text-green-800">
-                  Historial eliminado correctamente
-                </p>
+                <p className="text-sm font-semibold text-green-800">Historial eliminado correctamente</p>
               </div>
-              <div className="grid grid-cols-3 gap-2 text-sm">
+              <div className="grid grid-cols-3 gap-2">
                 <div className="bg-white rounded-lg p-3 text-center border border-green-100">
                   <p className="text-2xl font-bold text-gray-800">{deletedCounts.bookings}</p>
                   <p className="text-xs text-gray-500 mt-0.5">Bookings</p>
@@ -359,36 +297,9 @@ export default function ClearHistoricPage() {
           )}
         </div>
 
-        {/* ────────── Bulk Operations ────────── */}
-        <div className="space-y-4">
-          {CLEAR_OPTIONS.map(option => (
-            <div key={option.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <h3 className="text-base font-semibold text-gray-900">{option.label}</h3>
-                  <p className="text-sm text-gray-500 mt-1">{option.description}</p>
-                  <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
-                    <ExclamationTriangleIcon className="h-3.5 w-3.5" />
-                    {option.warning}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => { setConfirming(option.id); setConfirmInput('') }}
-                  disabled={!!loading}
-                  className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <TrashIcon className="h-4 w-4" />
-                  Ejecutar
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
       </div>
 
-      {/* ────────── Confirmation modal (step 1) ────────── */}
+      {/* Confirmation modal — paso 1 */}
       {step === 'confirm1' && lookupResult?.found && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
@@ -404,7 +315,7 @@ export default function ClearHistoricPage() {
               <p className="text-gray-500">N° Documento: {lookupResult.numeroId}</p>
             </div>
             <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
-              Se eliminarán <strong>{(lookupResult.counts?.bookings ?? 0) + (lookupResult.counts?.complementaria ?? 0) + (lookupResult.counts?.stepOverrides ?? 0)}</strong> registros en total.
+              Se eliminarán <strong>{totalCount}</strong> registros en total.
               Esta acción es <strong>irreversible</strong>.
             </p>
             <div className="flex gap-3 justify-end">
@@ -427,7 +338,7 @@ export default function ClearHistoricPage() {
         </div>
       )}
 
-      {/* ────────── Confirmation modal (step 2 — final) ────────── */}
+      {/* Confirmation modal — paso 2 final */}
       {step === 'confirm2' && lookupResult?.found && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
@@ -454,54 +365,6 @@ export default function ClearHistoricPage() {
                 className="px-4 py-2 text-sm font-medium text-white bg-red-700 rounded-lg hover:bg-red-800"
               >
                 Confirmar y borrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ────────── Bulk op confirmation modal ────────── */}
-      {confirming && selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center gap-3">
-              <ExclamationTriangleIcon className="h-6 w-6 text-red-500" />
-              <h2 className="text-lg font-bold text-gray-900">Confirmar operación</h2>
-            </div>
-            <p className="text-sm text-gray-600">
-              Está a punto de ejecutar: <strong>{selected.label}</strong>
-            </p>
-            <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
-              {selected.warning}
-            </p>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Escriba <span className="font-mono font-bold text-red-600">{selected.confirmText}</span> para confirmar:
-              </label>
-              <input
-                type="text"
-                value={confirmInput}
-                onChange={e => setConfirmInput(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-red-500 focus:border-red-500"
-                placeholder={selected.confirmText}
-                autoFocus
-              />
-            </div>
-            <div className="flex gap-3 justify-end">
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleExecute}
-                disabled={confirmInput !== selected.confirmText || !!loading}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading === selected.id ? 'Ejecutando...' : 'Confirmar y ejecutar'}
               </button>
             </div>
           </div>
