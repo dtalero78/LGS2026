@@ -16,7 +16,8 @@ async function safeCount(sql: string, params: any[]): Promise<number> {
 }
 
 export const GET = handlerWithAuth(async (req, session) => {
-  if (session.user.role !== 'SUPER_ADMIN') {
+  const role = (session.user as any)?.role
+  if (role !== 'SUPER_ADMIN') {
     throw new ForbiddenError('Solo SUPER_ADMIN puede ejecutar operaciones de limpieza')
   }
 
