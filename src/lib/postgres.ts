@@ -20,7 +20,7 @@ const getDatabaseConfig = () => {
     const urlWithoutSslMode = process.env.DATABASE_URL.replace(/[?&]sslmode=[^&]*/g, '');
     return {
       connectionString: urlWithoutSslMode,
-      max: 10,
+      max: 25,
       idleTimeoutMillis: 15000,
       connectionTimeoutMillis: 10000,
       ssl: {
