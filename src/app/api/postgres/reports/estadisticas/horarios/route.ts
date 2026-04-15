@@ -75,13 +75,24 @@ export const GET = handler(async (req) => {
     `, params)),
 
     // Por plataforma × hora en la zona horaria del cliente
+    // Cadena de fallback: b.plataforma → a.plataforma (ACADEMICA) → p.plataforma (PEOPLE BENEFICIARIO) → 'Sin país'
     safeQuery(() => queryMany(`
       SELECT
-        COALESCE("plataforma", 'Sin país') AS plataforma,
-        EXTRACT(HOUR FROM "fechaAgendamiento" AT TIME ZONE '${tz}')::int AS hora,
+        COALESCE(b."plataforma", a."plataforma", p."plataforma", 'Sin país') AS plataforma,
+        EXTRACT(HOUR FROM b."fechaAgendamiento" AT TIME ZONE '${tz}')::int AS hora,
         COUNT(*)::int AS total
-      FROM "ACADEMICA_BOOKINGS"
-      WHERE ${baseWhere}
+      FROM "ACADEMICA_BOOKINGS" b
+      LEFT JOIN "ACADEMICA" a ON a."_id" = COALESCE(b."idEstudiante", b."studentId")
+      LEFT JOIN "PEOPLE" p ON p."numeroId" = a."numeroId"
+                           AND p."tipoUsuario" IN ('BENEFICIARIO', 'BENEFICIARIA')
+      WHERE b."fechaAgendamiento" IS NOT NULL
+        AND b."fechaAgendamiento" >= $1::date
+        AND b."fechaAgendamiento" < ($2::date + INTERVAL '1 day')
+        AND (b."cancelo" IS NULL OR b."cancelo" = false)
+        AND b."origen" IN ('PANEL_EST', 'POSTGRES', 'COMP')
+        AND COALESCE(b."tipo", b."tipoEvento", '') NOT IN ('COMPLEMENTARIA', 'WELCOME')
+        AND COALESCE(b."nivel", '') != 'WELCOME'
+        AND EXTRACT(HOUR FROM b."fechaAgendamiento" AT TIME ZONE '${tz}') BETWEEN 6 AND 22
       GROUP BY 1, 2
       ORDER BY 1, 2
     `, params)),
