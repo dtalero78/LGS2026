@@ -193,7 +193,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 139. Ver progreso académico ("¿Cómo voy?" con barra de progreso, steps, porcentaje)
 140. Ver eventos próximos y disponibles (filtrados por nivel/step del estudiante)
 141. Auto-reserva de clases - Wizard 4 pasos: fecha (hoy/mañana) → tipo → evento → confirmación
-142. Validaciones de reserva: capacidad, no duplicado, no pending SESSION, límites semanales (2 sesiones/3 clubs), no misma hora, mínimo 30 min antes
+142. Validaciones de reserva: capacidad, no duplicado, no pending SESSION, límites semanales (2 sesiones/3 clubs), no misma hora, mínimo 30 min antes, **step del evento debe coincidir con el step activo del estudiante** (jump step: solo el jump exacto; step regular: solo eventos de ese step)
 143. Cancelación de clases con deadline de 60 minutos antes del evento
 144. Estadísticas personales de asistencia (total, asistidas, ausentes, porcentaje)
 145. Historial completo de clases con detalles
