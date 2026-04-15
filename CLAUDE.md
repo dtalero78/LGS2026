@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" language learning platform. The panel provides management interfaces for students, classes, events, contracts, and financial data. Includes a student self-service portal, a public contract/consent page, WhatsApp integration (Whapi.cloud), PDF generation (API2PDF), and a digital signature system via OTP. Uses PostgreSQL (Digital Ocean) as primary database with a layered architecture (Repository → Service → API Route → Hook).
+LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" language learning platform. The panel provides management interfaces for students, classes, events, contracts, and financial data. Includes a student self-service portal, a public contract/consent page, WhatsApp integration (Whapi.cloud), PDF generation (API2PDF), and a digital signature system via OTP. Uses PostgreSQL (Digital Ocean) as **única fuente de datos** with a layered architecture (Repository → Service → API Route → Hook). **La plataforma opera 100% sobre PostgreSQL — Wix ya no se usa como fuente de datos.**
 
 ## Lista Completa de Funcionalidades
 
@@ -545,17 +545,17 @@ Cuando se edita un evento en CALENDARIO, `calendar.service.updateEvent()` propag
 
 Esto garantiza que los bookings existentes reflejen siempre el estado actual del evento en CALENDARIO.
 
-### Compatibilidad Wix ↔ Admin en Bookings
-- Datos migrados de Wix usan `idEvento` como foreign key a CALENDARIO (nueva columna: `eventoId`)
-- El tipo de evento en datos Wix se almacena en `tipoEvento` (nueva: columna `tipo` en CALENDARIO)
-- Las queries de welcome sessions usan `COALESCE(b."eventoId", b."idEvento")` y `COALESCE(c."tipo", b."tipoEvento")` para soportar ambos formatos
-- Al crear nuevos bookings desde el admin, usar solo `eventoId` (sin `numeroId`, `celular`, `plataforma` que no existen en ACADEMICA_BOOKINGS)
+### Datos históricos Wix en ACADEMICA_BOOKINGS y CALENDARIO
+La plataforma opera 100% sobre PostgreSQL. Los datos migrados de Wix (marzo 2026) dejaron registros históricos con columnas legacy que las queries deben tolerar:
+- **`idEvento`** (legacy Wix) vs **`eventoId`** (nuevo POSTGRES): queries usan `COALESCE(b."eventoId", b."idEvento")`
+- **`tipoEvento`** (legacy Wix) vs **`tipo`** (nuevo POSTGRES): queries usan `COALESCE(c."tipo", b."tipoEvento")`
+- Nuevos bookings usan solo `eventoId` (sin `numeroId`, `celular`, `plataforma` que no existen en ACADEMICA_BOOKINGS)
 
-### Timestamps de CALENDARIO: Wix naive vs Admin UTC
-- **Eventos admin** (`origen='POSTGRES'`): `dia` se guarda via `toISOString()` desde el browser del admin → almacenado como UTC naive (ej: `'2026-04-15 12:00:00'` para 7 AM Colombia)
-- **Eventos Wix** (`origen != 'POSTGRES'`): `dia` se guarda como hora local Colombia naive (ej: `'2026-04-15 07:00:00'` para 7 AM Colombia), sin corrección UTC
+### Timestamps de CALENDARIO: datos históricos Wix naive vs POSTGRES UTC
+- **Eventos POSTGRES** (`origen='POSTGRES'`): `dia` se guarda via `toISOString()` desde el browser del admin → UTC correcto
+- **Eventos históricos Wix** (`origen != 'POSTGRES'`): `dia` almacenado como hora local Colombia naive (UTC-5), sin corrección UTC
 - **Función `eventDiaToUTC(dia, origen)`** en `student-booking.service.ts`: si `origen != 'POSTGRES'`, suma `COLOMBIA_OFFSET_MS` (5h) para obtener UTC correcto. Usada en `getAvailableEvents` (filtro 30min) y `bookEvent` (validación futura + límites semanales)
-- **Fix definitivo pendiente**: script SQL para normalizar todos los timestamps Wix a UTC en CALENDARIO. Respaldo `CALENDARIO_BACKUP_20260414` debe crearse antes de correr el script. Requiere abrir `0.0.0.0/0` en DO Trusted Sources temporalmente
+- **Fix definitivo pendiente**: script SQL para normalizar todos los timestamps históricos Wix a UTC en CALENDARIO. Respaldo `CALENDARIO_BACKUP_20260414` debe crearse antes de correr el script. Requiere abrir `0.0.0.0/0` en DO Trusted Sources temporalmente. Una vez ejecutado, `eventDiaToUTC` quedará obsoleta
 
 ### CALENDARIO JOIN para Step/Nivel Correcto en Bookings
 - **Problema**: Los bookings almacenan el step del estudiante al momento de agendar, NO el step real del evento. Si un estudiante en Step 16 agenda una sesión de Step 17, el booking guarda "Step 16".
@@ -605,127 +605,27 @@ Esto garantiza que los bookings existentes reflejen siempre el estado actual del
   - `COMPLEMENTARIA_ATTEMPTS`: Intentos de actividades complementarias (AI quiz). Campos: studentId, nivel, step, attemptNumber, questions (JSONB), answers (JSONB), score, passed, bookingId, status (IN_PROGRESS/PASSED/FAILED), plataforma (VARCHAR 50, nullable — se llena al generar el quiz desde el panel estudiante)
   - `APP_CONFIG`: Configuración de la aplicación (clave/valor). Campos: key (PK), value (TEXT), color (VARCHAR 20, default '#ffffff'), updatedBy, _updatedDate. Registros: `ticker_message` (banner animado panel estudiante), `banner_image` (base64 imagen banner login), `banner_active` ('true'/'false' visibilidad banner login)
 
-## Migración Wix → PostgreSQL
+## Migración Wix → PostgreSQL (COMPLETADA — marzo 2026)
+
+> **La migración está finalizada. La plataforma opera 100% sobre PostgreSQL. Wix ya no se usa como fuente de datos.**
 
 ### Resumen
-Los datos de producción viven en Wix (base NoSQL). Periódicamente se sincronizan a PostgreSQL (Digital Ocean) usando scripts de migración que hacen UPSERT (INSERT ... ON CONFLICT DO UPDATE). Es idempotente: se puede re-ejecutar sin duplicar datos.
+En marzo 2026 se realizó la migración única de todos los datos históricos de Wix (base NoSQL) a PostgreSQL (Digital Ocean). Los scripts en `migration/` se usaron para esa migración y ya no se ejecutan. Se conservan como referencia histórica.
 
-### Archivos del sistema de migración
+### Volumen migrado (marzo 2026)
 
-```
-migration/
-├── config.js                        ← Configuración central (conexión PG, endpoints Wix, batch sizes)
-├── orchestrator.js                  ← Ejecuta todos los exporters en secuencia
-├── check-db.js                      ← Verifica conexión y cuenta registros por tabla
-├── .env                             ← Credenciales (gitignored)
-└── exporters/
-    ├── 04-people.js                 ← PEOPLE (~9K registros)
-    ├── 05-academica.js              ← ACADEMICA (~5K registros)
-    ├── 06-calendario.js             ← CALENDARIO (~18K registros)
-    ├── 07-academica-bookings.js     ← ACADEMICA_BOOKINGS (~100K registros)
-    ├── 08-financieros.js            ← FINANCIEROS (~2.6K registros)
-    ├── 09-populate-estudiantes.js   ← Popula USUARIOS_ROLES con estudiantes de ACADEMICA
-    └── 10-populate-advisors.js      ← Popula USUARIOS_ROLES con advisors
-```
+| Tabla | Registros |
+|---|---|
+| PEOPLE | 9,747 |
+| ACADEMICA | 5,413 |
+| CALENDARIO | 19,971 |
+| ACADEMICA_BOOKINGS | 114,366 |
+| FINANCIEROS | 2,626 |
+| ADVISORS | 45 |
+| USUARIOS_ROLES (ESTUDIANTE) | 5,367 |
 
-### Cómo ejecutar la migración
-
-#### 1. Prerequisitos
-```bash
-# Asegurar que node está disponible
-export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-
-# El archivo .env debe existir en migration/ con:
-DATABASE_URL=postgresql://doadmin:PASS@lgs-db-do-user-19197755-0.e.db.ondigitalocean.com:25060/defaultdb?sslmode=require
-WIX_API_BASE_URL=https://www.lgsplataforma.com/_functions
-```
-
-#### 2. Abrir acceso en Digital Ocean
-- Ir a Digital Ocean → Database → Trusted Sources
-- Agregar `0.0.0.0/0` temporalmente (el ISP rota IPs entre subredes distintas: 191.x, 186.x, 212.x)
-- **IMPORTANTE**: Quitar `0.0.0.0/0` al terminar la migración
-
-#### 3. Preparar la base de datos
-Antes de migrar, se deben **eliminar check constraints y NOT NULL** que bloquean datos de Wix:
-```sql
--- Check constraints (valores de Wix fuera del rango permitido)
-ALTER TABLE "PEOPLE" DROP CONSTRAINT IF EXISTS "PEOPLE_aprobacion_check";
-ALTER TABLE "CALENDARIO" DROP CONSTRAINT IF EXISTS "CALENDARIO_tipo_check";
-ALTER TABLE "ACADEMICA_BOOKINGS" DROP CONSTRAINT IF EXISTS "ACADEMICA_BOOKINGS_calificacion_check";
-ALTER TABLE "FINANCIEROS" DROP CONSTRAINT IF EXISTS "FINANCIEROS_estado_check";
-
--- NOT NULL en campos que Wix deja vacíos
-ALTER TABLE "PEOPLE" ALTER COLUMN "fechaCreacion" DROP NOT NULL;
-ALTER TABLE "PEOPLE" ALTER COLUMN "tipoUsuario" DROP NOT NULL;
-ALTER TABLE "ACADEMICA" ALTER COLUMN "fechaCreacion" DROP NOT NULL;
-```
-
-#### 4. Ejecutar migración por tabla
-```bash
-cd migration/
-
-# Verificar conexión primero
-node check-db.js
-
-# Migrar tabla por tabla (recomendado)
-node exporters/04-people.js
-node exporters/05-academica.js
-node exporters/06-calendario.js
-node exporters/07-academica-bookings.js
-
-# Opciones útiles
-node exporters/04-people.js --dry-run     # Solo leer de Wix, no escribir en PG
-node exporters/04-people.js --max=200     # Migrar solo 200 registros (para probar)
-
-# O ejecutar todo en secuencia
-node orchestrator.js
-```
-
-#### 5. Verificar resultados
-```bash
-node check-db.js    # Muestra conteos por tabla
-```
-
-### Arquitectura técnica de los exporters
-
-Cada exporter sigue el mismo patrón:
-
-1. **Fetch paginado desde Wix** con retry (5 intentos, backoff exponencial 5s-30s)
-   - Endpoint: `https://www.lgsplataforma.com/_functions/exportar{Tabla}?skip=N&limit=M`
-   - Batch size configurado en `config.js` (100-200 registros)
-
-2. **Transform**: Limpia datos (fechas, JSONB, strings vacíos → NULL)
-
-3. **Filtrado de columnas**: Consulta las columnas reales de la tabla PG y descarta campos de Wix que no existen en PG (Wix es schema-less y tiene campos extra como `crmContactId`, `direccion`, `link-copy-of-contrato-_id`, etc.)
-
-4. **Batch UPSERT**: Construye un solo `INSERT INTO ... VALUES (...), (...), ... ON CONFLICT ("_id") DO UPDATE SET ...` por lote completo (~100-200 registros en una sola query)
-   - Rendimiento: **125-226 registros/segundo**
-   - Retry: 3 intentos con backoff de 2s-6s para errores de PG
-
-### Rendimiento y problemas conocidos
-
-| Estrategia | Velocidad | Estabilidad |
-|---|---|---|
-| Individual UPSERT (1 query por registro) | ~3 rec/sec | Estable pero muy lento |
-| Parallel UPSERT (CONCURRENT=5-10) | ~12 rec/sec | Pool PG se agota después de ~2300 registros |
-| **Batch UPSERT (multi-row INSERT)** | **125-226 rec/sec** | **Estable, 0 fallos** |
-
-- **FINANCIEROS**: Endpoint Wix `/exportarFinanciera` funciona correctamente (2,626 registros migrados Mar 2026)
-- **CLUBS, NIVELES_MATERIAL, COMMENTS, STEP_OVERRIDES**: Endpoints Wix no implementados
-- **IP rotation**: El ISP rota IPs entre subredes completamente distintas. Por eso se necesita `0.0.0.0/0` en trusted sources durante la migración
-- **SSL**: El `?sslmode=require` de DATABASE_URL se stripea automáticamente en `config.js` (igual que en `src/lib/postgres.ts`), usando `ssl: { rejectUnauthorized: false }` en su lugar
-
-### Última migración exitosa: Mar 7, 2026
-
-| Tabla | Registros | Última actualización |
-|---|---|---|
-| PEOPLE | 9,747 | 2026-03-07 |
-| ACADEMICA | 5,413 | 2026-03-07 |
-| CALENDARIO | 19,971 | 2026-03-07 |
-| ACADEMICA_BOOKINGS | 114,366 | 2026-03-07 |
-| FINANCIEROS | 2,626 | 2026-03-07 |
-| ADVISORS | 45 | 2026-02-02 |
-| USUARIOS_ROLES (ESTUDIANTE) | 5,367 | 2026-03-07 |
+### Datos históricos con formato legacy
+Los registros migrados de Wix dejaron columnas con nombres distintos a los actuales. El código mantiene compatibilidad via COALESCE (ver sección "Datos históricos Wix"). **No crear nuevos registros con el formato legacy.**
 
 ## OnHold System with Automatic Contract Extension
 
