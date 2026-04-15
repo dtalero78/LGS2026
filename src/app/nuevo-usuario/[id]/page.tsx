@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 
 type PageState = 'LOADING' | 'ERROR' | 'ALREADY_REGISTERED' | 'FORM' | 'SUCCESS'
 
@@ -45,7 +45,9 @@ function formatEventDate(dia: string) {
 
 export default function NuevoUsuarioPage() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const academicId = params.id as string
+  const noWelcome = searchParams.get('noWelcome') === '1'
 
   const [pageState, setPageState] = useState<PageState>('LOADING')
   const [error, setError] = useState('')
@@ -153,8 +155,8 @@ export default function NuevoUsuarioPage() {
       return
     }
 
-    // If nivel is WELCOME and no event selected and events are available
-    if (student?.nivel === 'WELCOME' && !hasWelcomeBooking && welcomeEvents.length > 0 && !selectedEvent) {
+    // If nivel is WELCOME and no event selected and events are available (skip if noWelcome)
+    if (!noWelcome && student?.nivel === 'WELCOME' && !hasWelcomeBooking && welcomeEvents.length > 0 && !selectedEvent) {
       setFormError('Por favor selecciona una fecha para tu sesión Welcome')
       return
     }
@@ -359,7 +361,7 @@ export default function NuevoUsuarioPage() {
           </div>
 
           {/* Welcome Session Dropdown */}
-          {student?.nivel === 'WELCOME' && !hasWelcomeBooking && (
+          {!noWelcome && student?.nivel === 'WELCOME' && !hasWelcomeBooking && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Agenda tu sesión Welcome
@@ -389,7 +391,7 @@ export default function NuevoUsuarioPage() {
             </div>
           )}
 
-          {student?.nivel === 'WELCOME' && hasWelcomeBooking && (
+          {!noWelcome && student?.nivel === 'WELCOME' && hasWelcomeBooking && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
               <p className="text-green-700 text-sm font-medium">
                 ✅ Ya tienes una sesión Welcome agendada

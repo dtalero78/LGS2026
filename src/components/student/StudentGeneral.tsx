@@ -18,6 +18,8 @@ export default function StudentGeneral({ student }: StudentGeneralProps) {
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false)
   const [whatsAppSent, setWhatsAppSent] = useState(false)
   const [whatsAppError, setWhatsAppError] = useState<string | null>(null)
+  const [sendingProfileOnly, setSendingProfileOnly] = useState(false)
+  const [profileOnlySent, setProfileOnlySent] = useState(false)
   const [showDocuments, setShowDocuments] = useState(false)
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([])
   const [editingPassword, setEditingPassword] = useState(false)
@@ -155,6 +157,47 @@ export default function StudentGeneral({ student }: StudentGeneralProps) {
     }
   }
 
+  const handleSendProfileOnly = async () => {
+    if (!student.celular && !student.telefono) {
+      setWhatsAppError('Este estudiante no tiene número de teléfono registrado')
+      setTimeout(() => setWhatsAppError(null), 5000)
+      return
+    }
+
+    setSendingProfileOnly(true)
+    setWhatsAppError(null)
+
+    try {
+      const phoneNumber = student.celular || student.telefono
+      const fullName = `${student.primerNombre} ${student.segundoNombre || ''} ${student.primerApellido} ${student.segundoApellido || ''}`.trim()
+
+      const response = await fetch('/api/wix/sendWelcomeWhatsApp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          celular: phoneNumber,
+          beneficiarioId: student._id,
+          nombre: fullName,
+          noWelcome: true,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setProfileOnlySent(true)
+        setTimeout(() => setProfileOnlySent(false), 3000)
+      } else {
+        throw new Error(data.error || 'Error al enviar WhatsApp')
+      }
+    } catch (error: any) {
+      setWhatsAppError(error.message || 'Error al enviar mensaje de WhatsApp')
+      setTimeout(() => setWhatsAppError(null), 5000)
+    } finally {
+      setSendingProfileOnly(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Action Buttons - Documents */}
@@ -222,35 +265,68 @@ export default function StudentGeneral({ student }: StudentGeneralProps) {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-sm font-medium text-gray-700">Celular</label>
-                  <button
-                    onClick={handleSendWhatsApp}
-                    disabled={sendingWhatsApp || whatsAppSent}
-                    className={`
-                      inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md
-                      transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
-                      ${whatsAppSent
-                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                        : 'bg-green-600 text-white hover:bg-green-700 active:bg-green-800'
-                      }
-                    `}
-                  >
-                    {sendingWhatsApp ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Enviando...</span>
-                      </>
-                    ) : whatsAppSent ? (
-                      <>
-                        <Check className="w-3.5 h-3.5" />
-                        <span>Enviado</span>
-                      </>
-                    ) : (
-                      <>
-                        <MessageCircle className="w-3.5 h-3.5" />
-                        <span>Mensaje de Bienvenida</span>
-                      </>
-                    )}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSendWhatsApp}
+                      disabled={sendingWhatsApp || whatsAppSent}
+                      className={`
+                        inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md
+                        transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+                        ${whatsAppSent
+                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                          : 'bg-green-600 text-white hover:bg-green-700 active:bg-green-800'
+                        }
+                      `}
+                    >
+                      {sendingWhatsApp ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Enviando...</span>
+                        </>
+                      ) : whatsAppSent ? (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Enviado</span>
+                        </>
+                      ) : (
+                        <>
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          <span>Mensaje de Bienvenida</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSendProfileOnly}
+                      disabled={sendingProfileOnly || profileOnlySent}
+                      className={`
+                        inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md
+                        transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+                        ${profileOnlySent
+                          ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                          : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+                        }
+                      `}
+                    >
+                      {sendingProfileOnly ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Enviando...</span>
+                        </>
+                      ) : profileOnlySent ? (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Enviado</span>
+                        </>
+                      ) : (
+                        <>
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          <span>Crear solo perfil</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
                 <p className="mt-1 text-sm text-gray-900">{student.celular}</p>
               </div>
