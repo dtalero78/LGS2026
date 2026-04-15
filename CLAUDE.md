@@ -551,6 +551,12 @@ Esto garantiza que los bookings existentes reflejen siempre el estado actual del
 - Las queries de welcome sessions usan `COALESCE(b."eventoId", b."idEvento")` y `COALESCE(c."tipo", b."tipoEvento")` para soportar ambos formatos
 - Al crear nuevos bookings desde el admin, usar solo `eventoId` (sin `numeroId`, `celular`, `plataforma` que no existen en ACADEMICA_BOOKINGS)
 
+### Timestamps de CALENDARIO: Wix naive vs Admin UTC
+- **Eventos admin** (`origen='POSTGRES'`): `dia` se guarda via `toISOString()` desde el browser del admin → almacenado como UTC naive (ej: `'2026-04-15 12:00:00'` para 7 AM Colombia)
+- **Eventos Wix** (`origen != 'POSTGRES'`): `dia` se guarda como hora local Colombia naive (ej: `'2026-04-15 07:00:00'` para 7 AM Colombia), sin corrección UTC
+- **Función `eventDiaToUTC(dia, origen)`** en `student-booking.service.ts`: si `origen != 'POSTGRES'`, suma `COLOMBIA_OFFSET_MS` (5h) para obtener UTC correcto. Usada en `getAvailableEvents` (filtro 30min) y `bookEvent` (validación futura + límites semanales)
+- **Fix definitivo pendiente**: script SQL para normalizar todos los timestamps Wix a UTC en CALENDARIO. Respaldo `CALENDARIO_BACKUP_20260414` debe crearse antes de correr el script. Requiere abrir `0.0.0.0/0` en DO Trusted Sources temporalmente
+
 ### CALENDARIO JOIN para Step/Nivel Correcto en Bookings
 - **Problema**: Los bookings almacenan el step del estudiante al momento de agendar, NO el step real del evento. Si un estudiante en Step 16 agenda una sesión de Step 17, el booking guarda "Step 16".
 - **Solución**: Todas las queries de bookings hacen `LEFT JOIN "CALENDARIO" c ON c."_id" = COALESCE(b."eventoId", b."idEvento")` y usan `COALESCE(c."step", b."step")` / `COALESCE(c."nivel", b."nivel")` para preferir el step/nivel del evento.
@@ -1644,6 +1650,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `42722ff` | fix: corregir minutesUntil y cálculo de semana para eventos migrados de Wix — eventos Wix almacenan hora naive Colombia (UTC-5); nueva función `eventDiaToUTC(dia, origen)` en `student-booking.service.ts` suma `COLOMBIA_OFFSET_MS` (5h) cuando `origen != 'POSTGRES'`; corrige 3 lugares: filtro 30min en `getAvailableEvents`, validación futura y cálculo de semana en `bookEvent`; respaldo `CALENDARIO_BACKUP_20260414` pendiente de crear cuando DO DB esté accesible |
 | `a14f48c` | fix: clear-historic — botón Cancelar junto a Eliminar historial en estado found; handlerWithAuth corregido a (req, _ctx, session); safeCount/safeDelete toleran tablas inexistentes en local; página abre en nueva pestaña (newTab: true) |
 | `400f10d` | feat: Clear Historic — limpiar historial académico de estudiante por numeroId; GET `/api/admin/clear-historic/lookup` verifica PEOPLE+ACADEMICA y cuenta Bookings/Complementarias/StepOverrides (excluye WELCOME); DELETE `/api/admin/clear-historic/student` borra por academicaIds; UI multi-paso: búsqueda → conteos → confirm1 → confirm2 → barra progreso → resumen |
 | `local` | feat: sidebar Mantenimiento — nuevo grupo (SUPER_ADMIN) que agrupa Permisos, Avisos (Ticker/Banner), Juegos y nuevo item Clear Historic (`/admin/clear-historic`) |
