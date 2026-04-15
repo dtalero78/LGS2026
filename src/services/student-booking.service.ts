@@ -169,44 +169,46 @@ export async function getAvailableEvents(
 
   const now = new Date();
 
-  // Annotate events
-  const annotated = await Promise.all(
-    events.map(async (evt: any) => {
-      // Filter out events less than 30 min from now
-      const evtDate = eventDiaToUTC(evt.dia);
-      const minutesUntil = (evtDate.getTime() - now.getTime()) / (1000 * 60);
-      if (minutesUntil < BOOKING_MIN_ADVANCE_MINUTES) {
-        return null;
-      }
+  // Batch count enrollments for all events in a single query (avoids N+1 pool exhaustion)
+  const eventIds = events.map((e: any) => e._id);
+  const enrollmentCounts = await CalendarioRepository.countActiveEnrollmentsBatch(eventIds);
 
-      // Same-hour exclusion: skip events at hours where student already has a booking
-      if (evt.hora && bookedHoursSet.has(evt.hora)) {
-        return null;
-      }
+  // Annotate events (no DB calls inside the loop)
+  const annotated = events.map((evt: any) => {
+    // Filter out events less than 30 min from now
+    const evtDate = eventDiaToUTC(evt.dia);
+    const minutesUntil = (evtDate.getTime() - now.getTime()) / (1000 * 60);
+    if (minutesUntil < BOOKING_MIN_ADVANCE_MINUTES) {
+      return null;
+    }
 
-      const activeCount = await CalendarioRepository.countActiveEnrollments(evt._id);
-      const cupoLleno = evt.limiteUsuarios > 0 && activeCount >= evt.limiteUsuarios;
-      const yaInscrito = enrolledEventIds.has(evt._id);
+    // Same-hour exclusion: skip events at hours where student already has a booking
+    if (evt.hora && bookedHoursSet.has(evt.hora)) {
+      return null;
+    }
 
-      const evtStepNum = extractStepNumber(evt.step || evt.nombreEvento || '');
-      const isJumpEvent = evtStepNum !== null && evtStepNum > 0 && evtStepNum % 5 === 0;
+    const activeCount = enrollmentCounts.get(evt._id) ?? 0;
+    const cupoLleno = evt.limiteUsuarios > 0 && activeCount >= evt.limiteUsuarios;
+    const yaInscrito = enrolledEventIds.has(evt._id);
 
-      if (isActiveJump) {
-        // Student completed all regular steps → show ONLY the specific jump event
-        if (!isJumpEvent || evtStepNum !== activeStepNum) return null;
-      } else {
-        // Student is on a regular step → show all non-jump events, hide jump events
-        if (isJumpEvent) return null;
-      }
+    const evtStepNum = extractStepNumber(evt.step || evt.nombreEvento || '');
+    const isJumpEvent = evtStepNum !== null && evtStepNum > 0 && evtStepNum % 5 === 0;
 
-      return {
-        ...evt,
-        inscritos: activeCount,
-        cupoLleno,
-        yaInscrito,
-      };
-    })
-  );
+    if (isActiveJump) {
+      // Student completed all regular steps → show ONLY the specific jump event
+      if (!isJumpEvent || evtStepNum !== activeStepNum) return null;
+    } else {
+      // Student is on a regular step → show all non-jump events, hide jump events
+      if (isJumpEvent) return null;
+    }
+
+    return {
+      ...evt,
+      inscritos: activeCount,
+      cupoLleno,
+      yaInscrito,
+    };
+  });
 
   return annotated.filter(Boolean);
 }

@@ -322,6 +322,28 @@ class CalendarioRepositoryClass extends BaseRepository {
     );
     return parseInt(row?.count ?? '0', 10);
   }
+
+  /**
+   * Batch count active enrollments for multiple events in a single query.
+   * Returns a map of eventId → count.
+   */
+  async countActiveEnrollmentsBatch(eventIds: string[]): Promise<Map<string, number>> {
+    if (eventIds.length === 0) return new Map();
+    const rows = await queryMany<{ evento_id: string; count: string }>(
+      `SELECT COALESCE(b."eventoId", b."idEvento") AS evento_id,
+              COUNT(*) AS count
+       FROM "ACADEMICA_BOOKINGS" b
+       WHERE (b."eventoId" = ANY($1) OR b."idEvento" = ANY($1))
+         AND b."cancelo" = false
+       GROUP BY COALESCE(b."eventoId", b."idEvento")`,
+      [eventIds]
+    );
+    const map = new Map<string, number>();
+    for (const r of rows) {
+      map.set(r.evento_id, parseInt(r.count, 10));
+    }
+    return map;
+  }
 }
 
 export const CalendarioRepository = new CalendarioRepositoryClass();
