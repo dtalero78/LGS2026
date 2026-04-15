@@ -150,20 +150,19 @@ class PeopleRepositoryClass extends BaseRepository {
   }
 
   /**
-   * Update nivel/step (regular or parallel)
+   * Update nivel/step (regular or parallel).
+   * When assigning ESS (isParallel + nivel='ESS'), also stores fechaInicioESS = NOW().
    */
   async updateStep(id: string, nivel: string, step: string, isParallel: boolean) {
-    const fields = isParallel
-      ? { nivelParalelo: nivel, stepParalelo: step }
-      : { nivel, step };
-
     const [col1, col2] = isParallel
       ? ['"nivelParalelo"', '"stepParalelo"']
       : ['"nivel"', '"step"'];
 
+    const essClause = isParallel && nivel === 'ESS' ? `, "fechaInicioESS" = NOW()` : '';
+
     return queryOne(
       `UPDATE "PEOPLE"
-       SET ${col1} = $1, ${col2} = $2, "_updatedDate" = NOW()
+       SET ${col1} = $1, ${col2} = $2${essClause}, "_updatedDate" = NOW()
        WHERE "_id" = $3
        RETURNING *`,
       [nivel, step, id]

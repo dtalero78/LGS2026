@@ -123,6 +123,7 @@ function eventDiaToUTC(dia: any): Date {
  * Get events available for a student to book.
  * Filters by date range, nivel, tipo, and annotates each event with
  * capacity status and whether the student is already enrolled.
+ * When nivelParalelo = 'ESS', also fetches ESS events and merges them.
  */
 export async function getAvailableEvents(
   studentId: string,
@@ -130,7 +131,8 @@ export async function getAvailableEvents(
   step: string,
   date: string,
   tipo?: string,
-  tzOffset: number = 0
+  tzOffset: number = 0,
+  nivelParalelo?: string
 ) {
   // Build a date range for the selected day in the student's local timezone
   // tzOffset is in minutes from UTC (e.g., Chile UTC-3 = 180, Colombia UTC-5 = 300)
@@ -141,12 +143,30 @@ export async function getAvailableEvents(
   const startDate = new Date(dayStart.getTime() + offsetMs).toISOString();
   const endDate = new Date(dayEnd.getTime() + offsetMs).toISOString();
 
-  const events = await CalendarioRepository.findEvents({
+  const mainEvents = await CalendarioRepository.findEvents({
     startDate,
     endDate,
     nivel,
     tipo,
   });
+
+  // If student has ESS as parallel level, fetch ESS events and merge
+  let essEvents: any[] = [];
+  if (nivelParalelo === 'ESS') {
+    essEvents = await CalendarioRepository.findEvents({
+      startDate,
+      endDate,
+      nivel: 'ESS',
+      tipo,
+    });
+    // Mark ESS events so the UI can differentiate them
+    essEvents = essEvents.map(e => ({ ...e, esESS: true }));
+  }
+
+  // Deduplicate by _id (avoid showing same event twice if it matches both filters)
+  const seenIds = new Set(mainEvents.map((e: any) => e._id));
+  const uniqueEssEvents = essEvents.filter(e => !seenIds.has(e._id));
+  const events = [...mainEvents, ...uniqueEssEvents];
 
   // Get student's upcoming bookings to check for duplicates
   const upcoming = await BookingRepository.findUpcomingByStudentId(studentId, 100);
@@ -175,10 +195,11 @@ export async function getAvailableEvents(
 
   // Annotate events (no DB calls inside the loop)
   const annotated = events.map((evt: any) => {
-    // Filter out events less than 30 min from now
     const evtDate = eventDiaToUTC(evt.dia);
     const minutesUntil = (evtDate.getTime() - now.getTime()) / (1000 * 60);
-    if (minutesUntil < BOOKING_MIN_ADVANCE_MINUTES) {
+
+    // Hard-filter: events more than 60 min in the past (claramente ya pasaron)
+    if (minutesUntil < -60) {
       return null;
     }
 
@@ -191,15 +212,22 @@ export async function getAvailableEvents(
     const cupoLleno = evt.limiteUsuarios > 0 && activeCount >= evt.limiteUsuarios;
     const yaInscrito = enrolledEventIds.has(evt._id);
 
-    const evtStepNum = extractStepNumber(evt.step || evt.nombreEvento || '');
-    const isJumpEvent = evtStepNum !== null && evtStepNum > 0 && evtStepNum % 5 === 0;
+    // Event needs > 30 min advance to book; if closer, show as disabled so the student
+    // can see the session existed today (important for students in different timezones)
+    const tiempoInsuficiente = minutesUntil < BOOKING_MIN_ADVANCE_MINUTES;
 
-    if (isActiveJump) {
-      // Student completed all regular steps → show ONLY the specific jump event
-      if (!isJumpEvent || evtStepNum !== activeStepNum) return null;
-    } else {
-      // Student is on a regular step → show all non-jump events, hide jump events
-      if (isJumpEvent) return null;
+    // ESS events: skip the step/jump filter — they always show regardless of active step
+    if (!evt.esESS) {
+      const evtStepNum = extractStepNumber(evt.step || evt.nombreEvento || '');
+      const isJumpEvent = evtStepNum !== null && evtStepNum > 0 && evtStepNum % 5 === 0;
+
+      if (isActiveJump) {
+        // Student completed all regular steps → show ONLY the specific jump event
+        if (!isJumpEvent || evtStepNum !== activeStepNum) return null;
+      } else {
+        // Student is on a regular step → show all non-jump events, hide jump events
+        if (isJumpEvent) return null;
+      }
     }
 
     return {
@@ -207,6 +235,7 @@ export async function getAvailableEvents(
       inscritos: activeCount,
       cupoLleno,
       yaInscrito,
+      tiempoInsuficiente,
     };
   });
 

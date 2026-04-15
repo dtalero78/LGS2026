@@ -15,8 +15,9 @@ export const GET = handlerWithAuth(async (request, context, session) => {
   const tzOffset = searchParams.get('tzOffset') ? parseInt(searchParams.get('tzOffset')!) : 0;
   const nivel = student.nivel || '';
   const step = student.step || '';
+  const nivelParalelo = student.nivelParalelo || undefined;
 
   const bookingId = student.academicaId || student._id;
-  const events = await getAvailableEvents(bookingId, nivel, step, date, tipo, tzOffset);
+  const events = await getAvailableEvents(bookingId, nivel, step, date, tipo, tzOffset, nivelParalelo);
   return successResponse({ events });
 });

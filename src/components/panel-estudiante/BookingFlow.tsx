@@ -175,7 +175,10 @@ export default function BookingFlow({ onClose, initialTipo }: BookingFlowProps) 
                 <div className="space-y-2">
                   {events.map((evt: any) => {
                     const eventDate = new Date(evt.dia)
-                    const tipoColor = evt.tipo === 'SESSION'
+                    const isDisabled = evt.cupoLleno || evt.yaInscrito || evt.tiempoInsuficiente
+                    const tipoColor = evt.esESS
+                      ? 'border-l-orange-400'
+                      : evt.tipo === 'SESSION'
                       ? 'border-l-blue-500'
                       : evt.tipo === 'CLUB'
                       ? 'border-l-green-500'
@@ -183,11 +186,12 @@ export default function BookingFlow({ onClose, initialTipo }: BookingFlowProps) 
 
                     return (
                       <button
+                        type="button"
                         key={evt._id}
-                        onClick={() => !evt.cupoLleno && !evt.yaInscrito && handleEventSelect(evt)}
-                        disabled={evt.cupoLleno || evt.yaInscrito}
+                        onClick={() => !isDisabled && handleEventSelect(evt)}
+                        disabled={isDisabled}
                         className={`w-full p-3 bg-gray-50 rounded-lg border-l-4 ${tipoColor} text-left transition-colors ${
-                          evt.cupoLleno || evt.yaInscrito
+                          isDisabled
                             ? 'opacity-50 cursor-not-allowed'
                             : 'hover:bg-gray-100'
                         }`}
@@ -197,11 +201,12 @@ export default function BookingFlow({ onClose, initialTipo }: BookingFlowProps) 
                             <div className="flex items-center gap-2">
                               <ClockIcon className="h-4 w-4 text-gray-400" />
                               <span className="text-sm font-medium text-gray-900">
-                                {format(eventDate, 'HH:mm')} - {evt.tipo || evt.evento || '-'}
+                                {format(eventDate, 'HH:mm')} - {evt.esESS ? 'ESS' : (evt.tipo || evt.evento || '-')}
                               </span>
                             </div>
                             <div className="text-xs text-gray-500 mt-1">
                               {(() => {
+                                if (evt.esESS) return 'English Speaking Session'
                                 const stepStr = evt.step || evt.nombreEvento || '-'
                                 const stepNum = stepStr.match(/Step\s*(\d+)/i)?.[1]
                                 const isJump = stepNum && parseInt(stepNum) % 5 === 0
@@ -215,6 +220,8 @@ export default function BookingFlow({ onClose, initialTipo }: BookingFlowProps) 
                               <span className="text-xs font-medium text-blue-600">Ya inscrito</span>
                             ) : evt.cupoLleno ? (
                               <span className="text-xs font-medium text-red-600">Lleno</span>
+                            ) : evt.tiempoInsuficiente ? (
+                              <span className="text-xs font-medium text-gray-400">Próximamente</span>
                             ) : null}
                           </div>
                         </div>
@@ -248,6 +255,7 @@ export default function BookingFlow({ onClose, initialTipo }: BookingFlowProps) 
               </div>
 
               <button
+                type="button"
                 onClick={handleConfirm}
                 disabled={bookMutation.isLoading}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
