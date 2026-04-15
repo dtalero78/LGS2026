@@ -127,11 +127,17 @@ export const POST = handler(async (
   if (!email?.trim()) throw new ValidationError('Email/usuario es requerido');
   if (!clave?.trim()) throw new ValidationError('Clave es requerida');
 
-  // Normalize email: lowercase, trim spaces
-  const normalizedEmail = email.trim().toLowerCase();
+  // Normalize email: strip Unicode invisible/non-ASCII characters, lowercase, trim
+  // Removes zero-width spaces, non-breaking spaces, Unicode punctuation (e.g. U+3002 ideographic period)
+  // that mobile keyboards sometimes insert instead of standard ASCII characters
+  const sanitizedEmail = email
+    .replace(/[^\x20-\x7E]/g, '')  // keep only printable ASCII (0x20–0x7E)
+    .trim()
+    .toLowerCase();
+  const normalizedEmail = sanitizedEmail;
 
-  // Validate no uppercase or spaces remain (defensive)
-  if (normalizedEmail !== normalizedEmail.replace(/\s/g, '')) {
+  // Validate no spaces remain (defensive)
+  if (normalizedEmail.includes(' ')) {
     throw new ValidationError('El email no debe contener espacios');
   }
 
