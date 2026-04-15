@@ -112,6 +112,18 @@ const WEEKLY_TRAINING_LIMIT = 1;
 const CANCEL_DEADLINE_MINUTES = 60;
 const BOOKING_MIN_ADVANCE_MINUTES = 30;
 
+// Wix-migrated events store naive Colombia local time (UTC-5).
+// Admin-panel events (origen='POSTGRES') store UTC-equivalent naive via toISOString().
+// This helper returns the correct UTC Date regardless of origin.
+const COLOMBIA_OFFSET_MS = 5 * 60 * 60 * 1000; // UTC-5 → add 5h to get UTC
+function eventDiaToUTC(dia: any, origen?: string): Date {
+  const d = new Date(dia);
+  if (!origen || origen !== 'POSTGRES') {
+    return new Date(d.getTime() + COLOMBIA_OFFSET_MS);
+  }
+  return d;
+}
+
 /**
  * Get events available for a student to book.
  * Filters by date range, nivel, tipo, and annotates each event with
@@ -166,7 +178,8 @@ export async function getAvailableEvents(
   const annotated = await Promise.all(
     events.map(async (evt: any) => {
       // Filter out events less than 30 min from now
-      const evtDate = new Date(evt.dia);
+      // eventDiaToUTC corrects naive Colombia timestamps from Wix-migrated data
+      const evtDate = eventDiaToUTC(evt.dia, evt.origen);
       const minutesUntil = (evtDate.getTime() - now.getTime()) / (1000 * 60);
       if (minutesUntil < BOOKING_MIN_ADVANCE_MINUTES) {
         return null;
@@ -229,7 +242,8 @@ export async function bookEvent(
   if (!event) throw new NotFoundError('Evento', eventId);
 
   // 2. Validate future date + 30 min advance
-  const eventDate = new Date(event.dia);
+  // eventDiaToUTC corrects naive Colombia timestamps from Wix-migrated data
+  const eventDate = eventDiaToUTC(event.dia, event.origen);
   const now = new Date();
   const minutesUntil = (eventDate.getTime() - now.getTime()) / (1000 * 60);
   if (minutesUntil <= 0) {
@@ -262,7 +276,8 @@ export async function bookEvent(
   }
 
   // 6. Check weekly limits
-  const eventDay = new Date(event.dia);
+  // eventDiaToUTC corrects naive Colombia timestamps from Wix-migrated data
+  const eventDay = eventDiaToUTC(event.dia, event.origen);
   const dayOfWeek = eventDay.getDay();
   const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
   const weekStart = new Date(eventDay);
