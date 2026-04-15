@@ -1542,13 +1542,28 @@ export interface Person {
 
 - **Retrocompatibilidad**: Estudiantes sin nivel paralelo siguen funcionando normalmente
 - **ESS Step 0 especial**: Sigue usando lógica de 5 semanas para aprobación automática
-- **Campos opcionales**: `nivelParalelo` y `stepParalelo` son nullable en PostgreSQL
+- **Campos opcionales**: `nivelParalelo`, `stepParalelo` y `fechaInicioESS` son nullable en PostgreSQL
 - **Jump Steps**: Funcionan igual en niveles paralelos y principales
+
+### ESS — Flujo completo (actualizado)
+
+1. Admin asigna ESS manualmente desde panel: `Cambiar Step → ESS → Step 0`
+2. `updateStep(isParallel=true, nivel='ESS')` guarda `nivelParalelo='ESS'`, `stepParalelo='Step 0'` + `fechaInicioESS=NOW()` en ACADEMICA y PEOPLE
+3. Estudiante puede reservar eventos ESS en el panel (aparecen con borde naranja en `BookingFlow`)
+4. Al cargar el panel (`resolveStudentFromSession`): si `nivelParalelo='ESS'` y `NOW() - fechaInicioESS >= 25 días` → auto-promueve a `nivel='BN1'`, `step='Step 1'`, limpia `nivelParalelo`, `stepParalelo`, `fechaInicioESS`
+5. Migración idempotente: `ALTER TABLE ... ADD COLUMN IF NOT EXISTS "fechaInicioESS" TIMESTAMPTZ` corre una vez por arranque del servidor en `panel-estudiante.service.ts`
+
+### Fix filtro 30 min en panel de reservas
+
+- Antes: eventos a <30 min se ocultaban completamente → estudiantes en zonas horarias distintas no veían el evento de "hoy"
+- Ahora: eventos entre -60 min y +30 min se muestran deshabilitados con badge "Próximamente" (los estudiantes pueden ver que existe el evento aunque no puedan reservar)
+- Eventos >60 min en el pasado se ocultan definitivamente
 
 ## Recent Changes (April 2026)
 
 | Commit | Description |
 |---|---|
+| `e9138b4` | feat: ESS parallel level — booking panel, auto-promoción BN1 tras 25 días — estudiantes con `nivelParalelo='ESS'` ven eventos ESS (borde naranja) en el panel de reservas junto a sus eventos del nivel principal; al asignar ESS vía `updateStep`, guarda `fechaInicioESS=NOW()` en ACADEMICA y PEOPLE; `resolveStudentFromSession` auto-promueve a `nivel='BN1'`, `step='Step 1'` cuando `nivelParalelo='ESS'` y han pasado ≥25 días; fix filtro 30 min: eventos <30 min (pero no >60 min pasados) se muestran deshabilitados con badge "Próximamente" en vez de ocultarse (soluciona visibilidad para estudiantes en zonas horarias distintas) |
 | `6788d6f` | feat: botón 'Crear solo perfil' en StudentGeneral — nuevo botón azul al lado de 'Mensaje de Bienvenida'; envía WhatsApp con link `?noWelcome=1`; `sendWelcomeWhatsApp` API acepta flag `noWelcome` y genera URL con sufijo; `nuevo-usuario` page lee `useSearchParams` y omite dropdown de Welcome + validación cuando `?noWelcome=1` está presente |
 | `bcb2ced` | perf: reemplazar N+1 countActiveEnrollments por batch en getAvailableEvents — `getAvailableEvents` hacía una query por evento en `Promise.all` agotando el pool de 25 conexiones bajo carga concurrente; nuevo método `countActiveEnrollmentsBatch` en `CalendarioRepository` agrupa todos los conteos en una sola query con `ANY($1)` y `GROUP BY`; el loop de anotación pasa de async a síncrono; total: de N+1 a 3 queries por request |
 | `d14f2a0` | fix: normalizar timestamps Wix en CALENDARIO + simplificar eventDiaToUTC — SQL aplicado en DO: `UPDATE "CALENDARIO" SET dia=(dia::timestamp AT TIME ZONE 'America/Bogota'), origen='POSTGRES' WHERE origen IS NULL OR origen != 'POSTGRES'` (19.943 registros); backup `CALENDARIO_BACKUP_20260414` intacto (22.819 registros); `eventDiaToUTC` simplificada a `new Date(dia)` — `COLOMBIA_OFFSET_MS` eliminado |
