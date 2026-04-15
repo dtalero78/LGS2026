@@ -551,11 +551,10 @@ La plataforma opera 100% sobre PostgreSQL. Los datos migrados de Wix (marzo 2026
 - **`tipoEvento`** (legacy Wix) vs **`tipo`** (nuevo POSTGRES): queries usan `COALESCE(c."tipo", b."tipoEvento")`
 - Nuevos bookings usan solo `eventoId` (sin `numeroId`, `celular`, `plataforma` que no existen en ACADEMICA_BOOKINGS)
 
-### Timestamps de CALENDARIO: datos históricos Wix naive vs POSTGRES UTC
-- **Eventos POSTGRES** (`origen='POSTGRES'`): `dia` se guarda via `toISOString()` desde el browser del admin → UTC correcto
-- **Eventos históricos Wix** (`origen != 'POSTGRES'`): `dia` almacenado como hora local Colombia naive (UTC-5), sin corrección UTC
-- **Función `eventDiaToUTC(dia, origen)`** en `student-booking.service.ts`: si `origen != 'POSTGRES'`, suma `COLOMBIA_OFFSET_MS` (5h) para obtener UTC correcto. Usada en `getAvailableEvents` (filtro 30min) y `bookEvent` (validación futura + límites semanales)
-- **Fix definitivo pendiente**: script SQL para normalizar todos los timestamps históricos Wix a UTC en CALENDARIO. Respaldo `CALENDARIO_BACKUP_20260414` debe crearse antes de correr el script. Requiere abrir `0.0.0.0/0` en DO Trusted Sources temporalmente. Una vez ejecutado, `eventDiaToUTC` quedará obsoleta
+### Timestamps de CALENDARIO: todos en UTC (fix aplicado 2026-04-15)
+- **Todos los eventos** tienen `origen='POSTGRES'` y `dia` almacenado en UTC correcto
+- **Fix aplicado**: 19.943 registros Wix normalizados via `dia = (dia::timestamp AT TIME ZONE 'America/Bogota')` + `origen = 'POSTGRES'`. Backup en `CALENDARIO_BACKUP_20260414` (22.819 registros)
+- **`eventDiaToUTC(dia)`** en `student-booking.service.ts` es ahora un simple `new Date(dia)` — el branch de COLOMBIA_OFFSET_MS fue eliminado
 
 ### CALENDARIO JOIN para Step/Nivel Correcto en Bookings
 - **Problema**: Los bookings almacenan el step del estudiante al momento de agendar, NO el step real del evento. Si un estudiante en Step 16 agenda una sesión de Step 17, el booking guarda "Step 16".
@@ -1550,7 +1549,9 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
-| `42722ff` | fix: corregir minutesUntil y cálculo de semana para eventos migrados de Wix — eventos Wix almacenan hora naive Colombia (UTC-5); nueva función `eventDiaToUTC(dia, origen)` en `student-booking.service.ts` suma `COLOMBIA_OFFSET_MS` (5h) cuando `origen != 'POSTGRES'`; corrige 3 lugares: filtro 30min en `getAvailableEvents`, validación futura y cálculo de semana en `bookEvent`; respaldo `CALENDARIO_BACKUP_20260414` pendiente de crear cuando DO DB esté accesible |
+| `bcb2ced` | perf: reemplazar N+1 countActiveEnrollments por batch en getAvailableEvents — `getAvailableEvents` hacía una query por evento en `Promise.all` agotando el pool de 25 conexiones bajo carga concurrente; nuevo método `countActiveEnrollmentsBatch` en `CalendarioRepository` agrupa todos los conteos en una sola query con `ANY($1)` y `GROUP BY`; el loop de anotación pasa de async a síncrono; total: de N+1 a 3 queries por request |
+| `d14f2a0` | fix: normalizar timestamps Wix en CALENDARIO + simplificar eventDiaToUTC — SQL aplicado en DO: `UPDATE "CALENDARIO" SET dia=(dia::timestamp AT TIME ZONE 'America/Bogota'), origen='POSTGRES' WHERE origen IS NULL OR origen != 'POSTGRES'` (19.943 registros); backup `CALENDARIO_BACKUP_20260414` intacto (22.819 registros); `eventDiaToUTC` simplificada a `new Date(dia)` — `COLOMBIA_OFFSET_MS` eliminado |
+| `42722ff` | fix: corregir minutesUntil y cálculo de semana para eventos migrados de Wix — eventos Wix almacenan hora naive Colombia (UTC-5); nueva función `eventDiaToUTC(dia, origen)` en `student-booking.service.ts` suma `COLOMBIA_OFFSET_MS` (5h) cuando `origen != 'POSTGRES'`; corrige 3 lugares: filtro 30min en `getAvailableEvents`, validación futura y cálculo de semana en `bookEvent`; sustituido por normalización definitiva en DB (d14f2a0) |
 | `a14f48c` | fix: clear-historic — botón Cancelar junto a Eliminar historial en estado found; handlerWithAuth corregido a (req, _ctx, session); safeCount/safeDelete toleran tablas inexistentes en local; página abre en nueva pestaña (newTab: true) |
 | `400f10d` | feat: Clear Historic — limpiar historial académico de estudiante por numeroId; GET `/api/admin/clear-historic/lookup` verifica PEOPLE+ACADEMICA y cuenta Bookings/Complementarias/StepOverrides (excluye WELCOME); DELETE `/api/admin/clear-historic/student` borra por academicaIds; UI multi-paso: búsqueda → conteos → confirm1 → confirm2 → barra progreso → resumen |
 | `local` | feat: sidebar Mantenimiento — nuevo grupo (SUPER_ADMIN) que agrupa Permisos, Avisos (Ticker/Banner), Juegos y nuevo item Clear Historic (`/admin/clear-historic`) |
