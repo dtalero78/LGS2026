@@ -198,11 +198,12 @@ export async function getAvailableEvents(
       const isJumpEvent = evtStepNum !== null && evtStepNum > 0 && evtStepNum % 5 === 0;
 
       if (isActiveJump) {
-        // Student completed all regular steps → show ONLY the specific jump event
+        // Student is on a jump step → show ONLY the specific jump event for their step
         if (!isJumpEvent || evtStepNum !== activeStepNum) return null;
       } else {
-        // Student is on a regular step → show all non-jump events, hide jump events
+        // Student is on a regular step → show only events whose step matches their active step
         if (isJumpEvent) return null;
+        if (evtStepNum !== null && evtStepNum !== activeStepNum) return null;
       }
 
       return {
