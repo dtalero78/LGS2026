@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import {
   ArrowLeftIcon, AcademicCapIcon, ArrowUpTrayIcon, TrashIcon,
-  PlayIcon, XMarkIcon, LinkIcon, CheckIcon
+  PlayIcon, XMarkIcon, LinkIcon, CheckIcon, VideoCameraIcon
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
@@ -27,8 +27,10 @@ export default function ActualizarVideosSesionesPage() {
   const [steps, setSteps]           = useState<StepRow[]>([])
   const [loading, setLoading]       = useState(false)
   const [uploading, setUploading]   = useState<UploadingKey | null>(null)
-  const [previewSrc, setPreviewSrc] = useState<string | null>(null)
-  const [confirmDel, setConfirmDel] = useState<{ nivel: string; step: string; field: string } | null>(null)
+  const [previewSrc, setPreviewSrc]   = useState<string | null>(null)
+  const [previewStep, setPreviewStep] = useState<string>('')
+  const [previewErr, setPreviewErr]   = useState(false)
+  const [confirmDel, setConfirmDel]   = useState<{ nivel: string; step: string; field: string } | null>(null)
   const [linkEdit, setLinkEdit]     = useState<{ step: string; value: string } | null>(null)
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
@@ -96,12 +98,16 @@ export default function ActualizarVideosSesionesPage() {
 
   // ── Preview ─────────────────────────────────────────────────────────────────
   const openPreview = (row: StepRow) => {
+    setPreviewErr(false)
+    setPreviewStep(row.step)
     if (row.videoUrl) {
       setPreviewSrc(`/api/postgres/niveles/video?nivel=${encodeURIComponent(row.code)}&step=${encodeURIComponent(row.step)}`)
     } else if (row.video) {
       setPreviewSrc(row.video)
     }
   }
+
+  const closePreview = () => { setPreviewSrc(null); setPreviewErr(false); setPreviewStep('') }
 
   const isYouTube = (url: string) => url.includes('youtube.com') || url.includes('youtu.be')
 
@@ -307,21 +313,38 @@ export default function ActualizarVideosSesionesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
           <div className="relative w-full max-w-3xl bg-black rounded-xl overflow-hidden shadow-2xl">
             <div className="flex items-center justify-between px-4 py-3 bg-gray-900">
-              <span className="text-white text-sm font-medium">Vista previa — {nivel}</span>
-              <button onClick={() => setPreviewSrc(null)} className="text-gray-400 hover:text-white">
+              <span className="text-white text-sm font-medium">Vista previa — {nivel} · {previewStep}</span>
+              <button type="button" title="Cerrar" onClick={closePreview} className="text-gray-400 hover:text-white">
                 <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
-            <div className="aspect-video bg-black">
-              {isYouTube(previewSrc) ? (
+            <div className="aspect-video bg-black flex items-center justify-center">
+              {previewErr ? (
+                <div className="text-center p-8">
+                  <VideoCameraIcon className="h-12 w-12 text-gray-500 mx-auto mb-3" />
+                  <p className="text-gray-400 text-sm">El archivo de video no está disponible en el almacenamiento.</p>
+                  <p className="text-gray-500 text-xs mt-1">Sube el archivo usando el botón <strong>Subir</strong>.</p>
+                  <button type="button" onClick={closePreview}
+                    className="mt-4 px-4 py-2 bg-gray-700 text-white text-sm rounded-lg hover:bg-gray-600">
+                    Cerrar
+                  </button>
+                </div>
+              ) : isYouTube(previewSrc) ? (
                 <iframe
                   src={toEmbedUrl(previewSrc)}
                   className="w-full h-full"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
+                  title="Vista previa YouTube"
                 />
               ) : (
-                <video key={previewSrc} src={previewSrc} controls autoPlay className="w-full h-full" />
+                <video
+                  key={previewSrc}
+                  src={previewSrc}
+                  controls autoPlay
+                  className="w-full h-full"
+                  onError={() => setPreviewErr(true)}
+                />
               )}
             </div>
           </div>

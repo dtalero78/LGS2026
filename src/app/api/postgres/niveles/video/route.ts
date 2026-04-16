@@ -57,7 +57,7 @@ export async function GET(request: Request) {
 
   const row = await NivelesRepository.findVideoByNivelAndStep(nivel, step);
   if (!row || !row.videoUrl) {
-    return NextResponse.json({ data: { videoUrl: null } }, { status: 200 });
+    return NextResponse.json({ error: 'No hay video para este step' }, { status: 404 });
   }
 
   // Stream from DO Spaces through the server (avoids browser CORS)
@@ -68,18 +68,21 @@ export async function GET(request: Request) {
     ...(rangeHeader ? { Range: rangeHeader } : {}),
   });
 
-  const s3Response = await spacesClient.send(command);
-  const body = s3Response.Body as any;
+  try {
+    const s3Response = await spacesClient.send(command);
+    const body = s3Response.Body as any;
 
-  const headers: Record<string, string> = {
-    'Content-Type': s3Response.ContentType || 'video/mp4',
-    'Accept-Ranges': 'bytes',
-    'Cache-Control': 'private, max-age=3600',
-  };
-  if (s3Response.ContentLength) headers['Content-Length'] = String(s3Response.ContentLength);
-  if (s3Response.ContentRange) headers['Content-Range'] = s3Response.ContentRange;
+    const headers: Record<string, string> = {
+      'Content-Type': s3Response.ContentType || 'video/mp4',
+      'Accept-Ranges': 'bytes',
+      'Cache-Control': 'private, max-age=3600',
+    };
+    if (s3Response.ContentLength) headers['Content-Length'] = String(s3Response.ContentLength);
+    if (s3Response.ContentRange) headers['Content-Range'] = s3Response.ContentRange;
 
-  const status = rangeHeader ? 206 : 200;
-
-  return new NextResponse(body as ReadableStream, { status, headers });
+    const status = rangeHeader ? 206 : 200;
+    return new NextResponse(body as ReadableStream, { status, headers });
+  } catch {
+    return NextResponse.json({ error: 'Archivo de video no encontrado en almacenamiento' }, { status: 404 });
+  }
 }
