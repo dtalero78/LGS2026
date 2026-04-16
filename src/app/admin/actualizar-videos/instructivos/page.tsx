@@ -26,6 +26,7 @@ export default function ActualizarVideosInstructivosPage() {
   const [confirmDelete, setConfirmDelete] = useState<{ id: number; type: 'video' | 'instructivo' } | null>(null)
   const [addingNew, setAddingNew]       = useState(false)
   const [newForm, setNewForm]           = useState({ title: '', description: '' })
+  const [migrating, setMigrating]       = useState(false)
   const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({})
 
   useEffect(() => { loadInstructivos() }, [])
@@ -38,6 +39,23 @@ export default function ActualizarVideosInstructivosPage() {
       if (d.success) setInstructivos(d.instructivos)
     } catch { toast.error('Error al cargar instructivos') }
     finally { setLoading(false) }
+  }
+
+  // ── Migrate static files to DO Spaces ──────────────────────────────────────
+  const handleMigrateStatic = async () => {
+    if (!confirm('Esto subirá los archivos instructivo1.mp4 e instructivo2.mp4 desde el servidor a DO Spaces. ¿Continuar?')) return
+    setMigrating(true)
+    try {
+      const r = await fetch('/api/admin/videos/migrate-static', { method: 'POST' })
+      const d = await r.json()
+      if (!d.success) throw new Error(d.error || 'Error')
+      const msgs = (d.results as { id: number; status: string; message: string }[])
+        .map(r => `#${r.id}: ${r.message}`)
+        .join('\n')
+      alert(`Migración completada:\n${msgs}`)
+      await loadInstructivos()
+    } catch (e: any) { toast.error(e.message || 'Error en migración') }
+    finally { setMigrating(false) }
   }
 
   // ── Add new instructivo ─────────────────────────────────────────────────────
@@ -145,6 +163,20 @@ export default function ActualizarVideosInstructivosPage() {
           <VideoCameraIcon className="h-6 w-6 text-blue-600" />
           <h1 className="text-xl font-bold text-gray-900">Videos — Instructivos</h1>
           <span className="ml-auto text-sm text-gray-400 mr-4">{instructivos.length} instructivos</span>
+          {instructivos.some(i => !i.videoKey) && (
+            <button
+              type="button"
+              onClick={handleMigrateStatic}
+              disabled={migrating}
+              title="Sube los archivos estáticos del servidor a DO Spaces automáticamente"
+              className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white text-sm font-medium rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors"
+            >
+              {migrating
+                ? <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> Migrando...</>
+                : <><ArrowUpTrayIcon className="h-4 w-4" /> Migrar archivos estáticos</>
+              }
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setAddingNew(true)}
