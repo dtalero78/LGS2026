@@ -42,18 +42,37 @@ export default function ActualizarVideosInstructivosPage() {
     finally { setLoading(false) }
   }
 
-  // ── Migrate static files to DO Spaces ──────────────────────────────────────
+  // ── Migrate static files to DO Spaces (client-side fetch → upload) ──────────
   const handleMigrateStatic = async () => {
-    if (!confirm('Esto subirá los archivos instructivo1.mp4 e instructivo2.mp4 desde el servidor a DO Spaces. ¿Continuar?')) return
+    if (!confirm('Esto descargará los archivos instructivo1.mp4 e instructivo2.mp4 desde el servidor y los subirá a DO Spaces. ¿Continuar?')) return
     setMigrating(true)
+    const pending = instructivos.filter(i => !i.videoKey)
+    const results: string[] = []
     try {
-      const r = await fetch('/api/admin/videos/migrate-static', { method: 'POST' })
-      const d = await r.json()
-      if (!d.success) throw new Error(d.error || 'Error')
-      const msgs = (d.results as { id: number; status: string; message: string }[])
-        .map(r => `#${r.id}: ${r.message}`)
-        .join('\n')
-      alert(`Migración completada:\n${msgs}`)
+      for (const item of pending) {
+        const staticUrl = `/instructivo${item.id}.mp4`
+        // 1. Fetch the static file from the server (browser side)
+        let blob: Blob
+        try {
+          const res = await fetch(staticUrl)
+          if (!res.ok) { results.push(`#${item.id}: archivo estático no encontrado (${res.status})`); continue }
+          blob = await res.blob()
+        } catch {
+          results.push(`#${item.id}: no se pudo descargar ${staticUrl}`)
+          continue
+        }
+        // 2. Upload as FormData to the existing instructivos upload endpoint
+        const fd = new FormData()
+        fd.append('id',          String(item.id))
+        fd.append('title',       item.title)
+        fd.append('description', item.description)
+        fd.append('file',        new File([blob], `instructivo-${item.id}.mp4`, { type: 'video/mp4' }))
+        const r = await fetch('/api/admin/videos/instructivos', { method: 'POST', body: fd })
+        const d = await r.json()
+        if (d.success) results.push(`#${item.id}: subido correctamente`)
+        else results.push(`#${item.id}: error — ${d.error || 'desconocido'}`)
+      }
+      alert(`Migración completada:\n${results.join('\n')}`)
       await loadInstructivos()
     } catch (e: any) { toast.error(e.message || 'Error en migración') }
     finally { setMigrating(false) }
