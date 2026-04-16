@@ -451,7 +451,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
               {/* Search bar container */}
               <div className="flex-1 max-w-2xl">
-                <SearchBar />
+                {userRole !== 'COMERCIAL' && <SearchBar />}
               </div>
 
             </div>
