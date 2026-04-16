@@ -408,6 +408,15 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Ver estadísticas de rendimiento por advisor',
   },
 
+  // -- Página: Actualizar Material (/dashboard/academic/actualizar-material) --
+  {
+    code: AcademicoPermission.ACTUALIZAR_MATERIAL,
+    module: Module.ACADEMICO,
+    section: 'Actualizar Material',
+    name: 'Página "Actualizar Material"',
+    description: 'Gestionar material de Usuarios (materialUsuario) y Advisors (material) por nivel/step — incluye subir, reemplazar, borrar y descargar archivos',
+  },
+
   // ========== INFORMES MODULE ==========
   {
     code: InformesPermission.VER,

@@ -39,6 +39,7 @@ const getNavigation = (userEmail: string) => [
       { name: 'Agenda Académica', href: '/dashboard/academic/agenda-academica' },
       { name: 'Advisors', href: '/dashboard/academic/advisors' },
       { name: 'Panel Advisor', href: `/panel-advisor?email=${encodeURIComponent(userEmail)}` },
+      { name: 'Actualizar Material', href: '/dashboard/academic/actualizar-material' },
     ],
   },
   {
@@ -142,7 +143,7 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [expandedSections, setExpandedSections] = useState<string[]>(['Académico', 'Servicio'])
+  const [expandedSections, setExpandedSections] = useState<string[]>([])
   const pathname = usePathname()
   const { data: session } = useSession()
   const { userPermissions, hasAnyPermission, isLoading, permissionsSource, isRole } = usePermissions()
@@ -181,6 +182,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       AcademicoPermission.LISTA_ADVISORS_VER, // ← TALERO tiene este
       AcademicoPermission.AGREGAR,
       AcademicoPermission.ESTADISTICA,
+    ],
+    '/dashboard/academic/actualizar-material': [
+      AcademicoPermission.ACTUALIZAR_MATERIAL,
     ],
     '/panel-advisor': [
       AcademicoPermission.ADVISOR_VER_ENLACE,
@@ -268,6 +272,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       AcademicoPermission.ADVISOR_VER_ENLACE,
       AcademicoPermission.AGREGAR,
       AcademicoPermission.ESTADISTICA,
+      // ACADEMICO.MATERIAL.*
+      AcademicoPermission.ACTUALIZAR_MATERIAL,
     ],
     'Informes': [
       InformesPermission.VER,

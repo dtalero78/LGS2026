@@ -110,6 +110,11 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
     'ACADEMICO.ADVISOR.ESTADISTICA' as Permission,
   ],
 
+  // Académico - Actualizar Material
+  '/dashboard/academic/actualizar-material': [
+    'ACADEMICO.MATERIAL.ACTUALIZAR' as Permission,
+  ],
+
   // Panel Advisor
   '/panel-advisor': [
     'ACADEMICO.ADVISOR.VER_ENLACE' as Permission,
@@ -205,6 +210,7 @@ export const GENERIC_ROUTE_ACCESS: Record<string, Permission[]> = {
     'ACADEMICO.ADVISOR.VER_ENLACE' as Permission,
     'ACADEMICO.ADVISOR.AGREGAR' as Permission,
     'ACADEMICO.ADVISOR.ESTADISTICA' as Permission,
+    'ACADEMICO.MATERIAL.ACTUALIZAR' as Permission,
   ],
 
   '/dashboard/servicio': [
