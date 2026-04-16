@@ -3,52 +3,75 @@ import { ValidationError } from '@/lib/errors';
 import { queryOne } from '@/lib/postgres';
 
 /**
- * GET /api/postgres/materials/nivel?step=Step 7
- * Returns material and materialUsuario for a given step from NIVELES table.
+ * GET /api/postgres/materials/nivel?step=Step 7[&nivel=BN1][&tipo=usuario|advisor|all]
+ *
+ * Returns material for a given step from NIVELES table.
+ * - tipo=usuario  → only materialUsuario (books for students)  [proxied through server]
+ * - tipo=advisor  → only material field (advisor guides)        [direct URLs]
+ * - tipo=all      → both combined (default / legacy behaviour)
+ *
+ * Providing ?nivel=BN1 narrows the query to that exact nivel code,
+ * which avoids returning Step 3 of BN2 when BN1-Step 3 is meant.
  */
 export const GET = handlerWithAuth(async (request) => {
   const { searchParams } = new URL(request.url);
-  const step = searchParams.get('step');
+  const stepParam  = searchParams.get('step');
+  const nivelParam = searchParams.get('nivel');   // optional
+  const tipo       = searchParams.get('tipo') || 'all';
 
-  if (!step) throw new ValidationError('step query parameter is required');
+  if (!stepParam) throw new ValidationError('step query parameter is required');
 
   // Normalize step format ("Step1" -> "Step 1")
-  let normalizedStep = step;
-  if (!step.includes(' ')) {
-    normalizedStep = step.replace(/^Step(\d+)$/, 'Step $1');
-  }
+  const normalizedStep = stepParam.includes(' ')
+    ? stepParam
+    : stepParam.replace(/^Step(\d+)$/, 'Step $1');
 
-  const nivel = await queryOne(
-    `SELECT "_id", "code", "step", "material", "materialUsuario", "description", "clubs", "steps", "esParalelo", "_createdDate", "_updatedDate"
-     FROM "NIVELES"
-     WHERE "step" = $1 OR "step" = $2
-     LIMIT 1`,
-    [step, normalizedStep]
-  );
+  // Query NIVELES — optionally filter by nivel/code
+  const row = nivelParam
+    ? await queryOne(
+        `SELECT "_id", "code", "step", "material", "materialUsuario",
+                "description", "clubs", "steps", "esParalelo",
+                "_createdDate", "_updatedDate"
+         FROM "NIVELES"
+         WHERE ("step" = $1 OR "step" = $2) AND "code" = $3
+         LIMIT 1`,
+        [stepParam, normalizedStep, nivelParam]
+      )
+    : await queryOne(
+        `SELECT "_id", "code", "step", "material", "materialUsuario",
+                "description", "clubs", "steps", "esParalelo",
+                "_createdDate", "_updatedDate"
+         FROM "NIVELES"
+         WHERE "step" = $1 OR "step" = $2
+         LIMIT 1`,
+        [stepParam, normalizedStep]
+      );
 
-  if (!nivel) {
-    return successResponse({ materials: [], material: null, message: `No material found for ${step}` });
+  if (!row) {
+    return successResponse({ materials: [], material: null, message: `No material found for ${stepParam}` });
   }
 
   // Parse material JSONB (legacy format: [{name, url}, ...])
-  let parsedMaterial = nivel.material;
+  let parsedMaterial = row.material;
   if (typeof parsedMaterial === 'string') {
     try { parsedMaterial = JSON.parse(parsedMaterial); } catch { parsedMaterial = []; }
   }
 
-  // Build unified materials array from both sources
-  const materials: { index: number; name: string; url: string }[] = [];
-  const seen = new Set<string>();
+  // Build materials arrays
+  const userMaterials: { index: number; name: string; url: string }[] = [];
+  const advisorMaterials: { index: number; name: string; url: string }[] = [];
+  const seenUser    = new Set<string>();
+  const seenAdvisor = new Set<string>();
 
   // 1. materialUsuario: DO Spaces keys like "materials/Filename.pdf"
-  const userMats = nivel.materialUsuario || [];
+  const userMats = row.materialUsuario || [];
   if (Array.isArray(userMats)) {
     for (const key of userMats) {
-      if (typeof key === 'string' && key.startsWith('materials/') && !seen.has(key)) {
-        seen.add(key);
+      if (typeof key === 'string' && key.startsWith('materials/') && !seenUser.has(key)) {
+        seenUser.add(key);
         const filename = decodeURIComponent(key.split('/').pop() || key);
-        materials.push({
-          index: materials.length + 1,
+        userMaterials.push({
+          index: userMaterials.length + 1,
           name: filename.replace(/\.pdf$/i, ''),
           url: `/api/postgres/niveles/material?key=${encodeURIComponent(key)}`,
         });
@@ -56,23 +79,39 @@ export const GET = handlerWithAuth(async (request) => {
     }
   }
 
-  // 2. material: legacy JSONB [{name, url}, ...]
+  // 2. material: JSONB [{name, url}, ...] or DO Spaces keys
   if (Array.isArray(parsedMaterial)) {
     for (const m of parsedMaterial) {
-      if (m && m.url && !seen.has(m.url)) {
-        seen.add(m.url);
-        materials.push({
-          index: materials.length + 1,
-          name: m.name || m.nombre || `Material ${materials.length + 1}`,
-          url: m.url,
-        });
+      const url  = typeof m === 'string' ? m : (m?.url || '')
+      const name = typeof m === 'string'
+        ? decodeURIComponent(url.split('/').pop() || url).replace(/\.pdf$/i, '')
+        : (m?.name || m?.nombre || `Material ${advisorMaterials.length + 1}`)
+      if (url && !seenAdvisor.has(url)) {
+        seenAdvisor.add(url);
+        advisorMaterials.push({ index: advisorMaterials.length + 1, name, url });
       }
     }
   }
 
+  // Build response depending on tipo
+  let materials: { index: number; name: string; url: string }[];
+  if (tipo === 'usuario') {
+    materials = userMaterials;
+  } else if (tipo === 'advisor') {
+    materials = advisorMaterials;
+  } else {
+    // all: combine (legacy behaviour — re-index)
+    const combined = [...userMaterials, ...advisorMaterials];
+    materials = combined.map((m, i) => ({ ...m, index: i + 1 }));
+  }
+
   return successResponse({
     materials,
-    nivel: nivel.code, step: nivel.step, material: nivel.material,
-    description: nivel.description, clubs: nivel.clubs, esParalelo: nivel.esParalelo,
+    nivel: row.code,
+    step: row.step,
+    material: row.material,
+    description: row.description,
+    clubs: row.clubs,
+    esParalelo: row.esParalelo,
   });
 });

@@ -5,7 +5,8 @@ import { cn } from '@/lib/utils'
 import {
   InformationCircleIcon,
   UserGroupIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  BookOpenIcon
 } from '@heroicons/react/24/outline'
 
 interface SessionTabsProps {
@@ -13,6 +14,7 @@ interface SessionTabsProps {
     general: React.ReactNode
     students: React.ReactNode
     material: React.ReactNode
+    advisorMaterial: React.ReactNode
   }
 }
 
@@ -33,10 +35,17 @@ const tabs = [
   },
   {
     id: 'material',
-    name: 'Material',
+    name: 'Libros',
     icon: DocumentTextIcon,
     color: 'text-emerald-600',
     activeColor: 'border-emerald-500 text-emerald-600'
+  },
+  {
+    id: 'advisorMaterial',
+    name: 'Material',
+    icon: BookOpenIcon,
+    color: 'text-amber-600',
+    activeColor: 'border-amber-500 text-amber-600'
   },
 ]
 
@@ -51,6 +60,8 @@ export default function SessionTabs({ children }: SessionTabsProps) {
         return children.students
       case 'material':
         return children.material
+      case 'advisorMaterial':
+        return children.advisorMaterial
       default:
         return children.students
     }

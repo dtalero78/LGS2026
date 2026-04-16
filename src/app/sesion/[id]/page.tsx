@@ -12,6 +12,7 @@ import SessionTabs from '@/components/session/SessionTabs'
 import SessionGeneralTab from '@/components/session/SessionGeneralTab'
 import SessionStudentsTab from '@/components/session/SessionStudentsTab'
 import SessionMaterialTab from '@/components/session/SessionMaterialTab'
+import SessionAdvisorMaterialTab from '@/components/session/SessionAdvisorMaterialTab'
 
 interface CalendarioEvent {
   _id: string
@@ -23,6 +24,8 @@ interface CalendarioEvent {
   observaciones?: string
   limiteUsuarios: number
   linkZoom?: string
+  nivel?: string
+  step?: string
 }
 
 interface Student {
@@ -242,6 +245,12 @@ export default function SesionPage() {
               material: (
                 <SessionMaterialTab
                   eventoNombre={evento.nombreEvento}
+                />
+              ),
+              advisorMaterial: (
+                <SessionAdvisorMaterialTab
+                  step={evento.step || ''}
+                  nivel={evento.nivel || ''}
                 />
               )
             }}
