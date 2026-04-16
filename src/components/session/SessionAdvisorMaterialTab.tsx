@@ -63,8 +63,8 @@ export default function SessionAdvisorMaterialTab({ step, nivel }: Props) {
       try {
         const r = await fetch(`/api/postgres/materials/presigned?key=${encodeURIComponent(mat.key)}`)
         const d = await r.json()
-        if (d.success && d.data?.signedUrl) {
-          window.open(d.data.signedUrl, '_blank', 'noopener,noreferrer')
+        if (d.success && d.signedUrl) {
+          window.open(d.signedUrl, '_blank', 'noopener,noreferrer')
           return
         }
       } catch { /* fall through */ }
@@ -87,8 +87,8 @@ export default function SessionAdvisorMaterialTab({ step, nivel }: Props) {
     try {
       const r = await fetch(`/api/postgres/materials/presigned?key=${encodeURIComponent(mat.key)}`)
       const d = await r.json()
-      if (!d.success || !d.data?.signedUrl) throw new Error(d.error || 'No se pudo obtener enlace')
-      const officeViewer = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(d.data.signedUrl)}`
+      if (!d.success || !d.signedUrl) throw new Error(d.error || 'No se pudo obtener enlace')
+      const officeViewer = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(d.signedUrl)}`
       setViewerUrl(officeViewer)
     } catch (e: any) {
       alert(`Error al generar vista previa: ${e.message}`)
