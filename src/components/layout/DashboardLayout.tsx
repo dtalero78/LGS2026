@@ -39,7 +39,7 @@ const getNavigation = (userEmail: string) => [
       { name: 'Agenda Académica', href: '/dashboard/academic/agenda-academica' },
       { name: 'Advisors', href: '/dashboard/academic/advisors' },
       { name: 'Panel Advisor', href: `/panel-advisor?email=${encodeURIComponent(userEmail)}` },
-      { name: 'Actualizar Material', href: '/dashboard/academic/actualizar-material' },
+      { name: 'Actualizar Material', href: '/dashboard/academic/actualizar-material', newTab: true },
     ],
   },
   {
