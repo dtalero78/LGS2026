@@ -22,7 +22,8 @@ export default function ActualizarVideosInstructivosPage() {
   const [uploading, setUploading]       = useState<number | null>(null)
   const [editing, setEditing]           = useState<number | null>(null)
   const [editState, setEditState]       = useState<EditState>({ title: '', description: '' })
-  const [previewKey, setPreviewKey]     = useState<string | null>(null)
+  const [previewKey, setPreviewKey]     = useState<string | null>(null)   // Spaces key or static URL
+  const [previewTitle, setPreviewTitle] = useState<string>('')
   const [confirmDelete, setConfirmDelete] = useState<{ id: number; type: 'video' | 'instructivo' } | null>(null)
   const [addingNew, setAddingNew]       = useState(false)
   const [newForm, setNewForm]           = useState({ title: '', description: '' })
@@ -330,12 +331,18 @@ export default function ActualizarVideosInstructivosPage() {
                 </button>
 
                 {/* Preview */}
-                {item.videoKey && (
+                {(item.videoKey || true) && (
                   <button type="button"
-                    onClick={() => setPreviewKey(item.videoKey)}
+                    onClick={() => {
+                      setPreviewTitle(item.title)
+                      setPreviewKey(item.videoKey
+                        ? `/api/postgres/niveles/video?key=${encodeURIComponent(item.videoKey)}`
+                        : `/instructivo${item.id}.mp4`
+                      )
+                    }}
                     className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 transition-colors"
                   >
-                    <PlayIcon className="h-4 w-4" /> Ver Video
+                    <PlayIcon className="h-4 w-4" /> {item.videoKey ? 'Ver Video' : 'Ver (archivo estático)'}
                   </button>
                 )}
 
@@ -413,18 +420,23 @@ export default function ActualizarVideosInstructivosPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
           <div className="relative w-full max-w-3xl bg-black rounded-xl overflow-hidden shadow-2xl">
             <div className="flex items-center justify-between px-4 py-3 bg-gray-900">
-              <span className="text-white text-sm font-medium">Vista previa</span>
-              <button type="button" title="Cerrar" onClick={() => setPreviewKey(null)} className="text-gray-400 hover:text-white">
+              <span className="text-white text-sm font-medium">{previewTitle || 'Vista previa'}</span>
+              <button type="button" title="Cerrar" onClick={() => { setPreviewKey(null); setPreviewTitle('') }} className="text-gray-400 hover:text-white">
                 <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
             <div className="aspect-video bg-black">
               <video
                 key={previewKey}
-                src={`/api/postgres/niveles/video?key=${encodeURIComponent(previewKey)}`}
+                src={previewKey}
                 controls autoPlay className="w-full h-full"
               />
             </div>
+            {!previewKey.includes('/api/') && (
+              <div className="px-4 py-2 bg-gray-800 text-xs text-amber-400">
+                ⚠ Reproduciendo desde archivo estático del servidor. Usa "Migrar archivos estáticos" para subirlo a DO Spaces.
+              </div>
+            )}
           </div>
         </div>
       )}
