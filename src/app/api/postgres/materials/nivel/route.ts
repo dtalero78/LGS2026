@@ -58,22 +58,23 @@ export const GET = handlerWithAuth(async (request) => {
   }
 
   // Build materials arrays
-  const userMaterials: { index: number; name: string; url: string }[] = [];
-  const advisorMaterials: { index: number; name: string; url: string }[] = [];
+  const userMaterials: { index: number; name: string; url: string; key?: string }[] = [];
+  const advisorMaterials: { index: number; name: string; url: string; key?: string }[] = [];
   const seenUser    = new Set<string>();
   const seenAdvisor = new Set<string>();
 
   // 1. materialUsuario: DO Spaces keys like "materials/Filename.pdf"
   const userMats = row.materialUsuario || [];
   if (Array.isArray(userMats)) {
-    for (const key of userMats) {
-      if (typeof key === 'string' && key.startsWith('materials/') && !seenUser.has(key)) {
-        seenUser.add(key);
-        const filename = decodeURIComponent(key.split('/').pop() || key);
+    for (const spacesKey of userMats) {
+      if (typeof spacesKey === 'string' && spacesKey.startsWith('materials/') && !seenUser.has(spacesKey)) {
+        seenUser.add(spacesKey);
+        const filename = decodeURIComponent(spacesKey.split('/').pop() || spacesKey);
         userMaterials.push({
           index: userMaterials.length + 1,
           name: filename.replace(/\.pdf$/i, ''),
-          url: `/api/postgres/niveles/material?key=${encodeURIComponent(key)}`,
+          url: `/api/postgres/niveles/material?key=${encodeURIComponent(spacesKey)}`,
+          key: spacesKey,
         });
       }
     }
@@ -88,13 +89,20 @@ export const GET = handlerWithAuth(async (request) => {
         : (m?.name || m?.nombre || `Material ${advisorMaterials.length + 1}`)
       if (url && !seenAdvisor.has(url)) {
         seenAdvisor.add(url);
-        advisorMaterials.push({ index: advisorMaterials.length + 1, name, url });
+        // If the url is a Spaces key (starts with materials/), expose it for presigned URL
+        const spacesKey = url.startsWith('materials/') ? url : undefined;
+        advisorMaterials.push({
+          index: advisorMaterials.length + 1,
+          name,
+          url,
+          key: spacesKey,
+        });
       }
     }
   }
 
   // Build response depending on tipo
-  let materials: { index: number; name: string; url: string }[];
+  let materials: { index: number; name: string; url: string; key?: string }[];
   if (tipo === 'usuario') {
     materials = userMaterials;
   } else if (tipo === 'advisor') {
