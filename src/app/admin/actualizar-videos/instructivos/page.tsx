@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import {
   ArrowLeftIcon, VideoCameraIcon, PencilIcon, TrashIcon,
-  ArrowUpTrayIcon, PlayIcon, XMarkIcon, CheckIcon, PlusIcon
+  ArrowUpTrayIcon, PlayIcon, XMarkIcon, CheckIcon, PlusIcon, ArrowDownTrayIcon
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
@@ -219,8 +219,8 @@ export default function ActualizarVideosInstructivosPage() {
               <span className="text-white font-semibold">{item.title}</span>
               <span className="ml-auto flex items-center gap-2">
                 {item.videoKey
-                  ? <span className="px-2 py-0.5 bg-green-500 text-white text-xs rounded-full">Video cargado</span>
-                  : <span className="px-2 py-0.5 bg-yellow-400 text-yellow-900 text-xs rounded-full">Sin video</span>
+                  ? <span className="px-2 py-0.5 bg-green-500 text-white text-xs rounded-full">✓ Video cargado</span>
+                  : <span className="px-2 py-0.5 bg-yellow-400 text-yellow-900 text-xs rounded-full">⚠ Pendiente — sin video subido</span>
                 }
               </span>
             </div>
@@ -305,6 +305,17 @@ export default function ActualizarVideosInstructivosPage() {
                   >
                     <PlayIcon className="h-4 w-4" /> Ver Video
                   </button>
+                )}
+
+                {/* Download */}
+                {item.videoKey && (
+                  <a
+                    href={`/api/postgres/niveles/video?key=${encodeURIComponent(item.videoKey)}&download=1`}
+                    download
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <ArrowDownTrayIcon className="h-4 w-4" /> Descargar
+                  </a>
                 )}
 
                 {/* Delete video only */}

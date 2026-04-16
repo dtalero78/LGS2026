@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import {
   ArrowLeftIcon, AcademicCapIcon, ArrowUpTrayIcon, TrashIcon,
-  PlayIcon, XMarkIcon, LinkIcon, CheckIcon, VideoCameraIcon
+  PlayIcon, XMarkIcon, LinkIcon, CheckIcon, VideoCameraIcon, ArrowDownTrayIcon
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
@@ -154,7 +154,7 @@ export default function ActualizarVideosSesionesPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-purple-900 uppercase tracking-wider">Step</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-purple-900 uppercase tracking-wider">Video MP4 (Spaces)</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-purple-900 uppercase tracking-wider">Enlace Externo (YouTube)</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-purple-900 uppercase tracking-wider">Vista Previa</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-purple-900 uppercase tracking-wider">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -261,16 +261,28 @@ export default function ActualizarVideosSesionesPage() {
                         )}
                       </td>
 
-                      {/* Preview */}
+                      {/* Acciones */}
                       <td className="px-6 py-4 text-right">
-                        {(row.videoUrl || row.video) && (
-                          <button
-                            onClick={() => openPreview(row)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 text-xs rounded-lg hover:bg-gray-200 transition-colors"
-                          >
-                            <PlayIcon className="h-3.5 w-3.5" /> Ver
-                          </button>
-                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          {(row.videoUrl || row.video) && (
+                            <button
+                              type="button"
+                              onClick={() => openPreview(row)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 text-xs rounded-lg hover:bg-gray-200 transition-colors"
+                            >
+                              <PlayIcon className="h-3.5 w-3.5" /> Ver
+                            </button>
+                          )}
+                          {row.videoUrl && (
+                            <a
+                              href={`/api/postgres/niveles/video?nivel=${encodeURIComponent(row.code)}&step=${encodeURIComponent(row.step)}&download=1`}
+                              download
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 transition-colors"
+                            >
+                              <ArrowDownTrayIcon className="h-3.5 w-3.5" /> Descargar
+                            </a>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )

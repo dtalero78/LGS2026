@@ -19,9 +19,10 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const nivel = searchParams.get('nivel');
-  const step  = searchParams.get('step');
-  const key   = searchParams.get('key');   // direct DO Spaces key (instructivos)
+  const nivel    = searchParams.get('nivel');
+  const step     = searchParams.get('step');
+  const key      = searchParams.get('key');        // direct DO Spaces key (instructivos)
+  const download = searchParams.get('download');   // '1' → force download with filename
 
   // Mode 1: direct key (instructivos or any Spaces path)
   if (key) {
@@ -37,11 +38,13 @@ export async function GET(request: Request) {
     try {
       const s3Response = await spacesClient.send(command);
       const body = s3Response.Body as any;
+      const filename = key.split('/').pop() || 'video.mp4';
       const headers: Record<string, string> = {
         'Content-Type': s3Response.ContentType || 'video/mp4',
         'Accept-Ranges': 'bytes',
         'Cache-Control': 'private, max-age=3600',
       };
+      if (download === '1') headers['Content-Disposition'] = `attachment; filename="${filename}"`;
       if (s3Response.ContentLength) headers['Content-Length'] = String(s3Response.ContentLength);
       if (s3Response.ContentRange) headers['Content-Range'] = s3Response.ContentRange;
       return new NextResponse(body as ReadableStream, { status: rangeHeader ? 206 : 200, headers });
@@ -71,12 +74,14 @@ export async function GET(request: Request) {
   try {
     const s3Response = await spacesClient.send(command);
     const body = s3Response.Body as any;
+    const filename = row.videoUrl!.split('/').pop() || 'video.mp4';
 
     const headers: Record<string, string> = {
       'Content-Type': s3Response.ContentType || 'video/mp4',
       'Accept-Ranges': 'bytes',
       'Cache-Control': 'private, max-age=3600',
     };
+    if (download === '1') headers['Content-Disposition'] = `attachment; filename="${filename}"`;
     if (s3Response.ContentLength) headers['Content-Length'] = String(s3Response.ContentLength);
     if (s3Response.ContentRange) headers['Content-Range'] = s3Response.ContentRange;
 
