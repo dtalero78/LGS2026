@@ -20,10 +20,39 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const nivel = searchParams.get('nivel');
-  const step = searchParams.get('step');
+  const step  = searchParams.get('step');
+  const key   = searchParams.get('key');   // direct DO Spaces key (instructivos)
 
+  // Mode 1: direct key (instructivos or any Spaces path)
+  if (key) {
+    if (!key.startsWith('videos/')) {
+      return NextResponse.json({ error: 'Invalid key' }, { status: 400 });
+    }
+    const rangeHeader = request.headers.get('range');
+    const command = new GetObjectCommand({
+      Bucket: SPACES_BUCKET,
+      Key: key,
+      ...(rangeHeader ? { Range: rangeHeader } : {}),
+    });
+    try {
+      const s3Response = await spacesClient.send(command);
+      const body = s3Response.Body as any;
+      const headers: Record<string, string> = {
+        'Content-Type': s3Response.ContentType || 'video/mp4',
+        'Accept-Ranges': 'bytes',
+        'Cache-Control': 'private, max-age=3600',
+      };
+      if (s3Response.ContentLength) headers['Content-Length'] = String(s3Response.ContentLength);
+      if (s3Response.ContentRange) headers['Content-Range'] = s3Response.ContentRange;
+      return new NextResponse(body as ReadableStream, { status: rangeHeader ? 206 : 200, headers });
+    } catch {
+      return NextResponse.json({ error: 'Video not found' }, { status: 404 });
+    }
+  }
+
+  // Mode 2: lookup by nivel + step
   if (!nivel || !step) {
-    return NextResponse.json({ error: 'nivel and step are required' }, { status: 400 });
+    return NextResponse.json({ error: 'nivel and step (or key) are required' }, { status: 400 });
   }
 
   const row = await NivelesRepository.findVideoByNivelAndStep(nivel, step);

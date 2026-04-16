@@ -38,7 +38,20 @@ function PanelEstudianteContent() {
   const [showHistory, setShowHistory] = useState(false)
   const [videoOpen, setVideoOpen] = useState(false)
   const [videoSrc, setVideoSrc] = useState<string | null>(null)
+  const [videoTitle, setVideoTitle] = useState<string>('')
   const [showInstructivos, setShowInstructivos] = useState(false)
+
+  // Instructivos from API
+  const instructivosQuery = useQuery(
+    'instructivos-config',
+    () => fetch('/api/postgres/config/instructivos').then(r => r.json()),
+    { staleTime: 10 * 60 * 1000 }
+  )
+  const instructivosData: { id: number; title: string; description: string; videoKey: string | null }[] =
+    instructivosQuery.data?.instructivos ?? [
+      { id: 1, title: 'Instructivo 1', description: 'Cómo agendar tus clases',      videoKey: null },
+      { id: 2, title: 'Instructivo 2', description: 'Cómo funciona la plataforma', videoKey: null },
+    ]
 
   // Ticker
   const tickerQuery = useQuery(
@@ -85,7 +98,7 @@ function PanelEstudianteContent() {
     const nivel = profile?.nivel
     const step = nextClass?.step || profile?.effectiveStep || profile?.step
     if (!nivel || !step) return
-    // Use the streaming endpoint directly as the video src (avoids CORS)
+    setVideoTitle('')
     setVideoSrc(`/api/postgres/niveles/video?nivel=${encodeURIComponent(nivel)}&step=${encodeURIComponent(step)}`)
     setVideoOpen(true)
   }
@@ -287,38 +300,36 @@ function PanelEstudianteContent() {
             </div>
             <div className="p-4 space-y-3">
               <p className="text-sm text-gray-500 mb-2">Selecciona un instructivo para ver:</p>
-              <button
-                onClick={() => {
-                  setShowInstructivos(false)
-                  setVideoSrc('/instructivo1.mp4')
-                  setVideoOpen(true)
-                }}
-                className="w-full flex items-center gap-4 p-4 border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 transition-colors text-left"
-              >
-                <div className="flex-shrink-0 h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <VideoCameraIcon className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Instructivo 1</p>
-                  <p className="text-sm text-gray-500">Cómo agendar tus clases</p>
-                </div>
-              </button>
-              <button
-                onClick={() => {
-                  setShowInstructivos(false)
-                  setVideoSrc('/instructivo2.mp4')
-                  setVideoOpen(true)
-                }}
-                className="w-full flex items-center gap-4 p-4 border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 transition-colors text-left"
-              >
-                <div className="flex-shrink-0 h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <VideoCameraIcon className="h-6 w-6 text-purple-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Instructivo 2</p>
-                  <p className="text-sm text-gray-500">Cómo funciona la plataforma</p>
-                </div>
-              </button>
+              {instructivosData.map((inst, idx) => {
+                const bgColors = ['bg-blue-100','bg-purple-100','bg-green-100','bg-amber-100']
+                const iconColors = ['text-blue-600','text-purple-600','text-green-600','text-amber-600']
+                const hoverColors = ['hover:bg-blue-50 hover:border-blue-300','hover:bg-purple-50 hover:border-purple-300','hover:bg-green-50 hover:border-green-300','hover:bg-amber-50 hover:border-amber-300']
+                const ci = idx % 4
+                const src = inst.videoKey
+                  ? `/api/postgres/niveles/video?key=${encodeURIComponent(inst.videoKey)}`
+                  : `/instructivo${inst.id}.mp4`  // fallback to static file
+                return (
+                  <button
+                    type="button"
+                    key={inst.id}
+                    onClick={() => {
+                      setShowInstructivos(false)
+                      setVideoSrc(src)
+                      setVideoTitle(`${inst.title} — ${inst.description}`)
+                      setVideoOpen(true)
+                    }}
+                    className={`w-full flex items-center gap-4 p-4 border border-gray-200 rounded-xl ${hoverColors[ci]} transition-colors text-left`}
+                  >
+                    <div className={`flex-shrink-0 h-12 w-12 ${bgColors[ci]} rounded-lg flex items-center justify-center`}>
+                      <VideoCameraIcon className={`h-6 w-6 ${iconColors[ci]}`} />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{inst.title}</p>
+                      <p className="text-sm text-gray-500">{inst.description}</p>
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>
@@ -330,12 +341,10 @@ function PanelEstudianteContent() {
           <div className="relative w-full max-w-3xl bg-black rounded-xl overflow-hidden shadow-2xl">
             <div className="flex items-center justify-between px-4 py-3 bg-gray-900">
               <span className="text-white text-sm font-medium">
-                {videoSrc?.includes('instructivo')
-                  ? videoSrc.includes('instructivo1') ? 'Instructivo 1 — Cómo agendar tus clases' : 'Instructivo 2 — Cómo funciona la plataforma'
-                  : `${profile?.nivel} — ${nextClass?.step || profile?.effectiveStep || profile?.step}`}
+                {videoTitle || `${profile?.nivel} — ${nextClass?.step || profile?.effectiveStep || profile?.step}`}
               </span>
               <button
-                onClick={() => { setVideoOpen(false); setVideoSrc(null) }}
+                onClick={() => { setVideoOpen(false); setVideoSrc(null); setVideoTitle('') }}
                 className="text-gray-400 hover:text-white transition-colors"
               >
                 <XMarkIcon className="h-5 w-5" />
