@@ -39,6 +39,7 @@ function PanelEstudianteContent() {
   const [videoOpen, setVideoOpen] = useState(false)
   const [videoSrc, setVideoSrc] = useState<string | null>(null)
   const [videoTitle, setVideoTitle] = useState<string>('')
+  const [videoErr, setVideoErr] = useState(false)
   const [showInstructivos, setShowInstructivos] = useState(false)
 
   // Instructivos from API
@@ -96,9 +97,12 @@ function PanelEstudianteContent() {
 
   const handleOpenVideo = () => {
     const nivel = profile?.nivel
-    const step = nextClass?.step || profile?.effectiveStep || profile?.step
+    // Always use profile?.step (the student's actual step in ACADEMICA).
+    // nextClass?.step can be "TRAINING - Step 7" which doesn't exist in NIVELES.
+    const step = profile?.effectiveStep || profile?.step
     if (!nivel || !step) return
     setVideoTitle('')
+    setVideoErr(false)
     setVideoSrc(`/api/postgres/niveles/video?nivel=${encodeURIComponent(nivel)}&step=${encodeURIComponent(step)}`)
     setVideoOpen(true)
   }
@@ -341,28 +345,32 @@ function PanelEstudianteContent() {
           <div className="relative w-full max-w-3xl bg-black rounded-xl overflow-hidden shadow-2xl">
             <div className="flex items-center justify-between px-4 py-3 bg-gray-900">
               <span className="text-white text-sm font-medium">
-                {videoTitle || `${profile?.nivel} — ${nextClass?.step || profile?.effectiveStep || profile?.step}`}
+                {videoTitle || `${profile?.nivel} — ${profile?.effectiveStep || profile?.step}`}
               </span>
               <button
-                onClick={() => { setVideoOpen(false); setVideoSrc(null); setVideoTitle('') }}
+                onClick={() => { setVideoOpen(false); setVideoSrc(null); setVideoTitle(''); setVideoErr(false) }}
                 className="text-gray-400 hover:text-white transition-colors"
               >
                 <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
             <div className="aspect-video bg-black flex items-center justify-center">
-              {videoSrc ? (
+              {videoErr || !videoSrc ? (
+                <div className="text-center p-8">
+                  <VideoCameraIcon className="h-12 w-12 text-gray-500 mx-auto mb-3" />
+                  <p className="text-gray-300 text-sm font-medium">Video no disponible aún</p>
+                  <p className="text-gray-500 text-xs mt-1">El video para este step será publicado próximamente.</p>
+                </div>
+              ) : (
                 <video
+                  key={videoSrc}
                   src={videoSrc}
                   controls
                   autoPlay
                   className="w-full h-full"
                   controlsList="nodownload"
+                  onError={() => setVideoErr(true)}
                 />
-              ) : (
-                <div className="text-gray-400 text-sm">
-                  No hay video disponible para esta clase.
-                </div>
               )}
             </div>
           </div>

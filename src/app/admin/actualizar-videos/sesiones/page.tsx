@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import {
   ArrowLeftIcon, AcademicCapIcon, ArrowUpTrayIcon, TrashIcon,
-  PlayIcon, XMarkIcon, VideoCameraIcon, ArrowDownTrayIcon
+  PlayIcon, XMarkIcon, VideoCameraIcon, ArrowDownTrayIcon, ShieldCheckIcon
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
@@ -30,7 +30,24 @@ export default function ActualizarVideosSesionesPage() {
   const [previewStep, setPreviewStep] = useState<string>('')
   const [previewErr, setPreviewErr]   = useState(false)
   const [confirmDel, setConfirmDel]   = useState<{ nivel: string; step: string } | null>(null)
+  const [checking, setChecking]       = useState(false)
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+
+  // ── Check & clean stale videoUrls ──────────────────────────────────────────
+  const handleCheckSpaces = async () => {
+    if (!confirm('Verificará todos los videoUrl en NIVELES contra DO Spaces y limpiará los que no existan. ¿Continuar?')) return
+    setChecking(true)
+    try {
+      const r = await fetch('/api/admin/videos/check-niveles', { method: 'POST' })
+      const d = await r.json()
+      if (!d.success) throw new Error(d.error || 'Error')
+      const cleared = d.results.filter((r: any) => r.cleared).length
+      const ok      = d.results.filter((r: any) => r.exists).length
+      toast.success(`Verificados: ${d.checked} | Válidos: ${ok} | Limpiados: ${cleared}`)
+      await loadSteps(nivel)
+    } catch (e: any) { toast.error(e.message || 'Error al verificar') }
+    finally { setChecking(false) }
+  }
 
   useEffect(() => { loadSteps(nivel) }, [nivel])
 
@@ -97,7 +114,19 @@ export default function ActualizarVideosSesionesPage() {
           </button>
           <AcademicCapIcon className="h-6 w-6 text-purple-600" />
           <h1 className="text-xl font-bold text-gray-900">Videos — Sesiones</h1>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleCheckSpaces}
+              disabled={checking}
+              title="Verifica videoUrl contra Spaces y limpia los que no existen"
+              className="flex items-center gap-2 px-3 py-1.5 bg-amber-500 text-white text-sm rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors"
+            >
+              {checking
+                ? <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> Verificando...</>
+                : <><ShieldCheckIcon className="h-4 w-4" /> Verificar Spaces</>
+              }
+            </button>
             <label className="text-sm text-gray-500">Nivel:</label>
             <select
               value={nivel}
