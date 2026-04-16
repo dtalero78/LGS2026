@@ -53,7 +53,31 @@ export default function SessionAdvisorMaterialTab({ step, nivel }: Props) {
     }
   }
 
-  const handleDownload = (url: string) => window.open(url, '_blank', 'noopener,noreferrer')
+  /** Returns true if the URL is a valid HTTP/HTTPS link the browser can open */
+  const isValidHttpUrl = (url: string) =>
+    url.startsWith('http://') || url.startsWith('https://')
+
+  const handleDownload = async (mat: Material) => {
+    // DO Spaces key → generate presigned URL for download
+    if (mat.key) {
+      try {
+        const r = await fetch(`/api/postgres/materials/presigned?key=${encodeURIComponent(mat.key)}`)
+        const d = await r.json()
+        if (d.success && d.data?.signedUrl) {
+          window.open(d.data.signedUrl, '_blank', 'noopener,noreferrer')
+          return
+        }
+      } catch { /* fall through */ }
+      alert('No se pudo generar el enlace de descarga')
+      return
+    }
+    // Regular HTTP URL
+    if (isValidHttpUrl(mat.url)) {
+      window.open(mat.url, '_blank', 'noopener,noreferrer')
+      return
+    }
+    alert('Este archivo fue migrado de Wix y no está disponible para descarga. Debe ser reemplazado desde el panel de administración.')
+  }
 
   const handleVisualize = async (mat: Material) => {
     if (!mat.key) return
@@ -142,6 +166,7 @@ export default function SessionAdvisorMaterialTab({ step, nivel }: Props) {
             <tbody className="bg-white divide-y divide-gray-200">
               {materials.map(mat => {
                 const office = isOfficeFile(mat.name) && !!mat.key
+                const available = !!mat.key || isValidHttpUrl(mat.url)
                 return (
                   <tr key={mat.index} className="hover:bg-amber-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{mat.index}</td>
@@ -152,6 +177,11 @@ export default function SessionAdvisorMaterialTab({ step, nivel }: Props) {
                             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                         <span className="font-medium">{mat.name}</span>
+                        {!available && (
+                          <span className="ml-1 px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded-full">
+                            Archivo legacy — reemplazar
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
@@ -176,18 +206,24 @@ export default function SessionAdvisorMaterialTab({ step, nivel }: Props) {
                             Visualizar
                           </button>
                         )}
-                        {/* Descargar */}
-                        <button
-                          type="button"
-                          onClick={() => handleDownload(mat.url)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
-                        >
-                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                          Descargar
-                        </button>
+                        {/* Descargar — solo si el archivo está disponible */}
+                        {available ? (
+                          <button
+                            type="button"
+                            onClick={() => handleDownload(mat)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+                          >
+                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Descargar
+                          </button>
+                        ) : (
+                          <span className="px-3 py-1.5 text-xs text-gray-400 bg-gray-100 rounded-lg">
+                            No disponible
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>
