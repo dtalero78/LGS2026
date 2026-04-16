@@ -78,101 +78,110 @@ export async function GET(request: Request) {
 // ── POST ──────────────────────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
-  const session = await requireAdmin(request)
-  if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  try {
+    const session = await requireAdmin(request)
+    if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const contentType = request.headers.get('content-type') || ''
+    const contentType = request.headers.get('content-type') || ''
 
-  if (contentType.includes('multipart/form-data')) {
-    const formData = await request.formData()
-    const nivel    = String(formData.get('nivel') || '')
-    const step     = String(formData.get('step')  || '')
-    const file     = formData.get('file') as File | null
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData()
+      const nivel    = String(formData.get('nivel') || '')
+      const step     = String(formData.get('step')  || '')
+      const file     = formData.get('file') as File | null
 
-    if (!nivel || !step || !file) {
-      return NextResponse.json({ error: 'nivel, step y file son requeridos' }, { status: 400 })
+      if (!nivel || !step || !file) {
+        return NextResponse.json({ error: 'nivel, step y file son requeridos' }, { status: 400 })
+      }
+
+      const key    = buildSpacesKey(nivel, step)
+      const buffer = Buffer.from(await file.arrayBuffer())
+
+      await spacesClient.send(new PutObjectCommand({
+        Bucket: SPACES_BUCKET,
+        Key: key,
+        Body: buffer,
+        ContentType: file.type || 'video/mp4',
+        ACL: 'private',
+      }))
+
+      await query(
+        `UPDATE "NIVELES" SET "videoUrl" = $1, "_updatedDate" = NOW()
+         WHERE "code" = $2 AND "step" = $3`,
+        [key, nivel, step]
+      )
+
+      return NextResponse.json({ success: true, videoUrl: key })
     }
 
-    const key    = buildSpacesKey(nivel, step)
-    const buffer = Buffer.from(await file.arrayBuffer())
+    // JSON — update URL fields directly
+    const body = await request.json()
+    const { nivel, step, videoUrl, video } = body
+    if (!nivel || !step) return NextResponse.json({ error: 'nivel y step son requeridos' }, { status: 400 })
 
-    await spacesClient.send(new PutObjectCommand({
-      Bucket: SPACES_BUCKET,
-      Key: key,
-      Body: buffer,
-      ContentType: file.type || 'video/mp4',
-      ACL: 'private',
-    }))
-
-    await query(
-      `UPDATE "NIVELES" SET "videoUrl" = $1, "_updatedDate" = NOW()
-       WHERE "code" = $2 AND "step" = $3`,
-      [key, nivel, step]
-    )
-
-    return NextResponse.json({ success: true, videoUrl: key })
-  }
-
-  // JSON — update URL fields directly
-  const body = await request.json()
-  const { nivel, step, videoUrl, video } = body
-  if (!nivel || !step) return NextResponse.json({ error: 'nivel y step son requeridos' }, { status: 400 })
-
-  if (videoUrl !== undefined) {
-    await query(
-      `UPDATE "NIVELES" SET "videoUrl" = $1, "_updatedDate" = NOW() WHERE "code" = $2 AND "step" = $3`,
-      [videoUrl || null, nivel, step]
-    )
-  }
-  if (video !== undefined) {
-    try {
+    if (videoUrl !== undefined) {
       await query(
-        `UPDATE "NIVELES" SET "video" = $1, "_updatedDate" = NOW() WHERE "code" = $2 AND "step" = $3`,
-        [video || null, nivel, step]
+        `UPDATE "NIVELES" SET "videoUrl" = $1, "_updatedDate" = NOW() WHERE "code" = $2 AND "step" = $3`,
+        [videoUrl || null, nivel, step]
       )
-    } catch { /* video column may not exist */ }
-  }
+    }
+    if (video !== undefined) {
+      try {
+        await query(
+          `UPDATE "NIVELES" SET "video" = $1, "_updatedDate" = NOW() WHERE "code" = $2 AND "step" = $3`,
+          [video || null, nivel, step]
+        )
+      } catch { /* video column may not exist */ }
+    }
 
-  return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true })
+  } catch (e: any) {
+    console.error('[admin/videos/sesiones POST]', e)
+    return NextResponse.json({ error: e.message || 'Error al subir video' }, { status: 500 })
+  }
 }
 
 // ── DELETE ────────────────────────────────────────────────────────────────────
 
 export async function DELETE(request: Request) {
-  const session = await requireAdmin(request)
-  if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  try {
+    const session = await requireAdmin(request)
+    if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { searchParams } = new URL(request.url)
-  const nivel = searchParams.get('nivel')
-  const step  = searchParams.get('step')
-  const field = searchParams.get('field') || 'videoUrl'  // 'videoUrl' | 'video'
+    const { searchParams } = new URL(request.url)
+    const nivel = searchParams.get('nivel')
+    const step  = searchParams.get('step')
+    const field = searchParams.get('field') || 'videoUrl'
 
-  if (!nivel || !step) return NextResponse.json({ error: 'nivel y step son requeridos' }, { status: 400 })
+    if (!nivel || !step) return NextResponse.json({ error: 'nivel y step son requeridos' }, { status: 400 })
 
-  if (field === 'videoUrl') {
-    // Get current key to delete from Spaces
-    const rows = await queryMany<{ videoUrl: string | null }>(
-      `SELECT "videoUrl" FROM "NIVELES" WHERE "code" = $1 AND "step" = $2`,
-      [nivel, step]
-    )
-    const key = rows[0]?.videoUrl
-    if (key) {
-      try {
-        await spacesClient.send(new DeleteObjectCommand({ Bucket: SPACES_BUCKET, Key: key }))
-      } catch { /* ignore */ }
-    }
-    await query(
-      `UPDATE "NIVELES" SET "videoUrl" = NULL, "_updatedDate" = NOW() WHERE "code" = $1 AND "step" = $2`,
-      [nivel, step]
-    )
-  } else {
-    try {
-      await query(
-        `UPDATE "NIVELES" SET "video" = NULL, "_updatedDate" = NOW() WHERE "code" = $1 AND "step" = $2`,
+    if (field === 'videoUrl') {
+      const rows = await queryMany<{ videoUrl: string | null }>(
+        `SELECT "videoUrl" FROM "NIVELES" WHERE "code" = $1 AND "step" = $2`,
         [nivel, step]
       )
-    } catch { /* video column may not exist */ }
-  }
+      const key = rows[0]?.videoUrl
+      if (key) {
+        try {
+          await spacesClient.send(new DeleteObjectCommand({ Bucket: SPACES_BUCKET, Key: key }))
+        } catch { /* ignore if already gone */ }
+      }
+      await query(
+        `UPDATE "NIVELES" SET "videoUrl" = NULL, "_updatedDate" = NOW() WHERE "code" = $1 AND "step" = $2`,
+        [nivel, step]
+      )
+    } else {
+      try {
+        await query(
+          `UPDATE "NIVELES" SET "video" = NULL, "_updatedDate" = NOW() WHERE "code" = $1 AND "step" = $2`,
+          [nivel, step]
+        )
+      } catch { /* video column may not exist */ }
+    }
 
-  return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true })
+  } catch (e: any) {
+    console.error('[admin/videos/sesiones DELETE]', e)
+    return NextResponse.json({ error: e.message || 'Error al eliminar' }, { status: 500 })
+  }
 }
