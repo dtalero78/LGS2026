@@ -127,16 +127,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, instructivo: list.find(i => i.id === id) })
   }
 
-  // JSON — metadata only
+  // JSON — metadata only (or remove: true to delete the instructivo from the list)
   const body = await request.json()
-  const { id, title, description } = body
+  const { id, title, description, remove } = body
   if (!id) return NextResponse.json({ error: 'id es requerido' }, { status: 400 })
 
   const list = await loadInstructivos()
   const idx  = list.findIndex(i => i.id === id)
+
+  // remove: true — delete entire instructivo from list
+  if (remove) {
+    const filtered = list.filter(i => i.id !== id)
+    await saveInstructivos(filtered, userEmail)
+    return NextResponse.json({ success: true })
+  }
+
   if (idx >= 0) {
-    if (title)       list[idx].title       = title
-    if (description) list[idx].description = description
+    if (title !== undefined)       list[idx].title       = title
+    if (description !== undefined) list[idx].description = description
   } else {
     list.push({ id, title: title || `Instructivo ${id}`, description: description || '', videoKey: null })
   }

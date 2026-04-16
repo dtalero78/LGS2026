@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import {
   ArrowLeftIcon, VideoCameraIcon, PencilIcon, TrashIcon,
-  ArrowUpTrayIcon, PlayIcon, XMarkIcon, CheckIcon
+  ArrowUpTrayIcon, PlayIcon, XMarkIcon, CheckIcon, PlusIcon
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
@@ -23,7 +23,9 @@ export default function ActualizarVideosInstructivosPage() {
   const [editing, setEditing]           = useState<number | null>(null)
   const [editState, setEditState]       = useState<EditState>({ title: '', description: '' })
   const [previewKey, setPreviewKey]     = useState<string | null>(null)
-  const [confirmDelete, setConfirmDelete] = useState<number | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<{ id: number; type: 'video' | 'instructivo' } | null>(null)
+  const [addingNew, setAddingNew]       = useState(false)
+  const [newForm, setNewForm]           = useState({ title: '', description: '' })
   const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({})
 
   useEffect(() => { loadInstructivos() }, [])
@@ -38,7 +40,26 @@ export default function ActualizarVideosInstructivosPage() {
     finally { setLoading(false) }
   }
 
-  // ── Upload ──────────────────────────────────────────────────────────────────
+  // ── Add new instructivo ─────────────────────────────────────────────────────
+  const handleAddNew = async () => {
+    if (!newForm.title.trim()) { toast.error('El título es requerido'); return }
+    try {
+      const nextId = instructivos.length > 0 ? Math.max(...instructivos.map(i => i.id)) + 1 : 1
+      const r = await fetch('/api/admin/videos/instructivos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: nextId, title: newForm.title.trim(), description: newForm.description.trim() }),
+      })
+      const d = await r.json()
+      if (!d.success) throw new Error(d.error || 'Error')
+      toast.success('Instructivo agregado')
+      setAddingNew(false)
+      setNewForm({ title: '', description: '' })
+      await loadInstructivos()
+    } catch (e: any) { toast.error(e.message || 'Error al agregar') }
+  }
+
+  // ── Upload video ────────────────────────────────────────────────────────────
   const handleUpload = async (id: number, file: File) => {
     if (!file.type.startsWith('video/')) { toast.error('Solo se permiten archivos de video'); return }
     setUploading(id)
@@ -49,7 +70,6 @@ export default function ActualizarVideosInstructivosPage() {
       fd.append('title',       item.title)
       fd.append('description', item.description)
       fd.append('file',        file)
-
       const r = await fetch('/api/admin/videos/instructivos', { method: 'POST', body: fd })
       const d = await r.json()
       if (!d.success) throw new Error(d.error || 'Error')
@@ -59,13 +79,32 @@ export default function ActualizarVideosInstructivosPage() {
     finally { setUploading(null) }
   }
 
-  // ── Delete ──────────────────────────────────────────────────────────────────
-  const handleDelete = async (id: number) => {
+  // ── Delete video only ───────────────────────────────────────────────────────
+  const handleDeleteVideo = async (id: number) => {
     try {
       const r = await fetch(`/api/admin/videos/instructivos?id=${id}`, { method: 'DELETE' })
       const d = await r.json()
       if (!d.success) throw new Error(d.error || 'Error')
       toast.success('Video eliminado')
+      setConfirmDelete(null)
+      await loadInstructivos()
+    } catch (e: any) { toast.error(e.message || 'Error al eliminar video') }
+  }
+
+  // ── Delete entire instructivo ───────────────────────────────────────────────
+  const handleDeleteInstructivo = async (id: number) => {
+    try {
+      // First delete the video file if any
+      await fetch(`/api/admin/videos/instructivos?id=${id}`, { method: 'DELETE' })
+      // Then remove the instructivo from the list via PATCH with remove flag
+      const r = await fetch('/api/admin/videos/instructivos', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, remove: true }),
+      })
+      const d = await r.json()
+      if (!d.success) throw new Error(d.error || 'Error')
+      toast.success('Instructivo eliminado')
       setConfirmDelete(null)
       await loadInstructivos()
     } catch (e: any) { toast.error(e.message || 'Error al eliminar') }
@@ -100,16 +139,78 @@ export default function ActualizarVideosInstructivosPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-4">
-          <button onClick={() => window.close()} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
+          <button type="button" onClick={() => window.close()} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
             <ArrowLeftIcon className="h-4 w-4" /> Cerrar
           </button>
           <VideoCameraIcon className="h-6 w-6 text-blue-600" />
           <h1 className="text-xl font-bold text-gray-900">Videos — Instructivos</h1>
-          <span className="ml-auto text-sm text-gray-400">{instructivos.length} instructivos</span>
+          <span className="ml-auto text-sm text-gray-400 mr-4">{instructivos.length} instructivos</span>
+          <button
+            type="button"
+            onClick={() => setAddingNew(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <PlusIcon className="h-4 w-4" /> Agregar Instructivo
+          </button>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+
+        {/* New instructivo form */}
+        {addingNew && (
+          <div className="bg-white rounded-xl shadow-sm border-2 border-blue-300 overflow-hidden">
+            <div className="bg-blue-50 px-6 py-4 flex items-center gap-3">
+              <PlusIcon className="h-5 w-5 text-blue-600" />
+              <span className="text-blue-700 font-semibold">Nuevo Instructivo</span>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Título <span className="text-red-500">*</span></label>
+                <input
+                  autoFocus
+                  value={newForm.title}
+                  onChange={e => setNewForm(s => ({ ...s, title: e.target.value }))}
+                  placeholder="Ej: Instructivo 3"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Descripción</label>
+                <input
+                  value={newForm.description}
+                  onChange={e => setNewForm(s => ({ ...s, description: e.target.value }))}
+                  placeholder="Ej: Cómo usar la plataforma avanzada"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={handleAddNew}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <CheckIcon className="h-4 w-4" /> Guardar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAddingNew(false); setNewForm({ title: '', description: '' }) }}
+                  className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {instructivos.length === 0 && !addingNew && (
+          <div className="text-center py-16 text-gray-500">
+            <VideoCameraIcon className="h-12 w-12 mx-auto text-gray-300 mb-3" />
+            <p>No hay instructivos. Haz clic en <strong>Agregar Instructivo</strong> para comenzar.</p>
+          </div>
+        )}
+
         {instructivos.map(item => (
           <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             {/* Card header */}
@@ -125,7 +226,7 @@ export default function ActualizarVideosInstructivosPage() {
             </div>
 
             <div className="p-6 space-y-4">
-              {/* Metadata */}
+              {/* Metadata edit */}
               {editing === item.id ? (
                 <div className="space-y-3">
                   <div>
@@ -145,16 +246,12 @@ export default function ActualizarVideosInstructivosPage() {
                     />
                   </div>
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => handleSaveMeta(item.id)}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
-                    >
+                    <button type="button" onClick={() => handleSaveMeta(item.id)}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
                       <CheckIcon className="h-4 w-4" /> Guardar
                     </button>
-                    <button
-                      onClick={() => setEditing(null)}
-                      className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-                    >
+                    <button type="button" onClick={() => setEditing(null)}
+                      className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
                       Cancelar
                     </button>
                   </div>
@@ -168,7 +265,7 @@ export default function ActualizarVideosInstructivosPage() {
                       <p className="text-xs text-gray-400 mt-1 font-mono">{item.videoKey}</p>
                     )}
                   </div>
-                  <button
+                  <button type="button"
                     onClick={() => { setEditing(item.id); setEditState({ title: item.title, description: item.description }) }}
                     className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                   >
@@ -179,32 +276,30 @@ export default function ActualizarVideosInstructivosPage() {
 
               {/* Actions */}
               <div className="flex flex-wrap gap-3 pt-2 border-t border-gray-100">
-                {/* Upload / Replace */}
+                {/* Upload / Replace video */}
                 <input
                   ref={el => { fileInputRefs.current[item.id] = el }}
-                  type="file"
-                  accept="video/*"
-                  className="hidden"
+                  type="file" accept="video/*" className="hidden"
                   onChange={e => {
                     const file = e.target.files?.[0]
                     if (file) handleUpload(item.id, file)
                     e.target.value = ''
                   }}
                 />
-                <button
+                <button type="button"
                   onClick={() => fileInputRefs.current[item.id]?.click()}
                   disabled={uploading === item.id}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
                 >
                   {uploading === item.id
                     ? <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> Subiendo...</>
-                    : <><ArrowUpTrayIcon className="h-4 w-4" /> {item.videoKey ? 'Reemplazar' : 'Subir Video'}</>
+                    : <><ArrowUpTrayIcon className="h-4 w-4" /> {item.videoKey ? 'Reemplazar Video' : 'Subir Video'}</>
                   }
                 </button>
 
                 {/* Preview */}
                 {item.videoKey && (
-                  <button
+                  <button type="button"
                     onClick={() => setPreviewKey(item.videoKey)}
                     className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 transition-colors"
                   >
@@ -212,38 +307,63 @@ export default function ActualizarVideosInstructivosPage() {
                   </button>
                 )}
 
-                {/* Delete */}
+                {/* Delete video only */}
                 {item.videoKey && (
-                  confirmDelete === item.id ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-red-600">¿Confirmar eliminación?</span>
-                      <button
-                        onClick={() => handleDelete(item.id)}
-                        className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700"
-                      >
-                        Sí, eliminar
-                      </button>
-                      <button
-                        onClick={() => setConfirmDelete(null)}
-                        className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setConfirmDelete(item.id)}
-                      className="flex items-center gap-2 px-4 py-2 text-red-600 text-sm border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
-                    >
-                      <TrashIcon className="h-4 w-4" /> Eliminar
-                    </button>
-                  )
+                  <button type="button"
+                    onClick={() => setConfirmDelete({ id: item.id, type: 'video' })}
+                    className="flex items-center gap-2 px-4 py-2 text-orange-600 text-sm border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors"
+                  >
+                    <TrashIcon className="h-4 w-4" /> Quitar Video
+                  </button>
                 )}
+
+                {/* Delete entire instructivo */}
+                <button type="button"
+                  onClick={() => setConfirmDelete({ id: item.id, type: 'instructivo' })}
+                  className="ml-auto flex items-center gap-2 px-4 py-2 text-red-600 text-sm border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                >
+                  <TrashIcon className="h-4 w-4" /> Eliminar Instructivo
+                </button>
               </div>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Confirm Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              {confirmDelete.type === 'video' ? 'Quitar video' : 'Eliminar instructivo'}
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              {confirmDelete.type === 'video'
+                ? 'Se eliminará el archivo de video de DO Spaces. El instructivo permanecerá sin video.'
+                : 'Se eliminará el instructivo completo (incluyendo su video). Esta acción no se puede deshacer.'
+              }
+            </p>
+            <div className="flex gap-3">
+              <button type="button"
+                onClick={() =>
+                  confirmDelete.type === 'video'
+                    ? handleDeleteVideo(confirmDelete.id)
+                    : handleDeleteInstructivo(confirmDelete.id)
+                }
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
+              >
+                Confirmar
+              </button>
+              <button type="button"
+                onClick={() => setConfirmDelete(null)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Video Preview Modal */}
       {previewKey && (
@@ -251,7 +371,7 @@ export default function ActualizarVideosInstructivosPage() {
           <div className="relative w-full max-w-3xl bg-black rounded-xl overflow-hidden shadow-2xl">
             <div className="flex items-center justify-between px-4 py-3 bg-gray-900">
               <span className="text-white text-sm font-medium">Vista previa</span>
-              <button onClick={() => setPreviewKey(null)} className="text-gray-400 hover:text-white">
+              <button type="button" title="Cerrar" onClick={() => setPreviewKey(null)} className="text-gray-400 hover:text-white">
                 <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
@@ -259,9 +379,7 @@ export default function ActualizarVideosInstructivosPage() {
               <video
                 key={previewKey}
                 src={`/api/postgres/niveles/video?key=${encodeURIComponent(previewKey)}`}
-                controls
-                autoPlay
-                className="w-full h-full"
+                controls autoPlay className="w-full h-full"
               />
             </div>
           </div>
