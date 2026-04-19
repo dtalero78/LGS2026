@@ -46,7 +46,6 @@ interface BookItem {
   url: string
   nivel: string
   step: string
-  tipo: 'usuario' | 'advisor'
 }
 
 function PanelAdvisorContent() {
@@ -483,37 +482,28 @@ function PanelAdvisorContent() {
                 No hay libros disponibles
               </div>
             ) : (
-              <div className="space-y-5">
-                {(['usuario', 'advisor'] as const).map(tipo => {
-                  const group = books.filter(b => b.tipo === tipo)
-                  if (group.length === 0) return null
-                  return (
-                    <div key={tipo}>
-                      <p className={`text-xs font-semibold uppercase tracking-wide mb-2 px-1 ${tipo === 'advisor' ? 'text-amber-700' : 'text-indigo-600'}`}>
-                        {tipo === 'advisor' ? 'Material Advisor' : 'Material Usuario'}
-                      </p>
-                      <div className="space-y-2">
-                        {group.map((book, idx) => (
-                          <a
-                            key={idx}
-                            href={book.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-indigo-50 transition-colors group"
-                          >
-                            <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-200">
-                              <ArrowDownTrayIcon className="h-5 w-5 text-indigo-600" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">{book.name}</p>
-                              <p className="text-xs text-gray-500">{book.nivel} - {book.step}</p>
-                            </div>
-                          </a>
-                        ))}
-                      </div>
+              <div className="space-y-3">
+                {books.map((book, idx) => (
+                  <a
+                    key={idx}
+                    href={book.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-indigo-50 transition-colors group"
+                  >
+                    <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-200">
+                      <ArrowDownTrayIcon className="h-5 w-5 text-indigo-600" />
                     </div>
-                  )
-                })}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {book.name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {book.nivel} - {book.step}
+                      </p>
+                    </div>
+                  </a>
+                ))}
               </div>
             )}
 
