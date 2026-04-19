@@ -199,7 +199,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 145. Historial completo de clases con detalles
 146. Material de estudio por nivel/step actual
 146b. Botón "Material Interactivo" — enlace a lgsplataforma.com/material-{nivel} para niveles BN1-BN3, P1-P3, F3 (solo visible si el nivel tiene URL asignada)
-146c. **Regla de material por rol**: Panel Estudiante muestra SOLO `NIVELES.materialUsuario` (archivos DO Spaces subidos por admin). Panel Advisor (`/panel-advisor`) y pestaña Material en `/sesion/[id]` muestran `NIVELES.material` (material advisor). El campo legacy `material`/`materiales` NO se expone a estudiantes.
+146c. **Regla de material por pantalla**: Todas las vistas de material de usuario usan `tipo=usuario` (solo `NIVELES.materialUsuario`): panel estudiante, pestaña **Libros** en `/sesion/[id]`, y modal Libros del panel-advisor. La pestaña **Material** (amber) en `/sesion/[id]` usa `tipo=advisor` (solo `NIVELES.material`) y es exclusiva para advisors/admins. El campo `material`/`materiales` legacy NO se expone a estudiantes.
 147. Comentarios de advisors (anotaciones y evaluaciones)
 148. Próxima clase destacada (card grande con fecha, advisor, Zoom link). Muestra "---" cuando no hay evento agendado (no muestra el nivel/step del estudiante). Cuando el Zoom aún no está disponible muestra: "Enlace disponible 5 min antes, recuerde refrescar el navegador"
 149. Actividades Complementarias (AI quiz): estudiantes con 1 sesión exitosa en un step normal pueden tomar un quiz de 10 preguntas generado por OpenAI (gpt-4o-mini). ≥50% para aprobar, máximo 3 intentos. Al aprobar se crea booking COMPLEMENTARIA y se ejecuta auto-promoción
@@ -1564,6 +1564,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `67d76d0` | fix: pestaña Libros en `/sesion/[id]` — usa `tipo=usuario` para mostrar solo `materialUsuario`; igual que panel-estudiante |
 | `8ba02e3` | fix: panel-estudiante MaterialsList — mostrar únicamente `materialUsuario`; el campo `material` (advisor) solo es visible en panel-advisor y pestaña Material de `/sesion/[id]` |
 | `43da318` | fix: Actualizar Material sidebar — abrir en nueva pestaña (`newTab: true`) |
 | `b872f3c` | fix: Material Advisor — corregir lectura de signedUrl (d.signedUrl, no d.data?.signedUrl); manejar URLs legacy Wix (`wix:document://`) mostrando badge "Archivo legacy — reemplazar" y botón "No disponible"; Descargar usa presigned URL para archivos en DO Spaces |
