@@ -42,7 +42,7 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
   const seen = new Set<string>()
 
   for (const row of materials) {
-    // materialUsuario: array of DO Spaces keys like "materials/Filename.pdf"
+    // Only materialUsuario: DO Spaces keys like "materials/..."
     const userMats = row.materialUsuario || []
     if (Array.isArray(userMats)) {
       for (const key of userMats) {
@@ -52,21 +52,6 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
           allMaterials.push({
             name: filename.replace(/\.pdf$/i, ''),
             url: `/api/postgres/niveles/material?key=${encodeURIComponent(key)}`,
-            step: row.step || '',
-          })
-        }
-      }
-    }
-
-    // Legacy: material/materiales with {name, url} objects
-    const matList = row.material || row.materiales || []
-    if (Array.isArray(matList)) {
-      for (const m of matList) {
-        if (m && m.url && !seen.has(m.url)) {
-          seen.add(m.url)
-          allMaterials.push({
-            name: m.name || m.nombre || `Material ${allMaterials.length + 1}`,
-            url: m.url,
             step: row.step || '',
           })
         }
