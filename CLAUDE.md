@@ -1356,16 +1356,16 @@ interface ConsentData {
 | Subir Lote | `/subir-lote` | SUPER_ADMIN only |
 | DB Viewer | `/dblgs` | SUPER_ADMIN/ADMIN only |
 
-## ESS (English Speaking Sessions) como Nivel Paralelo
+## ESS (Essential) — Nivel de Inicio
 
 ### Overview
-ESS es un nivel **paralelo y opcional** que NO bloquea el avance en los niveles principales (WELCOME → BN1 → BN2 → BN3 → etc.).
+ESS es el **nivel principal de inicio** que se asigna a estudiantes nuevos antes de ingresar a BN1. No es un nivel paralelo. El estudiante queda en `nivel='ESS'`, `step='Step 0'` durante 30 días; al cumplirlos, la plataforma lo promueve automáticamente a `nivel='BN1'`, `step='Step 1'`.
 
 ### Características Principales
-- **Paralelo**: Los estudiantes pueden estar en BN1 Y ESS simultáneamente
-- **Opcional**: No es requisito para avanzar a otros niveles
-- **Solo tracking**: Se usa para seguimiento de asistencia, no afecta promociones automáticas
-- **Sin dependencias**: Completar o no completar ESS no impide avanzar en otros niveles
+- **Nivel principal**: `nivel='ESS'`, `step='Step 0'` — ocupa el campo `nivel`, no `nivelParalelo`
+- **`esParalelo=false`** en NIVELES: ESS se trata igual que BN1, BN2, etc. desde el sistema de asignación
+- **Auto-promoción**: Después de 30 días (`fechaInicioESS`), `resolveStudentFromSession` promueve automáticamente a BN1 Step 1
+- **Excluido del diagnóstico "¿Cómo voy?"**: Al igual que WELCOME, ESS no aparece en el reporte de steps
 
 ### Estructura de Datos
 
@@ -1374,47 +1374,60 @@ ESS es un nivel **paralelo y opcional** que NO bloquea el avance en los niveles 
 {
   code: "ESS",          // Código del nivel
   step: "Step 0",       // Step único para ESS
-  esParalelo: true,     // Campo que identifica niveles paralelos
-  description: "English Speaking Sessions (Opcional)",
+  esParalelo: false,    // NO es nivel paralelo — es nivel principal
+  description: "Essential",
   material: [...],
   clubs: [...],
-  contenido: "..."      // Temario/contenido del step (TEXT, importado de Wix)
+  contenido: "..."
 }
 ```
 
-#### ACADEMICA (PostgreSQL)
+#### ACADEMICA (PostgreSQL) — estudiante en ESS
 ```javascript
 {
   _id: "...",
-  nivel: "BN1",           // Nivel principal actual
-  step: "Step 1",         // Step principal actual
-  nivelParalelo: "ESS",   // Nivel paralelo (opcional)
-  stepParalelo: "Step 0", // Step paralelo (opcional)
+  nivel: "ESS",          // Nivel actual (ESS es el nivel principal)
+  step: "Step 0",        // Step de ESS
+  fechaInicioESS: "2026-04-01T...",  // Fecha en que se asignó ESS — para auto-promoción
+  nivelParalelo: null,   // No se usa para ESS
+  stepParalelo: null,
   // ... otros campos
 }
 ```
 
-#### PEOPLE (PostgreSQL)
+#### PEOPLE (PostgreSQL) — estudiante en ESS
 ```javascript
 {
   _id: "...",
-  nivel: "BN1",           // Nivel principal
-  step: "Step 1",         // Step principal
-  nivelParalelo: "ESS",   // Nivel paralelo (opcional)
-  stepParalelo: "Step 0", // Step paralelo (opcional)
+  nivel: "ESS",
+  step: "Step 0",
+  fechaInicioESS: "2026-04-01T...",
+  nivelParalelo: null,
+  stepParalelo: null,
   // ... otros campos
 }
 ```
 
 ### Implementación
 
-#### updateStudentStep
+#### updateStudentStep (asignar ESS)
 - **API**: `PUT /api/postgres/students/[id]/step`
 - **Servicio**: `student.service.ts`
 - **Repositorios**: `niveles.repository.ts`, `academica.repository.ts`, `people.repository.ts`
-- Detecta si el nuevo step pertenece a un nivel paralelo consultando `NIVELES.esParalelo`
-- Si `esParalelo === true`: Actualiza `nivelParalelo` y `stepParalelo`
-- Si `esParalelo === false`: Actualiza `nivel` y `step` (comportamiento normal)
+- Como `esParalelo=false`, actualiza `nivel` y `step` (igual que cualquier nivel normal)
+- **Adicionalmente**: `academica.repository.updateStep` y `people.repository.updateStep` guardan `fechaInicioESS=NOW()` cuando `nivel === 'ESS'`
+
+#### Auto-promoción ESS → BN1
+- Se ejecuta en `resolveStudentFromSession` (`panel-estudiante.service.ts`) cada vez que el estudiante carga el panel
+- Condición: `nivel === 'ESS'` (no `nivelParalelo`) + `NOW() - fechaInicioESS >= 30 días`
+- Actualiza ACADEMICA: `nivel='BN1'`, `step='Step 1'`, `fechaInicioESS=NULL`
+- Actualiza PEOPLE: mismos campos
+- Constante: `ESS_DURATION_DAYS = 30`
+
+#### Eventos ESS en el panel de reservas
+- Cuando `nivel === 'ESS'`, los eventos ESS se marcan con `esESS: true`
+- UI muestra borde naranja para distinguirlos
+- El filtro de step/jump se omite para eventos ESS (el estudiante puede reservarlos libremente)
 
 #### getStudentProgress (Diagnóstico "¿Cómo voy?")
 - **API**: `GET /api/postgres/students/[id]/progress`
@@ -1489,7 +1502,7 @@ Los steps se ordenan **numéricamente** (no alfabéticamente), extrayendo el nú
 | BN2 | Steps 6-10 | Step 10 = Jump |
 | BN3 | Steps 11-15 | Step 15 = Jump |
 | ... | ... | Patrón continúa hasta F4 |
-| ESS | Step 0 | Nivel paralelo, excluido del diagnóstico |
+| ESS | Step 0 | Nivel de inicio (principal), excluido del diagnóstico, auto-promueve a BN1 Step 1 tras 30 días |
 | DONE | Step 0 | Nivel final |
 
 ### TypeScript Types
@@ -1499,59 +1512,47 @@ Los steps se ordenan **numéricamente** (no alfabéticamente), extrayendo el nú
 ```typescript
 export interface Student {
   // ... otros campos
-  nivel: string          // Nivel principal (WELCOME, BN1, BN2, etc.)
-  step: string           // Step principal
-  nivelParalelo?: string // Nivel paralelo opcional (ej: ESS)
-  stepParalelo?: string  // Step paralelo opcional
+  nivel: string          // Nivel actual (WELCOME, ESS, BN1, BN2, etc.)
+  step: string           // Step actual
+  nivelParalelo?: string // No se usa para ESS (nullable)
+  stepParalelo?: string  // No se usa para ESS (nullable)
 }
 
 export interface Person {
   // ... otros campos
-  nivel?: string          // Nivel principal (opcional para titulares)
-  step?: string           // Step principal (opcional para titulares)
-  nivelParalelo?: string // Nivel paralelo opcional (ej: ESS)
-  stepParalelo?: string  // Step paralelo opcional
+  nivel?: string          // Nivel actual (opcional para titulares)
+  step?: string           // Step actual (opcional para titulares)
+  nivelParalelo?: string // Nullable
+  stepParalelo?: string  // Nullable
 }
 ```
 
 ### Flujo de Trabajo Típico
 
-#### Estudiante comienza ESS mientras está en BN1
-1. Estudiante actual: `nivel: "BN1"`, `step: "Step 1"`
-2. Se inscribe en sesión ESS
-3. Admin cambia a ESS usando `updateStudentStep({ numeroId, newStep: "0" })`
-4. Estado resultante: `nivel: "BN1"`, `step: "Step 1"`, `nivelParalelo: "ESS"`, `stepParalelo: "Step 0"`
-5. El estudiante puede continuar avanzando en BN1 sin problema
+#### Estudiante nuevo entra en ESS
+1. Admin asigna ESS: `Cambiar Step → ESS → Step 0`
+2. Estado resultante: `nivel: "ESS"`, `step: "Step 0"`, `fechaInicioESS: NOW()`
+3. Estudiante puede reservar eventos ESS en el panel (borde naranja)
+4. Después de 30 días: al cargar el panel, `resolveStudentFromSession` detecta `nivel='ESS'` + `daysSince >= 30` → promueve a `nivel='BN1'`, `step='Step 1'`
 
-#### Estudiante avanza a BN2 mientras tiene ESS
-1. Estado actual: `nivel: "BN1"`, `nivelParalelo: "ESS"`
-2. Completa BN1 Step 5
-3. Admin cambia a BN2: `updateStudentStep({ numeroId, newStep: "6" })`
-4. Estado resultante: `nivel: "BN2"`, `step: "Step 6"`, `nivelParalelo: "ESS"` (se mantiene)
-
-#### Diagnóstico "¿Cómo voy?"
-1. Estudiante: `nivel: "BN2"`, `step: "Step 7"`, `nivelParalelo: "ESS"`
-2. Generar diagnóstico: `generateReport(studentId)` desde `progress.service.ts`
-3. **Resultado**:
-   - Diagnóstico por steps: Solo muestra progreso de BN2 (Steps 6-10)
-   - Cada step muestra: sesiones exitosas/2, clubs exitosos/1, estado, diagnóstico
-   - Jump (Step 10) muestra: clases/1, sin columna clubs, estado especial
-   - Estadísticas globales: Incluye TODAS las clases (incluyendo ESS) para tracking
-   - No evalúa completitud de ESS
+#### Diagnóstico "¿Cómo voy?" para estudiante en ESS
+- ESS es excluido del diagnóstico (igual que WELCOME)
+- Panel muestra el nivel/step actual (ESS - Step 0) en el header
+- No se genera tabla de steps para ESS
 
 ### Notas Importantes
 
-- **Retrocompatibilidad**: Estudiantes sin nivel paralelo siguen funcionando normalmente
-- **ESS Step 0 especial**: Sigue usando lógica de 5 semanas para aprobación automática
-- **Campos opcionales**: `nivelParalelo`, `stepParalelo` y `fechaInicioESS` son nullable en PostgreSQL
-- **Jump Steps**: Funcionan igual en niveles paralelos y principales
+- **ESS = nivel principal**: `nivel='ESS'`, no `nivelParalelo`. Los campos `nivelParalelo`/`stepParalelo` no se usan para ESS
+- **`fechaInicioESS`** es nullable en ACADEMICA y PEOPLE; se llena con `NOW()` al asignar ESS y se borra al promover
+- **Migración idempotente**: `ALTER TABLE ... ADD COLUMN IF NOT EXISTS "fechaInicioESS" TIMESTAMPTZ` corre una vez por arranque del servidor en `panel-estudiante.service.ts`
+- **Jump Steps**: No aplican en ESS (solo tiene Step 0)
 
-### ESS — Flujo completo (actualizado)
+### ESS — Flujo completo
 
-1. Admin asigna ESS manualmente desde panel: `Cambiar Step → ESS → Step 0`
-2. `updateStep(isParallel=true, nivel='ESS')` guarda `nivelParalelo='ESS'`, `stepParalelo='Step 0'` + `fechaInicioESS=NOW()` en ACADEMICA y PEOPLE
-3. Estudiante puede reservar eventos ESS en el panel (aparecen con borde naranja en `BookingFlow`)
-4. Al cargar el panel (`resolveStudentFromSession`): si `nivelParalelo='ESS'` y `NOW() - fechaInicioESS >= 25 días` → auto-promueve a `nivel='BN1'`, `step='Step 1'`, limpia `nivelParalelo`, `stepParalelo`, `fechaInicioESS`
+1. Admin asigna ESS desde panel: `Cambiar Step → ESS → Step 0`
+2. `updateStep(nivel='ESS')` — como `esParalelo=false`, actualiza `nivel` y `step` (no `nivelParalelo`/`stepParalelo`); el `essClause` en repositorios guarda `fechaInicioESS=NOW()`
+3. Estudiante puede reservar eventos ESS en el panel (borde naranja, filtro step omitido porque `esESS=true`)
+4. Al cargar el panel (`resolveStudentFromSession`): si `nivel='ESS'` y `NOW() - fechaInicioESS >= 30 días` → actualiza ACADEMICA y PEOPLE con `nivel='BN1'`, `step='Step 1'`, `fechaInicioESS=NULL`
 5. Migración idempotente: `ALTER TABLE ... ADD COLUMN IF NOT EXISTS "fechaInicioESS" TIMESTAMPTZ` corre una vez por arranque del servidor en `panel-estudiante.service.ts`
 
 ### Fix filtro 30 min en panel de reservas
@@ -1572,6 +1573,7 @@ export interface Person {
 | `local` | feat: Actualizar Videos — gestión de videos desde panel admin (Mantenimiento). Ítem `Actualizar Videos` abre `/admin/actualizar-videos` en nueva pestaña con dos sub-páginas: (1) **Instructivos** (`/admin/actualizar-videos/instructivos`) — CRUD de videos instructivos del panel estudiante: subir MP4 a DO Spaces (`videos/instructivos/instructivo-{n}.mp4`), reemplazar, eliminar, editar título/descripción, preview via streaming proxy; config almacenada en `APP_CONFIG.instructivos_config` (JSON). Panel estudiante actualizado: obtiene lista dinámica de instructivos desde `/api/postgres/config/instructivos` (fallback a archivos estáticos si sin video cargado). (2) **Sesiones** (`/admin/actualizar-videos/sesiones`) — gestión por nivel/step: subir MP4 a DO Spaces (`videos/sesiones/{nivel}/{step}.mp4`) actualiza `NIVELES.videoUrl`; editar enlace externo (YouTube) actualiza `NIVELES.video`; borrar limpia campo + elimina de Spaces; preview inline (MP4 vía proxy o YouTube embed). API `/api/postgres/niveles/video` extendida con parámetro `?key=` para stream directo por key de Spaces (usado en preview de instructivos). Nuevas APIs: `/api/admin/videos/instructivos`, `/api/admin/videos/sesiones`, `/api/postgres/config/instructivos` |
 | `1c104df` | feat: sesión — renombrar pestaña Material→Libros y nueva pestaña Material (advisor) — `SessionTabs` renombra tab emerald "Material" a "Libros" y agrega tab amber "Material" (`BookOpenIcon`); nuevo componente `SessionAdvisorMaterialTab` muestra material del advisor (`NIVELES.material`) filtrado por `nivel`+`step` del evento via `/api/postgres/materials/nivel?tipo=advisor`; `CalendarioEvent` interface en `/sesion/[id]/page.tsx` agrega campos `nivel` y `step`; API `materials/nivel/route.ts` soporta parámetros opcionales `?nivel=BN1` y `?tipo=usuario\|advisor\|all` |
 | `7409c40` | feat: Actualizar Material — gestión de material por nivel/step desde el panel admin. Dos sub-páginas: `/dashboard/academic/actualizar-material/usuarios` (campo `materialUsuario` en NIVELES) y `/dashboard/academic/actualizar-material/advisor` (campo `material` en NIVELES). Operaciones: Descargar (proxy DO Spaces existente), Reemplazar (sube a Spaces con key `materials/{nivel}/{tipo}/{step}-{filename}`), Borrar (borra de NIVELES y de Spaces), Agregar (sube nuevo sin reemplazar). Modal de confirmación en borrar y reemplazar. Registro de auditoría en tabla `MATERIAL_AUDIT` (auto-creada al primer uso): campos `tipo`, `nivel`, `step`, `accion`, `archivoAnterior`, `archivoNuevo`, `realizadoPor`, `_createdDate`. Nuevo permiso `ACADEMICO.MATERIAL.ACTUALIZAR` asignado a SUPER_ADMIN, ADMIN, COORDINADOR_ACADEMICO en ROL_PERMISOS. Sidebar inicia colapsado (`expandedSections: []`) en DashboardLayout |
+| `73c088d` | fix: ESS es nivel principal (no paralelo) — `nivel='ESS'` (no `nivelParalelo`); `fechaInicioESS` se guarda cuando `nivel === 'ESS'` (no depende de `isParallel`); auto-promoción usa `nivel === 'ESS'` (no `nivelParalelo`); duración corregida a 30 días; ACADEMICA/PEOPLE UPDATE no limpia `nivelParalelo`/`stepParalelo`; `student-booking.service.ts` marca eventos ESS con `esESS=true` basado en `nivel === 'ESS'` |
 | `e9138b4` | feat: ESS parallel level — booking panel, auto-promoción BN1 tras 25 días — estudiantes con `nivelParalelo='ESS'` ven eventos ESS (borde naranja) en el panel de reservas junto a sus eventos del nivel principal; al asignar ESS vía `updateStep`, guarda `fechaInicioESS=NOW()` en ACADEMICA y PEOPLE; `resolveStudentFromSession` auto-promueve a `nivel='BN1'`, `step='Step 1'` cuando `nivelParalelo='ESS'` y han pasado ≥25 días; fix filtro 30 min: eventos <30 min (pero no >60 min pasados) se muestran deshabilitados con badge "Próximamente" en vez de ocultarse (soluciona visibilidad para estudiantes en zonas horarias distintas) |
 | `6788d6f` | feat: botón 'Crear solo perfil' en StudentGeneral — nuevo botón azul al lado de 'Mensaje de Bienvenida'; envía WhatsApp con link `?noWelcome=1`; `sendWelcomeWhatsApp` API acepta flag `noWelcome` y genera URL con sufijo; `nuevo-usuario` page lee `useSearchParams` y omite dropdown de Welcome + validación cuando `?noWelcome=1` está presente |
 | `bcb2ced` | perf: reemplazar N+1 countActiveEnrollments por batch en getAvailableEvents — `getAvailableEvents` hacía una query por evento en `Promise.all` agotando el pool de 25 conexiones bajo carga concurrente; nuevo método `countActiveEnrollmentsBatch` en `CalendarioRepository` agrupa todos los conteos en una sola query con `ANY($1)` y `GROUP BY`; el loop de anotación pasa de async a síncrono; total: de N+1 a 3 queries por request |
