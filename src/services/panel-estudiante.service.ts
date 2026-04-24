@@ -35,8 +35,8 @@ async function ensureESSColumns() {
   }
 }
 
-/** Days a student stays in ESS before auto-promoting to BN1 Step 1 */
-const ESS_DURATION_DAYS = 25;
+/** Days a student stays in ESS (Essential) before auto-promoting to BN1 Step 1 */
+const ESS_DURATION_DAYS = 30;
 
 /**
  * Resolve the student from the session.
@@ -193,8 +193,9 @@ export async function resolveStudentFromSession(session: Session) {
     }
   }
 
-  // ESS auto-promotion: if nivelParalelo = 'ESS' and 25+ days since assignment → promote to BN1 Step 1
-  if (nivelParalelo === 'ESS' && academicaId) {
+  // ESS auto-promotion: nivel = 'ESS' is the Essential level (Step 0).
+  // After ESS_DURATION_DAYS (30) days from fechaInicioESS, promote to BN1 Step 1.
+  if (nivel === 'ESS' && academicaId) {
     const fechaInicioESS = (academica as any)?.fechaInicioESS ?? (base as any)?.fechaInicioESS;
     if (fechaInicioESS) {
       const today = new Date();
@@ -206,31 +207,26 @@ export async function resolveStudentFromSession(session: Session) {
       if (daysSince >= ESS_DURATION_DAYS) {
         console.log(`🎓 [Panel Estudiante] ESS completado (${daysSince} días). Promoviendo a BN1 Step 1.`);
         try {
-          // Update ACADEMICA: clear ESS parallel fields, set main nivel to BN1 Step 1
           await query(
             `UPDATE "ACADEMICA"
              SET "nivel" = 'BN1', "step" = 'Step 1',
-                 "nivelParalelo" = NULL, "stepParalelo" = NULL, "fechaInicioESS" = NULL,
+                 "fechaInicioESS" = NULL,
                  "_updatedDate" = NOW()
              WHERE "_id" = $1`,
             [academicaId]
           );
-          // Update PEOPLE
           if (person) {
             await query(
               `UPDATE "PEOPLE"
                SET "nivel" = 'BN1', "step" = 'Step 1',
-                   "nivelParalelo" = NULL, "stepParalelo" = NULL, "fechaInicioESS" = NULL,
+                   "fechaInicioESS" = NULL,
                    "_updatedDate" = NOW()
                WHERE "_id" = $1`,
               [(person as any)._id]
             );
           }
-          // Update local variables so the return reflects the new state
           nivel = 'BN1';
           step = 'Step 1';
-          nivelParalelo = null;
-          stepParalelo = null;
           console.log(`✅ [Panel Estudiante] Promoción ESS→BN1 Step 1 completada para ${email}`);
         } catch (err: any) {
           console.error('⚠️ [Panel Estudiante] Error en auto-promoción ESS:', err.message);

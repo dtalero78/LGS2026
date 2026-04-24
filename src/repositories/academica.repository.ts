@@ -162,15 +162,15 @@ class AcademicaRepositoryClass extends BaseRepository {
   }
 
   /**
-   * Update nivel/step (regular or parallel).
-   * When assigning ESS (isParallel + nivel='ESS'), also stores fechaInicioESS = NOW().
+   * Update nivel/step.
+   * When assigning ESS (nivel='ESS'), also stores fechaInicioESS = NOW() for auto-promotion tracking.
    */
   async updateStep(numeroId: string, nivel: string, step: string, isParallel: boolean) {
     const [col1, col2] = isParallel
       ? ['"nivelParalelo"', '"stepParalelo"']
       : ['"nivel"', '"step"'];
 
-    const essClause = isParallel && nivel === 'ESS' ? `, "fechaInicioESS" = NOW()` : '';
+    const essClause = nivel === 'ESS' ? `, "fechaInicioESS" = NOW()` : '';
 
     return queryOne(
       `UPDATE "ACADEMICA"

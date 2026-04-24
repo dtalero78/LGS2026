@@ -143,29 +143,34 @@ export async function getAvailableEvents(
   const startDate = new Date(dayStart.getTime() + offsetMs).toISOString();
   const endDate = new Date(dayEnd.getTime() + offsetMs).toISOString();
 
-  const mainEvents = await CalendarioRepository.findEvents({
+  // When the student's main nivel is ESS, mark all their events as esESS so the UI
+  // displays them correctly (orange border, "English Speaking Session" label) and
+  // the step/jump filter is bypassed (ESS has no step progression requirements).
+  const rawMainEvents = await CalendarioRepository.findEvents({
     startDate,
     endDate,
     nivel,
     tipo,
   });
+  const mainEvents = nivel === 'ESS'
+    ? rawMainEvents.map((e: any) => ({ ...e, esESS: true }))
+    : rawMainEvents;
 
-  // If student has ESS as parallel level, fetch ESS events and merge
+  // Legacy: if student has ESS as parallel level, also fetch ESS events and merge
   let essEvents: any[] = [];
   if (nivelParalelo === 'ESS') {
-    essEvents = await CalendarioRepository.findEvents({
+    const rawEss = await CalendarioRepository.findEvents({
       startDate,
       endDate,
       nivel: 'ESS',
       tipo,
     });
-    // Mark ESS events so the UI can differentiate them
-    essEvents = essEvents.map(e => ({ ...e, esESS: true }));
+    essEvents = rawEss.map((e: any) => ({ ...e, esESS: true }));
   }
 
   // Deduplicate by _id (avoid showing same event twice if it matches both filters)
   const seenIds = new Set(mainEvents.map((e: any) => e._id));
-  const uniqueEssEvents = essEvents.filter(e => !seenIds.has(e._id));
+  const uniqueEssEvents = essEvents.filter((e: any) => !seenIds.has(e._id));
   const events = [...mainEvents, ...uniqueEssEvents];
 
   // Get student's upcoming bookings to check for duplicates
