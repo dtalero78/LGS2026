@@ -604,6 +604,7 @@ La plataforma opera 100% sobre PostgreSQL. Los datos migrados de Wix (marzo 2026
   - `CONTRACT_TEMPLATES`: Plantillas de contrato por plataforma (HTML con {{placeholders}})
   - `COMPLEMENTARIA_ATTEMPTS`: Intentos de actividades complementarias (AI quiz). Campos: studentId, nivel, step, attemptNumber, questions (JSONB), answers (JSONB), score, passed, bookingId, status (IN_PROGRESS/PASSED/FAILED), plataforma (VARCHAR 50, nullable — se llena al generar el quiz desde el panel estudiante)
   - `APP_CONFIG`: Configuración de la aplicación (clave/valor). Campos: key (PK), value (TEXT), color (VARCHAR 20, default '#ffffff'), updatedBy, _updatedDate. Registros: `ticker_message` (banner animado panel estudiante), `banner_image` (base64 imagen banner login), `banner_active` ('true'/'false' visibilidad banner login)
+  - `auditautoaprov`: Auditoría de auto-aprobaciones de consentimiento. Auto-creada (`CREATE TABLE IF NOT EXISTS`) al primer uso. Campos: `_id` (PK), `contrato`, `titularId`, `usuarioEmail`, `usuarioNombre`, `ip`, `userAgent`, `_createdDate`. Se inserta un registro cada vez que un usuario ejecuta "Auto-Aprobar Consentimiento" en `/dashboard/comercial/contrato/[id]`
 
 ## Migración Wix → PostgreSQL (COMPLETADA — marzo 2026)
 
@@ -1565,6 +1566,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `392b715` | feat: modal advertencia + auditoría en auto-aprobar consentimiento — reemplaza `window.confirm` por modal rojo con texto "uso exclusivo del Área de Tecnología"; tabla `auditautoaprov` (auto-creada `CREATE TABLE IF NOT EXISTS`) registra `_id`, `contrato`, `titularId`, `usuarioEmail`, `usuarioNombre`, `ip`, `userAgent`, `_createdDate` en cada ejecución; `ids.audit` agregado al generador |
 | `ca10ec1` | fix: reordenar y restylear botones en detalle de contrato (`/dashboard/comercial/contrato/[id]`) — nuevo orden: Ver Contrato (verde sólido emerald-600), Subir documentación (verde suave emerald-100), Editar Contrato (azul, sin cambio), Auto-Aprobar Consentimiento (rojo red-600, al final); botones de cierre (×) en modales con `type="button"` y `title="Cerrar"` |
 | `67d76d0` | fix: pestaña Libros en `/sesion/[id]` — usa `tipo=usuario` para mostrar solo `materialUsuario`; igual que panel-estudiante |
 | `8ba02e3` | fix: panel-estudiante MaterialsList — mostrar únicamente `materialUsuario`; el campo `material` (advisor) solo es visible en panel-advisor y pestaña Material de `/sesion/[id]` |
