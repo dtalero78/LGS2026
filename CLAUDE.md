@@ -1565,6 +1565,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `ca10ec1` | fix: reordenar y restylear botones en detalle de contrato (`/dashboard/comercial/contrato/[id]`) — nuevo orden: Ver Contrato (verde sólido emerald-600), Subir documentación (verde suave emerald-100), Editar Contrato (azul, sin cambio), Auto-Aprobar Consentimiento (rojo red-600, al final); botones de cierre (×) en modales con `type="button"` y `title="Cerrar"` |
 | `67d76d0` | fix: pestaña Libros en `/sesion/[id]` — usa `tipo=usuario` para mostrar solo `materialUsuario`; igual que panel-estudiante |
 | `8ba02e3` | fix: panel-estudiante MaterialsList — mostrar únicamente `materialUsuario`; el campo `material` (advisor) solo es visible en panel-advisor y pestaña Material de `/sesion/[id]` |
 | `43da318` | fix: Actualizar Material sidebar — abrir en nueva pestaña (`newTab: true`) |
