@@ -1332,7 +1332,7 @@ interface ConsentData {
 | Contratos | `/dashboard/informes/contratos` | INFORMES.CONTRATOS |
 | Planta - Advisors | `/dashboard/informes/planta/advisors` | INFORMES.PLANTA |
 | Planta - Administrativos | `/dashboard/informes/planta/administrativos` | INFORMES.PLANTA |
-| Estadísticas - General | `/dashboard/informes/estadisticas` | INFORMES.ESTADISTICAS |
+| Estadísticas - Niveles | `/dashboard/informes/estadisticas` | INFORMES.ESTADISTICAS |
 | Estadísticas - Horarios | `/dashboard/informes/estadisticas/horarios` | INFORMES.ESTADISTICAS |
 | Welcome Session | `/dashboard/servicio/welcome-session` | SERVICIO permissions |
 | Servicio Main | `/dashboard/servicio` | SERVICIO permissions |
@@ -1566,6 +1566,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `df81696` | feat: informe Niveles en Estadísticas (`/dashboard/informes/estadisticas`) — reemplaza placeholder "Próximamente"; muestra sesiones/jumps/clubes agendados por nivel con filtro de fechas y nivel, 4 KPIs (Total Sesiones, Nivel Pico, Día más Activo, Club más Agendado), gráfica barras por nivel, barras horizontales por día de semana y jumps por nivel, cards de clubes por tipo, sección "Esta Semana" (lunes–domingo independiente del filtro); API `GET /api/postgres/reports/estadisticas/niveles`; sidebar: ítem "General" renombrado a "Niveles" |
 | `f272712` | feat: propagar `inicioContrato` del titular a beneficiarios en aprobación — al aprobar TITULAR copia `inicioContrato` (fecha firma consentimiento) a todos los beneficiarios pendientes del contrato; al aprobar BENEFICIARIO individualmente lo copia desde el titular; campo solo se propaga si el titular ya firmó el consentimiento (no null) |
 | `392b715` | feat: modal advertencia + auditoría en auto-aprobar consentimiento — reemplaza `window.confirm` por modal rojo con texto "uso exclusivo del Área de Tecnología"; tabla `auditautoaprov` (auto-creada `CREATE TABLE IF NOT EXISTS`) registra `_id`, `contrato`, `titularId`, `usuarioEmail`, `usuarioNombre`, `ip`, `userAgent`, `_createdDate` en cada ejecución; `ids.audit` agregado al generador |
 | `ca10ec1` | fix: reordenar y restylear botones en detalle de contrato (`/dashboard/comercial/contrato/[id]`) — nuevo orden: Ver Contrato (verde sólido emerald-600), Subir documentación (verde suave emerald-100), Editar Contrato (azul, sin cambio), Auto-Aprobar Consentimiento (rojo red-600, al final); botones de cierre (×) en modales con `type="button"` y `title="Cerrar"` |
