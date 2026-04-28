@@ -31,11 +31,12 @@ export default function ActualizarVideosSesionesPage() {
   const [previewErr, setPreviewErr]   = useState(false)
   const [confirmDel, setConfirmDel]   = useState<{ nivel: string; step: string } | null>(null)
   const [checking, setChecking]       = useState(false)
+  const [showCheckModal, setShowCheckModal] = useState(false)
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   // ── Check & clean stale videoUrls ──────────────────────────────────────────
   const handleCheckSpaces = async () => {
-    if (!confirm('Verificará todos los videoUrl en NIVELES contra DO Spaces y limpiará los que no existan. ¿Continuar?')) return
+    setShowCheckModal(false)
     setChecking(true)
     try {
       const r = await fetch('/api/admin/videos/check-niveles', { method: 'POST' })
@@ -136,7 +137,7 @@ export default function ActualizarVideosSesionesPage() {
           <div className="ml-auto flex items-center gap-3">
             <button
               type="button"
-              onClick={handleCheckSpaces}
+              onClick={() => setShowCheckModal(true)}
               disabled={checking}
               title="Verifica videoUrl contra Spaces y limpia los que no existen"
               className="flex items-center gap-2 px-3 py-1.5 bg-amber-500 text-white text-sm rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors"
@@ -314,6 +315,44 @@ export default function ActualizarVideosSesionesPage() {
                   onError={() => setPreviewErr(true)}
                 />
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── Modal confirmación Verificar Spaces ── */}
+      {showCheckModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-amber-500 px-6 py-4 flex items-center gap-3">
+              <ShieldCheckIcon className="h-6 w-6 text-white flex-shrink-0" />
+              <h2 className="text-lg font-bold text-white">Verificar Spaces</h2>
+            </div>
+            <div className="px-6 py-5 space-y-3">
+              <p className="text-sm text-gray-700">
+                Esta acción recorrerá <strong>todos los registros de NIVELES</strong> que tienen un video asignado
+                y verificará si el archivo existe en DO Spaces.
+              </p>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                Los registros cuyo archivo <strong>no exista</strong> en Spaces serán limpiados automáticamente
+                (se borrará el <code className="bg-amber-100 px-1 rounded">videoUrl</code> en NIVELES).
+              </div>
+              <p className="text-sm text-gray-500">¿Desea continuar?</p>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowCheckModal(false)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 text-sm font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleCheckSpaces}
+                className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 text-sm font-semibold"
+              >
+                Sí, verificar
+              </button>
             </div>
           </div>
         </div>
