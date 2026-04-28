@@ -1566,6 +1566,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `5e10e51` | feat: página Edición Contrato en Mantenimiento (`/admin/edicion-contrato`) — busca titular por `_id` directo (`prs_...`) o número de contrato; muestra titular, beneficiarios y endpoint; abre `/dashboard/comercial/contrato/[id]` en nueva pestaña; sidebar: ítem "Edición Contrato" bajo Mantenimiento (SUPER_ADMIN, newTab) |
 | `450fc7e` | fix: CORS en DO Spaces — endpoint `POST /api/admin/spaces-cors` aplica política CORS al bucket `lgs-bucket` (AllowedOrigins: lgs-plataforma.com + localhost:3001, Methods: GET/PUT/DELETE/HEAD); configurado via script Node + doctl para permitir uploads presigned desde el navegador |
 | `b3d184d` | fix: upload video sesiones via presigned URL — evita 504 Gateway Timeout en archivos grandes; nuevo flujo: `POST /presign` genera URL firmada (10 min) → cliente hace `PUT` directo a DO Spaces → `PATCH /sesiones` confirma y actualiza `NIVELES.videoUrl`; el video nunca pasa por el servidor |
 | `df81696` | feat: informe Niveles en Estadísticas (`/dashboard/informes/estadisticas`) — reemplaza placeholder "Próximamente"; muestra sesiones/jumps/clubes agendados por nivel con filtro de fechas y nivel, 4 KPIs (Total Sesiones, Nivel Pico, Día más Activo, Club más Agendado), gráfica barras por nivel, barras horizontales por día de semana y jumps por nivel, cards de clubes por tipo, sección "Esta Semana" (lunes–domingo independiente del filtro); API `GET /api/postgres/reports/estadisticas/niveles`; sidebar: ítem "General" renombrado a "Niveles" |
