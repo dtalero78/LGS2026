@@ -17,12 +17,9 @@ interface StepRow {
 
 type UploadingKey = string   // "{nivel}|{step}"
 
-const NIVELES_CODES = [
-  'WELCOME','BN1','BN2','BN3','P1','P2','P3','F1','F2','F3','F4','DONE','ESS'
-]
-
 export default function ActualizarVideosSesionesPage() {
-  const [nivel, setNivel]             = useState('BN1')
+  const [nivelesCodes, setNivelesCodes] = useState<string[]>([])
+  const [nivel, setNivel]             = useState('')
   const [steps, setSteps]             = useState<StepRow[]>([])
   const [loading, setLoading]         = useState(false)
   const [uploading, setUploading]     = useState<UploadingKey | null>(null)
@@ -50,7 +47,23 @@ export default function ActualizarVideosSesionesPage() {
     finally { setChecking(false) }
   }
 
-  useEffect(() => { loadSteps(nivel) }, [nivel])
+  // Load niveles from DB on mount
+  useEffect(() => {
+    fetch('/api/postgres/niveles')
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && d.niveles?.length) {
+          const codes: string[] = Array.from(
+            new Set((d.niveles as any[]).map((n: any) => n.code).filter(Boolean))
+          )
+          setNivelesCodes(codes)
+          setNivel(codes[0] || '')
+        }
+      })
+      .catch(() => toast.error('Error al cargar niveles'))
+  }, [])
+
+  useEffect(() => { if (nivel) loadSteps(nivel) }, [nivel])
 
   const loadSteps = async (code: string) => {
     setLoading(true)
@@ -153,7 +166,7 @@ export default function ActualizarVideosSesionesPage() {
               onChange={e => setNivel(e.target.value)}
               className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
-              {NIVELES_CODES.map(c => <option key={c} value={c}>{c}</option>)}
+              {nivelesCodes.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
         </div>
