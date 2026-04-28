@@ -1566,6 +1566,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `2e6afa9` | feat: auto-aprobar consentimiento genera y sube PDF al Drive — mismo flujo que Enviar PDF (API2PDF → bsl-utilidades) pero sin envío WhatsApp; errores de PDF son no-bloqueantes (el consentimiento se guarda igual) |
 | `e853e98` | fix: dropdown Nivel en Actualizar Videos/Sesiones — reemplaza lista estática hardcodeada (incluía F4 inexistente) por carga dinámica desde BD via `GET /api/postgres/niveles`; el dropdown siempre refleja los niveles reales de NIVELES |
 | `b76be6b` | fix: Edición Contrato — detectar UUID Wix (`002af1cd-...`) como ID directo además de `prs_...`; placeholder actualizado con los 3 formatos soportados |
 | `5e10e51` | feat: página Edición Contrato en Mantenimiento (`/admin/edicion-contrato`) — busca titular por `_id` directo (`prs_...`) o número de contrato; muestra titular, beneficiarios y endpoint; abre `/dashboard/comercial/contrato/[id]` en nueva pestaña; sidebar: ítem "Edición Contrato" bajo Mantenimiento (SUPER_ADMIN, newTab) |
