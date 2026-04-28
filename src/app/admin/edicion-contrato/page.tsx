@@ -31,7 +31,10 @@ export default function EdicionContratoPage() {
   const [result,  setResult]  = useState<ContractResult | null>(null)
   const [notFound, setNotFound] = useState(false)
 
-  const isDirectId = (val: string) => val.trim().startsWith('prs_')
+  // Detects prs_... format (new) OR UUID format xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (Wix legacy)
+  const isDirectId = (val: string) =>
+    val.trim().startsWith('prs_') ||
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim())
 
   const handleSearch = async () => {
     const val = input.trim()
@@ -92,8 +95,9 @@ export default function EdicionContratoPage() {
           <div>
             <p className="text-sm font-semibold text-gray-700 mb-1">Buscar titular por:</p>
             <p className="text-xs text-gray-500">
-              ID directo (ej: <code className="bg-gray-100 px-1 rounded">prs_1777175219970_zij89p664</code>) o
-              número de contrato (ej: <code className="bg-gray-100 px-1 rounded">01-15256-26</code>)
+              ID directo — formato nuevo (ej: <code className="bg-gray-100 px-1 rounded">prs_177...}</code>),
+              formato UUID Wix (ej: <code className="bg-gray-100 px-1 rounded">002af1cd-bdad-...</code>),
+              o número de contrato (ej: <code className="bg-gray-100 px-1 rounded">01-15256-26</code>)
             </p>
           </div>
 
