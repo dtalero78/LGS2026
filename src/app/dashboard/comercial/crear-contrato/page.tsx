@@ -953,14 +953,34 @@ function CrearContratoContent() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Vigencia *
+                    Vigencia * <span className="text-xs text-gray-400">(meses, 1–12)</span>
                   </label>
                   <input
-                    type="text"
+                    type="number"
+                    min={1}
+                    max={12}
                     value={financial.vigencia}
-                    onChange={(e) => setFinancial({...financial, vigencia: e.target.value})}
+                    onKeyDown={(e) => {
+                      // Block anything that is not a digit, backspace, delete, arrows or tab
+                      if (!/^\d$/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) {
+                        e.preventDefault()
+                      }
+                    }}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/[^0-9]/g, '')
+                      if (raw === '') { setFinancial({...financial, vigencia: ''}); return }
+                      const num = parseInt(raw, 10)
+                      if (!isNaN(num) && num >= 1 && num <= 12) {
+                        setFinancial({...financial, vigencia: String(num)})
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const num = parseInt(e.target.value, 10)
+                      if (isNaN(num) || num < 1) setFinancial({...financial, vigencia: '1'})
+                      else if (num > 12)         setFinancial({...financial, vigencia: '12'})
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Ej: 12 meses"
+                    placeholder="1 – 12"
                   />
                 </div>
                 <div>
