@@ -1566,6 +1566,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `240906a` | fix: `StudentProgress` (admin) muestra nombres de clubs en columna Clubs — agrega `clubNombres` a interfaz `StepProgress` y los renderiza bajo el contador `2/1` (ej: TRAINING, GRAMMAR); columna Diagnóstico sin cambios |
 | `03b6415` | fix: `changeStep` actualiza PEOPLE solo en BENEFICIARIOS — prioridad: `academic.usuarioId` (link directo al `_id` de PEOPLE) → `findBeneficiarioByNumeroId` (filtra `tipoUsuario=BENEFICIARIO`); evita actualizar TITULAR cuando comparte `numeroId` con el beneficiario |
 | `b600440` | fix: `autoAdvanceStep` normaliza `bookingNivel` — extrae código de nivel de formato `"BN1 - Step 5"` (tituloONivel guardado como nivel) para que la comparación con `student.nivel` no falle; `isCurrentStepComplete` usa `student.nivel` directamente en vez de `bookingNivel` para el lookup de clases |
 | `e9c2580` | fix: campos Número ID en Crear Contrato — solo letras mayúsculas y números, sin espacios ni guiones; `onKeyDown` bloquea caracteres inválidos, `onChange` limpia copy-paste y fuerza mayúsculas; aplica a Titular (paso 2) y Beneficiarios (paso 7) |
