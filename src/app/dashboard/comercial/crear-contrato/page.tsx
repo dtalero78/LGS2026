@@ -571,8 +571,17 @@ function CrearContratoContent() {
                   <input
                     type="text"
                     value={titular.numeroId}
-                    onChange={(e) => setTitular({...titular, numeroId: e.target.value})}
+                    onKeyDown={(e) => {
+                      if (!/^[a-zA-Z0-9]$/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) {
+                        e.preventDefault()
+                      }
+                    }}
+                    onChange={(e) => {
+                      const clean = e.target.value.replace(/[^A-Z0-9]/g, '').toUpperCase()
+                      setTitular({...titular, numeroId: clean})
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="Solo letras mayúsculas y números"
                   />
                 </div>
                 <div>
@@ -1079,8 +1088,17 @@ function CrearContratoContent() {
                           <input
                             type="text"
                             value={beneficiario.numeroId}
-                            onChange={(e) => updateBeneficiario(index, 'numeroId', e.target.value)}
+                            onKeyDown={(e) => {
+                              if (!/^[a-zA-Z0-9]$/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) {
+                                e.preventDefault()
+                              }
+                            }}
+                            onChange={(e) => {
+                              const clean = e.target.value.replace(/[^A-Z0-9]/g, '').toUpperCase()
+                              updateBeneficiario(index, 'numeroId', clean)
+                            }}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                            placeholder="Solo letras mayúsculas y números"
                           />
                         </div>
                         <div>
