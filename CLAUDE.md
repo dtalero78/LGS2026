@@ -1566,6 +1566,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `6af2533` | fix: campo Vigencia en Crear Contrato — `type="number"` min=1 max=12; `onKeyDown` bloquea letras/símbolos, `onChange` limpia copy-paste con regex, `onBlur` corrige valores fuera de rango; bloqueo aplica solo a ese campo |
 | `908a4fb` | feat: calcular `finalContrato` automáticamente al crear contrato — `finalContrato = hoy + vigencia meses`; se graba en TITULAR y todos los BENEFICIARIOS en el mismo INSERT; si `vigencia = 0` queda NULL |
 | `2e6afa9` | feat: auto-aprobar consentimiento genera y sube PDF al Drive — mismo flujo que Enviar PDF (API2PDF → bsl-utilidades) pero sin envío WhatsApp; errores de PDF son no-bloqueantes (el consentimiento se guarda igual) |
 | `e853e98` | fix: dropdown Nivel en Actualizar Videos/Sesiones — reemplaza lista estática hardcodeada (incluía F4 inexistente) por carga dinámica desde BD via `GET /api/postgres/niveles`; el dropdown siempre refleja los niveles reales de NIVELES |
