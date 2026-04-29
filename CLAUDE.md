@@ -1566,6 +1566,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `b600440` | fix: `autoAdvanceStep` normaliza `bookingNivel` — extrae código de nivel de formato `"BN1 - Step 5"` (tituloONivel guardado como nivel) para que la comparación con `student.nivel` no falle; `isCurrentStepComplete` usa `student.nivel` directamente en vez de `bookingNivel` para el lookup de clases |
 | `e9c2580` | fix: campos Número ID en Crear Contrato — solo letras mayúsculas y números, sin espacios ni guiones; `onKeyDown` bloquea caracteres inválidos, `onChange` limpia copy-paste y fuerza mayúsculas; aplica a Titular (paso 2) y Beneficiarios (paso 7) |
 | `6af2533` | fix: campo Vigencia en Crear Contrato — `type="number"` min=1 max=12; `onKeyDown` bloquea letras/símbolos, `onChange` limpia copy-paste con regex, `onBlur` corrige valores fuera de rango; bloqueo aplica solo a ese campo |
 | `908a4fb` | feat: calcular `finalContrato` automáticamente al crear contrato — `finalContrato = hoy + vigencia meses`; se graba en TITULAR y todos los BENEFICIARIOS en el mismo INSERT; si `vigencia = 0` queda NULL |
