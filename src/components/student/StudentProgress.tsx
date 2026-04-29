@@ -15,6 +15,7 @@ interface StepProgress {
   sesionesExitosas: number
   clubs: number
   clubsExitosos: number
+  clubNombres?: string[]
   noAprobo: boolean
   completado: boolean
   mensaje: string | null
@@ -216,9 +217,16 @@ export default function StudentProgress({ student }: StudentProgressProps) {
                         {s.esJump ? (
                           <span className="text-gray-400">—</span>
                         ) : (
-                          <span className={s.clubsExitosos >= 1 ? 'text-green-600 font-medium' : ''}>
-                            {s.clubsExitosos} / 1
-                          </span>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span className={s.clubsExitosos >= 1 ? 'text-green-600 font-medium' : ''}>
+                              {s.clubsExitosos} / 1
+                            </span>
+                            {s.clubNombres && s.clubNombres.length > 0 && (
+                              <span className="text-xs text-gray-400">
+                                {s.clubNombres.join(', ')}
+                              </span>
+                            )}
+                          </div>
                         )}
                       </td>
                       <td className="py-2 px-3 text-center">
