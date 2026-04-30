@@ -1144,6 +1144,7 @@ Questions are generated from `NIVELES.contenido` field (TEXT, markdown format wi
 | `PUT /api/postgres/academic/attendance` (bulk) | ✅ Sí (por cada booking con `asistio=true`) |
 | `PUT/POST /api/postgres/academic/evaluation` | ✅ Sí |
 | `POST /api/postgres/academic-record` | ✅ Sí |
+| `PUT /api/postgres/academic/[id]` | ✅ Sí (cuando `asistio=true` o `asistencia=true`) — modal Detalles de la Clase del panel admin |
 | Complementaria (al aprobar quiz) | ✅ Sí |
 
 ### Problema conocido: estudiantes "pegados"
