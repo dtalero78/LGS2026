@@ -1,7 +1,8 @@
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { BookingRepository } from '@/repositories/booking.repository';
 import { CalendarioRepository } from '@/repositories/calendar.repository';
-import { NotFoundError, ValidationError } from '@/lib/errors';
+import { autoAdvanceStep } from '@/services/student.service';
+import { NotFoundError } from '@/lib/errors';
 
 const ALLOWED_BOOKING_FIELDS = [
   'asistio', 'asistencia', 'participacion', 'evaluacion',
@@ -20,12 +21,21 @@ export const GET = handlerWithAuth(async (request, { params }) => {
 
 /**
  * PUT /api/postgres/academic/[id]
+ *
+ * Updates booking fields and triggers autoAdvanceStep when asistio=true,
+ * keeping parity with /attendance and /evaluation endpoints.
  */
 export const PUT = handlerWithAuth(async (request, { params }) => {
   const body = await request.json();
   const booking = await BookingRepository.updateFields(params.id, body, ALLOWED_BOOKING_FIELDS);
   if (!booking) throw new NotFoundError('Class record', params.id);
-  return successResponse({ booking, message: 'Class record updated successfully' });
+
+  let advancement = null;
+  if (body.asistio === true || body.asistencia === true) {
+    advancement = await autoAdvanceStep(params.id).catch(() => null);
+  }
+
+  return successResponse({ booking, advancement, message: 'Class record updated successfully' });
 });
 
 /**
