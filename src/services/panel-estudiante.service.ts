@@ -289,12 +289,12 @@ export async function resolveStudentFromSession(session: Session) {
         console.warn('⚠️ Could not sync USUARIOS_ROLES on contract expiration:', err);
       }
 
-      // Inactivate the titular and all beneficiarios of this contract in PEOPLE
+      // Inactivate ALL members of this contract in PEOPLE (titular + all beneficiarios)
       if (contrato) {
         await query(
           `UPDATE "PEOPLE"
            SET "estadoInactivo" = true, "aprobacion" = 'FINALIZADA', "_updatedDate" = NOW()
-           WHERE "contrato" = $1 AND "tipoUsuario" = 'TITULAR' AND ("estadoInactivo" IS NULL OR "estadoInactivo" = false)`,
+           WHERE "contrato" = $1 AND ("estadoInactivo" IS NULL OR "estadoInactivo" = false)`,
           [contrato]
         );
         // Inactivate ACADEMICA for all beneficiarios of this contract
