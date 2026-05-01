@@ -246,12 +246,24 @@ export async function resolveStudentFromSession(session: Session) {
     if (endDate < today) {
       console.log(`🔴 [Panel Estudiante] Contrato expirado (${finalContrato}). Inactivando estudiante y titular.`);
 
-      // Inactivate this student
+      // Inactivate this student in PEOPLE
       await query(
         `UPDATE "PEOPLE" SET "estadoInactivo" = true, "aprobacion" = 'FINALIZADA', "_updatedDate" = NOW() WHERE "_id" = $1`,
         [(base as any)._id]
       );
       (base as any).estadoInactivo = true;
+
+      // Inactivate this student in ACADEMICA (by numeroId)
+      if ((base as any).numeroId) {
+        try {
+          await query(
+            `UPDATE "ACADEMICA" SET "estadoInactivo" = true, "_updatedDate" = NOW() WHERE "numeroId" = $1`,
+            [(base as any).numeroId]
+          );
+        } catch (err) {
+          console.warn('⚠️ Could not sync ACADEMICA on contract expiration:', err);
+        }
+      }
 
       // Block login in USUARIOS_ROLES for this student and all contract members
       const contrato = (base as any).contrato;
@@ -277,7 +289,7 @@ export async function resolveStudentFromSession(session: Session) {
         console.warn('⚠️ Could not sync USUARIOS_ROLES on contract expiration:', err);
       }
 
-      // Inactivate the titular of this contract
+      // Inactivate the titular and all beneficiarios of this contract in PEOPLE
       if (contrato) {
         await query(
           `UPDATE "PEOPLE"
@@ -285,6 +297,19 @@ export async function resolveStudentFromSession(session: Session) {
            WHERE "contrato" = $1 AND "tipoUsuario" = 'TITULAR' AND ("estadoInactivo" IS NULL OR "estadoInactivo" = false)`,
           [contrato]
         );
+        // Inactivate ACADEMICA for all beneficiarios of this contract
+        try {
+          await query(
+            `UPDATE "ACADEMICA" SET "estadoInactivo" = true, "_updatedDate" = NOW()
+             WHERE "numeroId" IN (
+               SELECT "numeroId" FROM "PEOPLE"
+               WHERE "contrato" = $1 AND "tipoUsuario" = 'BENEFICIARIO' AND "numeroId" IS NOT NULL
+             )`,
+            [contrato]
+          );
+        } catch (err) {
+          console.warn('⚠️ Could not sync ACADEMICA beneficiarios on contract expiration:', err);
+        }
       }
     }
   }

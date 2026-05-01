@@ -64,21 +64,50 @@ export async function GET(request: NextRequest) {
       finalContrato?: string
     }> = []
 
+    // Collect unique contracts to update TITULARs once per contract
+    const contratosSeen = new Set<string>();
+
     for (const student of students) {
       try {
         console.log(`Cron expire-contracts: Marcando contrato expirado ${student._id} - ${student.primerNombre} ${student.primerApellido}`)
 
-        // Update the student to FINALIZADA
+        // 1. PEOPLE — BENEFICIARIO: estadoInactivo + FINALIZADA
         await query(
-          `UPDATE "PEOPLE" SET
-            "estado" = 'FINALIZADA',
-            "estadoInactivo" = true,
-            "_updatedDate" = NOW()
-          WHERE "_id" = $1`,
+          `UPDATE "PEOPLE" SET "estado" = 'FINALIZADA', "estadoInactivo" = true, "_updatedDate" = NOW()
+           WHERE "_id" = $1`,
           [student._id]
         )
 
-        console.log(`Cron expire-contracts: Estudiante ${student._id} marcado como FINALIZADA`)
+        // 2. ACADEMICA — BENEFICIARIO: estadoInactivo by numeroId
+        if (student.numeroId) {
+          await query(
+            `UPDATE "ACADEMICA" SET "estadoInactivo" = true, "_updatedDate" = NOW()
+             WHERE "numeroId" = $1`,
+            [student.numeroId]
+          ).catch(() => {})
+        }
+
+        // 3. USUARIOS_ROLES — BENEFICIARIO: activo = false by email
+        if (student.email) {
+          await query(
+            `UPDATE "USUARIOS_ROLES" SET "activo" = false, "_updatedDate" = NOW()
+             WHERE LOWER("email") = LOWER($1)`,
+            [student.email]
+          ).catch(() => {})
+        }
+
+        // 4. PEOPLE — TITULAR: estadoInactivo + FINALIZADA (once per contract)
+        if (student.contrato && !contratosSeen.has(student.contrato)) {
+          contratosSeen.add(student.contrato);
+          await query(
+            `UPDATE "PEOPLE" SET "estado" = 'FINALIZADA', "estadoInactivo" = true, "_updatedDate" = NOW()
+             WHERE "contrato" = $1 AND "tipoUsuario" = 'TITULAR'
+               AND ("estadoInactivo" IS NULL OR "estadoInactivo" = false)`,
+            [student.contrato]
+          ).catch(() => {})
+        }
+
+        console.log(`Cron expire-contracts: Estudiante ${student._id} procesado (PEOPLE + ACADEMICA + USUARIOS_ROLES + TITULAR)`)
 
         results.push({
           studentId: student._id,
