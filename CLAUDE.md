@@ -1182,7 +1182,7 @@ When a student with role ESTUDIANTE loads the panel (`resolveStudentFromSession`
 - If `finalContrato < today` and student is not already inactive:
   - Student is marked as `estadoInactivo = true`, `aprobacion = 'FINALIZADA'` in PEOPLE
   - Student's ACADEMICA record marked as `estadoInactivo = true` (by `numeroId`)
-  - The titular of the same contract is also marked as `estadoInactivo = true`, `aprobacion = 'FINALIZADA'`
+  - ALL members of the same contract (titular + all beneficiarios) marked as `estadoInactivo = true`, `aprobacion = 'FINALIZADA'` in PEOPLE
   - All beneficiarios' ACADEMICA records marked as `estadoInactivo = true`
   - All contract members' `USUARIOS_ROLES.activo` set to `false` (blocks login)
 - Implementation: `src/services/panel-estudiante.service.ts` (resolveStudentFromSession)
