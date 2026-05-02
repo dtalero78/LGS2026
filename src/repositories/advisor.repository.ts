@@ -7,10 +7,11 @@
 import 'server-only';
 import { queryOne, queryMany } from '@/lib/postgres';
 import { BaseRepository } from './base.repository';
+import { buildDynamicUpdate } from '@/lib/query-builder';
 
 const ADVISOR_COLUMNS = `
   "_id", "email", "primerNombre", "primerApellido", "nombreCompleto",
-  "pais", "zoom", "activo", "_createdDate", "_updatedDate"
+  "pais", "zoom", "activo", "fotoAdvisor", "domicilioadvisor", "_createdDate", "_updatedDate"
 `;
 
 class AdvisorRepositoryClass extends BaseRepository {
@@ -94,6 +95,16 @@ class AdvisorRepositoryClass extends BaseRepository {
         data.email, data.zoom || null, data.telefono || null, data.pais || null,
       ]
     );
+  }
+  /**
+   * Update allowed fields on an advisor record
+   */
+  async updateFields(id: string, body: Record<string, any>, allowedFields: string[]) {
+    const built = buildDynamicUpdate('ADVISORS', body, allowedFields);
+    if (!built) return null;
+    built.values.push(id);
+    const row = await queryOne(built.query, built.values);
+    return row;
   }
 }
 
