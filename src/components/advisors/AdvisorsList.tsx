@@ -1,7 +1,33 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { MagnifyingGlassIcon, UserIcon } from '@heroicons/react/24/outline'
+
+/**
+ * Lazy-loads a presigned URL for the advisor's photo from DO Spaces.
+ * Falls back to initials if no photo or load error.
+ */
+function AdvisorAvatar({ fotoKey, initials }: { fotoKey: string | null | undefined; initials: string }) {
+  const [url, setUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!fotoKey) return
+    fetch(`/api/postgres/materials/presigned?key=${encodeURIComponent(fotoKey)}`)
+      .then(r => r.json())
+      .then(d => { if (d.signedUrl) setUrl(d.signedUrl) })
+      .catch(() => {})
+  }, [fotoKey])
+
+  if (url) {
+    return <img src={url} alt={initials} className="h-10 w-10 rounded-full object-cover" />
+  }
+
+  return (
+    <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
+      <span className="text-sm font-medium text-primary-700">{initials}</span>
+    </div>
+  )
+}
 
 interface Advisor {
   _id: string
@@ -11,6 +37,7 @@ interface Advisor {
   telefono?: string
   numeroId?: string
   zoom?: string
+  fotoAdvisor?: string | null
 }
 
 interface AdvisorsListProps {
@@ -135,12 +162,10 @@ export default function AdvisorsList({
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="h-10 w-10 flex-shrink-0">
-                            <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-                              <span className="text-sm font-medium text-primary-700">
-                                {(advisor.primerNombre?.[0] || '').toUpperCase()}
-                                {(advisor.primerApellido?.[0] || '').toUpperCase()}
-                              </span>
-                            </div>
+                            <AdvisorAvatar
+                              fotoKey={advisor.fotoAdvisor}
+                              initials={`${(advisor.primerNombre?.[0] || '').toUpperCase()}${(advisor.primerApellido?.[0] || '').toUpperCase()}`}
+                            />
                           </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">
