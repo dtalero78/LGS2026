@@ -16,7 +16,8 @@ export const GET = handlerWithAuth(async (request) => {
   const key = searchParams.get('key');
 
   if (!key) throw new ValidationError('key es requerido');
-  if (!key.startsWith('materials/')) throw new ValidationError('key inválido');
+  const ALLOWED_PREFIXES = ['materials/', 'fotosAdvisors/', 'fotos/'];
+  if (!ALLOWED_PREFIXES.some(p => key.startsWith(p))) throw new ValidationError('key inválido');
 
   const command = new GetObjectCommand({ Bucket: SPACES_BUCKET, Key: key });
   const signedUrl = await getSignedUrl(spacesClient, command, { expiresIn: 600 });

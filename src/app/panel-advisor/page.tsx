@@ -23,6 +23,7 @@ interface Advisor {
   primerNombre: string
   primerApellido: string
   email?: string
+  fotoAdvisor?: string | null
 }
 
 interface CalendarioEvent {
@@ -69,6 +70,7 @@ function PanelAdvisorContent() {
   const [showBooksModal, setShowBooksModal] = useState(false)
   const [books, setBooks] = useState<BookItem[]>([])
   const [booksLoading, setBooksLoading] = useState(false)
+  const [fotoUrl, setFotoUrl] = useState<string | null>(null)
 
   // Get email from URL params; fall back to session email for logged-in ADVISORs
   const advisorEmail = searchParams.get('email') || (
@@ -107,6 +109,13 @@ function PanelAdvisorContent() {
 
       if (data.success && data.advisor) {
         setAdvisor(data.advisor)
+        // Load presigned URL for advisor photo
+        if (data.advisor.fotoAdvisor) {
+          fetch(`/api/postgres/materials/presigned?key=${encodeURIComponent(data.advisor.fotoAdvisor)}`)
+            .then(r => r.json())
+            .then(d => { if (d.signedUrl) setFotoUrl(d.signedUrl) })
+            .catch(() => {})
+        }
       } else {
         throw new Error(data.error || 'Advisor no encontrado')
       }
@@ -290,18 +299,33 @@ function PanelAdvisorContent() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="border-b border-gray-200 pb-4">
-          <h1 className="text-2xl font-bold text-gray-900">
-            ¡Hola {advisor?.primerNombre}!
-          </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Panel de gestión para advisors
-          </p>
+        <div className="border-b border-gray-200 pb-4 flex items-center gap-4">
+          {/* Advisor photo */}
+          <div className="flex-shrink-0 w-16 h-16 rounded-full overflow-hidden bg-gray-100 border-2 border-blue-200">
+            {fotoUrl
+              ? <img src={fotoUrl} alt="Foto advisor" className="w-full h-full object-cover" />
+              : <div className="w-full h-full flex items-center justify-center bg-blue-100">
+                  <span className="text-2xl font-bold text-blue-600">
+                    {advisor?.primerNombre?.[0]?.toUpperCase() || 'A'}
+                  </span>
+                </div>
+            }
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              ¡Hola {advisor?.primerNombre}!
+            </h1>
+            <p className="mt-1 text-sm text-gray-600">
+              Panel de gestión para advisors
+            </p>
+          </div>
+        </div>
 
-          {/* Botón de Libros */}
+        {/* Botón de Libros */}
+        <div className="-mt-2">
           <button
             onClick={handleOpenBooksModal}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <BookOpenIcon className="h-5 w-5" />
             Descargar Libros
