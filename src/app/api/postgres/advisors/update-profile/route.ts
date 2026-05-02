@@ -40,7 +40,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   if (cleanPass.length < 6 || cleanPass.length > 10) {
     throw new ValidationError('La clave debe tener entre 6 y 10 caracteres');
   }
-  if (!ALPHANUMERIC.test(cleanPass)) throw new ValidationError('La clave solo permite letras y números');
+  if (/\s/.test(cleanPass)) throw new ValidationError('La clave no puede contener espacios');
 
   // ── Find USUARIOS_ROLES record by session email ───────────────────────────
   const userRole = await queryOne<{ _id: string; rol: string }>(

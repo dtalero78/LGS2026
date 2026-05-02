@@ -36,7 +36,7 @@ export default function ActualizarDatosPage() {
     if (!ALPHANUMERIC.test(numberId.trim())) return 'El número de ID solo permite letras y números (sin espacios, puntos ni guiones)'
     if (!password.trim()) return 'La clave es requerida'
     if (password.length < 6 || password.length > 10) return 'La clave debe tener entre 6 y 10 caracteres'
-    if (!ALPHANUMERIC.test(password)) return 'La clave solo permite letras y números'
+    if (/\s/.test(password)) return 'La clave no puede contener espacios'
     if (password !== password2) return 'Las claves no coinciden'
     if (!celular.trim())   return 'El celular es requerido'
     if (!domicilio.trim()) return 'El domicilio es requerido'
@@ -168,15 +168,10 @@ export default function ActualizarDatosPage() {
           {/* Clave */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Clave * <span className="text-xs text-gray-400">(alfanumérica, 6–10 caracteres)</span>
+              Clave * <span className="text-xs text-gray-400">(letras, números y caracteres especiales, 6–10)</span>
             </label>
             <input type="password" value={password}
-              onKeyDown={e => {
-                if (!/^[a-zA-Z0-9]$/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) {
-                  e.preventDefault()
-                }
-              }}
-              onChange={e => { if (e.target.value.length <= 10) setPassword(e.target.value.replace(/[^a-zA-Z0-9]/g, '')) }}
+              onChange={e => { if (e.target.value.length <= 10) setPassword(e.target.value) }}
               maxLength={10}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Mínimo 6 caracteres" />
@@ -186,7 +181,7 @@ export default function ActualizarDatosPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar Clave *</label>
             <input type="password" value={password2}
-              onChange={e => setPassword2(e.target.value.replace(/[^a-zA-Z0-9]/g, ''))}
+              onChange={e => { if (e.target.value.length <= 10) setPassword2(e.target.value) }}
               maxLength={10}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Repita la clave" />
