@@ -1570,6 +1570,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `2b2b670` | feat: informe Asistencia Usuario (`/dashboard/informes/usuarios`) — busca beneficiario por `numeroId`, filtros fecha/nivel, tabla fecha/tipo/advisor/nivel/step/asistió/participó/noAprobo (sin Zoom), CSV exportable, mensaje cuando no hay agendamientos; API `GET /api/postgres/reports/asistencia/usuario` |
 | `22e8555` | fix: `/nuevo-advisor` — toggle ver/ocultar contraseña igual que `advisor-setup` |
 | `5d0e0d2` | feat: `/nuevo-advisor` agrega campos `numeroId` y `domicilio` (paso 1) y foto (paso 3 antes del link Zoom); endpoint público `photo-presign-public` para upload sin auth; `create` guarda `fotoAdvisor`, `domicilioadvisor` y `numberid` en ADVISORS/USUARIOS_ROLES |
 | `eb5e03c` | feat: foto advisor en Lista de Advisors — componente `AdvisorAvatar` carga presigned URL lazy por advisor; fallback a iniciales si sin foto; usa `GET /api/postgres/materials/presigned` existente |
