@@ -211,7 +211,9 @@ function PanelEstudianteContent() {
             ) : (
               <div className="space-y-3">
                 <div>
-                  <p className="text-lg font-bold uppercase tracking-wide">Next Session</p>
+                  <p className="text-lg font-bold uppercase tracking-wide">
+                    {nextClass?.tipo === 'CLUB' ? 'Next Club' : 'Next Session'}
+                  </p>
                   <p className="text-sm font-medium text-primary-200">{nextClass ? `${nextClass.nivel || profile?.nivel || '---'} - ${nextClass.step || '---'}` : '---'}</p>
                 </div>
                 <div>
