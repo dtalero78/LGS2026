@@ -1570,6 +1570,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `5d0e0d2` | feat: `/nuevo-advisor` agrega campos `numeroId` y `domicilio` (paso 1) y foto (paso 3 antes del link Zoom); endpoint público `photo-presign-public` para upload sin auth; `create` guarda `fotoAdvisor`, `domicilioadvisor` y `numberid` en ADVISORS/USUARIOS_ROLES |
 | `eb5e03c` | feat: foto advisor en Lista de Advisors — componente `AdvisorAvatar` carga presigned URL lazy por advisor; fallback a iniciales si sin foto; usa `GET /api/postgres/materials/presigned` existente |
 | `28ab4a4` | fix: actualizar-datos advisor — clave se guarda en texto plano (sin bcrypt); sistema soporta ambos formatos en auth |
 | `113ad95` | fix: `by-email` advisor incluye `fotoAdvisor` y `domicilioadvisor` en SELECT — el panel-advisor ahora puede mostrar la foto del advisor |
