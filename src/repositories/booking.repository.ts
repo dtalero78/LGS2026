@@ -407,6 +407,8 @@ class BookingRepositoryClass extends BaseRepository {
   async findUpcomingByStudentId(studentId: string, limit: number = 10) {
     return queryMany(
       `SELECT ab.*,
+              COALESCE(c."step", ab."step") AS "step",
+              COALESCE(c."nombreEvento", ab."nombreEvento") AS "nombreEvento",
               a."nombreCompleto" as "advisorNombre",
               c."linkZoom" as "eventLinkZoom"
        FROM "ACADEMICA_BOOKINGS" ab
