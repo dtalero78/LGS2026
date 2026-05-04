@@ -75,6 +75,7 @@ const getNavigation = (userEmail: string) => [
           { name: 'Actividades Complementarias', href: '/dashboard/informes/asistencia/complementarias', newTab: true },
           { name: 'Welcome Session', href: '/dashboard/informes/asistencia/welcome-session', newTab: true },
           { name: 'X País', href: '/dashboard/informes/asistencia/x-pais', newTab: true },
+          { name: 'Usuarios', href: '/dashboard/informes/usuarios', newTab: true },
         ]
       },
       {
