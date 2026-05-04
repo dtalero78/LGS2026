@@ -16,9 +16,11 @@ export const POST = handlerWithAuth(async (request) => {
   const diaDate = new Date(body.dia);
   const hora = body.hora || `${diaDate.getHours().toString().padStart(2, '0')}:${diaDate.getMinutes().toString().padStart(2, '0')}`;
 
-  // Resolve nivel and step: frontend sends nivel in tituloONivel and step in nombreEvento
+  // Resolve nivel and step: frontend sends nivel in tituloONivel and step in nombreEvento.
+  // For CLUB events, nombreEvento contains the full step name (e.g. "TRAINING - Step 32"),
+  // so prefer it over the raw step number to keep step consistent with nombreEvento.
   const nivel = body.nivel || body.tituloONivel || null;
-  const step = body.step || body.nombreEvento || null;
+  const step = body.nombreEvento || body.step || null;
 
   let tituloONivel = body.titulo || body.nombreEvento || '';
   if (nivel) {
