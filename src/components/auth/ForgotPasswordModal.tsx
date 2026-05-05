@@ -209,11 +209,17 @@ export default function ForgotPasswordModal({ initialEmail = '', onClose }: Forg
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Últimos 4 dígitos de tu celular
+                  Número de celular completo
+                  <span className="text-xs text-gray-400 ml-1">(con indicativo, solo números)</span>
                 </label>
-                <input type="text" value={lastFourPhone} maxLength={4}
+                <input type="tel" value={lastFourPhone}
+                  onKeyDown={e => {
+                    if (!/^\d$/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) {
+                      e.preventDefault()
+                    }
+                  }}
                   onChange={e => setLastFourPhone(e.target.value.replace(/\D/g, ''))}
-                  placeholder="Ej: 5678"
+                  placeholder="Ej: 56912345678"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

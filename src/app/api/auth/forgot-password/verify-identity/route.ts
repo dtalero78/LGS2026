@@ -20,11 +20,12 @@ export const POST = handler(async (request) => {
 
   const normalizedEmail = email.trim().toLowerCase();
   const cleanId    = lastFourId.replace(/[^0-9A-Za-z]/g, '').toUpperCase().slice(-4);
-  const cleanPhone = lastFourPhone.replace(/\D/g, '').slice(-4);
+  const cleanPhone = lastFourPhone.replace(/\D/g, '');  // full number, no signs
 
-  // Get ACADEMICA record
+  // Get ACADEMICA record — also check PEOPLE for celular fallback
   const academica = await queryOne<{ _id: string; celular: string | null; numeroId: string | null }>(
-    `SELECT "_id", "celular", "numeroId" FROM "ACADEMICA" WHERE LOWER("email") = $1 LIMIT 1`,
+    `SELECT a."_id", a."celular", a."numeroId"
+     FROM "ACADEMICA" a WHERE LOWER(a."email") = $1 LIMIT 1`,
     [normalizedEmail]
   );
   if (!academica) throw new NotFoundError('Registro académico', normalizedEmail);
@@ -33,9 +34,9 @@ export const POST = handler(async (request) => {
   const storedId = (academica.numeroId || '').replace(/[^0-9A-Za-z]/g, '').toUpperCase();
   const idMatches = storedId.endsWith(cleanId);
 
-  // Verify last 4 of phone
+  // Verify full phone number (strip non-digits from stored, compare with input)
   const storedPhone = (academica.celular || '').replace(/\D/g, '');
-  const phoneMatches = storedPhone.endsWith(cleanPhone);
+  const phoneMatches = storedPhone !== '' && storedPhone === cleanPhone;
 
   if (!idMatches || !phoneMatches) {
     // Return mismatch — client will show modal
