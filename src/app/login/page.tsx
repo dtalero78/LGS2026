@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
+const ForgotPasswordModal = lazy(() => import('@/components/auth/ForgotPasswordModal'))
 import { signIn, getSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
@@ -25,6 +26,7 @@ export default function LoginPage() {
   const [loginError, setLoginError] = useState<LoginErrorType>(null)
   const [bannerImage, setBannerImage] = useState<string | null>(null)
   const [bannerVisible, setBannerVisible] = useState(false)
+  const [showForgot, setShowForgot] = useState(false)
   const router = useRouter()
 
   // Cargar banner al montar (GET público, sin auth)
@@ -51,6 +53,7 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -305,9 +308,30 @@ export default function LoginPage() {
               )}
             </button>
           </div>
+
+          {/* Forgot password link */}
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={() => setShowForgot(true)}
+              className="text-sm text-primary-600 hover:text-primary-800 hover:underline transition-colors"
+            >
+              ¿Olvidaste tu contraseña?
+            </button>
+          </div>
         </form>
       </div>
     </div>
+
+    {/* Forgot password modal */}
+    {showForgot && (
+      <Suspense fallback={null}>
+        <ForgotPasswordModal
+          initialEmail={watch('email') || ''}
+          onClose={() => setShowForgot(false)}
+        />
+      </Suspense>
+    )}
     </>
   )
 }
