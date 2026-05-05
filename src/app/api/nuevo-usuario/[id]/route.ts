@@ -110,8 +110,10 @@ export const GET = handler(async (
  * POST /api/nuevo-usuario/[id]
  *
  * Public endpoint. Complete student registration:
- * 1. Update ACADEMICA with personal details (detallesPersonales, hobbies, email, clave, foto)
- * 2. Optionally create a WELCOME booking
+ * 1. Update ACADEMICA (detallesPersonales, hobbies, email, clave, foto, fechaNacimiento, edad)
+ * 2. Update PEOPLE (email, domicilio, ciudad, fechaNacimiento, edad)
+ * 3. Create/update USUARIOS_ROLES (email, password, celular, numberid, contrato)
+ * 4. Optionally create a WELCOME booking
  */
 export const POST = handler(async (
   request: Request,
@@ -120,67 +122,110 @@ export const POST = handler(async (
   const academicId = params.id;
   const body = await request.json();
 
-  const { detallesPersonales, hobbies, email, clave, foto, welcomeEventId } = body;
+  const {
+    detallesPersonales, hobbies, email, clave, foto, welcomeEventId,
+    domicilio, ciudad, fechaNacimiento,
+  } = body;
 
   // Validate required fields
   if (!detallesPersonales?.trim()) throw new ValidationError('Detalles personales es requerido');
-  if (!hobbies?.trim()) throw new ValidationError('Hobbies es requerido');
-  if (!email?.trim()) throw new ValidationError('Email/usuario es requerido');
-  if (!clave?.trim()) throw new ValidationError('Clave es requerida');
+  if (!hobbies?.trim())            throw new ValidationError('Hobbies es requerido');
+  if (!email?.trim())              throw new ValidationError('Email/usuario es requerido');
+  if (!clave?.trim())              throw new ValidationError('Clave es requerida');
 
-  // Normalize email: strip Unicode invisible/non-ASCII characters, lowercase, trim
-  // Removes zero-width spaces, non-breaking spaces, Unicode punctuation (e.g. U+3002 ideographic period)
-  // that mobile keyboards sometimes insert instead of standard ASCII characters
-  const sanitizedEmail = email
-    .replace(/[^\x20-\x7E]/g, '')  // keep only printable ASCII (0x20–0x7E)
-    .trim()
-    .toLowerCase();
-  const normalizedEmail = sanitizedEmail;
-
-  // Validate no spaces remain (defensive)
-  if (normalizedEmail.includes(' ')) {
+  // Normalize email
+  const normalizedEmail = email.replace(/[^\x20-\x7E]/g, '').trim().toLowerCase();
+  if (normalizedEmail.includes(' '))
     throw new ValidationError('El email no debe contener espacios');
-  }
-
-  // Basic email format validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(normalizedEmail)) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail))
     throw new ValidationError('El formato del email no es válido. Ejemplo: usuario@correo.com');
+
+  // Calculate edad from fechaNacimiento
+  let edad: number | null = null;
+  if (fechaNacimiento) {
+    const birth = new Date(fechaNacimiento);
+    const today = new Date();
+    edad = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) edad--;
   }
 
   // Get ACADEMICA record
   const student = await queryOne(
-    `SELECT "_id", "numeroId", "primerNombre", "primerApellido", "celular",
-            "nivel", "step", "plataforma", "usuarioId", "contrato"
-     FROM "ACADEMICA" WHERE "_id" = $1`,
+    `SELECT a."_id", a."numeroId", a."primerNombre", a."primerApellido", a."celular",
+            a."nivel", a."step", a."plataforma", a."usuarioId", a."contrato"
+     FROM "ACADEMICA" a WHERE a."_id" = $1`,
     [academicId]
   );
   if (!student) throw new NotFoundError('Registro académico', academicId);
 
-  // Update ACADEMICA with registration data
+  // 1. Update ACADEMICA
   await query(
     `UPDATE "ACADEMICA"
      SET "detallesPersonales" = $1,
-         "hobbies" = $2,
-         "email" = $3,
-         "clave" = $4,
-         "foto" = COALESCE($5, "foto"),
-         "_updatedDate" = NOW()
-     WHERE "_id" = $6`,
-    [detallesPersonales.trim(), hobbies.trim(), normalizedEmail, clave.trim(), foto || null, academicId]
+         "hobbies"            = $2,
+         "email"              = $3,
+         "clave"              = $4,
+         "foto"               = COALESCE($5, "foto"),
+         "fechaNacimiento"    = COALESCE($6::date, "fechaNacimiento"),
+         "edad"               = COALESCE($7, "edad"),
+         "_updatedDate"       = NOW()
+     WHERE "_id" = $8`,
+    [
+      detallesPersonales.trim(), hobbies.trim(), normalizedEmail,
+      clave.trim(), foto || null,
+      fechaNacimiento || null, edad,
+      academicId,
+    ]
   );
-  console.log(`✅ [NuevoUsuario] ACADEMICA actualizado para ${student.primerNombre} ${student.primerApellido}`);
+  console.log(`✅ [NuevoUsuario] ACADEMICA actualizado`);
 
-  // Create USUARIOS_ROLES entry so the student can log in to panel-estudiante
+  // 2. Update PEOPLE — propagate email + new fields (matched by numeroId from ACADEMICA)
+  if ((student as any).numeroId) {
+    await query(
+      `UPDATE "PEOPLE"
+       SET "email"           = $1,
+           "domicilio"       = COALESCE($2, "domicilio"),
+           "ciudad"          = COALESCE($3, "ciudad"),
+           "fechaNacimiento" = COALESCE($4::date, "fechaNacimiento"),
+           "edad"            = COALESCE($5, "edad"),
+           "_updatedDate"    = NOW()
+       WHERE "numeroId" = $6`,
+      [
+        normalizedEmail,
+        domicilio?.trim() || null,
+        ciudad?.trim() || null,
+        fechaNacimiento || null,
+        edad,
+        (student as any).numeroId,
+      ]
+    );
+    console.log(`✅ [NuevoUsuario] PEOPLE actualizado (email propagado)`);
+  }
+
+  // 3. Create/update USUARIOS_ROLES
   const nombreCompleto = [student.primerNombre, student.primerApellido].filter(Boolean).join(' ');
   const usuarioId = ids.person();
   await query(
-    `INSERT INTO "USUARIOS_ROLES" ("_id", "email", "password", "nombre", "rol", "activo", "numberid", "contrato", "_createdDate", "_updatedDate")
-     VALUES ($1, $2, $3, $4, 'ESTUDIANTE', true, $5, $6, NOW(), NOW())
-     ON CONFLICT ("email") DO UPDATE SET "password" = $3, "nombre" = $4, "numberid" = $5, "contrato" = $6, "_updatedDate" = NOW()`,
-    [usuarioId, normalizedEmail, clave.trim(), nombreCompleto, (student as any).numeroId || null, (student as any).contrato || null]
+    `INSERT INTO "USUARIOS_ROLES"
+       ("_id", "email", "password", "nombre", "rol", "activo",
+        "numberid", "contrato", "celular", "_createdDate", "_updatedDate")
+     VALUES ($1, $2, $3, $4, 'ESTUDIANTE', true, $5, $6, $7, NOW(), NOW())
+     ON CONFLICT ("email") DO UPDATE
+       SET "password"  = $3,
+           "nombre"    = $4,
+           "numberid"  = $5,
+           "contrato"  = $6,
+           "celular"   = $7,
+           "_updatedDate" = NOW()`,
+    [
+      usuarioId, normalizedEmail, clave.trim(), nombreCompleto,
+      (student as any).numeroId || null,
+      (student as any).contrato  || null,
+      (student as any).celular   || null,
+    ]
   );
-  console.log(`✅ [NuevoUsuario] USUARIOS_ROLES creado para ${normalizedEmail} (ESTUDIANTE, numberid=${(student as any).numeroId}, contrato=${(student as any).contrato})`);
+  console.log(`✅ [NuevoUsuario] USUARIOS_ROLES actualizado (email=${normalizedEmail})`);
 
   // Create WELCOME booking if event selected
   let bookingCreated = false;

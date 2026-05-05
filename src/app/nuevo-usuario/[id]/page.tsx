@@ -60,6 +60,9 @@ export default function NuevoUsuarioPage() {
   const [hobbies, setHobbies] = useState('')
   const [email, setEmail] = useState('')
   const [clave, setClave] = useState('')
+  const [domicilio, setDomicilio] = useState('')
+  const [ciudad, setCiudad] = useState('')
+  const [fechaNacimiento, setFechaNacimiento] = useState('')
   const [selectedEvent, setSelectedEvent] = useState('')
   const [fotoUrl, setFotoUrl] = useState('')
   const [fotoPreview, setFotoPreview] = useState('')
@@ -108,30 +111,35 @@ export default function NuevoUsuarioPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Preview
+    // Preview immediately
     const reader = new FileReader()
     reader.onloadend = () => setFotoPreview(reader.result as string)
     reader.readAsDataURL(file)
 
-    // Upload
+    // Upload via presigned URL directly to DO Spaces
     setUploadingPhoto(true)
     setFormError('')
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const res = await fetch(`/api/nuevo-usuario/${academicId}/upload-photo`, {
+      // 1. Get presigned URL
+      const presignRes = await fetch('/api/nuevo-usuario/photo-presign', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ academicaId: academicId, contentType: file.type }),
       })
-      const data = await res.json()
-      if (res.ok && data.success) {
-        setFotoUrl(data.publicUrl)
-      } else {
-        setFormError(data.error || 'Error subiendo la foto')
-        setFotoPreview('')
-      }
-    } catch {
-      setFormError('Error subiendo la foto. Intenta de nuevo.')
+      const presignData = await presignRes.json()
+      if (!presignData.success) throw new Error(presignData.error || 'Error al generar URL')
+
+      // 2. Upload directly to Spaces
+      const uploadRes = await fetch(presignData.presignedUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      })
+      if (!uploadRes.ok) throw new Error('Error al subir la foto')
+
+      setFotoUrl(presignData.publicUrl)
+    } catch (err: any) {
+      setFormError(err.message || 'Error subiendo la foto. Intenta de nuevo.')
       setFotoPreview('')
     } finally {
       setUploadingPhoto(false)
@@ -168,11 +176,14 @@ export default function NuevoUsuarioPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           detallesPersonales: detallesPersonales.trim(),
-          hobbies: hobbies.trim(),
-          email: email.trim().toLowerCase(),
-          clave: clave.trim(),
-          foto: fotoUrl || null,
-          welcomeEventId: selectedEvent || null,
+          hobbies:            hobbies.trim(),
+          email:              email.trim().toLowerCase(),
+          clave:              clave.trim(),
+          foto:               fotoUrl || null,
+          domicilio:          domicilio.trim() || null,
+          ciudad:             ciudad.trim() || null,
+          fechaNacimiento:    fechaNacimiento || null,
+          welcomeEventId:     selectedEvent || null,
         }),
       })
 
@@ -295,6 +306,49 @@ export default function NuevoUsuarioPage() {
               placeholder="¿Qué te gusta hacer en tu tiempo libre?"
               rows={2}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+            />
+          </div>
+
+          {/* Fecha de Nacimiento */}
+          <div>
+            <label htmlFor="fn-fecha" className="block text-sm font-medium text-gray-700 mb-1">
+              Fecha de nacimiento
+            </label>
+            <input
+              id="fn-fecha"
+              type="date"
+              value={fechaNacimiento}
+              onChange={e => setFechaNacimiento(e.target.value)}
+              title="Fecha de nacimiento"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          {/* Domicilio */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Dirección / Domicilio
+            </label>
+            <input
+              type="text"
+              value={domicilio}
+              onChange={e => setDomicilio(e.target.value)}
+              placeholder="Calle, número, barrio"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          {/* Ciudad */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Ciudad
+            </label>
+            <input
+              type="text"
+              value={ciudad}
+              onChange={e => setCiudad(e.target.value)}
+              placeholder="Tu ciudad"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
 
