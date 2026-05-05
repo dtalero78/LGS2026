@@ -142,10 +142,10 @@ const getNavigation = (userEmail: string) => [
         name: 'Usuarios', isSubmenu: true, children: [
           { name: 'Clear Historic',   href: '/admin/clear-historic',   newTab: true },
           { name: 'Edición Contrato', href: '/admin/edicion-contrato', newTab: true },
+          { name: 'Envío Mensajes',   href: '/admin/envio-mensajes',   newTab: true },
+          { name: 'Crear Rol',        href: '/admin/roles/create',     newTab: true },
         ],
       },
-      { name: 'Envío Mensajes', href: '/admin/envio-mensajes', newTab: true },
-      { name: 'Crear Rol',      href: '/admin/roles/create',   newTab: true },
     ],
   },
 ]
