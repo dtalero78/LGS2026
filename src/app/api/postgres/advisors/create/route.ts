@@ -35,6 +35,7 @@ export const POST = handler(async (request: Request) => {
     pais: body.pais?.trim() || undefined,
     domicilio: body.domicilio?.trim() || undefined,
     fotoAdvisor: body.fotoKey?.trim() || undefined,
+    fechaNacimiento: body.fechaNacimiento?.trim() || undefined,
   });
 
   // Also create USUARIOS_ROLES entry so the advisor can log in

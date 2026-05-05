@@ -17,7 +17,8 @@ export default function ActualizarDatosPage() {
   const [showPass2, setShowPass2] = useState(false)
   const [password2, setPassword2] = useState('')
   const [celular,   setCelular]   = useState('')
-  const [domicilio, setDomicilio] = useState('')
+  const [domicilio,        setDomicilio]        = useState('')
+  const [fechaNacimiento,  setFechaNacimiento]  = useState('')
   const [fotoFile,  setFotoFile]  = useState<File | null>(null)
   const [fotoPreview, setFotoPreview] = useState<string | null>(null)
   const [saving,    setSaving]    = useState(false)
@@ -42,8 +43,9 @@ export default function ActualizarDatosPage() {
     if (password !== password2) return 'Las claves no coinciden'
     if (!celular.trim())   return 'El celular es requerido'
     if (!/^\d+$/.test(celular.trim())) return 'El celular solo debe contener números (sin + ni espacios)'
-    if (!domicilio.trim()) return 'El domicilio es requerido'
-    if (!fotoFile)         return 'La foto es requerida'
+    if (!domicilio.trim())      return 'El domicilio es requerido'
+    if (!fechaNacimiento.trim()) return 'La fecha de nacimiento es requerida'
+    if (!fotoFile)               return 'La foto es requerida'
     return null
   }
 
@@ -76,12 +78,13 @@ export default function ActualizarDatosPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email:     email.trim().toLowerCase(),
-          numberId:  numberId.trim().toUpperCase(),
+          email:           email.trim().toLowerCase(),
+          numberId:        numberId.trim().toUpperCase(),
           password,
-          celular:   celular.trim(),
-          domicilio: domicilio.trim(),
-          fotoKey:   presignData.key,
+          celular:         celular.trim(),
+          domicilio:       domicilio.trim(),
+          fechaNacimiento: fechaNacimiento.trim(),
+          fotoKey:         presignData.key,
         }),
       })
       const saveData = await saveRes.json()
@@ -176,6 +179,14 @@ export default function ActualizarDatosPage() {
             <input type="text" value={domicilio} onChange={e => setDomicilio(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Calle 123, Ciudad" />
+          </div>
+
+          {/* Fecha de Nacimiento */}
+          <div>
+            <label htmlFor="as-fecha" className="block text-sm font-medium text-gray-700 mb-1">Fecha de Nacimiento *</label>
+            <input id="as-fecha" type="date" value={fechaNacimiento}
+              onChange={e => setFechaNacimiento(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
 
           {/* Clave */}

@@ -80,22 +80,23 @@ class AdvisorRepositoryClass extends BaseRepository {
     pais?: string;
     domicilio?: string;
     fotoAdvisor?: string;
+    fechaNacimiento?: string;
   }) {
     return queryOne(
       `INSERT INTO "ADVISORS" (
         "_id", "primerNombre", "primerApellido", "nombreCompleto",
-        "email", "zoom", "telefono", "pais", "domicilioadvisor", "fotoAdvisor", "activo",
+        "email", "zoom", "telefono", "pais", "domicilioadvisor", "fotoAdvisor", "fechaNacimiento", "activo",
         "_createdDate", "_updatedDate"
       ) VALUES (
         $1, $2, $3, $4,
-        $5, $6, $7, $8, $9, $10, true,
+        $5, $6, $7, $8, $9, $10, $11, true,
         NOW(), NOW()
       )
       RETURNING *`,
       [
         data._id, data.primerNombre, data.primerApellido, data.nombreCompleto,
         data.email, data.zoom || null, data.telefono || null, data.pais || null,
-        data.domicilio || null, data.fotoAdvisor || null,
+        data.domicilio || null, data.fotoAdvisor || null, data.fechaNacimiento || null,
       ]
     );
   }

@@ -20,6 +20,7 @@ interface FormData {
   telefono: string
   pais: string
   zoom: string
+  fechaNacimiento: string
   fotoKey: string   // DO Spaces key after upload
 }
 
@@ -29,7 +30,7 @@ export default function NuevoAdvisorPage() {
   const [step, setStep] = useState(1)
   const [form, setForm] = useState<FormData>({
     primerNombre: '', primerApellido: '', numeroId: '', domicilio: '',
-    email: '', clave: '', telefono: '', pais: '', zoom: '', fotoKey: '',
+    email: '', clave: '', telefono: '', pais: '', zoom: '', fechaNacimiento: '', fotoKey: '',
   })
   const [errors,     setErrors]     = useState<FormErrors>({})
   const [submitting, setSubmitting] = useState(false)
@@ -106,7 +107,8 @@ export default function NuevoAdvisorPage() {
       if (!form.pais)            e.pais = 'Requerido'
     }
     if (currentStep === 3) {
-      if (!form.zoom.trim()) e.zoom = 'Requerido'
+      if (!form.fechaNacimiento) e.fechaNacimiento = 'Requerido'
+      if (!form.zoom.trim())     e.zoom = 'Requerido'
     }
     setErrors(e)
     return Object.keys(e).length === 0
@@ -294,6 +296,18 @@ export default function NuevoAdvisorPage() {
                 <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFoto} />
               </div>
 
+              <div>
+                <label htmlFor="na-fecha" className="block text-sm font-medium text-gray-700 mb-1">
+                  Fecha de Nacimiento <span className="text-red-500">*</span>
+                </label>
+                <input id="na-fecha" type="date" value={form.fechaNacimiento}
+                  onChange={e => updateField('fechaNacimiento', e.target.value)}
+                  title="Fecha de nacimiento del advisor"
+                  className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${errors.fechaNacimiento ? 'border-red-400' : 'border-gray-300'}`}
+                />
+                {errors.fechaNacimiento && <p className="text-red-500 text-xs mt-1">{errors.fechaNacimiento}</p>}
+              </div>
+
               <Field label="Link de Zoom" value={form.zoom}
                 onChange={v => updateField('zoom', v)} error={errors.zoom}
                 placeholder="https://zoom.us/j/..." required />
@@ -308,6 +322,7 @@ export default function NuevoAdvisorPage() {
                   <p><span className="font-medium">Email:</span> {form.email}</p>
                   <p><span className="font-medium">Teléfono:</span> {form.telefono}</p>
                   <p><span className="font-medium">País:</span> {form.pais}</p>
+                  <p><span className="font-medium">Fecha Nacimiento:</span> {form.fechaNacimiento || '—'}</p>
                   <p><span className="font-medium">Zoom:</span> {form.zoom}</p>
                   {fotoPreview && <p><span className="font-medium">Foto:</span> ✓ Cargada</p>}
                 </div>

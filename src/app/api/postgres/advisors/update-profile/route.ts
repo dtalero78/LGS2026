@@ -20,7 +20,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   if (!sessionEmail) throw new ValidationError('No se encontró email en la sesión');
 
   const body = await request.json();
-  const { email, numberId, password, celular, domicilio, fotoKey } = body;
+  const { email, numberId, password, celular, domicilio, fotoKey, fechaNacimiento } = body;
 
   // ── Validations ──────────────────────────────────────────────────────────
   if (!email?.trim())    throw new ValidationError('El email es requerido');
@@ -79,13 +79,15 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
          "telefono"           = $2,
          "domicilioadvisor"   = $3,
          "fotoAdvisor"        = $4,
+         "fechaNacimiento"    = $5,
          "_updatedDate"       = NOW()
-     WHERE "_id" = $5`,
+     WHERE "_id" = $6`,
     [
       normalizedEmail,
       celular.trim(),
       domicilio.trim(),
       fotoKey || null,
+      fechaNacimiento?.trim() || null,
       advisor._id,
     ]
   );
