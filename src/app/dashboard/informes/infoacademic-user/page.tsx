@@ -79,7 +79,10 @@ export default function InfoAcademicUserPage() {
     ], `reporte_academico_${data.student?.numeroId}_${today}`)
   }
 
-  const handlePrint = () => window.print()
+  const handlePrint = () => {
+    // Tip: in print dialog, disable "Headers and footers" to hide URL/date
+    window.print()
+  }
 
   const heatmapMax = data ? Math.max(...(data.heatmap || []).map((h: any) => h.count), 1) : 1
 
@@ -110,19 +113,44 @@ export default function InfoAcademicUserPage() {
       {/* Print CSS injected inline */}
       <style>{`
         @media print {
-          .no-print { display: none !important; }
+          /* Hide everything UI-related */
+          .no-print,
+          [data-sonner-toaster],
+          [data-testid="toast"],
+          .toast,
+          #__next > div > div:last-child,
+          footer,
+          nav { display: none !important; }
+
           .print-header { display: flex !important; }
-          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            background: white !important;
+          }
+
           .print-page { page-break-inside: avoid; }
-          @page { size: letter portrait; margin: 15mm; }
-          .watermark::before {
+
+          @page {
+            size: letter portrait;
+            margin: 12mm 15mm 12mm 15mm;
+          }
+
+          /* Watermark */
+          .watermark::after {
             content: '';
             position: fixed; top: 50%; left: 50%;
-            transform: translate(-50%,-50%) rotate(-30deg);
-            width: 400px; height: 400px;
+            transform: translate(-50%,-50%) rotate(-25deg);
+            width: 380px; height: 380px;
             background: url('/logo.png') center/contain no-repeat;
             opacity: 0.04; z-index: 0; pointer-events: none;
           }
+
+          /* Avoid table breaks */
+          table { page-break-inside: auto; }
+          tr { page-break-inside: avoid; page-break-after: auto; }
+          thead { display: table-header-group; }
         }
         @media screen { .print-header { display: none !important; } }
       `}</style>
@@ -232,6 +260,7 @@ export default function InfoAcademicUserPage() {
                   <ArrowDownTrayIcon className="h-4 w-4" /> CSV
                 </button>
                 <button type="button" onClick={handlePrint}
+                  title="En el diálogo de impresión, desactive 'Encabezados y pies de página' para ocultar la URL del navegador"
                   className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                   <PrinterIcon className="h-4 w-4" /> Imprimir / PDF
                 </button>
