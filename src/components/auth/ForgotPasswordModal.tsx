@@ -171,7 +171,7 @@ export default function ForgotPasswordModal({ initialEmail = '', onClose }: Forg
           {/* ── Step 1: EMAIL ── */}
           {step === 'EMAIL' && (
             <>
-              <p className="text-sm text-gray-600">Ingresa el email con el que te registraste.</p>
+              <p className="text-sm text-gray-600">Ingresa tu email y verificamos si está registrado.</p>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <input type="email" value={email} readOnly={!!initialEmail}
