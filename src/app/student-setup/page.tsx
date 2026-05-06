@@ -31,7 +31,9 @@ export default function StudentSetupPage() {
   }
 
   const handleSkip = () => {
-    // Skip this time — perfilActualizado stays null, will ask again next login
+    // Skip this time — set session cookie so layout won't redirect again this session
+    // perfilActualizado stays null → will ask again on next login
+    document.cookie = 'student_setup_skipped=1; path=/; SameSite=Lax'
     router.push('/panel-estudiante')
   }
 
@@ -124,7 +126,8 @@ export default function StudentSetupPage() {
                 <CameraIcon className="h-3.5 w-3.5 text-white" />
               </div>
             </div>
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFoto} />
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFoto}
+              title="Subir foto de perfil" aria-label="Subir foto de perfil" />
             <p className="text-xs text-gray-500">Foto de perfil (opcional)</p>
           </div>
 

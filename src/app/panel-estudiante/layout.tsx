@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-postgres';
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { queryOne } from '@/lib/postgres';
 
 /**
@@ -15,6 +16,13 @@ export default async function PanelEstudianteLayout({ children }: { children: Re
   const email = session?.user?.email;
 
   if (role === 'ESTUDIANTE' && email) {
+    // If student skipped this session, don't redirect again
+    const cookieStore = await cookies();
+    const skipped = cookieStore.get('student_setup_skipped');
+    if (skipped?.value === '1') {
+      return <>{children}</>;
+    }
+
     const ur = await queryOne<{ perfilActualizado: string | null }>(
       `SELECT "perfilActualizado" FROM "USUARIOS_ROLES" WHERE LOWER("email") = LOWER($1) LIMIT 1`,
       [email]
