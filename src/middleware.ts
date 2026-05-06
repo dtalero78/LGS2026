@@ -72,7 +72,7 @@ export async function middleware(request: NextRequest) {
     // Rutas que siempre están permitidas (búsqueda de personas/estudiantes, panel de advisor)
     // Nota: la redirección de ADVISOR a /actualizar-datos se maneja en el Server Layout
     // de /panel-advisor para evitar importar pg en el Edge Runtime del middleware.
-    const alwaysAllowedRoutes = ['/person', '/student', '/sesion', '/advisor', '/panel-advisor', '/panel-estudiante', '/advisor-setup'];
+    const alwaysAllowedRoutes = ['/person', '/student', '/sesion', '/advisor', '/panel-advisor', '/panel-estudiante', '/advisor-setup', '/student-setup'];
     if (alwaysAllowedRoutes.some(route => pathname.startsWith(route))) {
       console.log(`✅ [Middleware] Access granted to ${pathname} (always allowed route)`);
       return noCacheNext();
