@@ -5,10 +5,9 @@ import DashboardLayout from '@/components/layout/DashboardLayout'
 import { exportToExcel } from '@/lib/export-excel'
 import { useSession } from 'next-auth/react'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  Legend, Cell
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts'
-import { MagnifyingGlassIcon, PrinterIcon, ArrowDownTrayIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon, PrinterIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 
 const today       = new Date().toISOString().split('T')[0]
 const NIVEL_ORDER = ['ESS','BN1','BN2','BN3','P1','P2','P3','F1','F2','F3']
