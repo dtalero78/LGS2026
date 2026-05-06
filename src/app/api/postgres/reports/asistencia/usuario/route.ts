@@ -60,7 +60,7 @@ export const GET = handler(async (req) => {
        b."_id",
        b."fechaEvento",
        COALESCE(c."tipo", b."tipo", b."tipoEvento")                       AS "tipo",
-       b."advisor",
+       COALESCE(a."nombreCompleto", b."advisor")                           AS "advisor",
        COALESCE(c."nivel", b."nivel")                                      AS "nivel",
        CASE
          WHEN COALESCE(c."step", b."step", '') LIKE 'TRAINING%'
@@ -74,6 +74,7 @@ export const GET = handler(async (req) => {
        b."cancelo"
      FROM "ACADEMICA_BOOKINGS" b
      LEFT JOIN "CALENDARIO" c ON c."_id" = COALESCE(b."eventoId", b."idEvento")
+     LEFT JOIN "ADVISORS" a ON a."_id" = b."advisor"
      WHERE ${conditions.join(' AND ')}
      ORDER BY b."fechaEvento" DESC NULLS LAST`,
     params

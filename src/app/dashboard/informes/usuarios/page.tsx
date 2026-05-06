@@ -75,6 +75,7 @@ export default function InformesUsuariosPage() {
         { header: 'Step',         accessor: r => r.step || '' },
         { header: 'Asistió',      accessor: r => (r.asistio || r.asistencia) ? 'Sí' : 'No' },
         { header: 'Participó',    accessor: r => r.participacion ? 'Sí' : 'No' },
+        { header: 'Canceló',      accessor: r => r.cancelo ? 'Sí' : 'No' },
         { header: 'No Aprobó',    accessor: r => r.noAprobo ? 'Sí' : 'No' },
       ],
       `asistencia_${student.numeroId}_${startDate}_${endDate}`
@@ -191,7 +192,7 @@ export default function InformesUsuariosPage() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      {['FECHA','TIPO','ADVISOR','NIVEL','STEP','ASISTIÓ','PARTICIPÓ','NO APROBÓ'].map(h => (
+                      {['FECHA','TIPO','ADVISOR','NIVEL','STEP','ASISTIÓ','PARTICIPÓ','CANCELÓ','NO APROBÓ'].map(h => (
                         <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           {h}
                         </th>
@@ -221,6 +222,7 @@ export default function InformesUsuariosPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">{r.participacion ? 'Sí' : '—'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{r.cancelo ? 'Sí' : '—'}</td>
                         <td className="px-4 py-3 text-sm text-gray-600">{r.noAprobo ? 'Sí' : '—'}</td>
                       </tr>
                     ))}
