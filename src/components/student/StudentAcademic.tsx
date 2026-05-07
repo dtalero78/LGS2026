@@ -632,8 +632,17 @@ export default function StudentAcademic({ student, classes: initialClasses, view
     return true
   })
 
-  // Get unique advisors for filter dropdown
-  const uniqueAdvisors = Array.from(new Set(classes.map(c => c.advisor).filter(Boolean)))
+  // Get unique advisors for filter dropdown — resolve name from advisorNombre (server-joined) or advisorNames map
+  const uniqueAdvisors = Array.from(
+    new Map(
+      classes
+        .filter(c => c.advisor)
+        .map(c => [
+          c.advisor,
+          (c as any).advisorNombre || advisorNames[c.advisor] || c.advisor,
+        ])
+    ).entries()
+  ).map(([id, name]) => ({ id, name }))
 
   // Render functions for different views
   const renderAttendanceTable = () => (
@@ -697,10 +706,8 @@ export default function StudentAcademic({ student, classes: initialClasses, view
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="">Todos los advisors</option>
-              {uniqueAdvisors.map(advisorId => (
-                <option key={advisorId} value={advisorId}>
-                  {advisorNames[advisorId] || 'Cargando...'}
-                </option>
+              {uniqueAdvisors.map(({ id, name }) => (
+                <option key={id} value={id}>{name}</option>
               ))}
             </select>
           </div>
@@ -766,7 +773,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
                           className="text-blue-600 hover:text-blue-800 hover:underline"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          {advisorNames[classItem.advisor] || 'Cargando...'}
+                          {(classItem as any).advisorNombre || advisorNames[classItem.advisor] || classItem.advisor || 'Sin advisor'}
                         </Link>
                       ) : (
                         'No asignado'

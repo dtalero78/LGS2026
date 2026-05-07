@@ -90,7 +90,9 @@ class BookingRepositoryClass extends BaseRepository {
    */
   async findByStudentId(studentId: string, limit: number = 500) {
     return queryMany(
-      `SELECT b."_id", b."studentId", b."eventoId", b."tipo", b."fecha", b."hora", b."advisor",
+      `SELECT b."_id", b."studentId", b."eventoId", b."tipo", b."fecha", b."hora",
+              b."advisor",
+              COALESCE(adv."nombreCompleto", b."advisor") AS "advisorNombre",
               COALESCE(c."nivel", b."nivel") AS "nivel",
               CASE WHEN b."step" ~ '^[A-Z]+ - Step' THEN b."step"
                    ELSE COALESCE(c."step", b."step")
@@ -103,6 +105,7 @@ class BookingRepositoryClass extends BaseRepository {
               b."_createdDate", b."_updatedDate"
        FROM "ACADEMICA_BOOKINGS" b
        LEFT JOIN "CALENDARIO" c ON c."_id" = COALESCE(b."eventoId", b."idEvento")
+       LEFT JOIN "ADVISORS" adv ON adv."_id" = b."advisor"
        WHERE (b."idEstudiante" = $1 OR b."studentId" = $1
          OR b."idEstudiante" IN (
            SELECT p."_id" FROM "PEOPLE" p
