@@ -10,7 +10,7 @@ interface Props {
   onSuccess: () => void
 }
 
-type Step = 'loading' | 'blocked' | 'info' | 'form' | 'confirm' | 'done'
+type Step = 'loading' | 'blocked' | 'nivel-bloqueado' | 'info' | 'form' | 'confirm' | 'done'
 
 export default function StudentInicializarNivel({ studentId, studentName, onClose, onSuccess }: Props) {
   const [step, setStep]             = useState<Step>('loading')
@@ -33,7 +33,9 @@ export default function StudentInicializarNivel({ studentId, studentName, onClos
         const json = await res.json()
         if (!json.success) throw new Error(json.error || 'Error al cargar información')
         setInfo(json)
-        setStep(json.done ? 'blocked' : 'info')
+        if (json.nivelBloqueado) setStep('nivel-bloqueado')
+        else if (json.done)      setStep('blocked')
+        else                     setStep('info')
       } catch (e: any) {
         setError(e.message)
         setStep('info')
@@ -88,6 +90,32 @@ export default function StudentInicializarNivel({ studentId, studentName, onClos
           {/* LOADING */}
           {step === 'loading' && (
             <div className="text-center py-8 text-gray-500 text-sm">Cargando información...</div>
+          )}
+
+          {/* NIVEL BLOQUEADO — ESS, WELCOME o DONE */}
+          {step === 'nivel-bloqueado' && info && (
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <NoSymbolIcon className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-amber-800">Nivel no permitido</p>
+                  <p className="text-sm text-amber-700 mt-1">
+                    El proceso <strong>Inicializar Nivel</strong> no está disponible para estudiantes en nivel{' '}
+                    <strong className="uppercase">{info.nivel}</strong>.
+                  </p>
+                  <p className="text-sm text-amber-600 mt-2">
+                    Este proceso solo aplica a niveles académicos regulares (BN1–F3). Los niveles{' '}
+                    <strong>ESS</strong>, <strong>WELCOME</strong> y <strong>DONE</strong> están excluidos.
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <button type="button" onClick={onClose}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200">
+                  Cerrar
+                </button>
+              </div>
+            </div>
           )}
 
           {/* BLOCKED — ya se realizó una vez */}

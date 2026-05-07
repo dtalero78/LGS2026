@@ -396,12 +396,17 @@ export async function changeStep(
  * GET preflight for Inicializar Nivel:
  * Returns eligibility status, first step of current nivel, and booking count to delete.
  */
+const NIVELES_NO_PERMITIDOS = ['ESS', 'WELCOME', 'DONE'];
+
 export async function getInicializarNivelInfo(academicaId: string) {
   const academic = await AcademicaRepository.findByAnyIdOrThrow(academicaId);
   const { done, data } = await AcademicaRepository.getInicializarNivelStatus(academicaId);
 
   const nivel = academic.nivel;
   if (!nivel) throw new ValidationError('El estudiante no tiene nivel asignado');
+
+  // Niveles no permitidos
+  const nivelBloqueado = NIVELES_NO_PERMITIDOS.includes(nivel?.toUpperCase() || '');
 
   // Get first step of current nivel from NIVELES (lowest numeric step)
   const firstStepRow = await queryOne<{ step: string }>(
@@ -413,10 +418,11 @@ export async function getInicializarNivelInfo(academicaId: string) {
   );
   const firstStep = firstStepRow?.step || null;
 
-  const bookingCount = await BookingRepository.countByNivelAndStudent(academicaId, nivel);
+  const bookingCount = nivelBloqueado ? 0 : await BookingRepository.countByNivelAndStudent(academicaId, nivel);
 
   return {
     done,
+    nivelBloqueado,
     auditData: done ? data?.inicianivel : null,
     nivel,
     stepActual: academic.step,
@@ -437,8 +443,9 @@ export async function inicializarNivel(
   autorizadoPor: string,
   realizadoPor: string
 ) {
-  const { done, nivel, stepActual, firstStep, bookingCount } = await getInicializarNivelInfo(academicaId);
+  const { done, nivelBloqueado, nivel, stepActual, firstStep, bookingCount } = await getInicializarNivelInfo(academicaId);
 
+  if (nivelBloqueado) throw new ValidationError(`El proceso Inicializar Nivel no está disponible para el nivel ${nivel}`);
   if (done) throw new ValidationError('Este proceso solo puede realizarse una vez por estudiante');
   if (!firstStep) throw new ValidationError(`No se encontró el primer step del nivel ${nivel}`);
 
