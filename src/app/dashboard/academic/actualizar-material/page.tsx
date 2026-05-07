@@ -6,7 +6,7 @@ export default function ActualizarMaterialPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-900 mb-2">Actualizar Material</h1>
-      <p className="text-gray-500 mb-8">Selecciona el tipo de material que deseas actualizar.</p>
+      <p className="text-gray-500 mb-8">Selecciona el tipo de material que deseas actualizar, esta acción genera registros de auditoría.</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {/* Usuarios */}
