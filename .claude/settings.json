@@ -7,7 +7,10 @@
       "PowerShell(Set-Location \"c:\\\\Users\\\\tddir\\\\Documents\\\\GRUPO J&J\\\\X PLATAFORMA\\\\LGS2026Git\\\\LGS2026\"; Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"npm run dev\" -WindowStyle Normal)",
       "PowerShell(Start-Process cmd -ArgumentList \"/k\", \"cd /d `\"c:\\\\Users\\\\tddir\\\\Documents\\\\GRUPO J&J\\\\X PLATAFORMA\\\\LGS2026Git\\\\LGS2026`\" && npm run dev\" -WindowStyle Normal)",
       "PowerShell(Get-Content \"c:\\\\Users\\\\tddir\\\\Documents\\\\GRUPO J&J\\\\X PLATAFORMA\\\\LGS2026Git\\\\LGS2026\\\\node_modules\\\\.bin\\\\next\" -First 3 2>$null)",
-      "PowerShell(Start-Process cmd -ArgumentList \"/k\", \"cd /d `\"c:\\\\Users\\\\tddir\\\\Documents\\\\GRUPO J&J\\\\X PLATAFORMA\\\\LGS2026Git\\\\LGS2026`\" && node node_modules\\\\next\\\\dist\\\\bin\\\\next dev -p 3001\" -WindowStyle Normal)"
+      "PowerShell(Start-Process cmd -ArgumentList \"/k\", \"cd /d `\"c:\\\\Users\\\\tddir\\\\Documents\\\\GRUPO J&J\\\\X PLATAFORMA\\\\LGS2026Git\\\\LGS2026`\" && node node_modules\\\\next\\\\dist\\\\bin\\\\next dev -p 3001\" -WindowStyle Normal)",
+      "Bash(git commit -m 'fix: infoacademic-user — retirar porcentaje de barras de progreso del programa *)",
+      "Bash(git commit -m 'feat: sidebar Informes — filtrar sub-grupos por permiso individual *)",
+      "Bash(git commit -m 'fix: actualizar-material — agregar nota de auditoría en subtítulo *)"
     ]
   }
 }

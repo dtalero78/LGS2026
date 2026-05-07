@@ -1570,7 +1570,23 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
-| `local` | feat: Migrar Contrato — wizard 8 pasos en Mantenimiento → Usuarios para crear titular + beneficiarios con número de contrato manual; permiso `MANTENIMIENTO.CONTRATOS.MIGRAR` (`MantenimientoPermission`) registrado en RBAC y visible en `/admin/permissions`; flujo de beneficiarios iterativo con modal "¿Agregar otro?"; validaciones: vigencia 1–12, ID solo alfanumérico, teléfonos solo dígitos, email con regex, mínimo 1 beneficiario; campos de dinero con máscara `$ 1.050.000`; al finalizar abre `/dashboard/comercial/contrato/[titularId]` en nueva pestaña. Archivos: `src/app/admin/migrar-contrato/page.tsx`, `src/app/api/admin/migrar-contrato/route.ts`. Módulo `MANTENIMIENTO` agregado al `Module` enum y catálogo de permisos |
+| `bf8859c` | feat: Inicializar Nivel — nuevo ítem en submenú Académica de `/student/[id]`; modal 3 pasos: (1) info nivel/step/bookings a borrar, (2) auditoría (motivo + autorizadoPor + fecha automática), (3) confirmación con opción Abandonar; columnas `inicianivel` (JSONB) y `checkinicianivel` (INTEGER) creadas con `ADD COLUMN IF NOT EXISTS` en ACADEMICA; proceso solo se puede ejecutar una vez (checkinicianivel >= 1 → pantalla bloqueada con historial de la ejecución); elimina ACADEMICA_BOOKINGS del nivel actual, resetea step al primer step del nivel (desde NIVELES table), sincroniza PEOPLE; permiso `STUDENT.ACADEMIA.INICIALIZAR_NIVEL` en RBAC grupo BENEFICIARIO → Tab Académica |
+| `ba40eb2` | fix: actualizar-material — subtítulo incluye nota "esta acción genera registros de auditoría" |
+| `6217ca4` | feat: sidebar Informes — filtrar sub-grupos individualmente por permiso: Asistencia→INFORMES.ASISTENCIA, Programación→INFORMES.PROGRAMACION, Advisors→INFORMES.ADVISORS, Planta→INFORMES.PLANTA, Estadísticas→INFORMES.ESTADISTICAS; Usuarios/InfoAcademic User→INFORMES.USUARIOS; Contratos→INFORMES.CONTRATOS |
+| `0d5cdc1` | fix: infoacademic-user — retirar porcentaje de barras de progreso del programa; texto muestra solo `X ses · Y/Z steps · N días` |
+| `130b653` | fix: infoacademic-user — eje X gráfica semanal convierte ISO week a fecha legible (ej: '17 Feb'); total de sesiones sobre cada columna con LabelList personalizado; barras de progreso muestran sesionesEfectivas/completedSteps/totalSteps/diasEnNivel (API agrega sesionesEfectivas); heatmap con etiquetas de mes encima y L/M/X/J/V a la izquierda; tooltip con fecha completa |
+| `5739139` | feat: Migrar Contrato — wizard 8 pasos en Mantenimiento → Usuarios para crear titular + beneficiarios con número de contrato manual; permiso `MANTENIMIENTO.CONTRATOS.MIGRAR` (`MantenimientoPermission`) registrado en RBAC; flujo de beneficiarios iterativo con modal "¿Agregar otro?"; validaciones: vigencia 1–12, ID solo alfanumérico, teléfonos solo dígitos, email con regex, mínimo 1 beneficiario; campos de dinero con máscara `$ 1.050.000`; Módulo `MANTENIMIENTO` agregado al `Module` enum y catálogo de permisos; `InformesPermission` agregado al union type `Permission` |
+
+### Inicializar Nivel — Detalles de implementación
+
+- **Permiso**: `STUDENT.ACADEMIA.INICIALIZAR_NIVEL` — asignable desde `/admin/permissions`
+- **Columnas DB nuevas en ACADEMICA** (auto-creadas con `ADD COLUMN IF NOT EXISTS`):
+  - `checkinicianivel` INTEGER — contador; `NULL`=no ejecutado, `1`=ejecutado (bloqueado)
+  - `inicianivel` JSONB — auditoría: `{fecha, motivo, autorizadoPor, realizadoPor, nivel, stepAnterior, stepNuevo, bookingsEliminados}`
+- **API**: `GET /api/postgres/students/[id]/inicializar-nivel` (preflight) + `POST` (ejecutar)
+- **Qué borra**: `DELETE FROM ACADEMICA_BOOKINGS WHERE (idEstudiante=$1 OR studentId=$1) AND nivel=$2`
+- **Primer step del nivel**: consulta `NIVELES` ordenando por número extraído del step (`REGEXP_REPLACE`)
+- **Archivos**: `src/app/api/postgres/students/[id]/inicializar-nivel/route.ts`, `src/components/student/StudentInicializarNivel.tsx`, `src/repositories/academica.repository.ts` (resetNivel, ensureColumns), `src/repositories/booking.repository.ts` (countByNivelAndStudent, deleteByNivelAndStudent), `src/services/student.service.ts` (getInicializarNivelInfo, inicializarNivel)
 
 ## Recent Changes (April 2026)
 
