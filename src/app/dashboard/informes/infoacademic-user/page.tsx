@@ -380,18 +380,12 @@ export default function InfoAcademicUserPage() {
                         {p.nivel}
                       </span>
                       <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden relative">
-                        <div className="h-5 rounded-full transition-all duration-500 flex items-center justify-end pr-2"
+                        <div className="h-5 rounded-full transition-all duration-500"
                           style={{
                             width: barPct > 0 ? `${Math.max(barPct, 3)}%` : '0%',
                             backgroundColor: NIVEL_COLORS[p.nivel] || '#9ca3af',
-                          }}>
-                          {barPct > 18 && (
-                            <span className="text-white text-xs font-semibold">{displayPct}%</span>
-                          )}
-                        </div>
-                        {barPct <= 18 && barPct > 0 && (
-                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-700">{displayPct}%</span>
-                        )}
+                          }}
+                        />
                       </div>
                       <div className="text-xs text-gray-500 w-52 flex-shrink-0">
                         {p.hasData ? (
