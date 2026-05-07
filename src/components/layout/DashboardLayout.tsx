@@ -23,7 +23,7 @@ import {
 import { cn } from '@/lib/utils'
 import SearchBar from '@/components/search/SearchBar'
 import { usePermissions } from '@/hooks/usePermissions'
-import { ServicioPermission, AcademicoPermission, InformesPermission, ComercialPermission, AprobacionPermission, Permission } from '@/types/permissions'
+import { ServicioPermission, AcademicoPermission, InformesPermission, ComercialPermission, AprobacionPermission, MantenimientoPermission, Permission } from '@/types/permissions'
 
 const getNavigation = (userEmail: string) => [
   {
@@ -143,6 +143,7 @@ const getNavigation = (userEmail: string) => [
         name: 'Usuarios', isSubmenu: true, children: [
           { name: 'Clear Historic',   href: '/admin/clear-historic',   newTab: true },
           { name: 'Edición Contrato', href: '/admin/edicion-contrato', newTab: true },
+          { name: 'Migrar Contrato',  href: '/admin/migrar-contrato',  newTab: true },
           { name: 'Envío Mensajes',   href: '/admin/envio-mensajes',   newTab: true },
           { name: 'Crear Rol',        href: '/admin/roles/create',     newTab: true },
         ],
@@ -248,6 +249,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ],
     '/subir-lote': [
       ComercialPermission.MODIFICAR_CONTRATO,
+    ],
+    '/admin/migrar-contrato': [
+      MantenimientoPermission.MIGRAR_CONTRATO,
     ],
     // Aprobación
     '/dashboard/aprobacion': [

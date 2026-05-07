@@ -1566,6 +1566,12 @@ export interface Person {
 - Ahora: eventos entre -60 min y +30 min se muestran deshabilitados con badge "Próximamente" (los estudiantes pueden ver que existe el evento aunque no puedan reservar)
 - Eventos >60 min en el pasado se ocultan definitivamente
 
+## Recent Changes (May 2026)
+
+| Commit | Description |
+|---|---|
+| `local` | feat: Migrar Contrato — wizard 8 pasos en Mantenimiento → Usuarios para crear titular + beneficiarios con número de contrato manual; permiso `MANTENIMIENTO.CONTRATOS.MIGRAR` (`MantenimientoPermission`) registrado en RBAC y visible en `/admin/permissions`; flujo de beneficiarios iterativo con modal "¿Agregar otro?"; validaciones: vigencia 1–12, ID solo alfanumérico, teléfonos solo dígitos, email con regex, mínimo 1 beneficiario; campos de dinero con máscara `$ 1.050.000`; al finalizar abre `/dashboard/comercial/contrato/[titularId]` en nueva pestaña. Archivos: `src/app/admin/migrar-contrato/page.tsx`, `src/app/api/admin/migrar-contrato/route.ts`. Módulo `MANTENIMIENTO` agregado al `Module` enum y catálogo de permisos |
+
 ## Recent Changes (April 2026)
 
 | Commit | Description |

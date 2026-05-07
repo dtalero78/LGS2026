@@ -56,6 +56,10 @@ const MODULE_COLORS: Record<string, { bg: string; border: string; tag: string; t
     bg: 'bg-red-50', border: 'border-red-200', tag: 'bg-red-100 text-red-800',
     text: 'text-red-900', accent: 'text-red-600',
   },
+  [Module.MANTENIMIENTO]: {
+    bg: 'bg-slate-50', border: 'border-slate-200', tag: 'bg-slate-100 text-slate-800',
+    text: 'text-slate-900', accent: 'text-slate-600',
+  },
 };
 
 const getModuleColors = (module: string) => {
@@ -72,6 +76,7 @@ const MODULE_DISPLAY_NAMES: Record<string, { title: string; subtitle: string }> 
   'SERVICIO': { title: 'SERVICIO', subtitle: 'Menú Servicio' },
   'COMERCIAL': { title: 'COMERCIAL', subtitle: 'Menú Comercial' },
   'APROBACION': { title: 'APROBACION', subtitle: 'Menú Aprobación' },
+  'MANTENIMIENTO': { title: 'MANTENIMIENTO', subtitle: 'Menú Mantenimiento → Usuarios' },
 };
 
 // Iconos para tipos de componente

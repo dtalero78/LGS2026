@@ -15,6 +15,7 @@ import {
   ServicioPermission,
   ComercialPermission,
   AprobacionPermission,
+  MantenimientoPermission,
 } from '@/types/permissions';
 
 // ============================================================================
@@ -620,6 +621,15 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     section: 'Detalle Aprobación',
     name: 'Botón "Aprobación Autónoma"',
     description: 'Aprobar contrato sin verificación OTP del cliente',
+  },
+
+  // ========== MANTENIMIENTO MODULE (Menú Mantenimiento → Usuarios) ==========
+  {
+    code: MantenimientoPermission.MIGRAR_CONTRATO,
+    module: Module.MANTENIMIENTO,
+    section: 'Usuarios',
+    name: 'Página "Migrar Contrato"',
+    description: 'Acceso a migrar contratos existentes creando titular y beneficiarios manualmente con número de contrato predefinido',
   },
 ];
 

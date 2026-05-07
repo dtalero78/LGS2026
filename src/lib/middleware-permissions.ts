@@ -173,6 +173,11 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/dashboard/informes/estadisticas':          ['INFORMES.ESTADISTICAS' as Permission],
   '/dashboard/informes/estadisticas/horarios': ['INFORMES.ESTADISTICAS' as Permission],
 
+  // Mantenimiento - Migrar Contrato
+  '/admin/migrar-contrato': [
+    'MANTENIMIENTO.CONTRATOS.MIGRAR' as Permission,
+  ],
+
   // Aprobación
   '/dashboard/aprobacion': [
     'APROBACION.MODIFICAR.ACTUALIZAR' as Permission,

@@ -18,6 +18,7 @@ export enum Module {
   SERVICIO = 'SERVICIO',
   COMERCIAL = 'COMERCIAL',
   APROBACION = 'APROBACION',
+  MANTENIMIENTO = 'MANTENIMIENTO',
 }
 
 /**
@@ -186,6 +187,13 @@ export enum ComercialPermission {
 }
 
 /**
+ * Permisos del módulo MANTENIMIENTO (Menú Mantenimiento - SUPER_ADMIN)
+ */
+export enum MantenimientoPermission {
+  MIGRAR_CONTRATO = 'MANTENIMIENTO.CONTRATOS.MIGRAR',
+}
+
+/**
  * Permisos del módulo APROBACION (Menú Aprobación)
  */
 export enum AprobacionPermission {
@@ -215,7 +223,9 @@ export type Permission =
   | AcademicoPermission
   | ServicioPermission
   | ComercialPermission
-  | AprobacionPermission;
+  | AprobacionPermission
+  | MantenimientoPermission
+  | InformesPermission;
 
 // ============================================================================
 // INTERFACES

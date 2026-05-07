@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node -e \":*)"
+      "Bash(node -e \":*)",
+      "Bash(git commit -m ' *)",
+      "Bash(Get-Content \"C:\\\\Users\\\\tddir\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-tddir-Documents-GRUPO-J-J-X-PLATAFORMA-LGS2026Git-LGS2026\\\\a6cdb31c-94d3-437c-a53a-28ccb2b81139\\\\tasks\\\\b800dfq7j.output\" -Tail 30)",
+      "PowerShell(Set-Location \"c:\\\\Users\\\\tddir\\\\Documents\\\\GRUPO J&J\\\\X PLATAFORMA\\\\LGS2026Git\\\\LGS2026\"; Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"npm run dev\" -WindowStyle Normal)",
+      "PowerShell(Start-Process cmd -ArgumentList \"/k\", \"cd /d `\"c:\\\\Users\\\\tddir\\\\Documents\\\\GRUPO J&J\\\\X PLATAFORMA\\\\LGS2026Git\\\\LGS2026`\" && npm run dev\" -WindowStyle Normal)",
+      "PowerShell(Get-Content \"c:\\\\Users\\\\tddir\\\\Documents\\\\GRUPO J&J\\\\X PLATAFORMA\\\\LGS2026Git\\\\LGS2026\\\\node_modules\\\\.bin\\\\next\" -First 3 2>$null)",
+      "PowerShell(Start-Process cmd -ArgumentList \"/k\", \"cd /d `\"c:\\\\Users\\\\tddir\\\\Documents\\\\GRUPO J&J\\\\X PLATAFORMA\\\\LGS2026Git\\\\LGS2026`\" && node node_modules\\\\next\\\\dist\\\\bin\\\\next dev -p 3001\" -WindowStyle Normal)"
     ]
   }
 }
