@@ -219,8 +219,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/dashboard/informes/advisors/clubes': [InformesPermission.ADVISORS],
     '/dashboard/informes/advisors/welcome': [InformesPermission.ADVISORS],
     '/dashboard/informes/advisors/resumen': [InformesPermission.ADVISORS],
-    '/dashboard/informes/usuarios': [InformesPermission.USUARIOS],
-    '/dashboard/informes/contratos': [InformesPermission.CONTRATOS],
+    '/dashboard/informes/usuarios':           [InformesPermission.USUARIOS],
+    '/dashboard/informes/infoacademic-user':  [InformesPermission.USUARIOS],
+    '/dashboard/informes/contratos':          [InformesPermission.CONTRATOS],
     '/dashboard/informes/planta/advisors': [InformesPermission.PLANTA],
     '/dashboard/informes/planta/administrativos': [InformesPermission.PLANTA],
     '/dashboard/informes/estadisticas':         [InformesPermission.ESTADISTICAS],
@@ -382,6 +383,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return true
   })
 
+  // Permisos por sub-grupo de Informes (isSubmenu: true)
+  const informesSubmenuPermissions: Record<string, Permission[]> = {
+    'Asistencia':    [InformesPermission.ASISTENCIA],
+    'Programación':  [InformesPermission.PROGRAMACION],
+    'Advisors':      [InformesPermission.ADVISORS],
+    'Planta':        [InformesPermission.PLANTA],
+    'Estadísticas':  [InformesPermission.ESTADISTICAS],
+  }
+
   // Also filter children of each navigation item based on page permissions
   const finalNavigation = filteredNavigation.map(item => {
     if (!item.children) return item
@@ -393,6 +403,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       // Full access users see everything (except superAdminOnly already filtered above)
       if (hasFullAccess) return true
+
+      // Sub-grupos con isSubmenu (ej: Asistencia, Programación, Advisors dentro de Informes)
+      if (child.isSubmenu && informesSubmenuPermissions[child.name]) {
+        return hasAnyPermission(informesSubmenuPermissions[child.name])
+      }
 
       const requiredPerms = pagePermissions[child.href]
       if (!requiredPerms) return true // Si no hay permisos definidos, mostrar por defecto
