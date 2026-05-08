@@ -282,10 +282,8 @@ export default function StudentContract({ student, contratoFinalizado = false }:
         <StudentOnHold student={student} />
       </div>
 
-      {/* ── Fila 2: 4 tarjetas en grid 2x2 ────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* Diagnóstico Avance Nivel */}
+      {/* ── Fila 2: 3 tarjetas (Diagnóstico | Inicialización | Borrado) ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <PlaceholderCard
           icon={ChartBarIcon}
           title="Diagnóstico Avance Nivel"
@@ -293,8 +291,6 @@ export default function StudentContract({ student, contratoFinalizado = false }:
           bgColor="bg-blue-50"
           borderColor="border-blue-200"
         />
-
-        {/* Inicialización Nivel */}
         <PlaceholderCard
           icon={ArrowPathIcon}
           title="Inicialización Nivel"
@@ -302,8 +298,6 @@ export default function StudentContract({ student, contratoFinalizado = false }:
           bgColor="bg-orange-50"
           borderColor="border-orange-200"
         />
-
-        {/* Borrado Histórico */}
         <PlaceholderCard
           icon={TrashIcon}
           title="Borrado Histórico"
@@ -311,47 +305,45 @@ export default function StudentContract({ student, contratoFinalizado = false }:
           bgColor="bg-red-50"
           borderColor="border-red-200"
         />
-
-        {/* Últimos Agendamientos */}
-        <div className="rounded-xl border-2 border-indigo-200 bg-indigo-50 p-5 space-y-3">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="p-2 rounded-lg bg-white/70">
-              <CalendarDaysIcon className="w-5 h-5 text-indigo-600" />
-            </div>
-            <h4 className="font-semibold text-gray-800">Últimos Agendamientos</h4>
-          </div>
-
-          {loadingAgend ? (
-            <div className="py-6 text-center text-sm text-gray-400">Cargando...</div>
-          ) : (
-            <div className="space-y-2">
-              <BookingRow
-                label="Última sesión asistida"
-                color="bg-white border-blue-100"
-                booking={agendamientos?.ultimaSesion ?? null}
-              />
-              <BookingRow
-                label="Último jump aprobado"
-                color="bg-white border-purple-100"
-                booking={agendamientos?.ultimoJump ?? null}
-              />
-              <BookingRow
-                label="Último club asistido"
-                color="bg-white border-green-100"
-                booking={agendamientos?.ultimoClub ?? null}
-              />
-            </div>
-          )}
-        </div>
       </div>
 
-      {/* ── Tarjeta: Relación con el Estudiante ────────────────────────── */}
+      {/* ── Fila 3: Últimos Agendamientos (ancho completo) ─────────────── */}
+      <div className="rounded-xl border-2 border-indigo-200 bg-indigo-50 p-5 space-y-3">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="p-2 rounded-lg bg-white/70">
+            <CalendarDaysIcon className="w-5 h-5 text-indigo-600" />
+          </div>
+          <h4 className="font-semibold text-gray-800">Últimos Agendamientos</h4>
+        </div>
+        {loadingAgend ? (
+          <div className="py-6 text-center text-sm text-gray-400">Cargando...</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <BookingRow
+              label="Última sesión asistida"
+              color="bg-white border-blue-100"
+              booking={agendamientos?.ultimaSesion ?? null}
+            />
+            <BookingRow
+              label="Último jump aprobado"
+              color="bg-white border-purple-100"
+              booking={agendamientos?.ultimoJump ?? null}
+            />
+            <BookingRow
+              label="Último club asistido"
+              color="bg-white border-green-100"
+              booking={agendamientos?.ultimoClub ?? null}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* ── Fila 4: Relación con el Estudiante (ancho completo) ────────── */}
       <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-4">
         <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide">
           Relación con el Estudiante
         </h3>
 
-        {/* Texto principal */}
         <p className="text-sm text-gray-700 leading-relaxed">
           El titular del contrato{' '}
           <strong className="text-gray-900">
@@ -363,12 +355,12 @@ export default function StudentContract({ student, contratoFinalizado = false }:
           </strong>.
         </p>
 
-        {/* Datos del contrato */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="bg-gray-50 rounded-lg px-4 py-3">
             <p className="text-xs font-medium text-gray-500 mb-0.5">Contrato</p>
             <p className="text-sm font-semibold text-gray-900">{student.contrato || '—'}</p>
           </div>
+
           <div className="bg-gray-50 rounded-lg px-4 py-3">
             <p className="text-xs font-medium text-gray-500 mb-0.5">Fecha inicial</p>
             <p className="text-sm font-semibold text-gray-900">
@@ -377,24 +369,25 @@ export default function StudentContract({ student, contratoFinalizado = false }:
                 : '—'}
             </p>
           </div>
+
           <div className="bg-gray-50 rounded-lg px-4 py-3">
             <p className="text-xs font-medium text-gray-500 mb-0.5">Vigencia (fecha final)</p>
             <p className={`text-sm font-semibold ${
-              student.finalContrato
-                ? (new Date(student.finalContrato) < new Date() ? 'text-red-600' : 'text-gray-900')
-                : 'text-gray-900'
+              student.finalContrato && new Date(student.finalContrato) < new Date()
+                ? 'text-red-600' : 'text-gray-900'
             }`}>
               {student.finalContrato
                 ? new Date(student.finalContrato).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
                 : '—'}
             </p>
           </div>
+
           <div className="bg-gray-50 rounded-lg px-4 py-3">
             <p className="text-xs font-medium text-gray-500 mb-0.5">Beneficiario</p>
-            <p className="text-sm font-semibold text-gray-900 uppercase">
+            <p className="text-sm font-semibold text-gray-900 uppercase leading-snug">
               {student.primerNombre} {student.primerApellido}
             </p>
-            <p className="text-xs text-gray-500">ID: {student.numeroId}</p>
+            <p className="text-xs text-gray-500 mt-0.5">ID: {student.numeroId}</p>
           </div>
         </div>
       </div>
