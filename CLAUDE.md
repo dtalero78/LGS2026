@@ -1570,6 +1570,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `4c2a6d7` | fix: Reiniciar Nivel — API `/inicializar-nivel` corregía 403 porque `session.user.permissions` siempre es vacío (las permissions no se guardan en JWT); eliminado check; acceso controlado por frontend. Renombrado "Inicializar Nivel" → "Reiniciar Nivel" en modal, submenú, tarjeta placeholder y catálogo de permisos; el código interno `STUDENT.ACADEMIA.INICIALIZAR_NIVEL` no cambia |
 | `cc7f449` | feat: Cambio Step Auditado — botón 'Cambiar Step' en submenú Académica usa `StudentCambioStepAuditado`; modal 3 pasos: (1) selector step + motivo + autorizadoPor + comentario opcional; (2) confirmación; (3) resultado; API `POST /students/[id]/cambio-step-auditado` ejecuta `changeStep()` + guarda en `ACADEMICA.cambioStepHistory` (JSONB, `ADD COLUMN IF NOT EXISTS`) + agrega comentario a `PEOPLE.comentarios` (areaRemitente=Académico, areaDestinatario=General); permiso `STUDENT.ACADEMIA.ASIGNAR_STEP` |
 | `ff150a6` | fix: Extender Vigencia — cualquier rol con permiso `STUDENT.CONTRATO.EXTENDER_VIGENCIA` puede extender aunque el contrato esté Finalizado; elimina restricción `contratoFinalizado` del botón; fix TS `canOnHold` declarado sin uso y comparación string/number en vigencia |
 | `4b0efbf` | fix: Días restantes en Tab Contrato mostraba `—` — `vigencia` llega como string (`COALESCE ::text`) desde API; reemplaza `typeof === 'number'` por `Number()` |

@@ -29,7 +29,9 @@
       "Bash(git commit -m 'fix: Extender Vigencia habilitado para cualquier rol con permiso EXTENDER_VIGENCIA sin restriccion contratoFinalizado; fix TS errors canOnHold/vigencia *)",
       "Bash(git commit -m 'docs: actualizar CLAUDE.md — permisos Extender Vigencia, usePermissions SUPER_ADMIN, fix dias restantes \\(ff150a6, 4b0efbf, f3a16ca, d1ab7b3, 223e457\\) *)",
       "Bash(git commit -m 'feat: Cambio Step Auditado — modal 3 pasos con auditoría en ACADEMICA y comentario en PEOPLE *)",
-      "Bash(git commit -m 'docs: actualizar CLAUDE.md — Cambio Step Auditado \\(cc7f449\\) *)"
+      "Bash(git commit -m 'docs: actualizar CLAUDE.md — Cambio Step Auditado \\(cc7f449\\) *)",
+      "Bash(git commit -m 'fix: Reiniciar Nivel — corregir 403 en API + renombrar en toda la UI *)",
+      "Bash(git commit -m 'docs: actualizar CLAUDE.md — fix Reiniciar Nivel 403 + rename \\(4c2a6d7\\) *)"
     ]
   }
 }
