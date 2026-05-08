@@ -1,15 +1,128 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Student } from '@/types'
-import { formatDate } from '@/lib/utils'
-import StudentOnHold from './StudentOnHold'
 import { api, ApiError } from '@/hooks/use-api'
+import StudentOnHold from './StudentOnHold'
+import {
+  ChartBarIcon,
+  ArrowPathIcon,
+  TrashIcon,
+  CalendarDaysIcon,
+  ClockIcon,
+  UserIcon,
+  AcademicCapIcon,
+} from '@heroicons/react/24/outline'
 
 interface StudentContractProps {
   student: Student
   contratoFinalizado?: boolean
 }
+
+interface BookingSnap {
+  _id: string
+  fechaEvento: string
+  hora: string
+  advisorNombre: string
+  nivel: string
+  step: string
+}
+
+interface UltimosAgendamientos {
+  ultimaSesion: BookingSnap | null
+  ultimoJump: BookingSnap | null
+  ultimoClub: BookingSnap | null
+}
+
+// ── helpers ────────────────────────────────────────────────────────────────
+
+function fmtFecha(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('es-CO', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  })
+}
+
+function fmtHora(hora: string | null | undefined): string {
+  if (!hora) return '—'
+  return hora
+}
+
+// ── sub-componente: fila de booking ────────────────────────────────────────
+
+function BookingRow({
+  label,
+  color,
+  booking,
+}: {
+  label: string
+  color: string
+  booking: BookingSnap | null
+}) {
+  return (
+    <div className={`rounded-lg border p-3 space-y-1.5 ${color}`}>
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
+      {booking ? (
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+          <div className="flex items-center gap-1.5 text-gray-700">
+            <CalendarDaysIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+            <span>{fmtFecha(booking.fechaEvento)}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-gray-700">
+            <ClockIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+            <span>{fmtHora(booking.hora)}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-gray-700 col-span-2">
+            <UserIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+            <span className="truncate">{booking.advisorNombre || '—'}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-gray-700 col-span-2">
+            <AcademicCapIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+            <span className="font-medium">{booking.nivel}</span>
+            <span className="text-gray-400">·</span>
+            <span>{booking.step}</span>
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm text-gray-400 italic">Sin registros</p>
+      )}
+    </div>
+  )
+}
+
+// ── sub-componente: tarjeta placeholder ───────────────────────────────────
+
+function PlaceholderCard({
+  icon: Icon,
+  title,
+  iconColor,
+  bgColor,
+  borderColor,
+}: {
+  icon: React.ElementType
+  title: string
+  iconColor: string
+  bgColor: string
+  borderColor: string
+}) {
+  return (
+    <div className={`rounded-xl border-2 p-5 flex flex-col gap-3 ${bgColor} ${borderColor}`}>
+      <div className="flex items-center gap-3">
+        <div className={`p-2 rounded-lg bg-white/70`}>
+          <Icon className={`w-5 h-5 ${iconColor}`} />
+        </div>
+        <h4 className="font-semibold text-gray-800">{title}</h4>
+      </div>
+      <div className="flex-1 flex items-center justify-center py-6">
+        <p className="text-sm text-gray-400 italic text-center">
+          Contenido disponible próximamente
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// ── componente principal ───────────────────────────────────────────────────
 
 export default function StudentContract({ student, contratoFinalizado = false }: StudentContractProps) {
   const [showExtensionModal, setShowExtensionModal] = useState(false)
@@ -17,123 +130,53 @@ export default function StudentContract({ student, contratoFinalizado = false }:
   const [motivoExtension, setMotivoExtension] = useState('')
   const [isExtendingVigencia, setIsExtendingVigencia] = useState(false)
   const [showExtensionHistory, setShowExtensionHistory] = useState(false)
+  const [agendamientos, setAgendamientos] = useState<UltimosAgendamientos | null>(null)
+  const [loadingAgend, setLoadingAgend] = useState(true)
 
-  // Mock contract holder data - in real implementation, this would come from API
-  const contractHolder = {
-    primerNombre: 'Juan Carlos',
-    primerApellido: 'Rodríguez',
-    numeroId: '12345678',
-    celular: '+57 300 123 4567',
-    email: 'juan.rodriguez@email.com',
-    domicilio: 'Calle 123 #45-67',
-    ciudad: 'Bogotá',
-    asesor: 'Maria García',
-    contrato: student.contrato,
-    vigencia: '2024-12-31',
-    fechaCreacion: '2024-01-15'
-  }
-
-  const contractGroups = [
-    {
-      title: 'Información del Asesor',
-      color: 'bg-blue-50 border-blue-200',
-      fields: [
-        { label: 'Asesor Asignado', value: contractHolder.asesor }
-      ]
-    },
-    {
-      title: 'Datos Personales Básicos',
-      color: 'bg-green-50 border-green-200',
-      fields: [
-        { label: 'Primer Nombre', value: contractHolder.primerNombre },
-        { label: 'Primer Apellido', value: contractHolder.primerApellido },
-        { label: 'Número de Documento', value: contractHolder.numeroId }
-      ]
-    },
-    {
-      title: 'Contacto y Ubicación',
-      color: 'bg-purple-50 border-purple-200',
-      fields: [
-        { label: 'Celular', value: contractHolder.celular },
-        { label: 'Email', value: contractHolder.email },
-        { label: 'Domicilio', value: contractHolder.domicilio },
-        { label: 'Ciudad', value: contractHolder.ciudad }
-      ]
-    },
-    {
-      title: 'Datos Adicionales',
-      color: 'bg-orange-50 border-orange-200',
-      fields: [
-        { label: 'Tipo de Usuario', value: 'TITULAR' },
-        { label: 'Estado', value: 'Aprobado' }
-      ]
-    },
-    {
-      title: 'Referencias',
-      color: 'bg-pink-50 border-pink-200',
-      fields: [
-        { label: 'Referencia Personal', value: 'Ana López - 300 987 6543' },
-        { label: 'Referencia Comercial', value: 'Empresa XYZ - 601 234 5678' }
-      ]
-    },
-    {
-      title: 'Información Financiera Completa',
-      color: 'bg-yellow-50 border-yellow-200',
-      fields: [
-        { label: 'Número de Contrato', value: contractHolder.contrato },
-        { label: 'Vigencia del Contrato', value: formatDate(contractHolder.vigencia) },
-        { label: 'Fecha de Creación', value: formatDate(contractHolder.fechaCreacion) },
-        { label: 'Tarifa Mensual', value: '$350.000 COP' },
-        { label: 'Estado de Pago', value: 'Al día' }
-      ]
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/postgres/students/${student._id}/ultimos-agendamientos`)
+        const json = await res.json()
+        if (json.success) setAgendamientos(json)
+      } catch { /* silencioso */ }
+      finally { setLoadingAgend(false) }
     }
-  ]
+    load()
+  }, [student._id])
 
   const handleExtendVigencia = async () => {
     if (!nuevaFechaFinal) {
       alert('⚠️ Por favor seleccione una nueva fecha de vigencia')
       return
     }
-
     const fechaActual = student.finalContrato ? new Date(student.finalContrato) : new Date()
     const nuevaFecha = new Date(nuevaFechaFinal)
-
     if (nuevaFecha <= fechaActual) {
       alert('⚠️ La nueva fecha debe ser posterior a la fecha actual de vigencia')
       return
     }
-
     const diasExtendidos = Math.ceil((nuevaFecha.getTime() - fechaActual.getTime()) / (1000 * 60 * 60 * 24))
-
     const confirmed = window.confirm(
-      `⚠️ ATENCIÓN: Extensión de Vigencia para ${student.primerNombre} ${student.primerApellido}\n\n` +
-      `¿Está seguro que desea extender la vigencia de este estudiante?\n\n` +
-      `Detalles de la extensión:\n` +
-      `  • Estudiante: ${student.primerNombre} ${student.primerApellido}\n` +
-      `  • Vigencia actual: ${fechaActual.toLocaleDateString('es-ES')}\n` +
-      `  • Nueva vigencia: ${nuevaFecha.toLocaleDateString('es-ES')}\n` +
-      `  • Días extendidos: ${diasExtendidos} días\n` +
-      `  • Motivo: ${motivoExtension || 'Sin motivo especificado'}\n\n` +
-      `Esta acción actualizará SOLO la fecha final de este estudiante en PEOPLE.`
+      `⚠️ ATENCIÓN: Extensión de Vigencia\n\n` +
+      `Estudiante: ${student.primerNombre} ${student.primerApellido}\n` +
+      `Vigencia actual: ${fechaActual.toLocaleDateString('es-ES')}\n` +
+      `Nueva vigencia: ${nuevaFecha.toLocaleDateString('es-ES')}\n` +
+      `Días extendidos: ${diasExtendidos}\n` +
+      `Motivo: ${motivoExtension || 'Sin motivo'}`
     )
-
     if (!confirmed) return
-
     setIsExtendingVigencia(true)
-
     try {
       const studentId = student.peopleId || student._id
       const data = await api.post(`/api/postgres/students/${studentId}/extend`, {
         diasExtension: diasExtendidos,
-        motivo: motivoExtension
+        motivo: motivoExtension,
       })
-
       alert(
-        `✅ Extensión aplicada exitosamente\n\n` +
-        `• Estudiante: ${student.primerNombre} ${student.primerApellido}\n` +
-        `• Días extendidos: ${data.data?.data?.diasExtendidos || diasExtendidos}\n` +
-        `• Nueva vigencia: ${nuevaFecha.toLocaleDateString('es-ES')}\n` +
-        `• Extensión #${data.data?.data?.extensionNumero || (student.extensionCount ? student.extensionCount + 1 : 1)}`
+        `✅ Extensión aplicada\n` +
+        `Días extendidos: ${data.data?.data?.diasExtendidos || diasExtendidos}\n` +
+        `Nueva vigencia: ${nuevaFecha.toLocaleDateString('es-ES')}`
       )
       setShowExtensionModal(false)
       setMotivoExtension('')
@@ -146,365 +189,210 @@ export default function StudentContract({ student, contratoFinalizado = false }:
     }
   }
 
+  // ── vigencia badge color ─────────────────────────────────────────────────
+  const vigDays = typeof student.vigencia === 'number' ? student.vigencia : null
+  const vigColor = vigDays === null ? 'text-gray-600'
+    : vigDays < 30  ? 'text-red-600'
+    : vigDays < 90  ? 'text-orange-600'
+    : 'text-green-600'
+
   return (
     <div className="space-y-6">
-      {/* Extensión de Vigencia y OnHold - Dos cards lado a lado */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Extensión de Vigencia del Estudiante */}
-        <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-4">📅 Extensión de Vigencia</h3>
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-6 shadow-sm">
+
+      {/* ── Fila 1: Extensión de Vigencia + OnHold (igual altura) ──────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+
+        {/* Extensión de Vigencia */}
+        <div className="flex flex-col bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-100 rounded-lg">
-                <span className="text-2xl">📅</span>
+                <CalendarDaysIcon className="w-5 h-5 text-green-600" />
               </div>
               <div>
-                <h4 className="font-semibold text-gray-900">Extender Vigencia</h4>
-                <p className="text-sm text-gray-600">Cambiar la fecha final solo para este estudiante</p>
+                <h4 className="font-semibold text-gray-900">Extensión de Vigencia</h4>
+                <p className="text-xs text-gray-500">Cambiar la fecha final del estudiante</p>
               </div>
             </div>
-            {student.extensionCount && student.extensionCount > 0 && (
-              <div className="flex items-center gap-3">
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-300">
-                  📈 {student.extensionCount} {student.extensionCount === 1 ? 'extensión' : 'extensiones'}
+            {!!student.extensionCount && student.extensionCount > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold bg-green-100 text-green-800 border border-green-300 px-2 py-0.5 rounded-full">
+                  {student.extensionCount} ext.
                 </span>
-                <button
-                  onClick={() => setShowExtensionHistory(true)}
-                  className="text-xs text-green-600 hover:text-green-800 underline font-medium"
-                  title="Ver historial de extensiones"
-                >
+                <button type="button" onClick={() => setShowExtensionHistory(true)}
+                  className="text-xs text-green-600 hover:text-green-800 underline font-medium">
                   Ver historial
                 </button>
               </div>
             )}
           </div>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div className="bg-white/50 rounded-lg p-3">
-                <p className="text-gray-600 font-medium mb-1">📍 Vigencia Actual</p>
-                <p className="text-gray-900 font-semibold">
-                  {student.finalContrato ? new Date(student.finalContrato).toLocaleDateString('es-ES', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  }) : 'No disponible'}
-                </p>
-              </div>
-              <div className="bg-white/50 rounded-lg p-3">
-                <p className="text-gray-600 font-medium mb-1">⏱️ Días Restantes</p>
-                <p className={`font-semibold ${
-                  student.vigencia && typeof student.vigencia === 'number' && student.vigencia < 30 ? 'text-red-600' :
-                  student.vigencia && typeof student.vigencia === 'number' && student.vigencia < 90 ? 'text-orange-600' : 'text-green-600'
-                }`}>
-                  {student.vigencia ? `${student.vigencia} días` : 'No disponible'}
-                </p>
-              </div>
-              <div className="bg-white/50 rounded-lg p-3">
-                <p className="text-gray-600 font-medium mb-1">📊 Extensiones Realizadas</p>
-                <p className="text-gray-900 font-semibold">
-                  {student.extensionCount || 0} {student.extensionCount === 1 ? 'vez' : 'veces'}
-                </p>
-              </div>
+          <div className="grid grid-cols-3 gap-3 text-sm mb-4">
+            <div className="bg-white/60 rounded-lg p-3">
+              <p className="text-xs text-gray-500 font-medium mb-1">Vigencia actual</p>
+              <p className="font-semibold text-gray-900 text-xs leading-snug">
+                {student.finalContrato
+                  ? new Date(student.finalContrato).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+                  : '—'}
+              </p>
             </div>
-
-            <button
-              onClick={() => setShowExtensionModal(true)}
-              className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-            >
-              <span className="text-xl">🔄</span>
-              Extender Vigencia del Estudiante
-            </button>
+            <div className="bg-white/60 rounded-lg p-3">
+              <p className="text-xs text-gray-500 font-medium mb-1">Días restantes</p>
+              <p className={`font-bold ${vigColor}`}>
+                {vigDays !== null ? `${vigDays} días` : '—'}
+              </p>
+            </div>
+            <div className="bg-white/60 rounded-lg p-3">
+              <p className="text-xs text-gray-500 font-medium mb-1">Extensiones</p>
+              <p className="font-semibold text-gray-900">{student.extensionCount ?? 0} veces</p>
+            </div>
           </div>
-        </div>
-      </div>
 
-        {/* Estado OnHold del Estudiante - Solo mostrar si el contrato NO está finalizado */}
-        {!contratoFinalizado && (
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">⏸️ Estado OnHold</h3>
-            <StudentOnHold
-              studentId={student._id}
-              peopleId={student.peopleId}
-              numeroId={student.numeroId}
-              estadoInactivo={student.estadoInactivo || false}
-              currentFechaOnHold={student.fechaOnHold}
-              currentFechaFinOnHold={student.fechaFinOnHold}
-              onHoldCount={student.onHoldCount}
-              onHoldHistory={student.onHoldHistory}
-            />
-          </div>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {contractGroups.map((group, index) => (
-          <div
-            key={index}
-            className={`border-2 rounded-lg p-4 ${group.color}`}
+          <button
+            type="button"
+            onClick={() => setShowExtensionModal(true)}
+            disabled={contratoFinalizado}
+            className="mt-auto w-full py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-40 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
           >
-            <h4 className="font-semibold text-gray-800 mb-3 text-sm">
-              Grupo {index + 1}: {group.title}
-            </h4>
-            <div className="space-y-2">
-              {group.fields.map((field, fieldIndex) => (
-                <div key={fieldIndex}>
-                  <label className="block text-xs font-medium text-gray-600">
-                    {field.label}
-                  </label>
-                  <p className="text-sm text-gray-900">{field.value || 'No especificado'}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
+            <CalendarDaysIcon className="w-4 h-4" />
+            Extender Vigencia del Estudiante
+          </button>
+        </div>
+
+        {/* Estado OnHold */}
+        <StudentOnHold student={student} />
       </div>
 
-      {/* Relationship Info */}
-      <div className="bg-gray-50 rounded-lg p-4">
-        <h4 className="font-medium text-gray-800 mb-2">Relación con el Estudiante</h4>
-        <p className="text-sm text-gray-600">
-          El titular del contrato <strong>{contractHolder.primerNombre} {contractHolder.primerApellido}</strong>
-          {' '}es el responsable financiero de la educación de <strong>{student.primerNombre} {student.primerApellido}</strong>.
-        </p>
-        <div className="mt-3 text-xs text-gray-500">
-          <p>• Contrato: {contractHolder.contrato}</p>
-          <p>• Vigencia: {formatDate(contractHolder.vigencia)}</p>
-          <p>• Beneficiario: {student.primerNombre} {student.primerApellido} (ID: {student.numeroId})</p>
+      {/* ── Fila 2: 4 tarjetas en grid 2x2 ────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* Diagnóstico Avance Nivel */}
+        <PlaceholderCard
+          icon={ChartBarIcon}
+          title="Diagnóstico Avance Nivel"
+          iconColor="text-blue-600"
+          bgColor="bg-blue-50"
+          borderColor="border-blue-200"
+        />
+
+        {/* Inicialización Nivel */}
+        <PlaceholderCard
+          icon={ArrowPathIcon}
+          title="Inicialización Nivel"
+          iconColor="text-orange-600"
+          bgColor="bg-orange-50"
+          borderColor="border-orange-200"
+        />
+
+        {/* Borrado Histórico */}
+        <PlaceholderCard
+          icon={TrashIcon}
+          title="Borrado Histórico"
+          iconColor="text-red-600"
+          bgColor="bg-red-50"
+          borderColor="border-red-200"
+        />
+
+        {/* Últimos Agendamientos */}
+        <div className="rounded-xl border-2 border-indigo-200 bg-indigo-50 p-5 space-y-3">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="p-2 rounded-lg bg-white/70">
+              <CalendarDaysIcon className="w-5 h-5 text-indigo-600" />
+            </div>
+            <h4 className="font-semibold text-gray-800">Últimos Agendamientos</h4>
+          </div>
+
+          {loadingAgend ? (
+            <div className="py-6 text-center text-sm text-gray-400">Cargando...</div>
+          ) : (
+            <div className="space-y-2">
+              <BookingRow
+                label="Última sesión asistida"
+                color="bg-white border-blue-100"
+                booking={agendamientos?.ultimaSesion ?? null}
+              />
+              <BookingRow
+                label="Último jump aprobado"
+                color="bg-white border-purple-100"
+                booking={agendamientos?.ultimoJump ?? null}
+              />
+              <BookingRow
+                label="Último club asistido"
+                color="bg-white border-green-100"
+                booking={agendamientos?.ultimoClub ?? null}
+              />
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Modal de Extensión de Vigencia */}
+      {/* ── Modal Extender Vigencia ─────────────────────────────────────── */}
       {showExtensionModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
-            <div className="bg-gradient-to-r from-green-600 to-emerald-700 px-6 py-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                📅 Extender Vigencia del Estudiante
-              </h3>
-              <button
-                onClick={() => {
-                  setShowExtensionModal(false)
-                  setMotivoExtension('')
-                }}
-                className="text-white hover:text-gray-200 transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-bold text-gray-900">Extender Vigencia</h3>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
+              Vigencia actual:{' '}
+              <strong>
+                {student.finalContrato
+                  ? new Date(student.finalContrato).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+                  : 'No disponible'}
+              </strong>
             </div>
-
-            <div className="p-6 space-y-4">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <h4 className="font-semibold text-green-900 mb-2">Información Actual</h4>
-                <div className="space-y-1 text-sm">
-                  <p className="text-green-800">
-                    <strong>Estudiante:</strong> {student.primerNombre} {student.primerApellido}
-                  </p>
-                  <p className="text-green-800">
-                    <strong>ID:</strong> {student.numeroId}
-                  </p>
-                  <p className="text-green-800">
-                    <strong>Vigencia actual:</strong> {student.finalContrato ? new Date(student.finalContrato).toLocaleDateString('es-ES') : 'No disponible'}
-                  </p>
-                  <p className="text-green-800">
-                    <strong>Días restantes:</strong> {student.vigencia || 'No disponible'} días
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  📅 Nueva Fecha Final <span className="text-red-600">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={nuevaFechaFinal}
-                  onChange={(e) => setNuevaFechaFinal(e.target.value)}
-                  min={student.finalContrato ? new Date(new Date(student.finalContrato).getTime() + 86400000).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Debe ser posterior a la fecha actual de vigencia
-                </p>
-              </div>
-
-              {nuevaFechaFinal && student.finalContrato && (
-                <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
-                  <p className="text-sm text-blue-800">
-                    <strong>Días a extender:</strong>{' '}
-                    {Math.ceil((new Date(nuevaFechaFinal).getTime() - new Date(student.finalContrato).getTime()) / (1000 * 60 * 60 * 24))} días
-                  </p>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  💬 Motivo de la Extensión (opcional)
-                </label>
-                <textarea
-                  value={motivoExtension}
-                  onChange={(e) => setMotivoExtension(e.target.value)}
-                  placeholder="Ej: Extensión individual por cambio de nivel, extensión por vacaciones, etc."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                  rows={3}
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nueva fecha final *</label>
+              <input type="date" value={nuevaFechaFinal} onChange={e => setNuevaFechaFinal(e.target.value)}
+                title="Nueva fecha final de vigencia"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-green-500 focus:border-green-500" />
             </div>
-
-            <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setShowExtensionModal(false)
-                  setMotivoExtension('')
-                }}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
-                disabled={isExtendingVigencia}
-              >
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Motivo</label>
+              <textarea value={motivoExtension} onChange={e => setMotivoExtension(e.target.value)}
+                rows={2} placeholder="Motivo de la extensión (opcional)"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-green-500 focus:border-green-500" />
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button type="button" onClick={() => { setShowExtensionModal(false); setMotivoExtension('') }}
+                className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
                 Cancelar
               </button>
-              <button
-                onClick={handleExtendVigencia}
-                disabled={isExtendingVigencia || !nuevaFechaFinal}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {isExtendingVigencia ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Extendiendo...
-                  </>
-                ) : (
-                  <>
-                    ✅ Aplicar Extensión
-                  </>
-                )}
+              <button type="button" onClick={handleExtendVigencia} disabled={isExtendingVigencia}
+                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50">
+                {isExtendingVigencia ? 'Extendiendo...' : 'Confirmar extensión'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal de Historial de Extensiones */}
-      {showExtensionHistory && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="bg-gradient-to-r from-green-600 to-emerald-700 px-6 py-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                📊 Historial de Extensiones - {student.primerNombre} {student.primerApellido}
-              </h3>
-              <button
-                onClick={() => setShowExtensionHistory(false)}
-                className="text-white hover:text-gray-200 transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+      {/* ── Modal Historial de Extensiones ─────────────────────────────── */}
+      {showExtensionHistory && student.extensionHistory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900">Historial de Extensiones</h3>
+              <button type="button" onClick={() => setShowExtensionHistory(false)} className="text-gray-400 hover:text-gray-600 text-xl" title="Cerrar">×</button>
             </div>
-
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-              {student.extensionHistory && student.extensionHistory.length > 0 ? (
-                <div className="space-y-4">
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                    <p className="text-sm text-green-800">
-                      <strong>Total de extensiones:</strong> {student.extensionCount} {student.extensionCount === 1 ? 'vez' : 'veces'}
-                    </p>
+            {(student.extensionHistory as any[]).length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-4">Sin extensiones registradas</p>
+            ) : (
+              <div className="space-y-3">
+                {(student.extensionHistory as any[]).map((ext: any, i: number) => (
+                  <div key={i} className="bg-gray-50 rounded-lg p-4 text-sm space-y-1">
+                    <p className="font-semibold text-gray-800">Extensión #{ext.numero || i + 1}</p>
+                    <p className="text-gray-600">Fecha: {ext.fechaEjecucion ? new Date(ext.fechaEjecucion).toLocaleDateString('es-CO') : '—'}</p>
+                    <p className="text-gray-600">Días: +{ext.diasExtendidos}</p>
+                    <p className="text-gray-600">Anterior: {ext.vigenciaAnterior ? new Date(ext.vigenciaAnterior).toLocaleDateString('es-CO') : '—'}</p>
+                    <p className="text-gray-600">Nueva: {ext.vigenciaNueva ? new Date(ext.vigenciaNueva).toLocaleDateString('es-CO') : '—'}</p>
+                    {ext.motivo && <p className="text-gray-500 italic">{ext.motivo}</p>}
                   </div>
-
-                  {student.extensionHistory.sort((a: any, b: any) => b.numero - a.numero).map((entry: any) => (
-                    <div
-                      key={entry.numero}
-                      className="border-2 border-green-300 bg-green-50 rounded-lg p-5"
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl font-bold text-gray-700">#{entry.numero}</span>
-                          <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-200 text-green-800">
-                            ✅ COMPLETADO
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-gray-500">Días extendidos</p>
-                          <p className="text-lg font-bold text-green-600">{entry.diasExtendidos} días</p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                        <div className="space-y-2">
-                          <div className="flex items-start gap-2">
-                            <span className="text-gray-600 font-medium text-sm">📅 Vigencia Anterior:</span>
-                            <span className="text-gray-900 text-sm">
-                              {new Date(entry.vigenciaAnterior).toLocaleDateString('es-ES', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
-                              })}
-                            </span>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <span className="text-gray-600 font-medium text-sm">📅 Vigencia Nueva:</span>
-                            <span className="text-gray-900 text-sm font-semibold">
-                              {new Date(entry.vigenciaNueva).toLocaleDateString('es-ES', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
-                              })}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex items-start gap-2">
-                            <span className="text-gray-600 font-medium text-sm">🕐 Fecha Ejecución:</span>
-                            <span className="text-gray-900 text-sm">
-                              {new Date(entry.fechaEjecucion).toLocaleDateString('es-ES', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </span>
-                          </div>
-                          {entry.motivo && (
-                            <div className="flex items-start gap-2">
-                              <span className="text-gray-600 font-medium text-sm">💬 Motivo:</span>
-                              <span className="text-gray-900 text-sm italic">
-                                {entry.motivo}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="text-6xl mb-4">📊</div>
-                  <p className="text-gray-500 text-lg">No hay historial de extensiones disponible</p>
-                  <p className="text-gray-400 text-sm mt-2">Las extensiones se registrarán aquí automáticamente</p>
-                </div>
-              )}
-            </div>
-
-            <div className="bg-gray-50 px-6 py-4 flex justify-end">
-              <button
-                onClick={() => setShowExtensionHistory(false)}
-                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
-              >
-                Cerrar
-              </button>
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
+
     </div>
   )
 }
