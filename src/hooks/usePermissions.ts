@@ -78,11 +78,15 @@ export function usePermissions() {
     permissions: Array.isArray(userPermissions) ? userPermissions.slice(0, 5) : [], // Solo primeros 5 para no saturar
   });
 
+  // SUPER_ADMIN y ADMIN tienen acceso total sin importar lo que esté en la BD
+  const hasFullAccess = userRole === Role.SUPER_ADMIN || userRole === Role.ADMIN || (userRole as string) === 'admin';
+
   /**
    * Verifica si el usuario tiene un permiso específico
    */
   const hasPermission = (permission: Permission): boolean => {
     if (!userRole) return false;
+    if (hasFullAccess) return true;
     return userPermissions.includes(permission);
   };
 
@@ -91,6 +95,7 @@ export function usePermissions() {
    */
   const hasAllPermissions = (permissions: Permission[]): boolean => {
     if (!userRole) return false;
+    if (hasFullAccess) return true;
     return permissions.every((permission) => userPermissions.includes(permission));
   };
 
@@ -99,6 +104,7 @@ export function usePermissions() {
    */
   const hasAnyPermission = (permissions: Permission[]): boolean => {
     if (!userRole) return false;
+    if (hasFullAccess) return true;
     return permissions.some((permission) => userPermissions.includes(permission));
   };
 

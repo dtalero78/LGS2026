@@ -10,9 +10,11 @@ import {
   PersonPermission,
   StudentPermission,
   AcademicoPermission,
+  InformesPermission,
   ServicioPermission,
   ComercialPermission,
   AprobacionPermission,
+  MantenimientoPermission,
 } from '@/types/permissions';
 
 // ============================================================================
@@ -23,23 +25,14 @@ import {
  * SUPER_ADMIN - Acceso total al sistema
  */
 const SUPER_ADMIN_PERMISSIONS: Permission[] = [
-  // Todos los permisos de PERSON
   ...Object.values(PersonPermission),
-
-  // Todos los permisos de STUDENT
   ...Object.values(StudentPermission),
-
-  // Todos los permisos de ACADEMICO
   ...Object.values(AcademicoPermission),
-
-  // Todos los permisos de SERVICIO
+  ...Object.values(InformesPermission),
   ...Object.values(ServicioPermission),
-
-  // Todos los permisos de COMERCIAL
   ...Object.values(ComercialPermission),
-
-  // Todos los permisos de APROBACION
   ...Object.values(AprobacionPermission),
+  ...Object.values(MantenimientoPermission),
 ];
 
 /**
@@ -351,6 +344,7 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
  */
 const FALLBACK_PERMISSIONS_MAP: Record<string, Permission[]> = {
   SUPER_ADMIN: SUPER_ADMIN_PERMISSIONS,
+  admin: SUPER_ADMIN_PERMISSIONS,
   ADMIN: ADMIN_PERMISSIONS,
   ADVISOR: ADVISOR_PERMISSIONS,
   COMERCIAL: COMERCIAL_PERMISSIONS,
