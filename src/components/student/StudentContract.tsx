@@ -233,9 +233,12 @@ export default function StudentContract({ student, contratoFinalizado = false }:
     }
   }
 
-  // ── vigencia badge color ─────────────────────────────────────────────────
-  const vigDays = typeof student.vigencia === 'number' ? student.vigencia : null
-  const vigColor = vigDays === null ? 'text-gray-600'
+  // ── vigencia badge color — vigencia puede llegar como string o number desde la API
+  const vigRaw = student.vigencia
+  const vigDays = (vigRaw !== null && vigRaw !== undefined && vigRaw !== '')
+    ? Math.round(Number(vigRaw))
+    : null
+  const vigColor = vigDays === null || isNaN(vigDays) ? 'text-gray-600'
     : vigDays < 30  ? 'text-red-600'
     : vigDays < 90  ? 'text-orange-600'
     : 'text-green-600'
