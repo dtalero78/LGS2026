@@ -20,6 +20,7 @@ export default function StudentSetupPage() {
   const [fotoFile,        setFotoFile]        = useState<File | null>(null)
   const [fotoPreview,     setFotoPreview]     = useState<string | null>(null)
   const [saving,          setSaving]          = useState(false)
+  const [skipping,        setSkipping]        = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const handleFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,10 +32,11 @@ export default function StudentSetupPage() {
   }
 
   const handleSkip = () => {
-    // Skip this time — set session cookie so layout won't redirect again this session
-    // perfilActualizado stays null → will ask again on next login
+    setSkipping(true)
+    // Set cookie FIRST, then force full navigation so the Server Layout reads the cookie correctly.
+    // router.push() can use a cached RSC redirect; window.location.href forces a fresh request.
     document.cookie = 'student_setup_skipped=1; path=/; SameSite=Lax'
-    router.push('/panel-estudiante')
+    window.location.href = '/panel-estudiante'
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,7 +92,7 @@ export default function StudentSetupPage() {
       if (!data.success) throw new Error(data.error || 'Error al guardar')
 
       toast.success('¡Perfil actualizado!')
-      setTimeout(() => router.push('/panel-estudiante'), 1200)
+      setTimeout(() => { window.location.href = '/panel-estudiante' }, 1200)
     } catch (err: any) {
       toast.error(err.message || 'Error al actualizar el perfil')
     } finally {
@@ -212,9 +214,9 @@ export default function StudentSetupPage() {
 
           {/* Buttons */}
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={handleSkip}
-              className="flex-1 py-2.5 border border-gray-300 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
-              Más tarde
+            <button type="button" onClick={handleSkip} disabled={skipping || saving}
+              className="flex-1 py-2.5 border border-gray-300 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50">
+              {skipping ? 'Redirigiendo...' : 'Más tarde'}
             </button>
             <button type="submit" disabled={saving}
               className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors">
