@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { Student } from '@/types'
 import { api, ApiError } from '@/hooks/use-api'
+import { usePermissions } from '@/hooks/usePermissions'
+import { StudentPermission } from '@/types/permissions'
 import StudentOnHold from './StudentOnHold'
 import {
   ChartBarIcon,
@@ -133,6 +135,10 @@ export default function StudentContract({ student, contratoFinalizado = false }:
   const [agendamientos, setAgendamientos] = useState<UltimosAgendamientos | null>(null)
   const [loadingAgend, setLoadingAgend] = useState(true)
   const [titularNombre, setTitularNombre] = useState<string | null>(null)
+
+  const { hasPermission, isLoading: permLoading } = usePermissions()
+  const canExtender = hasPermission(StudentPermission.EXTENDER_VIGENCIA)
+  const canOnHold   = hasPermission(StudentPermission.ACTIVAR_HOLD)
 
   useEffect(() => {
     const load = async () => {
@@ -286,16 +292,28 @@ export default function StudentContract({ student, contratoFinalizado = false }:
           <button
             type="button"
             onClick={() => setShowExtensionModal(true)}
-            disabled={contratoFinalizado}
+            disabled={contratoFinalizado || !canExtender || permLoading}
             className="mt-auto w-full py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-40 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
           >
             <CalendarDaysIcon className="w-4 h-4" />
             Extender Vigencia del Estudiante
           </button>
+          {!permLoading && !canExtender && (
+            <p className="text-xs text-gray-400 text-center mt-1">Sin permiso para extender vigencia</p>
+          )}
         </div>
 
         {/* Estado OnHold */}
-        <StudentOnHold student={student} />
+        <StudentOnHold
+          studentId={student._id}
+          peopleId={(student as any).peopleId || null}
+          numeroId={student.numeroId || ''}
+          estadoInactivo={!!(student as any).estadoInactivo}
+          currentFechaOnHold={(student as any).fechaOnHold}
+          currentFechaFinOnHold={(student as any).fechaFinOnHold}
+          onHoldCount={(student as any).onHoldCount}
+          onHoldHistory={(student as any).onHoldHistory}
+        />
       </div>
 
       {/* ── Fila 2: 3 tarjetas (Diagnóstico | Inicialización | Borrado) ── */}
