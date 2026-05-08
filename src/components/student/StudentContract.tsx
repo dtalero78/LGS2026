@@ -14,7 +14,14 @@ import {
   ClockIcon,
   UserIcon,
   AcademicCapIcon,
+  UserCircleIcon,
 } from '@heroicons/react/24/outline'
+
+// ── helpers de formato ─────────────────────────────────────────────────────
+function fmtFechaAudit(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })
+}
 
 interface StudentContractProps {
   student: Student
@@ -92,37 +99,7 @@ function BookingRow({
   )
 }
 
-// ── sub-componente: tarjeta placeholder ───────────────────────────────────
 
-function PlaceholderCard({
-  icon: Icon,
-  title,
-  iconColor,
-  bgColor,
-  borderColor,
-}: {
-  icon: React.ElementType
-  title: string
-  iconColor: string
-  bgColor: string
-  borderColor: string
-}) {
-  return (
-    <div className={`rounded-xl border-2 p-5 flex flex-col gap-3 ${bgColor} ${borderColor}`}>
-      <div className="flex items-center gap-3">
-        <div className={`p-2 rounded-lg bg-white/70`}>
-          <Icon className={`w-5 h-5 ${iconColor}`} />
-        </div>
-        <h4 className="font-semibold text-gray-800">{title}</h4>
-      </div>
-      <div className="flex-1 flex items-center justify-center py-6">
-        <p className="text-sm text-gray-400 italic text-center">
-          Contenido disponible próximamente
-        </p>
-      </div>
-    </div>
-  )
-}
 
 // ── componente principal ───────────────────────────────────────────────────
 
@@ -135,6 +112,11 @@ export default function StudentContract({ student, contratoFinalizado = false }:
   const [agendamientos, setAgendamientos] = useState<UltimosAgendamientos | null>(null)
   const [loadingAgend, setLoadingAgend] = useState(true)
   const [titularNombre, setTitularNombre] = useState<string | null>(null)
+  const [auditData, setAuditData] = useState<{
+    cambioStepHistory: any[] | null
+    inicianivel: any | null
+    clrhistoric: any | null
+  } | null>(null)
 
   const { hasPermission, isLoading: permLoading } = usePermissions()
   const canExtender = hasPermission(StudentPermission.EXTENDER_VIGENCIA)
@@ -150,6 +132,17 @@ export default function StudentContract({ student, contratoFinalizado = false }:
       finally { setLoadingAgend(false) }
     }
     load()
+  }, [student._id])
+
+  useEffect(() => {
+    const loadAudit = async () => {
+      try {
+        const res = await fetch(`/api/postgres/students/${student._id}/academic-audit`)
+        const json = await res.json()
+        if (json.success) setAuditData(json)
+      } catch { /* silencioso */ }
+    }
+    loadAudit()
   }, [student._id])
 
   // Cargar nombre del titular: 1° por titularId, 2° por contrato (fallback para datos Wix)
@@ -319,29 +312,117 @@ export default function StudentContract({ student, contratoFinalizado = false }:
         />
       </div>
 
-      {/* ── Fila 2: 3 tarjetas (Diagnóstico | Reiniciar Nivel | Borrado) ── */}
+      {/* ── Fila 2: 3 tarjetas con datos reales de ACADEMICA ─────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <PlaceholderCard
-          icon={ChartBarIcon}
-          title="Diagnóstico Avance Nivel"
-          iconColor="text-blue-600"
-          bgColor="bg-blue-50"
-          borderColor="border-blue-200"
-        />
-        <PlaceholderCard
-          icon={ArrowPathIcon}
-          title="Reiniciar Nivel"
-          iconColor="text-orange-600"
-          bgColor="bg-orange-50"
-          borderColor="border-orange-200"
-        />
-        <PlaceholderCard
-          icon={TrashIcon}
-          title="Borrado Histórico"
-          iconColor="text-red-600"
-          bgColor="bg-red-50"
-          borderColor="border-red-200"
-        />
+
+        {/* Gestión Académica Nivel — cambioStepHistory */}
+        <div className="rounded-xl border-2 border-blue-200 bg-blue-50 p-5 flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-white/70">
+              <ChartBarIcon className="w-5 h-5 text-blue-600" />
+            </div>
+            <h4 className="font-semibold text-gray-800">Gestión Académica Nivel</h4>
+          </div>
+          {!auditData ? (
+            <div className="flex-1 flex items-center justify-center py-4">
+              <p className="text-xs text-gray-400 italic">Cargando...</p>
+            </div>
+          ) : !auditData.cambioStepHistory || auditData.cambioStepHistory.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center py-4">
+              <p className="text-xs text-gray-400 italic text-center">Sin registros de cambio de step</p>
+            </div>
+          ) : (
+            <div className="space-y-2 overflow-y-auto max-h-48">
+              {[...auditData.cambioStepHistory].reverse().map((e: any, i: number) => (
+                <div key={i} className="bg-white/80 rounded-lg px-3 py-2 text-xs space-y-0.5">
+                  <p className="font-medium text-gray-800">
+                    {e.stepAnterior} → {e.stepNuevo}
+                    {e.nivelNuevo && e.nivelNuevo !== e.nivelAnterior && (
+                      <span className="text-blue-600 ml-1">({e.nivelNuevo})</span>
+                    )}
+                  </p>
+                  <p className="text-gray-600 flex items-center gap-1">
+                    <UserCircleIcon className="w-3 h-3" /> {e.autorizadoPor || '—'}
+                  </p>
+                  <p className="text-gray-500 flex items-center gap-1">
+                    <CalendarDaysIcon className="w-3 h-3" /> {fmtFechaAudit(e.fecha)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Reiniciar Nivel — inicianivel */}
+        <div className="rounded-xl border-2 border-orange-200 bg-orange-50 p-5 flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-white/70">
+              <ArrowPathIcon className="w-5 h-5 text-orange-600" />
+            </div>
+            <h4 className="font-semibold text-gray-800">Reiniciar Nivel</h4>
+          </div>
+          {!auditData ? (
+            <div className="flex-1 flex items-center justify-center py-4">
+              <p className="text-xs text-gray-400 italic">Cargando...</p>
+            </div>
+          ) : !auditData.inicianivel ? (
+            <div className="flex-1 flex items-center justify-center py-4">
+              <p className="text-xs text-gray-400 italic text-center">Sin registros de reinicio</p>
+            </div>
+          ) : (
+            <div className="bg-white/80 rounded-lg px-3 py-2 text-xs space-y-1">
+              <p className="font-medium text-gray-800">
+                {auditData.inicianivel.nivel} — {auditData.inicianivel.stepAnterior} → {auditData.inicianivel.stepNuevo}
+              </p>
+              <p className="text-gray-600">
+                Bookings eliminados: <strong>{auditData.inicianivel.bookingsEliminados}</strong>
+              </p>
+              <p className="text-gray-600 flex items-center gap-1">
+                <UserCircleIcon className="w-3 h-3" /> {auditData.inicianivel.autorizadoPor || '—'}
+              </p>
+              <p className="text-gray-500 flex items-center gap-1">
+                <CalendarDaysIcon className="w-3 h-3" /> {fmtFechaAudit(auditData.inicianivel.fecha)}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Borrado Histórico — clrhistoric */}
+        <div className="rounded-xl border-2 border-red-200 bg-red-50 p-5 flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-white/70">
+              <TrashIcon className="w-5 h-5 text-red-600" />
+            </div>
+            <h4 className="font-semibold text-gray-800">Borrado Histórico</h4>
+          </div>
+          {!auditData ? (
+            <div className="flex-1 flex items-center justify-center py-4">
+              <p className="text-xs text-gray-400 italic">Cargando...</p>
+            </div>
+          ) : !auditData.clrhistoric ? (
+            <div className="flex-1 flex items-center justify-center py-4">
+              <p className="text-xs text-gray-400 italic text-center">Sin registros de borrado</p>
+            </div>
+          ) : (
+            <div className="bg-white/80 rounded-lg px-3 py-2 text-xs space-y-1">
+              <p className="font-medium text-gray-800">
+                Bookings: <strong>{auditData.clrhistoric.bookingsEliminados}</strong>
+                {auditData.clrhistoric.complementariasEliminadas > 0 && (
+                  <span className="ml-2">· Compl: <strong>{auditData.clrhistoric.complementariasEliminadas}</strong></span>
+                )}
+                {auditData.clrhistoric.stepOverridesEliminados > 0 && (
+                  <span className="ml-2">· Overrides: <strong>{auditData.clrhistoric.stepOverridesEliminados}</strong></span>
+                )}
+              </p>
+              <p className="text-gray-600 flex items-center gap-1">
+                <UserCircleIcon className="w-3 h-3" /> {auditData.clrhistoric.autorizadoPor || '—'}
+              </p>
+              <p className="text-gray-500 flex items-center gap-1">
+                <CalendarDaysIcon className="w-3 h-3" /> {fmtFechaAudit(auditData.clrhistoric.fecha)}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Fila 3: Últimos Agendamientos (ancho completo) ─────────────── */}
