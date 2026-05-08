@@ -136,9 +136,12 @@ export default function StudentContract({ student, contratoFinalizado = false }:
   const [loadingAgend, setLoadingAgend] = useState(true)
   const [titularNombre, setTitularNombre] = useState<string | null>(null)
 
-  const { hasPermission, isLoading: permLoading } = usePermissions()
-  const canExtender = hasPermission(StudentPermission.EXTENDER_VIGENCIA)
-  const canOnHold   = hasPermission(StudentPermission.ACTIVAR_HOLD)
+  const { hasPermission, isLoading: permLoading, isRole } = usePermissions()
+  const canExtender  = hasPermission(StudentPermission.EXTENDER_VIGENCIA)
+  const canOnHold    = hasPermission(StudentPermission.ACTIVAR_HOLD)
+  // SUPER_ADMIN y ADMIN pueden extender aunque el contrato esté finalizado
+  const isAdmin      = isRole('SUPER_ADMIN' as any) || isRole('ADMIN' as any)
+  const bloqueado    = contratoFinalizado && !isAdmin
 
   useEffect(() => {
     const load = async () => {
@@ -292,7 +295,7 @@ export default function StudentContract({ student, contratoFinalizado = false }:
           <button
             type="button"
             onClick={() => setShowExtensionModal(true)}
-            disabled={contratoFinalizado || !canExtender || permLoading}
+            disabled={bloqueado || !canExtender || permLoading}
             className="mt-auto w-full py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-40 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
           >
             <CalendarDaysIcon className="w-4 h-4" />
