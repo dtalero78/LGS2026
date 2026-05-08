@@ -136,12 +136,9 @@ export default function StudentContract({ student, contratoFinalizado = false }:
   const [loadingAgend, setLoadingAgend] = useState(true)
   const [titularNombre, setTitularNombre] = useState<string | null>(null)
 
-  const { hasPermission, isLoading: permLoading, isRole } = usePermissions()
-  const canExtender  = hasPermission(StudentPermission.EXTENDER_VIGENCIA)
-  const canOnHold    = hasPermission(StudentPermission.ACTIVAR_HOLD)
-  // SUPER_ADMIN y ADMIN pueden extender aunque el contrato esté finalizado
-  const isAdmin      = isRole('SUPER_ADMIN' as any) || isRole('ADMIN' as any)
-  const bloqueado    = contratoFinalizado && !isAdmin
+  const { hasPermission, isLoading: permLoading } = usePermissions()
+  const canExtender = hasPermission(StudentPermission.EXTENDER_VIGENCIA)
+  // Tener el permiso EXTENDER_VIGENCIA permite extender aunque el contrato esté Finalizado
 
   useEffect(() => {
     const load = async () => {
@@ -235,10 +232,10 @@ export default function StudentContract({ student, contratoFinalizado = false }:
 
   // ── vigencia badge color — vigencia puede llegar como string o number desde la API
   const vigRaw = student.vigencia
-  const vigDays = (vigRaw !== null && vigRaw !== undefined && vigRaw !== '')
+  const vigDays = (vigRaw !== null && vigRaw !== undefined)
     ? Math.round(Number(vigRaw))
     : null
-  const vigColor = vigDays === null || isNaN(vigDays) ? 'text-gray-600'
+  const vigColor = vigDays === null || isNaN(vigDays as number) ? 'text-gray-600'
     : vigDays < 30  ? 'text-red-600'
     : vigDays < 90  ? 'text-orange-600'
     : 'text-green-600'
@@ -298,7 +295,7 @@ export default function StudentContract({ student, contratoFinalizado = false }:
           <button
             type="button"
             onClick={() => setShowExtensionModal(true)}
-            disabled={bloqueado || !canExtender || permLoading}
+            disabled={!canExtender || permLoading}
             className="mt-auto w-full py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-40 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
           >
             <CalendarDaysIcon className="w-4 h-4" />
