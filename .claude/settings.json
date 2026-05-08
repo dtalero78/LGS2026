@@ -33,7 +33,9 @@
       "Bash(git commit -m 'fix: Reiniciar Nivel — corregir 403 en API + renombrar en toda la UI *)",
       "Bash(git commit -m 'docs: actualizar CLAUDE.md — fix Reiniciar Nivel 403 + rename \\(4c2a6d7\\) *)",
       "Bash(git commit -m 'fix: Cambiar Step — modal original con toggle '\\\\''Cambio Academico'\\\\'' integrado *)",
-      "Bash(git commit -m 'docs: actualizar CLAUDE.md — toggle Cambio Academico en modal Cambiar Step \\(2725bd3\\) *)"
+      "Bash(git commit -m 'docs: actualizar CLAUDE.md — toggle Cambio Academico en modal Cambiar Step \\(2725bd3\\) *)",
+      "Bash(git commit -m 'feat: tarjetas Tab Contrato con datos reales de ACADEMICA *)",
+      "Bash(git commit -m 'docs: actualizar CLAUDE.md — tarjetas audit Tab Contrato \\(29bdf7c\\) *)"
     ]
   }
 }
