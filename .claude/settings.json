@@ -35,7 +35,9 @@
       "Bash(git commit -m 'fix: Cambiar Step — modal original con toggle '\\\\''Cambio Academico'\\\\'' integrado *)",
       "Bash(git commit -m 'docs: actualizar CLAUDE.md — toggle Cambio Academico en modal Cambiar Step \\(2725bd3\\) *)",
       "Bash(git commit -m 'feat: tarjetas Tab Contrato con datos reales de ACADEMICA *)",
-      "Bash(git commit -m 'docs: actualizar CLAUDE.md — tarjetas audit Tab Contrato \\(29bdf7c\\) *)"
+      "Bash(git commit -m 'docs: actualizar CLAUDE.md — tarjetas audit Tab Contrato \\(29bdf7c\\) *)",
+      "Bash(git commit -m 'fix: Cambiar Step — corregir formato step enviado a los endpoints *)",
+      "Bash(git commit -m 'docs: actualizar CLAUDE.md — fix Step Step N en Cambiar Step \\(ead90d4\\) *)"
     ]
   }
 }

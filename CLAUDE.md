@@ -1570,6 +1570,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `ead90d4` | fix: Cambiar Step — corregir "Step Step N" error; `PUT /step` espera número puro y agrega "Step " internamente (`Step ${newStep}`); modo simple envía `"35"`, modo auditado envía `"Step 35"` a `/cambio-step-auditado` que llama `changeStep()` directamente sin prefijo adicional |
 | `29bdf7c` | feat: Tab Contrato — tarjetas con datos reales de ACADEMICA; renombra "Diagnóstico Avance Nivel" → "Gestión Académica Nivel"; API `GET /students/[id]/academic-audit` retorna `cambioStepHistory`, `inicianivel`, `clrhistoric` (columnas creadas con `ADD COLUMN IF NOT EXISTS`); cada tarjeta muestra: detalle, autorizadoPor y fecha en una línea cada uno; "Sin registros" cuando el campo es null/vacío |
 | `2725bd3` | fix: Cambiar Step — modal original integra toggle 'Cambio Académico'; OFF=cambio simple como antes (`PUT /step`); ON=expande campos motivo+autorizadoPor+comentario y llama `POST /cambio-step-auditado`; selector de steps muestra 'NivelCod — Step N'; StudentTabs revierte a id `change-step` → abre StudentChangeStep |
 | `4c2a6d7` | fix: Reiniciar Nivel — API `/inicializar-nivel` corregía 403 porque `session.user.permissions` siempre es vacío (las permissions no se guardan en JWT); eliminado check; acceso controlado por frontend. Renombrado "Inicializar Nivel" → "Reiniciar Nivel" en modal, submenú, tarjeta placeholder y catálogo de permisos; el código interno `STUDENT.ACADEMIA.INICIALIZAR_NIVEL` no cambia |
