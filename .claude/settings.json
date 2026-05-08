@@ -21,7 +21,13 @@
       "Bash(git commit -m 'fix: Tab Contrato — layout 4 filas: 2+3+1+1 tarjetas; Agendamientos full-width en 3 columnas *)",
       "Bash(git commit -m 'fix: titular en tarjeta Relación — doble fallback: titularId directo + búsqueda por contrato *)",
       "Bash(git commit -m 'fix: tarjeta Relación — fallback titular cambiado de '\\\\''Patricio Donoso'\\\\'' a '\\\\''SIN TITULAR'\\\\'' \\(gris itálico\\) *)",
-      "Bash(git commit -m 'docs: actualizar CLAUDE.md — Tab Contrato rediseño completo \\(d380c56, b0b9405, 20396c3, 3b90d05\\) *)"
+      "Bash(git commit -m 'docs: actualizar CLAUDE.md — Tab Contrato rediseño completo \\(d380c56, b0b9405, 20396c3, 3b90d05\\) *)",
+      "Bash(git commit -m 'fix: StudentContract verifica permiso EXTENDER_VIGENCIA con usePermissions *)",
+      "Bash(git commit -m 'fix: SUPER_ADMIN y ADMIN tienen acceso total en usePermissions independiente de ROL_PERMISOS *)",
+      "Bash(git commit -m 'fix: SUPER_ADMIN y ADMIN pueden extender vigencia aunque contrato esté Finalizado *)",
+      "Bash(git commit -m 'fix: Días restantes en Extensión de Vigencia — vigencia llega como string desde API \\(COALESCE ::text cast\\); usa Number\\(\\) en vez de typeof === '\\\\''number'\\\\'' *)",
+      "Bash(git commit -m 'fix: Extender Vigencia habilitado para cualquier rol con permiso EXTENDER_VIGENCIA sin restriccion contratoFinalizado; fix TS errors canOnHold/vigencia *)",
+      "Bash(git commit -m 'docs: actualizar CLAUDE.md — permisos Extender Vigencia, usePermissions SUPER_ADMIN, fix dias restantes \\(ff150a6, 4b0efbf, f3a16ca, d1ab7b3, 223e457\\) *)"
     ]
   }
 }

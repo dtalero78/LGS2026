@@ -1570,6 +1570,11 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `ff150a6` | fix: Extender Vigencia — cualquier rol con permiso `STUDENT.CONTRATO.EXTENDER_VIGENCIA` puede extender aunque el contrato esté Finalizado; elimina restricción `contratoFinalizado` del botón; fix TS `canOnHold` declarado sin uso y comparación string/number en vigencia |
+| `4b0efbf` | fix: Días restantes en Tab Contrato mostraba `—` — `vigencia` llega como string (`COALESCE ::text`) desde API; reemplaza `typeof === 'number'` por `Number()` |
+| `f3a16ca` | fix: SUPER_ADMIN y ADMIN bypass `contratoFinalizado` en botón Extender Vigencia |
+| `d1ab7b3` | fix: `usePermissions` — SUPER_ADMIN y ADMIN retornan `true` en `hasPermission/hasAllPermissions/hasAnyPermission` sin depender de `ROL_PERMISOS`; `config/roles.ts` agrega `InformesPermission` y `MantenimientoPermission` a `SUPER_ADMIN_PERMISSIONS` |
+| `223e457` | fix: `StudentContract` verifica permiso `STUDENT.CONTRATO.EXTENDER_VIGENCIA` con `usePermissions`; corrige llamada a `StudentOnHold` con props individuales |
 | `d380c56` | fix: tarjeta Relación con el Estudiante — fallback titular muestra "SIN TITULAR" (gris itálico) cuando no se resuelve |
 | `b0b9405` | fix: titular en tarjeta Relación — doble fallback: (1) `GET /api/postgres/people/[titularId]` para contratos nuevos; (2) `GET /api/postgres/contracts/search?pattern=[contrato]&exact=true` para datos Wix sin titularId |
 | `20396c3` | fix: Tab Contrato layout 4 filas — Fila 1: 2 tarjetas (Extensión+OnHold); Fila 2: 3 tarjetas (Diagnóstico+Inicialización+Borrado, `md:grid-cols-3`); Fila 3: Últimos Agendamientos full-width con 3 columnas internas; Fila 4: Relación con el Estudiante full-width |
