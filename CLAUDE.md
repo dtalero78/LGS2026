@@ -1570,6 +1570,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `c10249f` | feat: Borrado Histórico — (1) agrega comentario a `PEOPLE.comentarios` (`areaRemitente='Académico'`/`areaDestinatario='General'`) al ejecutar Clear Historic; (2) tarjeta en Tab Contrato muestra Bookings/Complementarias/Step Overrides en líneas separadas, mismo estilo que Reiniciar Nivel; (3) página `admin/clear-historic`: reemplaza `confirm1`+`confirm2` por un único modal Resumen con datos completos (estudiante, conteos, motivo, autorizadoPor) — mismo patrón que Reiniciar Nivel |
 | `ab1bb23` | feat: panel-estudiante — botón **Perfil** en navbar (después de Instructivos); modal muestra avatar con foto/iniciales, nombre completo, badge nivel/step y campos: numeroId, email, celular, fechaNacimiento, domicilio, ciudad, plataforma; icono `UserCircleIcon` |
 | `55ea3a4` | fix: Reiniciar Nivel — agrega comentario a `PEOPLE.comentarios` con `areaRemitente='Académico'` / `areaDestinatario='General'` al ejecutar `inicializarNivel()`; mismo patrón que Cambio Step Auditado; texto: `[Reiniciar Nivel] {nivel}, {stepAnterior} → {stepNuevo}. {motivo}. Autorizado por: {autorizadoPor}` |
 | `f90c5dc` | fix: deshabilitar redirección student-setup — `panel-estudiante/layout.tsx` reducido a pass-through; estudiantes acceden directamente al panel sin solicitud de actualización de datos al login |
