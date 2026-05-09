@@ -517,6 +517,20 @@ function PanelEstudianteContent() {
                   ) : null
                 )}
               </div>
+
+              {/* Botón Actualizar — solo si perfilActualizado es null */}
+              {profile?.perfilActualizado === null && (
+                <>
+                  <hr className="border-gray-100" />
+                  <button
+                    type="button"
+                    onClick={() => { window.location.href = '/student-setup' }}
+                    className="w-full py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Actualizar mis datos
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

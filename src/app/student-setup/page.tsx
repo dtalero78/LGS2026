@@ -1,14 +1,14 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { UserCircleIcon, CameraIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
 export default function StudentSetupPage() {
-  const router = useRouter()
+  const { data: session } = useSession()
+  const sessionEmail = session?.user?.email ?? ''
 
-  const [email,           setEmail]           = useState('')
   const [password,        setPassword]        = useState('')
   const [showPass,        setShowPass]        = useState(false)
   const [password2,       setPassword2]       = useState('')
@@ -20,7 +20,6 @@ export default function StudentSetupPage() {
   const [fotoFile,        setFotoFile]        = useState<File | null>(null)
   const [fotoPreview,     setFotoPreview]     = useState<string | null>(null)
   const [saving,          setSaving]          = useState(false)
-  const [skipping,        setSkipping]        = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const handleFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,19 +30,14 @@ export default function StudentSetupPage() {
     setFotoPreview(URL.createObjectURL(file))
   }
 
-  const handleSkip = () => {
-    setSkipping(true)
-    // Set cookie FIRST, then force full navigation so the Server Layout reads the cookie correctly.
-    // router.push() can use a cached RSC redirect; window.location.href forces a fresh request.
-    document.cookie = 'student_setup_skipped=1; path=/; SameSite=Lax'
+  const handleCancel = () => {
     window.location.href = '/panel-estudiante'
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!email.trim()) { toast.error('El email es requerido'); return }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { toast.error('Formato de email inválido'); return }
+    if (!sessionEmail) { toast.error('No se encontró email en la sesión'); return }
     if (celular.trim() && !/^\d+$/.test(celular.trim())) { toast.error('El celular solo debe contener números (sin + ni espacios)'); return }
     if (password.trim()) {
       if (/\s/.test(password)) { toast.error('La contraseña no puede contener espacios'); return }
@@ -54,7 +48,6 @@ export default function StudentSetupPage() {
     try {
       let fotoUrl: string | null = null
 
-      // Upload photo if provided
       if (fotoFile) {
         const presignRes = await fetch('/api/nuevo-usuario/photo-presign', {
           method: 'POST',
@@ -79,7 +72,7 @@ export default function StudentSetupPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email:           email.trim().toLowerCase(),
+          email:           sessionEmail.toLowerCase(),
           password:        password.trim() || undefined,
           celular:         celular.trim() || undefined,
           domicilio:       domicilio.trim() || undefined,
@@ -108,7 +101,7 @@ export default function StudentSetupPage() {
         <div className="bg-blue-600 px-6 py-5">
           <h1 className="text-xl font-bold text-white">Actualización de Datos</h1>
           <p className="text-blue-100 text-sm mt-1">
-            Mantén tu información actualizada. Puedes omitir y completarlo después.
+            Mantén tu información actualizada.
           </p>
         </div>
 
@@ -133,12 +126,19 @@ export default function StudentSetupPage() {
             <p className="text-xs text-gray-500">Foto de perfil (opcional)</p>
           </div>
 
-          {/* Email */}
+          {/* Email — readonly */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value.toLowerCase())}
+            <label htmlFor="ss-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input
+              id="ss-email"
+              type="email"
+              value={sessionEmail}
+              readOnly
+              title="Email de la cuenta (no modificable)"
               placeholder="tu@email.com"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+            />
+            <p className="text-xs text-gray-400 mt-1">El email no puede modificarse.</p>
           </div>
 
           {/* Celular */}
@@ -195,28 +195,26 @@ export default function StudentSetupPage() {
             </div>
           </div>
 
-          {/* Confirmar contraseña */}
-          {password.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar contraseña</label>
-              <div className="relative">
-                <input type={showPass2 ? 'text' : 'password'} value={password2}
-                  onChange={e => setPassword2(e.target.value)}
-                  placeholder="Repite la contraseña"
-                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                <button type="button" onClick={() => setShowPass2(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                  {showPass2 ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
-                </button>
-              </div>
+          {/* Confirmar contraseña — siempre visible */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar contraseña</label>
+            <div className="relative">
+              <input type={showPass2 ? 'text' : 'password'} value={password2}
+                onChange={e => setPassword2(e.target.value)}
+                placeholder="Repite la contraseña"
+                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <button type="button" onClick={() => setShowPass2(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                {showPass2 ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+              </button>
             </div>
-          )}
+          </div>
 
           {/* Buttons */}
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={handleSkip} disabled={skipping || saving}
+            <button type="button" onClick={handleCancel} disabled={saving}
               className="flex-1 py-2.5 border border-gray-300 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50">
-              {skipping ? 'Redirigiendo...' : 'Más tarde'}
+              Cancelar
             </button>
             <button type="submit" disabled={saving}
               className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors">
