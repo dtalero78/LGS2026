@@ -489,6 +489,20 @@ export async function inicializarNivel(
        )`,
       [firstStep, academic.numeroId]
     );
+
+    // 4. Agregar comentario a PEOPLE.comentarios (Académico → General)
+    const person = await PeopleRepository.findBeneficiarioByNumeroId(academic.numeroId).catch(() => null);
+    if (person) {
+      const commentObj = {
+        id: `comment_${Date.now()}`,
+        texto: `[Reiniciar Nivel] ${nivel}, ${stepActual} → ${firstStep}. ${motivo}. Autorizado por: ${autorizadoPor}`,
+        usuario: realizadoPor,
+        fecha: ahora,
+        areaRemitente: 'Académico',
+        areaDestinatario: 'General',
+      };
+      await PeopleRepository.appendComment(person._id, JSON.stringify(commentObj)).catch(() => null);
+    }
   }
 
   return { nivel, stepAnterior: stepActual, stepNuevo: firstStep, bookingsEliminados: deleted, auditData };
