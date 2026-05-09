@@ -1570,6 +1570,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `1e99bf0` | feat: `nuevo-usuario` + `student-setup` — (1) nuevo-usuario: email readonly, confirmar clave con ojo toggle, API guarda `perfilActualizado=NOW()` en USUARIOS_ROLES; (2) student-setup: carga perfil al montar, muestra `detallesPersonales`/`hobbies` solo si están vacíos en ACADEMICA (requeridos si se muestran), `update-profile` API guarda esos campos en ACADEMICA |
 | `61fd72b` | feat: Perfil modal — botón **Actualizar mis datos** aparece al pie solo si `USUARIOS_ROLES.perfilActualizado` es `null` (API `/me` ahora incluye ese campo); `student-setup` refactorizado: email pre-cargado desde sesión y `readOnly`, contraseña + confirmación siempre visibles con ojo toggle, botón Cancelar regresa al panel |
 | `c10249f` | feat: Borrado Histórico — (1) agrega comentario a `PEOPLE.comentarios` (`areaRemitente='Académico'`/`areaDestinatario='General'`) al ejecutar Clear Historic; (2) tarjeta en Tab Contrato muestra Bookings/Complementarias/Step Overrides en líneas separadas, mismo estilo que Reiniciar Nivel; (3) página `admin/clear-historic`: reemplaza `confirm1`+`confirm2` por un único modal Resumen con datos completos (estudiante, conteos, motivo, autorizadoPor) — mismo patrón que Reiniciar Nivel |
 | `ab1bb23` | feat: panel-estudiante — botón **Perfil** en navbar (después de Instructivos); modal muestra avatar con foto/iniciales, nombre completo, badge nivel/step y campos: numeroId, email, celular, fechaNacimiento, domicilio, ciudad, plataforma; icono `UserCircleIcon` |
