@@ -1570,6 +1570,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `2c96056` | feat: sidebar Mantenimiento — ahora visible para roles con `MantenimientoPermission` (ej: `MIGRAR_CONTRATO`); SUPER_ADMIN no se ve afectado (sale en primer check); no-SUPER_ADMIN con permiso ve solo los ítems que tiene permiso (Migrar Contrato); resto de Mantenimiento (Permisos, Avisos, Juegos, Material) permanece SUPER_ADMIN only |
 | `6d282ac` | fix: student-setup — botón "Más tarde" quedaba en loop porque `router.push()` reutilizaba respuesta RSC cacheada del redirect del layout; cambiado a `window.location.href` para forzar request HTTP fresco con la cookie `student_setup_skipped=1`; agrega estado visual "Redirigiendo..." |
 | `ead90d4` | fix: Cambiar Step — corregir "Step Step N" error; `PUT /step` espera número puro y agrega "Step " internamente (`Step ${newStep}`); modo simple envía `"35"`, modo auditado envía `"Step 35"` a `/cambio-step-auditado` que llama `changeStep()` directamente sin prefijo adicional |
 | `29bdf7c` | feat: Tab Contrato — tarjetas con datos reales de ACADEMICA; renombra "Diagnóstico Avance Nivel" → "Gestión Académica Nivel"; API `GET /students/[id]/academic-audit` retorna `cambioStepHistory`, `inicianivel`, `clrhistoric` (columnas creadas con `ADD COLUMN IF NOT EXISTS`); cada tarjeta muestra: detalle, autorizadoPor y fecha en una línea cada uno; "Sin registros" cuando el campo es null/vacío |

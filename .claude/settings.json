@@ -39,7 +39,9 @@
       "Bash(git commit -m 'fix: Cambiar Step — corregir formato step enviado a los endpoints *)",
       "Bash(git commit -m 'docs: actualizar CLAUDE.md — fix Step Step N en Cambiar Step \\(ead90d4\\) *)",
       "Bash(git commit -m 'fix: student-setup — boton '\\\\''Mas tarde'\\\\'' no navegaba por cache RSC del layout *)",
-      "Bash(git commit -m 'docs: actualizar CLAUDE.md — fix student-setup Mas tarde loop \\(6d282ac\\) *)"
+      "Bash(git commit -m 'docs: actualizar CLAUDE.md — fix student-setup Mas tarde loop \\(6d282ac\\) *)",
+      "Bash(git commit -m 'feat: sidebar Mantenimiento visible para roles con MantenimientoPermission *)",
+      "Bash(git commit -m 'docs: actualizar CLAUDE.md — sidebar Mantenimiento para MantenimientoPermission \\(2c96056\\) *)"
     ]
   }
 }
