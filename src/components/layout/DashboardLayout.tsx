@@ -351,8 +351,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     // Always show Dashboard home
     if (item.href === '/') return true
 
-    // Items exclusivos de SUPER_ADMIN (verificar ANTES de hasFullAccess)
-    if (item.superAdminOnly) return isRole('SUPER_ADMIN')
+    // Items exclusivos de SUPER_ADMIN — pero Mantenimiento también se muestra
+    // si el usuario tiene algún permiso de Mantenimiento (ej: MIGRAR_CONTRATO)
+    if (item.superAdminOnly) {
+      if (isRole('SUPER_ADMIN')) return true
+      if (item.name === 'Mantenimiento') {
+        return hasAnyPermission(Object.values(MantenimientoPermission) as Permission[])
+      }
+      return false
+    }
 
     // Full access users see everything
     if (hasFullAccess) return true
@@ -403,6 +410,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       // Full access users see everything (except superAdminOnly already filtered above)
       if (hasFullAccess) return true
+
+      // Para Mantenimiento: no-SUPER_ADMIN solo ve ítems con permiso explícito en pagePermissions.
+      // Permisos, Avisos, Juegos, Material → no tienen pagePermissions → se ocultan.
+      // Usuarios (isSubmenu) tiene Migrar Contrato → tiene pagePermissions → visible si tiene permiso.
+      if (item.name === 'Mantenimiento') {
+        if (child.isSubmenu) {
+          // Mostrar submenu Usuarios solo si alguno de sus hijos tiene permiso
+          const hasChildPerm = (child.children || []).some((grandchild: any) => {
+            const gPerms = pagePermissions[grandchild.href]
+            return gPerms ? hasAnyPermission(gPerms) : false
+          })
+          return hasChildPerm
+        }
+        const mPerms = pagePermissions[child.href]
+        return mPerms ? hasAnyPermission(mPerms) : false
+      }
 
       // Sub-grupos con isSubmenu (ej: Asistencia, Programación, Advisors dentro de Informes)
       if (child.isSubmenu && informesSubmenuPermissions[child.name]) {
