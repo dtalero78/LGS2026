@@ -7,6 +7,7 @@ import {
   ChartBarIcon,
   VideoCameraIcon,
   XMarkIcon,
+  UserCircleIcon,
 } from '@heroicons/react/24/outline'
 import { useQuery } from 'react-query'
 import {
@@ -41,6 +42,7 @@ function PanelEstudianteContent() {
   const [videoTitle, setVideoTitle] = useState<string>('')
   const [videoErr, setVideoErr] = useState(false)
   const [showInstructivos, setShowInstructivos] = useState(false)
+  const [showPerfil, setShowPerfil] = useState(false)
 
   // Instructivos from API
   const instructivosQuery = useQuery(
@@ -169,6 +171,13 @@ function PanelEstudianteContent() {
           >
             <VideoCameraIcon className="h-4 w-4" />
             Instructivos
+          </button>
+          <button
+            onClick={() => setShowPerfil(true)}
+            className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1.5"
+          >
+            <UserCircleIcon className="h-4 w-4" />
+            Perfil
           </button>
         </div>
       </div>
@@ -446,6 +455,68 @@ function PanelEstudianteContent() {
                 data={historyQuery.data}
                 isLoading={historyQuery.isLoading}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Perfil Modal */}
+      {showPerfil && (
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[85vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between rounded-t-2xl">
+              <h2 className="text-lg font-semibold text-gray-900">Mi Perfil</h2>
+              <button
+                onClick={() => setShowPerfil(false)}
+                className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-5">
+              {/* Avatar */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="h-20 w-20 rounded-full overflow-hidden bg-primary-100 flex items-center justify-center border-2 border-primary-200 flex-shrink-0">
+                  {profile?.foto && profile.foto.startsWith('https://')
+                    ? <img src={profile.foto} alt="Foto" className="h-full w-full object-cover" />
+                    : <span className="text-2xl font-bold text-primary-700">
+                        {`${profile?.primerNombre?.[0] || ''}${profile?.primerApellido?.[0] || ''}`.toUpperCase()}
+                      </span>
+                  }
+                </div>
+                <div className="text-center">
+                  <p className="text-base font-semibold text-gray-900">
+                    {[profile?.primerNombre, profile?.segundoNombre, profile?.primerApellido, profile?.segundoApellido].filter(Boolean).join(' ')}
+                  </p>
+                  {profile?.nivel && (
+                    <span className="text-xs font-medium bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">
+                      {profile.nivel}{profile.step ? ` - ${profile.step}` : ''}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <hr className="border-gray-100" />
+
+              {/* Datos */}
+              <div className="space-y-3">
+                {[
+                  { label: 'Número de ID',       value: profile?.numeroId },
+                  { label: 'Email',               value: profile?.email },
+                  { label: 'Celular',             value: profile?.celular },
+                  { label: 'Fecha de nacimiento', value: profile?.fechaNacimiento ? new Date(profile.fechaNacimiento).toLocaleDateString('es', { day: '2-digit', month: 'long', year: 'numeric' }) : null },
+                  { label: 'Domicilio',           value: profile?.domicilio },
+                  { label: 'Ciudad',              value: profile?.ciudad },
+                  { label: 'Plataforma',          value: profile?.plataforma },
+                ].map(({ label, value }) =>
+                  value ? (
+                    <div key={label} className="flex justify-between items-start gap-4">
+                      <span className="text-sm text-gray-500 flex-shrink-0">{label}</span>
+                      <span className="text-sm font-medium text-gray-900 text-right break-all">{value}</span>
+                    </div>
+                  ) : null
+                )}
+              </div>
             </div>
           </div>
         </div>
