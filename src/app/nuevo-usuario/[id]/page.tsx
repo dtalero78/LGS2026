@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
 type PageState = 'LOADING' | 'ERROR' | 'ALREADY_REGISTERED' | 'FORM' | 'SUCCESS'
 
@@ -60,6 +61,9 @@ export default function NuevoUsuarioPage() {
   const [hobbies, setHobbies] = useState('')
   const [email, setEmail] = useState('')
   const [clave, setClave] = useState('')
+  const [showClave, setShowClave] = useState(false)
+  const [claveConfirm, setClaveConfirm] = useState('')
+  const [showClaveConfirm, setShowClaveConfirm] = useState(false)
   const [domicilio, setDomicilio] = useState('')
   const [ciudad, setCiudad] = useState('')
   const [fechaNacimiento, setFechaNacimiento] = useState('')
@@ -155,6 +159,7 @@ export default function NuevoUsuarioPage() {
     if (!hobbies.trim()) { setFormError('Por favor escribe tus hobbies'); return }
     if (!email.trim()) { setFormError('Por favor ingresa tu email'); return }
     if (!clave.trim()) { setFormError('Por favor crea una clave'); return }
+    if (clave.trim() !== claveConfirm.trim()) { setFormError('Las claves no coinciden'); return }
 
     // Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -352,19 +357,21 @@ export default function NuevoUsuarioPage() {
             />
           </div>
 
-          {/* Email / Usuario */}
+          {/* Email — readonly */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email o nombre de usuario
+            <label htmlFor="nu-email" className="block text-sm font-medium text-gray-700 mb-1">
+              Email
             </label>
             <input
-              type="text"
+              id="nu-email"
+              type="email"
               value={email}
-              onChange={e => setEmail(e.target.value.toLowerCase())}
+              readOnly
+              title="Email de la cuenta (no modificable)"
               placeholder="tu@email.com"
-              autoCapitalize="none"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed text-sm"
             />
+            <p className="text-xs text-gray-400 mt-1">El email no puede modificarse.</p>
           </div>
 
           {/* Clave */}
@@ -372,13 +379,39 @@ export default function NuevoUsuarioPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Crea una clave
             </label>
-            <input
-              type="password"
-              value={clave}
-              onChange={e => setClave(e.target.value)}
-              placeholder="Tu clave para acceder a la plataforma"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+            <div className="relative">
+              <input
+                type={showClave ? 'text' : 'password'}
+                value={clave}
+                onChange={e => setClave(e.target.value)}
+                placeholder="Tu clave para acceder a la plataforma"
+                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <button type="button" onClick={() => setShowClave(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                {showClave ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Confirmar clave */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Confirmar clave
+            </label>
+            <div className="relative">
+              <input
+                type={showClaveConfirm ? 'text' : 'password'}
+                value={claveConfirm}
+                onChange={e => setClaveConfirm(e.target.value)}
+                placeholder="Repite tu clave"
+                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <button type="button" onClick={() => setShowClaveConfirm(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                {showClaveConfirm ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+              </button>
+            </div>
           </div>
 
           {/* Photo Upload */}

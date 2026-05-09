@@ -20,7 +20,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   if (!sessionEmail) throw new ValidationError('No se encontró email en la sesión');
 
   const body = await request.json();
-  const { email, password, celular, domicilio, ciudad, fechaNacimiento, fotoUrl } = body;
+  const { email, password, celular, domicilio, ciudad, fechaNacimiento, fotoUrl, detallesPersonales, hobbies } = body;
 
   if (!email?.trim()) throw new ValidationError('El email es requerido');
 
@@ -95,11 +95,13 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   const acadValues: any[] = [sessionEmail, normalizedEmail];
   let aidx = 3;
 
-  if (celular?.trim())      { acadFields.push(`"celular" = $${aidx++}`);              acadValues.push(celular.trim()); }
-  if (fotoUrl?.trim())      { acadFields.push(`"foto" = $${aidx++}`);                 acadValues.push(fotoUrl.trim()); }
-  if (fechaNacimiento)      { acadFields.push(`"fechaNacimiento" = $${aidx++}::date`); acadValues.push(fechaNacimiento); }
-  if (edad !== null)        { acadFields.push(`"edad" = $${aidx++}`);                  acadValues.push(edad); }
-  if (password?.trim())     { acadFields.push(`"clave" = $${aidx++}`);                acadValues.push(password.trim()); }
+  if (celular?.trim())            { acadFields.push(`"celular" = $${aidx++}`);              acadValues.push(celular.trim()); }
+  if (fotoUrl?.trim())            { acadFields.push(`"foto" = $${aidx++}`);                 acadValues.push(fotoUrl.trim()); }
+  if (fechaNacimiento)            { acadFields.push(`"fechaNacimiento" = $${aidx++}::date`); acadValues.push(fechaNacimiento); }
+  if (edad !== null)              { acadFields.push(`"edad" = $${aidx++}`);                  acadValues.push(edad); }
+  if (password?.trim())           { acadFields.push(`"clave" = $${aidx++}`);                acadValues.push(password.trim()); }
+  if (detallesPersonales?.trim()) { acadFields.push(`"detallesPersonales" = $${aidx++}`);   acadValues.push(detallesPersonales.trim()); }
+  if (hobbies?.trim())            { acadFields.push(`"hobbies" = $${aidx++}`);              acadValues.push(hobbies.trim()); }
 
   await query(
     `UPDATE "ACADEMICA" SET ${acadFields.join(', ')} WHERE LOWER("email") = LOWER($1)`,

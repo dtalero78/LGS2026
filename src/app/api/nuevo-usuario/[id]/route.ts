@@ -13,6 +13,7 @@ async function ensureColumns() {
     await query(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "hobbies" TEXT`, []);
     await query(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "foto" TEXT`, []);
     await query(`ALTER TABLE "USUARIOS_ROLES" ADD COLUMN IF NOT EXISTS "contrato" VARCHAR(50)`, []);
+    await query(`ALTER TABLE "USUARIOS_ROLES" ADD COLUMN IF NOT EXISTS "perfilActualizado" TIMESTAMPTZ`, []);
     migrationDone = true;
     console.log('✅ [NuevoUsuario] Columnas verificadas en ACADEMICA y USUARIOS_ROLES');
   } catch (err: any) {
@@ -90,6 +91,8 @@ export const GET = handler(async (
       nivel: student.nivel,
       plataforma: student.plataforma,
       foto: student.foto,
+      detallesPersonales: student.detallesPersonales || null,
+      hobbies: student.hobbies || null,
     },
     welcomeEvents: welcomeEvents.map(e => ({
       _id: e._id,
@@ -209,15 +212,16 @@ export const POST = handler(async (
   await query(
     `INSERT INTO "USUARIOS_ROLES"
        ("_id", "email", "password", "nombre", "rol", "activo",
-        "numberid", "contrato", "celular", "_createdDate", "_updatedDate")
-     VALUES ($1, $2, $3, $4, 'ESTUDIANTE', true, $5, $6, $7, NOW(), NOW())
+        "numberid", "contrato", "celular", "perfilActualizado", "_createdDate", "_updatedDate")
+     VALUES ($1, $2, $3, $4, 'ESTUDIANTE', true, $5, $6, $7, NOW(), NOW(), NOW())
      ON CONFLICT ("email") DO UPDATE
-       SET "password"  = $3,
-           "nombre"    = $4,
-           "numberid"  = $5,
-           "contrato"  = $6,
-           "celular"   = $7,
-           "_updatedDate" = NOW()`,
+       SET "password"         = $3,
+           "nombre"           = $4,
+           "numberid"         = $5,
+           "contrato"         = $6,
+           "celular"          = $7,
+           "perfilActualizado" = NOW(),
+           "_updatedDate"     = NOW()`,
     [
       usuarioId, normalizedEmail, clave.trim(), nombreCompleto,
       (student as any).numeroId || null,

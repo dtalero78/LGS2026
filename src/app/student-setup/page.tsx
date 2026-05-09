@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { UserCircleIcon, CameraIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
 export default function StudentSetupPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const sessionEmail = session?.user?.email ?? ''
 
   const [password,        setPassword]        = useState('')
@@ -21,6 +21,27 @@ export default function StudentSetupPage() {
   const [fotoPreview,     setFotoPreview]     = useState<string | null>(null)
   const [saving,          setSaving]          = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // Campos opcionales: solo se muestran si están vacíos en el perfil
+  const [detallesPersonales, setDetallesPersonales] = useState('')
+  const [hobbies,             setHobbies]             = useState('')
+  const [showPersonalFields,  setShowPersonalFields]  = useState(false)
+  const [profileLoaded,       setProfileLoaded]       = useState(false)
+
+  // Cargar perfil para verificar si detallesPersonales/hobbies están vacíos
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    fetch('/api/postgres/panel-estudiante/me')
+      .then(r => r.json())
+      .then(data => {
+        const prof = data?.data?.profile ?? data?.profile
+        const hasDetalles = !!prof?.detallesPersonales?.trim()
+        const hasHobbies  = !!prof?.hobbies?.trim()
+        setShowPersonalFields(!hasDetalles || !hasHobbies)
+        setProfileLoaded(true)
+      })
+      .catch(() => { setShowPersonalFields(true); setProfileLoaded(true) })
+  }, [status])
 
   const handleFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -42,6 +63,10 @@ export default function StudentSetupPage() {
     if (password.trim()) {
       if (/\s/.test(password)) { toast.error('La contraseña no puede contener espacios'); return }
       if (password !== password2) { toast.error('Las contraseñas no coinciden'); return }
+    }
+    if (showPersonalFields) {
+      if (!detallesPersonales.trim()) { toast.error('Por favor cuéntanos sobre ti'); return }
+      if (!hobbies.trim()) { toast.error('Por favor ingresa tus hobbies'); return }
     }
 
     setSaving(true)
@@ -72,13 +97,15 @@ export default function StudentSetupPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email:           sessionEmail.toLowerCase(),
-          password:        password.trim() || undefined,
-          celular:         celular.trim() || undefined,
-          domicilio:       domicilio.trim() || undefined,
-          ciudad:          ciudad.trim() || undefined,
-          fechaNacimiento: fechaNacimiento || undefined,
-          fotoUrl:         fotoUrl || undefined,
+          email:              sessionEmail.toLowerCase(),
+          password:           password.trim() || undefined,
+          celular:            celular.trim() || undefined,
+          domicilio:          domicilio.trim() || undefined,
+          ciudad:             ciudad.trim() || undefined,
+          fechaNacimiento:    fechaNacimiento || undefined,
+          fotoUrl:            fotoUrl || undefined,
+          detallesPersonales: showPersonalFields ? detallesPersonales.trim() || undefined : undefined,
+          hobbies:            showPersonalFields ? hobbies.trim() || undefined : undefined,
         }),
       })
       const data = await res.json()
@@ -91,6 +118,14 @@ export default function StudentSetupPage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  if (!profileLoaded || status === 'loading') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+      </div>
+    )
   }
 
   return (
@@ -106,6 +141,38 @@ export default function StudentSetupPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-6 space-y-4">
+
+          {/* Campos personales — solo si están vacíos en el perfil */}
+          {showPersonalFields && (
+            <>
+              <div>
+                <label htmlFor="ss-detalles" className="block text-sm font-medium text-gray-700 mb-1">
+                  Cuéntanos sobre ti *
+                </label>
+                <textarea
+                  id="ss-detalles"
+                  value={detallesPersonales}
+                  onChange={e => setDetallesPersonales(e.target.value)}
+                  rows={3}
+                  placeholder="¿Qué te motivó a aprender inglés? ¿En qué trabajas?"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="ss-hobbies" className="block text-sm font-medium text-gray-700 mb-1">
+                  Hobbies e intereses *
+                </label>
+                <textarea
+                  id="ss-hobbies"
+                  value={hobbies}
+                  onChange={e => setHobbies(e.target.value)}
+                  rows={2}
+                  placeholder="¿Qué te gusta hacer en tu tiempo libre?"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </>
+          )}
 
           {/* Foto */}
           <div className="flex flex-col items-center gap-2 mb-2">
