@@ -308,65 +308,76 @@ export default function EventReportCharts({ charts, config, loading }: Props) {
           const r = 55, cx = 70, cy = 70, sw = 20, circ = 2 * Math.PI * r
           let offset = 0
 
-          return (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              <SectionLabel label="Ranking & Actividad" color="#6b7280" />
-
-              {/* Donut Training + tipos de club */}
-              <ChartCard title="Training & Clubes — Distribución">
-                <div className="flex items-start gap-3 flex-wrap justify-center">
-                  <svg width="140" height="140" viewBox="0 0 140 140" className="flex-shrink-0">
-                    {donutTotal === 0
-                      ? <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e5e7eb" strokeWidth={sw} />
-                      : donutSegments.map((seg, i) => {
-                          const pct  = seg.value / donutTotal
-                          const dash = pct * circ
-                          const gap  = circ - dash
-                          const rot  = offset * 360 - 90
-                          offset += pct
-                          return <circle key={i} cx={cx} cy={cy} r={r} fill="none"
-                            stroke={seg.color} strokeWidth={sw}
-                            strokeDasharray={`${dash} ${gap}`} strokeLinecap="butt"
-                            transform={`rotate(${rot} ${cx} ${cy})`} />
-                        })
-                    }
-                    <text x={cx} y={cy - 6} textAnchor="middle" fontSize="18" fontWeight="bold" fill="#1f2937">{donutTotal.toLocaleString()}</text>
-                    <text x={cx} y={cy + 12} textAnchor="middle" fontSize="9" fill="#6b7280">TOTAL</text>
-                  </svg>
-                  <div className="space-y-1.5 min-w-0">
-                    {donutSegments.map(seg => (
-                      <div key={seg.label} className="flex items-center gap-1.5 text-xs">
-                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: seg.color }} />
-                        <span className="text-gray-600 truncate max-w-[80px]">{seg.label}</span>
-                        <span className="font-semibold text-gray-900 ml-auto pl-1">{seg.value.toLocaleString()}</span>
-                        <span className="text-gray-400 w-10 text-right">{donutTotal > 0 ? `${((seg.value / donutTotal) * 100).toFixed(0)}%` : '0%'}</span>
-                      </div>
-                    ))}
-                  </div>
+          // Donut card reutilizable
+          const DonutCard = () => (
+            <ChartCard title="Training & Clubes — Distribución">
+              <div className="flex items-start gap-3 flex-wrap justify-center">
+                <svg width="140" height="140" viewBox="0 0 140 140" className="flex-shrink-0">
+                  {donutTotal === 0
+                    ? <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e5e7eb" strokeWidth={sw} />
+                    : donutSegments.map((seg, i) => {
+                        const pct  = seg.value / donutTotal
+                        const dash = pct * circ
+                        const gap  = circ - dash
+                        const rot  = offset * 360 - 90
+                        offset += pct
+                        return <circle key={i} cx={cx} cy={cy} r={r} fill="none"
+                          stroke={seg.color} strokeWidth={sw}
+                          strokeDasharray={`${dash} ${gap}`} strokeLinecap="butt"
+                          transform={`rotate(${rot} ${cx} ${cy})`} />
+                      })
+                  }
+                  <text x={cx} y={cy - 6} textAnchor="middle" fontSize="18" fontWeight="bold" fill="#1f2937">{donutTotal.toLocaleString()}</text>
+                  <text x={cx} y={cy + 12} textAnchor="middle" fontSize="9" fill="#6b7280">TOTAL</text>
+                </svg>
+                <div className="space-y-1.5 min-w-0">
+                  {donutSegments.map(seg => (
+                    <div key={seg.label} className="flex items-center gap-1.5 text-xs">
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: seg.color }} />
+                      <span className="text-gray-600 truncate max-w-[80px]">{seg.label}</span>
+                      <span className="font-semibold text-gray-900 ml-auto pl-1">{seg.value.toLocaleString()}</span>
+                      <span className="text-gray-400 w-10 text-right">{donutTotal > 0 ? `${((seg.value / donutTotal) * 100).toFixed(0)}%` : '0%'}</span>
+                    </div>
+                  ))}
                 </div>
-              </ChartCard>
+              </div>
+            </ChartCard>
+          )
 
-              <ChartCard title="Ranking Advisors — Training" accent={tColor}>
-                <RankingChart data={charts.rankingAdvisorsTraining ?? []} />
-              </ChartCard>
+          return (
+            <>
+              {/* ── FILA 3: Clubes por Hora + Ranking ── */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <SectionLabel label="Ranking & Actividad" color="#6b7280" />
 
-              <ChartCard title="Ranking Advisors — Clubes" accent={cColor}>
-                <RankingChart data={charts.rankingAdvisorsClub ?? []} />
-              </ChartCard>
-            </div>
+                <ChartCard title="Clubes por Hora" accent={cColor}>
+                  <HoraChart data={charts.clubesPorHora ?? []} />
+                </ChartCard>
+
+                <ChartCard title="Ranking Advisors — Training" accent={tColor}>
+                  <RankingChart data={charts.rankingAdvisorsTraining ?? []} />
+                </ChartCard>
+
+                <ChartCard title="Ranking Advisors — Clubes" accent={cColor}>
+                  <RankingChart data={charts.rankingAdvisorsClub ?? []} />
+                </ChartCard>
+              </div>
+
+              {/* ── FILA 4: Donut + Heatmaps ── */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <DonutCard />
+
+                <ChartCard title="Heatmap Training — Día vs Hora" accent={tColor}>
+                  <HeatmapGrid data={charts.heatmapTraining ?? []} palette={PALETTE_ORANGE} />
+                </ChartCard>
+
+                <ChartCard title="Heatmap Clubes — Día vs Hora" accent={cColor}>
+                  <HeatmapGrid data={charts.heatmapClub ?? []} palette={PALETTE_GREEN} />
+                </ChartCard>
+              </div>
+            </>
           )
         })()}
-
-        {/* ── FILA 4: Heatmaps ── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ChartCard title="Heatmap Training — Día vs Hora" accent={tColor}>
-            <HeatmapGrid data={charts.heatmapTraining ?? []} palette={PALETTE_ORANGE} />
-          </ChartCard>
-
-          <ChartCard title="Heatmap Clubes — Día vs Hora" accent={cColor}>
-            <HeatmapGrid data={charts.heatmapClub ?? []} palette={PALETTE_GREEN} />
-          </ChartCard>
-        </div>
 
       </div>
     )
