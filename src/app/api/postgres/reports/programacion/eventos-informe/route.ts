@@ -230,6 +230,20 @@ export const GET = handlerWithAuth(async (req, _ctx, _session) => {
     heatmapDiaHora:        buildHeatmap(rows),
   }
 
+  // Split SESSION vs JUMP for sessions-jumps report
+  if (reportType === 'sessions-jumps') {
+    const sRows = rows.filter(r => r.tipoDerivado === 'SESSION')
+    const jRows = rows.filter(r => r.tipoDerivado === 'JUMP')
+    charts.sessionsPorNivel        = groupBy(sRows, r => r.nivel || 'Sin nivel')
+    charts.sessionsPorHora         = buildHoraChart(sRows)
+    charts.sesionesAsistencia      = buildTimeSeries(sRows)
+    charts.jumpsPorNivel           = groupBy(jRows, r => r.nivel || 'Sin nivel')
+    charts.jumpsPorHora            = buildHoraChart(jRows)
+    charts.jumpsAsistencia         = buildTimeSeries(jRows)
+    charts.rankingAdvisorsSesiones = groupBy(sRows, r => r.advisorNombre)
+    charts.rankingAdvisorsJumps    = groupBy(jRows, r => r.advisorNombre)
+  }
+
   // Split TRAINING vs CLUB for training-clubs report
   if (reportType === 'training-clubs') {
     const tRows = rows.filter(r => r.tipoDerivado === 'TRAINING')

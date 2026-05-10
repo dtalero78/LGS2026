@@ -43,6 +43,15 @@ function noData(arr: unknown[]) {
     : null
 }
 
+function BigStatCard({ label, total, color }: { label: string; total: number; color: string }) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col items-center justify-center min-h-[140px] gap-1">
+      <span className="text-5xl font-bold" style={{ color }}>{total.toLocaleString()}</span>
+      <span className="text-xs text-gray-500 font-semibold uppercase tracking-widest mt-1">{label}</span>
+    </div>
+  )
+}
+
 // ── Reusable chart renderers ──────────────────────────────────────────────────
 function NivelChart({ data, color }: { data: ChartPoint[]; color: string }) {
   return noData(data) ?? (
@@ -143,7 +152,7 @@ function HeatmapGrid({ data }: { data: HeatmapPoint[] }) {
       <table className="text-xs border-collapse w-full">
         <thead>
           <tr>
-            <th className="p-1 text-gray-400 font-normal w-10" />
+            <th className="p-1 text-gray-400 font-normal w-10" scope="col" aria-label="Día" />
             {horas.map(h => (
               <th key={h} className="p-1 text-gray-500 font-medium text-center" style={{ minWidth: 38 }}>{h}</th>
             ))}
@@ -198,8 +207,18 @@ export default function EventReportCharts({ charts, config, loading }: Props) {
     const tColor = TYPE_COLORS.TRAINING  // orange
     const cColor = TYPE_COLORS.CLUB      // green
 
+    const trainingTotal = charts.eventosPorTipo.find(e => e.name === 'TRAINING')?.total ?? 0
+
     return (
       <div className="space-y-4">
+
+        {/* ── KPIs: Training + cada tipo de club ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+          <BigStatCard label="Training" total={trainingTotal} color={tColor} />
+          {charts.clubsPorTipo.map(ct => (
+            <BigStatCard key={ct.name} label={ct.name} total={ct.total} color={cColor} />
+          ))}
+        </div>
 
         {/* ── FILA 1: Training ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -272,46 +291,97 @@ export default function EventReportCharts({ charts, config, loading }: Props) {
     )
   }
 
-  // ── SESSIONS-JUMPS: tarjetas separadas + resto de gráficos ───────────────
+  // ── SESSIONS-JUMPS: layout 3 filas ─────────────────────────────────────
   if (isSessionsJumps) {
+    const sColor = TYPE_COLORS.SESSION
+    const jColor = TYPE_COLORS.JUMP
+    const sesTotal = charts.eventosPorTipo.find(e => e.name === 'SESSION')?.total ?? 0
+    const jmpTotal = charts.eventosPorTipo.find(e => e.name === 'JUMP')?.total ?? 0
+
+    // SVG Donut reutilizable
+    const DonutSesJumps = () => {
+      const segments = [
+        { label: 'Sessions', value: sesTotal, color: sColor },
+        { label: 'Jumps',    value: jmpTotal, color: jColor },
+      ]
+      const total = sesTotal + jmpTotal
+      const r = 55, cx = 70, cy = 70, sw = 22
+      const circ = 2 * Math.PI * r
+      let offset = 0
+      return (
+        <div className="flex items-center gap-4 justify-center">
+          <svg width="140" height="140" viewBox="0 0 140 140">
+            {total === 0
+              ? <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e5e7eb" strokeWidth={sw} />
+              : segments.map((seg, i) => {
+                  const pct  = seg.value / total
+                  const dash = pct * circ
+                  const gap  = circ - dash
+                  const rot  = offset * 360 - 90
+                  offset += pct
+                  return <circle key={i} cx={cx} cy={cy} r={r} fill="none"
+                    stroke={seg.color} strokeWidth={sw}
+                    strokeDasharray={`${dash} ${gap}`} strokeLinecap="butt"
+                    transform={`rotate(${rot} ${cx} ${cy})`} />
+                })
+            }
+            <text x={cx} y={cy - 6} textAnchor="middle" fontSize="20" fontWeight="bold" fill="#1f2937">{total.toLocaleString()}</text>
+            <text x={cx} y={cy + 12} textAnchor="middle" fontSize="9" fill="#6b7280">TOTAL</text>
+          </svg>
+          <div className="space-y-2">
+            {segments.map(seg => (
+              <div key={seg.label} className="flex items-center gap-2 text-sm">
+                <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: seg.color }} />
+                <span className="text-gray-600 w-20">{seg.label}</span>
+                <span className="font-semibold text-gray-900">{seg.value.toLocaleString()}</span>
+                <span className="text-gray-400 text-xs">{total > 0 ? `${((seg.value / total) * 100).toFixed(1)}%` : '0%'}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {['SESSION', 'JUMP'].map(tipo => {
-          const total = charts.eventosPorTipo.find(e => e.name === tipo)?.total ?? 0
-          const label = tipo === 'SESSION' ? 'Sessions' : 'Jumps'
-          return (
-            <ChartCard key={tipo} title={label}>
-              {total === 0
-                ? <p className="text-sm text-gray-400 text-center py-8">Sin datos</p>
-                : (
-                  <div className="flex flex-col items-center justify-center h-48 gap-2">
-                    <span className="text-6xl font-bold" style={{ color: TYPE_COLORS[tipo] }}>
-                      {total.toLocaleString()}
-                    </span>
-                    <span className="text-sm text-gray-500 font-medium uppercase tracking-wide">
-                      eventos {label}
-                    </span>
-                  </div>
-                )
-              }
-            </ChartCard>
-          )
-        })}
 
-        <ChartCard title="Eventos por Nivel">
-          <NivelChart data={charts.eventosPorNivel} color={TYPE_COLORS.SESSION} />
+        {/* Fila 1 */}
+        <ChartCard title="Sessions vs Jumps">
+          <DonutSesJumps />
         </ChartCard>
 
-        <ChartCard title="Eventos por Hora">
-          <HoraChart data={charts.eventosPorHora} />
+        <ChartCard title="Sessions por Nivel">
+          <NivelChart data={charts.sessionsPorNivel ?? []} color={sColor} />
         </ChartCard>
 
-        <ChartCard title="Asistencia vs Inscritos (por fecha)">
-          <AsistenciaChart data={charts.asistenciaVsInscritos} gradId="global" />
+        <ChartCard title="Sessions por Hora">
+          <HoraChart data={charts.sessionsPorHora ?? []} />
         </ChartCard>
 
-        <ChartCard title="Ranking Advisors por Eventos">
-          <RankingChart data={charts.rankingAdvisors} />
+        {/* Fila 2 */}
+        <ChartCard title="Sessions — Asistencia vs Inscritos">
+          <AsistenciaChart data={charts.sesionesAsistencia ?? []} gradId="ses" />
+        </ChartCard>
+
+        <ChartCard title="Jumps por Nivel">
+          <NivelChart data={charts.jumpsPorNivel ?? []} color={jColor} />
+        </ChartCard>
+
+        <ChartCard title="Jumps por Hora">
+          <HoraChart data={charts.jumpsPorHora ?? []} />
+        </ChartCard>
+
+        {/* Fila 3 */}
+        <ChartCard title="Jumps — Asistencia vs Inscritos">
+          <AsistenciaChart data={charts.jumpsAsistencia ?? []} gradId="jmp" />
+        </ChartCard>
+
+        <ChartCard title="Ranking Advisors — Sessions">
+          <RankingChart data={charts.rankingAdvisorsSesiones ?? []} />
+        </ChartCard>
+
+        <ChartCard title="Ranking Advisors — Jumps">
+          <RankingChart data={charts.rankingAdvisorsJumps ?? []} />
         </ChartCard>
 
         <ChartCard title="Heatmap — Día vs Hora">

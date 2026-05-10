@@ -33,6 +33,16 @@ export interface ChartsData {
   rankingAdvisors:       ChartPoint[]
   heatmapDiaHora:        HeatmapPoint[]
 
+  // Split SESSION vs JUMP (solo sessions-jumps)
+  sessionsPorNivel?:          ChartPoint[]
+  sessionsPorHora?:           ChartPoint[]
+  sesionesAsistencia?:        TimeSeriesPoint[]
+  jumpsPorNivel?:             ChartPoint[]
+  jumpsPorHora?:              ChartPoint[]
+  jumpsAsistencia?:           TimeSeriesPoint[]
+  rankingAdvisorsSesiones?:   ChartPoint[]
+  rankingAdvisorsJumps?:      ChartPoint[]
+
   // Split TRAINING vs CLUB (solo training-clubs)
   trainingPorNivel?:        ChartPoint[]
   trainingPorHora?:         ChartPoint[]
