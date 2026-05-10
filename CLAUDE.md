@@ -1570,6 +1570,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `76cf422` | feat: sidebar Programación — elimina ítems obsoletos (Sesiones/Clubes/Welcome stub) y sus entradas en pagePermissions + middleware; renombra: `Calendario Sesiones–Jumps`→`Sesiones - Jumps`, `Calendario Training–Clubs`→`Training - Clubs`, `Calendario–Welcome`→`Welcome` |
 | `f6de71d` | feat: Training-Clubs — filas 3-4 reorganizadas: Fila 3: Clubes por Hora · Ranking Training · Ranking Clubes; Fila 4: Donut circular · Heatmap Training (naranja) · Heatmap Clubes (verde) |
 | `10f7301` | feat: heatmaps separados por tipo — Sessions-Jumps: heatmapSesiones (azul) + heatmapJumps (rojo); Training-Clubs: heatmapTraining (naranja) + heatmapClub (verde); `HeatmapGrid` acepta prop `palette`; 4 paletas definidas: BLUE/RED/ORANGE/GREEN |
 | `8b91221` | feat: Calendario Sesiones-Jumps — layout 3 filas con charts split: Fila 1: Donut SESSION+JUMP · Sessions por Nivel · Sessions por Hora; Fila 2: Sessions Asistencia vs Inscritos · Jumps por Nivel · Jumps por Hora; Fila 3: Jumps Asistencia vs Inscritos · Ranking Advisors Sessions · Ranking Advisors Jumps + Heatmaps; API split SESSION/JUMP rows para charts independientes |
