@@ -83,6 +83,9 @@ const getNavigation = (userEmail: string) => [
           { name: 'Sesiones', href: '/dashboard/informes/sesiones/programadas', newTab: true },
           { name: 'Clubes', href: '/dashboard/informes/sesiones/clubes', newTab: true },
           { name: 'Welcome', href: '/dashboard/informes/sesiones/welcome', newTab: true },
+          { name: 'Calendario Sesiones – Jumps', href: '/dashboard/informes/sesiones/calendario-sesiones-jumps', newTab: true },
+          { name: 'Calendario Training – Clubs', href: '/dashboard/informes/sesiones/calendario-training-clubs', newTab: true },
+          { name: 'Calendario – Welcome',        href: '/dashboard/informes/sesiones/calendario-welcome',        newTab: true },
         ]
       },
       {
@@ -213,6 +216,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/dashboard/informes/sesiones/advisor': [InformesPermission.PROGRAMACION],
     '/dashboard/informes/sesiones/clubes': [InformesPermission.PROGRAMACION],
     '/dashboard/informes/sesiones/welcome': [InformesPermission.PROGRAMACION],
+    '/dashboard/informes/sesiones/calendario-sesiones-jumps': [InformesPermission.PROGRAMACION],
+    '/dashboard/informes/sesiones/calendario-training-clubs': [InformesPermission.PROGRAMACION],
+    '/dashboard/informes/sesiones/calendario-welcome':        [InformesPermission.PROGRAMACION],
     '/dashboard/informes/advisors/sesiones': [InformesPermission.ADVISORS],
     '/dashboard/informes/advisors/jumps': [InformesPermission.ADVISORS],
     '/dashboard/informes/advisors/training': [InformesPermission.ADVISORS],
