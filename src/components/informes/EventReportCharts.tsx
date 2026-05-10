@@ -48,11 +48,19 @@ function Heatmap({ data }: { data: { dia: string; hora: string; total: number }[
   const getVal = (dia: string, hora: string) =>
     data.find(r => r.dia === dia && r.hora === hora)?.total ?? 0
 
-  const getColor = (val: number) => {
-    if (val === 0) return '#f3f4f6'
-    const intensity = Math.ceil((val / maxVal) * 5)
-    const palette = ['#ede9fe', '#c4b5fd', '#a78bfa', '#7c3aed', '#4c1d95']
-    return palette[Math.min(intensity - 1, 4)]
+  // Paleta azul-teal con texto legible: claro→oscuro texto, oscuro→blanco texto
+  const PALETTE = [
+    { bg: '#e0f2fe', text: '#0369a1' },  // sky-100 / sky-700
+    { bg: '#7dd3fc', text: '#0c4a6e' },  // sky-300 / sky-900
+    { bg: '#0ea5e9', text: '#ffffff' },  // sky-500 / white
+    { bg: '#0369a1', text: '#ffffff' },  // sky-700 / white
+    { bg: '#0c4a6e', text: '#ffffff' },  // sky-900 / white
+  ]
+
+  const getCell = (val: number) => {
+    if (val === 0) return { bg: '#f8fafc', text: 'transparent' }
+    const idx = Math.min(Math.ceil((val / maxVal) * 5) - 1, 4)
+    return { bg: PALETTE[idx].bg, text: PALETTE[idx].text }
   }
 
   return (
@@ -62,21 +70,22 @@ function Heatmap({ data }: { data: { dia: string; hora: string; total: number }[
           <tr>
             <th className="p-1 text-gray-400 font-normal w-10" />
             {horas.map(h => (
-              <th key={h} className="p-1 text-gray-500 font-medium text-center" style={{ minWidth: 36 }}>{h}</th>
+              <th key={h} className="p-1 text-gray-500 font-medium text-center" style={{ minWidth: 38 }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {dias.map(dia => (
             <tr key={dia}>
-              <td className="p-1 text-gray-500 font-medium pr-2">{dia}</td>
+              <td className="p-1 text-gray-500 font-semibold pr-2 whitespace-nowrap">{dia}</td>
               {horas.map(hora => {
                 const val = getVal(dia, hora)
+                const cell = getCell(val)
                 return (
                   <td key={hora} title={`${dia} ${hora}: ${val}`}
-                    className="p-0.5 text-center rounded cursor-default"
-                    style={{ backgroundColor: getColor(val), color: val > 0 ? '#4b5563' : 'transparent' }}>
-                    <span className="block text-[10px] font-medium leading-5 w-8 h-5 mx-auto">{val || ''}</span>
+                    className="p-0.5 text-center rounded cursor-default transition-colors"
+                    style={{ backgroundColor: cell.bg, color: cell.text }}>
+                    <span className="block text-[10px] font-bold leading-5 w-8 h-5 mx-auto">{val || ''}</span>
                   </td>
                 )
               })}
@@ -118,15 +127,15 @@ export default function EventReportCharts({ charts, config, loading }: Props) {
         )}
       </ChartCard>
 
-      {/* 2. Eventos por Nivel */}
+      {/* 2. Eventos por Nivel — altura dinámica para mostrar todos los niveles */}
       <ChartCard title="Eventos por Nivel">
         {noData(charts.eventosPorNivel) ?? (
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={charts.eventosPorNivel.slice(0, 12)} layout="vertical"
-              margin={{ top: 4, right: 16, bottom: 4, left: 32 }}>
+          <ResponsiveContainer width="100%" height={Math.max(220, charts.eventosPorNivel.length * 30)}>
+            <BarChart data={charts.eventosPorNivel} layout="vertical"
+              margin={{ top: 4, right: 24, bottom: 4, left: 8 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f3f4f6" />
               <XAxis type="number" tick={{ fontSize: 11 }} />
-              <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={40} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={44} />
               <Tooltip formatter={(v: number) => [v, 'Eventos']} />
               <Bar dataKey="total" fill={Object.values(config.colors)[0] ?? '#6366f1'} radius={[0, 4, 4, 0]} />
             </BarChart>

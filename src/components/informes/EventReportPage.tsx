@@ -35,6 +35,7 @@ export default function EventReportPage({ reportType }: Props) {
     setLoading(true)
     setError(null)
     try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
       const qs = new URLSearchParams({
         reportType,
         fechaInicio:   f.fechaInicio,
@@ -43,6 +44,7 @@ export default function EventReportPage({ reportType }: Props) {
         hora:          f.hora,
         advisorNombre: f.advisorNombre,
         tipoClub:      f.tipoClub,
+        tz,
       })
       const res  = await fetch(`/api/postgres/reports/programacion/eventos-informe?${qs}`)
       const json = await res.json()

@@ -6,7 +6,8 @@ import { queryMany } from '@/lib/postgres'
 interface EventRow {
   _id: string
   dia: string
-  hora: string | null
+  hora: string | null        // raw UTC (legacy Wix) or Colombia (POSTGRES) — use horaLocal
+  horaLocal: string          // always Colombia time derived from dia AT TIME ZONE 'America/Bogota'
   tipo: string
   nivel: string | null
   step: string | null
@@ -80,13 +81,26 @@ function groupBy<K extends string>(rows: EventRow[], key: (r: EventRow) => K) {
     .sort((a, b) => b.total - a.total)
 }
 
+// Hours: uses horaLocal (client tz from dia), chronological, 06:00–22:00
+function buildHoraChart(rows: EventRow[]) {
+  const map: Record<string, number> = {}
+  for (const r of rows) {
+    const h = r.horaLocal
+    if (!h || h < '06:00' || h > '22:00') continue
+    map[h] = (map[h] ?? 0) + 1
+  }
+  return Object.entries(map).map(([name, total]) => ({ name, total }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
 function buildHeatmap(rows: EventRow[]) {
   const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
   const map: Record<string, number> = {}
   for (const r of rows) {
+    const h = r.horaLocal
+    if (!h || h < '06:00' || h > '22:00') continue
     const d = new Date(r.dia)
     const day = DAYS[d.getUTCDay()]
-    const h = r.hora ? r.hora.substring(0, 5) : 'Sin hora'
     const k = `${day}|${h}`
     map[k] = (map[k] ?? 0) + 1
   }
@@ -120,13 +134,18 @@ export const GET = handlerWithAuth(async (req, _ctx, _session) => {
   const advisorNombre = searchParams.get('advisorNombre') ?? ''
   const tipoClub      = searchParams.get('tipoClub')      ?? ''
 
+  // Validate timezone — IANA format (e.g. America/Bogota) or UTC
+  const rawTz = searchParams.get('tz') ?? 'UTC'
+  const tz = /^[A-Za-z_/+-]+$/.test(rawTz) && rawTz.length < 64 ? rawTz : 'UTC'
+
   const typeCondition = buildTypeCondition(reportType)
-  const params: any[] = [fechaInicio, fechaFin]
-  let idx = 3
+  // $1=fechaInicio, $2=fechaFin, $3=tz — filters start at $4
+  const params: any[] = [fechaInicio, fechaFin, tz]
+  let idx = 4
   const extraWhere: string[] = []
 
   if (nivel)         { extraWhere.push(`c."nivel" = $${idx++}`);                                    params.push(nivel) }
-  if (hora)          { extraWhere.push(`c."hora"  LIKE $${idx++}`);                                 params.push(`${hora}%`) }
+  if (hora)          { extraWhere.push(`TO_CHAR(c."dia" AT TIME ZONE $3, 'HH24:MI') LIKE $${idx++}`); params.push(`${hora}%`) }
   if (advisorNombre) { extraWhere.push(`COALESCE(adv."nombreCompleto", c."advisor", '') ILIKE $${idx++}`); params.push(`%${advisorNombre}%`) }
   if (tipoClub)      { extraWhere.push(`COALESCE(c."nombreEvento", c."tituloONivel", '') ILIKE $${idx++}`); params.push(`%${tipoClub}%`) }
 
@@ -137,6 +156,7 @@ export const GET = handlerWithAuth(async (req, _ctx, _session) => {
       c."_id",
       c."dia",
       c."hora",
+      TO_CHAR(c."dia" AT TIME ZONE $3, 'HH24:MI') AS "horaLocal",
       c."tipo",
       COALESCE(c."nivel", '') AS "nivel",
       COALESCE(c."step",  '') AS "step",
@@ -188,7 +208,7 @@ export const GET = handlerWithAuth(async (req, _ctx, _session) => {
   const charts = {
     eventosPorTipo:        groupBy(rows, r => r.tipoDerivado),
     eventosPorNivel:       groupBy(rows, r => r.nivel || 'Sin nivel'),
-    eventosPorHora:        groupBy(rows, r => r.hora ? r.hora.substring(0, 5) : 'Sin hora'),
+    eventosPorHora:        buildHoraChart(rows),
     asistenciaVsInscritos: buildTimeSeries(rows),
     rankingAdvisors:       groupBy(rows, r => r.advisorNombre),
     heatmapDiaHora:        buildHeatmap(rows),
@@ -197,14 +217,17 @@ export const GET = handlerWithAuth(async (req, _ctx, _session) => {
   // ── Table ─────────────────────────────────────────────────────────────────
   const table = rows.map(r => ({
     ...r,
-    dia: r.dia.toString().substring(0, 10),
+    dia:          r.dia.toString().substring(0, 10),
+    hora:         r.horaLocal,   // show client-tz time in table, not raw UTC
     pctAsistencia: safeDiv(r.asistentes, r.inscritos),
     pctOcupacion:  safeDiv(r.inscritos,  r.capacidad),
   }))
 
-  // Distinct values for filter dropdowns
+  // Distinct values for filter dropdowns — use horaLocal (06:00–22:00)
   const niveles  = [...new Set(rows.map(r => r.nivel).filter(Boolean))].sort()
-  const horas    = [...new Set(rows.map(r => r.hora ? r.hora.substring(0, 5) : null).filter(Boolean))].sort()
+  const horas    = [...new Set(
+    rows.map(r => r.horaLocal).filter(h => h && h >= '06:00' && h <= '22:00')
+  )].sort()
   const advisors = [...new Set(rows.map(r => r.advisorNombre).filter(v => v !== 'Sin advisor'))].sort()
 
   return successResponse({ kpis, charts, table, meta: { niveles, horas, advisors } })
