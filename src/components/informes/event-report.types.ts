@@ -25,6 +25,7 @@ export interface HeatmapPoint     { dia: string; hora: string; total: number }
 
 export interface ChartsData {
   eventosPorTipo:        ChartPoint[]
+  clubsPorTipo:          ChartPoint[]   // breakdown by club sub-type (Listening, Grammar, etc.)
   eventosPorNivel:       ChartPoint[]
   eventosPorHora:        ChartPoint[]
   asistenciaVsInscritos: TimeSeriesPoint[]

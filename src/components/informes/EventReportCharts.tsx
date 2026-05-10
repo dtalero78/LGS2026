@@ -108,24 +108,60 @@ export default function EventReportCharts({ charts, config, loading }: Props) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
 
-      {/* 1. Eventos por Tipo */}
-      <ChartCard title="Eventos por Tipo">
-        {noData(charts.eventosPorTipo) ?? (
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={charts.eventosPorTipo} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v: number) => [v, 'Eventos']} />
-              <Bar dataKey="total" radius={[4, 4, 0, 0]}>
-                {charts.eventosPorTipo.map(e => (
-                  <Cell key={e.name} fill={TYPE_COLORS[e.name] ?? '#6b7280'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-      </ChartCard>
+      {/* 1a. Training-Clubs: Training total */}
+      {config.tiposPermitidos.includes('TRAINING') && config.tiposPermitidos.includes('CLUB') ? (
+        <>
+          <ChartCard title="Training Sessions">
+            {(() => {
+              const trainingTotal = charts.eventosPorTipo.find(e => e.name === 'TRAINING')?.total ?? 0
+              return trainingTotal === 0
+                ? <p className="text-sm text-gray-400 text-center py-8">Sin datos</p>
+                : (
+                  <div className="flex flex-col items-center justify-center h-48 gap-2">
+                    <span className="text-6xl font-bold" style={{ color: TYPE_COLORS.TRAINING }}>{trainingTotal.toLocaleString()}</span>
+                    <span className="text-sm text-gray-500 font-medium uppercase tracking-wide">eventos Training</span>
+                  </div>
+                )
+            })()}
+          </ChartCard>
+
+          {/* 1b. Clubes por Tipo */}
+          <ChartCard title="Clubes por Tipo">
+            {noData(charts.clubsPorTipo) ?? (
+              <ResponsiveContainer width="100%" height={Math.max(180, charts.clubsPorTipo.length * 32)}>
+                <BarChart data={charts.clubsPorTipo} layout="vertical"
+                  margin={{ top: 4, right: 24, bottom: 4, left: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f3f4f6" />
+                  <XAxis type="number" tick={{ fontSize: 11 }} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={90}
+                    tickFormatter={v => v.length > 12 ? `${v.slice(0, 11)}…` : v} />
+                  <Tooltip formatter={(v: number) => [v, 'Eventos']} />
+                  <Bar dataKey="total" fill={TYPE_COLORS.CLUB} radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCard>
+        </>
+      ) : (
+        /* 1. Eventos por Tipo — para sessions-jumps y welcome */
+        <ChartCard title="Eventos por Tipo">
+          {noData(charts.eventosPorTipo) ?? (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={charts.eventosPorTipo} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip formatter={(v: number) => [v, 'Eventos']} />
+                <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+                  {charts.eventosPorTipo.map(e => (
+                    <Cell key={e.name} fill={TYPE_COLORS[e.name] ?? '#6b7280'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
+      )}
 
       {/* 2. Eventos por Nivel — altura dinámica para mostrar todos los niveles */}
       <ChartCard title="Eventos por Nivel">

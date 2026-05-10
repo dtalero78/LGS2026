@@ -112,7 +112,7 @@ export default function EventReportPage({ reportType }: Props) {
 
         {/* Charts */}
         <EventReportCharts
-          charts={data?.charts ?? { eventosPorTipo: [], eventosPorNivel: [], eventosPorHora: [], asistenciaVsInscritos: [], rankingAdvisors: [], heatmapDiaHora: [] }}
+          charts={data?.charts ?? { eventosPorTipo: [], clubsPorTipo: [], eventosPorNivel: [], eventosPorHora: [], asistenciaVsInscritos: [], rankingAdvisors: [], heatmapDiaHora: [] }}
           config={config}
           loading={loading}
         />

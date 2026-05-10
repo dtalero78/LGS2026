@@ -81,6 +81,21 @@ function groupBy<K extends string>(rows: EventRow[], key: (r: EventRow) => K) {
     .sort((a, b) => b.total - a.total)
 }
 
+// Club type breakdown: extracts sub-type from nombreEvento ("LISTENING - Step 7" → "LISTENING")
+function buildClubsPorTipo(rows: EventRow[]) {
+  const map: Record<string, number> = {}
+  for (const r of rows) {
+    if (r.tipoDerivado !== 'CLUB') continue
+    const nombre = r.nombreEvento?.trim() ?? ''
+    const tipo = nombre.includes(' - ')
+      ? nombre.split(' - ')[0].trim()
+      : nombre || 'Sin tipo'
+    map[tipo] = (map[tipo] ?? 0) + 1
+  }
+  return Object.entries(map).map(([name, total]) => ({ name, total }))
+    .sort((a, b) => b.total - a.total)
+}
+
 // Hours: uses horaLocal (client tz from dia), chronological, 06:00–22:00
 function buildHoraChart(rows: EventRow[]) {
   const map: Record<string, number> = {}
@@ -207,6 +222,7 @@ export const GET = handlerWithAuth(async (req, _ctx, _session) => {
   // ── Charts ────────────────────────────────────────────────────────────────
   const charts = {
     eventosPorTipo:        groupBy(rows, r => r.tipoDerivado),
+    clubsPorTipo:          buildClubsPorTipo(rows),
     eventosPorNivel:       groupBy(rows, r => r.nivel || 'Sin nivel'),
     eventosPorHora:        buildHoraChart(rows),
     asistenciaVsInscritos: buildTimeSeries(rows),
