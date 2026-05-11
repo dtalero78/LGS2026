@@ -1570,6 +1570,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `a9075c9` | fix: `resumen/route` — `tz` era usada en `detailParams` pero nunca declarada en el handler; causaba `NULL` en `AT TIME ZONE $3` y error 500 al filtrar por advisor |
 | `2f15244` | feat: Advisors Resumen — **modo detalle** al filtrar por advisor: sin advisor → tabla consolidada por advisor; con advisor → sesiones individuales con Fecha/Hora/Tipo/Nivel/Step/Agendados/Asistentes/No Asistieron/% Asistencia + modal de usuarios por sesión. API retorna `sessionDetails[]` adicional cuando `advisorId` presente |
 | `97ceb48` | fix: sidebar — remover ítem "Usuarios" duplicado de Informes > Asistencia (apuntaba a `/dashboard/informes/usuarios`, igual que el ítem directo en Informes > Usuarios); sin impacto en ruta, página, API ni permisos |
 | `0c3c62d` | feat: Advisors **Resumen** — dashboard consolidado: totales por advisor × tipo (Sesiones/Jumps/Training/Essential/Welcome). API `GET .../advisors/resumen` (CTE con CASE WHEN que clasifica cada evento); filtros fecha + advisor + tipoFiltro; 5 KPI cards, stacked bar Recharts, donut distribución, tabla con badges de color y % asistencia, export Excel |
