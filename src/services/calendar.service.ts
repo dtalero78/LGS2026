@@ -115,11 +115,10 @@ export async function updateEvent(eventId: string, data: Record<string, any>) {
     data.nivel = data.tituloONivel;
   }
   if (data.nombreEvento && !data.step) {
-    // nombreEvento can be "Step 31" or "TRAINING - Step 12"
-    const stepMatch = data.nombreEvento.match(/Step\s*(\d+)/i);
-    if (stepMatch) {
-      data.step = `Step ${stepMatch[1]}`;
-    }
+    // Preserve full nombreEvento as step so CLUB prefixes are kept intact
+    // e.g. "TRAINING - Step 3" stays "TRAINING - Step 3", not stripped to "Step 3"
+    // SESSION events send nombreEvento = "Step N" so the value is also correct
+    data.step = data.nombreEvento;
   }
   // Rebuild tituloONivel as "NIVEL - nombreEvento" for display consistency
   if (data.tituloONivel && data.nombreEvento) {
