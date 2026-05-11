@@ -11,20 +11,22 @@ export interface RankingRow {
 }
 
 interface Props {
-  data:      RankingRow[]
-  tipo:      'advisor' | 'nivel'
-  loading:   boolean
+  data:       RankingRow[]
+  tipo:       'advisor' | 'nivel'
+  labelTitle: string   // "Ranking de Advisors por Sesiones" / "Ranking de Niveles" / etc.
+  labelCol:   string   // "Advisor" / "Nivel" / "Tipo de Club"
+  loading:    boolean
 }
 
-export default function AdvisorScheduleRanking({ data, tipo, loading }: Props) {
-  const title  = tipo === 'advisor' ? 'Ranking de Advisors por Sesiones' : 'Ranking de Niveles por Sesiones'
-  const colNom = tipo === 'advisor' ? 'Advisor' : 'Nivel'
+export default function AdvisorScheduleRanking({ data, tipo, labelTitle, labelCol, loading }: Props) {
+  const title  = labelTitle
+  const colNom = labelCol
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
       <div className="px-5 py-4 border-b border-gray-100">
         <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
-        <p className="text-xs text-gray-400 mt-0.5">{data.length} {tipo === 'advisor' ? 'advisors' : 'niveles'}</p>
+        <p className="text-xs text-gray-400 mt-0.5">{data.length} {colNom.toLowerCase()}</p>
       </div>
 
       {loading ? (

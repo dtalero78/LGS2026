@@ -10,7 +10,7 @@ interface KpiData {
   porcentajeInasistencia: number
 }
 
-interface Props { kpis: KpiData; loading: boolean }
+interface Props { kpis: KpiData; loading: boolean; kpiLabel?: string }
 
 function KpiCard({ label, value, color, sub }: {
   label: string; value: string | number; color: string; sub?: string
@@ -27,7 +27,7 @@ function KpiCard({ label, value, color, sub }: {
   )
 }
 
-export default function AdvisorScheduleKpis({ kpis, loading }: Props) {
+export default function AdvisorScheduleKpis({ kpis, loading, kpiLabel = 'Total Sesiones' }: Props) {
   if (loading) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
@@ -43,7 +43,7 @@ export default function AdvisorScheduleKpis({ kpis, loading }: Props) {
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
-      <KpiCard label="Total Sesiones"    value={kpis.totalSesiones.toLocaleString()}     color="#3b82f6" />
+      <KpiCard label={kpiLabel}           value={kpis.totalSesiones.toLocaleString()}     color="#3b82f6" />
       <KpiCard label="Total Advisors"    value={kpis.totalAdvisors.toLocaleString()}     color="#8b5cf6" />
       <KpiCard label="Usuarios Agendados" value={kpis.totalAgendados.toLocaleString()}   color="#6366f1" />
       <KpiCard label="Asistieron"         value={kpis.totalAsistieron.toLocaleString()}  color="#10b981" />

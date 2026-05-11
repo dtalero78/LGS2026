@@ -19,9 +19,10 @@ interface ChartsData {
 }
 
 interface Props {
-  charts:    ChartsData
-  advisorId: string
-  loading:   boolean
+  charts:        ChartsData
+  advisorId:     string
+  loading:       boolean
+  chartLabelSec: string   // "por Nivel" / "por Tipo de Club"
 }
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
@@ -94,7 +95,7 @@ function HeatmapGrid({ data }: { data: HeatPoint[] }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function AdvisorScheduleCharts({ charts, advisorId, loading }: Props) {
+export default function AdvisorScheduleCharts({ charts, advisorId, loading, chartLabelSec }: Props) {
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -112,8 +113,9 @@ export default function AdvisorScheduleCharts({ charts, advisorId, loading }: Pr
 
   const sesiones    = modoAdvisor ? charts.sesionesPorNivel    : charts.sesionesPorAdvisor
   const asistencias = modoAdvisor ? charts.asistenciaPorNivel  : charts.asistenciaPorAdvisor
-  const titleSes    = modoAdvisor ? 'Sesiones por Nivel'       : 'Sesiones por Advisor'
-  const titleAsis   = modoAdvisor ? 'Asistencia por Nivel'     : 'Asistencia por Advisor'
+  const titleSes    = modoAdvisor ? `Sesiones ${chartLabelSec}`    : 'Sesiones por Advisor'
+  const titleAsis   = modoAdvisor ? `Asistencia ${chartLabelSec}`  : 'Asistencia por Advisor'
+  const titleDistrib = `Distribución ${chartLabelSec}`
 
   const tickFmt = (v: string) => v.length > 14 ? `${v.slice(0, 13)}…` : v
 
@@ -154,8 +156,8 @@ export default function AdvisorScheduleCharts({ charts, advisorId, loading }: Pr
         )}
       </ChartCard>
 
-      {/* 3. Distribución por nivel (siempre visible) */}
-      <ChartCard title="Distribución por Nivel">
+      {/* 3. Distribución (siempre visible) */}
+      <ChartCard title={titleDistrib}>
         {!charts.distribucionPorNivel.length ? <NoData /> : (
           <ResponsiveContainer width="100%" height={Math.max(220, charts.distribucionPorNivel.length * 30)}>
             <BarChart data={charts.distribucionPorNivel} layout="vertical"

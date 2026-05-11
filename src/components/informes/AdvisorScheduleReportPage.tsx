@@ -3,11 +3,13 @@
 import { useState, useCallback, useEffect } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import AdvisorScheduleFilters, { AdvisorFilterState } from './AdvisorScheduleFilters'
-import AdvisorScheduleKpis   from './AdvisorScheduleKpis'
-import AdvisorScheduleCharts from './AdvisorScheduleCharts'
+import AdvisorScheduleKpis    from './AdvisorScheduleKpis'
+import AdvisorScheduleCharts  from './AdvisorScheduleCharts'
 import AdvisorScheduleRanking from './AdvisorScheduleRanking'
 import AdvisorScheduleTable, { type SessionRow } from './AdvisorScheduleTable'
 import AdvisorSessionDetailModal from './AdvisorSessionDetailModal'
+import { ADVISOR_REPORT_CONFIGS } from './advisor-report.config'
+import type { AdvisorReportType } from '@/app/api/postgres/reports/programacion/advisors/route'
 
 const today       = new Date().toISOString().substring(0, 10)
 const firstOfYear = `${new Date().getFullYear()}-01-01`
@@ -17,6 +19,7 @@ const DEFAULT_FILTERS: AdvisorFilterState = {
   fechaFin:    today,
   advisorId:   '',
   nivel:       '',
+  tipoClub:    '',
 }
 
 interface Advisor { _id: string; nombreCompleto: string }
@@ -30,10 +33,14 @@ interface ReportData {
   ranking: any[]
   charts:  any
   table:   SessionRow[]
-  meta:    { advisors: Advisor[]; niveles: string[] }
+  meta:    { advisors: Advisor[]; niveles: string[]; reportType: string }
 }
 
-export default function AdvisorScheduleReportPage() {
+interface Props { reportType: AdvisorReportType }
+
+export default function AdvisorScheduleReportPage({ reportType }: Props) {
+  const config = ADVISOR_REPORT_CONFIGS[reportType]
+
   const [filters,    setFilters]    = useState<AdvisorFilterState>(DEFAULT_FILTERS)
   const [data,       setData]       = useState<ReportData | null>(null)
   const [loading,    setLoading]    = useState(true)
@@ -45,10 +52,12 @@ export default function AdvisorScheduleReportPage() {
     try {
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
       const qs = new URLSearchParams({
+        reportType,
         fechaInicio: f.fechaInicio,
         fechaFin:    f.fechaFin,
         advisorId:   f.advisorId,
         nivel:       f.nivel,
+        tipoClub:    f.tipoClub,
         tz,
       })
       const res  = await fetch(`/api/postgres/reports/programacion/advisors?${qs}`)
@@ -60,15 +69,21 @@ export default function AdvisorScheduleReportPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [reportType])
 
   useEffect(() => { fetchData(DEFAULT_FILTERS) }, [fetchData])
 
   const handleApply = () => fetchData(filters)
   const handleClear = () => { setFilters(DEFAULT_FILTERS); fetchData(DEFAULT_FILTERS) }
 
-  const modoAdvisor  = !!filters.advisorId
-  const rankingTipo  = modoAdvisor ? 'nivel' : 'advisor'
+  const modoAdvisor = !!filters.advisorId
+  const rankingTipo = modoAdvisor ? 'nivel' : 'advisor'
+
+  // Dynamic ranking labels
+  const rankingLabelTitle = modoAdvisor
+    ? `Ranking de ${config.rankingLabelSec}`
+    : `Ranking de ${config.rankingLabelAdv}s`
+  const rankingLabelCol = modoAdvisor ? config.rankingLabelSec : config.rankingLabelAdv
 
   const emptyKpis = {
     totalSesiones: 0, totalAdvisors: 0, totalAgendados: 0,
@@ -87,10 +102,14 @@ export default function AdvisorScheduleReportPage() {
 
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Informe de Sesiones por Advisor</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{config.title}</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Sesiones programadas (excluye Jumps, Clubs y Welcome)
-            {modoAdvisor && <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">Advisor seleccionado</span>}
+            {config.subtitle}
+            {modoAdvisor && (
+              <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                Advisor seleccionado
+              </span>
+            )}
           </p>
         </div>
 
@@ -104,6 +123,8 @@ export default function AdvisorScheduleReportPage() {
           advisors={data?.meta?.advisors ?? []}
           niveles={data?.meta?.niveles ?? []}
           loading={loading}
+          showNivelFilter={config.showNivelFilter}
+          showTipoClubFilter={config.showTipoClubFilter}
         />
 
         {/* Error */}
@@ -118,12 +139,18 @@ export default function AdvisorScheduleReportPage() {
         )}
 
         {/* KPIs */}
-        <AdvisorScheduleKpis kpis={data?.kpis ?? emptyKpis} loading={loading} />
+        <AdvisorScheduleKpis
+          kpis={data?.kpis ?? emptyKpis}
+          loading={loading}
+          kpiLabel={config.kpiLabel}
+        />
 
         {/* Ranking */}
         <AdvisorScheduleRanking
           data={data?.ranking ?? []}
           tipo={rankingTipo}
+          labelTitle={rankingLabelTitle}
+          labelCol={rankingLabelCol}
           loading={loading}
         />
 
@@ -132,6 +159,7 @@ export default function AdvisorScheduleReportPage() {
           charts={data?.charts ?? emptyCharts}
           advisorId={filters.advisorId}
           loading={loading}
+          chartLabelSec={config.chartLabelSec}
         />
 
         {/* Table */}

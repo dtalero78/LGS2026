@@ -5,24 +5,27 @@ export interface AdvisorFilterState {
   fechaFin:     string
   advisorId:    string
   nivel:        string
+  tipoClub:     string
 }
 
 interface Advisor { _id: string; nombreCompleto: string }
 
 interface Props {
-  filters:   AdvisorFilterState
-  onChange:  (f: AdvisorFilterState) => void
-  onApply:   () => void
-  onClear:   () => void
-  onExport:  () => void
-  advisors:  Advisor[]
-  niveles:   string[]
-  loading:   boolean
+  filters:            AdvisorFilterState
+  onChange:           (f: AdvisorFilterState) => void
+  onApply:            () => void
+  onClear:            () => void
+  onExport:           () => void
+  advisors:           Advisor[]
+  niveles:            string[]   // niveles OR tipos de club depending on reportType
+  loading:            boolean
+  showNivelFilter:    boolean
+  showTipoClubFilter: boolean
 }
 
 export default function AdvisorScheduleFilters({
   filters, onChange, onApply, onClear, onExport,
-  advisors, niveles, loading,
+  advisors, niveles, loading, showNivelFilter, showTipoClubFilter,
 }: Props) {
   const set = (key: keyof AdvisorFilterState, val: string) =>
     onChange({ ...filters, [key]: val })
@@ -54,14 +57,27 @@ export default function AdvisorScheduleFilters({
           </select>
         </div>
 
-        <div>
-          <label htmlFor="af-nivel" className="block text-xs text-gray-500 mb-1">Nivel</label>
-          <select id="af-nivel" value={filters.nivel} onChange={e => set('nivel', e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[110px]">
-            <option value="">Todos</option>
-            {niveles.map(n => <option key={n} value={n}>{n}</option>)}
-          </select>
-        </div>
+        {showNivelFilter && (
+          <div>
+            <label htmlFor="af-nivel" className="block text-xs text-gray-500 mb-1">Nivel</label>
+            <select id="af-nivel" value={filters.nivel} onChange={e => set('nivel', e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[110px]">
+              <option value="">Todos</option>
+              {niveles.map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </div>
+        )}
+
+        {showTipoClubFilter && (
+          <div>
+            <label htmlFor="af-tipoclub" className="block text-xs text-gray-500 mb-1">Tipo de Club</label>
+            <select id="af-tipoclub" value={filters.tipoClub} onChange={e => set('tipoClub', e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[140px]">
+              <option value="">Todos los tipos</option>
+              {niveles.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+        )}
 
         <div className="flex gap-2 ml-auto flex-wrap">
           <button type="button" onClick={onApply} disabled={loading}
