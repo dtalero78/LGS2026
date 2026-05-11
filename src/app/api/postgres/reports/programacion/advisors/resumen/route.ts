@@ -151,6 +151,61 @@ export const GET = handlerWithAuth(async (req, _ctx, _session) => {
     { name: 'Welcome',   value: kpis.totalWelcome   },
   ].filter(d => d.value > 0)
 
+  // ── Session details (only when advisor is selected) ──────────────────────
+  let sessionDetails: any[] = []
+  if (advisorId) {
+    // Build params for detail query: same fecha range + advisorId, reusing $1/$2/$3(tz)
+    const detailParams: any[] = [fechaInicio, fechaFin, tz, advisorId]
+    let didx = 5
+    const detailType = tipoFiltro !== 'all' ? `AND (${TIPO_INFORME_EXPR}) = '${tipoFiltro}'` : ''
+
+    const detailSql = `
+      SELECT
+        c."_id",
+        c."dia",
+        TO_CHAR(c."dia" AT TIME ZONE $3, 'HH24:MI') AS "horaLocal",
+        COALESCE(c."nivel", '')                       AS "nivel",
+        COALESCE(c."step", '')                        AS "step",
+        COALESCE(c."nombreEvento", c."tituloONivel", '') AS "nombreEvento",
+        COALESCE(adv."nombreCompleto", c."advisor", 'Sin advisor') AS "advisorNombre",
+        COALESCE(c."limiteUsuarios", 0)::int           AS "capacidad",
+        COALESCE(c."inscritos", 0)::int                AS "inscritos",
+        COUNT(DISTINCT CASE
+          WHEN (b."asistio" = true OR b."asistencia" = true)
+            AND (b."cancelo" IS NULL OR b."cancelo" = false)
+          THEN b."_id"
+        END)::int AS "asistentes",
+        (${TIPO_INFORME_EXPR}) AS "tipoDerivado"
+      FROM "CALENDARIO" c
+      LEFT JOIN "ADVISORS" adv
+        ON adv."_id" = c."advisor" OR LOWER(adv."email") = LOWER(c."advisor")
+      LEFT JOIN "ACADEMICA_BOOKINGS" b
+        ON COALESCE(b."eventoId", b."idEvento") = c."_id"
+        AND (b."cancelo" IS NULL OR b."cancelo" = false)
+      WHERE c."dia" BETWEEN $1::date AND ($2::date + interval '1 day')
+        AND adv."_id" = $4
+        ${detailType}
+      GROUP BY c."_id", adv."nombreCompleto", adv."_id"
+      ORDER BY c."dia" ASC, c."hora" ASC
+    `
+    const detailRows = await queryMany<any>(detailSql, detailParams)
+    sessionDetails = detailRows.map(r => ({
+      _id:           r._id,
+      fecha:         r.dia.toString().substring(0, 10),
+      hora:          r.horaLocal,
+      tipoDerivado:  r.tipoDerivado ?? '',
+      nivel:         r.nivel,
+      step:          r.step,
+      nombreEvento:  r.nombreEvento,
+      advisorNombre: r.advisorNombre,
+      capacidad:     r.capacidad,
+      inscritos:     r.inscritos,
+      asistentes:    r.asistentes,
+      noAsistieron:  Math.max(0, r.inscritos - r.asistentes),
+      pctAsistencia: safeDiv(r.asistentes, r.inscritos),
+    }))
+  }
+
   // Meta dropdowns
   const allAdvisors = await queryMany<{ _id: string; nombreCompleto: string }>(
     `SELECT "_id", "nombreCompleto" FROM "ADVISORS" WHERE "activo" = true ORDER BY "nombreCompleto"`,
@@ -161,6 +216,7 @@ export const GET = handlerWithAuth(async (req, _ctx, _session) => {
     kpis,
     charts: { stackedByAdvisor, donutByType },
     table:  rows,
+    sessionDetails,
     meta:   { advisors: allAdvisors },
   })
 })

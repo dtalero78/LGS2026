@@ -7,6 +7,8 @@ import {
   Legend, ResponsiveContainer,
 } from 'recharts'
 import { exportToExcel } from '@/lib/export-excel'
+import AdvisorScheduleTable, { type SessionRow } from './AdvisorScheduleTable'
+import AdvisorSessionDetailModal from './AdvisorSessionDetailModal'
 
 type TipoFiltro = 'all' | 'sesiones' | 'jumps' | 'training' | 'essential' | 'welcome'
 
@@ -35,8 +37,9 @@ interface ReportData {
     stackedByAdvisor: any[]
     donutByType:      { name: string; value: number }[]
   }
-  table: AdvisorRow[]
-  meta:  { advisors: Advisor[] }
+  table:          AdvisorRow[]
+  sessionDetails: SessionRow[]     // individual events when advisor selected
+  meta:           { advisors: Advisor[] }
 }
 
 const TIPO_OPTIONS: { value: TipoFiltro; label: string }[] = [
@@ -121,6 +124,7 @@ export default function AdvisorResumenReportPage() {
   const [data,        setData]        = useState<ReportData | null>(null)
   const [loading,     setLoading]     = useState(true)
   const [error,       setError]       = useState<string | null>(null)
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
 
   const fetchData = useCallback(async (fi: string, ff: string, aid: string, tipo: TipoFiltro) => {
     setLoading(true); setError(null)
@@ -298,58 +302,75 @@ export default function AdvisorResumenReportPage() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-800">Detalle por Advisor</h3>
-            <p className="text-xs text-gray-400 mt-0.5">{(data?.table.length ?? 0).toLocaleString()} advisors</p>
+        {/* Table — modo resumen (todos) o detalle (advisor seleccionado) */}
+        {advisorId ? (
+          /* Modo detalle: sesiones individuales del advisor con agendados/asistentes */
+          <AdvisorScheduleTable
+            data={data?.sessionDetails ?? []}
+            loading={loading}
+            onRowClick={row => setSelectedEventId(row._id)}
+            filters={{ fechaInicio, fechaFin }}
+          />
+        ) : (
+          /* Modo resumen: tabla consolidada por advisor */
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h3 className="text-sm font-semibold text-gray-800">Detalle por Advisor</h3>
+              <p className="text-xs text-gray-400 mt-0.5">{(data?.table.length ?? 0).toLocaleString()} advisors</p>
+            </div>
+            {loading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3" />
+                <p className="text-sm text-gray-400">Cargando...</p>
+              </div>
+            ) : !data?.table.length ? (
+              <p className="text-sm text-gray-400 text-center p-8">Sin datos para el período seleccionado.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
+                    <tr>
+                      {['#','Advisor','Sesiones','Jumps','Training','Essential','Welcome','Total','Inscritos','Asistentes','% Asist.'].map(h => (
+                        <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {data.table.map((row, i) => {
+                      const pct = row.totalInscritos > 0
+                        ? Math.round((row.totalAsistentes / row.totalInscritos) * 10000) / 100 : 0
+                      return (
+                        <tr key={row.advisorId ?? i} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-3 py-2.5 text-gray-400 text-xs">{i + 1}</td>
+                          <td className="px-3 py-2.5 font-medium text-gray-900 max-w-[160px] truncate" title={row.advisorNombre}>{row.advisorNombre}</td>
+                          <td className="px-3 py-2.5 text-center"><span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">{row.totalSesiones}</span></td>
+                          <td className="px-3 py-2.5 text-center"><span className="px-2 py-0.5 bg-red-100 text-red-600 rounded-full text-xs font-semibold">{row.totalJumps}</span></td>
+                          <td className="px-3 py-2.5 text-center"><span className="px-2 py-0.5 bg-orange-100 text-orange-600 rounded-full text-xs font-semibold">{row.totalTraining}</span></td>
+                          <td className="px-3 py-2.5 text-center"><span className="px-2 py-0.5 bg-sky-100 text-sky-600 rounded-full text-xs font-semibold">{row.totalEssential}</span></td>
+                          <td className="px-3 py-2.5 text-center"><span className="px-2 py-0.5 bg-purple-100 text-purple-600 rounded-full text-xs font-semibold">{row.totalWelcome}</span></td>
+                          <td className="px-3 py-2.5 text-right font-bold text-gray-900">{row.totalGeneral}</td>
+                          <td className="px-3 py-2.5 text-right text-gray-700">{row.totalInscritos}</td>
+                          <td className="px-3 py-2.5 text-right text-green-600 font-medium">{row.totalAsistentes}</td>
+                          <td className="px-3 py-2.5 text-right">
+                            <span className={`font-semibold ${pct >= 75 ? 'text-green-600' : pct >= 50 ? 'text-yellow-600' : 'text-red-500'}`}>{pct}%</span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-          {loading ? (
-            <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3" />
-              <p className="text-sm text-gray-400">Cargando...</p>
-            </div>
-          ) : !data?.table.length ? (
-            <p className="text-sm text-gray-400 text-center p-8">Sin datos para el período seleccionado.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
-                  <tr>
-                    {['#','Advisor','Sesiones','Jumps','Training','Essential','Welcome','Total','Inscritos','Asistentes','% Asist.'].map(h => (
-                      <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {data.table.map((row, i) => {
-                    const pct = row.totalInscritos > 0
-                      ? Math.round((row.totalAsistentes / row.totalInscritos) * 10000) / 100 : 0
-                    return (
-                      <tr key={row.advisorId ?? i} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-3 py-2.5 text-gray-400 text-xs">{i + 1}</td>
-                        <td className="px-3 py-2.5 font-medium text-gray-900 max-w-[160px] truncate" title={row.advisorNombre}>{row.advisorNombre}</td>
-                        <td className="px-3 py-2.5 text-center"><span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">{row.totalSesiones}</span></td>
-                        <td className="px-3 py-2.5 text-center"><span className="px-2 py-0.5 bg-red-100 text-red-600 rounded-full text-xs font-semibold">{row.totalJumps}</span></td>
-                        <td className="px-3 py-2.5 text-center"><span className="px-2 py-0.5 bg-orange-100 text-orange-600 rounded-full text-xs font-semibold">{row.totalTraining}</span></td>
-                        <td className="px-3 py-2.5 text-center"><span className="px-2 py-0.5 bg-sky-100 text-sky-600 rounded-full text-xs font-semibold">{row.totalEssential}</span></td>
-                        <td className="px-3 py-2.5 text-center"><span className="px-2 py-0.5 bg-purple-100 text-purple-600 rounded-full text-xs font-semibold">{row.totalWelcome}</span></td>
-                        <td className="px-3 py-2.5 text-right font-bold text-gray-900">{row.totalGeneral}</td>
-                        <td className="px-3 py-2.5 text-right text-gray-700">{row.totalInscritos}</td>
-                        <td className="px-3 py-2.5 text-right text-green-600 font-medium">{row.totalAsistentes}</td>
-                        <td className="px-3 py-2.5 text-right">
-                          <span className={`font-semibold ${pct >= 75 ? 'text-green-600' : pct >= 50 ? 'text-yellow-600' : 'text-red-500'}`}>{pct}%</span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        )}
 
       </div>
+
+      {/* Session detail modal — solo en modo advisor */}
+      <AdvisorSessionDetailModal
+        eventId={selectedEventId}
+        onClose={() => setSelectedEventId(null)}
+      />
     </DashboardLayout>
   )
 }
