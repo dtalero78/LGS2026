@@ -62,6 +62,8 @@ export const GET = handlerWithAuth(async (req, _ctx, _session) => {
   const fechaFin    = searchParams.get('fechaFin')    ?? new Date().toISOString().substring(0, 10)
   const advisorId   = searchParams.get('advisorId')   ?? ''
   const tipoFiltro  = (searchParams.get('tipoFiltro') ?? 'all') as TipoFiltro
+  const rawTz       = searchParams.get('tz') ?? 'UTC'
+  const tz          = /^[A-Za-z_/+-]+$/.test(rawTz) && rawTz.length < 64 ? rawTz : 'UTC'
 
   const params: any[] = [fechaInicio, fechaFin]
   let idx = 3
