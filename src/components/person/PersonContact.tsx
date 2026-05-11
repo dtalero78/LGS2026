@@ -13,18 +13,18 @@ export default function PersonContact({ person }: PersonContactProps) {
     referencias: {
       personal: {
         nombre: (person as any).referenciaUno || 'No disponible',
-        telefono: (person as any).telRefUno || 'No disponible',
+        telefono: (person as any).telefonoRefUno || 'No disponible',
         relacion: (person as any).parentezcoRefUno || 'No disponible'
       },
       comercial: {
         nombre: (person as any).referenciaDos || 'No disponible',
-        telefono: (person as any).telRefDos || 'No disponible',
+        telefono: (person as any).telefonoRefDos || 'No disponible',
         contacto: (person as any).parentezcoRefDos || 'No disponible'
       },
       familiar: {
-        nombre: (person as any).referenciaUno || 'No disponible',
-        telefono: (person as any).telRefUno || 'No disponible',
-        relacion: (person as any).parentezcoRefUno || 'No disponible'
+        nombre: (person as any).referenciaDos || 'No disponible',
+        telefono: (person as any).telefonoRefDos || 'No disponible',
+        relacion: (person as any).parentezcoRefDos || 'No disponible'
       }
     }
   }
