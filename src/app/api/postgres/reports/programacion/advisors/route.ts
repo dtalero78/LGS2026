@@ -2,7 +2,7 @@ import 'server-only'
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers'
 import { queryMany } from '@/lib/postgres'
 
-export type AdvisorReportType = 'sesiones' | 'jumps' | 'training' | 'clubes' | 'welcome'
+export type AdvisorReportType = 'sesiones' | 'jumps' | 'training' | 'clubes' | 'welcome' | 'essential'
 
 interface SessionRow {
   _id: string
@@ -91,6 +91,8 @@ function buildTypeCondition(reportType: AdvisorReportType): string {
         OR c."tituloONivel" ILIKE '%WELCOME%'
         OR c."nombreEvento" ILIKE '%WELCOME%'
         OR c."tipo" = 'WELCOME')`
+    case 'essential':
+      return `c."tipo" = 'SESSION' AND c."nivel" = 'ESS'`
     default:
       return 'false'
   }

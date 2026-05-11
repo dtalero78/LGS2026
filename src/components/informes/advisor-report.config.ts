@@ -1,4 +1,5 @@
 import type { AdvisorReportType } from '@/app/api/postgres/reports/programacion/advisors/route'
+export type { AdvisorReportType }
 
 export interface AdvisorReportConfig {
   title:              string
@@ -62,10 +63,21 @@ export const ADVISOR_REPORT_CONFIGS: Record<AdvisorReportType, AdvisorReportConf
     subtitle:           'Sesiones de bienvenida (nivel WELCOME)',
     kpiLabel:           'Total Welcome',
     rankingLabelAdv:    'Advisor',
-    rankingLabelSec:    'Advisor',   // welcome sessions only have one level
+    rankingLabelSec:    'Advisor',
     chartLabelSec:      'por Advisor',
     showNivelFilter:    false,
     showTipoClubFilter: false,
     accentColor:        '#a855f7',
+  },
+  essential: {
+    title:              'Informe Essential por Advisor',
+    subtitle:           'Sesiones ESS (nivel de inicio previo a BN1)',
+    kpiLabel:           'Total Essential',
+    rankingLabelAdv:    'Advisor',
+    rankingLabelSec:    'Nivel',
+    chartLabelSec:      'por Nivel',
+    showNivelFilter:    false,
+    showTipoClubFilter: false,
+    accentColor:        '#0ea5e9',
   },
 }
