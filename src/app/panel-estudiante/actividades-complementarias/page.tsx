@@ -18,7 +18,8 @@ import {
 function ComplementariaContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const step = searchParams.get('step') || ''
+  const step  = searchParams.get('step')  || ''
+  const nivel = searchParams.get('nivel') || ''
 
   const eligibilityQuery = useComplementariaEligibility(step)
   const attemptsQuery = useComplementariaAttempts(step)
@@ -131,34 +132,48 @@ function ComplementariaContent() {
         {eligibility?.eligible && !currentAttempt && !gradeResult && (
           <>
             {/* Info Card */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
-              <h3 className="text-sm font-semibold text-blue-800 mb-2">
-                Actividad Complementaria disponible
-              </h3>
-              <p className="text-sm text-blue-700 mb-3">
-                Tienes 1 sesión exitosa en este step y necesitas 2. Puedes completar esta
-                actividad para sustituir la sesión faltante.
-              </p>
-              <ul className="text-sm text-blue-700 space-y-1 mb-4">
-                <li>• Se generarán <strong>10 preguntas</strong> basadas en el contenido del step</li>
-                <li>• Necesitas <strong>80% o más</strong> para aprobar</li>
-                <li>• Tienes <strong>{3 - (eligibility.attemptsUsed || 0)} intentos</strong> restantes</li>
-              </ul>
-              <button
-                onClick={handleGenerate}
-                disabled={generateMutation.isLoading}
-                className="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {generateMutation.isLoading ? (
-                  <span className="flex items-center gap-2">
-                    <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                    Generando preguntas...
-                  </span>
-                ) : (
-                  'Generar Actividad'
-                )}
-              </button>
-            </div>
+            {(() => {
+              const remaining = 3 - (eligibility.attemptsUsed || 0)
+              return (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
+                  <h3 className="text-sm font-semibold text-blue-800 mb-3">
+                    Actividad Complementaria disponible
+                  </h3>
+                  <ul className="text-sm text-blue-700 space-y-2 mb-5">
+                    <li>
+                      • Antes de presentar la actividad, revisa el material correspondiente al Nivel{' '}
+                      <strong>{nivel || '—'}</strong> y Step <strong>{step || '—'}</strong>
+                    </li>
+                    <li>• Basado en el contenido del material se generarán <strong>10 preguntas</strong></li>
+                    <li>• Necesitas <strong>80% o más</strong> para aprobar</li>
+                    <li>
+                      {remaining > 0 ? (
+                        <>• Tienes <strong>{remaining} {remaining === 1 ? 'intento' : 'intentos'}</strong> restante{remaining === 1 ? '' : 's'}</>
+                      ) : (
+                        <>• No tienes más intentos disponibles. Por favor <strong>comunícate con Servicio al Cliente</strong></>
+                      )}
+                    </li>
+                  </ul>
+                  {remaining > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleGenerate}
+                      disabled={generateMutation.isLoading}
+                      className="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {generateMutation.isLoading ? (
+                        <span className="flex items-center gap-2">
+                          <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                          Generando preguntas...
+                        </span>
+                      ) : (
+                        'Generar Actividad'
+                      )}
+                    </button>
+                  )}
+                </div>
+              )
+            })()}
 
             {/* Previous Attempts */}
             {attempts.length > 0 && (

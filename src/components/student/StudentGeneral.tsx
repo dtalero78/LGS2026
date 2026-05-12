@@ -141,7 +141,7 @@ export default function StudentGeneral({ student }: StudentGeneralProps) {
 
       if (data.success) {
         setWhatsAppSent(true)
-        console.log('✅ WhatsApp enviado exitosamente')
+        toast.success('WhatsApp de bienvenida enviado exitosamente')
 
         // Reset success state after 3 seconds
         setTimeout(() => setWhatsAppSent(false), 3000)
@@ -186,6 +186,7 @@ export default function StudentGeneral({ student }: StudentGeneralProps) {
 
       if (data.success) {
         setProfileOnlySent(true)
+        toast.success('Link de perfil enviado exitosamente')
         setTimeout(() => setProfileOnlySent(false), 3000)
       } else {
         throw new Error(data.error || 'Error al enviar WhatsApp')

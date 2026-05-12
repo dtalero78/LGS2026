@@ -106,7 +106,7 @@ export default function ProgressReport({ data, isLoading }: ProgressReportProps)
                             <>
                               {parts[0]}
                               <a
-                                href={`/panel-estudiante/actividades-complementarias?step=${encodeURIComponent(s.step)}`}
+                                href={`/panel-estudiante/actividades-complementarias?step=${encodeURIComponent(s.step)}&nivel=${encodeURIComponent(progress?.nivelActual || '')}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="font-medium text-blue-600 hover:text-blue-800 underline"
