@@ -56,7 +56,10 @@ export async function checkEligibility(
     return { eligible: false, reason: 'Step no válido', attemptsUsed: 0, maxAttempts: MAX_ATTEMPTS };
   }
 
-  // Jump steps not eligible
+  // Only steps 1–44 (excluding multiples of 5) are eligible
+  if (stepNum > 44) {
+    return { eligible: false, reason: 'No disponible para steps mayores de 44', attemptsUsed: 0, maxAttempts: MAX_ATTEMPTS };
+  }
   if (stepNum > 0 && stepNum % 5 === 0) {
     return { eligible: false, reason: 'No disponible para Jump Steps', attemptsUsed: 0, maxAttempts: MAX_ATTEMPTS };
   }
