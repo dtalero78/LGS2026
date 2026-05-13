@@ -3,6 +3,8 @@
 import type { TableRow, ReportConfig } from './event-report.types'
 import { exportToExcel } from '@/lib/export-excel'
 import { TYPE_COLORS } from './event-report.config'
+import { PermissionGuard } from '@/components/permissions/PermissionGuard'
+import { InformesPermission } from '@/types/permissions'
 
 interface Props {
   data:    TableRow[]
@@ -40,13 +42,15 @@ export default function EventReportTable({ data, config, loading, filters }: Pro
           <h3 className="text-sm font-semibold text-gray-800">Detalle de Eventos</h3>
           <p className="text-xs text-gray-400 mt-0.5">{data.length.toLocaleString()} registros</p>
         </div>
-        <button type="button" onClick={handleExport} disabled={loading || data.length === 0}
-          className="px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-          </svg>
-          Exportar Excel
-        </button>
+        <PermissionGuard permission={InformesPermission.PROGRAMACION_EXPORTAR}>
+          <button type="button" onClick={handleExport} disabled={loading || data.length === 0}
+            className="px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            Exportar Excel
+          </button>
+        </PermissionGuard>
       </div>
 
       {loading ? (

@@ -497,6 +497,64 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Acceso al informe de estadísticas',
   },
 
+  // -- Exportar / Imprimir por grupo (botones internos de cada informe) --
+  {
+    code: InformesPermission.ASISTENCIA_EXPORTAR,
+    module: Module.INFORMES,
+    section: 'Asistencia',
+    name: 'Botón "Exportar CSV" (Asistencia)',
+    description: 'Descargar como CSV cualquier informe del grupo Asistencia (Sesiones-Jumps, Clubes, Complementarias, Welcome, X País)',
+  },
+  {
+    code: InformesPermission.PROGRAMACION_EXPORTAR,
+    module: Module.INFORMES,
+    section: 'Programación',
+    name: 'Botón "Exportar CSV" (Programación)',
+    description: 'Descargar como CSV cualquier informe del grupo Programación (Sesiones-Jumps, Training-Clubs, Welcome)',
+  },
+  {
+    code: InformesPermission.ADVISORS_EXPORTAR,
+    module: Module.INFORMES,
+    section: 'Advisors',
+    name: 'Botón "Exportar CSV" (Advisors)',
+    description: 'Descargar como CSV cualquier informe del grupo Advisors (Sesiones, Jumps, Training, Clubes, Welcome, Essential, Resumen)',
+  },
+  {
+    code: InformesPermission.USUARIOS_EXPORTAR,
+    module: Module.INFORMES,
+    section: 'Usuarios',
+    name: 'Botón "Exportar CSV" (Usuarios)',
+    description: 'Descargar como CSV los informes de Usuarios y InfoAcademic User',
+  },
+  {
+    code: InformesPermission.USUARIOS_IMPRIMIR,
+    module: Module.INFORMES,
+    section: 'Usuarios',
+    name: 'Botón "Imprimir" (InfoAcademic User)',
+    description: 'Imprimir / generar PDF del reporte ejecutivo InfoAcademic User',
+  },
+  {
+    code: InformesPermission.CONTRATOS_EXPORTAR,
+    module: Module.INFORMES,
+    section: 'Contratos',
+    name: 'Botón "Exportar CSV" (Contratos)',
+    description: 'Descargar como CSV el informe de Contratos',
+  },
+  {
+    code: InformesPermission.PLANTA_EXPORTAR,
+    module: Module.INFORMES,
+    section: 'Planta',
+    name: 'Botón "Exportar CSV" (Planta)',
+    description: 'Descargar como CSV los informes del grupo Planta (Advisors, Administrativos)',
+  },
+  {
+    code: InformesPermission.ESTADISTICAS_EXPORTAR,
+    module: Module.INFORMES,
+    section: 'Estadísticas',
+    name: 'Botón "Exportar CSV" (Estadísticas)',
+    description: 'Descargar como CSV los informes del grupo Estadísticas (Niveles, Horarios)',
+  },
+
   // ========== SERVICIO MODULE ==========
   // -- Página: Welcome Session (/dashboard/servicio/welcome-session) --
   {

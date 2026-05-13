@@ -8,6 +8,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LabelList
 } from 'recharts'
 import { MagnifyingGlassIcon, PrinterIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
+import { PermissionGuard } from '@/components/permissions/PermissionGuard'
+import { InformesPermission } from '@/types/permissions'
 
 const today       = new Date().toISOString().split('T')[0]
 const NIVEL_ORDER = ['ESS','BN1','BN2','BN3','P1','P2','P3','F1','F2','F3']
@@ -282,15 +284,19 @@ export default function InfoAcademicUserPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <button type="button" onClick={handleCSV}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700">
-                  <ArrowDownTrayIcon className="h-4 w-4" /> CSV
-                </button>
-                <button type="button" onClick={handlePrint}
-                  title="En el diálogo de impresión, desactive 'Encabezados y pies de página' para ocultar la URL del navegador"
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                  <PrinterIcon className="h-4 w-4" /> Imprimir / PDF
-                </button>
+                <PermissionGuard permission={InformesPermission.USUARIOS_EXPORTAR}>
+                  <button type="button" onClick={handleCSV}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700">
+                    <ArrowDownTrayIcon className="h-4 w-4" /> CSV
+                  </button>
+                </PermissionGuard>
+                <PermissionGuard permission={InformesPermission.USUARIOS_IMPRIMIR}>
+                  <button type="button" onClick={handlePrint}
+                    title="En el diálogo de impresión, desactive 'Encabezados y pies de página' para ocultar la URL del navegador"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    <PrinterIcon className="h-4 w-4" /> Imprimir / PDF
+                  </button>
+                </PermissionGuard>
               </div>
             </div>
 

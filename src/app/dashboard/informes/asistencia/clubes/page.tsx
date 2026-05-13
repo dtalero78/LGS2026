@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { exportToExcel } from '@/lib/export-excel'
+import { PermissionGuard } from '@/components/permissions/PermissionGuard'
+import { InformesPermission } from '@/types/permissions'
 
 // ── Types ──────────────────────────────────────────────────────────────
 interface Stats { total: number; asistieron: number; noAsistieron: number; cancelaron: number }
@@ -258,10 +260,12 @@ export default function InformeClubesPage() {
                   className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
                   Limpiar filtros
                 </button>
-                <button type="button" onClick={handleCSVTraining} disabled={trLoading}
-                  className="px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
-                  <DownloadIcon /> Descargar CSV
-                </button>
+                <PermissionGuard permission={InformesPermission.ASISTENCIA_EXPORTAR}>
+                  <button type="button" onClick={handleCSVTraining} disabled={trLoading}
+                    className="px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
+                    <DownloadIcon /> Descargar CSV
+                  </button>
+                </PermissionGuard>
               </div>
             </div>
           </div>
@@ -327,10 +331,12 @@ export default function InformeClubesPage() {
                   className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
                   Limpiar filtros
                 </button>
-                <button type="button" onClick={handleCSVClubes} disabled={clLoading}
-                  className="px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
-                  <DownloadIcon /> Descargar CSV
-                </button>
+                <PermissionGuard permission={InformesPermission.ASISTENCIA_EXPORTAR}>
+                  <button type="button" onClick={handleCSVClubes} disabled={clLoading}
+                    className="px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
+                    <DownloadIcon /> Descargar CSV
+                  </button>
+                </PermissionGuard>
               </div>
             </div>
           </div>
