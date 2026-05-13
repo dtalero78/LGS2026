@@ -13,7 +13,7 @@ require('dotenv').config({ path: '.env.local' });
 
 const NIVELES = [
   { code: 'MASTER',  nombreNivel: 'MASTER',  step: 'Step 46', description: 'Nivel posterior a F3 sin pruebas internacionales' },
-  { code: 'IELS',    nombreNivel: 'IELS',    step: 'Step 47', description: 'Preparacion IELTS' },
+  { code: 'IELTS',   nombreNivel: 'IELTS',   step: 'Step 47', description: 'Preparacion IELTS' },
   { code: 'B2FIRST', nombreNivel: 'B2FIRST', step: 'Step 48', description: 'Preparacion Cambridge B2 First' },
   { code: 'TOEFL',   nombreNivel: 'TOEFL',   step: 'Step 49', description: 'Preparacion TOEFL' },
 ];
@@ -41,7 +41,7 @@ const NIVELES = [
     console.log('---');
     const v = await pool.query(
       `SELECT "code", "step", "nombreNivel" FROM "NIVELES"
-       WHERE "code" IN ('MASTER','IELS','B2FIRST','TOEFL') ORDER BY "step"`
+       WHERE "code" IN ('MASTER','IELTS','B2FIRST','TOEFL') ORDER BY "step"`
     );
     console.log('Verificacion final (' + v.rows.length + ' filas):');
     v.rows.forEach(r => console.log('  ' + r.code + ' - ' + r.step + ' (nombreNivel: ' + r.nombreNivel + ')'));

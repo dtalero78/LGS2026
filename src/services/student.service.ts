@@ -465,7 +465,7 @@ export async function changeStep(
 // nivel final (DONE) y los 4 niveles especiales post-F3 (MASTER, IELS,
 // B2FIRST, TOEFL) cuyas condiciones de promoción son específicas y no
 // deben sobrescribirse con un reinicio.
-const NIVELES_NO_PERMITIDOS = ['ESS', 'WELCOME', 'DONE', 'MASTER', 'IELS', 'B2FIRST', 'TOEFL'];
+const NIVELES_NO_PERMITIDOS = ['ESS', 'WELCOME', 'DONE', 'MASTER', 'IELTS', 'B2FIRST', 'TOEFL'];
 
 export async function getInicializarNivelInfo(academicaId: string) {
   const academic = await AcademicaRepository.findByAnyIdOrThrow(academicaId);

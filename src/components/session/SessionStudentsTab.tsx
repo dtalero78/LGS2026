@@ -184,7 +184,7 @@ export default function SessionStudentsTab({
           nivel: evento?.tituloONivel,
           step: evento?.nombreEvento ? extractStepNumber(evento.nombreEvento) : evento?.nombreEvento,
           // pruebainter is only sent when the event is Step 45 (Jump)
-          // Empty string → null (default → MASTER); 'IELS'/'B2F'/'TOEF' → that nivel
+          // Empty string → null (default → MASTER); 'IELTS'/'B2F'/'TOEF' → that nivel
           pruebainter: isStep45() ? (pruebainter || null) : undefined,
         })
       })
@@ -353,7 +353,7 @@ export default function SessionStudentsTab({
                   <div className="space-y-3">
                     {[
                       { value: '',     label: 'Ninguna (→ MASTER · Step 46)' },
-                      { value: 'IELS', label: 'IELS (→ IELS · Step 47)' },
+                      { value: 'IELTS', label: 'IELTS (→ IELTS · Step 47)' },
                       { value: 'B2F',  label: 'B2 First (→ B2FIRST · Step 48)' },
                       { value: 'TOEF', label: 'TOEFL (→ TOEFL · Step 49)' },
                     ].map(opt => (

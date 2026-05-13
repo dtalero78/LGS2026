@@ -8,7 +8,7 @@
  * Students reach these niveles after passing F3 Step 45 (Jump) based on
  * their selection in ACADEMICA.pruebainter:
  *   - NULL  → MASTER  (Step 46)
- *   - 'IELS' → IELS    (Step 47)
+ *   - 'IELTS' → IELS    (Step 47)
  *   - 'B2F'  → B2FIRST (Step 48)
  *   - 'TOEF' → TOEFL   (Step 49)
  *
@@ -25,7 +25,7 @@
 import 'server-only';
 import { query, queryOne } from '@/lib/postgres';
 
-export const SPECIAL_NIVELES = ['MASTER', 'IELS', 'B2FIRST', 'TOEFL'] as const;
+export const SPECIAL_NIVELES = ['MASTER', 'IELTS', 'B2FIRST', 'TOEFL'] as const;
 export type SpecialNivel = (typeof SPECIAL_NIVELES)[number];
 
 // Days after promotion to IELS/B2FIRST/TOEFL before auto-promotion to DONE
@@ -44,7 +44,7 @@ export function resolvePruebaInterTarget(pruebainter: string | null | undefined)
   step: string;
 } {
   switch ((pruebainter || '').toUpperCase()) {
-    case 'IELS': return { nivel: 'IELS',    step: 'Step 47' };
+    case 'IELTS': return { nivel: 'IELTS',    step: 'Step 47' };
     case 'B2F':  return { nivel: 'B2FIRST', step: 'Step 48' };
     case 'TOEF': return { nivel: 'TOEFL',   step: 'Step 49' };
     default:     return { nivel: 'MASTER',  step: 'Step 46' };
@@ -167,7 +167,7 @@ export async function autoAdvanceSpecialNivel(
 ): Promise<AdvanceResult | null> {
   switch (student.nivel as SpecialNivel) {
     case 'MASTER':  return promoteFromMaster(student, booking);
-    case 'IELS':    return promoteFromIels(student, booking);
+    case 'IELTS':    return promoteFromIels(student, booking);
     case 'B2FIRST': return promoteFromB2First(student, booking);
     case 'TOEFL':   return promoteFromToefl(student, booking);
     default:        return null;
@@ -190,7 +190,7 @@ async function promoteFromMaster(student: any, _booking: any): Promise<AdvanceRe
  * IELS → DONE: 100 days since fechaPromocionEspecial OR finalContrato < today.
  */
 async function promoteFromIels(student: any, _booking: any): Promise<AdvanceResult | null> {
-  return promoteFromIelsLike(student, 'IELS');
+  return promoteFromIelsLike(student, 'IELTS');
 }
 
 async function promoteFromB2First(student: any, _booking: any): Promise<AdvanceResult | null> {

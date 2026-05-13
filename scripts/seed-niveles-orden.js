@@ -33,7 +33,7 @@ const NIVELES_ORDEN = [
   ['F2',      10],
   ['F3',      11],
   ['MASTER',  12],
-  ['IELS',    13],
+  ['IELTS',   13],
   ['B2FIRST', 14],
   ['TOEFL',   15],
   ['DONE',    16],
