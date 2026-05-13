@@ -60,6 +60,7 @@ interface ClassRecord {
 }
 
 interface StudentWithClass extends Student {
+  pruebainter?: string | null
   classRecord?: ClassRecord
 }
 
@@ -132,6 +133,7 @@ export default function SesionPage() {
             edad: booking.edad,
             pais: booking.pais,
             hobbies: booking.hobbies || '',
+            pruebainter: booking.studentPruebaInter ?? null,
             classRecord: {
               _id: booking._id,
               idEstudiante: booking.idEstudiante,

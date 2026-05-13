@@ -274,6 +274,15 @@ export async function autoAdvanceStep(bookingId: string) {
 
   if (extractStepNum(bookingStep) === null) return null;
 
+  // ─── SPECIAL NIVELES (MASTER, IELS, B2FIRST, TOEFL) ─────────────────────
+  // Dispatch to dedicated service when student is in one of these end-of-program
+  // niveles. Each promote* function has its own conditions; default returns null
+  // so students stay in place until business rules are defined.
+  const { isSpecialNivel, autoAdvanceSpecialNivel } = await import('@/services/special-nivel.service');
+  if (isSpecialNivel(student.nivel)) {
+    return autoAdvanceSpecialNivel(student, booking);
+  }
+
   // Only advance if the booking is for the student's CURRENT step
   if (student.nivel !== bookingNivel || student.step !== bookingStep) return null;
 
@@ -291,6 +300,20 @@ export async function autoAdvanceStep(bookingId: string) {
     overrideStudentId
   );
   if (!isComplete) return null;
+
+  // ─── F3 Step 45 (Jump) approved → route to MASTER/IELS/B2FIRST/TOEFL ───
+  // After passing F3 Jump, student is promoted to one of 4 special niveles
+  // based on ACADEMICA.pruebainter selection at evaluation time.
+  if (extractStepNum(bookingStep) === 45 && student.nivel === 'F3') {
+    const { resolvePruebaInterTarget } = await import('@/services/special-nivel.service');
+    const target = resolvePruebaInterTarget((student as any).pruebainter);
+    await changeStep(studentId, target.step);
+    return {
+      advanced: true,
+      from: { nivel: 'F3', step: 'Step 45' },
+      to:   { nivel: target.nivel, step: target.step },
+    };
+  }
 
   // Use getEffectiveStepNumber to find the real target step.
   // Handles cascading: if Steps 1-4 are all complete, advances directly to Step 5 (Jump).

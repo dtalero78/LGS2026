@@ -74,7 +74,8 @@ class BookingRepositoryClass extends BaseRepository {
               COALESCE(a."email", p."email") as "studentEmail",
               COALESCE(p."plataforma", a."plataforma") as "studentPlataforma",
               p."estadoInactivo" as "studentInactivo", p."vigencia" as "studentVigencia",
-              p."finalContrato" as "studentFinalContrato"
+              p."finalContrato" as "studentFinalContrato",
+              a."pruebainter" as "studentPruebaInter"
        FROM "ACADEMICA_BOOKINGS" b
        LEFT JOIN "ACADEMICA" a ON b."idEstudiante" = a."_id"
        LEFT JOIN "PEOPLE" p ON a."numeroId" = p."numeroId"

@@ -49,6 +49,7 @@ interface StudentWithClass {
   foto?: string
   nivel?: string
   step?: string
+  pruebainter?: string | null
   classRecord?: ClassRecord
 }
 
@@ -76,6 +77,8 @@ export default function SessionStudentsTab({
   const [advisorAnotaciones, setAdvisorAnotaciones] = useState('')
   const [actividadPropuesta, setActividadPropuesta] = useState('')
   const [isGeneratingActivity, setIsGeneratingActivity] = useState(false)
+  // Only used for F3 Step 45 (Jump): routes promotion to MASTER/IELS/B2FIRST/TOEFL
+  const [pruebainter, setPruebainter] = useState<string>('')
 
   useEffect(() => {
     if (selectedStudent?.classRecord) {
@@ -86,6 +89,7 @@ export default function SessionStudentsTab({
       setComentarios(selectedStudent.classRecord.comentarios || '')
       setAdvisorAnotaciones(selectedStudent.classRecord.advisorAnotaciones || '')
       setActividadPropuesta(selectedStudent.classRecord.actividadPropuesta || '')
+      setPruebainter(selectedStudent.pruebainter || '')
     } else {
       resetForm()
     }
@@ -99,6 +103,7 @@ export default function SessionStudentsTab({
     setComentarios('')
     setAdvisorAnotaciones('')
     setActividadPropuesta('')
+    setPruebainter('')
   }
 
   const isJumpStep = () => {
@@ -108,6 +113,13 @@ export default function SessionStudentsTab({
     const stepNumber = parseInt(stepMatch[1])
     const JUMP_STEPS = [5, 10, 15, 20, 25, 30, 35, 40, 45]
     return JUMP_STEPS.includes(stepNumber)
+  }
+
+  // F3 Step 45 (Jump) → show "Pruebas Internacionales" box for routing promotion
+  const isStep45 = () => {
+    if (!evento?.nombreEvento) return false
+    const stepMatch = evento.nombreEvento.match(/Step\s+(\d+)/i)
+    return !!stepMatch && parseInt(stepMatch[1]) === 45
   }
 
   const handleGenerateActivity = async () => {
@@ -170,7 +182,10 @@ export default function SessionStudentsTab({
           advisorAnotaciones,
           actividadPropuesta,
           nivel: evento?.tituloONivel,
-          step: evento?.nombreEvento ? extractStepNumber(evento.nombreEvento) : evento?.nombreEvento
+          step: evento?.nombreEvento ? extractStepNumber(evento.nombreEvento) : evento?.nombreEvento,
+          // pruebainter is only sent when the event is Step 45 (Jump)
+          // Empty string → null (default → MASTER); 'IELS'/'B2F'/'TOEF' → that nivel
+          pruebainter: isStep45() ? (pruebainter || null) : undefined,
         })
       })
 
@@ -291,40 +306,72 @@ export default function SessionStudentsTab({
               </div>
             </div>
 
-            {/* Asistencia y Participación */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Asistencia y Participación</h3>
-              <div className="space-y-4">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={asistencia}
-                    onChange={(e) => setAsistencia(e.target.checked)}
-                    className="w-5 h-5 text-primary-600 rounded focus:ring-primary-500"
-                  />
-                  <span className="text-gray-700">Asistió a la clase</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={participacion}
-                    onChange={(e) => setParticipacion(e.target.checked)}
-                    className="w-5 h-5 text-primary-600 rounded focus:ring-primary-500"
-                  />
-                  <span className="text-gray-700">Participó activamente</span>
-                </label>
-                {isJumpStep() && (
+            {/* Asistencia y Participación + Pruebas Internacionales (Step 45) */}
+            <div className={isStep45() ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''}>
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h3 className="font-semibold text-gray-900 mb-4">Asistencia y Participación</h3>
+                <div className="space-y-4">
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={noAprobo}
-                      onChange={(e) => setNoAprobo(e.target.checked)}
-                      className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
+                      checked={asistencia}
+                      onChange={(e) => setAsistencia(e.target.checked)}
+                      className="w-5 h-5 text-primary-600 rounded focus:ring-primary-500"
                     />
-                    <span className="text-red-700 font-medium">No aprobó (Jump Step)</span>
+                    <span className="text-gray-700">Asistió a la clase</span>
                   </label>
-                )}
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={participacion}
+                      onChange={(e) => setParticipacion(e.target.checked)}
+                      className="w-5 h-5 text-primary-600 rounded focus:ring-primary-500"
+                    />
+                    <span className="text-gray-700">Participó activamente</span>
+                  </label>
+                  {isJumpStep() && (
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={noAprobo}
+                        onChange={(e) => setNoAprobo(e.target.checked)}
+                        className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
+                      />
+                      <span className="text-red-700 font-medium">No aprobó (Jump Step)</span>
+                    </label>
+                  )}
+                </div>
               </div>
+
+              {/* Pruebas Internacionales — solo en Step 45 (F3 Jump) */}
+              {isStep45() && (
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                  <h3 className="font-semibold text-gray-900 mb-1">Pruebas Internacionales</h3>
+                  <p className="text-xs text-gray-500 mb-4">
+                    Define la promoción al aprobar el Jump. Sin selección → MASTER.
+                  </p>
+                  <div className="space-y-3">
+                    {[
+                      { value: '',     label: 'Ninguna (→ MASTER · Step 46)' },
+                      { value: 'IELS', label: 'IELS (→ IELS · Step 47)' },
+                      { value: 'B2F',  label: 'B2 First (→ B2FIRST · Step 48)' },
+                      { value: 'TOEF', label: 'TOEFL (→ TOEFL · Step 49)' },
+                    ].map(opt => (
+                      <label key={opt.value || 'none'} className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="pruebainter"
+                          value={opt.value}
+                          checked={pruebainter === opt.value}
+                          onChange={(e) => setPruebainter(e.target.value)}
+                          className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                        />
+                        <span className="text-gray-700 text-sm">{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Calificación */}
