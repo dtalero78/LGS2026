@@ -9,6 +9,20 @@ import { query, queryOne, queryMany } from '@/lib/postgres';
 import { BaseRepository } from './base.repository';
 import { buildDynamicUpdate } from '@/lib/query-builder';
 
+// Ensure ACADEMICA.pruebainter column exists (idempotent, runs once per server start).
+// Required so SELECT a."pruebainter" in findByEventIdWithStudentDetails does not fail
+// before the first Step 45 evaluation is saved (which is what creates the column elsewhere).
+let pruebainterEnsured = false;
+async function ensurePruebaInterColumn() {
+  if (pruebainterEnsured) return;
+  try {
+    await query(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "pruebainter" VARCHAR(10)`, []);
+    pruebainterEnsured = true;
+  } catch (err: any) {
+    console.warn('[booking.repository] ensurePruebaInterColumn:', err.message);
+  }
+}
+
 class BookingRepositoryClass extends BaseRepository {
   constructor() {
     super('ACADEMICA_BOOKINGS');
@@ -69,6 +83,9 @@ class BookingRepositoryClass extends BaseRepository {
    * Get bookings with extended student info
    */
   async findByEventIdWithStudentDetails(eventId: string) {
+    // Ensure pruebainter column exists (created when first Step 45 is evaluated;
+    // also created here to avoid SELECT failures when loading events).
+    await ensurePruebaInterColumn();
     return queryMany(
       `SELECT DISTINCT ON (b."_id") b.*,
               COALESCE(a."email", p."email") as "studentEmail",
