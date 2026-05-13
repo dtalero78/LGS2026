@@ -419,7 +419,11 @@ export async function changeStep(
  * GET preflight for Inicializar Nivel:
  * Returns eligibility status, first step of current nivel, and booking count to delete.
  */
-const NIVELES_NO_PERMITIDOS = ['ESS', 'WELCOME', 'DONE'];
+// Reiniciar Nivel está deshabilitado para niveles de inicio (ESS/WELCOME),
+// nivel final (DONE) y los 4 niveles especiales post-F3 (MASTER, IELS,
+// B2FIRST, TOEFL) cuyas condiciones de promoción son específicas y no
+// deben sobrescribirse con un reinicio.
+const NIVELES_NO_PERMITIDOS = ['ESS', 'WELCOME', 'DONE', 'MASTER', 'IELS', 'B2FIRST', 'TOEFL'];
 
 export async function getInicializarNivelInfo(academicaId: string) {
   const academic = await AcademicaRepository.findByAnyIdOrThrow(academicaId);
