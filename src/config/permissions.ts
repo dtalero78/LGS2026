@@ -32,6 +32,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Botón para descargar el PDF del contrato del titular',
   },
   {
+    code: PersonPermission.VER_CONTRATO,
+    module: Module.PERSON,
+    section: 'Información General',
+    name: 'Botón "Ver Contrato"',
+    description: 'Botón que abre un modal con la plantilla del contrato completamente llenada (solo lectura, sin opciones de impresión/firma/envío PDF)',
+  },
+  {
     code: PersonPermission.VER_DOCUMENTACION,
     module: Module.PERSON,
     section: 'Información General',
