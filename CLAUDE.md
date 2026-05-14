@@ -1573,6 +1573,7 @@ export interface Person {
 
 | Commit | Description |
 |---|---|
+| `local` | chore: normalizar `PEOPLE.vigencia` anómala con `extensionCount = 0` a `'12'`. `scripts/normalize-vigencia-anomalous-with-zero-extensions.js` corrigió 17 filas con valores como `'3'`, `'4'`, `'193'`, `'312'`, `'350'` que tenían `extensionCount=0` (sin extensión real registrada) — errores de captura sin justificación de negocio. Complementa `normalize-vigencia-without-extensions.js` (que cubrió `extensionCount IS NULL`). Idempotente |
 | `local` | chore: normalizar `PEOPLE.vigencia` con texto/espacios a `'12'`. `scripts/normalize-vigencia-text-to-12.js` reemplazó 97 filas con valores como `'12 meses'`, `'12 '`, `'12 MESES'`, `'13 meses'` (residuos de captura Wix) por la forma canónica `'12'`. Filtra cualquier valor que no sea `^[0-9]+$`. Idempotente |
 | `local` | chore: corregir años desfasados en `PEOPLE.finalContrato`. `scripts/fix-finalcontrato-year-too-high.js` cambió 116 filas con año > 2027 (rango 2028–2052) a año 2026 conservando mes y día — errores de captura de la migración Wix. Idempotente |
 | `local` | chore: reemplazar `PEOPLE.vigencia` `'11'` y `'13'` por `'12'` (146 filas, todas eran '13'). `scripts/normalize-vigencia-11-13.js` — off-by-one típicos de captura. Idempotente |
