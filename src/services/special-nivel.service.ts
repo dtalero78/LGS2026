@@ -1,25 +1,28 @@
 /**
  * Special Niveles Service
  *
- * Handles auto-advance logic for special end-of-program niveles:
- * MASTER, IELS, B2FIRST, TOEFL.
+ * Handles auto-advance logic for the 4 end-of-program niveles:
+ * MASTER, IELTS, B2FIRST, TOEFL.
  *
  * Each of these niveles has a single step (46, 47, 48, 49 respectively).
  * Students reach these niveles after passing F3 Step 45 (Jump) based on
  * their selection in ACADEMICA.pruebainter:
- *   - NULL  → MASTER  (Step 46)
- *   - 'IELTS' → IELS    (Step 47)
- *   - 'B2F'  → B2FIRST (Step 48)
- *   - 'TOEF' → TOEFL   (Step 49)
+ *   - NULL    → MASTER  (Step 46)
+ *   - 'IELTS' → IELTS   (Step 47)
+ *   - 'B2F'   → B2FIRST (Step 48)
+ *   - 'TOEF'  → TOEFL   (Step 49)
  *
- * Promotion to DONE Step 50:
- *   - MASTER  → when finalContrato < today (or manual admin promotion)
- *   - IELS    → when 100 days passed since promotion OR finalContrato < today
- *   - B2FIRST → same as IELS
- *   - TOEFL   → same as IELS
+ * Promotion to DONE Step 50 (ALL 4 niveles, same rule):
+ *   ONLY when finalContrato < today (the gracia +1 day rule from
+ *   contract-expiry.ts applies — see CONTRACT_EXPIRED helpers).
  *
- * When promoted to Step 50, the student is blocked: USUARIOS_ROLES.activo=false
- * + estadoInactivo=true in ACADEMICA + PEOPLE.
+ * That means a student who passes the F3 Jump stays in their assigned
+ * special nivel until the contract expires — no 100-day timer, no other
+ * automatic advancement. Manual admin promotion to Step 50 via changeStep()
+ * is the only other path (handled separately in student.service.ts).
+ *
+ * When promoted to Step 50, the student is blocked:
+ * USUARIOS_ROLES.activo=false + estadoInactivo=true in ACADEMICA + PEOPLE.
  */
 
 import 'server-only';
@@ -28,9 +31,6 @@ import { isContractExpired } from '@/lib/contract-expiry';
 
 export const SPECIAL_NIVELES = ['MASTER', 'IELTS', 'B2FIRST', 'TOEFL'] as const;
 export type SpecialNivel = (typeof SPECIAL_NIVELES)[number];
-
-// Days after promotion to IELS/B2FIRST/TOEFL before auto-promotion to DONE
-const IELS_PROMOTION_DAYS = 100;
 
 export function isSpecialNivel(nivel: string | null | undefined): nivel is SpecialNivel {
   return !!nivel && (SPECIAL_NIVELES as readonly string[]).includes(nivel);
@@ -61,14 +61,6 @@ export interface AdvanceResult {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-function daysBetween(from: Date | string, to: Date = new Date()): number {
-  const d1 = new Date(from);
-  const d2 = to;
-  d1.setHours(0, 0, 0, 0);
-  d2.setHours(0, 0, 0, 0);
-  return Math.floor((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
-}
 
 /**
  * Lookup PEOPLE.finalContrato by ACADEMICA's numeroId (where the field lives).
@@ -150,70 +142,22 @@ export async function promoteToDoneAndBlock(
 // ── Dispatcher ───────────────────────────────────────────────────────────────
 
 /**
- * Routes auto-advance to the matching promoteFromX function.
- * Returns null if no promotion conditions are met (student stays in place).
+ * Auto-advance for the 4 special niveles. Single rule: promote to DONE Step 50
+ * (with full inactivation + login block) if and only if finalContrato has
+ * expired. Otherwise the student stays in their current special nivel.
+ *
+ * The previous 100-day timer for IELTS/B2FIRST/TOEFL was removed by business
+ * decision — students keep access in the special nivel for the full duration
+ * of their contract regardless of how long ago they entered it.
  */
 export async function autoAdvanceSpecialNivel(
   student: any,
-  booking: any
+  _booking: any
 ): Promise<AdvanceResult | null> {
-  switch (student.nivel as SpecialNivel) {
-    case 'MASTER':  return promoteFromMaster(student, booking);
-    case 'IELTS':    return promoteFromIels(student, booking);
-    case 'B2FIRST': return promoteFromB2First(student, booking);
-    case 'TOEFL':   return promoteFromToefl(student, booking);
-    default:        return null;
-  }
-}
+  if (!isSpecialNivel(student.nivel)) return null;
 
-// ── Promotion functions per nivel ────────────────────────────────────────────
-
-/**
- * MASTER → DONE: only when finalContrato < today.
- * Manual admin promotion to Step 50 is handled by changeStep() in student.service.
- */
-async function promoteFromMaster(student: any, _booking: any): Promise<AdvanceResult | null> {
   const finalContrato = await getFinalContrato(student);
   if (!isContractExpired(finalContrato)) return null;
+
   return promoteToDoneAndBlock(student, `contrato vencido (${finalContrato})`);
-}
-
-/**
- * IELS → DONE: 100 days since fechaPromocionEspecial OR finalContrato < today.
- */
-async function promoteFromIels(student: any, _booking: any): Promise<AdvanceResult | null> {
-  return promoteFromIelsLike(student, 'IELTS');
-}
-
-async function promoteFromB2First(student: any, _booking: any): Promise<AdvanceResult | null> {
-  return promoteFromIelsLike(student, 'B2FIRST');
-}
-
-async function promoteFromToefl(student: any, _booking: any): Promise<AdvanceResult | null> {
-  return promoteFromIelsLike(student, 'TOEFL');
-}
-
-/**
- * Shared logic for IELS/B2FIRST/TOEFL: 100 days OR contract expired.
- */
-async function promoteFromIelsLike(student: any, nivelName: string): Promise<AdvanceResult | null> {
-  // Check 1: 100 days since promotion to special nivel
-  const fechaPromocion = (student as any).fechaPromocionEspecial;
-  if (fechaPromocion) {
-    const days = daysBetween(fechaPromocion);
-    if (days >= IELS_PROMOTION_DAYS) {
-      return promoteToDoneAndBlock(
-        student,
-        `${days} días desde promoción a ${nivelName} (límite: ${IELS_PROMOTION_DAYS})`
-      );
-    }
-  }
-
-  // Check 2: contract expired
-  const finalContrato = await getFinalContrato(student);
-  if (isContractExpired(finalContrato)) {
-    return promoteToDoneAndBlock(student, `contrato vencido (${finalContrato})`);
-  }
-
-  return null;
 }

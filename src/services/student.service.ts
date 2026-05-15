@@ -328,11 +328,12 @@ export async function autoAdvanceStep(bookingId: string) {
   );
   if (!isComplete) return null;
 
-  // ─── F3 Step 45 (Jump) approved → route to MASTER/IELS/B2FIRST/TOEFL ───
+  // ─── F3 Step 45 (Jump) approved → route to MASTER/IELTS/B2FIRST/TOEFL ───
   // After passing F3 Jump, student is promoted to one of 4 special niveles
   // based on ACADEMICA.pruebainter selection at evaluation time. We also
-  // write fechaPromocionEspecial = NOW() so IELS/B2FIRST/TOEFL can compute
-  // their 100-day auto-promotion to DONE later.
+  // write fechaPromocionEspecial = NOW() purely for audit purposes — the
+  // student stays in the special nivel until finalContrato expires (the
+  // 100-day timer was removed by business decision in May 2026).
   if (extractStepNum(bookingStep) === 45 && student.nivel === 'F3') {
     const { resolvePruebaInterTarget } = await import('@/services/special-nivel.service');
     const target = resolvePruebaInterTarget((student as any).pruebainter);
