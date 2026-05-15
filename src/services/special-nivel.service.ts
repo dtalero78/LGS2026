@@ -12,17 +12,21 @@
  *   - 'B2F'   → B2FIRST (Step 48)
  *   - 'TOEF'  → TOEFL   (Step 49)
  *
- * Promotion to DONE Step 50 (ALL 4 niveles, same rule):
- *   ONLY when finalContrato < today (the gracia +1 day rule from
- *   contract-expiry.ts applies — see CONTRACT_EXPIRED helpers).
+ * Behavior when finalContrato is expired (gracia +1 day rule, see
+ * src/lib/contract-expiry.ts):
  *
- * That means a student who passes the F3 Jump stays in their assigned
- * special nivel until the contract expires — no 100-day timer, no other
- * automatic advancement. Manual admin promotion to Step 50 via changeStep()
- * is the only other path (handled separately in student.service.ts).
+ *   - MASTER (no international test selected) →
+ *       Promote to DONE Step 50 + full block (USUARIOS_ROLES.activo=false,
+ *       estadoInactivo=true in ACADEMICA + PEOPLE).
  *
- * When promoted to Step 50, the student is blocked:
- * USUARIOS_ROLES.activo=false + estadoInactivo=true in ACADEMICA + PEOPLE.
+ *   - IELTS / B2FIRST / TOEFL (test was selected at F3 Jump) →
+ *       Stay in their current Step (47/48/49) but block: estadoInactivo=true
+ *       in ACADEMICA + PEOPLE, USUARIOS_ROLES.activo=false. The level info
+ *       is preserved so that if the contract is later extended, the student
+ *       resumes exactly where they were.
+ *
+ * When finalContrato is NOT expired, the student stays active in their
+ * special nivel indefinitely (the previous 100-day timer was removed).
  */
 
 import 'server-only';
@@ -139,16 +143,73 @@ export async function promoteToDoneAndBlock(
   };
 }
 
+/**
+ * Block a student in their CURRENT special step (do NOT move to Step 50).
+ * Mirrors promoteToDoneAndBlock's inactivation cascade but preserves the
+ * student's nivel/step so the level info (which international test they were
+ * preparing) is not lost. Used for IELTS / B2FIRST / TOEFL when their
+ * contract expires.
+ */
+export async function blockInCurrentSpecialStep(
+  student: any,
+  reason: string = 'contrato vencido — bloqueado en nivel especial'
+): Promise<AdvanceResult> {
+  const currentNivel = student.nivel ?? '';
+  const currentStep  = student.step  ?? '';
+
+  // 1. ACADEMICA: estadoInactivo only (preserve nivel/step)
+  if (student._id) {
+    await query(
+      `UPDATE "ACADEMICA"
+       SET "estadoInactivo" = true, "_updatedDate" = NOW()
+       WHERE "_id" = $1`,
+      [student._id]
+    ).catch(err => console.warn('[special-nivel] ACADEMICA block failed:', err.message));
+  }
+
+  // 2. PEOPLE: estadoInactivo + aprobacion (preserve nivel/step)
+  if (student.numeroId) {
+    await query(
+      `UPDATE "PEOPLE"
+       SET "estadoInactivo" = true, "aprobacion" = 'FINALIZADA', "_updatedDate" = NOW()
+       WHERE "_id" = (
+         SELECT "_id" FROM "PEOPLE"
+         WHERE "numeroId" = $1
+         ORDER BY CASE WHEN "tipoUsuario" IN ('BENEFICIARIO','BENEFICIARIA') THEN 0 ELSE 1 END
+         LIMIT 1
+       )`,
+      [student.numeroId]
+    ).catch(err => console.warn('[special-nivel] PEOPLE block failed:', err.message));
+  }
+
+  // 3. USUARIOS_ROLES: block login
+  if (student.email) {
+    await query(
+      `UPDATE "USUARIOS_ROLES" SET "activo" = false, "_updatedDate" = NOW()
+       WHERE LOWER("email") = LOWER($1)`,
+      [student.email]
+    ).catch(err => console.warn('[special-nivel] USUARIOS_ROLES block failed:', err.message));
+  }
+
+  console.log(`🔒 [special-nivel] ${currentNivel} ${currentStep} bloqueado (${reason})`);
+
+  return {
+    advanced:  true,
+    graduated: true,   // signals to callers that the panel should treat this as terminal
+    from: { nivel: currentNivel, step: currentStep },
+    to:   { nivel: currentNivel, step: currentStep },
+    message: `Bloqueado en ${currentNivel} ${currentStep}: ${reason}. Acceso a la plataforma bloqueado.`,
+  };
+}
+
 // ── Dispatcher ───────────────────────────────────────────────────────────────
 
 /**
- * Auto-advance for the 4 special niveles. Single rule: promote to DONE Step 50
- * (with full inactivation + login block) if and only if finalContrato has
- * expired. Otherwise the student stays in their current special nivel.
+ * Auto-advance for the 4 special niveles when finalContrato is expired:
+ *   - MASTER → promoteToDoneAndBlock (DONE Step 50)
+ *   - IELTS / B2FIRST / TOEFL → blockInCurrentSpecialStep (stays in 47/48/49)
  *
- * The previous 100-day timer for IELTS/B2FIRST/TOEFL was removed by business
- * decision — students keep access in the special nivel for the full duration
- * of their contract regardless of how long ago they entered it.
+ * When finalContrato is not expired, returns null and the student stays active.
  */
 export async function autoAdvanceSpecialNivel(
   student: any,
@@ -159,5 +220,10 @@ export async function autoAdvanceSpecialNivel(
   const finalContrato = await getFinalContrato(student);
   if (!isContractExpired(finalContrato)) return null;
 
-  return promoteToDoneAndBlock(student, `contrato vencido (${finalContrato})`);
+  if (student.nivel === 'MASTER') {
+    return promoteToDoneAndBlock(student, `contrato vencido (${finalContrato})`);
+  }
+
+  // IELTS / B2FIRST / TOEFL: keep the level info, just block.
+  return blockInCurrentSpecialStep(student, `contrato vencido (${finalContrato})`);
 }

@@ -329,13 +329,20 @@ export async function autoAdvanceStep(bookingId: string) {
   if (!isComplete) return null;
 
   // ─── F3 Step 45 (Jump) approved → route to MASTER/IELTS/B2FIRST/TOEFL ───
-  // After passing F3 Jump, student is promoted to one of 4 special niveles
-  // based on ACADEMICA.pruebainter selection at evaluation time. We also
-  // write fechaPromocionEspecial = NOW() purely for audit purposes — the
-  // student stays in the special nivel until finalContrato expires (the
-  // 100-day timer was removed by business decision in May 2026).
+  // After passing F3 Jump, the student is promoted to one of 4 special niveles
+  // based on ACADEMICA.pruebainter selection. fechaPromocionEspecial is stored
+  // for audit only (the 100-day timer was removed in May 2026).
+  //
+  // If finalContrato is ALREADY expired at this point (student approved the
+  // Jump after contract expiry), the rule from special-nivel.service applies
+  // post-promotion:
+  //   - MASTER (no test selected) → DONE Step 50 + full block
+  //   - IELTS/B2FIRST/TOEFL → stay in 47/48/49 + block (preserves test info)
   if (extractStepNum(bookingStep) === 45 && student.nivel === 'F3') {
-    const { resolvePruebaInterTarget } = await import('@/services/special-nivel.service');
+    const {
+      resolvePruebaInterTarget,
+      autoAdvanceSpecialNivel,
+    } = await import('@/services/special-nivel.service');
     const target = resolvePruebaInterTarget((student as any).pruebainter);
     await ensureFechaPromocionEspecial();
     if (student._id) {
@@ -347,6 +354,28 @@ export async function autoAdvanceStep(bookingId: string) {
       ).catch(err => console.warn('[autoAdvanceStep] fechaPromocionEspecial write failed:', err.message));
     }
     await changeStep(studentId, target.step);
+
+    // Post-promotion: if the contract is already expired, apply the
+    // special-nivel rule immediately so the student is left in the right
+    // final state (blocked, with or without a Step 50 jump).
+    const studentForCheck = {
+      _id:        student._id,
+      numeroId:   student.numeroId,
+      email:      (student as any).email,
+      nivel:      target.nivel,
+      step:       target.step,
+      finalContrato: (student as any).finalContrato,
+    };
+    const blockResult = await autoAdvanceSpecialNivel(studentForCheck, null);
+    if (blockResult?.graduated) {
+      return {
+        advanced: true,
+        from: { nivel: 'F3', step: 'Step 45' },
+        to:   blockResult.to ?? { nivel: target.nivel, step: target.step },
+        message: blockResult.message,
+      };
+    }
+
     return {
       advanced: true,
       from: { nivel: 'F3', step: 'Step 45' },
