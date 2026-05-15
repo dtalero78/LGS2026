@@ -96,10 +96,10 @@ async function PersonContent({ personId }: { personId: string }) {
                 </div>
                 <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-gray-500">
                   {personData.person.fechaContrato && (
-                    <span>Inicio Contrato: {new Date(personData.person.fechaContrato).toLocaleDateString('es-ES')}</span>
+                    <span>Inicio Contrato: {new Date(personData.person.fechaContrato).toLocaleDateString('es-ES', { timeZone: 'UTC' })}</span>
                   )}
                   {personData.person.finalContrato && (
-                    <span>Final Contrato: {new Date(personData.person.finalContrato).toLocaleDateString('es-ES')}</span>
+                    <span>Final Contrato: {new Date(personData.person.finalContrato).toLocaleDateString('es-ES', { timeZone: 'UTC' })}</span>
                   )}
                   {personData.person.vigencia && (
                     <span>Vigencia: {personData.person.vigencia}</span>

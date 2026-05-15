@@ -23,6 +23,7 @@ import {
 
 import StudentHeader from '@/components/panel-estudiante/StudentHeader'
 import MyEventsSection from '@/components/panel-estudiante/MyEventsSection'
+import { formatDate } from '@/lib/utils'
 import AttendanceStats from '@/components/panel-estudiante/AttendanceStats'
 import BookingFlow from '@/components/panel-estudiante/BookingFlow'
 import ProgressReport from '@/components/panel-estudiante/ProgressReport'
@@ -504,7 +505,7 @@ function PanelEstudianteContent() {
                   { label: 'Número de ID',       value: profile?.numeroId },
                   { label: 'Email',               value: profile?.email },
                   { label: 'Celular',             value: profile?.celular },
-                  { label: 'Fecha de nacimiento', value: profile?.fechaNacimiento ? new Date(profile.fechaNacimiento).toLocaleDateString('es', { day: '2-digit', month: 'long', year: 'numeric' }) : null },
+                  { label: 'Fecha de nacimiento', value: profile?.fechaNacimiento ? formatDate(profile.fechaNacimiento) : null },
                   { label: 'Domicilio',           value: profile?.domicilio },
                   { label: 'Ciudad',              value: profile?.ciudad },
                   { label: 'Plataforma',          value: profile?.plataforma },

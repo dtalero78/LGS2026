@@ -269,7 +269,7 @@ export default function StudentContract({ student, contratoFinalizado = false }:
               <p className="text-xs text-gray-500 font-medium mb-1">Vigencia actual</p>
               <p className="font-semibold text-gray-900 text-xs leading-snug">
                 {student.finalContrato
-                  ? new Date(student.finalContrato).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+                  ? new Date(student.finalContrato).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })
                   : '—'}
               </p>
             </div>
@@ -495,7 +495,7 @@ export default function StudentContract({ student, contratoFinalizado = false }:
                 ? 'text-red-600' : 'text-gray-900'
             }`}>
               {student.finalContrato
-                ? new Date(student.finalContrato).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
+                ? new Date(student.finalContrato).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })
                 : '—'}
             </p>
           </div>
@@ -519,7 +519,7 @@ export default function StudentContract({ student, contratoFinalizado = false }:
               Vigencia actual:{' '}
               <strong>
                 {student.finalContrato
-                  ? new Date(student.finalContrato).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+                  ? new Date(student.finalContrato).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' })
                   : 'No disponible'}
               </strong>
             </div>
