@@ -43,16 +43,17 @@ export function isSpecialNivel(nivel: string | null | undefined): nivel is Speci
 /**
  * Map pruebainter value to target nivel/step.
  * Used when promoting from F3 Step 45 (Jump approved).
+ * Canonical values: IELTS / B2FIRST / TOEFL (full names, May 2026).
  */
 export function resolvePruebaInterTarget(pruebainter: string | null | undefined): {
   nivel: SpecialNivel;
   step: string;
 } {
   switch ((pruebainter || '').toUpperCase()) {
-    case 'IELTS': return { nivel: 'IELTS',    step: 'Step 47' };
-    case 'B2F':  return { nivel: 'B2FIRST', step: 'Step 48' };
-    case 'TOEF': return { nivel: 'TOEFL',   step: 'Step 49' };
-    default:     return { nivel: 'MASTER',  step: 'Step 46' };
+    case 'IELTS':   return { nivel: 'IELTS',   step: 'Step 47' };
+    case 'B2FIRST': return { nivel: 'B2FIRST', step: 'Step 48' };
+    case 'TOEFL':   return { nivel: 'TOEFL',   step: 'Step 49' };
+    default:        return { nivel: 'MASTER',  step: 'Step 46' };
   }
 }
 

@@ -10,7 +10,7 @@ import { ValidationError } from '@/lib/errors';
  * considered "preparing test X" when `pruebainter = X` OR `step = STEP_OF_X`.
  *
  * Required query param:
- *   prueba — 'IELTS' | 'B2F' | 'TOEF'
+ *   prueba — 'IELTS' | 'B2FIRST' | 'TOEFL'
  *
  * Optional filters:
  *   startDate / endDate — bounds on fechaPromocionEspecial (YYYY-MM-DD, inclusive)
@@ -19,9 +19,9 @@ import { ValidationError } from '@/lib/errors';
  */
 
 const PRUEBA_TO_STEP: Record<string, string> = {
-  IELTS: 'Step 47',
-  B2F:   'Step 48',
-  TOEF:  'Step 49',
+  IELTS:   'Step 47',
+  B2FIRST: 'Step 48',
+  TOEFL:   'Step 49',
 };
 
 interface ExamInternRow {

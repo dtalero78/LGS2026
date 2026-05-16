@@ -352,10 +352,10 @@ export default function SessionStudentsTab({
                   </p>
                   <div className="space-y-3">
                     {[
-                      { value: '',     label: 'Ninguna (→ MASTER · Step 46)' },
-                      { value: 'IELTS', label: 'IELTS (→ IELTS · Step 47)' },
-                      { value: 'B2F',  label: 'B2 First (→ B2FIRST · Step 48)' },
-                      { value: 'TOEF', label: 'TOEFL (→ TOEFL · Step 49)' },
+                      { value: '',        label: 'Ninguna (→ MASTER · Step 46)' },
+                      { value: 'IELTS',   label: 'IELTS (→ IELTS · Step 47)' },
+                      { value: 'B2FIRST', label: 'B2 First (→ B2FIRST · Step 48)' },
+                      { value: 'TOEFL',   label: 'TOEFL (→ TOEFL · Step 49)' },
                     ].map(opt => (
                       <label key={opt.value || 'none'} className="flex items-center gap-3 cursor-pointer">
                         <input

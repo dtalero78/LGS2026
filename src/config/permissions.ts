@@ -626,6 +626,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     name: 'Botón "Exportar CSV"',
     description: 'Descargar listado IELTS como archivo CSV',
   },
+  {
+    code: ServicioPermission.EXAM_INTERN_IELTS_APLICAR_CONFIRMACION,
+    module: Module.SERVICIO,
+    section: 'Exam. Intern. > IELTS',
+    name: 'Botón "Aplicar Confirmación"',
+    description: 'Columna CONFIRMADO + botón rojo que extiende 100 días desde fecha base a los marcados y bloquea (DONE Step 50) a los no marcados. Acción irreversible.',
+  },
 
   // -- Página: Exam. Intern. > B2 First (/dashboard/servicio/exam-intern/b2first) --
   {
@@ -642,6 +649,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     name: 'Botón "Exportar CSV"',
     description: 'Descargar listado B2 First como archivo CSV',
   },
+  {
+    code: ServicioPermission.EXAM_INTERN_B2F_APLICAR_CONFIRMACION,
+    module: Module.SERVICIO,
+    section: 'Exam. Intern. > B2 First',
+    name: 'Botón "Aplicar Confirmación"',
+    description: 'Columna CONFIRMADO + botón rojo que extiende 100 días desde fecha base a los marcados y bloquea (DONE Step 50) a los no marcados. Acción irreversible.',
+  },
 
   // -- Página: Exam. Intern. > TOEFL (/dashboard/servicio/exam-intern/toefl) --
   {
@@ -657,6 +671,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     section: 'Exam. Intern. > TOEFL',
     name: 'Botón "Exportar CSV"',
     description: 'Descargar listado TOEFL como archivo CSV',
+  },
+  {
+    code: ServicioPermission.EXAM_INTERN_TOEFL_APLICAR_CONFIRMACION,
+    module: Module.SERVICIO,
+    section: 'Exam. Intern. > TOEFL',
+    name: 'Botón "Aplicar Confirmación"',
+    description: 'Columna CONFIRMADO + botón rojo que extiende 100 días desde fecha base a los marcados y bloquea (DONE Step 50) a los no marcados. Acción irreversible.',
   },
 
   // ========== COMERCIAL MODULE ==========
