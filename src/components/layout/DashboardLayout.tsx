@@ -49,6 +49,13 @@ const getNavigation = (userEmail: string) => [
       { name: 'Welcome Session', href: '/dashboard/servicio/welcome-session' },
       { name: 'Lista de Sesiones', href: '/dashboard/servicio/lista-sesiones' },
       { name: 'Usuarios sin perfil creado', href: '/dashboard/servicio/sin-registro' },
+      {
+        name: 'Exam. Intern.', isSubmenu: true, children: [
+          { name: 'IELTS',    href: '/dashboard/servicio/exam-intern/ielts',    newTab: true },
+          { name: 'B2 First', href: '/dashboard/servicio/exam-intern/b2first', newTab: true },
+          { name: 'TOEFL',    href: '/dashboard/servicio/exam-intern/toefl',    newTab: true },
+        ],
+      },
     ],
   },
   {
@@ -240,6 +247,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       ServicioPermission.USUARIOS_ACTUALIZAR,
       ServicioPermission.USUARIOS_EXPORTAR_CSV,
     ],
+    '/dashboard/servicio/exam-intern/ielts':   [ServicioPermission.EXAM_INTERN_IELTS_VER],
+    '/dashboard/servicio/exam-intern/b2first': [ServicioPermission.EXAM_INTERN_B2F_VER],
+    '/dashboard/servicio/exam-intern/toefl':   [ServicioPermission.EXAM_INTERN_TOEFL_VER],
 
     // Comercial
     '/dashboard/comercial/crear-contrato': [

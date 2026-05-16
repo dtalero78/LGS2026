@@ -611,6 +611,54 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Descargar usuarios sin registro como archivo Excel/CSV',
   },
 
+  // -- Página: Exam. Intern. > IELTS (/dashboard/servicio/exam-intern/ielts) --
+  {
+    code: ServicioPermission.EXAM_INTERN_IELTS_VER,
+    module: Module.SERVICIO,
+    section: 'Exam. Intern. > IELTS',
+    name: 'Página "IELTS"',
+    description: 'Acceso al listado de estudiantes preparando IELTS (pruebainter=IELTS o step=Step 47)',
+  },
+  {
+    code: ServicioPermission.EXAM_INTERN_IELTS_EXPORTAR,
+    module: Module.SERVICIO,
+    section: 'Exam. Intern. > IELTS',
+    name: 'Botón "Exportar CSV"',
+    description: 'Descargar listado IELTS como archivo CSV',
+  },
+
+  // -- Página: Exam. Intern. > B2 First (/dashboard/servicio/exam-intern/b2first) --
+  {
+    code: ServicioPermission.EXAM_INTERN_B2F_VER,
+    module: Module.SERVICIO,
+    section: 'Exam. Intern. > B2 First',
+    name: 'Página "B2 First"',
+    description: 'Acceso al listado de estudiantes preparando B2 First (pruebainter=B2F o step=Step 48)',
+  },
+  {
+    code: ServicioPermission.EXAM_INTERN_B2F_EXPORTAR,
+    module: Module.SERVICIO,
+    section: 'Exam. Intern. > B2 First',
+    name: 'Botón "Exportar CSV"',
+    description: 'Descargar listado B2 First como archivo CSV',
+  },
+
+  // -- Página: Exam. Intern. > TOEFL (/dashboard/servicio/exam-intern/toefl) --
+  {
+    code: ServicioPermission.EXAM_INTERN_TOEFL_VER,
+    module: Module.SERVICIO,
+    section: 'Exam. Intern. > TOEFL',
+    name: 'Página "TOEFL"',
+    description: 'Acceso al listado de estudiantes preparando TOEFL (pruebainter=TOEF o step=Step 49)',
+  },
+  {
+    code: ServicioPermission.EXAM_INTERN_TOEFL_EXPORTAR,
+    module: Module.SERVICIO,
+    section: 'Exam. Intern. > TOEFL',
+    name: 'Botón "Exportar CSV"',
+    description: 'Descargar listado TOEFL como archivo CSV',
+  },
+
   // ========== COMERCIAL MODULE ==========
   // -- Página: Contrato Detalle (/dashboard/comercial/contrato/[id]) --
   {
