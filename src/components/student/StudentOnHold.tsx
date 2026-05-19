@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { OnHoldHistoryEntry } from '@/types'
 import { api, ApiError } from '@/hooks/use-api'
+import { usePermissions } from '@/hooks/usePermissions'
+import { StudentPermission } from '@/types/permissions'
 
 interface StudentOnHoldProps {
   studentId: string
@@ -25,6 +27,10 @@ export default function StudentOnHold({
   onHoldCount = 0,
   onHoldHistory = []
 }: StudentOnHoldProps) {
+  const { hasPermission, isRole, isLoading: permLoading } = usePermissions()
+  const hasFullAccess = isRole('SUPER_ADMIN') || isRole('ADMIN')
+  const canOnHold = hasFullAccess || hasPermission(StudentPermission.ACTIVAR_HOLD)
+
   const [showModal, setShowModal] = useState(false)
   const [showOnHoldHistory, setShowOnHoldHistory] = useState(false)
   // A student is truly on hold only if estadoInactivo AND has active OnHold dates
@@ -186,10 +192,10 @@ export default function StudentOnHold({
 
           <button
             onClick={handleToggleOnHold}
-            disabled={isTogglingOnHold}
+            disabled={isTogglingOnHold || !canOnHold || permLoading}
             className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2 ${
-              isTogglingOnHold
-                ? 'bg-gray-400 cursor-not-allowed text-white'
+              isTogglingOnHold || !canOnHold || permLoading
+                ? 'bg-gray-400 cursor-not-allowed text-white opacity-60'
                 : isOnHold
                   ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700'
                   : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700'
@@ -198,6 +204,11 @@ export default function StudentOnHold({
             <span className="text-xl">{isOnHold ? '▶️' : '⏸️'}</span>
             {isOnHold ? 'Reactivar Estudiante' : 'Pausar Estudiante (OnHold)'}
           </button>
+          {!permLoading && !canOnHold && (
+            <p className="text-xs text-gray-400 text-center mt-1">
+              Sin permiso para {isOnHold ? 'reactivar' : 'pausar'} estudiante
+            </p>
+          )}
         </div>
       </div>
 
