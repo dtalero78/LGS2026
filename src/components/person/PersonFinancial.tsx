@@ -322,14 +322,15 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                   <table className="min-w-full text-sm">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
+                        <th className="px-3 py-2 text-center font-medium text-gray-700"># Cuota</th>
                         <th className="px-3 py-2 text-left font-medium text-gray-700">Fecha</th>
-                        <th className="px-3 py-2 text-left font-medium text-gray-700">Cuota</th>
+                        <th className="px-3 py-2 text-left font-medium text-gray-700">Gestor</th>
                         <th className="px-3 py-2 text-right font-medium text-gray-700">Valor Pagado</th>
                         <th className="px-3 py-2 text-right font-medium text-gray-700">Descuento</th>
                         <th className="px-3 py-2 text-right font-medium text-gray-700">Saldo</th>
-                        <th className="px-3 py-2 text-left font-medium text-gray-700">Medio</th>
-                        <th className="px-3 py-2 text-left font-medium text-gray-700"># Ref / Factura</th>
-                        <th className="px-3 py-2 text-center font-medium text-gray-700">Estado</th>
+                        <th className="px-3 py-2 text-center font-medium text-gray-700">Validado</th>
+                        <th className="px-3 py-2 text-left font-medium text-gray-700">Fecha Validación</th>
+                        <th className="px-3 py-2 text-left font-medium text-gray-700"># Factura</th>
                         <th className="px-3 py-2 text-right font-medium text-gray-700">Acciones</th>
                       </tr>
                     </thead>
@@ -338,30 +339,43 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                         const fechaPago = p.fechaPago
                           ? new Date(p.fechaPago).toLocaleDateString('es', { timeZone: 'UTC' })
                           : '—'
+                        const fechaValidacion = p.fechaValidacion
+                          ? new Date(p.fechaValidacion).toLocaleDateString('es', { timeZone: 'UTC' })
+                          : '—'
+                        const gestor = recaudoUsers.find(u => u._id === p.gestorRecaudo)
+                        const gestorLabel = gestor ? gestor.nombre : (p.gestorRecaudo ? '—' : '—')
                         return (
                           <tr key={p._id} className="hover:bg-gray-50">
+                            <td className="px-3 py-2 text-center text-gray-900 font-medium">{p.numCuota ?? '—'}</td>
                             <td className="px-3 py-2 text-gray-900">{fechaPago}</td>
-                            <td className="px-3 py-2 text-gray-700">{p.numCuota ?? '—'}</td>
+                            <td className="px-3 py-2 text-gray-700">
+                              {gestor ? (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="inline-flex px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-800">
+                                    {ROLE_LABEL[gestor.rol] || gestor.rol}
+                                  </span>
+                                  <span className="text-xs">{gestor.nombre}</span>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-gray-400 italic">{gestorLabel}</span>
+                              )}
+                            </td>
                             <td className="px-3 py-2 text-right text-gray-900 font-medium">{p.valorPagado ? formatCurrency(p.valorPagado) : '—'}</td>
                             <td className="px-3 py-2 text-right text-gray-600">{p.descuento ? formatCurrency(p.descuento) : '—'}</td>
                             <td className="px-3 py-2 text-right text-amber-900 font-medium">{p.saldo != null ? formatCurrency(p.saldo) : '—'}</td>
-                            <td className="px-3 py-2 text-gray-700">{p.medioPago || '—'}</td>
-                            <td className="px-3 py-2 text-gray-700 text-xs">
-                              {p.numeroReferencia ? <div>R: {p.numeroReferencia}</div> : null}
-                              {p.numeroFactura ? <div>F: {p.numeroFactura}</div> : null}
-                              {!p.numeroReferencia && !p.numeroFactura ? '—' : null}
-                            </td>
                             <td className="px-3 py-2 text-center">
                               {p.validado ? (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                  <CheckBadgeIcon className="h-3.5 w-3.5" /> Validado
+                                  <CheckBadgeIcon className="h-3.5 w-3.5" /> Sí
                                 </span>
                               ) : (
                                 <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                  Pendiente
+                                  No
                                 </span>
                               )}
                             </td>
+                            <td className="px-3 py-2 text-gray-700 text-xs">{fechaValidacion}</td>
+                            <td className="px-3 py-2 text-gray-700 text-xs">{p.numeroFactura || '—'}</td>
                             <td className="px-3 py-2 text-right">
                               <div className="flex items-center justify-end gap-1">
                                 {!p.validado && (
