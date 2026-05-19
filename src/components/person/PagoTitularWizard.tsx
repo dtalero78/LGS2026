@@ -41,7 +41,6 @@ interface DraftState {
   descuento: string
   medioPago: string
   numeroReferencia: string
-  numeroFactura: string
   pagoTercero: string
   idTercero: string
   plataforma: string
@@ -61,7 +60,6 @@ const empty = (): DraftState => ({
   descuento: '',
   medioPago: '',
   numeroReferencia: '',
-  numeroFactura: '',
   pagoTercero: '',
   idTercero: '',
   plataforma: '',
@@ -251,7 +249,6 @@ export default function PagoTitularWizard({
         descuento: form.descuento ? toNum(form.descuento) : 0,
         medioPago: form.medioPago || null,
         numeroReferencia: form.numeroReferencia || null,
-        numeroFactura: form.numeroFactura || null,
         documentosAdjuntos: form.documentosAdjuntos,
       })
       toast.success('Pago registrado')
@@ -376,7 +373,7 @@ export default function PagoTitularWizard({
           </div>
 
           {/* Pago / Referencia */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="medioPago" className="block text-sm font-medium text-gray-700">Medio de Pago</label>
               <input
@@ -391,15 +388,6 @@ export default function PagoTitularWizard({
               <input
                 id="numeroReferencia" type="text" value={form.numeroReferencia}
                 onChange={e => setForm(f => ({ ...f, numeroReferencia: e.target.value.replace(/[^A-Za-z0-9\-]/g, '') }))}
-                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                placeholder="Alfanumérico"
-              />
-            </div>
-            <div>
-              <label htmlFor="numeroFactura" className="block text-sm font-medium text-gray-700"># Factura</label>
-              <input
-                id="numeroFactura" type="text" value={form.numeroFactura}
-                onChange={e => setForm(f => ({ ...f, numeroFactura: e.target.value.replace(/[^A-Za-z0-9\-]/g, '') }))}
                 className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 placeholder="Alfanumérico"
               />

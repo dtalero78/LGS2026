@@ -48,6 +48,9 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
   const [loadingPagos, setLoadingPagos] = useState(false)
   const [showWizard, setShowWizard] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; nombre: string } | null>(null)
+  const [validateModal, setValidateModal] = useState<{ id: string; numCuota: number | null } | null>(null)
+  const [facturaInput, setFacturaInput] = useState('')
+  const [validating, setValidating] = useState(false)
 
   const loadPagos = useCallback(async () => {
     if (!isTitular) return
@@ -66,13 +69,26 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
     if (isTitular && canVerPagos) loadPagos()
   }, [isTitular, canVerPagos, loadPagos])
 
-  const handleValidarPago = async (id: string) => {
+  const openValidarModal = (id: string, numCuota: number | null) => {
+    setFacturaInput('')
+    setValidateModal({ id, numCuota })
+  }
+
+  const handleValidarPago = async () => {
+    if (!validateModal) return
+    const factura = facturaInput.trim()
+    if (!factura) { toast.error('Número de factura requerido'); return }
+    setValidating(true)
     try {
-      await api.post(`/api/postgres/pagos-titulares/${id}/validar`, {})
+      await api.post(`/api/postgres/pagos-titulares/${validateModal.id}/validar`, { numeroFactura: factura })
       toast.success('Pago validado')
+      setValidateModal(null)
+      setFacturaInput('')
       loadPagos()
     } catch (err) {
       handleApiError(err, 'Error al validar pago')
+    } finally {
+      setValidating(false)
     }
   }
 
@@ -382,7 +398,7 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                                   <PermissionGuard permission={PersonPermission.PAGOS_VALIDAR}>
                                     <button
                                       type="button"
-                                      onClick={() => handleValidarPago(p._id)}
+                                      onClick={() => openValidarModal(p._id, p.numCuota ?? null)}
                                       title="Validar pago"
                                       className="p-1 text-green-600 hover:text-green-800"
                                     >
@@ -432,6 +448,54 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
           gestorLabel={currentGestor ? `${currentGestor.nombre} · ${ROLE_LABEL[currentGestor.rol] || currentGestor.rol}` : null}
           onCreated={loadPagos}
         />
+      )}
+
+      {/* ── Validar Pago (captura # Factura) ───────────────────────────────── */}
+      {validateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-bold text-gray-900">✅ Validar Pago</h3>
+            <p className="text-sm text-gray-600">
+              Confirma la validación del pago{validateModal.numCuota != null ? ` (cuota ${validateModal.numCuota})` : ''}.
+              Ingresa el <strong>número de factura</strong>; la fecha de validación quedará registrada como hoy.
+            </p>
+            <div>
+              <label htmlFor="factura-input" className="block text-sm font-medium text-gray-700 mb-1">
+                # Factura <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="factura-input"
+                type="text"
+                value={facturaInput}
+                onChange={e => setFacturaInput(e.target.value.replace(/[^A-Za-z0-9\-]/g, ''))}
+                autoFocus
+                placeholder="Alfanumérico"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+              />
+            </div>
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+              ⚠️ Una vez validado, el pago no se puede editar ni eliminar.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => { setValidateModal(null); setFacturaInput('') }}
+                disabled={validating}
+                className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleValidarPago}
+                disabled={validating || !facturaInput.trim()}
+                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50"
+              >
+                {validating ? 'Validando…' : 'Validar Pago'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Confirm Delete Pago ────────────────────────────────────────────── */}

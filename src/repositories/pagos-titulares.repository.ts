@@ -122,17 +122,20 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
 
   /**
    * Mark a payment as validated and stamp validation metadata.
+   * `numeroFactura` is captured here (no en el wizard de registro) y
+   * obligatorio en el flujo de validación.
    */
-  async validar(id: string, validadoPor: string): Promise<PagoTitular | null> {
+  async validar(id: string, validadoPor: string, numeroFactura: string): Promise<PagoTitular | null> {
     const row = await queryOne<PagoTitular>(
       `UPDATE "PAGOS_TITULARES"
        SET "validado" = true,
            "fechaValidacion" = CURRENT_DATE,
            "validadoPor" = $2,
+           "numeroFactura" = $3,
            "_updatedDate" = NOW()
        WHERE "_id" = $1
        RETURNING *`,
-      [id, validadoPor]
+      [id, validadoPor, numeroFactura]
     );
     return this.parse(row);
   }
