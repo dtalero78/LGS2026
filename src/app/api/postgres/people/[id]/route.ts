@@ -204,6 +204,7 @@ const PEOPLE_UPDATE_FIELDS = [
   'vigencia',
   'finalContrato',
   'inicioCurso',
+  'gestorRecaudo',
 ];
 
 /**
@@ -221,11 +222,37 @@ export const PATCH = handlerWithAuth(async (
   console.log('🔄 [PostgreSQL People] Updating person:', personId);
 
   // Fetch current person before update (needed for old email to update USUARIOS_ROLES)
-  const currentPerson = await queryOne(
-    `SELECT "email", "numeroId" FROM "PEOPLE" WHERE "_id" = $1`,
+  const currentPerson = await queryOne<{ email: string | null; numeroId: string | null; tipoUsuario: string | null }>(
+    `SELECT "email", "numeroId", "tipoUsuario" FROM "PEOPLE" WHERE "_id" = $1`,
     [personId]
   );
   if (!currentPerson) throw new NotFoundError('Person', personId);
+
+  // Validate gestorRecaudo assignment:
+  //   - Only allowed on TITULAR rows
+  //   - Value must reference an existing USUARIOS_ROLES._id with rol IN
+  //     ('RECAUDO_ASIST', 'RECAUDOS_JEFE') and activo=true.
+  //   - null/empty clears the assignment (allowed).
+  if (Object.prototype.hasOwnProperty.call(body, 'gestorRecaudo')) {
+    if (currentPerson.tipoUsuario !== 'TITULAR') {
+      throw new ValidationError('Solo se puede asignar gestor de recaudo a TITULARES');
+    }
+    const value = body.gestorRecaudo;
+    if (value !== null && value !== '') {
+      const user = await queryOne<{ rol: string; activo: boolean }>(
+        `SELECT "rol", "activo" FROM "USUARIOS_ROLES" WHERE "_id" = $1`,
+        [value]
+      );
+      if (!user) throw new ValidationError(`Usuario no encontrado: ${value}`);
+      if (!user.activo) throw new ValidationError('El usuario seleccionado no está activo');
+      if (!['RECAUDO_ASIST', 'RECAUDOS_JEFE'].includes(user.rol)) {
+        throw new ValidationError(`Rol inválido para gestor de recaudo: ${user.rol}`);
+      }
+    } else {
+      // Normalize empty string to null for clearing
+      body.gestorRecaudo = null;
+    }
+  }
 
   const built = buildDynamicUpdate('PEOPLE', body, PEOPLE_UPDATE_FIELDS);
   if (!built) throw new ValidationError('No valid fields to update');

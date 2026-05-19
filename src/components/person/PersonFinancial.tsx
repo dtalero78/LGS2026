@@ -1,35 +1,97 @@
 'use client'
 
+import { useEffect, useState, useCallback } from 'react'
+import toast from 'react-hot-toast'
 import { Person, FinancialData } from '@/types'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils'
+import { PermissionGuard } from '@/components/permissions'
+import { PersonPermission } from '@/types/permissions'
+import { api, handleApiError } from '@/hooks/use-api'
 
 interface PersonFinancialProps {
   person: Person
   financialData?: FinancialData
 }
 
-export default function PersonFinancial({ person, financialData }: PersonFinancialProps) {
+interface RecaudoUser {
+  _id: string
+  email: string
+  nombre: string
+  rol: string
+  activo: boolean
+}
 
-  // Use real financial data or fallback to mock data
+const GESTOR_ROLES = ['RECAUDO_ASIST', 'RECAUDOS_JEFE']
+const ROLE_LABEL: Record<string, string> = {
+  RECAUDO_ASIST: 'Asistente',
+  RECAUDOS_JEFE: 'Jefe',
+}
+
+export default function PersonFinancial({ person, financialData }: PersonFinancialProps) {
+  const isTitular = person.tipoUsuario === 'TITULAR'
+
+  // Gestor de recaudo state
+  const [gestorRecaudoId, setGestorRecaudoId] = useState<string | null>(person.gestorRecaudo ?? null)
+  const [recaudoUsers, setRecaudoUsers] = useState<RecaudoUser[]>([])
+  const [loadingUsers, setLoadingUsers] = useState(false)
+  const [showAssignModal, setShowAssignModal] = useState(false)
+  const [selectedUserId, setSelectedUserId] = useState<string>('')
+  const [saving, setSaving] = useState(false)
+
+  const loadRecaudoUsers = useCallback(async () => {
+    setLoadingUsers(true)
+    try {
+      const data = await api.get<{ users: RecaudoUser[] }>(
+        `/api/postgres/users/by-role?roles=${GESTOR_ROLES.join(',')}&activeOnly=true`
+      )
+      setRecaudoUsers(data.users || [])
+    } catch (err) {
+      console.warn('[PersonFinancial] No se pudieron cargar usuarios de recaudo:', err)
+    } finally {
+      setLoadingUsers(false)
+    }
+  }, [])
+
+  // Load list once on mount (titulares only — otherwise the dropdown is irrelevant)
+  useEffect(() => {
+    if (isTitular) loadRecaudoUsers()
+  }, [isTitular, loadRecaudoUsers])
+
+  const currentGestor = recaudoUsers.find(u => u._id === gestorRecaudoId) || null
+
+  const openAssignModal = () => {
+    setSelectedUserId(gestorRecaudoId || '')
+    setShowAssignModal(true)
+  }
+
+  const handleSaveGestor = async () => {
+    setSaving(true)
+    try {
+      const payload = { gestorRecaudo: selectedUserId || null }
+      await api.patch(`/api/postgres/people/${person._id}`, payload)
+      setGestorRecaudoId(selectedUserId || null)
+      setShowAssignModal(false)
+      toast.success(selectedUserId ? 'Ejecutivo de Recaudos asignado' : 'Asignación removida')
+    } catch (err) {
+      handleApiError(err, 'Error al asignar gestor de recaudo')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // ── Financial data parsing (existing logic, unchanged) ──────────────────
   let financial: any
   let paymentProgress: number
 
   if (financialData) {
-    // Transform Wix financial data - only use available real fields
     const data = financialData as any
-
-    // Helper function to parse Colombian currency format: "90.000,00" -> 90000
     const parseCurrency = (value: string | number) => {
       if (!value) return 0
-      // If it's already a number, return it
       if (typeof value === 'number') return value
-      // Remove dots (thousands separator) and replace comma (decimal separator) with dot
       const cleaned = value.replace(/\./g, '').replace(',', '.')
       return parseFloat(cleaned) || 0
     }
-
     const cuotaInicialParsed = parseCurrency(data.pagoInscripcion)
-
     financial = {
       contrato: data.contrato || person.contrato,
       tarifa: parseCurrency(data.valorCuota),
@@ -43,36 +105,41 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
       inscripcionPagada: data.inscripcionPagada || 'No',
       confirmaJudith: data.confirmaJudith || 'No',
       confirmaPrixus: data.confirmaPrixus || 'No',
-      // Calculate progress based on amount paid vs total
       montoTotal: parseCurrency(data.totalPlan),
       montoPendiente: parseCurrency(data.saldo),
-      // Calculate remaining installments: saldo / valorCuota
-      cuotasRestantes: data.valorCuota ? Math.ceil(parseCurrency(data.saldo) / parseCurrency(data.valorCuota)) : 0
+      cuotasRestantes: data.valorCuota ? Math.ceil(parseCurrency(data.saldo) / parseCurrency(data.valorCuota)) : 0,
     }
-
-    // Calculate payment progress based on amounts, not cuotas
     const montoPagado = financial.montoTotal - financial.montoPendiente
     paymentProgress = financial.montoTotal > 0 ? (montoPagado / financial.montoTotal) * 100 : 0
   } else {
-    // Mock financial data if not provided
     financial = {
-      contrato: person.contrato,
-      tarifa: 350000,
-      cuotas: 12,
-      cuotasPagadas: 8,
-      saldo: 1400000,
-      fechaUltimoPago: '2024-08-15',
-      estado: 'Al día'
+      contrato: person.contrato, tarifa: 350000, cuotas: 12, cuotasPagadas: 8,
+      saldo: 1400000, fechaUltimoPago: '2024-08-15', estado: 'Al día',
     }
-
     paymentProgress = (financial.cuotasPagadas / financial.cuotas) * 100
   }
+  // Suppress unused warning — paymentProgress is computed for parity with original
+  void paymentProgress
 
   return (
     <div className="space-y-6">
       {/* Financial Summary */}
       <div>
-        <h3 className="text-lg font-medium text-gray-900 mb-4">💳 Resumen Financiero del Titular</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900">💳 Resumen Financiero del Titular</h3>
+          {isTitular && (
+            <PermissionGuard permission={PersonPermission.ASIGNAR_GESTOR_RECAUDO}>
+              <button
+                type="button"
+                onClick={openAssignModal}
+                disabled={loadingUsers}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50"
+              >
+                💼 {currentGestor ? 'Reasignar Ejecutivo' : 'Asignar Ejecutivo de Recaudos'}
+              </button>
+            </PermissionGuard>
+          )}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
             <div className="text-sm font-medium text-primary-600">Valor Plan</div>
@@ -105,6 +172,26 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">💰 Información de Pagos</h3>
         <div className="bg-white border border-gray-200 rounded-lg p-6">
+          {/* Ejecutivo de Recaudos badge (only for TITULAR) */}
+          {isTitular && (
+            <div className="mb-4 pb-4 border-b border-gray-200">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Ejecutivo de Recaudos</label>
+              {loadingUsers && !currentGestor ? (
+                <p className="text-sm text-gray-400 italic">Cargando…</p>
+              ) : currentGestor ? (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
+                    {ROLE_LABEL[currentGestor.rol] || currentGestor.rol}
+                  </span>
+                  <span className="text-sm font-semibold text-gray-900">{currentGestor.nombre}</span>
+                  <span className="text-xs text-gray-500">· {currentGestor.email}</span>
+                </div>
+              ) : (
+                <p className="text-sm text-amber-700 italic">⚠️ Pendiente asignar Ejecutivo de Recaudos</p>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700">Método de Pago</label>
@@ -132,7 +219,6 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
             </div>
           </div>
 
-          {/* Financial Confirmations Section - Only show if financial data exists */}
           {financialData && (
             <div className="mt-4 pt-4 border-t border-gray-200">
               <h4 className="text-sm font-medium text-gray-700 mb-3">Estado de Confirmaciones</h4>
@@ -159,6 +245,59 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
         </div>
       </div>
 
+      {/* ── Modal Asignar Ejecutivo de Recaudos ──────────────────────────── */}
+      {showAssignModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-bold text-gray-900">💼 Asignar Ejecutivo de Recaudos</h3>
+            <p className="text-sm text-gray-500">
+              Selecciona un usuario con rol Recaudo (Asistente o Jefe). Solo se muestran usuarios activos.
+            </p>
+
+            <div>
+              <label htmlFor="gestor-recaudo-select" className="block text-sm font-medium text-gray-700 mb-1">
+                Ejecutivo
+              </label>
+              <select
+                id="gestor-recaudo-select"
+                value={selectedUserId}
+                onChange={e => setSelectedUserId(e.target.value)}
+                title="Selecciona el ejecutivo de recaudos a asignar"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+              >
+                <option value="">— Sin asignar —</option>
+                {recaudoUsers.map(u => (
+                  <option key={u._id} value={u._id}>
+                    {u.nombre} · {ROLE_LABEL[u.rol] || u.rol}
+                  </option>
+                ))}
+              </select>
+              {recaudoUsers.length === 0 && !loadingUsers && (
+                <p className="text-xs text-amber-700 mt-1">No hay usuarios activos con rol Recaudo</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowAssignModal(false)}
+                disabled={saving}
+                className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveGestor}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50"
+              >
+                {saving ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

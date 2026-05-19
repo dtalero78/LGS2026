@@ -39,6 +39,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Botón que abre un modal con la plantilla del contrato completamente llenada (solo lectura, sin opciones de impresión/firma/envío PDF)',
   },
   {
+    code: PersonPermission.ASIGNAR_GESTOR_RECAUDO,
+    module: Module.PERSON,
+    section: 'Financiera',
+    name: 'Botón "Asignar Ejecutivo de Recaudos"',
+    description: 'Botón en la pestaña Financiera del titular para asignar/reasignar el gestor de recaudo (USUARIOS_ROLES con rol RECAUDO_ASIST o RECAUDOS_JEFE). Sin este permiso el botón no aparece y el campo es de solo lectura',
+  },
+  {
     code: PersonPermission.VER_DOCUMENTACION,
     module: Module.PERSON,
     section: 'Información General',
