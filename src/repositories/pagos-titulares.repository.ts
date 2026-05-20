@@ -333,7 +333,7 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
            AND pt1."numCuota" > 0
        ) agg ON true
        ${whereClause}
-       ORDER BY p."primerApellido" ASC NULLS LAST, p."primerNombre" ASC NULLS LAST
+       ORDER BY p."fechaContrato" DESC NULLS LAST, p."primerApellido" ASC NULLS LAST
        LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
       [...params, opts.limit, opts.offset]
     );
