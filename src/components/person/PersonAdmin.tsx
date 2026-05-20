@@ -535,9 +535,16 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
   }
 
   const handleSaveBeneficiary = async () => {
-    // Normalizar celular: remover '+', espacios y caracteres no numéricos → ej: "+57 3008021701" → "573008021701"
-    // Concatenar prefijo + número y eliminar todo excepto dígitos → ej: "+57" + "3008021701" = "573008021701"
-    const normalizedCelular = ((beneficiaryData.celularPrefijo || '') + (beneficiaryData.celular || '')).replace(/\D/g, '')
+    const isEdit = isEditMode && !!editingBeneficiaryId
+    // En CREAR: el celular es solo el número local, hay que concatenar el prefijo.
+    //   "+57" + "3008021701" → "573008021701"
+    // En EDITAR: el celular en BD ya incluye el prefijo (ej: "573008021701").
+    //   El form lo carga completo en el input y el usuario lo edita tal cual.
+    //   Si concatenáramos prefijo otra vez, se generaría un doble prefijo
+    //   (bug que impedía cambiar el celular de beneficiarios existentes).
+    const normalizedCelular = isEdit
+      ? (beneficiaryData.celular || '').replace(/\D/g, '')
+      : ((beneficiaryData.celularPrefijo || '') + (beneficiaryData.celular || '')).replace(/\D/g, '')
 
     try {
       let response: Response
