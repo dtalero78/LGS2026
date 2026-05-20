@@ -18,7 +18,7 @@ interface EnrollInput {
   agendadoPorRol?: string;
   /**
    * Rol REAL de la sesión (no se acepta del body — viene del route handler).
-   * Se usa para validar el bypass de estudiantes INACTIVOS: solo SUPER_ADMIN.
+   * Se usa para validar el bypass de estudiantes INACTIVOS: solo SUPER_ADMIN o ADMIN.
    */
   sessionRole?: string;
 }
@@ -96,9 +96,9 @@ export async function enrollStudents(input: EnrollInput) {
     throw new NotFoundError('Students', input.studentIds.join(', '));
   }
 
-  // Bloqueo de estudiantes INACTIVOS — solo SUPER_ADMIN puede bypasear.
+  // Bloqueo de estudiantes INACTIVOS — solo SUPER_ADMIN o ADMIN pueden bypasear.
   // sessionRole viene SIEMPRE del route handler (nunca del body) — no spoofeable.
-  const canBypassInactive = input.sessionRole === 'SUPER_ADMIN';
+  const canBypassInactive = input.sessionRole === 'SUPER_ADMIN' || input.sessionRole === 'ADMIN';
   if (!canBypassInactive) {
     const inactivos = students.filter((s: any) => s.peopleEstadoInactivo === true || s.academicaEstadoInactivo === true);
     if (inactivos.length > 0) {

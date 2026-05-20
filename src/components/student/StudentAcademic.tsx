@@ -34,9 +34,9 @@ export default function StudentAcademic({ student, classes: initialClasses, view
   // Solo COORDINADOR_ACADEMICO y SUPER_ADMIN pueden editar los campos de comentarios
   const canEditComments = userRole === Role.SUPER_ADMIN || userRole === Role.COORDINADOR_ACADEMICO
 
-  // Bloqueo de agendamiento si el estudiante está INACTIVO en ACADEMICA — solo SUPER_ADMIN puede continuar
+  // Bloqueo de agendamiento si el estudiante está INACTIVO en ACADEMICA — solo SUPER_ADMIN o ADMIN pueden continuar
   const isStudentInactive = student.estadoInactivo === true
-  const canBypassInactive = userRole === Role.SUPER_ADMIN
+  const canBypassInactive = userRole === Role.SUPER_ADMIN || userRole === Role.ADMIN
   const blockSchedulingByInactive = isStudentInactive && !canBypassInactive
 
   // Filter states
@@ -410,7 +410,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
     console.log('🔍 handleSaveNewEvent called - selectedTime:', selectedTime)
 
     if (blockSchedulingByInactive) {
-      alert('Usuario con estado INACTIVO. Solo un SUPER_ADMIN puede agendar clases para este estudiante.')
+      alert('Usuario con estado INACTIVO. Consulte el Área de Servicio.')
       return
     }
 
@@ -1350,7 +1350,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
                         <p className="font-semibold">Usuario con estado INACTIVO</p>
                         <p className="mt-1">
                           {canBypassInactive
-                            ? 'Este estudiante está marcado como inactivo en ACADEMICA. Como SUPER_ADMIN puedes continuar, pero verifica que sea correcto agendarle clases.'
+                            ? 'Este estudiante está marcado como inactivo en ACADEMICA. Como administrador puedes continuar, pero verifica que sea correcto agendarle clases.'
                             : 'No se puede agendar clases para este estudiante porque su registro académico está inactivo. Consulte el Área de Servicio.'}
                         </p>
                       </div>
