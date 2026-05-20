@@ -22,6 +22,8 @@ interface AsignacionRow {
   fechaContrato: string | null
   plataforma: string | null
   gestorRecaudo: string | null
+  estadoInactivo: boolean | null
+  aprobacion: string | null
   saldoActual: string | null
   tipoCartera: string
   ultimaFechaPago: string | null
@@ -149,6 +151,7 @@ export default function AsignacionRecaudosPage() {
       'Saldo Actual': parseMoneyText(t.saldoActual),
       'Estado Cartera': ESTADO_CARTERA_META[t.tipoCartera]?.label || t.tipoCartera,
       'Día Vencimiento': dayOf(t.ultimaFechaPago),
+      'Estado Contrato': t.estadoInactivo ? 'Finalizada' : 'Activo',
       Plataforma: t.plataforma || '',
     }))
     const columns = (Object.keys(rows[0]) as Array<keyof typeof rows[0]>).map(k => ({
@@ -295,6 +298,7 @@ export default function AsignacionRecaudosPage() {
                       <th className="px-3 py-2 text-right font-medium text-gray-700">Saldo a la Fecha</th>
                       <th className="px-3 py-2 text-center font-medium text-gray-700">Estado Cartera</th>
                       <th className="px-3 py-2 text-center font-medium text-gray-700">Día Vencimiento</th>
+                      <th className="px-3 py-2 text-center font-medium text-gray-700">Estado Contrato</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -332,6 +336,17 @@ export default function AsignacionRecaudosPage() {
                           </td>
                           <td className="px-3 py-2 text-center text-gray-900 font-medium">
                             {dayOf(t.ultimaFechaPago)}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {t.estadoInactivo ? (
+                              <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                Finalizada
+                              </span>
+                            ) : (
+                              <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Activo
+                              </span>
+                            )}
                           </td>
                         </tr>
                       )
