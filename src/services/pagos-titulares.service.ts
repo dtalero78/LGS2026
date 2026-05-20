@@ -39,7 +39,10 @@ const UPDATABLE_FIELDS = [
   'numeroReferencia',
   'numeroFactura',
   'documentosAdjuntos',
+  'tipoCartera',
 ];
+
+const TIPO_CARTERA_VALIDOS = ['normal', 'prejuridico', 'juridico', 'castigada'] as const;
 
 function toNum(v: any): number {
   if (v === null || v === undefined || v === '') return 0;
@@ -205,6 +208,11 @@ export const pagosTitularesService = {
 
     if (existing.validado) {
       throw new ValidationError('No se puede modificar un pago ya validado');
+    }
+
+    if (body.tipoCartera !== undefined && body.tipoCartera !== null
+        && !(TIPO_CARTERA_VALIDOS as readonly string[]).includes(body.tipoCartera)) {
+      throw new ValidationError(`tipoCartera debe ser uno de: ${TIPO_CARTERA_VALIDOS.join(', ')}`);
     }
 
     const next = { ...existing, ...body };

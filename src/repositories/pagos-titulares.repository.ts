@@ -35,6 +35,8 @@ export interface PagoTitular {
   inscripcion: number | null;
   cuotasTotal: number | null;
   numeroRecibo: string | null;
+  /** 'normal' | 'prejuridico' | 'juridico' | 'castigada'. Default 'normal'. */
+  tipoCartera: string | null;
   medioPago: string | null;
   numeroReferencia: string | null;
   numeroFactura: string | null;
