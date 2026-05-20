@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import StudentTabs from '@/components/student/StudentTabs'
+import EstadoBadge from '@/components/common/EstadoBadge'
 import { getProfile, getAcademicHistory } from '@/services/student.service'
 import { PermissionGuard } from '@/components/permissions'
 import { StudentPermission } from '@/types/permissions'
@@ -67,11 +68,12 @@ async function StudentContent({ studentId }: { studentId: string }) {
               <h1 className="text-2xl font-bold text-gray-900">
                 {student.primerNombre} {student.primerApellido}
               </h1>
-              <div className="mt-1 flex items-center space-x-4 text-sm text-gray-500">
+              <div className="mt-1 flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-gray-500">
                 <span>ID: {student.numeroId || 'No disponible'}</span>
                 <span>Contrato: {student.contrato || 'No disponible'}</span>
                 <span>Nivel: {student.nivel || 'No asignado'}</span>
                 <span>Step: {student.step || 'No asignado'}</span>
+                <EstadoBadge estado={student.estado} prefix="Estado: " />
               </div>
             </div>
             <div className="flex flex-col items-end space-y-2">

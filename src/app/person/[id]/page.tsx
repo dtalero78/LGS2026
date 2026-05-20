@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import PersonTabs from '@/components/person/PersonTabs'
+import EstadoBadge from '@/components/common/EstadoBadge'
 import { PermissionGuard } from '@/components/permissions'
 import { PersonPermission } from '@/types/permissions'
 
@@ -107,6 +108,7 @@ async function PersonContent({ personId, initialTab }: { personId: string; initi
                   {personData.person.vigencia && (
                     <span>Vigencia: {personData.person.vigencia}</span>
                   )}
+                  <EstadoBadge estado={personData.person.estado} prefix="Estado: " />
                 </div>
               </div>
             </div>
