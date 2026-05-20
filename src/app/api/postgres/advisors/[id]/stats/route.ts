@@ -68,9 +68,9 @@ export const GET = handlerWithAuth(async (request, { params }) => {
         totalAsistencias: parseInt(g.totalAsistencias) || 0, totalAusencias: parseInt(g.totalAusencias) || 0,
         estudiantesUnicos: parseInt(g.estudiantesUnicos) || 0, promedioAsistencia: parseFloat(g.promedioAsistencia) || 0,
       },
-      byType: byTypeR.rows.map((r) => ({ tipo: r.tipo, totalEventos: parseInt(r.totalEventos) || 0, totalInscripciones: parseInt(r.totalInscripciones) || 0, totalAsistencias: parseInt(r.totalAsistencias) || 0 })),
-      byNivel: byNivelR.rows.map((r) => ({ nivel: r.nivel, totalEventos: parseInt(r.totalEventos) || 0, totalInscripciones: parseInt(r.totalInscripciones) || 0, totalAsistencias: parseInt(r.totalAsistencias) || 0 })),
-      recentEvents: recentR.rows.map((r) => ({ _id: r._id, dia: r.dia, hora: r.hora, tipo: r.tipo, nivel: r.nivel, step: r.step, titulo: r.titulo, inscritos: r.inscritos, bookingCount: parseInt(r.bookingCount) || 0, asistenciasCount: parseInt(r.asistenciasCount) || 0 })),
+      byType: byTypeR.rows.map((r: any) => ({ tipo: r.tipo, totalEventos: parseInt(r.totalEventos) || 0, totalInscripciones: parseInt(r.totalInscripciones) || 0, totalAsistencias: parseInt(r.totalAsistencias) || 0 })),
+      byNivel: byNivelR.rows.map((r: any) => ({ nivel: r.nivel, totalEventos: parseInt(r.totalEventos) || 0, totalInscripciones: parseInt(r.totalInscripciones) || 0, totalAsistencias: parseInt(r.totalAsistencias) || 0 })),
+      recentEvents: recentR.rows.map((r: any) => ({ _id: r._id, dia: r.dia, hora: r.hora, tipo: r.tipo, nivel: r.nivel, step: r.step, titulo: r.titulo, inscritos: r.inscritos, bookingCount: parseInt(r.bookingCount) || 0, asistenciasCount: parseInt(r.asistenciasCount) || 0 })),
     },
   });
 });

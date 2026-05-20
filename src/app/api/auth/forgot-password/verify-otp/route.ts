@@ -1,4 +1,5 @@
 import 'server-only';
+import { NextResponse } from 'next/server';
 import { handler, successResponse } from '@/lib/api-helpers';
 import { ValidationError } from '@/lib/errors';
 import { verifyOtp } from '@/lib/otp-store';
@@ -17,9 +18,9 @@ export const POST = handler(async (request) => {
   const result = verifyOtp(normalizedEmail, code.trim());
 
   if (!result.valid) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Código inválido o expirado' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    return NextResponse.json(
+      { success: false, error: 'Código inválido o expirado' },
+      { status: 400 }
     );
   }
 

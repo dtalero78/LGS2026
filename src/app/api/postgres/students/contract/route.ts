@@ -7,7 +7,7 @@ import { ValidationError } from '@/lib/errors';
  *
  * Manually extend student contract by days or to a specific date.
  */
-export const PUT = handlerWithAuth(async (request, { session }) => {
+export const PUT = handlerWithAuth(async (request, _ctx, session) => {
   const body = await request.json();
 
   if (!body.studentId) throw new ValidationError('studentId is required');

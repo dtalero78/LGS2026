@@ -255,8 +255,8 @@ export default function AgendaSesionesPage() {
   }
 
   const updateInscripciones = async (eventIds: string[], isPriority: boolean = false) => {
+    const typeLabel = isPriority ? 'PRIORITARIOS' : 'BACKGROUND'
     try {
-      const typeLabel = isPriority ? 'PRIORITARIOS' : 'BACKGROUND'
       console.log(`🔄 Frontend: Actualizando inscripciones ${typeLabel} para`, eventIds.length, 'eventos')
 
       // Solo mostrar loader para eventos prioritarios
@@ -321,7 +321,7 @@ export default function AgendaSesionesPage() {
         }))
 
         // Log solo si hay eventos con inscripciones para debug
-        const eventosConInscripciones = updatedEvents.filter(event => event.inscritos > 0)
+        const eventosConInscripciones = updatedEvents.filter(event => (event.inscritos ?? 0) > 0)
         if (eventosConInscripciones.length > 0 && isPriority) {
           console.log(`📊 Eventos con inscripciones encontrados: ${eventosConInscripciones.length}`)
         }

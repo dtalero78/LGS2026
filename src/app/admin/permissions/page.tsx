@@ -236,7 +236,7 @@ export default function PermissionsAdminPage() {
       const permissions = Object.entries(permissionState[selectedRole] || {})
         .filter(([_, value]) => value)
         .map(([key]) => key as Permission)
-        .filter(p => p && p !== 'undefined');
+        .filter(p => p && (p as string) !== 'undefined');
 
       if (permissions.length === 0) {
         const confirmed = window.confirm(

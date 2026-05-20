@@ -71,7 +71,7 @@ export default function BannerPage() {
       setTimeout(() => setSaved(false), 3000)
       toast.success('Banner actualizado')
     },
-    onError: (err: any) => toast.error(err.message || 'Error al guardar'),
+    onError: (err: any) => { toast.error(err.message || 'Error al guardar') },
   })
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

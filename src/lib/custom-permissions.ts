@@ -65,7 +65,7 @@ export function invalidateCustomRolesCache() {
  * @param role Rol del usuario
  * @returns Array de permisos (personalizados o por defecto)
  */
-export function getPermissionsForRole(role: Role): Permission[] {
+export async function getPermissionsForRole(role: Role): Promise<Permission[]> {
   const customRoles = loadCustomRoles();
 
   // Si hay permisos personalizados para este rol, usarlos
@@ -74,7 +74,7 @@ export function getPermissionsForRole(role: Role): Permission[] {
   }
 
   // Sino, usar la configuración por defecto
-  return getDefaultPermissions(role);
+  return await getDefaultPermissions(role);
 }
 
 /**

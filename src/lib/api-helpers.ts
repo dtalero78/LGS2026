@@ -21,21 +21,23 @@
  */
 
 import 'server-only';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession, Session } from 'next-auth';
 import { authOptions } from '@/lib/auth-postgres';
 import { AppError, UnauthorizedError } from './errors';
 
-// Route context type matching Next.js App Router
+// Route context type matching Next.js App Router.
+// Aceptamos `NextRequest` (lo que Next.js pasa en runtime). Es asignable a
+// `Request`, así handlers tipados con cualquiera de los dos compilan.
 type RouteContext = { params: Record<string, string> };
 
 type HandlerFn = (
-  request: Request,
+  request: NextRequest,
   context: RouteContext
 ) => Promise<NextResponse>;
 
 type AuthHandlerFn = (
-  request: Request,
+  request: NextRequest,
   context: RouteContext,
   session: Session
 ) => Promise<NextResponse>;
@@ -71,7 +73,7 @@ export function errorResponse(error: AppError) {
  * Unknown errors return 500 with the error message.
  */
 export function handler(fn: HandlerFn) {
-  return async (request: Request, context: RouteContext) => {
+  return async (request: NextRequest, context: RouteContext) => {
     try {
       return await fn(request, context);
     } catch (error: any) {

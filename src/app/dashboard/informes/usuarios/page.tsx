@@ -23,6 +23,7 @@ interface Record {
   asistencia: boolean
   participacion: boolean
   noAprobo: boolean
+  cancelo?: boolean
 }
 
 interface Student {

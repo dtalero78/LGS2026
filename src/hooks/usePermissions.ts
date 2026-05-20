@@ -117,7 +117,8 @@ export function usePermissions() {
     isLoading,
     isAuthenticated: !!session,
     permissionsSource,
-    isRole: (role: Role) => userRole === role,
-    isAnyRole: (roles: Role[]) => !!userRole && roles.includes(userRole),
+    // Accept Role enum value or raw string — runtime compara strings.
+    isRole: (role: Role | string) => userRole === role,
+    isAnyRole: (roles: Array<Role | string>) => !!userRole && roles.includes(userRole as Role),
   };
 }

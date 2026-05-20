@@ -11,7 +11,7 @@ import {
   PermissionCheck,
   UserWithPermissions,
 } from '@/types/permissions';
-import { getPermissionsByRole as getDefaultPermissions, roleHasPermission as defaultRoleHasPermission } from '@/config/roles';
+import { getPermissionsByRole as getDefaultPermissions, getPermissionsByRoleSync, roleHasPermission as defaultRoleHasPermission } from '@/config/roles';
 import { getPermissionsForRole } from '@/lib/custom-permissions';
 
 // ============================================================================
@@ -43,7 +43,7 @@ export async function checkPermission(permission: Permission): Promise<Permissio
   }
 
   // Obtener permisos (personalizados o por defecto)
-  const userPermissions = getPermissionsForRole(userRole);
+  const userPermissions = await getPermissionsForRole(userRole);
   const hasPermission = userPermissions.includes(permission);
 
   return {
@@ -79,7 +79,7 @@ export async function checkAllPermissions(
   }
 
   // Obtener permisos (personalizados o por defecto)
-  const userPermissions = getPermissionsForRole(userRole);
+  const userPermissions = await getPermissionsForRole(userRole);
   const missingPermissions = permissions.filter(
     (permission) => !userPermissions.includes(permission)
   );
@@ -123,7 +123,7 @@ export async function checkAnyPermission(
   }
 
   // Obtener permisos (personalizados o por defecto)
-  const userPermissions = getPermissionsForRole(userRole);
+  const userPermissions = await getPermissionsForRole(userRole);
   const hasAnyPermission = permissions.some((permission) =>
     userPermissions.includes(permission)
   );
@@ -157,7 +157,7 @@ export async function getCurrentUserWithPermissions(): Promise<UserWithPermissio
   }
 
   // Obtener permisos (personalizados o por defecto)
-  const permissions = getPermissionsForRole(userRole);
+  const permissions = await getPermissionsForRole(userRole);
 
   return {
     id: user.id || user.email,
@@ -186,7 +186,7 @@ export async function getCurrentUserPermissions(): Promise<Permission[]> {
   }
 
   // Obtener permisos (personalizados o por defecto)
-  return getPermissionsForRole(userRole);
+  return await getPermissionsForRole(userRole);
 }
 
 /**
@@ -214,8 +214,9 @@ export async function getCurrentUserRole(): Promise<Role | null> {
  * @returns true si el rol tiene el permiso
  */
 export function hasPermission(role: Role, permission: Permission): boolean {
-  // Obtener permisos (personalizados o por defecto)
-  const permissions = getPermissionsForRole(role);
+  // Versión sync — usa la matriz local (fallback) en lugar de cache async.
+  // Para checks autoritativos usar checkPermission() (async).
+  const permissions = getPermissionsByRoleSync(role);
   return permissions.includes(permission);
 }
 
@@ -225,8 +226,8 @@ export function hasPermission(role: Role, permission: Permission): boolean {
  * @returns Array de permisos del rol
  */
 export function getRolePermissions(role: Role): Permission[] {
-  // Obtener permisos (personalizados o por defecto)
-  return getPermissionsForRole(role);
+  // Versión sync — usa la matriz local (fallback).
+  return getPermissionsByRoleSync(role);
 }
 
 // ============================================================================

@@ -98,7 +98,7 @@ const ADVISOR_PERMISSIONS: Permission[] = [
   AcademicoPermission.CREAR_EVENTO,
   AcademicoPermission.VER,
   AcademicoPermission.ESTADISTICAS,
-  AcademicoPermission.VER_ENLACE,
+  AcademicoPermission.ADVISOR_VER_ENLACE,
 
   // SERVICIO - Solo Welcome Session
   ServicioPermission.WELCOME_CARGAR_EVENTOS,
@@ -442,8 +442,8 @@ export function getPermissionsByRoleSync(role: Role): Permission[] {
 /**
  * Verifica si un rol tiene un permiso específico
  */
-export function roleHasPermission(role: Role, permission: Permission): boolean {
-  const permissions = getPermissionsByRole(role);
+export async function roleHasPermission(role: Role, permission: Permission): Promise<boolean> {
+  const permissions = await getPermissionsByRole(role);
   return permissions.includes(permission);
 }
 
@@ -457,6 +457,6 @@ export function getAllRoles(): Role[] {
 /**
  * Cuenta cuántos permisos tiene un rol
  */
-export function countRolePermissions(role: Role): number {
-  return getPermissionsByRole(role).length;
+export async function countRolePermissions(role: Role): Promise<number> {
+  return (await getPermissionsByRole(role)).length;
 }

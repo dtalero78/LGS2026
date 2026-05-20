@@ -77,7 +77,7 @@ console.log(`║  🐘 POSTGRESQL: ${_resolvedDbName.padEnd(37)}║`);
 console.log('╚══════════════════════════════════════════════════════╝\n');
 
 // Handle pool errors
-pool.on('error', (err) => {
+pool.on('error', (err: any) => {
   console.error('❌ Unexpected PostgreSQL pool error:', err);
   process.exit(-1);
 });
@@ -273,7 +273,7 @@ export function parseJsonbFields<T extends Record<string, any>>(
 ): T | null {
   if (!row) return null;
 
-  const parsed = { ...row };
+  const parsed: any = { ...row };
 
   for (const field of jsonbFields) {
     if (parsed[field] && typeof parsed[field] === 'string') {
@@ -286,7 +286,7 @@ export function parseJsonbFields<T extends Record<string, any>>(
     }
   }
 
-  return parsed;
+  return parsed as T;
 }
 
 /**
@@ -303,7 +303,7 @@ export function stringifyJsonbFields<T extends Record<string, any>>(
   data: T,
   jsonbFields: string[]
 ): T {
-  const stringified = { ...data };
+  const stringified: any = { ...data };
 
   for (const field of jsonbFields) {
     if (stringified[field] && typeof stringified[field] === 'object') {
@@ -311,7 +311,7 @@ export function stringifyJsonbFields<T extends Record<string, any>>(
     }
   }
 
-  return stringified;
+  return stringified as T;
 }
 
 // Export pool for direct access if needed

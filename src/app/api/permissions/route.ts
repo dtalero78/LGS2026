@@ -54,10 +54,12 @@ export const GET = handlerWithAuth(async (_req, _ctx, session) => {
   } catch (dbError) {
     console.error('⚠️ [PostgreSQL] Error al cargar permisos, usando fallback:', dbError);
 
-    const matrix = ROLE_PERMISSIONS_MATRIX.map((rolePerms) => {
-      const permissions = getPermissionsForRole(rolePerms.role);
-      return { role: rolePerms.role, permissions, count: permissions.length };
-    });
+    const matrix = await Promise.all(
+      ROLE_PERMISSIONS_MATRIX.map(async (rolePerms) => {
+        const permissions = await getPermissionsForRole(rolePerms.role);
+        return { role: rolePerms.role, permissions, count: permissions.length };
+      })
+    );
 
     return NextResponse.json(
       { success: true, source: 'fallback', data: { roles: Object.values(Role), permissions: PERMISSIONS_CATALOG, matrix } },

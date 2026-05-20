@@ -47,7 +47,7 @@ export const GET = handlerWithAuth(async (_req, _ctx, session) => {
     console.error('❌ [PostgreSQL] Error al cargar permisos:', dbError);
 
     const { getPermissionsByRole } = await import('@/config/roles');
-    const fallbackPermissions = getPermissionsByRole(userRole);
+    const fallbackPermissions = await getPermissionsByRole(userRole);
 
     console.log(`⚠️ Usando permisos fallback para ${userRole}:`, fallbackPermissions.length);
 

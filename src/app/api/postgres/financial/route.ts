@@ -49,13 +49,12 @@ export const GET = handlerWithAuth(async (request) => {
   const contrato = searchParams.get('contrato');
   const estadoPago = searchParams.get('estadoPago');
 
-  const filters: Record<string, any> = {};
-  if (contrato) filters.contrato = contrato;
-  if (estadoPago) filters.estadoPago = estadoPago;
-
-  const { whereClause, values } = buildDynamicWhere(filters);
+  const { clause, values } = buildDynamicWhere([
+    { field: 'contrato',   value: contrato },
+    { field: 'estadoPago', value: estadoPago },
+  ]);
   const result = await query(
-    `SELECT * FROM "FINANCIEROS" ${whereClause} ORDER BY "_createdDate" DESC`,
+    `SELECT * FROM "FINANCIEROS" ${clause} ORDER BY "_createdDate" DESC`,
     values
   );
 

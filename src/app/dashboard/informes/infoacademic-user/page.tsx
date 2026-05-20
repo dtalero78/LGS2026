@@ -330,7 +330,7 @@ export default function InfoAcademicUserPage() {
                     <YAxis tick={{ fontSize: 10, fill:'#9ca3af' }} width={28} allowDecimals={false} />
                     <Tooltip
                       formatter={(value: any, name: string) => [value, name]}
-                      labelFormatter={(label: string, payload: any[]) => {
+                      labelFormatter={(label: any, payload: readonly any[]) => {
                         if (!payload?.length) return label
                         const semana = payload[0]?.payload?.semana || ''
                         return `${label}  (${semana})`

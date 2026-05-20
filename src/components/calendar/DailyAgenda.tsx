@@ -20,6 +20,7 @@ interface CalendarEvent {
   linkZoom?: string
   inscritos?: number
   asistieron?: number
+  _createdDate?: string | Date
 }
 
 interface Advisor {

@@ -1,4 +1,5 @@
 import 'server-only';
+import { NextResponse } from 'next/server';
 import { handler, successResponse } from '@/lib/api-helpers';
 import { ValidationError, NotFoundError } from '@/lib/errors';
 import { queryOne } from '@/lib/postgres';
@@ -45,9 +46,9 @@ export const POST = handler(async (request) => {
 
   if (!idMatches || !phoneMatches) {
     // Return mismatch — client will show modal
-    return new Response(
-      JSON.stringify({ success: false, mismatch: true, error: 'Los datos no coinciden con nuestros registros' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    return NextResponse.json(
+      { success: false, mismatch: true, error: 'Los datos no coinciden con nuestros registros' },
+      { status: 400 }
     );
   }
 

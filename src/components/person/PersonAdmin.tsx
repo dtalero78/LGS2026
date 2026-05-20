@@ -50,6 +50,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     segundoApellido: '',
     numeroId: '',
     fechaNacimiento: '',
+    edad: '',
     pais: '',
     domicilio: '',
     ciudad: '',
@@ -433,6 +434,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             pais: ben.pais || ben.plataforma || '',
             domicilio: ben.domicilio || '',
             ciudad: ben.ciudad || '',
+            celularPrefijo: ben.celularPrefijo || '+57',
             celular: ben.celular || '',
             email: ben.email || '',
             genero: ben.genero || ''
@@ -595,7 +597,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         setBeneficiaryData({
           primerNombre: '', segundoNombre: '', primerApellido: '', segundoApellido: '',
           numeroId: '', fechaNacimiento: '', edad: '', pais: '', domicilio: '',
-          ciudad: '', celular: '', email: '', genero: ''
+          ciudad: '', celularPrefijo: '+57', celular: '', email: '', genero: ''
         })
         setCurrentFormStep(1)
       } else {

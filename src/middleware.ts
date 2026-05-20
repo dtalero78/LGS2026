@@ -64,7 +64,7 @@ export async function middleware(request: NextRequest) {
     const userRole = (token.role as Role) || 'admin';
 
     // SUPER_ADMIN y ADMIN tienen acceso total
-    if (userRole === Role.SUPER_ADMIN || userRole === Role.ADMIN || userRole === 'admin') {
+    if (userRole === Role.SUPER_ADMIN || userRole === Role.ADMIN || (userRole as string) === 'admin') {
       console.log(`✅ [Middleware] Full access granted to ${pathname} for ${userRole}`);
       return noCacheNext();
     }
