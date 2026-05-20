@@ -230,6 +230,24 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
   // Suppress unused warning — paymentProgress is computed for parity with original
   void paymentProgress
 
+  // ── Derivados del listado de pagos para mostrar en "Información de Pagos" ──
+  // Cuotas pagadas REALES = pagos validados con numCuota > 0
+  // (la cuota #0 = inscripción NO cuenta como cuota pagada)
+  const cuotasPagadasReales = pagos
+    .filter((p: any) => p.validado === true && Number(p.numCuota) > 0)
+    .length
+  // Estado Cartera: leído del registro cuota #0 (donde se guarda el tipo de
+  // cartera del contrato). Default 'normal' si no hay cuota #0.
+  const cuotaCero: any = pagos.find((p: any) => Number(p.numCuota) === 0)
+  const estadoCartera = String(cuotaCero?.tipoCartera || 'normal').toLowerCase()
+  const ESTADO_CARTERA_META: Record<string, { label: string; cls: string }> = {
+    normal:      { label: 'Normal',       cls: 'bg-green-100 text-green-800' },
+    prejuridico: { label: 'Prejurídico',  cls: 'bg-amber-100 text-amber-800' },
+    juridico:    { label: 'Jurídico',     cls: 'bg-orange-100 text-orange-800' },
+    castigada:   { label: 'Castigada',    cls: 'bg-red-100 text-red-800' },
+  }
+  const estadoMeta = ESTADO_CARTERA_META[estadoCartera] || { label: estadoCartera, cls: 'bg-gray-100 text-gray-800' }
+
   return (
     <div className="space-y-6">
       {/* Financial Summary */}
@@ -301,7 +319,7 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700">Método de Pago</label>
               <p className="mt-1 text-sm text-gray-900">
@@ -312,6 +330,12 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
               <label className="block text-sm font-medium text-gray-700">Plan Contratado</label>
               <p className="mt-1 text-sm text-gray-900">
                 {financialData ? financial.plan : 'No disponible'}
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Cuotas Pagadas</label>
+              <p className="mt-1 text-sm text-gray-900 font-semibold">
+                {cuotasPagadasReales}{financial.cuotas ? ` / ${financial.cuotas}` : ''}
               </p>
             </div>
             <div>
@@ -327,6 +351,20 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                   ? formatCurrency(financial.cuotaInicial)
                   : 'No disponible'}
               </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Valor Cuota</label>
+              <p className="mt-1 text-sm text-gray-900 font-semibold">
+                {financialData && financial.tarifa > 0
+                  ? formatCurrency(financial.tarifa)
+                  : 'No disponible'}
+              </p>
+            </div>
+            <div className="md:col-span-3 pt-3 border-t border-gray-100">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Estado Cartera</label>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${estadoMeta.cls}`}>
+                {estadoMeta.label}
+              </span>
             </div>
           </div>
 

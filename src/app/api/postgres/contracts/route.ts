@@ -175,14 +175,14 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
            "valorCuota", "valorPagado", "inscripcion", "saldo", "descuento",
            "medioPago", "documentosAdjuntos",
            "validado", "fechaValidacion", "validadoPor",
-           "createdBy", "_createdDate", "_updatedDate"
+           "createdBy", "tipoCartera", "_createdDate", "_updatedDate"
          ) VALUES (
            $1, $2, $3, $4, $5,
            COALESCE($15::date, CURRENT_DATE), $6::date, 0, $7, $8,
            $9, $10, $11, $12, 0,
            $13, '[]'::jsonb,
            true, COALESCE($15::date, CURRENT_DATE), $14,
-           $14, NOW(), NOW()
+           $14, 'normal', NOW(), NOW()
          ) RETURNING "_id"`,
         [
           ids.payment(),
