@@ -127,6 +127,7 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
     fechaDesde?: string | null;
     fechaHasta?: string | null;
     search?: string | null;
+    gestorRecaudo?: string | null;
     limit: number;
     offset: number;
   }): Promise<{ rows: any[]; total: number }> {
@@ -139,6 +140,11 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
 
     if (opts.fechaDesde) { conds.push(`pt."fechaPago" >= $${i}::date`); params.push(opts.fechaDesde); i++; }
     if (opts.fechaHasta) { conds.push(`pt."fechaPago" <= $${i}::date`); params.push(opts.fechaHasta); i++; }
+
+    if (opts.gestorRecaudo && opts.gestorRecaudo.trim()) {
+      conds.push(`pt."gestorRecaudo" = $${i}`);
+      params.push(opts.gestorRecaudo.trim()); i++;
+    }
 
     if (opts.search && opts.search.trim()) {
       const term = `%${opts.search.trim()}%`;

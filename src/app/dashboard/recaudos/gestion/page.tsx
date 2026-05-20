@@ -73,6 +73,7 @@ export default function GestionRecaudosPage() {
   const [search, setSearch] = useState('')
   const [fechaInicio, setFechaInicio] = useState('')
   const [fechaFin, setFechaFin] = useState('')
+  const [gestorFiltro, setGestorFiltro] = useState('')
 
   // Datos
   const [pagos, setPagos] = useState<PagoRow[]>([])
@@ -97,6 +98,7 @@ export default function GestionRecaudosPage() {
       if (search.trim()) qs.set('search', search.trim())
       if (fechaInicio) qs.set('fechaInicio', fechaInicio)
       if (fechaFin) qs.set('fechaFin', fechaFin)
+      if (gestorFiltro) qs.set('gestorRecaudo', gestorFiltro)
       qs.set('page', String(pageToUse))
       qs.set('pageSize', String(PAGE_SIZE))
       const data = await api.get<{ pagos: PagoRow[]; total: number; page: number }>(
@@ -110,7 +112,7 @@ export default function GestionRecaudosPage() {
     } finally {
       setLoading(false)
     }
-  }, [estado, search, fechaInicio, fechaFin, page])
+  }, [estado, search, fechaInicio, fechaFin, gestorFiltro, page])
 
   // Carga inicial
   useEffect(() => {
@@ -129,7 +131,7 @@ export default function GestionRecaudosPage() {
 
   const handleAplicarFiltros = () => fetchPagos(true)
   const handleLimpiar = () => {
-    setEstado('pendiente'); setSearch(''); setFechaInicio(''); setFechaFin('')
+    setEstado('pendiente'); setSearch(''); setFechaInicio(''); setFechaFin(''); setGestorFiltro('')
     setTimeout(() => fetchPagos(true), 0)
   }
 
@@ -226,7 +228,7 @@ export default function GestionRecaudosPage() {
           </div>
 
           {/* Filtros */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4 grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+          <div className="bg-white border border-gray-200 rounded-lg p-4 grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
             <div className="md:col-span-2">
               <label htmlFor="search" className="block text-xs font-medium text-gray-700">Buscar (titular, ID, contrato)</label>
               <div className="mt-1 relative">
@@ -253,6 +255,23 @@ export default function GestionRecaudosPage() {
               </select>
             </div>
             <div>
+              <label htmlFor="gestorFiltro" className="block text-xs font-medium text-gray-700">Gestor de Recaudo</label>
+              <select
+                id="gestorFiltro" value={gestorFiltro}
+                onChange={e => setGestorFiltro(e.target.value)}
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              >
+                <option value="">Todos</option>
+                {displayUsers
+                  .filter(u => u.rol === 'RECAUDO_ASIST' || u.rol === 'RECAUDOS_JEFE')
+                  .map(u => (
+                    <option key={u._id} value={u._id}>
+                      {u.nombre} · {ROLE_LABEL[u.rol] || u.rol}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div>
               <label htmlFor="fechaInicio" className="block text-xs font-medium text-gray-700">Fecha desde</label>
               <input
                 id="fechaInicio" type="date" value={fechaInicio}
@@ -268,7 +287,7 @@ export default function GestionRecaudosPage() {
                 className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
               />
             </div>
-            <div className="md:col-span-5 flex items-center justify-end gap-2 pt-2">
+            <div className="md:col-span-6 flex items-center justify-end gap-2 pt-2">
               <button
                 type="button" onClick={handleLimpiar}
                 className="px-3 py-1.5 text-xs text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"

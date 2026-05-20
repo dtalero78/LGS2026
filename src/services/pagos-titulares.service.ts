@@ -122,6 +122,7 @@ export const pagosTitularesService = {
     fechaDesde?: string | null;
     fechaHasta?: string | null;
     search?: string | null;
+    gestorRecaudo?: string | null;
     page?: number;
     pageSize?: number;
   }) {
@@ -133,6 +134,7 @@ export const pagosTitularesService = {
       fechaDesde: opts.fechaDesde ?? null,
       fechaHasta: opts.fechaHasta ?? null,
       search: opts.search ?? null,
+      gestorRecaudo: opts.gestorRecaudo ?? null,
       limit: pageSize,
       offset,
     });
