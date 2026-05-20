@@ -210,6 +210,136 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
   }
 
   /**
+   * Lista de titulares ASIGNADOS a gestores de recaudo (page Asignación).
+   *
+   * Devuelve un row por titular con agregaciones de sus pagos:
+   *   - ultimaFechaPago: MAX(fechaPago) de pagos VALIDADOS con numCuota > 0
+   *   - ultimaCuotaPagada: MAX(numCuota) de validados con numCuota > 0
+   *   - tipoCartera: leído del registro cuota #0 (con default 'normal')
+   *   - saldoActual: FINANCIEROS.saldo (texto legacy)
+   *
+   * Filtros (todos opcionales):
+   *   - gestorRecaudoIn: lista de USUARIOS_ROLES._id a los que se restringe
+   *     el filtro p.gestorRecaudo IN (...) — viene del role-based filter
+   *     calculado en el service (no del cliente).
+   *   - search: ILIKE sobre nombre/apellido/contrato/numeroId
+   *   - estadoCartera: filtra por tipoCartera del registro cuota #0
+   *   - fechaDesde / fechaHasta: rango sobre PEOPLE.fechaContrato
+   *
+   * Sólo titulares con gestorRecaudo NOT NULL.
+   */
+  async findTitularesAsignados(opts: {
+    gestorRecaudoIn: string[];           // [] = no filtro adicional (admin); undefined invalida
+    search?: string | null;
+    estadoCartera?: 'normal' | 'prejuridico' | 'juridico' | 'castigada' | null;
+    fechaDesde?: string | null;
+    fechaHasta?: string | null;
+    limit: number;
+    offset: number;
+  }): Promise<{ rows: any[]; total: number }> {
+    const conds: string[] = [
+      `p."tipoUsuario" = 'TITULAR'`,
+      `p."gestorRecaudo" IS NOT NULL`,
+      `p."gestorRecaudo" <> ''`,
+    ];
+    const params: any[] = [];
+    let i = 1;
+
+    // Filtro role-based: si el caller pasa un array no vacío, restringe.
+    // Si pasa array vacío → no restringe (caso admin/super_admin).
+    if (Array.isArray(opts.gestorRecaudoIn) && opts.gestorRecaudoIn.length > 0) {
+      conds.push(`p."gestorRecaudo" = ANY($${i}::text[])`);
+      params.push(opts.gestorRecaudoIn);
+      i++;
+    }
+
+    if (opts.search && opts.search.trim()) {
+      const term = `%${opts.search.trim()}%`;
+      conds.push(`(
+        p."primerNombre" ILIKE $${i}
+        OR p."primerApellido" ILIKE $${i}
+        OR p."segundoApellido" ILIKE $${i}
+        OR p."contrato" ILIKE $${i}
+        OR p."numeroId" ILIKE $${i}
+      )`);
+      params.push(term); i++;
+    }
+
+    if (opts.fechaDesde) { conds.push(`p."fechaContrato" >= $${i}::date`); params.push(opts.fechaDesde); i++; }
+    if (opts.fechaHasta) { conds.push(`p."fechaContrato" <= $${i}::date`); params.push(opts.fechaHasta); i++; }
+
+    // estadoCartera se filtra DESPUÉS del SELECT (subquery cuota #0) usando HAVING-equivalent
+    // o filtrando vía sub-WHERE; lo aplicamos como filtro extra después de calcular.
+    // Para mantener todo en una query, lo usamos en un WHERE sobre la subquery del LEFT JOIN.
+    let havingCartera = '';
+    if (opts.estadoCartera) {
+      conds.push(`COALESCE(c0."tipoCartera", 'normal') = $${i}`);
+      params.push(opts.estadoCartera);
+      i++;
+      havingCartera = ''; // ya queda en WHERE
+    }
+
+    const whereClause = `WHERE ${conds.join(' AND ')}`;
+
+    // Total
+    const totalRow = await queryOne<{ total: string }>(
+      `SELECT COUNT(*)::text AS total
+       FROM "PEOPLE" p
+       LEFT JOIN LATERAL (
+         SELECT pt0."tipoCartera"
+         FROM "PAGOS_TITULARES" pt0
+         WHERE pt0."idPeople" = p."_id" AND pt0."numCuota" = 0
+         LIMIT 1
+       ) c0 ON true
+       ${whereClause}`,
+      params
+    );
+    const total = parseInt(totalRow?.total ?? '0', 10) || 0;
+
+    // Página
+    const limitIdx = i; const offsetIdx = i + 1;
+    const rows = await queryMany<any>(
+      `SELECT
+         p."_id"                                 AS "_id",
+         p."primerNombre"                        AS "primerNombre",
+         p."primerApellido"                      AS "primerApellido",
+         p."segundoApellido"                     AS "segundoApellido",
+         p."numeroId"                            AS "numeroId",
+         p."contrato"                            AS "contrato",
+         p."fechaContrato"                       AS "fechaContrato",
+         p."plataforma"                          AS "plataforma",
+         p."gestorRecaudo"                       AS "gestorRecaudo",
+         f."saldo"                               AS "saldoActual",
+         COALESCE(c0."tipoCartera", 'normal')    AS "tipoCartera",
+         agg."ultimaFechaPago"                   AS "ultimaFechaPago",
+         agg."ultimaCuotaPagada"                 AS "ultimaCuotaPagada"
+       FROM "PEOPLE" p
+       LEFT JOIN "FINANCIEROS" f ON f."contrato" = p."contrato"
+       LEFT JOIN LATERAL (
+         SELECT pt0."tipoCartera"
+         FROM "PAGOS_TITULARES" pt0
+         WHERE pt0."idPeople" = p."_id" AND pt0."numCuota" = 0
+         LIMIT 1
+       ) c0 ON true
+       LEFT JOIN LATERAL (
+         SELECT
+           MAX(pt1."fechaPago")  AS "ultimaFechaPago",
+           MAX(pt1."numCuota")   AS "ultimaCuotaPagada"
+         FROM "PAGOS_TITULARES" pt1
+         WHERE pt1."idPeople" = p."_id"
+           AND pt1."validado" = true
+           AND pt1."numCuota" > 0
+       ) agg ON true
+       ${whereClause}
+       ORDER BY p."primerApellido" ASC NULLS LAST, p."primerNombre" ASC NULLS LAST
+       LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+      [...params, opts.limit, opts.offset]
+    );
+
+    return { rows, total };
+  }
+
+  /**
    * Asigna numeroRecibo si no tiene, en formato LGS-####.
    * Numeración global atómica via MAX+1 (mismo patrón que contracts).
    * Si ya tiene numeroRecibo lo conserva (idempotente).

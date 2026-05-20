@@ -194,6 +194,9 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/dashboard/recaudos/gestion': [
     'RECAUDOS.GESTION.VER' as Permission,
   ],
+  '/dashboard/recaudos/asignacion': [
+    'RECAUDOS.ASIGNACION.VER' as Permission,
+  ],
 
   // Aprobación
   '/dashboard/aprobacion': [

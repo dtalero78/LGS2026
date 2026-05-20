@@ -76,7 +76,8 @@ const getNavigation = (userEmail: string) => [
     name: 'Recaudos',
     icon: BanknotesIcon,
     children: [
-      { name: 'Gestión', href: '/dashboard/recaudos/gestion', newTab: true },
+      { name: 'Gestión',    href: '/dashboard/recaudos/gestion',    newTab: true },
+      { name: 'Asignación', href: '/dashboard/recaudos/asignacion', newTab: true },
     ],
   },
   {
@@ -276,6 +277,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/dashboard/recaudos/gestion': [
       RecaudosPermission.GESTION_VER,
     ],
+    '/dashboard/recaudos/asignacion': [
+      RecaudosPermission.ASIGNACION_VER,
+    ],
     // Aprobación
     '/dashboard/aprobacion': [
       AprobacionPermission.ACTUALIZAR,
@@ -359,6 +363,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ],
     'Recaudos': [
       RecaudosPermission.GESTION_VER,
+      RecaudosPermission.ASIGNACION_VER,
     ],
   }
 

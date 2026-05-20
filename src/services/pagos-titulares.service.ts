@@ -128,6 +128,92 @@ export const pagosTitularesService = {
   },
 
   /**
+   * Lista de titulares ASIGNADOS para la pantalla
+   * `/dashboard/recaudos/asignacion` ("Usuarios Asignados").
+   *
+   * Filtro role-based (server-side, no se puede burlar desde el cliente):
+   *  - SUPER_ADMIN / ADMIN  → todos los titulares (gestorRecaudo opcional).
+   *  - RECAUDOS_JEFE        → titulares con gestor asignado a CUALQUIER
+   *                            user con rol RECAUDOS_JEFE o RECAUDO_ASIST.
+   *  - RECAUDO_ASIST        → SÓLO los titulares con gestor = su _id.
+   *                            Ignora cualquier `gestorRecaudo` enviado.
+   *  - Otros roles          → lanza ForbiddenError.
+   *
+   * `gestorRecaudo` opcional (sólo se honra para JEFE/admin para
+   * limitar a un gestor específico dentro del set permitido).
+   */
+  async listAsignaciones(
+    session: { role: string; id?: string | null; email?: string | null },
+    opts: {
+      search?: string | null;
+      estadoCartera?: 'normal' | 'prejuridico' | 'juridico' | 'castigada' | null;
+      gestorRecaudo?: string | null;
+      fechaDesde?: string | null;
+      fechaHasta?: string | null;
+      page?: number;
+      pageSize?: number;
+    },
+  ) {
+    const role = (session.role || '').toString();
+    const isAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN' || role === 'admin';
+    const isJefe  = role === 'RECAUDOS_JEFE';
+    const isAsist = role === 'RECAUDO_ASIST';
+
+    if (!isAdmin && !isJefe && !isAsist) {
+      throw new ValidationError('Rol no autorizado para ver asignaciones');
+    }
+
+    let gestorIn: string[] = [];
+
+    if (isAsist) {
+      // Resolver _id del asistente desde su email (siempre filtra a sí mismo)
+      if (!session.email) throw new ValidationError('Sesión sin email');
+      const found = await queryOne<{ _id: string }>(
+        `SELECT "_id" FROM "USUARIOS_ROLES" WHERE LOWER("email") = LOWER($1) LIMIT 1`,
+        [session.email]
+      );
+      if (!found?._id) {
+        // No tiene fila en USUARIOS_ROLES → no puede tener titulares asignados
+        return { titulares: [], total: 0, page: 1, pageSize: opts.pageSize ?? 50 };
+      }
+      gestorIn = [found._id];
+    } else if (isJefe) {
+      // RECAUDOS_JEFE ve todos los gestores con rol RECAUDOS_JEFE o RECAUDO_ASIST
+      const rows = await query(
+        `SELECT "_id" FROM "USUARIOS_ROLES"
+         WHERE "rol" IN ('RECAUDOS_JEFE', 'RECAUDO_ASIST') AND "activo" = true`
+      );
+      gestorIn = rows.rows.map((r: any) => r._id);
+      // Si filtra por un gestor específico, validar que esté dentro del set
+      if (opts.gestorRecaudo) {
+        if (!gestorIn.includes(opts.gestorRecaudo)) {
+          throw new ValidationError('Gestor no autorizado');
+        }
+        gestorIn = [opts.gestorRecaudo];
+      }
+    } else {
+      // SUPER_ADMIN / ADMIN: sin restricción, opcional filtrar por gestor
+      if (opts.gestorRecaudo) gestorIn = [opts.gestorRecaudo];
+      else gestorIn = []; // sin restricción
+    }
+
+    const pageSize = Math.min(Math.max(1, opts.pageSize ?? 50), 500);
+    const page = Math.max(1, opts.page ?? 1);
+    const offset = (page - 1) * pageSize;
+
+    const { rows, total } = await PagosTitularesRepository.findTitularesAsignados({
+      gestorRecaudoIn: gestorIn,
+      search: opts.search ?? null,
+      estadoCartera: opts.estadoCartera ?? null,
+      fechaDesde: opts.fechaDesde ?? null,
+      fechaHasta: opts.fechaHasta ?? null,
+      limit: pageSize,
+      offset,
+    });
+    return { titulares: rows, total, page, pageSize };
+  },
+
+  /**
    * Lista paginada para el Centro de Validación de Pagos
    * (con JOIN PEOPLE, excluye cuota #0).
    */

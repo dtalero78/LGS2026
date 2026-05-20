@@ -824,6 +824,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     name: 'Sub-ítem "Gestión" (sidebar Recaudos)',
     description: 'Acceso al grupo Recaudos > Gestión en el sidebar. Página de gestión de pagos/recaudos (en construcción)',
   },
+  {
+    code: RecaudosPermission.ASIGNACION_VER,
+    module: Module.RECAUDOS,
+    section: 'Asignación',
+    name: 'Sub-ítem "Asignación" (sidebar Recaudos)',
+    description: 'Acceso a /dashboard/recaudos/asignacion — vista "Usuarios Asignados" filtrada por rol del usuario logueado (RECAUDOS_JEFE ve todos los titulares con gestor asignado; RECAUDO_ASIST ve sólo los suyos; SUPER_ADMIN/ADMIN ven todos)',
+  },
 ];
 
 // ============================================================================
