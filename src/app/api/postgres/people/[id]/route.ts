@@ -199,6 +199,7 @@ const PEOPLE_UPDATE_FIELDS = [
   'stepParalelo',
   'plataforma',
   'estadoInactivo',
+  'estado',
   'aprobacion',
   'observaciones',
   'vigencia',
@@ -222,11 +223,57 @@ export const PATCH = handlerWithAuth(async (
   console.log('🔄 [PostgreSQL People] Updating person:', personId);
 
   // Fetch current person before update (needed for old email to update USUARIOS_ROLES)
-  const currentPerson = await queryOne<{ email: string | null; numeroId: string | null; tipoUsuario: string | null }>(
-    `SELECT "email", "numeroId", "tipoUsuario" FROM "PEOPLE" WHERE "_id" = $1`,
+  const currentPerson = await queryOne<{
+    email: string | null;
+    numeroId: string | null;
+    tipoUsuario: string | null;
+    aprobacion: string | null;
+    estado: string | null;
+    contrato: string | null;
+  }>(
+    `SELECT "email", "numeroId", "tipoUsuario", "aprobacion", "estado", "contrato" FROM "PEOPLE" WHERE "_id" = $1`,
     [personId]
   );
   if (!currentPerson) throw new NotFoundError('Person', personId);
+
+  // ── Validación de cambio de aprobación ──
+  // Una vez aprobado un contrato:
+  //   - 'Contrato nulo' / 'Devuelto' / 'Rechazado' quedan BLOQUEADOS
+  //     (esos estados sólo aplican pre-aprobación).
+  //   - 'Pendiente' y 'Retractado' SÍ se permiten (con alerta en frontend).
+  // Pre-aprobación cualquier transición es libre.
+  if (body.aprobacion && currentPerson.aprobacion === 'Aprobado') {
+    const blockedPostApproval = ['Contrato nulo', 'Devuelto', 'Rechazado'];
+    if (blockedPostApproval.includes(body.aprobacion)) {
+      // Chequeos de contexto: estado operativo + beneficiarios académicos
+      const estadoActual = currentPerson.estado ?? '';
+      const reasons: string[] = [];
+      if (estadoActual === 'On Hold')         reasons.push('está en OnHold');
+      if (estadoActual === 'CON EXTENSION')   reasons.push('tiene una extensión activa');
+
+      let benefAcademica = 0;
+      if (currentPerson.contrato) {
+        const benefRow = await queryOne<{ count: string }>(
+          `SELECT COUNT(*)::text AS count
+           FROM "ACADEMICA" a
+           JOIN "PEOPLE" p ON p."numeroId" = a."numeroId" AND p."tipoUsuario" = 'BENEFICIARIO'
+           WHERE p."contrato" = $1`,
+          [currentPerson.contrato]
+        );
+        benefAcademica = parseInt(benefRow?.count ?? '0', 10) || 0;
+      }
+      if (benefAcademica > 0) {
+        reasons.push(`tiene ${benefAcademica} beneficiario(s) con registro académico creado`);
+      }
+
+      throw new ValidationError(
+        `No se puede cambiar la aprobación a "${body.aprobacion}" después de aprobar el contrato. ` +
+        `Estados "Contrato nulo", "Devuelto" y "Rechazado" sólo aplican antes de aprobar. ` +
+        `Usa "Retractado" si necesitas anular post-aprobación.` +
+        (reasons.length ? ` Además: el contrato ${reasons.join(' y ')}.` : '')
+      );
+    }
+  }
 
   // Validate gestorRecaudo assignment:
   //   - Only allowed on TITULAR rows
@@ -252,6 +299,22 @@ export const PATCH = handlerWithAuth(async (
       // Normalize empty string to null for clearing
       body.gestorRecaudo = null;
     }
+  }
+
+  // Auto-mapear aprobacion → estado operativo si el caller no envió estado
+  // explícito. Aprobado=ACTIVA, Pendiente=PENDIENTE, Retractado=RETRACTADO,
+  // Contrato nulo/Devuelto/Rechazado=ANULADO.
+  if (body.aprobacion && body.estado === undefined) {
+    const APROBACION_TO_ESTADO: Record<string, string> = {
+      'Aprobado':       'ACTIVA',
+      'Pendiente':      'PENDIENTE',
+      'Retractado':     'RETRACTADO',
+      'Contrato nulo':  'ANULADO',
+      'Devuelto':       'ANULADO',
+      'Rechazado':      'ANULADO',
+    };
+    const mapped = APROBACION_TO_ESTADO[body.aprobacion as string];
+    if (mapped) body.estado = mapped;
   }
 
   const built = buildDynamicUpdate('PEOPLE', body, PEOPLE_UPDATE_FIELDS);

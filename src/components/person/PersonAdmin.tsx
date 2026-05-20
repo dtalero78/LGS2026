@@ -104,8 +104,15 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     'Contrato nulo',
     'Devuelto',
     'Pendiente',
-    'Rechazado'
+    'Rechazado',
+    'Retractado',
   ]
+
+  // Estados que SOLO aplican antes de aprobar.
+  // Post-aprobación el backend rechaza estos cambios con 400 + mensaje.
+  const PRE_APPROVAL_ONLY = ['Contrato nulo', 'Devuelto', 'Rechazado']
+  // Estados post-aprobación que requieren confirmación simple (sin bloqueo)
+  const SIMPLE_CONFIRM_POST_APPROVAL = ['Pendiente', 'Retractado']
 
   const handleApproveSpecificBeneficiary = async (beneficiaryId: string) => {
     if (!beneficiaryId) return
@@ -177,11 +184,22 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     console.log('Nuevo estado solicitado:', newEstado)
     console.log('Estado actual:', selectedEstado)
 
+    // Bloqueo client-side: si el contrato ya está Aprobado, los estados
+    // "pre-aprobación" no se permiten. El backend también lo rechaza.
+    if (originalEstado === 'Aprobado' && PRE_APPROVAL_ONLY.includes(newEstado)) {
+      alert(
+        `No se puede cambiar a "${newEstado}" después de aprobar el contrato.\n\n` +
+        `Estos estados (Contrato nulo, Devuelto, Rechazado) sólo aplican antes de aprobar.\n` +
+        `Usa "Retractado" si necesitas anular el contrato post-aprobación.`
+      )
+      // Volver a sincronizar el dropdown con el estado real
+      setSelectedEstado(originalEstado as any)
+      return
+    }
+
     // Guardar el estado pendiente y mostrar modal de confirmación
     setPendingEstado(newEstado)
     setShowEstadoModal(true)
-
-    console.log('Modal de confirmación mostrado para cambio de estado')
   }
 
   const handleAddComment = () => {
@@ -720,16 +738,23 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                   onChange={(e) => handleEstadoChange(e.target.value)}
                   className="input-field"
                 >
-                  {estadoOptions.map((estado) => (
-                    <option key={estado} value={estado}>
-                      {estado === 'Aprobado' && '✅ '}
-                      {estado === 'Contrato nulo' && '⚪ '}
-                      {estado === 'Devuelto' && '🔄 '}
-                      {estado === 'Pendiente' && '⏳ '}
-                      {estado === 'Rechazado' && '❌ '}
-                      {estado}
-                    </option>
-                  ))}
+                  {estadoOptions
+                    // Si ya está Aprobado, ocultar opciones pre-aprobación
+                    // ('Contrato nulo', 'Devuelto', 'Rechazado').
+                    .filter(estado =>
+                      originalEstado !== 'Aprobado' || !PRE_APPROVAL_ONLY.includes(estado)
+                    )
+                    .map((estado) => (
+                      <option key={estado} value={estado}>
+                        {estado === 'Aprobado' && '✅ '}
+                        {estado === 'Contrato nulo' && '⚪ '}
+                        {estado === 'Devuelto' && '🔄 '}
+                        {estado === 'Pendiente' && '⏳ '}
+                        {estado === 'Rechazado' && '❌ '}
+                        {estado === 'Retractado' && '↩️ '}
+                        {estado}
+                      </option>
+                    ))}
                 </select>
               </div>
               <div className="flex items-center">
@@ -1289,6 +1314,13 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                 </span>
                 ?
               </p>
+              {originalEstado === 'Aprobado' && SIMPLE_CONFIRM_POST_APPROVAL.includes(pendingEstado) && (
+                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+                  <strong>⚠ Atención:</strong> el contrato ya está <strong>Aprobado</strong>.
+                  Verifica que ningún beneficiario esté actualmente en clase activa y
+                  que el contrato no tenga OnHold o extensión en curso antes de confirmar.
+                </div>
+              )}
               <p className="text-sm text-gray-500 mt-2">
                 Este cambio se aplicará en la base de datos y será visible inmediatamente.
               </p>

@@ -134,30 +134,21 @@ export async function resolveStudentFromSession(session: Session) {
         newFinalStr = newFinal.toISOString().split('T')[0];
         newVigencia = Math.ceil((newFinal.getTime() - todayOnHold.getTime()) / (1000 * 60 * 60 * 24));
 
-        // Build extension history
-        const currentExtHistory = Array.isArray((base as any).extensionHistory) ? (base as any).extensionHistory : [];
-        const extensionEntry = {
-          numero: ((base as any).extensionCount || 0) + 1,
-          fechaEjecucion: new Date().toISOString(),
-          vigenciaAnterior: currentFinal.toISOString().split('T')[0],
-          vigenciaNueva: newFinalStr,
-          diasExtendidos: daysPaused,
-          motivo: `Extensión automática por OnHold (${daysPaused} días pausados desde ${fechaOnHold} hasta ${fechaFinOnHold})`,
-        };
-        const updatedExtHistory = [...currentExtHistory, extensionEntry];
-
+        // OnHold y Extensión son procesos independientes con contadores
+        // separados. La auto-reactivación al login extiende finalContrato
+        // por los días pausados pero NO toca extensionCount ni
+        // extensionHistory (la traza queda en onHoldHistory).
         await query(
           `UPDATE "PEOPLE"
            SET "estadoInactivo" = false,
+               "estado" = 'ACTIVA',
                "fechaOnHold" = NULL,
                "fechaFinOnHold" = NULL,
                "finalContrato" = $1::date,
                "vigencia" = $2,
-               "extensionCount" = COALESCE("extensionCount", 0) + 1,
-               "extensionHistory" = $3::jsonb,
                "_updatedDate" = NOW()
-           WHERE "_id" = $4`,
-          [newFinalStr, newVigencia, JSON.stringify(updatedExtHistory), (base as any)._id]
+           WHERE "_id" = $3`,
+          [newFinalStr, newVigencia, (base as any)._id]
         );
       } else {
         // No contract date — just clear OnHold fields

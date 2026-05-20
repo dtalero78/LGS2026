@@ -170,7 +170,11 @@ class PeopleRepositoryClass extends BaseRepository {
   }
 
   /**
-   * Extend contract end date
+   * Extend contract end date (manual extension).
+   *
+   * Marca el estado operativo del contrato como 'CON EXTENSION'.
+   * Cuando finalContrato venza, el cron expire-contracts lo pasará a
+   * 'FINALIZADA'.
    */
   async extendContract(
     id: string,
@@ -184,6 +188,7 @@ class PeopleRepositoryClass extends BaseRepository {
            "vigencia" = $2,
            "extensionCount" = COALESCE("extensionCount", 0) + 1,
            "extensionHistory" = $3::jsonb,
+           "estado" = 'CON EXTENSION',
            "_updatedDate" = NOW()
        WHERE "_id" = $4
        RETURNING *`,
@@ -231,13 +236,17 @@ class PeopleRepositoryClass extends BaseRepository {
   }
 
   /**
-   * Deactivate OnHold with automatic contract extension
+   * Deactivate OnHold with automatic contract extension.
+   *
+   * Extiende `finalContrato` por los días pausados pero NO toca
+   * `extensionCount` ni `extensionHistory`: OnHold y Extensión son
+   * procesos independientes con contadores separados. La traza del
+   * OnHold ya está en `onHoldHistory` (escrita al activar).
    */
   async deactivateOnHold(
     id: string,
     newFinalContrato: string,
     newVigencia: number,
-    extensionHistory: any[]
   ) {
     const row = await queryOne(
       `UPDATE "PEOPLE"
@@ -247,12 +256,10 @@ class PeopleRepositoryClass extends BaseRepository {
            "fechaFinOnHold" = NULL,
            "finalContrato" = $1::timestamp with time zone,
            "vigencia" = $2,
-           "extensionCount" = COALESCE("extensionCount", 0) + 1,
-           "extensionHistory" = $3::jsonb,
            "_updatedDate" = NOW()
-       WHERE "_id" = $4
+       WHERE "_id" = $3
        RETURNING *`,
-      [newFinalContrato, newVigencia, JSON.stringify(extensionHistory), id]
+      [newFinalContrato, newVigencia, id]
     );
     return this.parse(row);
   }

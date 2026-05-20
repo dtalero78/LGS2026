@@ -40,6 +40,5 @@ export const POST = handlerWithAuth(async (request, context, session) => {
     student: result.student,
     message: 'OnHold desactivado y contrato extendido automáticamente',
     extension: result.extension,
-    extensionEntry: result.extensionEntry,
   });
 });

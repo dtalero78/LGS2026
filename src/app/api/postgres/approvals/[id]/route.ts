@@ -12,16 +12,27 @@ export const GET = handlerWithAuth(async (request, { params }) => {
   return successResponse({ approval: result.rows[0] });
 });
 
+// Mapeo aprobacion → estado operativo del contrato
+const APROBACION_TO_ESTADO: Record<string, string> = {
+  'Aprobado':       'ACTIVA',
+  'Pendiente':      'PENDIENTE',
+  'Retractado':     'RETRACTADO',
+  'Contrato nulo':  'ANULADO',
+  'Devuelto':       'ANULADO',
+  'Rechazado':      'ANULADO',
+};
+
 export const PUT = handlerWithAuth(async (request, { params }) => {
   const { estado } = await request.json();
   if (!estado) throw new ValidationError('estado is required');
 
-  const validEstados = ['Aprobado', 'Rechazado', 'Pendiente', 'Contrato nulo', 'Devuelto'];
+  const validEstados = ['Aprobado', 'Rechazado', 'Pendiente', 'Contrato nulo', 'Devuelto', 'Retractado'];
   // Accept both uppercase API format and display format
   const estadoMap: Record<string, string> = {
     'APROBADO': 'Aprobado',
     'RECHAZADO': 'Rechazado',
     'PENDIENTE': 'Pendiente',
+    'RETRACTADO': 'Retractado',
   };
   const estadoFinal = estadoMap[estado] || estado;
 
@@ -32,9 +43,15 @@ export const PUT = handlerWithAuth(async (request, { params }) => {
   const check = await query(`SELECT "_id" FROM "PEOPLE" WHERE "_id" = $1`, [params.id]);
   if (check.rowCount === 0) throw new NotFoundError('Person');
 
+  const estadoOperativo = APROBACION_TO_ESTADO[estadoFinal] ?? null;
+
   const result = await query(
-    `UPDATE "PEOPLE" SET "aprobacion" = $1 WHERE "_id" = $2 RETURNING *`,
-    [estadoFinal, params.id]
+    `UPDATE "PEOPLE"
+     SET "aprobacion" = $1,
+         "estado" = COALESCE($2, "estado"),
+         "_updatedDate" = NOW()
+     WHERE "_id" = $3 RETURNING *`,
+    [estadoFinal, estadoOperativo, params.id]
   );
 
   return successResponse({ message: `Aprobación actualizada a: ${estadoFinal}`, approval: result.rows[0] });

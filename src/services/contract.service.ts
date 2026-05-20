@@ -151,6 +151,21 @@ export async function activateOnHold(input: ActivateOnHoldInput) {
 
   const person = await PeopleRepository.findByIdOrThrow(input.studentId);
 
+  // Reglas de bloqueo de OnHold:
+  //  - Máximo 2 OnHolds por contrato.
+  //  - No se permite OnHold si el contrato ya tuvo extensión manual
+  //    (extensionCount > 0). OnHold y extensión son procesos
+  //    independientes con conteos separados — OnHold no cuenta para
+  //    extensionCount, sólo para onHoldCount.
+  const onHoldCount = Number(person.onHoldCount) || 0;
+  const extensionCount = Number(person.extensionCount) || 0;
+  if (onHoldCount >= 2) {
+    throw new ValidationError('No se puede activar OnHold: el contrato ya alcanzó el máximo de 2 OnHolds');
+  }
+  if (extensionCount > 0) {
+    throw new ValidationError('No se puede activar OnHold: el contrato ya tuvo una extensión manual');
+  }
+
   const currentHistory = Array.isArray(person.onHoldHistory) ? person.onHoldHistory : [];
   const onHoldEntry = {
     fechaActivacion: new Date().toISOString(),
@@ -211,24 +226,14 @@ export async function deactivateOnHold(studentId: string) {
     (newFinal.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
   );
 
-  // Build extension history entry
-  const currentExtHistory = Array.isArray(person.extensionHistory) ? person.extensionHistory : [];
-  const extensionEntry = {
-    numero: (person.extensionCount || 0) + 1,
-    fechaEjecucion: new Date().toISOString(),
-    vigenciaAnterior: currentFinal.toISOString().split('T')[0],
-    vigenciaNueva: newFinal.toISOString().split('T')[0],
-    diasExtendidos: daysPaused,
-    motivo: `Extensión automática por OnHold (${daysPaused} días pausados desde ${person.fechaOnHold} hasta ${person.fechaFinOnHold})`,
-  };
-
-  const updatedExtHistory = [...currentExtHistory, extensionEntry];
-
+  // NOTA: OnHold y Extensión son procesos independientes con contadores
+  // separados. OnHold extiende finalContrato por los días pausados, pero
+  // NO toca extensionCount ni extensionHistory (esos son sólo de
+  // extensiones manuales). La traza del OnHold ya está en onHoldHistory.
   const student = await PeopleRepository.deactivateOnHold(
     studentId,
     newFinal.toISOString().split('T')[0],
     newVigencia,
-    updatedExtHistory
   );
 
   // Sync: restore login in USUARIOS_ROLES
@@ -251,6 +256,5 @@ export async function deactivateOnHold(studentId: string) {
       newFinalContrato: newFinal.toISOString().split('T')[0],
       newVigencia,
     },
-    extensionEntry,
   };
 }
