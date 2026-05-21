@@ -96,7 +96,7 @@ async function StudentContent({ studentId }: { studentId: string }) {
                 )}
                 {contratoFinalizado ? (
                   <span className="badge badge-error">
-                    ❌ Finalizada
+                    ❌ Aprobada
                   </span>
                 ) : nextClass ? (
                   <span className="badge badge-warning">

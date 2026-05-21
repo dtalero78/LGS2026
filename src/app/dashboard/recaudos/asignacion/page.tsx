@@ -151,7 +151,7 @@ export default function AsignacionRecaudosPage() {
       'Saldo Actual': parseMoneyText(t.saldoActual),
       'Estado Cartera': ESTADO_CARTERA_META[t.tipoCartera]?.label || t.tipoCartera,
       'Día Vencimiento': dayOf(t.ultimaFechaPago),
-      'Estado Contrato': t.estadoInactivo ? 'Finalizada' : 'Activo',
+      'Estado Contrato': t.estadoInactivo ? 'Aprobada' : 'Activo',
       Plataforma: t.plataforma || '',
     }))
     const columns = (Object.keys(rows[0]) as Array<keyof typeof rows[0]>).map(k => ({
@@ -340,7 +340,7 @@ export default function AsignacionRecaudosPage() {
                           <td className="px-3 py-2 text-center">
                             {t.estadoInactivo ? (
                               <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                Finalizada
+                                Aprobada
                               </span>
                             ) : (
                               <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
