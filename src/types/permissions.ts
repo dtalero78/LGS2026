@@ -227,8 +227,9 @@ export enum MantenimientoPermission {
  * Permisos del módulo RECAUDOS (Menú Recaudos)
  */
 export enum RecaudosPermission {
-  GESTION_VER    = 'RECAUDOS.GESTION.VER',
-  ASIGNACION_VER = 'RECAUDOS.ASIGNACION.VER',
+  GESTION_VER         = 'RECAUDOS.GESTION.VER',
+  ASIGNACION_VER      = 'RECAUDOS.ASIGNACION.VER',
+  ASIGNACION_EXPORTAR = 'RECAUDOS.ASIGNACION.EXPORTAR',
 }
 
 /**

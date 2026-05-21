@@ -831,6 +831,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     name: 'Sub-ítem "Asignación" (sidebar Recaudos)',
     description: 'Acceso a /dashboard/recaudos/asignacion — vista "Usuarios Asignados" filtrada por rol del usuario logueado (RECAUDOS_JEFE ve todos los titulares con gestor asignado; RECAUDO_ASIST ve sólo los suyos; SUPER_ADMIN/ADMIN ven todos)',
   },
+  {
+    code: RecaudosPermission.ASIGNACION_EXPORTAR,
+    module: Module.RECAUDOS,
+    section: 'Asignación',
+    name: 'Botón "Exportar Excel" en Asignación',
+    description: 'Permite descargar a Excel la tabla de titulares asignados. SUPER_ADMIN y ADMIN siempre pueden; otros roles requieren este permiso explícito',
+  },
 ];
 
 // ============================================================================

@@ -180,14 +180,16 @@ export default function AsignacionRecaudosPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleExport}
-                disabled={!titulares.length || loading}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50"
-              >
-                <ArrowDownTrayIcon className="h-4 w-4" /> Exportar Excel
-              </button>
+              <PermissionGuard permission={RecaudosPermission.ASIGNACION_EXPORTAR}>
+                <button
+                  type="button"
+                  onClick={handleExport}
+                  disabled={!titulares.length || loading}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50"
+                >
+                  <ArrowDownTrayIcon className="h-4 w-4" /> Exportar Excel
+                </button>
+              </PermissionGuard>
               <button
                 type="button"
                 onClick={() => fetchTitulares()}
