@@ -121,7 +121,7 @@ async function PersonContent({ personId, initialTab }: { personId: string; initi
               </span>
               {personData.person.aprobacion && (
                 <span className={`badge ${getEstadoBadgeClass(personData.person.aprobacion)}`}>
-                  {personData.person.aprobacion}
+                  {personData.person.aprobacion === 'FINALIZADA' ? '❌ Aprobada' : personData.person.aprobacion}
                 </span>
               )}
               {personData.person.plataforma && (
@@ -181,6 +181,8 @@ function getEstadoBadgeClass(estado: string): string {
       return 'badge-danger'
     case 'ON HOLD':
       return 'badge-warning'
+    case 'FINALIZADA':
+      return 'badge-error'
     default:
       return 'badge-info'
   }
