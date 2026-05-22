@@ -330,7 +330,7 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Plan Contratado</label>
+              <label className="block text-sm font-medium text-gray-700">Tipo de Plan</label>
               <p className="mt-1 text-sm text-gray-900">
                 {financialData ? financial.plan : 'No disponible'}
               </p>
