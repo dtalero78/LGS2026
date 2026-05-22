@@ -288,6 +288,14 @@ export const pagosTitularesService = {
       throw new ValidationError('numCuota debe ser >= 0');
     }
 
+    // Validar plan (Tipo Plan): 'Contado' | 'Credito' | 'Colaborador' | null
+    if (input.plan !== undefined && input.plan !== null && input.plan !== '') {
+      const VALID_PLAN = ['Contado', 'Credito', 'Colaborador'];
+      if (!VALID_PLAN.includes(String(input.plan).trim())) {
+        throw new ValidationError(`plan debe ser uno de: ${VALID_PLAN.join(', ')}`);
+      }
+    }
+
     const saldo = computeSaldo(input.valorCuota, input.valorPagado, input.descuento);
 
     const data: Partial<PagoTitular> = {
@@ -330,6 +338,14 @@ export const pagosTitularesService = {
     if (body.tipoCartera !== undefined && body.tipoCartera !== null
         && !(TIPO_CARTERA_VALIDOS as readonly string[]).includes(body.tipoCartera)) {
       throw new ValidationError(`tipoCartera debe ser uno de: ${TIPO_CARTERA_VALIDOS.join(', ')}`);
+    }
+
+    // Validar plan (Tipo Plan): 'Contado' | 'Credito' | 'Colaborador' | null
+    if (body.plan !== undefined && body.plan !== null && body.plan !== '') {
+      const VALID_PLAN = ['Contado', 'Credito', 'Colaborador'];
+      if (!VALID_PLAN.includes(String(body.plan).trim())) {
+        throw new ValidationError(`plan debe ser uno de: ${VALID_PLAN.join(', ')}`);
+      }
     }
 
     const next = { ...existing, ...body };

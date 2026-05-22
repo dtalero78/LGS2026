@@ -120,6 +120,7 @@ function CrearContratoContent() {
     pagoInscripcion: 0,
     saldo: 0,
     numeroCuotas: 0,
+    tipoPlan: '' as '' | 'Contado' | 'Credito' | 'Colaborador',
     valorCuota: 0,
     fechaPago: '',
     vigencia: '',
@@ -929,19 +930,35 @@ function CrearContratoContent() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Número de cuotas
+                    Número de cuotas / Tipo Plan
                   </label>
-                  <input
-                    type="number"
-                    value={financial.numeroCuotas}
-                    onChange={(e) => {
-                      const numCuotas = Number(e.target.value);
-                      setFinancial({...financial, numeroCuotas: numCuotas});
-                      calculateInstallmentValue(financial.saldo, numCuotas);
-                    }}
-                    min="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="number"
+                      value={financial.numeroCuotas}
+                      onChange={(e) => {
+                        const numCuotas = Number(e.target.value);
+                        setFinancial({...financial, numeroCuotas: numCuotas});
+                        calculateInstallmentValue(financial.saldo, numCuotas);
+                      }}
+                      min="0"
+                      max="99"
+                      placeholder="Cuotas"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    />
+                    <select
+                      aria-label="Tipo Plan"
+                      title="Tipo Plan"
+                      value={financial.tipoPlan}
+                      onChange={(e) => setFinancial({...financial, tipoPlan: e.target.value as any})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value="">Tipo plan</option>
+                      <option value="Contado">Contado</option>
+                      <option value="Credito">Credito</option>
+                      <option value="Colaborador">Colaborador</option>
+                    </select>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">

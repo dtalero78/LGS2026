@@ -222,6 +222,15 @@ export const PATCH = handlerWithAuth(async (
 
   console.log('🔄 [PostgreSQL People] Updating person:', personId);
 
+  // ── Validación de plan (Tipo Plan en PEOPLE.plan) ──
+  // Solo se aceptan: 'Contado', 'Credito', 'Colaborador', null o '' (limpiar).
+  if (body.plan !== undefined && body.plan !== null && body.plan !== '') {
+    const VALID_PLAN = ['Contado', 'Credito', 'Colaborador'];
+    if (!VALID_PLAN.includes(String(body.plan).trim())) {
+      throw new ValidationError(`plan debe ser uno de: ${VALID_PLAN.join(', ')}`);
+    }
+  }
+
   // Fetch current person before update (needed for old email to update USUARIOS_ROLES)
   const currentPerson = await queryOne<{
     email: string | null;

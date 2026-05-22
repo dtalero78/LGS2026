@@ -339,7 +339,7 @@ export default function PagoTitularWizard({
         idTercero: form.idTercero || null,
         fechaPago: form.fechaPago,
         fechaVencimiento: form.fechaVencimiento || null,
-        plan: form.plan ? toNum(form.plan) : null,
+        plan: form.plan || null,
         vlrTotalProg: form.vlrTotalProg ? toNum(form.vlrTotalProg) : null,
         numCuota: form.numCuota === '' ? null : Number(form.numCuota),
         valorCuota: form.valorCuota ? toNum(form.valorCuota) : null,
@@ -438,12 +438,16 @@ export default function PagoTitularWizard({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label htmlFor="plan" className="block text-sm font-medium text-gray-700">Plan</label>
-              <input
-                id="plan" type="number" min={0} step="1" value={form.plan}
-                onChange={e => setForm(f => ({ ...f, plan: e.target.value.replace(/[^0-9]/g, '') }))}
+              <select
+                id="plan" value={form.plan}
+                onChange={e => setForm(f => ({ ...f, plan: e.target.value }))}
                 className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                placeholder="0"
-              />
+              >
+                <option value="">Seleccione</option>
+                <option value="Contado">Contado</option>
+                <option value="Credito">Credito</option>
+                <option value="Colaborador">Colaborador</option>
+              </select>
             </div>
             <MoneyInput id="vlrTotalProg" label="Total del Programa" value={form.vlrTotalProg} onChange={v => setForm(f => ({ ...f, vlrTotalProg: v }))} />
             <div>

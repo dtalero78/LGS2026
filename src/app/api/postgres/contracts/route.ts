@@ -41,12 +41,26 @@ async function generateContractNumber(plataforma: string): Promise<string> {
   return `${codigoPais}-${siguiente}-${anoActual}`;
 }
 
+const VALID_TIPO_PLAN = ['Contado', 'Credito', 'Colaborador'] as const;
+type TipoPlan = typeof VALID_TIPO_PLAN[number];
+function normalizeTipoPlan(v: any): TipoPlan | null {
+  if (!v) return null;
+  const s = String(v).trim();
+  return (VALID_TIPO_PLAN as readonly string[]).includes(s) ? (s as TipoPlan) : null;
+}
+
 export const POST = handlerWithAuth(async (request, _ctx, session) => {
   const { titular, financial, beneficiarios, titularEsBeneficiario, clientToday } = await request.json();
 
   if (!titular?.plataforma) throw new ValidationError('plataforma is required');
   if (!titular?.numeroId || !titular?.primerNombre || !titular?.primerApellido) {
     throw new ValidationError('titular with numeroId, primerNombre, and primerApellido is required');
+  }
+
+  // tipoPlan (Contado / Credito / Colaborador) — se valida y propaga a 3 tablas
+  const tipoPlan = normalizeTipoPlan(financial?.tipoPlan);
+  if (financial?.tipoPlan && !tipoPlan) {
+    throw new ValidationError(`tipoPlan debe ser uno de: ${VALID_TIPO_PLAN.join(', ')}`);
   }
 
   // Generate contract number server-side to avoid race conditions
@@ -70,8 +84,8 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
       "email", "celular", "telefono", "fechaNacimiento", "domicilio", "ciudad",
       "plataforma", "ingresos", "empresa", "cargo", "genero",
       "referenciaUno", "parentezcoRefUno", "telefonoRefUno", "referenciaDos", "parentezcoRefDos", "telefonoRefDos",
-      "asesor", "tipoUsuario", "contrato", "vigencia", "fechaContrato", "finalContrato", "origen", "_createdDate", "_updatedDate")
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,'TITULAR',$25,$26,NOW(),$27::date,'POSTGRES',NOW(),NOW()) RETURNING *`,
+      "asesor", "tipoUsuario", "contrato", "vigencia", "fechaContrato", "finalContrato", "plan", "origen", "_createdDate", "_updatedDate")
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,'TITULAR',$25,$26,NOW(),$27::date,$28,'POSTGRES',NOW(),NOW()) RETURNING *`,
     [titularId, titular.numeroId, titular.primerNombre, titular.segundoNombre || null,
      titular.primerApellido, titular.segundoApellido || null,
      titular.email || null, titular.celular || null, titular.telefono || null,
@@ -79,7 +93,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
      titular.plataforma || null, titular.ingresos || null, titular.empresa || null, titular.cargo || null, titular.genero || null,
      titular.referenciaUno || null, titular.parentezcoRefUno || null, titular.telRefUno || null,
      titular.referenciaDos || null, titular.parentezcoRefDos || null, titular.telRefDos || null,
-     titular.asesor || null, contrato, financial?.vigencia || null, finalContrato]
+     titular.asesor || null, contrato, financial?.vigencia || null, finalContrato, tipoPlan]
   );
   created.titular = titularResult.rows[0];
 
@@ -124,12 +138,13 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   if (financial && financial.totalPlan) {
     const finResult = await query(
       `INSERT INTO "FINANCIEROS" ("_id", "contrato", "totalPlan", "numeroCuotas", "valorCuota",
-        "pagoInscripcion", "saldo", "fechaPago", "medioPago", "vigencia",
+        "pagoInscripcion", "saldo", "fechaPago", "medioPago", "vigencia", "plan",
         "origen", "_createdDate", "_updatedDate")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'POSTGRES',NOW(),NOW()) RETURNING *`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'POSTGRES',NOW(),NOW()) RETURNING *`,
       [ids.financial(), contrato, financial.totalPlan || 0, financial.numeroCuotas || 0,
        financial.valorCuota || 0, financial.pagoInscripcion || 0, financial.saldo || 0,
-       financial.fechaPago || null, financial.medioPago || null, financial.vigencia || null]
+       financial.fechaPago || null, financial.medioPago || null, financial.vigencia || null,
+       tipoPlan]
     );
     created.financiero = finResult.rows[0];
 
@@ -175,14 +190,14 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
            "valorCuota", "valorPagado", "inscripcion", "saldo", "descuento",
            "medioPago", "documentosAdjuntos",
            "validado", "fechaValidacion", "validadoPor",
-           "createdBy", "tipoCartera", "_createdDate", "_updatedDate"
+           "createdBy", "tipoCartera", "plan", "_createdDate", "_updatedDate"
          ) VALUES (
            $1, $2, $3, $4, $5,
            COALESCE($15::date, CURRENT_DATE), $6::date, 0, $7, $8,
            $9, $10, $11, $12, 0,
            $13, '[]'::jsonb,
            true, COALESCE($15::date, CURRENT_DATE), $14,
-           $14, 'normal', NOW(), NOW()
+           $14, 'normal', $16, NOW(), NOW()
          ) RETURNING "_id"`,
         [
           ids.payment(),
@@ -200,6 +215,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
           financial.medioPago || null,
           createdBy,
           fechaPagoCliente,
+          tipoPlan, // $16
         ]
       );
       created.pagoInicial = pagoResult.rows[0];
