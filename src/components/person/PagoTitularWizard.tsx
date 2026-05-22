@@ -104,6 +104,25 @@ function addOneMonth(dateStr: string | null | undefined): string {
   return target.toISOString().slice(0, 10)
 }
 
+/** YYYY-MM-DD + N meses → YYYY-MM-DD. Preserva el día; en overflow va al último día del mes objetivo. */
+function addNMonths(dateStr: string | null | undefined, n: number): string {
+  if (!dateStr || !Number.isFinite(n)) return ''
+  const ymd = String(dateStr).slice(0, 10)
+  const parts = ymd.split('-').map(Number)
+  if (parts.length !== 3 || parts.some(x => !Number.isFinite(x))) return ''
+  const [y, m, d] = parts // m es 1-indexed
+  let newMonth = m + n
+  let newYear = y
+  while (newMonth > 12) { newMonth -= 12; newYear++ }
+  while (newMonth < 1)  { newMonth += 12; newYear-- }
+  const target = new Date(Date.UTC(newYear, newMonth - 1, d))
+  if (target.getUTCMonth() !== newMonth - 1) {
+    // Día overflowed (ej: día 31 en Feb) → último día del mes objetivo
+    return new Date(Date.UTC(newYear, newMonth, 0)).toISOString().slice(0, 10)
+  }
+  return target.toISOString().slice(0, 10)
+}
+
 function formatMoney(v: string): string {
   if (!v) return ''
   const num = toNum(v)
@@ -158,7 +177,10 @@ export default function PagoTitularWizard({
   // Defaults auto-poblados desde pagos existentes:
   //  - cuota#0 → vlrTotalProg + valorCuota (referencia del contrato)
   //  - max(numCuota)+1 → próxima cuota
-  //  - último pago.fechaPago + 1 mes → próxima fechaVencimiento
+  //  - cuota#0.fechaVencimiento + N meses → próxima fechaVencimiento
+  //    (donde N = número de la próxima cuota; el día se hereda de paso 6
+  //    de /dashboard/comercial/crear-contrato y se conserva mes a mes)
+  //    Fallback: addOneMonth(último pago.fechaPago)
   const computeAutoDefaults = (): Partial<DraftState> => {
     const list = Array.isArray(existingPagos) ? existingPagos : []
     if (list.length === 0) return {}
@@ -175,7 +197,13 @@ export default function PagoTitularWizard({
     })
     const ultimo = sorted[0]
     const nextNumCuota = maxCuota >= 0 ? String(maxCuota + 1) : ''
-    const nextVenc = ultimo?.fechaPago ? addOneMonth(ultimo.fechaPago) : ''
+    const nextNumCuotaNum = maxCuota >= 0 ? maxCuota + 1 : 1
+    // Preferir cuota#0.fechaVencimiento (paso 6 de crear-contrato) como base,
+    // y avanzar N meses para la cuota actual. Cae a fechaPago si no existe.
+    const billingRef = cuotaCero?.fechaVencimiento || cuotaCero?.fechaPago
+    const nextVenc = billingRef
+      ? addNMonths(String(billingRef).slice(0, 10), nextNumCuotaNum)
+      : (ultimo?.fechaPago ? addOneMonth(String(ultimo.fechaPago).slice(0, 10)) : '')
     return {
       vlrTotalProg: cuotaCero?.vlrTotalProg != null ? String(cuotaCero.vlrTotalProg) : '',
       valorCuota:   cuotaCero?.valorCuota   != null ? String(cuotaCero.valorCuota)   : '',
