@@ -210,7 +210,10 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
       totalPlan: parseCurrency(data.totalPlan),
       cuotaInicial: cuotaInicialParsed,
       formaPago: data.medioPago || data.formaPago || 'No especificado',
-      plan: data.plan || 'Plan estándar',
+      // PEOPLE.plan es la fuente más confiable (los 2,033 titulares canónicos viven ahí).
+      // FINANCIEROS.plan solo está poblado en ~34 contratos por desajuste legacy con
+      // PEOPLE.contrato. Damos prioridad a person.plan y caemos a FINANCIEROS si falta.
+      plan: (person as any)?.plan || data.plan || 'No disponible',
       inscripcionPagada: data.inscripcionPagada || 'No',
       montoTotal: parseCurrency(data.totalPlan),
       montoPendiente: parseCurrency(data.saldo),
