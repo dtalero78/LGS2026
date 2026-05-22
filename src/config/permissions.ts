@@ -474,6 +474,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     name: 'Página "Actualizar Material"',
     description: 'Gestionar material de Usuarios (materialUsuario) y Advisors (material) por nivel/step — incluye subir, reemplazar, borrar y descargar archivos',
   },
+  {
+    code: AcademicoPermission.CONTROL_HORAS_VER,
+    module: Module.ACADEMICO,
+    section: 'Control Horas',
+    name: 'Página "Control Horas"',
+    description: 'Acceso a /dashboard/academic/control-horas. Página en construcción.',
+  },
 
   // ========== INFORMES MODULE ==========
   {

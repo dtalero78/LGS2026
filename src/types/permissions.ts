@@ -143,6 +143,9 @@ export enum AcademicoPermission {
 
   // Material
   ACTUALIZAR_MATERIAL = 'ACADEMICO.MATERIAL.ACTUALIZAR',
+
+  // Control Horas
+  CONTROL_HORAS_VER = 'ACADEMICO.CONTROL_HORAS.VER',
 }
 
 /**
