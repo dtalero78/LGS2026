@@ -13,6 +13,7 @@ import 'server-only';
 import { queryOne, queryMany } from '@/lib/postgres';
 import { BaseRepository } from './base.repository';
 import { buildDynamicUpdate } from '@/lib/query-builder';
+import { buildPlataformaWhereSql, type PlataformaScope } from '@/lib/recaudos-scope';
 
 export interface PagoTitular {
   _id: string;
@@ -131,6 +132,8 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
     fechaHasta?: string | null;
     search?: string | null;
     gestorRecaudo?: string | null;
+    /** Scope de plataforma del usuario logueado (filtra titulares.plataforma) */
+    plataformaScope?: PlataformaScope | null;
     limit: number;
     offset: number;
   }): Promise<{ rows: any[]; total: number }> {
@@ -159,6 +162,17 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
         OR p."numeroId" ILIKE $${i}
       )`);
       params.push(term); i++;
+    }
+
+    // Plataforma scope (multi-tenancy Recaudos) sobre titular
+    if (opts.plataformaScope) {
+      const scope = buildPlataformaWhereSql(opts.plataformaScope, 'p."plataforma"', i);
+      if (scope.sql) {
+        // Remueve el " AND " inicial porque ya estamos construyendo conds[]
+        conds.push(scope.sql.replace(/^\s*AND\s+/, ''));
+        params.push(...scope.params);
+        i += scope.params.length;
+      }
     }
 
     const whereClause = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
@@ -234,6 +248,8 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
     estadoCartera?: 'normal' | 'prejuridico' | 'juridico' | 'castigada' | null;
     fechaDesde?: string | null;
     fechaHasta?: string | null;
+    /** Scope de plataforma del usuario logueado (filtra titulares.plataforma) */
+    plataformaScope?: PlataformaScope | null;
     limit: number;
     offset: number;
   }): Promise<{ rows: any[]; total: number }> {
@@ -244,6 +260,16 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
     ];
     const params: any[] = [];
     let i = 1;
+
+    // Plataforma scope (multi-tenancy Recaudos) sobre titular
+    if (opts.plataformaScope) {
+      const scope = buildPlataformaWhereSql(opts.plataformaScope, 'p."plataforma"', i);
+      if (scope.sql) {
+        conds.push(scope.sql.replace(/^\s*AND\s+/, ''));
+        params.push(...scope.params);
+        i += scope.params.length;
+      }
+    }
 
     // Filtro role-based: si el caller pasa un array no vacío, restringe.
     // Si pasa array vacío → no restringe (caso admin/super_admin).

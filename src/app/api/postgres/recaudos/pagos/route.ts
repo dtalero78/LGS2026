@@ -32,15 +32,21 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
   const page           = parseInt(searchParams.get('page') || '1', 10) || 1;
   const pageSize       = parseInt(searchParams.get('pageSize') || '50', 10) || 50;
 
-  const data = await pagosTitularesService.listForGestion({
-    estado,
-    fechaDesde: fechaInicio,
-    fechaHasta: fechaFin,
-    search,
-    gestorRecaudo,
-    page,
-    pageSize,
-  });
+  const data = await pagosTitularesService.listForGestion(
+    {
+      role: ((session.user as any)?.role ?? '').toString(),
+      email: session.user?.email ?? null,
+    },
+    {
+      estado,
+      fechaDesde: fechaInicio,
+      fechaHasta: fechaFin,
+      search,
+      gestorRecaudo,
+      page,
+      pageSize,
+    },
+  );
 
   return successResponse(data);
 });

@@ -16,6 +16,7 @@ import { PeopleRepository } from '@/repositories/people.repository';
 import { ids } from '@/lib/id-generator';
 import { query, queryOne } from '@/lib/postgres';
 import { NotFoundError, ValidationError } from '@/lib/errors';
+import { computePlataformaScope, getSessionPlataforma, buildPlataformaWhereSql, type PlataformaScope } from '@/lib/recaudos-scope';
 
 const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
 
@@ -179,9 +180,14 @@ export const pagosTitularesService = {
       gestorIn = [found._id];
     } else if (isJefe) {
       // RECAUDOS_JEFE ve todos los gestores con rol RECAUDOS_JEFE o RECAUDO_ASIST
+      // PERO restringidos al scope de plataforma del propio jefe.
+      const jefePlataforma = await getSessionPlataforma(session.email);
+      const jefeScope = computePlataformaScope(role, jefePlataforma);
+      const scopeSql = buildPlataformaWhereSql(jefeScope, '"plataforma"', 1);
       const rows = await query(
         `SELECT "_id" FROM "USUARIOS_ROLES"
-         WHERE "rol" IN ('RECAUDOS_JEFE', 'RECAUDO_ASIST') AND "activo" = true`
+         WHERE "rol" IN ('RECAUDOS_JEFE', 'RECAUDO_ASIST') AND "activo" = true${scopeSql.sql}`,
+        scopeSql.params,
       );
       gestorIn = rows.rows.map((r: any) => r._id);
       // Si filtra por un gestor específico, validar que esté dentro del set
@@ -201,12 +207,21 @@ export const pagosTitularesService = {
     const page = Math.max(1, opts.page ?? 1);
     const offset = (page - 1) * pageSize;
 
+    // Scope de plataforma para titulares: jefes ven solo titulares de su scope;
+    // asistentes ya están limitados por gestorRecaudoIn; admin ve todo.
+    let plataformaScope: PlataformaScope | null = null;
+    if (isJefe) {
+      const jefePlataforma = await getSessionPlataforma(session.email);
+      plataformaScope = computePlataformaScope(role, jefePlataforma);
+    }
+
     const { rows, total } = await PagosTitularesRepository.findTitularesAsignados({
       gestorRecaudoIn: gestorIn,
       search: opts.search ?? null,
       estadoCartera: opts.estadoCartera ?? null,
       fechaDesde: opts.fechaDesde ?? null,
       fechaHasta: opts.fechaHasta ?? null,
+      plataformaScope,
       limit: pageSize,
       offset,
     });
@@ -216,25 +231,41 @@ export const pagosTitularesService = {
   /**
    * Lista paginada para el Centro de Validación de Pagos
    * (con JOIN PEOPLE, excluye cuota #0).
+   *
+   * Aplica scope de plataforma del usuario logueado (RECAUDOS_JEFE) sobre
+   * `PEOPLE.plataforma` del titular. SUPER_ADMIN/ADMIN bypassean.
    */
-  async listForGestion(opts: {
-    estado?: 'validado' | 'pendiente';
-    fechaDesde?: string | null;
-    fechaHasta?: string | null;
-    search?: string | null;
-    gestorRecaudo?: string | null;
-    page?: number;
-    pageSize?: number;
-  }) {
+  async listForGestion(
+    session: { role: string; email?: string | null },
+    opts: {
+      estado?: 'validado' | 'pendiente';
+      fechaDesde?: string | null;
+      fechaHasta?: string | null;
+      search?: string | null;
+      gestorRecaudo?: string | null;
+      page?: number;
+      pageSize?: number;
+    },
+  ) {
     const pageSize = Math.min(Math.max(1, opts.pageSize ?? 50), 500);
     const page = Math.max(1, opts.page ?? 1);
     const offset = (page - 1) * pageSize;
+
+    const role = (session.role || '').toString();
+    const isAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN' || role === 'admin';
+    let plataformaScope: PlataformaScope | null = null;
+    if (!isAdmin) {
+      const callerPlataforma = await getSessionPlataforma(session.email);
+      plataformaScope = computePlataformaScope(role, callerPlataforma);
+    }
+
     const { rows, total } = await PagosTitularesRepository.findAllWithTitular({
       estado: opts.estado,
       fechaDesde: opts.fechaDesde ?? null,
       fechaHasta: opts.fechaHasta ?? null,
       search: opts.search ?? null,
       gestorRecaudo: opts.gestorRecaudo ?? null,
+      plataformaScope,
       limit: pageSize,
       offset,
     });

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { queryMany } from '@/lib/postgres';
 import { ValidationError } from '@/lib/errors';
+import { computePlataformaScope, getSessionPlataforma, buildPlataformaWhereSql } from '@/lib/recaudos-scope';
 
 /**
  * GET /api/postgres/users/by-role?roles=RECAUDO_ASIST,RECAUDOS_JEFE&activeOnly=true
@@ -10,13 +11,19 @@ import { ValidationError } from '@/lib/errors';
  * dropdowns where the admin selects a user (e.g. assigning a collection
  * executive to a TITULAR in /person/[id]).
  *
+ * Scope multi-tenancy: si el caller logueado tiene rol Recaudos con
+ * plataforma asignada, sólo se devuelven candidatos cuya plataforma esté
+ * dentro del scope (Chile → solo Chile, Colombia → todo excepto Chile,
+ * Internacional/NULL → todo, Ecuador/Perú/etc. → solo su plataforma).
+ * SUPER_ADMIN/ADMIN ven todos.
+ *
  * Query params:
  *   roles      — comma-separated list of role codes. Required.
  *   activeOnly — when 'true' (default), only returns activo=true rows.
  *
  * Returns: [{ _id, email, nombre, rol, activo }]
  */
-export const GET = handlerWithAuth(async (request: NextRequest) => {
+export const GET = handlerWithAuth(async (request: NextRequest, _ctx, session) => {
   const { searchParams } = new URL(request.url);
   const rolesParam = (searchParams.get('roles') || '').trim();
   if (!rolesParam) {
@@ -30,8 +37,24 @@ export const GET = handlerWithAuth(async (request: NextRequest) => {
 
   const conditions: string[] = [`"rol" = ANY($1)`];
   const params: any[] = [roles];
+  let i = 2;
   if (activeOnly) {
     conditions.push(`"activo" = true`);
+  }
+
+  // Aplicar scope de plataforma del caller (sólo cuando se piden roles Recaudos).
+  const wantsRecaudos = roles.some(r => r === 'RECAUDO_ASIST' || r === 'RECAUDOS_JEFE');
+  if (wantsRecaudos) {
+    const callerRole = ((session.user as any)?.role ?? '').toString();
+    const callerEmail = session.user?.email ?? null;
+    const callerPlataforma = await getSessionPlataforma(callerEmail);
+    const scope = computePlataformaScope(callerRole, callerPlataforma);
+    const scopeSql = buildPlataformaWhereSql(scope, '"plataforma"', i);
+    if (scopeSql.sql) {
+      conditions.push(scopeSql.sql.replace(/^\s*AND\s+/, ''));
+      params.push(...scopeSql.params);
+      i += scopeSql.params.length;
+    }
   }
 
   const users = await queryMany<{ _id: string; email: string; nombre: string; rol: string; activo: boolean }>(
