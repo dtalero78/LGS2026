@@ -390,9 +390,8 @@ export default function PagoTitularWizard({
               </label>
               <input
                 id="fechaPago" type="date" value={form.fechaPago}
-                readOnly tabIndex={-1}
-                onChange={() => {}}
-                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-600 cursor-not-allowed"
+                onChange={e => setForm(f => ({ ...f, fechaPago: e.target.value }))}
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
               />
             </div>
             <div>
@@ -401,9 +400,8 @@ export default function PagoTitularWizard({
               </label>
               <input
                 id="fechaVencimiento" type="date" value={form.fechaVencimiento}
-                readOnly tabIndex={-1}
-                onChange={() => {}}
-                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-600 cursor-not-allowed"
+                onChange={e => setForm(f => ({ ...f, fechaVencimiento: e.target.value }))}
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
               />
             </div>
           </div>
@@ -419,14 +417,13 @@ export default function PagoTitularWizard({
                 placeholder="0"
               />
             </div>
-            <MoneyInput id="vlrTotalProg" label="Total del Programa" value={form.vlrTotalProg} onChange={v => setForm(f => ({ ...f, vlrTotalProg: v }))} readOnly />
+            <MoneyInput id="vlrTotalProg" label="Total del Programa" value={form.vlrTotalProg} onChange={v => setForm(f => ({ ...f, vlrTotalProg: v }))} />
             <div>
               <label htmlFor="numCuota" className="block text-sm font-medium text-gray-700"># Cuota</label>
               <input
                 id="numCuota" type="number" min={0} value={form.numCuota}
-                readOnly tabIndex={-1}
-                onChange={() => {}}
-                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-600 cursor-not-allowed"
+                onChange={e => setForm(f => ({ ...f, numCuota: e.target.value.replace(/[^0-9]/g, '') }))}
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 placeholder="0"
               />
             </div>
@@ -434,7 +431,7 @@ export default function PagoTitularWizard({
 
           {/* Valores */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <MoneyInput id="valorCuota" label="Valor Cuota" value={form.valorCuota} onChange={v => setForm(f => ({ ...f, valorCuota: v }))} readOnly />
+            <MoneyInput id="valorCuota" label="Valor Cuota" value={form.valorCuota} onChange={v => setForm(f => ({ ...f, valorCuota: v }))} />
             <MoneyInput id="valorPagado" label="Valor Pagado" value={form.valorPagado} onChange={v => setForm(f => ({ ...f, valorPagado: v }))} required />
             <MoneyInput id="descuento" label="Descuento" value={form.descuento} onChange={v => setForm(f => ({ ...f, descuento: v }))} />
             <div>
