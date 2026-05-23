@@ -28,6 +28,12 @@ interface AsignacionRow {
   tipoCartera: string
   ultimaFechaPago: string | null
   ultimaCuotaPagada: number | null
+  /**
+   * Día (1-31) extraído de FINANCIEROS.fechaPago en zona America/Bogota.
+   * Es la cadencia base elegida al crear el contrato — independiente de
+   * si el titular ya tiene pagos registrados.
+   */
+  diaVencimiento: number | null
 }
 
 interface DisplayUser {
@@ -146,7 +152,7 @@ export default function AsignacionRecaudosPage() {
       'Número ID': t.numeroId,
       Contrato: t.contrato || '',
       'Fecha Contrato': fmtDate(t.fechaContrato),
-      'Día Vencimiento': dayOf(t.ultimaFechaPago),
+      'Día Vencimiento': t.diaVencimiento ?? '',
       'Fecha Último Pago': fmtDate(t.ultimaFechaPago),
       'Última Cuota Pagada': t.ultimaCuotaPagada ?? '',
       'Saldo Actual': parseMoneyText(t.saldoActual),
@@ -325,7 +331,7 @@ export default function AsignacionRecaudosPage() {
                           <td className="px-3 py-2 text-gray-700">{t.contrato || '—'}</td>
                           <td className="px-3 py-2 text-gray-900">{fmtDate(t.fechaContrato)}</td>
                           <td className="px-3 py-2 text-center text-gray-900 font-medium">
-                            {dayOf(t.ultimaFechaPago)}
+                            {t.diaVencimiento != null ? t.diaVencimiento : '—'}
                           </td>
                           <td className="px-3 py-2 text-gray-900">{fmtDate(t.ultimaFechaPago)}</td>
                           <td className="px-3 py-2 text-center text-gray-900 font-medium">

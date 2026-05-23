@@ -231,6 +231,11 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
    *   - ultimaCuotaPagada: MAX(numCuota) de validados con numCuota > 0
    *   - tipoCartera: leído del registro cuota #0 (con default 'normal')
    *   - saldoActual: FINANCIEROS.saldo (texto legacy)
+   *   - diaVencimiento: día del mes (1-31) extraído de FINANCIEROS.fechaPago
+   *     en la zona horaria de la PLATAFORMA del titular (Chile→Santiago,
+   *     Ecuador→Guayaquil, Colombia/Perú→Bogota/Lima). Mismo resultado
+   *     para todos los consultores (no depende de la TZ del navegador).
+   *     Si fechaPago es NULL, devuelve NULL.
    *
    * Filtros (todos opcionales):
    *   - gestorRecaudoIn: lista de USUARIOS_ROLES._id a los que se restringe
@@ -340,7 +345,20 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
          f."saldo"                               AS "saldoActual",
          COALESCE(c0."tipoCartera", 'normal')    AS "tipoCartera",
          agg."ultimaFechaPago"                   AS "ultimaFechaPago",
-         agg."ultimaCuotaPagada"                 AS "ultimaCuotaPagada"
+         agg."ultimaCuotaPagada"                 AS "ultimaCuotaPagada",
+         CASE
+           WHEN f."fechaPago" IS NULL THEN NULL
+           ELSE EXTRACT(DAY FROM (f."fechaPago" AT TIME ZONE
+             CASE LOWER(COALESCE(p."plataforma", ''))
+               WHEN 'chile'    THEN 'America/Santiago'
+               WHEN 'ecuador'  THEN 'America/Guayaquil'
+               WHEN 'colombia' THEN 'America/Bogota'
+               WHEN 'perú'     THEN 'America/Lima'
+               WHEN 'peru'     THEN 'America/Lima'
+               ELSE 'America/Bogota'
+             END
+           ))::int
+         END                                     AS "diaVencimiento"
        FROM "PEOPLE" p
        LEFT JOIN "FINANCIEROS" f ON f."contrato" = p."contrato"
        LEFT JOIN LATERAL (
