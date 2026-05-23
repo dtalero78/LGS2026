@@ -2,38 +2,46 @@
  * Helpers para derivar el estado visual del contrato a partir de los
  * campos canónicos de PEOPLE. No tocan BD — sólo cálculos.
  *
- * Diferencia clave entre `estado` y `estadoInactivo`:
- *   - `estado` = ciclo de vida del contrato (ACTIVA / On Hold /
- *     CON EXTENSION / FINALIZADA / PENDIENTE / RETRACTADO / ANULADO)
- *   - `estadoInactivo` = bandera booleana que controla acceso (login,
- *     agendamiento)
+ * El badge amarillo "SUSPENDIDA" solo debe aparecer cuando la suspensión
+ * fue producto del toggle administrativo en /person/[id] → Administración
+ * ("Estado del Contrato") o del botón "Inactivar" individual en esa misma
+ * pantalla. No debe aparecer cuando estadoInactivo=true viene por otras
+ * causas:
  *
- * Una persona puede estar `estadoInactivo=true` por varias razones:
- *   1. OnHold activo                → fechaOnHold IS NOT NULL
- *   2. Cron expire-contracts         → estado='FINALIZADA'
- *   3. Aprobación anulada            → estado='ANULADO'
- *   4. **Suspensión administrativa** → ninguna de las anteriores
- *      (toggle Activo/Inactivo en /person/[id] → Administración con
- *       el contrato en ACTIVA / CON EXTENSION / On Hold)
+ *   - Cron expire-contracts                  → estado='FINALIZADA'
+ *   - Expiración al login                    → aprobacion='FINALIZADA'
+ *   - OnHold activo                          → fechaOnHold IS NOT NULL
+ *   - Cambio estado a Contrato nulo/Devuelto/Rechazado → estado='ANULADO'
+ *   - Special-nivel block (MASTER/IELTS/B2F/TOEFL)     → aprobacion='FINALIZADA'
+ *   - Bulk bloqueo Mantenimiento             → estado/aprobacion='FINALIZADA'
  *
- * Este helper detecta SOLO el caso 4.
+ * En lugar de mantener una blacklist por campo (frágil y propensa a
+ * falsos positivos), usamos una regla positiva: el badge se muestra
+ * sii la columna `suspenddata` registra una INACTIVACION explícita.
+ * Solo los dos flujos administrativos mencionados escriben ese campo.
  */
+
+export interface SuspendData {
+  accion: 'INACTIVACION' | 'REACTIVACION'
+  motivo: string
+  fecha: string
+  realizadoPor: string
+  realizadoPorNombre?: string
+}
 
 interface ContractStatusInput {
   estadoInactivo?: boolean | null
-  fechaOnHold?: string | Date | null
-  estado?: string | null
+  suspenddata?: SuspendData | null
 }
 
 /**
  * `true` si la persona está suspendida administrativamente (toggle
- * Inactivo) y NO por OnHold, expiración o anulación.
+ * Inactivo desde /person/[id] → Administración). Robusta contra futuros
+ * flujos que pongan estadoInactivo=true por otras causas: si el último
+ * registro en suspenddata no es una INACTIVACION, NO es suspensión admin.
  */
 export function isAdminSuspended(person: ContractStatusInput | null | undefined): boolean {
   if (!person) return false
   if (person.estadoInactivo !== true) return false
-  if (person.fechaOnHold)               return false
-  if (person.estado === 'FINALIZADA')   return false
-  if (person.estado === 'ANULADO')      return false
-  return true
+  return person.suspenddata?.accion === 'INACTIVACION'
 }

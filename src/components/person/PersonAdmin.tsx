@@ -73,6 +73,17 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
   const [editingBeneficiaryId, setEditingBeneficiaryId] = useState<string | null>(null)
   const [isTogglingContract, setIsTogglingContract] = useState(false)
 
+  // Modal "Motivo de suspensión administrativa" — usado por el toggle del
+  // contrato y por el botón "Inactivar" individual de beneficiario.
+  // Cuando target.kind = 'contract'  → afecta titular + todos los beneficiarios
+  // Cuando target.kind = 'beneficiary' → afecta sólo a ese beneficiario
+  type SuspendTarget =
+    | { kind: 'contract'; activate: boolean }
+    | { kind: 'beneficiary'; activate: boolean; beneficiary: Beneficiary }
+  const [suspendTarget, setSuspendTarget] = useState<SuspendTarget | null>(null)
+  const [suspendMotivo, setSuspendMotivo] = useState('')
+  const [isSubmittingSuspend, setIsSubmittingSuspend] = useState(false)
+
   // Sincronizar las props con el estado local
   useEffect(() => {
     console.log('🔄 PersonAdmin: Beneficiaries props changed:', beneficiaries)
@@ -215,30 +226,12 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     setShowDeleteModal(true)
   }
 
-  const handleInactivateBeneficiary = async (beneficiary: Beneficiary) => {
-    try {
-      const response = await fetch(`/api/postgres/people/${beneficiary._id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estadoInactivo: true })
-      })
-
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        setCurrentBeneficiaries(prev =>
-          prev.map(b =>
-            b._id === beneficiary._id
-              ? { ...b, estado: 'Inactivo' as any, estadoInactivo: true }
-              : b
-          )
-        )
-      } else {
-        console.error('❌ Error inactivando beneficiario:', data.error)
-      }
-    } catch (error) {
-      console.error('❌ Error inactivando beneficiario:', error)
-    }
+  const handleInactivateBeneficiary = (beneficiary: Beneficiary) => {
+    // El botón "Inactivar" individual abre el mismo modal de motivo que
+    // el toggle del contrato. Pasa por /toggle-status (con suspenddata
+    // + suspendcount) en lugar de PATCH directo a /people/[id].
+    setSuspendTarget({ kind: 'beneficiary', activate: false, beneficiary })
+    setSuspendMotivo('')
   }
 
   const confirmDeleteBeneficiary = async () => {
@@ -376,58 +369,83 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     console.log('✓ Cambio de estado cancelado')
   }
 
-  const handleToggleContractStatus = async () => {
-    const currentStatus = !person.estadoInactivo // true = activo, false = inactivo
-    const newStatus = !currentStatus
-    const setInactive = !newStatus // Si queremos activar (newStatus=true), setInactive debe ser false
+  const handleToggleContractStatus = () => {
+    // Abre el modal "Motivo" antes de ejecutar. La acción se ejecuta en
+    // confirmSuspendAction cuando el usuario llena motivo y confirma.
+    const activate = person.estadoInactivo === true // si está inactivo, queremos activar
+    setSuspendTarget({ kind: 'contract', activate })
+    setSuspendMotivo('')
+  }
 
-    const affectedUsers = [
-      `Titular: ${person.primerNombre} ${person.primerApellido} (${person.numeroId})`,
-      ...currentBeneficiaries.map(b => `Beneficiario: ${b.nombre} ${b.apellido} (${b.numeroId})`)
-    ]
+  /**
+   * Ejecuta la suspensión/reactivación real (toggle del contrato o de un
+   * beneficiario individual). Llama a /toggle-status pasando el motivo
+   * obligatorio. Se invoca desde el botón "Confirmar" del modal.
+   */
+  const confirmSuspendAction = async () => {
+    if (!suspendTarget) return
+    if (!suspendMotivo.trim()) {
+      alert('El motivo es obligatorio.')
+      return
+    }
 
-    const confirmed = window.confirm(
-      `⚠️ ATENCIÓN: Esta acción afectará a TODO el contrato ${person.contrato}\n\n` +
-      `¿Está seguro que desea ${newStatus ? 'ACTIVAR' : 'INACTIVAR'} el contrato completo?\n\n` +
-      `Usuarios afectados (${affectedUsers.length}):\n` +
-      affectedUsers.map(u => `  • ${u}`).join('\n') + '\n\n' +
-      `Esta acción:\n` +
-      `  • Marcará estadoInactivo como ${setInactive ? 'true' : 'false'}\n` +
-      `  • Se aplicará en PEOPLE y ACADEMICA\n` +
-      `  • Afectará a ${affectedUsers.length} usuario(s)\n`
-    )
-
-    if (!confirmed) return
-
-    setIsTogglingContract(true)
+    setIsSubmittingSuspend(true)
+    if (suspendTarget.kind === 'contract') setIsTogglingContract(true)
 
     try {
-      // Toggle titular + all beneficiaries (sequential to avoid exhausting DB pool)
-      const allIds = [person._id, ...currentBeneficiaries.map(b => b._id)]
+      const motivo = suspendMotivo.trim()
+      const ids = suspendTarget.kind === 'contract'
+        ? [person._id, ...currentBeneficiaries.map(b => b._id)]
+        : [suspendTarget.beneficiary._id]
+      const activate = suspendTarget.activate
+
       let failures = 0
-      for (const id of allIds) {
+      for (const id of ids) {
         const res = await fetch(`/api/postgres/students/${id}/toggle-status`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ active: newStatus })
+          body: JSON.stringify({ active: activate, motivo }),
         })
-        const data = await res.json()
-        if (!data.success) failures++
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok || !data.success) failures++
       }
 
       if (failures === 0) {
-        alert(`✅ Contrato ${newStatus ? 'activado' : 'inactivado'} exitosamente\n\n` +
-              `Usuarios actualizados: ${allIds.length}`)
-        window.location.href = window.location.href
+        if (suspendTarget.kind === 'contract') {
+          alert(
+            `✅ Contrato ${activate ? 'activado' : 'inactivado'} exitosamente\n\n` +
+            `Personas actualizadas: ${ids.length}`
+          )
+          window.location.href = window.location.href
+        } else {
+          // Beneficiario individual: actualizar lista local sin recargar
+          const ben = suspendTarget.beneficiary
+          setCurrentBeneficiaries(prev =>
+            prev.map(b =>
+              b._id === ben._id
+                ? { ...b, estado: activate ? 'Aprobado' : ('Inactivo' as any), estadoInactivo: !activate }
+                : b
+            )
+          )
+          setSuspendTarget(null)
+          setSuspendMotivo('')
+        }
       } else {
-        alert(`❌ Error al cambiar estado: ${failures} de ${allIds.length} fallaron`)
+        alert(`❌ Error al cambiar estado: ${failures} de ${ids.length} fallaron`)
       }
     } catch (error) {
-      console.error('Error al cambiar estado del contrato:', error)
+      console.error('Error al cambiar estado:', error)
       alert('❌ Error al comunicarse con el servidor')
     } finally {
+      setIsSubmittingSuspend(false)
       setIsTogglingContract(false)
     }
+  }
+
+  const cancelSuspendAction = () => {
+    if (isSubmittingSuspend) return
+    setSuspendTarget(null)
+    setSuspendMotivo('')
   }
 
   const handleEditBeneficiary = async (beneficiaryId: string) => {
@@ -1359,6 +1377,83 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
           </div>
         </div>
       )}
+
+      {/* Suspensión Administrativa — Modal de Motivo */}
+      {suspendTarget && (() => {
+        const isContract = suspendTarget.kind === 'contract'
+        const activate = suspendTarget.activate
+        const verbo = activate ? 'Reactivar' : 'Inactivar'
+        const verboPasado = activate ? 'reactivado' : 'inactivado'
+        const targetLabel = isContract
+          ? `el contrato ${person.contrato || ''} (titular + ${currentBeneficiaries.length} beneficiario(s))`
+          : `al beneficiario ${suspendTarget.beneficiary.nombre} ${suspendTarget.beneficiary.apellido}`
+        const headerColor = activate ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+        const btnColor = activate ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-700'
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <div className="flex items-center mb-4">
+                <div className={`h-8 w-8 rounded-full flex items-center justify-center ${headerColor}`}>
+                  <span className="text-base">{activate ? '✓' : '⚠️'}</span>
+                </div>
+                <h3 className="ml-3 text-lg font-medium text-gray-900">
+                  {verbo} {isContract ? 'Contrato' : 'Beneficiario'}
+                </h3>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-3">
+                  Vas a <strong>{verbo.toLowerCase()}</strong> {targetLabel}. Esta acción queda
+                  registrada con tu usuario, fecha y motivo en el historial de la persona.
+                </p>
+                <label htmlFor="suspend-motivo" className="block text-sm font-medium text-gray-700 mb-1">
+                  Motivo <span className="text-red-600">*</span>
+                </label>
+                <textarea
+                  id="suspend-motivo"
+                  value={suspendMotivo}
+                  onChange={(e) => setSuspendMotivo(e.target.value)}
+                  rows={3}
+                  className="input-field"
+                  placeholder={activate
+                    ? 'Ej: Cliente regularizó pago / Cliente solicita reactivación'
+                    : 'Ej: Cliente solicitó suspensión / Mora en pagos / Solicitud del titular'}
+                  disabled={isSubmittingSuspend}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  El motivo será visible al hacer clic en el badge amarillo &quot;SUSPENDIDA&quot;.
+                </p>
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <button
+                  type="button"
+                  onClick={cancelSuspendAction}
+                  disabled={isSubmittingSuspend}
+                  className="flex-1 bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmSuspendAction}
+                  disabled={isSubmittingSuspend || !suspendMotivo.trim()}
+                  className={`flex-1 ${btnColor} border border-transparent rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center`}
+                >
+                  {isSubmittingSuspend ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Aplicando...
+                    </>
+                  ) : (
+                    `Confirmar ${verbo}`
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
     </div>
   )

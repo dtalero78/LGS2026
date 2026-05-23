@@ -225,7 +225,11 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
             <span>{uploadingFiles.length > 0 ? `Subiendo (${uploadingFiles.length})...` : 'Agregar Documentación'}</span>
           </button>
         </PermissionGuard>
-        <SuspendidaBadge show={!!isSuspendida} />
+        <SuspendidaBadge
+          show={!!isSuspendida}
+          suspenddata={(student as any).suspenddata ?? null}
+          suspendcount={(student as any).suspendcount}
+        />
       </div>
 
       {/* Personal Information */}

@@ -131,7 +131,11 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
             <span>{uploadingFiles.length > 0 ? `Subiendo (${uploadingFiles.length})...` : 'Agregar Documentación'}</span>
           </button>
         </PermissionGuard>
-        <SuspendidaBadge show={!!isSuspendida} />
+        <SuspendidaBadge
+          show={!!isSuspendida}
+          suspenddata={person.suspenddata ?? null}
+          suspendcount={person.suspendcount}
+        />
       </div>
 
       {/* Main Layout - Two Columns */}

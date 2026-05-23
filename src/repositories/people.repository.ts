@@ -211,6 +211,39 @@ class PeopleRepositoryClass extends BaseRepository {
   }
 
   /**
+   * Toggle estadoInactivo + persist the latest admin suspension event.
+   *
+   * suspenddata is overwritten with the new entry (only last record matters).
+   * suspendcount is incremented only when transitioning to inactive
+   * (INACTIVACION); on REACTIVACION the counter is left untouched.
+   */
+  async toggleStatusWithSuspendData(
+    id: string,
+    inactive: boolean,
+    suspendData: {
+      accion: 'INACTIVACION' | 'REACTIVACION';
+      motivo: string;
+      fecha: string;
+      realizadoPor: string;
+      realizadoPorNombre?: string;
+    }
+  ) {
+    const counterClause = inactive
+      ? `, "suspendcount" = COALESCE("suspendcount", 0) + 1`
+      : '';
+    return queryOne(
+      `UPDATE "PEOPLE"
+       SET "estadoInactivo" = $1,
+           "suspenddata" = $2::jsonb,
+           "_updatedDate" = NOW()
+           ${counterClause}
+       WHERE "_id" = $3
+       RETURNING *`,
+      [inactive, JSON.stringify(suspendData), id]
+    );
+  }
+
+  /**
    * Activate OnHold
    */
   async activateOnHold(

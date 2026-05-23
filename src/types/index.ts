@@ -43,6 +43,9 @@ export interface Student {
   // OnHold fields
   onHoldCount?: number
   onHoldHistory?: OnHoldHistoryEntry[]
+  // Administrative suspension fields
+  suspenddata?: SuspendDataEntry | null
+  suspendcount?: number
   // Documents
   documentacion?: Array<string | { url: string; nombre: string; tipo?: string; fechaSubida?: string }>
 }
@@ -92,6 +95,18 @@ export interface Person {
 
   // Collection executive (USUARIOS_ROLES._id with rol RECAUDO_ASIST or RECAUDOS_JEFE)
   gestorRecaudo?: string | null
+
+  // Administrative suspension fields
+  suspenddata?: SuspendDataEntry | null
+  suspendcount?: number
+}
+
+export interface SuspendDataEntry {
+  accion: 'INACTIVACION' | 'REACTIVACION'
+  motivo: string
+  fecha: string
+  realizadoPor: string
+  realizadoPorNombre?: string
 }
 
 export interface OnHoldHistoryEntry {

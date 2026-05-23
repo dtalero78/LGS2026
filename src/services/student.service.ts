@@ -121,9 +121,21 @@ export async function updateStudent(id: string, body: Record<string, any>) {
 
 /**
  * Toggle student active/inactive status.
- * Returns null if status is already the same (no-op).
+ *
+ * Persists `suspenddata` (last suspension event) and increments
+ * `suspendcount` (only on INACTIVACION). Requires `motivo` and the
+ * authenticated user info (`realizadoPor`) so the suspension is
+ * auditable. Both fields are mandatory at the API layer.
+ *
+ * Returns `statusChanged: false` if the requested state matches current.
  */
-export async function toggleStatus(id: string, active: boolean) {
+interface ToggleStatusOptions {
+  motivo: string;
+  realizadoPor: string;        // email of the admin executing the action
+  realizadoPorNombre?: string; // optional display name
+}
+
+export async function toggleStatus(id: string, active: boolean, opts: ToggleStatusOptions) {
   const person = await PeopleRepository.findByIdOrThrow(id);
 
   const currentlyInactive = person.estadoInactivo === true;
@@ -133,7 +145,17 @@ export async function toggleStatus(id: string, active: boolean) {
     return { student: person, statusChanged: false };
   }
 
-  const updated = await PeopleRepository.toggleStatus(id, wantInactive);
+  const suspendData = {
+    accion: (wantInactive ? 'INACTIVACION' : 'REACTIVACION') as 'INACTIVACION' | 'REACTIVACION',
+    motivo: opts.motivo,
+    fecha: new Date().toISOString(),
+    realizadoPor: opts.realizadoPor,
+    realizadoPorNombre: opts.realizadoPorNombre,
+  };
+
+  // Persist toggle + suspenddata + (conditionally) increment suspendcount.
+  // suspendcount only grows on INACTIVACION; REACTIVACION leaves it intact.
+  const updated = await PeopleRepository.toggleStatusWithSuspendData(id, wantInactive, suspendData);
 
   // Sync estadoInactivo in ACADEMICA (match by numeroId)
   if (person.numeroId) {
@@ -164,6 +186,7 @@ export async function toggleStatus(id: string, active: boolean) {
     statusChanged: true,
     previousStatus: currentlyInactive,
     newStatus: wantInactive,
+    suspenddata: suspendData,
   };
 }
 
