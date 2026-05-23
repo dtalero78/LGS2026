@@ -878,6 +878,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     name: 'Página "Actualizar Videos"',
     description: 'Acceso a /admin/actualizar-videos. Gestión de videos instructivos del panel estudiante y videos por nivel/step',
   },
+  {
+    code: MantenimientoPermission.SCRIPTS_USUARIOS_PEGADOS,
+    module: Module.MANTENIMIENTO,
+    section: 'Scripts',
+    name: 'Página "Usuarios Pegados"',
+    description: 'Acceso a /admin/scripts/usuarios-pegados. Detecta estudiantes cuyo step actual es menor al step real calculado según sus bookings y permite reconciliar en bulk',
+  },
 
   // ========== RECAUDOS MODULE (Menú Recaudos) ==========
   {

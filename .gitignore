@@ -58,6 +58,7 @@ jsconfig.json
 /bloqueo-*.csv
 /bulk-bloqueo-*.csv
 /casos-a-revisar.csv
+/estudiantes-pegados.csv
 /finalcontrato-*.csv
 /numeroid-*.csv
 /orphan-*.csv

@@ -166,6 +166,11 @@ const getNavigation = (userEmail: string) => [
           { name: 'Crear Rol',        href: '/admin/roles/create',     newTab: true },
         ],
       },
+      {
+        name: 'Scripts', isSubmenu: true, children: [
+          { name: 'Usuarios Pegados', href: '/admin/scripts/usuarios-pegados', newTab: true },
+        ],
+      },
     ],
   },
 ]
@@ -301,6 +306,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ],
     '/admin/actualizar-videos': [
       MantenimientoPermission.ACTUALIZAR_VIDEOS,
+    ],
+    '/admin/scripts/usuarios-pegados': [
+      MantenimientoPermission.SCRIPTS_USUARIOS_PEGADOS,
     ],
     // Recaudos
     '/dashboard/recaudos/gestion': [

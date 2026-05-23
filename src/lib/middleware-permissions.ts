@@ -216,6 +216,9 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/admin/actualizar-videos': [
     'MANTENIMIENTO.MATERIAL.ACTUALIZAR_VIDEOS' as Permission,
   ],
+  '/admin/scripts/usuarios-pegados': [
+    'MANTENIMIENTO.SCRIPTS.USUARIOS_PEGADOS' as Permission,
+  ],
 
   // Recaudos - Gestión
   '/dashboard/recaudos/gestion': [

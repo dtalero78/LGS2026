@@ -333,8 +333,17 @@ export async function autoAdvanceStep(bookingId: string) {
     return autoAdvanceSpecialNivel(student, booking);
   }
 
-  // Only advance if the booking is for the student's CURRENT step
-  if (student.nivel !== bookingNivel || student.step !== bookingStep) return null;
+  // Sólo avanzamos dentro del MISMO nivel — esta guarda nunca se relaja.
+  if (student.nivel !== bookingNivel) return null;
+
+  // Para steps NORMALES (1-4, 6-9, 11-14, etc.): regla estricta — sólo el step actual.
+  // Para JUMPS (5, 10, 15, 20, 25, 30, 35, 40, 45): se relaja para destrabar
+  // estudiantes que aprobaron el Jump fuera de orden cronológico (caso documentado
+  // como "pegados"). La validación dura de aprobación sigue en aproboElJump()
+  // dentro de isCurrentStepComplete() más abajo, así que un Jump no aprobado
+  // jamás avanza aunque pase esta guarda.
+  const esJumpDelBooking = isJumpStep(bookingStep);
+  if (!esJumpDelBooking && student.step !== bookingStep) return null;
 
   // Resolve overrideStudentId (STEP_OVERRIDES uses PEOPLE _id)
   let overrideStudentId = student._id;
@@ -411,6 +420,12 @@ export async function autoAdvanceStep(bookingId: string) {
   // If all nivel steps are complete (returns 0), falls back to next sequential step (level transition).
   const { getEffectiveStepNumber } = await import('@/services/student-booking.service');
   const effectiveStepNum = await getEffectiveStepNumber(studentId, student.nivel);
+
+  // Anti-retroceso: si el cálculo arroja un step MENOR que el actual del
+  // estudiante, significa que faltan bookings (típico tras Clear Historic).
+  // En ese caso NO retroceder — preservar student.step y abortar el avance.
+  const currentStepNumForGuard = extractStepNum(student.step) ?? 0;
+  if (effectiveStepNum > 0 && effectiveStepNum < currentStepNumForGuard) return null;
 
   const targetStepName = effectiveStepNum > 0
     ? `Step ${effectiveStepNum}`
