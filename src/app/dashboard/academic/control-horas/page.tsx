@@ -48,7 +48,14 @@ interface HistoricoRow {
   motivoTransicion: string | null
 }
 
-interface AdvisorOption { _id: string; nombre: string; email: string }
+interface AdvisorOption {
+  _id: string
+  nombre: string
+  email: string
+  primerNombre?: string
+  primerApellido?: string
+  fotoAdvisor?: string | null
+}
 
 type EventCard =
   | (VigenteRow & { kind: 'vigente' })
@@ -107,6 +114,12 @@ function ControlHorasContent() {
 
   const [selectedCard, setSelectedCard] = useState<EventCard | null>(null)
 
+  // Info del advisor actualmente seleccionado (para el header con foto + nombre).
+  // Admin: se deriva de `advisors` cuando cambia advisorId.
+  // ADVISOR: se obtiene del fetch by-email.
+  const [currentAdvisor, setCurrentAdvisor] = useState<AdvisorOption | null>(null)
+  const [fotoUrl, setFotoUrl] = useState<string | null>(null)
+
   useEffect(() => {
     if (!myEmail) return
     if (isAdmin) {
@@ -117,6 +130,9 @@ function ControlHorasContent() {
             _id: a._id,
             nombre: `${a.primerNombre ?? ''} ${a.primerApellido ?? ''}`.trim() || a.email,
             email: a.email,
+            primerNombre: a.primerNombre,
+            primerApellido: a.primerApellido,
+            fotoAdvisor: a.fotoAdvisor ?? null,
           }))
           setAdvisors(list)
           if (list[0]) setAdvisorId(list[0]._id)
@@ -126,13 +142,43 @@ function ControlHorasContent() {
       fetch(`/api/postgres/advisors/by-email/${encodeURIComponent(myEmail)}`)
         .then(r => r.json())
         .then(j => {
-          const id = j.advisor?._id
-          if (id) setAdvisorId(id)
-          else setError('Tu usuario no está registrado como advisor')
+          const a = j.advisor
+          if (a?._id) {
+            setAdvisorId(a._id)
+            setCurrentAdvisor({
+              _id: a._id,
+              nombre: `${a.primerNombre ?? ''} ${a.primerApellido ?? ''}`.trim() || a.email,
+              email: a.email,
+              primerNombre: a.primerNombre,
+              primerApellido: a.primerApellido,
+              fotoAdvisor: a.fotoAdvisor ?? null,
+            })
+          } else {
+            setError('Tu usuario no está registrado como advisor')
+          }
         })
         .catch(() => setError('No se pudo cargar tu perfil de advisor'))
     }
   }, [myEmail, isAdmin])
+
+  // Mantener currentAdvisor sincronizado con advisorId cuando el admin cambia
+  // de selección desde el dropdown.
+  useEffect(() => {
+    if (!isAdmin || !advisorId) return
+    const found = advisors.find(a => a._id === advisorId)
+    if (found) setCurrentAdvisor(found)
+  }, [advisorId, advisors, isAdmin])
+
+  // Cargar presigned URL de la foto cuando cambia el advisor seleccionado.
+  useEffect(() => {
+    setFotoUrl(null)
+    const key = currentAdvisor?.fotoAdvisor
+    if (!key) return
+    fetch(`/api/postgres/materials/presigned?key=${encodeURIComponent(key)}`)
+      .then(r => r.json())
+      .then(d => { if (d.signedUrl) setFotoUrl(d.signedUrl) })
+      .catch(() => { /* fallback a inicial */ })
+  }, [currentAdvisor?.fotoAdvisor])
 
   const fetchMonth = useCallback(async () => {
     if (!advisorId) return
@@ -235,9 +281,39 @@ function ControlHorasContent() {
 
   return (
     <div className="max-w-7xl mx-auto p-6">
-      <div className="flex items-center gap-3 mb-6">
-        <ClockIcon className="h-7 w-7 text-blue-600" />
-        <h1 className="text-2xl font-bold text-gray-900">Control de Horas</h1>
+      {/* Header adaptativo según rol:
+          - ADVISOR (su propio panel): "¡Hola {nombre}!" + subtítulo "⏰ Control de Horas"
+          - Admin (consulta a otro):    "⏰ Control de Horas" + subtítulo con nombre advisor */}
+      <div className="mb-6 flex items-center gap-4">
+        <AdvisorAvatar
+          fotoUrl={fotoUrl}
+          inicial={currentAdvisor?.primerNombre?.[0]?.toUpperCase() || 'A'}
+        />
+        <div>
+          {role === 'ADVISOR' ? (
+            <>
+              <h1 className="text-2xl font-bold text-gray-900">
+                ¡Hola {currentAdvisor?.primerNombre || ''}!
+              </h1>
+              <p className="mt-1 text-sm text-gray-600 flex items-center gap-1.5">
+                <ClockIcon className="h-4 w-4 text-blue-600" />
+                Control de Horas
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <ClockIcon className="h-7 w-7 text-blue-600" />
+                Control de Horas
+              </h1>
+              <p className="mt-1 text-sm text-gray-600">
+                {currentAdvisor
+                  ? `${currentAdvisor.primerNombre ?? ''} ${currentAdvisor.primerApellido ?? ''}`.trim() || currentAdvisor.email
+                  : 'Selecciona un advisor'}
+              </p>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Toolbar */}
@@ -364,6 +440,19 @@ function ControlHorasContent() {
 }
 
 // ─────────────────────────────────────────────────────────
+
+function AdvisorAvatar({ fotoUrl, inicial }: { fotoUrl: string | null; inicial: string }) {
+  return (
+    <div className="flex-shrink-0 w-16 h-16 rounded-full overflow-hidden bg-gray-100 border-2 border-blue-200">
+      {fotoUrl
+        ? <img src={fotoUrl} alt="Foto advisor" className="w-full h-full object-cover" />
+        : <div className="w-full h-full flex items-center justify-center bg-blue-100">
+            <span className="text-2xl font-bold text-blue-600">{inicial}</span>
+          </div>
+      }
+    </div>
+  )
+}
 
 function TotalCard({ label, value, color }: { label: string; value: number; color: string }) {
   return (
