@@ -18,6 +18,8 @@ import {
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, addMonths, subMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
 import HolidayBadge from '@/components/common/HolidayBadge'
+import { usePermissions } from '@/hooks/usePermissions'
+import { AcademicoPermission } from '@/types/permissions'
 
 interface Advisor {
   _id: string
@@ -73,20 +75,61 @@ function PanelAdvisorContent() {
   const [booksLoading, setBooksLoading] = useState(false)
   const [fotoUrl, setFotoUrl] = useState<string | null>(null)
 
+  // Rol del usuario logueado
+  const userRole = (session?.user as any)?.role
+
+  // Permiso para usar el selector y navegar a paneles de OTROS advisors.
+  // Reusamos ACADEMICO.ADVISOR.VER_ENLACE — el mismo que ya gatea el acceso
+  // a /panel-advisor en el middleware (separado de ACADEMICO.ADVISOR.LISTA_VER,
+  // que rige sólo la lista en /dashboard/academic/advisors).
+  //
+  // Un ADVISOR puede tener VER_ENLACE pero ser redirigido a SU propio panel
+  // (por searchParams.get('email') || session.email cuando el rol es ADVISOR).
+  // El dropdown sólo aparece para roles NO-ADVISOR con el permiso.
+  const { hasPermission } = usePermissions()
+  const canPickOtherAdvisor = hasPermission(AcademicoPermission.ADVISOR_VER_ENLACE) && userRole !== 'ADVISOR'
+
   // Get email from URL params; fall back to session email for logged-in ADVISORs
   const advisorEmail = searchParams.get('email') || (
-    (session?.user as any)?.role === 'ADVISOR' ? session?.user?.email ?? null : null
+    userRole === 'ADVISOR' ? session?.user?.email ?? null : null
   )
+
+  // Lista de advisors para el selector (sólo se carga si tiene el permiso)
+  const [availableAdvisors, setAvailableAdvisors] = useState<Advisor[]>([])
+
+  // Cargar lista de advisors si el usuario tiene permiso (para el selector)
+  useEffect(() => {
+    if (!canPickOtherAdvisor) return
+    fetch('/api/postgres/advisors')
+      .then(r => r.json())
+      .then(j => setAvailableAdvisors(j.advisors || j.data || []))
+      .catch(() => { /* silencioso — el dropdown queda vacío */ })
+  }, [canPickOtherAdvisor])
 
   // Load advisor data
   useEffect(() => {
     if (advisorEmail) {
       loadAdvisor(advisorEmail)
-    } else {
+    } else if (canPickOtherAdvisor && availableAdvisors.length > 0) {
+      // Usuario con permiso pero sin email en URL: auto-seleccionar el primero
+      const first = availableAdvisors[0]
+      if (first?.email) {
+        router.replace(`/panel-advisor?email=${encodeURIComponent(first.email)}`)
+      } else {
+        setError('No hay advisors disponibles')
+        setLoading(false)
+      }
+    } else if (!canPickOtherAdvisor) {
       setError('No se proporcionó un email de advisor en la URL')
       setLoading(false)
     }
-  }, [advisorEmail])
+    // Si tiene permiso y availableAdvisors aún cargando, esperar al siguiente render
+  }, [advisorEmail, canPickOtherAdvisor, availableAdvisors, router])
+
+  function handleAdvisorChange(email: string) {
+    if (!email) return
+    router.replace(`/panel-advisor?email=${encodeURIComponent(email)}`)
+  }
 
   // Load events when advisor or month changes
   useEffect(() => {
@@ -312,7 +355,7 @@ function PanelAdvisorContent() {
                 </div>
             }
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-2xl font-bold text-gray-900">
               ¡Hola {advisor?.primerNombre}!
             </h1>
@@ -320,6 +363,29 @@ function PanelAdvisorContent() {
               Panel de gestión para advisors
             </p>
           </div>
+
+          {/* Selector de advisor — sólo visible para usuarios con permiso
+              ACADEMICO.ADVISOR.LISTA_VER. Un ADVISOR sin este permiso ve
+              únicamente su propio panel (email de la sesión, sin selector). */}
+          {canPickOtherAdvisor && availableAdvisors.length > 0 && (
+            <div className="ml-auto">
+              <label htmlFor="advisor-switcher" className="block text-xs font-medium text-gray-500 mb-1">
+                Ver panel de
+              </label>
+              <select
+                id="advisor-switcher"
+                value={advisor?.email ?? advisorEmail ?? ''}
+                onChange={e => handleAdvisorChange(e.target.value)}
+                className="border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white min-w-[220px]"
+              >
+                {availableAdvisors.map(a => (
+                  <option key={a._id} value={a.email ?? ''}>
+                    {[a.primerNombre, a.primerApellido].filter(Boolean).join(' ') || a.email || a._id}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Botón de Libros */}
