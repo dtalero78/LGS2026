@@ -1,154 +1,152 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/postgres'
+import { recordCronRun } from '@/lib/cron-runs'
 
 const CRON_SECRET = process.env.CRON_SECRET
 
 /**
  * Cron Job: Reactivar estudiantes con OnHold vencido
  *
- * Este endpoint se ejecuta automáticamente via cron en Digital Ocean App Platform.
- * Busca estudiantes cuyo período OnHold ha vencido (fechaFinOnHold <= hoy)
- * y los reactiva automáticamente, extendiendo su vigencia.
+ * Llamado por cron-worker (Node.js daemon en Digital Ocean) a las 03:00 UTC
+ * todos los días con Authorization: Bearer <CRON_SECRET>.
  *
- * Configuración en Digital Ocean App Platform:
- * - Job Type: Cron
- * - Schedule: 0 6 * * * (todos los días a las 6:00 AM)
- * - HTTP Route: GET /api/cron/reactivate-onhold
- * - Header: Authorization: Bearer <CRON_SECRET>
+ * Cada ejecución queda registrada en CRON_RUNS via recordCronRun() — el
+ * endpoint /api/cron/health-check expone la última ejecución para detectar
+ * si el cron lleva mucho sin correr.
+ *
+ * Por cada estudiante con OnHold vencido:
+ *   - Extiende finalContrato por los días pausados
+ *   - Marca estadoInactivo=false y limpia fechaOnHold
+ *   - Incrementa extensionCount y agrega entrada a extensionHistory
+ *   - Sincroniza ACADEMICA.estadoInactivo=false (por numeroId)
  */
 export async function GET(request: NextRequest) {
+  const authHeader = request.headers.get('authorization')
+  const providedSecret = authHeader?.replace('Bearer ', '')
+  if (CRON_SECRET && providedSecret !== CRON_SECRET) {
+    console.log('Cron reactivate-onhold: Unauthorized request')
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
-    // Validar autorización del cron job
-    const authHeader = request.headers.get('authorization')
-    const providedSecret = authHeader?.replace('Bearer ', '')
+    const result = await recordCronRun('reactivate-onhold', async () => {
+      console.log('Cron reactivate-onhold: [PostgreSQL] Iniciando proceso de reactivación automática')
 
-    // En producción, validar el secret
-    if (CRON_SECRET && providedSecret !== CRON_SECRET) {
-      console.log('Cron reactivate-onhold: Unauthorized request')
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
+      const expiredResult = await query(
+        `SELECT * FROM "PEOPLE"
+         WHERE "estadoInactivo" = true
+           AND "fechaFinOnHold" IS NOT NULL
+           AND "fechaFinOnHold"::date <= CURRENT_DATE
+         ORDER BY "fechaFinOnHold" ASC`
       )
-    }
 
-    console.log('Cron reactivate-onhold: [PostgreSQL] Iniciando proceso de reactivación automática')
-
-    // 1. Obtener estudiantes con OnHold vencido
-    const expiredResult = await query(
-      `SELECT * FROM "PEOPLE"
-       WHERE "estadoInactivo" = true
-         AND "fechaFinOnHold" IS NOT NULL
-         AND "fechaFinOnHold"::date <= CURRENT_DATE
-       ORDER BY "fechaFinOnHold" ASC`
-    )
-
-    if (expiredResult.rowCount === 0) {
-      console.log('Cron reactivate-onhold: No hay estudiantes con OnHold vencido')
-      return NextResponse.json({
-        success: true,
-        message: 'No hay estudiantes con OnHold vencido para reactivar',
-        processed: 0,
-        results: []
-      })
-    }
-
-    const students = expiredResult.rows
-    console.log(`Cron reactivate-onhold: Encontrados ${students.length} estudiantes con OnHold vencido`)
-
-    // 2. Reactivar cada estudiante
-    const results: Array<{
-      studentId: string
-      nombre: string
-      success: boolean
-      error?: string
-      diasExtendidos?: number
-    }> = []
-
-    for (const student of students) {
-      try {
-        console.log(`Cron reactivate-onhold: Reactivando estudiante ${student._id} - ${student.primerNombre} ${student.primerApellido}`)
-
-        // Calculate days paused
-        const fechaOnHold = new Date(student.fechaOnHold)
-        const fechaFinOnHold = new Date(student.fechaFinOnHold)
-        const diasPausados = Math.ceil((fechaFinOnHold.getTime() - fechaOnHold.getTime()) / (1000 * 60 * 60 * 24))
-
-        // Calculate new finalContrato
-        let newFinalContrato = student.finalContrato
-        if (student.finalContrato) {
-          const finalDate = new Date(student.finalContrato)
-          finalDate.setDate(finalDate.getDate() + diasPausados)
-          newFinalContrato = finalDate.toISOString().split('T')[0]
+      const students = expiredResult.rows
+      if (students.length === 0) {
+        console.log('Cron reactivate-onhold: No hay estudiantes con OnHold vencido')
+        return {
+          processedCount: 0,
+          successCount: 0,
+          failedCount: 0,
+          metadata: { details: [] },
         }
-
-        // Update the student
-        await query(
-          `UPDATE "PEOPLE" SET
-            "estadoInactivo" = false,
-            "fechaOnHold" = NULL,
-            "fechaFinOnHold" = NULL,
-            "finalContrato" = $2,
-            "extensionCount" = COALESCE("extensionCount", 0) + 1,
-            "extensionHistory" = COALESCE("extensionHistory", '[]'::jsonb) || $3::jsonb,
-            "_updatedDate" = NOW()
-          WHERE "_id" = $1`,
-          [
-            student._id,
-            newFinalContrato,
-            JSON.stringify({
-              numero: (student.extensionCount || 0) + 1,
-              fechaEjecucion: new Date().toISOString(),
-              vigenciaAnterior: student.finalContrato,
-              vigenciaNueva: newFinalContrato,
-              diasExtendidos: diasPausados,
-              motivo: `Extensión automática por OnHold (${diasPausados} días pausados desde ${student.fechaOnHold} hasta ${student.fechaFinOnHold}) - Cron Job`
-            })
-          ]
-        )
-
-        // Sync ACADEMICA.estadoInactivo (por numeroId). Sin esto el estudiante
-        // queda en estado inconsistente: puede loguear pero NO puede agendar
-        // (validación de booking bloquea cuando ACADEMICA.estadoInactivo=true).
-        if (student.numeroId) {
-          await query(
-            `UPDATE "ACADEMICA" SET "estadoInactivo" = false, "_updatedDate" = NOW() WHERE "numeroId" = $1`,
-            [student.numeroId]
-          ).catch(err => console.warn(`Cron reactivate-onhold: ACADEMICA sync failed for ${student.numeroId}:`, err))
-        }
-
-        console.log(`Cron reactivate-onhold: Estudiante ${student._id} reactivado exitosamente`)
-
-        results.push({
-          studentId: student._id,
-          nombre: `${student.primerNombre} ${student.primerApellido}`,
-          success: true,
-          diasExtendidos: diasPausados
-        })
-      } catch (studentError) {
-        console.error(`Cron reactivate-onhold: Error procesando estudiante ${student._id}:`, studentError)
-
-        results.push({
-          studentId: student._id,
-          nombre: `${student.primerNombre} ${student.primerApellido}`,
-          success: false,
-          error: studentError instanceof Error ? studentError.message : 'Error desconocido'
-        })
       }
-    }
 
-    // 3. Generar resumen
-    const successful = results.filter(r => r.success).length
-    const failed = results.filter(r => !r.success).length
+      console.log(`Cron reactivate-onhold: Encontrados ${students.length} estudiantes con OnHold vencido`)
 
-    console.log(`Cron reactivate-onhold: Proceso completado. Exitosos: ${successful}, Fallidos: ${failed}`)
+      const details: Array<{
+        studentId: string
+        nombre: string
+        success: boolean
+        error?: string
+        diasExtendidos?: number
+      }> = []
+
+      for (const student of students) {
+        try {
+          console.log(`Cron reactivate-onhold: Reactivando estudiante ${student._id} - ${student.primerNombre} ${student.primerApellido}`)
+
+          const fechaOnHold = new Date(student.fechaOnHold)
+          const fechaFinOnHold = new Date(student.fechaFinOnHold)
+          const diasPausados = Math.ceil((fechaFinOnHold.getTime() - fechaOnHold.getTime()) / (1000 * 60 * 60 * 24))
+
+          let newFinalContrato = student.finalContrato
+          if (student.finalContrato) {
+            const finalDate = new Date(student.finalContrato)
+            finalDate.setDate(finalDate.getDate() + diasPausados)
+            newFinalContrato = finalDate.toISOString().split('T')[0]
+          }
+
+          await query(
+            `UPDATE "PEOPLE" SET
+              "estadoInactivo" = false,
+              "fechaOnHold" = NULL,
+              "fechaFinOnHold" = NULL,
+              "finalContrato" = $2,
+              "extensionCount" = COALESCE("extensionCount", 0) + 1,
+              "extensionHistory" = COALESCE("extensionHistory", '[]'::jsonb) || $3::jsonb,
+              "_updatedDate" = NOW()
+            WHERE "_id" = $1`,
+            [
+              student._id,
+              newFinalContrato,
+              JSON.stringify({
+                numero: (student.extensionCount || 0) + 1,
+                fechaEjecucion: new Date().toISOString(),
+                vigenciaAnterior: student.finalContrato,
+                vigenciaNueva: newFinalContrato,
+                diasExtendidos: diasPausados,
+                motivo: `Extensión automática por OnHold (${diasPausados} días pausados desde ${student.fechaOnHold} hasta ${student.fechaFinOnHold}) - Cron Job`
+              })
+            ]
+          )
+
+          // Sync ACADEMICA.estadoInactivo (por numeroId).
+          if (student.numeroId) {
+            await query(
+              `UPDATE "ACADEMICA" SET "estadoInactivo" = false, "_updatedDate" = NOW() WHERE "numeroId" = $1`,
+              [student.numeroId]
+            ).catch(err => console.warn(`Cron reactivate-onhold: ACADEMICA sync failed for ${student.numeroId}:`, err))
+          }
+
+          console.log(`Cron reactivate-onhold: Estudiante ${student._id} reactivado exitosamente`)
+          details.push({
+            studentId: student._id,
+            nombre: `${student.primerNombre} ${student.primerApellido}`,
+            success: true,
+            diasExtendidos: diasPausados
+          })
+        } catch (studentError) {
+          console.error(`Cron reactivate-onhold: Error procesando estudiante ${student._id}:`, studentError)
+          details.push({
+            studentId: student._id,
+            nombre: `${student.primerNombre} ${student.primerApellido}`,
+            success: false,
+            error: studentError instanceof Error ? studentError.message : 'Error desconocido'
+          })
+        }
+      }
+
+      const successful = details.filter(r => r.success).length
+      const failed = details.filter(r => !r.success).length
+      console.log(`Cron reactivate-onhold: Proceso completado. Exitosos: ${successful}, Fallidos: ${failed}`)
+
+      return {
+        processedCount: students.length,
+        successCount: successful,
+        failedCount: failed,
+        metadata: { details },
+      }
+    })
 
     return NextResponse.json({
       success: true,
-      message: `Proceso completado. ${successful} estudiantes reactivados, ${failed} fallidos.`,
-      processed: students.length,
-      successful,
-      failed,
-      results,
+      message: result.processedCount === 0
+        ? 'No hay estudiantes con OnHold vencido para reactivar'
+        : `Proceso completado. ${result.successCount} estudiantes reactivados, ${result.failedCount} fallidos.`,
+      processed: result.processedCount,
+      successful: result.successCount,
+      failed: result.failedCount,
+      results: result.metadata?.details ?? [],
       timestamp: new Date().toISOString()
     })
 
@@ -165,7 +163,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// También soportar POST para pruebas manuales
 export async function POST(request: NextRequest) {
   return GET(request)
 }
