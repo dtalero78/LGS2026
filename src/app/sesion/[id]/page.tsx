@@ -419,7 +419,7 @@ function RegistrarSesionButton({
 
             <div className="mb-3">
               <label htmlFor="timeout-input" className="block text-xs font-medium text-gray-700 mb-1">
-                Time Out (HH:MM militar) <span className="text-red-600">*</span>
+                Time Out (HH:MM) <span className="text-red-600">*</span>
               </label>
               <input
                 id="timeout-input"
