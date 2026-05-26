@@ -56,6 +56,9 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
   // SuperAdmin/Admin ve siempre las acciones (incluso sobre pagos validados),
   // resto de roles solo ve acciones sobre pagos pendientes.
   const isAdmin = isRole('SUPER_ADMIN' as any) || isRole('ADMIN' as any)
+  // RECAUDO_ASIST: rol operativo de captura — sólo registra pagos e imprime
+  // recibos. No valida (lo hace el JEFE / financiero) ni elimina pagos.
+  const isRecaudoAsist = isRole('RECAUDO_ASIST' as any)
   const [pagos, setPagos] = useState<any[]>([])
   const [loadingPagos, setLoadingPagos] = useState(false)
   const [showWizard, setShowWizard] = useState(false)
@@ -558,23 +561,22 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                             <td className="px-3 py-2 text-gray-700 text-xs">{p.numeroFactura || '—'}</td>
                             <td className="px-3 py-2 text-right">
                               <div className="flex items-center justify-end gap-1">
-                                {/* Recibo: solo visible si el pago está validado y el usuario tiene permiso */}
-                                {p.validado && (
-                                  <PermissionGuard permission={PersonPermission.PAGOS_RECIBO}>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleGenerarRecibo(p._id)}
-                                      title={p.numeroRecibo ? `Descargar recibo ${p.numeroRecibo}` : 'Generar recibo de pago'}
-                                      className="p-1 text-indigo-600 hover:text-indigo-800"
-                                    >
-                                      <DocumentTextIcon className="h-4 w-4" />
-                                    </button>
-                                  </PermissionGuard>
-                                )}
-                                {/* Validar: visible si no está validado (cualquier rol con permiso).
-                                    SuperAdmin/Admin también lo ven en validados como referencia,
-                                    pero el botón se deshabilita porque ya está validado. */}
-                                {!p.validado && (
+                                {/* Recibo: disponible apenas se registra el pago (NO requiere validado).
+                                    Para RECAUDO_ASIST ésta es la única acción visible. */}
+                                <PermissionGuard permission={PersonPermission.PAGOS_RECIBO}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleGenerarRecibo(p._id)}
+                                    title={p.numeroRecibo ? `Descargar recibo ${p.numeroRecibo}` : 'Generar recibo de pago'}
+                                    className="p-1 text-indigo-600 hover:text-indigo-800"
+                                  >
+                                    <DocumentTextIcon className="h-4 w-4" />
+                                  </button>
+                                </PermissionGuard>
+                                {/* Validar: visible si no está validado (cualquier rol con permiso),
+                                    EXCEPTO RECAUDO_ASIST que sólo registra/imprime — la validación
+                                    contable es responsabilidad del jefe/financiero. */}
+                                {!p.validado && !isRecaudoAsist && (
                                   <PermissionGuard permission={PersonPermission.PAGOS_VALIDAR}>
                                     <button
                                       type="button"
@@ -587,8 +589,10 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                                   </PermissionGuard>
                                 )}
                                 {/* Eliminar: visible para pagos pendientes (cualquier rol con permiso)
-                                    o siempre para SuperAdmin/Admin (pueden borrar validados también). */}
-                                {(!p.validado || isAdmin) && (
+                                    o siempre para SuperAdmin/Admin (pueden borrar validados también).
+                                    RECAUDO_ASIST nunca puede borrar, ni siquiera pagos pendientes que
+                                    él mismo registró. */}
+                                {(!p.validado || isAdmin) && !isRecaudoAsist && (
                                   <PermissionGuard permission={PersonPermission.PAGOS_ELIMINAR}>
                                     <button
                                       type="button"

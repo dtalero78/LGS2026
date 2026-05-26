@@ -395,7 +395,9 @@ export const pagosTitularesService = {
    */
   /**
    * Genera el PDF del recibo de pago (LGS-####).
-   * - Sólo pagos validados.
+   * - Disponible apenas se registra el pago — NO requiere validado=true.
+   *   (El recaudo necesita entregar el recibo al titular en el momento; la
+   *   validación contable suele venir después por el área financiera.)
    * - Si no tiene numeroRecibo se le asigna uno atómicamente.
    * - Si ya tiene, se reutiliza (idempotente: vuelve a generar el mismo PDF).
    * - HTML inline + API2PDF.
@@ -405,7 +407,6 @@ export const pagosTitularesService = {
   async generarRecibo(id: string): Promise<{ pdfUrl: string; numeroRecibo: string }> {
     const pago = await PagosTitularesRepository.findById(id);
     if (!pago) throw new NotFoundError('PAGOS_TITULARES', id);
-    if (!pago.validado) throw new ValidationError('Solo se puede generar recibo de pagos validados');
 
     const titular = await PeopleRepository.findById(pago.idPeople);
     if (!titular) throw new NotFoundError('PEOPLE', pago.idPeople);
