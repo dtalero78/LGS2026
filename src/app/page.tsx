@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import DashboardStats from '@/components/dashboard/DashboardStats'
 import DashboardCharts from '@/components/dashboard/DashboardCharts'
+import AdvisorDashboard from '@/components/dashboard/AdvisorDashboard'
 import { isAuthDisabled } from '@/lib/utils'
 
 export default async function HomePage() {
@@ -20,6 +21,17 @@ export default async function HomePage() {
   const userRole = (session.user as any)?.role
   if (userRole === 'ESTUDIANTE') {
     redirect('/panel-estudiante')
+  }
+
+  // ADVISOR: dashboard personalizado del mes corriente (KPIs + heatmap + 2 donuts),
+  // datos filtrados por su _id resuelto desde el email de sesión.
+  // No ve los stats globales ni las gráficas IA (que son agregados de plataforma).
+  if (userRole === 'ADVISOR') {
+    return (
+      <DashboardLayout>
+        <AdvisorDashboard />
+      </DashboardLayout>
+    )
   }
 
   return (
