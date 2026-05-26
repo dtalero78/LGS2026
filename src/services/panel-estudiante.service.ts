@@ -280,9 +280,15 @@ export async function resolveStudentFromSession(session: Session) {
   if (!((base as any).estadoInactivo) && isContractExpired(finalContrato)) {
     console.log(`🔴 [Panel Estudiante] Contrato expirado (${finalContrato}). Inactivando estudiante y titular.`);
 
-    // Inactivate this student in PEOPLE
+    // Inactivate this student in PEOPLE.
+    // Política unificada (mayo 2026): contratos vencidos sólo escriben
+    // `estado='FINALIZADA'` + `estadoInactivo=true`. El campo `aprobacion`
+    // refleja la decisión comercial (Aprobado/Pendiente/Retractado/…) y
+    // NO debe sobrescribirse por vencimiento — evita la inconsistencia
+    // previa donde el cron escribía `estado` y este flujo escribía
+    // `aprobacion`, dejando datos divergentes.
     await query(
-      `UPDATE "PEOPLE" SET "estadoInactivo" = true, "aprobacion" = 'FINALIZADA', "_updatedDate" = NOW() WHERE "_id" = $1`,
+      `UPDATE "PEOPLE" SET "estadoInactivo" = true, "estado" = 'FINALIZADA', "_updatedDate" = NOW() WHERE "_id" = $1`,
       [(base as any)._id]
     );
     (base as any).estadoInactivo = true;
@@ -327,7 +333,7 @@ export async function resolveStudentFromSession(session: Session) {
     if (contrato) {
       await query(
         `UPDATE "PEOPLE"
-         SET "estadoInactivo" = true, "aprobacion" = 'FINALIZADA', "_updatedDate" = NOW()
+         SET "estadoInactivo" = true, "estado" = 'FINALIZADA', "_updatedDate" = NOW()
          WHERE "contrato" = $1 AND ("estadoInactivo" IS NULL OR "estadoInactivo" = false)`,
         [contrato]
       );

@@ -107,12 +107,15 @@ export async function promoteToDoneAndBlock(
     ).catch(err => console.warn('[special-nivel] ACADEMICA update failed:', err.message));
   }
 
-  // 2. PEOPLE: nivel/step + estadoInactivo + aprobacion (matched by numeroId, prefer BENEFICIARIO)
+  // 2. PEOPLE: nivel/step + estadoInactivo + estado (matched by numeroId, prefer BENEFICIARIO)
+  // Política unificada (mayo 2026): bloqueo por vencimiento sólo escribe
+  // `estado='FINALIZADA'`; `aprobacion` queda intacta (refleja la decisión
+  // comercial original — Aprobado/Pendiente/etc).
   if (student.numeroId) {
     await query(
       `UPDATE "PEOPLE"
        SET "nivel" = 'DONE', "step" = 'Step 50',
-           "estadoInactivo" = true, "aprobacion" = 'FINALIZADA',
+           "estadoInactivo" = true, "estado" = 'FINALIZADA',
            "_updatedDate" = NOW()
        WHERE "_id" = (
          SELECT "_id" FROM "PEOPLE"
@@ -168,11 +171,13 @@ export async function blockInCurrentSpecialStep(
     ).catch(err => console.warn('[special-nivel] ACADEMICA block failed:', err.message));
   }
 
-  // 2. PEOPLE: estadoInactivo + aprobacion (preserve nivel/step)
+  // 2. PEOPLE: estadoInactivo + estado (preserve nivel/step, preserve aprobacion).
+  // Política unificada (mayo 2026): bloqueo por vencimiento sólo escribe
+  // `estado='FINALIZADA'`; `aprobacion` queda intacta.
   if (student.numeroId) {
     await query(
       `UPDATE "PEOPLE"
-       SET "estadoInactivo" = true, "aprobacion" = 'FINALIZADA', "_updatedDate" = NOW()
+       SET "estadoInactivo" = true, "estado" = 'FINALIZADA', "_updatedDate" = NOW()
        WHERE "_id" = (
          SELECT "_id" FROM "PEOPLE"
          WHERE "numeroId" = $1

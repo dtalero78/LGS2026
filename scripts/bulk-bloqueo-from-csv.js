@@ -11,7 +11,7 @@
  *         - finalContrato difiere y < hoy (extensión vencida) → BLOQUEAR
  *         - finalContrato difiere y >= hoy (extensión vigente) → SKIP (respeta)
  *   2. Por cada persona a bloquear:
- *      - PEOPLE: estadoInactivo=true, aprobacion='FINALIZADA', estado='FINALIZADA'
+ *      - PEOPLE: estadoInactivo=true, estado='FINALIZADA' (aprobacion NO se toca)
  *      - ACADEMICA (por numeroId): estadoInactivo=true
  *      - USUARIOS_ROLES (por email): activo=false
  *
@@ -203,7 +203,7 @@ function fullName(p) {
         try {
           await pool.query(
             `UPDATE "PEOPLE"
-             SET "estadoInactivo" = true, "aprobacion" = 'FINALIZADA', "estado" = 'FINALIZADA', "_updatedDate" = NOW()
+             SET "estadoInactivo" = true, "estado" = 'FINALIZADA', "_updatedDate" = NOW()
              WHERE "_id" = $1`,
             [p._id]
           );

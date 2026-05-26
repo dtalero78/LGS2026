@@ -252,11 +252,13 @@ export async function executeBloqueo(personIds: string[]): Promise<BloqueoExecut
 
   for (const p of personas) {
     try {
-      // PEOPLE
+      // PEOPLE — bloqueo por vencimiento.
+      // Política unificada (mayo 2026): sólo escribe `estado='FINALIZADA'`
+      // + `estadoInactivo=true`. El campo `aprobacion` NO se toca (refleja
+      // la decisión comercial original — Aprobado/Pendiente/Retractado/etc).
       await query(
         `UPDATE "PEOPLE"
          SET "estadoInactivo" = true,
-             "aprobacion" = 'FINALIZADA',
              "estado" = 'FINALIZADA',
              "_updatedDate" = NOW()
          WHERE "_id" = $1`,

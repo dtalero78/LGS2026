@@ -9,11 +9,15 @@
  * causas:
  *
  *   - Cron expire-contracts                  → estado='FINALIZADA'
- *   - Expiración al login                    → aprobacion='FINALIZADA'
+ *   - Expiración al login (panel-estudiante)  → estado='FINALIZADA'
  *   - OnHold activo                          → fechaOnHold IS NOT NULL
  *   - Cambio estado a Contrato nulo/Devuelto/Rechazado → estado='ANULADO'
- *   - Special-nivel block (MASTER/IELTS/B2F/TOEFL)     → aprobacion='FINALIZADA'
- *   - Bulk bloqueo Mantenimiento             → estado/aprobacion='FINALIZADA'
+ *   - Special-nivel block (MASTER/IELTS/B2F/TOEFL)     → estado='FINALIZADA'
+ *   - Bulk bloqueo Mantenimiento             → estado='FINALIZADA'
+ *
+ * Política unificada (mayo 2026): todos los flujos de vencimiento sólo
+ * escriben `estado='FINALIZADA'`. El campo `aprobacion` NUNCA se
+ * sobrescribe por vencimiento — refleja la decisión comercial original.
  *
  * En lugar de mantener una blacklist por campo (frágil y propensa a
  * falsos positivos), usamos una regla positiva: el badge se muestra
