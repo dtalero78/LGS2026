@@ -78,9 +78,12 @@ export const POST = handlerWithAuth(async (request, { params }, session) => {
         [titular.contrato, params.id]
       );
 
+      // FINANCIEROS se busca por "contrato" (mismo bug que send-pdf — la tabla no
+      // tiene titularId / esa columna legacy quedó NULL en la migración).
       const financial = await queryOne(
-        `SELECT * FROM "FINANCIEROS" WHERE "titularId" = $1 LIMIT 1`,
-        [params.id]
+        `SELECT * FROM "FINANCIEROS" WHERE "contrato" = $1
+         ORDER BY "_createdDate" DESC LIMIT 1`,
+        [titular.contrato]
       );
 
       let templateRow = await queryOne(
