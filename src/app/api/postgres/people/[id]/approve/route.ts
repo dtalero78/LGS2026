@@ -52,8 +52,13 @@ async function approveOnePerson(
   // Use provided contrato or person's own
   const effectiveContrato = contrato || person.contrato;
 
-  // Update PEOPLE.aprobacion = 'Aprobado'
-  // For BENEFICIARIO: also copy contrato (if missing) and inicioContrato from titular
+  // Update PEOPLE.aprobacion = 'Aprobado' + estado = 'ACTIVA'.
+  // El mapeo aprobacion→estado está documentado en /api/postgres/approvals/[id]
+  // (APROBACION_TO_ESTADO); aquí lo aplicamos para que ambos endpoints dejen el
+  // titular/beneficiario en estado consistente. Antes este route sólo tocaba
+  // aprobacion y dejaba `estado` en NULL — el badge "Estado: Null" aparecía
+  // en /person/[id] aunque el contrato estuviera aprobado.
+  // Para BENEFICIARIO además copia `contrato` (si falta) y `inicioContrato` del titular.
   if (person.tipoUsuario === 'BENEFICIARIO') {
     const extraFields = [];
     const extraValues: any[] = [];
@@ -69,81 +74,101 @@ async function approveOnePerson(
 
     const setClause = extraFields.length > 0 ? `, ${extraFields.join(', ')}` : '';
     await query(
-      `UPDATE "PEOPLE" SET "aprobacion" = 'Aprobado'${setClause}, "_updatedDate" = NOW() WHERE "_id" = $1`,
+      `UPDATE "PEOPLE" SET "aprobacion" = 'Aprobado', "estado" = 'ACTIVA'${setClause}, "_updatedDate" = NOW() WHERE "_id" = $1`,
       [personId, ...extraValues]
     );
   } else {
     await query(
-      `UPDATE "PEOPLE" SET "aprobacion" = 'Aprobado', "_updatedDate" = NOW() WHERE "_id" = $1`,
+      `UPDATE "PEOPLE" SET "aprobacion" = 'Aprobado', "estado" = 'ACTIVA', "_updatedDate" = NOW() WHERE "_id" = $1`,
       [personId]
     );
   }
-  console.log(`✅ [Approve] PEOPLE.aprobacion actualizado a 'Aprobado'`);
+  console.log(`✅ [Approve] PEOPLE.aprobacion='Aprobado' + estado='ACTIVA'`);
 
-  // Check/Create ACADEMICA record
-  const existingAcademic = await queryOne(
-    `SELECT "_id" FROM "ACADEMICA" WHERE "numeroId" = $1 LIMIT 1`,
-    [person.numeroId]
-  );
-
-  let academicId = existingAcademic?._id;
+  // Check/Create ACADEMICA record — SÓLO para BENEFICIARIO.
+  // Los TITULARES no son estudiantes (no toman clases); su rol es contractual.
+  // Crear ACADEMICA para un titular que NO es beneficiario produce un registro
+  // espurio que aparece como "estudiante" en búsquedas, paneles y reports.
+  // Si el titular ES también beneficiario (titularEsBeneficiario), existe una fila
+  // PEOPLE separada con tipoUsuario='BENEFICIARIO' que sí dispara ACADEMICA.
+  let academicId: string | null = null;
   let academicCreated = false;
 
-  if (!existingAcademic) {
-    academicId = ids.academic();
-    await query(
-      `INSERT INTO "ACADEMICA" (
-        "_id", "numeroId", "primerNombre", "segundoNombre",
-        "primerApellido", "segundoApellido", "email", "celular",
-        "nivel", "step", "plataforma", "estadoInactivo",
-        "contrato", "usuarioId",
-        "_createdDate", "_updatedDate"
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, false, $12, $13, NOW(), NOW()
-      )`,
-      [
-        academicId,
-        person.numeroId,
-        person.primerNombre,
-        person.segundoNombre || null,
-        person.primerApellido,
-        person.segundoApellido || null,
-        person.email || null,
-        person.celular || null,
-        'WELCOME',
-        'WELCOME',
-        person.plataforma || null,
-        effectiveContrato || null,
-        personId,
-      ]
+  if (person.tipoUsuario === 'BENEFICIARIO') {
+    const existingAcademic = await queryOne(
+      `SELECT "_id" FROM "ACADEMICA" WHERE "numeroId" = $1 LIMIT 1`,
+      [person.numeroId]
     );
-    academicCreated = true;
-    console.log(`✅ [Approve] Registro ACADEMICA creado: ${academicId}`);
-  } else {
-    console.log(`ℹ️ [Approve] Registro ACADEMICA ya existía: ${academicId}`);
-  }
 
-  // Send WhatsApp welcome message
-  let whatsappSent = false;
-  let whatsappError: string | null = null;
-  const celular = person.celular;
-  console.log(`📱 [Approve] Celular: "${celular}" (${celular ? celular.length + ' chars' : 'null/undefined'})`);
+    academicId = existingAcademic?._id ?? null;
 
-  if (celular) {
-    try {
-      const nombre = person.primerNombre || '';
-      const message = `Hola ${nombre} 👋:\n\n*¡Eres parte de Let's Go Speak!* 🎉 \n\nPara terminar tu registro y crear tu usuario sigue este enlace:\n\nhttps://lgs-plataforma.com/nuevo-usuario/${academicId}\n\nSi tienes alguna pregunta, no dudes en contactarnos.\n\n¡Bienvenido a la familia LGS! 🚀`;
-      console.log(`📤 [Approve] Enviando WhatsApp a: ${celular}`);
-      const whatsappResult = await sendWhatsAppMessage(celular, message);
-      whatsappSent = true;
-      console.log(`✅ [Approve] WhatsApp enviado a ${celular}`, whatsappResult);
-    } catch (err: any) {
-      whatsappError = err.message;
-      console.error(`⚠️ [Approve] Error enviando WhatsApp a "${celular}":`, err.message);
+    if (!existingAcademic) {
+      academicId = ids.academic();
+      await query(
+        `INSERT INTO "ACADEMICA" (
+          "_id", "numeroId", "primerNombre", "segundoNombre",
+          "primerApellido", "segundoApellido", "email", "celular",
+          "nivel", "step", "plataforma", "estadoInactivo",
+          "contrato", "usuarioId",
+          "_createdDate", "_updatedDate"
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, false, $12, $13, NOW(), NOW()
+        )`,
+        [
+          academicId,
+          person.numeroId,
+          person.primerNombre,
+          person.segundoNombre || null,
+          person.primerApellido,
+          person.segundoApellido || null,
+          person.email || null,
+          person.celular || null,
+          'WELCOME',
+          'WELCOME',
+          person.plataforma || null,
+          effectiveContrato || null,
+          personId,
+        ]
+      );
+      academicCreated = true;
+      console.log(`✅ [Approve] Registro ACADEMICA creado: ${academicId}`);
+    } else {
+      console.log(`ℹ️ [Approve] Registro ACADEMICA ya existía: ${academicId}`);
     }
   } else {
-    whatsappError = 'Sin número de celular registrado';
-    console.log(`ℹ️ [Approve] Sin celular, no se envió WhatsApp`);
+    console.log(`ℹ️ [Approve] ${person.tipoUsuario} — se omite creación de ACADEMICA (sólo beneficiarios necesitan registro académico)`);
+  }
+
+  // Send WhatsApp welcome message — SÓLO a BENEFICIARIOS.
+  // El mensaje contiene un link de auto-registro (/nuevo-usuario/{academicId})
+  // que sólo aplica a estudiantes. Para TITULARES el academicId es null y el
+  // link saldría roto; además los titulares no son usuarios de la plataforma.
+  let whatsappSent = false;
+  let whatsappError: string | null = null;
+
+  if (person.tipoUsuario !== 'BENEFICIARIO') {
+    whatsappError = 'Omitido — los titulares no reciben mensaje de auto-registro';
+    console.log(`ℹ️ [Approve] ${person.tipoUsuario} — se omite WhatsApp de bienvenida`);
+  } else {
+    const celular = person.celular;
+    console.log(`📱 [Approve] Celular: "${celular}" (${celular ? celular.length + ' chars' : 'null/undefined'})`);
+
+    if (celular) {
+      try {
+        const nombre = person.primerNombre || '';
+        const message = `Hola ${nombre} 👋:\n\n*¡Eres parte de Let's Go Speak!* 🎉 \n\nPara terminar tu registro y crear tu usuario sigue este enlace:\n\nhttps://lgs-plataforma.com/nuevo-usuario/${academicId}\n\nSi tienes alguna pregunta, no dudes en contactarnos.\n\n¡Bienvenido a la familia LGS! 🚀`;
+        console.log(`📤 [Approve] Enviando WhatsApp a: ${celular}`);
+        const whatsappResult = await sendWhatsAppMessage(celular, message);
+        whatsappSent = true;
+        console.log(`✅ [Approve] WhatsApp enviado a ${celular}`, whatsappResult);
+      } catch (err: any) {
+        whatsappError = err.message;
+        console.error(`⚠️ [Approve] Error enviando WhatsApp a "${celular}":`, err.message);
+      }
+    } else {
+      whatsappError = 'Sin número de celular registrado';
+      console.log(`ℹ️ [Approve] Sin celular, no se envió WhatsApp`);
+    }
   }
 
   return {
