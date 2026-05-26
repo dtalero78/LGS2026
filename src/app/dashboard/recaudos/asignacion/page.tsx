@@ -29,11 +29,12 @@ interface AsignacionRow {
   ultimaFechaPago: string | null
   ultimaCuotaPagada: number | null
   /**
-   * Día (1-31) extraído de FINANCIEROS.fechaPago en zona America/Bogota.
-   * Es la cadencia base elegida al crear el contrato — independiente de
-   * si el titular ya tiene pagos registrados.
+   * Fecha del primer pago definida en el contrato (FINANCIEROS.fechaPago).
+   * Es la fecha base elegida al crear/migrar el contrato — independiente de
+   * si el titular ya tiene pagos registrados. Hasta mayo 2026 se mostraba
+   * sólo el día del mes; ahora la fecha completa.
    */
-  diaVencimiento: number | null
+  fechaPrimerPago: string | null
 }
 
 interface DisplayUser {
@@ -66,13 +67,6 @@ const PAGE_SIZE = 50
 function fmtDate(d: string | null): string {
   if (!d) return '—'
   try { return new Date(d).toLocaleDateString('es', { timeZone: 'UTC' }) } catch { return '—' }
-}
-function dayOf(d: string | null): string {
-  if (!d) return '—'
-  try {
-    // Día del mes (UTC para evitar drift por TZ del navegador)
-    return String(new Date(d).getUTCDate())
-  } catch { return '—' }
 }
 function parseMoneyText(v: any): number {
   if (v === null || v === undefined || v === '') return 0
@@ -157,7 +151,7 @@ export default function AsignacionRecaudosPage() {
       'Número ID': t.numeroId,
       Contrato: t.contrato || '',
       'Fecha Contrato': fmtDate(t.fechaContrato),
-      'Día Vencimiento': t.diaVencimiento ?? '',
+      'Fecha 1er Pago': fmtDate(t.fechaPrimerPago),
       'Fecha Último Pago': fmtDate(t.ultimaFechaPago),
       'Última Cuota Pagada': t.ultimaCuotaPagada ?? '',
       'Saldo Actual': parseMoneyText(t.saldoActual),
@@ -306,7 +300,7 @@ export default function AsignacionRecaudosPage() {
                       <th className="px-3 py-2 text-left font-medium text-gray-700">Titular</th>
                       <th className="px-3 py-2 text-left font-medium text-gray-700">Contrato</th>
                       <th className="px-3 py-2 text-left font-medium text-gray-700">Fecha Contrato</th>
-                      <th className="px-3 py-2 text-center font-medium text-gray-700">Día Vencimiento</th>
+                      <th className="px-3 py-2 text-left font-medium text-gray-700">Fecha 1er Pago</th>
                       <th className="px-3 py-2 text-left font-medium text-gray-700">Fecha Último Pago</th>
                       <th className="px-3 py-2 text-center font-medium text-gray-700">Última Cuota Pagada</th>
                       <th className="px-3 py-2 text-right font-medium text-gray-700">Saldo a la Fecha</th>
@@ -335,9 +329,7 @@ export default function AsignacionRecaudosPage() {
                           </td>
                           <td className="px-3 py-2 text-gray-700">{t.contrato || '—'}</td>
                           <td className="px-3 py-2 text-gray-900">{fmtDate(t.fechaContrato)}</td>
-                          <td className="px-3 py-2 text-center text-gray-900 font-medium">
-                            {t.diaVencimiento != null ? t.diaVencimiento : '—'}
-                          </td>
+                          <td className="px-3 py-2 text-gray-900">{fmtDate(t.fechaPrimerPago)}</td>
                           <td className="px-3 py-2 text-gray-900">{fmtDate(t.ultimaFechaPago)}</td>
                           <td className="px-3 py-2 text-center text-gray-900 font-medium">
                             {t.ultimaCuotaPagada != null ? t.ultimaCuotaPagada : '—'}

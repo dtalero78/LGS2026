@@ -300,15 +300,56 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
     if (opts.fechaDesde) { conds.push(`p."fechaContrato" >= $${i}::date`); params.push(opts.fechaDesde); i++; }
     if (opts.fechaHasta) { conds.push(`p."fechaContrato" <= $${i}::date`); params.push(opts.fechaHasta); i++; }
 
-    // estadoCartera se filtra DESPUÉS del SELECT (subquery cuota #0) usando HAVING-equivalent
-    // o filtrando vía sub-WHERE; lo aplicamos como filtro extra después de calcular.
-    // Para mantener todo en una query, lo usamos en un WHERE sobre la subquery del LEFT JOIN.
-    let havingCartera = '';
+    // Reglas de filtro por tipoCartera (mayo 2026):
+    //   - 'normal'      → todos (sin restricción de mes)
+    //   - 'prejuridico' → todos (sin restricción de mes)
+    //   - 'ultimopago'  → SÓLO los del mes corriente (en TZ America/Bogota,
+    //     tomada como referencia de operación del equipo de recaudo)
+    //   - 'penalidad'   → SÓLO los del mes corriente (idem)
+    //   - sin filtro    → unión: todos normal/prejuridico + ultimopago/penalidad
+    //     del mes corriente. Esto evita acumular casos viejos de ultimopago/
+    //     penalidad y deja al asistente concentrarse en los activos.
+    //
+    // "Del mes corriente" se evalúa con la fecha del último cambio a ese
+    // tipoCartera (tomado de la última entry de `tipoCarteraHistory` cuyo
+    // `estadoNuevo` coincide con el `tipoCartera` actual; fallback a
+    // `c0."_updatedDate"` si no hay history).
+    const monthFilterSql = (alias: string) => `
+      COALESCE(
+        (SELECT MAX((entry->>'fecha')::timestamptz)
+         FROM jsonb_array_elements(${alias}."tipoCarteraHistory") AS entry
+         WHERE entry->>'estadoNuevo' = ${alias}."tipoCartera"),
+        ${alias}."_updatedDate"
+      ) >= date_trunc('month', NOW() AT TIME ZONE 'America/Bogota') AT TIME ZONE 'America/Bogota'
+    `;
+    const TRANSITORIOS = `('ultimopago', 'penalidad')`;
+    const ESTABLES     = `('normal', 'prejuridico')`;
+
     if (opts.estadoCartera) {
+      const ec = String(opts.estadoCartera).toLowerCase();
       conds.push(`COALESCE(c0."tipoCartera", 'normal') = $${i}`);
-      params.push(opts.estadoCartera);
+      params.push(ec);
       i++;
-      havingCartera = ''; // ya queda en WHERE
+      if (ec === 'ultimopago' || ec === 'penalidad') {
+        // Filtro adicional: el cambio a este estado debe ser del mes corriente
+        conds.push(monthFilterSql('c0'));
+      }
+    } else {
+      // Sin filtro explícito → unión de estables (sin restricción) +
+      // transitorios (sólo del mes). Legacy values (juridico/castigada)
+      // siguen visibles vía el último OR.
+      conds.push(`(
+        COALESCE(c0."tipoCartera", 'normal') IN ${ESTABLES}
+        OR (
+          c0."tipoCartera" IN ${TRANSITORIOS}
+          AND ${monthFilterSql('c0')}
+        )
+        OR (
+          c0."tipoCartera" IS NOT NULL
+          AND c0."tipoCartera" NOT IN ${ESTABLES}
+          AND c0."tipoCartera" NOT IN ${TRANSITORIOS}
+        )
+      )`);
     }
 
     const whereClause = `WHERE ${conds.join(' AND ')}`;
@@ -318,7 +359,7 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
       `SELECT COUNT(*)::text AS total
        FROM "PEOPLE" p
        LEFT JOIN LATERAL (
-         SELECT pt0."tipoCartera"
+         SELECT pt0."tipoCartera", pt0."tipoCarteraHistory", pt0."_updatedDate"
          FROM "PAGOS_TITULARES" pt0
          WHERE pt0."idPeople" = p."_id" AND pt0."numCuota" = 0
          LIMIT 1
@@ -347,23 +388,11 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
          COALESCE(c0."tipoCartera", 'normal')    AS "tipoCartera",
          agg."ultimaFechaPago"                   AS "ultimaFechaPago",
          agg."ultimaCuotaPagada"                 AS "ultimaCuotaPagada",
-         CASE
-           WHEN f."fechaPago" IS NULL THEN NULL
-           ELSE EXTRACT(DAY FROM (f."fechaPago" AT TIME ZONE
-             CASE LOWER(COALESCE(p."plataforma", ''))
-               WHEN 'chile'    THEN 'America/Santiago'
-               WHEN 'ecuador'  THEN 'America/Guayaquil'
-               WHEN 'colombia' THEN 'America/Bogota'
-               WHEN 'perú'     THEN 'America/Lima'
-               WHEN 'peru'     THEN 'America/Lima'
-               ELSE 'America/Bogota'
-             END
-           ))::int
-         END                                     AS "diaVencimiento"
+         f."fechaPago"                           AS "fechaPrimerPago"
        FROM "PEOPLE" p
        LEFT JOIN "FINANCIEROS" f ON f."contrato" = p."contrato"
        LEFT JOIN LATERAL (
-         SELECT pt0."tipoCartera"
+         SELECT pt0."tipoCartera", pt0."tipoCarteraHistory", pt0."_updatedDate"
          FROM "PAGOS_TITULARES" pt0
          WHERE pt0."idPeople" = p."_id" AND pt0."numCuota" = 0
          LIMIT 1
