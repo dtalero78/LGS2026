@@ -51,6 +51,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/prod_node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+# Copy scripts/ so the cron-worker component (separate DO worker) can run
+# scripts/cron-worker.js — el run_command del worker en el app spec apunta
+# a este archivo. La imagen es la misma que la del servicio web; sólo cambia
+# el comando de arranque entre componentes.
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 
 # Switch to non-root user
 USER nextjs

@@ -1,57 +1,57 @@
-name: lgs-plataforma
+# Documental — el spec real está aplicado en el app `lgs2026` (ID
+# 46497990-fbfe-4a88-ad11-a40e672fe7a1) en Digital Ocean. Este YAML refleja
+# la arquitectura para futuras referencias. La aplicación de cambios debe
+# hacerse vía `doctl apps update <APP_ID> --spec .do/app.yaml`.
+#
+# Componentes:
+#   - services.lgs2026          → Next.js web (lgs-plataforma.com)
+#   - workers.cron-worker       → node-cron daemon que dispara los endpoints
+#                                  /api/cron/reactivate-onhold y
+#                                  /api/cron/expire-contracts diariamente.
+
+name: lgs2026
+region: atl
+
+domains:
+  - domain: lgs-plataforma.com
+    type: PRIMARY
+    zone: lgs-plataforma.com
+
+features:
+  - buildpack-stack=ubuntu-22
+
+ingress:
+  rules:
+    - component:
+        name: lgs2026
+      match:
+        path:
+          prefix: /
 
 services:
-  - name: web
+  - name: lgs2026
+    dockerfile_path: /Dockerfile
     github:
-      repo: dtalero78/let-s-go-speak2
+      repo: dtalero78/LGS2026
       branch: main
       deploy_on_push: true
-    build_command: npm run build
-    run_command: npm start
     http_port: 3001
-    instance_size_slug: professional-xs
     instance_count: 1
-    routes:
-      - path: /
-    envs:
-      - key: NODE_ENV
-        value: production
-      - key: NEXTAUTH_URL
-        scope: RUN_TIME
-        type: SECRET
-      - key: NEXTAUTH_SECRET
-        scope: RUN_TIME
-        type: SECRET
-      - key: ADMIN_EMAIL
-        scope: RUN_TIME
-        type: SECRET
-      - key: ADMIN_PASSWORD
-        scope: RUN_TIME
-        type: SECRET
-      - key: NEXT_PUBLIC_WIX_API_BASE_URL
-        value: "https://www.lgsplataforma.com/_functions"
-      - key: WIX_API_BASE_URL
-        value: "https://www.lgsplataforma.com/_functions"
-      - key: CRON_SECRET
-        scope: RUN_TIME
-        type: SECRET
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    source_dir: /
 
+# Worker daemon — comparte la misma imagen Docker que el servicio web (mismo
+# Dockerfile, mismo build) pero arranca con un run_command distinto que ejecuta
+# scripts/cron-worker.js. node-cron mantiene el proceso vivo y dispara
+# llamadas HTTP a los endpoints /api/cron/* en los horarios programados.
 workers:
   - name: cron-worker
+    dockerfile_path: /Dockerfile
     github:
-      repo: dtalero78/let-s-go-speak2
+      repo: dtalero78/LGS2026
       branch: main
       deploy_on_push: true
-    build_command: npm install
-    run_command: npm run cron:worker
-    instance_size_slug: basic-xxs
+    run_command: node scripts/cron-worker.js
     instance_count: 1
-    envs:
-      - key: NODE_ENV
-        value: production
-      - key: NEXTAUTH_URL
-        scope: RUN_TIME
-        type: SECRET
-      - key: CRON_SECRET
-        scope: RUN_TIME
-        type: SECRET
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    source_dir: /
