@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import DashboardStats from '@/components/dashboard/DashboardStats'
-import DashboardCharts from '@/components/dashboard/DashboardCharts'
+import DashboardMonthlyCharts from '@/components/dashboard/DashboardMonthlyCharts'
 import AdvisorDashboard from '@/components/dashboard/AdvisorDashboard'
 import { isAuthDisabled } from '@/lib/utils'
 
@@ -52,9 +52,9 @@ export default async function HomePage() {
           <DashboardStats />
         </Suspense>
 
-{/* AI-Generated Charts */}
-        <Suspense fallback={<div className="card p-6 animate-pulse h-96" />}>
-          <DashboardCharts />
+        {/* Agregados del mes — heatmap + donut + barras por nivel */}
+        <Suspense fallback={<div className="card p-6 animate-pulse h-64" />}>
+          <DashboardMonthlyCharts />
         </Suspense>
       </div>
     </DashboardLayout>
@@ -63,12 +63,12 @@ export default async function HomePage() {
 
 function DashboardStatsLoading() {
   return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
       {[...Array(5)].map((_, i) => (
-        <div key={i} className="card p-6 animate-pulse">
-          <div className="h-5 bg-gray-200 rounded w-3/4 mb-3"></div>
-          <div className="h-9 bg-gray-200 rounded w-1/2 mb-3"></div>
-          <div className="h-4 bg-gray-200 rounded w-full"></div>
+        <div key={i} className="card p-4 animate-pulse">
+          <div className="h-3 bg-gray-200 rounded w-3/4 mb-3"></div>
+          <div className="h-7 bg-gray-200 rounded w-1/2 mb-2"></div>
+          <div className="h-3 bg-gray-200 rounded w-full"></div>
         </div>
       ))}
     </div>

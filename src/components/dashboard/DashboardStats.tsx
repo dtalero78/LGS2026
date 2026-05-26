@@ -71,29 +71,17 @@ export default function DashboardStats() {
   ]
 
   return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
       {statsConfig.map((stat) => (
-        <div key={stat.name} className="card p-6">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <stat.icon className="h-10 w-10 text-primary-600" />
-            </div>
-            <div className="ml-5 flex-1">
-              <dl>
-                <dt className="text-base font-medium text-gray-900">
-                  {stat.name}
-                </dt>
-                <dd className="mt-2">
-                  <div className="text-3xl font-bold text-gray-900">
-                    {stat.value}
-                  </div>
-                </dd>
-                <dd className="text-sm text-gray-500 mt-2">
-                  {stat.description}
-                </dd>
-              </dl>
-            </div>
+        <div key={stat.name} className="card p-4 flex flex-col">
+          <div className="flex items-center gap-2 mb-2">
+            <stat.icon className="h-5 w-5 text-primary-600 flex-shrink-0" />
+            <span className="text-[10px] uppercase tracking-wide font-semibold text-gray-600 truncate">
+              {stat.name}
+            </span>
           </div>
+          <div className="text-2xl font-bold text-gray-900 leading-tight">{stat.value}</div>
+          <div className="text-[11px] text-gray-500 mt-1 leading-snug">{stat.description}</div>
         </div>
       ))}
     </div>
@@ -102,19 +90,15 @@ export default function DashboardStats() {
 
 function DashboardStatsLoading() {
   return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
       {[...Array(5)].map((_, i) => (
-        <div key={i} className="card p-6 animate-pulse">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <div className="h-10 w-10 bg-gray-200 rounded"></div>
-            </div>
-            <div className="ml-5 flex-1">
-              <div className="h-5 bg-gray-200 rounded w-3/4 mb-3"></div>
-              <div className="h-9 bg-gray-200 rounded w-1/2 mb-3"></div>
-              <div className="h-4 bg-gray-200 rounded w-full"></div>
-            </div>
+        <div key={i} className="card p-4 animate-pulse flex flex-col">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="h-5 w-5 bg-gray-200 rounded flex-shrink-0"></div>
+            <div className="h-3 bg-gray-200 rounded flex-1"></div>
           </div>
+          <div className="h-7 bg-gray-200 rounded w-1/2 mb-2"></div>
+          <div className="h-3 bg-gray-200 rounded w-full"></div>
         </div>
       ))}
     </div>
