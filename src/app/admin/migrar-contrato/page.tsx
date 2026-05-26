@@ -825,7 +825,7 @@ export default function MigrarContratoPage() {
               </div>
 
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-                Al confirmar se crearán los registros en PEOPLE y FINANCIEROS. Esta acción no se puede deshacer desde esta pantalla.
+                Al confirmar se creará el contrato para ser aprobado, con sus datos financieros. Esta acción no se puede deshacer desde esta pantalla.
               </div>
             </div>
           )}
