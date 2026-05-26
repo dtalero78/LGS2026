@@ -68,6 +68,22 @@ function fmtDate(d: string | null): string {
   if (!d) return '—'
   try { return new Date(d).toLocaleDateString('es', { timeZone: 'UTC' }) } catch { return '—' }
 }
+/**
+ * "Opcional" (badge OPC naranja) — true cuando el día del mes de la fecha
+ * 1er pago es 28-31. Estos días no existen en todos los meses (feb no tiene
+ * 29/30/31, abr/jun/sep/nov no tienen 31), por lo que la cadencia mensual
+ * regular se rompe → casos opcionales que el área de recaudo trata aparte.
+ * Usa día UTC para evitar drift por TZ del navegador (igual patrón que
+ * fmtDate / la query del repo).
+ */
+function isOpcionalFechaPago(d: string | null): boolean {
+  if (!d) return false
+  try {
+    const day = new Date(d).getUTCDate()
+    return day > 27
+  } catch { return false }
+}
+
 function parseMoneyText(v: any): number {
   if (v === null || v === undefined || v === '') return 0
   if (typeof v === 'number') return v
@@ -152,6 +168,7 @@ export default function AsignacionRecaudosPage() {
       Contrato: t.contrato || '',
       'Fecha Contrato': fmtDate(t.fechaContrato),
       'Fecha 1er Pago': fmtDate(t.fechaPrimerPago),
+      Opcional: isOpcionalFechaPago(t.fechaPrimerPago) ? 'OPC' : '',
       'Fecha Último Pago': fmtDate(t.ultimaFechaPago),
       'Última Cuota Pagada': t.ultimaCuotaPagada ?? '',
       'Saldo Actual': parseMoneyText(t.saldoActual),
@@ -301,6 +318,12 @@ export default function AsignacionRecaudosPage() {
                       <th className="px-3 py-2 text-left font-medium text-gray-700">Contrato</th>
                       <th className="px-3 py-2 text-left font-medium text-gray-700">Fecha Contrato</th>
                       <th className="px-3 py-2 text-left font-medium text-gray-700">Fecha 1er Pago</th>
+                      <th
+                        className="px-2 py-2 text-center font-medium text-gray-700"
+                        title="OPC = día del 1er pago > 27 (28/29/30/31). La cadencia mensual regular se rompe en estos días — recaudo los trata aparte."
+                      >
+                        Opcional
+                      </th>
                       <th className="px-3 py-2 text-left font-medium text-gray-700">Fecha Último Pago</th>
                       <th className="px-3 py-2 text-center font-medium text-gray-700">Última Cuota Pagada</th>
                       <th className="px-3 py-2 text-right font-medium text-gray-700">Saldo a la Fecha</th>
@@ -330,6 +353,15 @@ export default function AsignacionRecaudosPage() {
                           <td className="px-3 py-2 text-gray-700">{t.contrato || '—'}</td>
                           <td className="px-3 py-2 text-gray-900">{fmtDate(t.fechaContrato)}</td>
                           <td className="px-3 py-2 text-gray-900">{fmtDate(t.fechaPrimerPago)}</td>
+                          <td className="px-2 py-2 text-center">
+                            {isOpcionalFechaPago(t.fechaPrimerPago) ? (
+                              <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-800">
+                                OPC
+                              </span>
+                            ) : (
+                              <span className="text-gray-300">—</span>
+                            )}
+                          </td>
                           <td className="px-3 py-2 text-gray-900">{fmtDate(t.ultimaFechaPago)}</td>
                           <td className="px-3 py-2 text-center text-gray-900 font-medium">
                             {t.ultimaCuotaPagada != null ? t.ultimaCuotaPagada : '—'}
