@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { XMarkIcon, ArrowUpTrayIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { api, handleApiError } from '@/hooks/use-api'
+import { PermissionGuard } from '@/components/permissions'
+import { PersonPermission } from '@/types/permissions'
 
 interface PagoTitularWizardProps {
   isOpen: boolean
@@ -50,6 +52,13 @@ interface DraftState {
   idTercero: string
   plataforma: string
   documentosAdjuntos: DocAdjunto[]
+  /**
+   * Cambio de tipoCartera disparado AL registrar el pago (opcional).
+   * '' = sin cambio · 'ultimopago' o 'penalidad' = al guardar el pago se
+   * dispara también POST /cambio-cartera con motivo auto-generado.
+   * Mutuamente exclusivo (sólo uno marcado a la vez).
+   */
+  cambioCartera: '' | 'ultimopago' | 'penalidad'
 }
 
 const DRAFT_TTL_MS = 72 * 60 * 60 * 1000 // 72 horas
@@ -80,6 +89,7 @@ const empty = (): DraftState => ({
   idTercero: '',
   plataforma: '',
   documentosAdjuntos: [],
+  cambioCartera: '',
 })
 
 function toNum(v: string): number {
@@ -349,6 +359,24 @@ export default function PagoTitularWizard({
         numeroReferencia: form.numeroReferencia || null,
         documentosAdjuntos: form.documentosAdjuntos,
       })
+
+      // Cambio de tipoCartera disparado desde la casilla en el wizard.
+      // Best-effort: si falla, el pago YA quedó registrado — sólo se muestra
+      // un toast.error indicando que el cambio de cartera no se aplicó.
+      if (form.cambioCartera) {
+        try {
+          const motivoAuto = `Marcado automáticamente al registrar pago${
+            form.numCuota !== '' ? ` cuota #${form.numCuota}` : ''
+          }${form.valorPagado ? ` ($${form.valorPagado})` : ''}`
+          await api.post(`/api/postgres/people/${titular._id}/cambio-cartera`, {
+            nuevoTipo: form.cambioCartera,
+            motivo: motivoAuto,
+          })
+        } catch (err) {
+          handleApiError(err, 'Pago registrado, pero falló el cambio de cartera')
+        }
+      }
+
       toast.success('Pago registrado')
       localStorage.removeItem(draftKey)
       onCreated()
@@ -495,6 +523,44 @@ export default function PagoTitularWizard({
               />
             </div>
           </div>
+
+          {/* Cambio de Estado Cartera — opcional, mutuamente exclusivo.
+              Al guardar el pago se dispara también POST /cambio-cartera con
+              motivo auto-generado. Gateado por CAMBIO_ESTADO_CARTERA — sin
+              ese permiso el bloque no aparece. */}
+          <PermissionGuard permission={PersonPermission.CAMBIO_ESTADO_CARTERA}>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+              <p className="text-xs text-orange-900 mb-3">
+                🔄 Marca <strong>una</strong> opción para cambiar también el estado de cartera del titular al registrar este pago (opcional, mutuamente excluyente).
+              </p>
+              <div className="flex items-center gap-6">
+                <label className="inline-flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.cambioCartera === 'ultimopago'}
+                    onChange={e => setForm(f => ({
+                      ...f,
+                      cambioCartera: e.target.checked ? 'ultimopago' : '',
+                    }))}
+                    className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                  />
+                  <span className="text-sm font-medium text-purple-800">Último Pago</span>
+                </label>
+                <label className="inline-flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.cambioCartera === 'penalidad'}
+                    onChange={e => setForm(f => ({
+                      ...f,
+                      cambioCartera: e.target.checked ? 'penalidad' : '',
+                    }))}
+                    className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                  />
+                  <span className="text-sm font-medium text-orange-800">Penalidad</span>
+                </label>
+              </div>
+            </div>
+          </PermissionGuard>
 
           {/* Pago Tercero */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
