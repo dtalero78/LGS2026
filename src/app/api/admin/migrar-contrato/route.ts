@@ -3,6 +3,7 @@ import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { query, queryOne } from '@/lib/postgres';
 import { ValidationError, ConflictError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
+import { syncFinancieroSaldo } from '@/services/pagos-titulares.service';
 
 const VALID_PLAN = ['Contado', 'Credito', 'Colaborador'] as const;
 type Plan = typeof VALID_PLAN[number];
@@ -12,7 +13,16 @@ function normalizePlan(v: any): Plan | null {
   return (VALID_PLAN as readonly string[]).includes(s) ? (s as Plan) : null;
 }
 
-export const POST = handlerWithAuth(async (request) => {
+/** Parse string monetario "$ 1.234.567" / "1234567" / "1234.5" → number. */
+function parseMoney(v: any): number {
+  if (v === null || v === undefined || v === '') return 0;
+  if (typeof v === 'number') return v;
+  const cleaned = String(v).replace(/\./g, '').replace(',', '.').replace(/[^0-9.\-]/g, '');
+  const n = parseFloat(cleaned);
+  return Number.isFinite(n) ? n : 0;
+}
+
+export const POST = handlerWithAuth(async (request, _ctx, session) => {
   const { contrato, titular, financial, beneficiarios, titularEsBeneficiario } = await request.json();
 
   // Plan (Contado/Credito/Colaborador) — se valida y propaga a PEOPLE (titular +
@@ -185,6 +195,74 @@ export const POST = handlerWithAuth(async (request) => {
         plan,
       ]
     );
+
+    // 5. Crear cuota #0 en PAGOS_TITULARES — mismo patrón que /api/postgres/contracts.
+    //    Diferencias vs flujo de Crear Contrato:
+    //      - validadoPor = 'SISTEMA' (la inscripción fue validada offline; este endpoint
+    //        sólo migra el registro contable)
+    //      - createdBy   = email del admin que disparó la migración (auditoría)
+    //      - gestorRecaudo = titular.asesor (resuelto a USUARIOS_ROLES._id si existe)
+    //    Best effort: si falla NO rompe la migración.
+    try {
+      const adminEmail = (session?.user as any)?.email || 'unknown';
+      const totalPlanNum   = parseMoney(financial.totalPlan);
+      const inscripcionNum = parseMoney(financial.pagoInscripcion);
+      const saldoNum       = parseMoney(financial.saldo);
+      const valorCuotaNum  = parseMoney(financial.valorCuota);
+      const cuotasTotalNum = parseInt(String(financial.numeroCuotas ?? 0), 10) || 0;
+
+      // Resolver _id del comercial (asesor) — fallback al email crudo si no existe en USUARIOS_ROLES
+      const comercialEmail = (titular.asesor || '').trim().toLowerCase();
+      let comercialId: string | null = null;
+      if (comercialEmail) {
+        const found = await query(
+          `SELECT "_id" FROM "USUARIOS_ROLES" WHERE LOWER("email") = $1 LIMIT 1`,
+          [comercialEmail]
+        );
+        comercialId = found.rows[0]?._id ?? comercialEmail;
+      }
+
+      await query(
+        `INSERT INTO "PAGOS_TITULARES" (
+           "_id", "idPeople", "numeroId", "gestorRecaudo", "plataforma",
+           "fechaPago", "fechaVencimiento", "numCuota", "cuotasTotal", "vlrTotalProg",
+           "valorCuota", "valorPagado", "inscripcion", "saldo", "descuento",
+           "medioPago", "documentosAdjuntos",
+           "validado", "fechaValidacion", "validadoPor",
+           "createdBy", "tipoCartera", "plan", "_createdDate", "_updatedDate"
+         ) VALUES (
+           $1, $2, $3, $4, $5,
+           COALESCE($6::date, CURRENT_DATE), $7::date, 0, $8, $9,
+           $10, $11, $12, $13, 0,
+           $14, '[]'::jsonb,
+           true, COALESCE($6::date, CURRENT_DATE), 'SISTEMA',
+           $15, 'normal', $16, NOW(), NOW()
+         )`,
+        [
+          ids.payment(),                          // $1
+          titularId,                              // $2
+          titular.numeroId,                       // $3
+          comercialId,                            // $4  gestorRecaudo
+          titular.plataforma || null,             // $5
+          financial.fechaPago || null,            // $6  (también fechaValidacion via COALESCE)
+          financial.fechaPago || null,            // $7  fechaVencimiento — para migración =fechaPago
+          cuotasTotalNum,                         // $8
+          totalPlanNum,                           // $9  vlrTotalProg
+          valorCuotaNum,                          // $10
+          inscripcionNum,                         // $11 valorPagado
+          inscripcionNum,                         // $12 inscripcion (etiqueta semántica)
+          saldoNum,                               // $13
+          financial.medioPago || null,            // $14
+          adminEmail,                             // $15 createdBy
+          plan,                                   // $16
+        ]
+      );
+
+      // 6. Sync FINANCIEROS.saldo desde la cuota #0 recién validada.
+      await syncFinancieroSaldo(titularId);
+    } catch (err: any) {
+      console.warn(`[migrar-contrato] PAGOS_TITULARES cuota#0 falló para ${contratoTrimmed}:`, err?.message || err);
+    }
   }
 
   return successResponse({
