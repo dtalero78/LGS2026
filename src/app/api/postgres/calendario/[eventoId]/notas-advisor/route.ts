@@ -17,10 +17,15 @@ export const PATCH = handlerWithAuth(async (request, { params }, session) => {
   if (!email) throw new UnauthorizedError('Sesión sin email');
 
   const body = await request.json().catch(() => ({}));
+  // sessionRole se toma de la sesión NextAuth (no del body, no spoofeable).
+  // Sólo SUPER_ADMIN/ADMIN bypasean ownership / ventana temporal / sesión cerrada.
+  const sessionRole = (session?.user as any)?.role;
   const result = await updateAdvisorNotes(params.eventoId, email, {
-    timeout:      body?.timeout,
-    notasadvisor: body?.notasadvisor,
-    tz:           typeof body?.tz === 'string' ? body.tz : undefined,
+    timeout:         body?.timeout,
+    notasadvisor:    body?.notasadvisor,
+    tz:              typeof body?.tz === 'string' ? body.tz : undefined,
+    sessionRole,
+    motivoAdminEdit: typeof body?.motivoAdminEdit === 'string' ? body.motivoAdminEdit : undefined,
   });
   return successResponse(result);
 });

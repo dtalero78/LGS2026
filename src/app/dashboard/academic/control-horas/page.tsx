@@ -424,7 +424,12 @@ function ControlHorasContent() {
       {selectedCard && (
         <EventDetailModal
           card={selectedCard}
-          canEditNotes={!isAdmin && selectedCard.kind === 'vigente' && selectedCard.canEdit}
+          // ADVISOR propio: puede editar sólo vigentes dentro de la ventana temporal.
+          // ADMIN/SUPER_ADMIN: puede editar SIEMPRE eventos vigentes (vigente=Conducted),
+          // pero si la sesión está cerrada se pedirá motivo en el modal de warning.
+          // Históricos (Canceled/Suspended) siempre son read-only.
+          canEditNotes={selectedCard.kind === 'vigente' && (isAdmin || selectedCard.canEdit)}
+          isAdminEditor={isAdmin}
           onClose={() => setSelectedCard(null)}
           onSaved={async () => {
             await fetchMonth()
@@ -498,10 +503,11 @@ function stateLabel(c: EventCard): string {
 // ─────────────────────────────────────────────────────────
 
 function EventDetailModal({
-  card, canEditNotes, onClose, onSaved,
+  card, canEditNotes, isAdminEditor, onClose, onSaved,
 }: {
   card: EventCard
   canEditNotes: boolean
+  isAdminEditor: boolean
   onClose: () => void
   onSaved: () => void
 }) {
@@ -512,12 +518,20 @@ function EventDetailModal({
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
+  // Estado del modal de warning para admin editando sesión cerrada
+  const [showClosedWarning, setShowClosedWarning] = useState(false)
+  const [warningChecked, setWarningChecked] = useState(false)
+  const [adminMotivo, setAdminMotivo] = useState('')
+
   // Sincronizar estado interno si llega un card nuevo desde el padre
   useEffect(() => {
     setTimeoutVal(card.timeout || '')
     setNotas(card.notasadvisor || '')
     setEditing(false)
     setErr(null)
+    setShowClosedWarning(false)
+    setWarningChecked(false)
+    setAdminMotivo('')
   }, [card])
 
   const fecha = new Date(card.fechaEvento)
@@ -542,6 +556,26 @@ function EventDetailModal({
     }
   })()
 
+  /**
+   * Inicia la edición. Si la sesión está cerrada Y el editor es admin,
+   * primero muestra el warning con motivo obligatorio.
+   */
+  function startEdit() {
+    if (isAdminEditor && isClosed) {
+      setShowClosedWarning(true)
+      setWarningChecked(false)
+      setAdminMotivo('')
+      return
+    }
+    setEditing(true)
+  }
+
+  function confirmAdminEdit() {
+    if (!warningChecked || !adminMotivo.trim()) return
+    setShowClosedWarning(false)
+    setEditing(true)
+  }
+
   async function save() {
     setSaving(true); setErr(null)
     try {
@@ -552,12 +586,16 @@ function EventDetailModal({
           timeout: timeoutVal || null,
           notasadvisor: notas || null,
           tz: clientTimeZone(),
+          // Sólo se envía si admin está editando una sesión ya cerrada.
+          // El backend exige este motivo cuando isClosed && isAdmin.
+          ...(isAdminEditor && isClosed && adminMotivo.trim() ? { motivoAdminEdit: adminMotivo.trim() } : {}),
         }),
       })
       const json = await res.json()
       if (!res.ok || !json.success) throw new Error(json.error || 'Error guardando')
-      toast.success('Guardado')
+      toast.success(json.audited ? 'Guardado (con registro de auditoría)' : 'Guardado')
       setEditing(false)
+      setAdminMotivo('')
       onSaved()
     } catch (e: any) {
       setErr(e?.message || 'Error guardando')
@@ -683,11 +721,12 @@ function EventDetailModal({
                           const mm = String(now.getMinutes()).padStart(2, '0')
                           setTimeoutVal(`${hh}:${mm}`)
                         }
-                        setEditing(true)
+                        // Si admin edita sesión cerrada → pasa por warning primero
+                        startEdit()
                       }}
-                      className="px-3 py-1.5 text-sm border border-blue-600 text-blue-600 rounded hover:bg-blue-50"
+                      className={`px-3 py-1.5 text-sm border rounded ${isAdminEditor && isClosed ? 'border-amber-600 text-amber-700 hover:bg-amber-50' : 'border-blue-600 text-blue-600 hover:bg-blue-50'}`}
                     >
-                      Editar Time Out / Notas
+                      {isAdminEditor && isClosed ? '⚠️ Editar (sesión cerrada)' : 'Editar Time Out / Notas'}
                     </button>
                   ) : (
                     <>
@@ -715,6 +754,72 @@ function EventDetailModal({
           )}
         </div>
       </div>
+
+      {/* Modal de warning para admin editando sesión cerrada — motivo obligatorio */}
+      {showClosedWarning && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-70">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-2xl">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              ⚠️ Sesión cerrada — edición admin
+            </h3>
+            <p className="text-sm text-gray-700 mb-4">
+              Esta sesión ya fue <strong>registrada (cerrada)</strong>
+              {card.kind === 'vigente' && card.fechaCierreSesion
+                ? ` el ${new Date(card.fechaCierreSesion).toLocaleString('es')}`
+                : ''}.
+              Como administrador, puedes editarla; la modificación quedará
+              registrada en el log de auditoría con tu usuario y motivo.
+            </p>
+
+            <label className="flex items-start gap-2 mb-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={warningChecked}
+                onChange={e => setWarningChecked(e.target.checked)}
+                className="mt-0.5 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+              />
+              <span className="text-sm text-gray-800">
+                Confirmo que necesito editar los datos de esta sesión cerrada
+              </span>
+            </label>
+
+            <div className="mb-4">
+              <label htmlFor="admin-edit-motivo" className="block text-xs font-medium text-gray-700 mb-1">
+                Motivo <span className="text-red-600">*</span>
+              </label>
+              <textarea
+                id="admin-edit-motivo"
+                rows={3}
+                value={adminMotivo}
+                onChange={e => setAdminMotivo(e.target.value)}
+                placeholder="Ej: el advisor reportó Time Out incorrecto vía WhatsApp"
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                El motivo se guarda en el log de auditoría junto a tu email y los valores anteriores/nuevos.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => { setShowClosedWarning(false); setWarningChecked(false); setAdminMotivo('') }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmAdminEdit}
+                disabled={!warningChecked || !adminMotivo.trim()}
+                className="px-4 py-2 text-sm font-semibold text-white bg-amber-600 rounded hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Continuar a editar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

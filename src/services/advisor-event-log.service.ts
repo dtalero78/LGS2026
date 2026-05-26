@@ -24,6 +24,7 @@ import 'server-only';
 import { query, queryOne, queryMany } from '@/lib/postgres';
 import { ValidationError, ForbiddenError, NotFoundError } from '@/lib/errors';
 import { AdvisorEventLogRepository, AdvisorEventLogRow } from '@/repositories/advisor-event-log.repository';
+import { AdvisorNotesAuditRepository } from '@/repositories/advisor-notes-audit.repository';
 
 const TIMEOUT_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 const EDIT_WINDOW_MIN_MINUTES = 30;
@@ -232,16 +233,28 @@ export async function buildMonthlyView(
 export async function updateAdvisorNotes(
   eventoId: string,
   sessionEmail: string,
-  patch: { timeout?: string | null; notasadvisor?: string | null; tz?: string },
-): Promise<{ ok: true; timeout: string | null; notasadvisor: string | null }> {
+  patch: {
+    timeout?: string | null;
+    notasadvisor?: string | null;
+    tz?: string;
+    /** Rol de la sesión NextAuth — viene SIEMPRE del route handler, no del body. */
+    sessionRole?: string;
+    /** Motivo obligatorio cuando un admin edita una sesión ya cerrada. */
+    motivoAdminEdit?: string;
+  },
+): Promise<{ ok: true; timeout: string | null; notasadvisor: string | null; audited: boolean }> {
+  const isAdmin = patch.sessionRole === 'SUPER_ADMIN' || patch.sessionRole === 'ADMIN';
   const advisorId = await resolveAdvisorIdByEmail(sessionEmail);
-  if (!advisorId) throw new ForbiddenError('Tu email no está registrado en ADVISORS');
+
+  // ADVISOR (propio): exige email registrado en ADVISORS.
+  // ADMIN: no necesita estar en ADVISORS (puede editar evento de cualquiera).
+  if (!isAdmin && !advisorId) {
+    throw new ForbiddenError('Tu email no está registrado en ADVISORS');
+  }
 
   // CALENDARIO.dia (timestamptz) es la única fuente de verdad para la hora.
   // CALENDARIO.hora (texto) es legacy — en datos históricos quedó guardado
   // como hora UTC en lugar de hora local, por eso NO se usa para validar.
-  // Derivamos horaInicio desde dia en la TZ que reporte el cliente
-  // (Intl.DateTimeFormat().resolvedOptions().timeZone). Default 'America/Bogota'.
   const tz = patch.tz && TZ_REGEX.test(patch.tz) ? patch.tz : 'America/Bogota';
 
   const evt = await queryOne<{
@@ -249,22 +262,36 @@ export async function updateAdvisorNotes(
     dia: Date;
     sesionCerrada: boolean | null;
     horaInicioLocal: string | null;
+    timeout: string | null;
+    notasadvisor: string | null;
   }>(
-    `SELECT "advisor", "dia", "sesionCerrada",
+    `SELECT "advisor", "dia", "sesionCerrada", "timeout", "notasadvisor",
             TO_CHAR("dia" AT TIME ZONE $2, 'HH24:MI') AS "horaInicioLocal"
      FROM "CALENDARIO" WHERE "_id" = $1`,
     [eventoId, tz],
   );
   if (!evt) throw new NotFoundError('Evento', eventoId);
-  if (evt.advisor !== advisorId) {
-    throw new ForbiddenError('Este evento está asignado a otro advisor');
-  }
-  if (evt.sesionCerrada === true) {
-    throw new ValidationError('La sesión ya fue registrada (cerrada). No se puede editar.');
-  }
 
-  const { canEdit, editReason } = computeEditability(new Date(evt.dia), false);
-  if (!canEdit) throw new ValidationError(editReason ?? 'No se puede editar todavía');
+  const sesionCerrada = evt.sesionCerrada === true;
+
+  if (isAdmin) {
+    // Bypass validaciones de ownership / ventana temporal / sesión cerrada.
+    // PERO si la sesión está cerrada, exigir motivo (sería edición forzada
+    // y queda registro de auditoría).
+    if (sesionCerrada && !patch.motivoAdminEdit?.trim()) {
+      throw new ValidationError('La sesión está cerrada — debes incluir un motivo obligatorio para editar.');
+    }
+  } else {
+    // ADVISOR: validaciones normales
+    if (evt.advisor !== advisorId) {
+      throw new ForbiddenError('Este evento está asignado a otro advisor');
+    }
+    if (sesionCerrada) {
+      throw new ValidationError('La sesión ya fue registrada (cerrada). No se puede editar.');
+    }
+    const { canEdit, editReason } = computeEditability(new Date(evt.dia), false);
+    if (!canEdit) throw new ValidationError(editReason ?? 'No se puede editar todavía');
+  }
 
   const updates: string[] = [];
   const params: any[] = [];
@@ -300,7 +327,31 @@ export async function updateAdvisorNotes(
     params,
   );
 
-  return { ok: true, timeout: result?.timeout ?? null, notasadvisor: result?.notasadvisor ?? null };
+  // Auditoría: solo cuando el editor NO es el advisor propio del evento.
+  // Las ediciones del propio advisor en su evento abierto son flujo normal
+  // y no se registran (ruido). Las del admin SÍ se registran siempre.
+  const shouldAudit = isAdmin && (evt.advisor !== advisorId || sesionCerrada);
+  if (shouldAudit) {
+    await AdvisorNotesAuditRepository.insert({
+      eventoId,
+      advisorIdAtEdit: evt.advisor,
+      actorEmail: sessionEmail,
+      actorRole: patch.sessionRole || 'unknown',
+      motivo: patch.motivoAdminEdit?.trim() || '(sin motivo)',
+      timeoutBefore: evt.timeout,
+      timeoutAfter: result?.timeout ?? null,
+      notasBefore: evt.notasadvisor,
+      notasAfter: result?.notasadvisor ?? null,
+      sesionEstabaCerrada: sesionCerrada,
+    }).catch(err => console.warn('[updateAdvisorNotes] audit insert failed:', err?.message));
+  }
+
+  return {
+    ok: true,
+    timeout: result?.timeout ?? null,
+    notasadvisor: result?.notasadvisor ?? null,
+    audited: shouldAudit,
+  };
 }
 
 /**
