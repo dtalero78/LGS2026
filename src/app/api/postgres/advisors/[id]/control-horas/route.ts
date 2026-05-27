@@ -2,7 +2,7 @@ import 'server-only';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { ForbiddenError, ValidationError } from '@/lib/errors';
 import { queryOne } from '@/lib/postgres';
-import { getPermissionsByRole } from '@/config/roles';
+import { RolPermisosRepository } from '@/repositories/roles.repository';
 import { buildMonthlyView, isRegistroSesionRequerido } from '@/services/advisor-event-log.service';
 
 /**
@@ -22,10 +22,15 @@ export const GET = handlerWithAuth(async (request, { params }, session) => {
   // el permiso ACADEMICO.CONTROL_HORAS.VER_TODOS. El resto sólo puede
   // consultar su propio Ctrl Horas (email matchea el ADVISORS._id del path).
   if (!isAdmin) {
+    // Leer permisos del rol DIRECTO de ROL_PERMISOS (fuente de verdad), no
+    // vía getPermissionsByRole() que hace un self-fetch HTTP y cae a un
+    // FALLBACK_PERMISSIONS_MAP hardcodeado cuando el fetch falla — ese
+    // fallback no refleja permisos asignados recientemente en /admin/permissions.
     let canPickAdvisor = false;
     try {
-      const perms = await getPermissionsByRole(role);
-      canPickAdvisor = perms.includes('ACADEMICO.CONTROL_HORAS.VER_TODOS' as any);
+      const row = await RolPermisosRepository.findByRol(role);
+      const perms = Array.isArray((row as any)?.permisos) ? (row as any).permisos as string[] : [];
+      canPickAdvisor = perms.includes('ACADEMICO.CONTROL_HORAS.VER_TODOS');
     } catch { /* sin permisos → tratado como advisor propio */ }
 
     if (!canPickAdvisor) {
