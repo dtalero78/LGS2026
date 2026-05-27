@@ -239,28 +239,37 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/panel-advisor': [
       AcademicoPermission.ADVISOR_VER_ENLACE,
     ],
-    '/dashboard/informes/asistencia/sesiones-clubes': [InformesPermission.ASISTENCIA],
-    '/dashboard/informes/asistencia/clubes': [InformesPermission.ASISTENCIA],
-    '/dashboard/informes/asistencia/complementarias': [InformesPermission.ASISTENCIA],
-    '/dashboard/informes/asistencia/welcome-session': [InformesPermission.ASISTENCIA],
-    '/dashboard/informes/asistencia/x-pais': [InformesPermission.ASISTENCIA],
-    '/dashboard/informes/sesiones/calendario-sesiones-jumps': [InformesPermission.PROGRAMACION],
-    '/dashboard/informes/sesiones/calendario-training-clubs': [InformesPermission.PROGRAMACION],
-    '/dashboard/informes/sesiones/calendario-welcome':        [InformesPermission.PROGRAMACION],
-    '/dashboard/informes/advisors/sesiones': [InformesPermission.ADVISORS],
-    '/dashboard/informes/advisors/jumps': [InformesPermission.ADVISORS],
-    '/dashboard/informes/advisors/training': [InformesPermission.ADVISORS],
-    '/dashboard/informes/advisors/clubes': [InformesPermission.ADVISORS],
-    '/dashboard/informes/advisors/welcome':   [InformesPermission.ADVISORS],
-    '/dashboard/informes/advisors/essential': [InformesPermission.ADVISORS],
-    '/dashboard/informes/advisors/resumen':   [InformesPermission.ADVISORS],
+    // Nivel 3 — cada reporte con su permiso específico (nieto)
+    '/dashboard/informes/asistencia/sesiones-clubes': [InformesPermission.ASIS_SESIONES],
+    '/dashboard/informes/asistencia/clubes': [InformesPermission.ASIS_CLUBES],
+    '/dashboard/informes/asistencia/complementarias': [InformesPermission.ASIS_COMPLEMENTARIAS],
+    '/dashboard/informes/asistencia/welcome-session': [InformesPermission.ASIS_WELCOME],
+    '/dashboard/informes/asistencia/x-pais': [InformesPermission.ASIS_XPAIS],
+    '/dashboard/informes/sesiones/calendario-sesiones-jumps': [InformesPermission.PROG_SESIONES_JUMPS],
+    '/dashboard/informes/sesiones/calendario-training-clubs': [InformesPermission.PROG_TRAINING_CLUBS],
+    '/dashboard/informes/sesiones/calendario-welcome':        [InformesPermission.PROG_WELCOME],
+    '/dashboard/informes/advisors/sesiones': [InformesPermission.ADV_SESIONES],
+    '/dashboard/informes/advisors/jumps': [InformesPermission.ADV_JUMPS],
+    '/dashboard/informes/advisors/training': [InformesPermission.ADV_TRAINING],
+    '/dashboard/informes/advisors/clubes': [InformesPermission.ADV_CLUBES],
+    '/dashboard/informes/advisors/welcome':   [InformesPermission.ADV_WELCOME],
+    '/dashboard/informes/advisors/essential': [InformesPermission.ADV_ESSENTIAL],
+    '/dashboard/informes/advisors/resumen':   [InformesPermission.ADV_RESUMEN],
     '/dashboard/informes/usuarios':           [InformesPermission.USUARIOS],
     '/dashboard/informes/infoacademic-user':  [InformesPermission.USUARIOS],
     '/dashboard/informes/contratos':          [InformesPermission.CONTRATOS],
-    '/dashboard/informes/planta/advisors': [InformesPermission.PLANTA],
-    '/dashboard/informes/planta/administrativos': [InformesPermission.PLANTA],
-    '/dashboard/informes/estadisticas':         [InformesPermission.ESTADISTICAS],
-    '/dashboard/informes/estadisticas/horarios': [InformesPermission.ESTADISTICAS],
+    '/dashboard/informes/planta/advisors': [InformesPermission.PLANTA_ADVISORS],
+    '/dashboard/informes/planta/administrativos': [InformesPermission.PLANTA_ADMINISTRATIVOS],
+    '/dashboard/informes/estadisticas':         [InformesPermission.EST_NIVELES],
+    '/dashboard/informes/estadisticas/horarios': [InformesPermission.EST_HORARIOS],
+    // Nivel 2 — Tableros por área
+    '/dashboard/tableros/administracion': [InformesPermission.TABLERO_ADMINISTRACION],
+    '/dashboard/tableros/gerencia':       [InformesPermission.TABLERO_GERENCIA],
+    '/dashboard/tableros/academica':      [InformesPermission.TABLERO_ACADEMICA],
+    '/dashboard/tableros/servicio':       [InformesPermission.TABLERO_SERVICIO],
+    '/dashboard/tableros/recaudo':        [InformesPermission.TABLERO_RECAUDO],
+    '/dashboard/tableros/comercial':      [InformesPermission.TABLERO_COMERCIAL],
+    '/dashboard/tableros/sistema':        [InformesPermission.TABLERO_SISTEMA],
 
     // Servicio
     '/dashboard/servicio/welcome-session': [
@@ -380,6 +389,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       InformesPermission.CONTRATOS,
       InformesPermission.PLANTA,
       InformesPermission.ESTADISTICAS,
+      // Tableros por área (nivel 2 standalone) — un usuario con sólo un
+      // tablero asignado igual debe ver el grupo Informes para alcanzarlo.
+      InformesPermission.TABLERO_ADMINISTRACION,
+      InformesPermission.TABLERO_GERENCIA,
+      InformesPermission.TABLERO_ACADEMICA,
+      InformesPermission.TABLERO_SERVICIO,
+      InformesPermission.TABLERO_RECAUDO,
+      InformesPermission.TABLERO_COMERCIAL,
+      InformesPermission.TABLERO_SISTEMA,
     ],
     'Servicio': [
       // SERVICIO.WELCOME.*
@@ -478,12 +496,28 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     'Estadísticas':  [InformesPermission.ESTADISTICAS],
   }
 
-  // Also filter children of each navigation item based on page permissions
+    // Also filter children of each navigation item based on page permissions
   const finalNavigation = filteredNavigation.map(item => {
     if (!item.children) return item
 
-    // Filtrar children basándose en permisos de página
-    const filteredChildren = item.children.filter((child: any) => {
+    // Paso 1 — Nivel 3 (nietos): para cada submenu, filtrar sus reportes
+    // individuales por su permiso propio en pagePermissions. SUPER_ADMIN/ADMIN
+    // (hasFullAccess) ven todos. Items sin permiso definido se muestran.
+    const childrenLvl3 = item.children.map((child: any) => {
+      if (child.isSubmenu && Array.isArray(child.children)) {
+        if (hasFullAccess) return child
+        const filteredGrand = child.children.filter((g: any) => {
+          if (g.superAdminOnly && !isRole('SUPER_ADMIN')) return false
+          const gPerms = pagePermissions[g.href]
+          return gPerms ? hasAnyPermission(gPerms) : true
+        })
+        return { ...child, children: filteredGrand }
+      }
+      return child
+    })
+
+    // Paso 2 — Nivel 2 (hijos): filtrar children basándose en permisos
+    const filteredChildren = childrenLvl3.filter((child: any) => {
       // Items restringidos a SUPER_ADMIN
       if (child.superAdminOnly && !isRole('SUPER_ADMIN')) return false
 
@@ -507,8 +541,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       }
 
       // Sub-grupos con isSubmenu (ej: Asistencia, Programación, Advisors dentro de Informes)
+      // Visible sii: tiene el permiso de grupo (nivel 2) Y le queda ≥1 nieto visible
+      // tras el filtrado de nivel 3. Esto honra los 3 niveles independientes.
       if (child.isSubmenu && informesSubmenuPermissions[child.name]) {
-        return hasAnyPermission(informesSubmenuPermissions[child.name])
+        if (!hasAnyPermission(informesSubmenuPermissions[child.name])) return false
+        return (child.children?.length ?? 0) > 0
       }
 
       const requiredPerms = pagePermissions[child.href]

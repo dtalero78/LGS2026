@@ -626,6 +626,40 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Descargar como CSV los informes del grupo Estadísticas (Niveles, Horarios)',
   },
 
+  // -- Nivel 3 (nietos): un permiso por reporte individual --
+  { code: InformesPermission.ASIS_SESIONES,        module: Module.INFORMES, section: 'Asistencia',    name: 'Reporte "Sesiones" (Asistencia)',               description: 'Ver el informe Asistencia → Sesiones' },
+  { code: InformesPermission.ASIS_CLUBES,          module: Module.INFORMES, section: 'Asistencia',    name: 'Reporte "Clubes" (Asistencia)',                 description: 'Ver el informe Asistencia → Clubes' },
+  { code: InformesPermission.ASIS_COMPLEMENTARIAS, module: Module.INFORMES, section: 'Asistencia',    name: 'Reporte "Actividades Complementarias"',         description: 'Ver el informe Asistencia → Actividades Complementarias' },
+  { code: InformesPermission.ASIS_WELCOME,         module: Module.INFORMES, section: 'Asistencia',    name: 'Reporte "Welcome Session" (Asistencia)',        description: 'Ver el informe Asistencia → Welcome Session' },
+  { code: InformesPermission.ASIS_XPAIS,           module: Module.INFORMES, section: 'Asistencia',    name: 'Reporte "X País" (Asistencia)',                 description: 'Ver el informe Asistencia → X País' },
+
+  { code: InformesPermission.PROG_SESIONES_JUMPS,  module: Module.INFORMES, section: 'Programación',  name: 'Reporte "Sesiones - Jumps" (Programación)',     description: 'Ver el informe Programación → Sesiones - Jumps' },
+  { code: InformesPermission.PROG_TRAINING_CLUBS,  module: Module.INFORMES, section: 'Programación',  name: 'Reporte "Training - Clubs" (Programación)',     description: 'Ver el informe Programación → Training - Clubs' },
+  { code: InformesPermission.PROG_WELCOME,         module: Module.INFORMES, section: 'Programación',  name: 'Reporte "Welcome" (Programación)',              description: 'Ver el informe Programación → Welcome' },
+
+  { code: InformesPermission.ADV_SESIONES,         module: Module.INFORMES, section: 'Advisors',      name: 'Reporte "Sesiones" (Advisors)',                 description: 'Ver el informe Advisors → Sesiones' },
+  { code: InformesPermission.ADV_JUMPS,            module: Module.INFORMES, section: 'Advisors',      name: 'Reporte "Jumps" (Advisors)',                    description: 'Ver el informe Advisors → Jumps' },
+  { code: InformesPermission.ADV_TRAINING,         module: Module.INFORMES, section: 'Advisors',      name: 'Reporte "Training" (Advisors)',                 description: 'Ver el informe Advisors → Training' },
+  { code: InformesPermission.ADV_CLUBES,           module: Module.INFORMES, section: 'Advisors',      name: 'Reporte "Clubes" (Advisors)',                   description: 'Ver el informe Advisors → Clubes' },
+  { code: InformesPermission.ADV_WELCOME,          module: Module.INFORMES, section: 'Advisors',      name: 'Reporte "Welcome" (Advisors)',                  description: 'Ver el informe Advisors → Welcome' },
+  { code: InformesPermission.ADV_ESSENTIAL,        module: Module.INFORMES, section: 'Advisors',      name: 'Reporte "Essential" (Advisors)',                description: 'Ver el informe Advisors → Essential' },
+  { code: InformesPermission.ADV_RESUMEN,          module: Module.INFORMES, section: 'Advisors',      name: 'Reporte "Resumen" (Advisors)',                  description: 'Ver el informe Advisors → Resumen' },
+
+  { code: InformesPermission.PLANTA_ADVISORS,        module: Module.INFORMES, section: 'Planta',      name: 'Reporte "Advisors" (Planta)',                   description: 'Ver el informe Planta → Advisors' },
+  { code: InformesPermission.PLANTA_ADMINISTRATIVOS, module: Module.INFORMES, section: 'Planta',      name: 'Reporte "Administrativos" (Planta)',            description: 'Ver el informe Planta → Administrativos' },
+
+  { code: InformesPermission.EST_NIVELES,          module: Module.INFORMES, section: 'Estadísticas',  name: 'Reporte "Niveles" (Estadísticas)',              description: 'Ver el informe Estadísticas → Niveles' },
+  { code: InformesPermission.EST_HORARIOS,         module: Module.INFORMES, section: 'Estadísticas',  name: 'Reporte "Horarios" (Estadísticas)',             description: 'Ver el informe Estadísticas → Horarios' },
+
+  // -- Nivel 2: Tableros por área (stubs en construcción) --
+  { code: InformesPermission.TABLERO_ADMINISTRACION, module: Module.INFORMES, section: 'Tableros', name: 'Tablero "Administración"', description: 'Acceso al tablero Administración (en construcción)' },
+  { code: InformesPermission.TABLERO_GERENCIA,       module: Module.INFORMES, section: 'Tableros', name: 'Tablero "Gerencia"',       description: 'Acceso al tablero Gerencia (en construcción)' },
+  { code: InformesPermission.TABLERO_ACADEMICA,      module: Module.INFORMES, section: 'Tableros', name: 'Tablero "Académica"',      description: 'Acceso al tablero Académica (en construcción)' },
+  { code: InformesPermission.TABLERO_SERVICIO,       module: Module.INFORMES, section: 'Tableros', name: 'Tablero "Servicio"',       description: 'Acceso al tablero Servicio (en construcción)' },
+  { code: InformesPermission.TABLERO_RECAUDO,        module: Module.INFORMES, section: 'Tableros', name: 'Tablero "Recaudo"',        description: 'Acceso al tablero Recaudo (en construcción)' },
+  { code: InformesPermission.TABLERO_COMERCIAL,      module: Module.INFORMES, section: 'Tableros', name: 'Tablero "Comercial"',      description: 'Acceso al tablero Comercial (en construcción)' },
+  { code: InformesPermission.TABLERO_SISTEMA,        module: Module.INFORMES, section: 'Tableros', name: 'Tablero "Sistema"',        description: 'Acceso al tablero Sistema (en construcción)' },
+
   // ========== SERVICIO MODULE ==========
   // -- Página: Welcome Session (/dashboard/servicio/welcome-session) --
   {
