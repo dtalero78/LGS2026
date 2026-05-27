@@ -27,6 +27,7 @@ const UPDATABLE_FIELDS = [
   'idTercero',
   'fechaPago',
   'fechaVencimiento',
+  'fechaReporte',
   'plan',
   'vlrTotalProg',
   'numCuota',
@@ -302,7 +303,31 @@ export const pagosTitularesService = {
       }
     }
 
-    const saldo = computeSaldo(input.valorCuota, input.valorPagado, input.descuento);
+    // Saldo del pago = "Saldo después de pago" en el wizard
+    // (= Saldo a la Fecha actual − (Valor a Pagar − Descuento)).
+    // Saldo a la Fecha lo obtenemos de FINANCIEROS.saldo (mantenido al día
+    // por syncFinancieroSaldo). Para cuota#0 no aplica — esa fila se inserta
+    // directamente en /api/postgres/contracts y /api/admin/migrar-contrato
+    // con su propia lógica; este path es para cuotas posteriores.
+    const valorPagadoNum = toNum(input.valorPagado);
+    const descuentoNum   = toNum(input.descuento);
+    const valorAplicar   = Math.max(0, valorPagadoNum - descuentoNum);
+
+    let saldoAFecha = 0;
+    const titularContrato = (titular as any).contrato as string | undefined;
+    if (titularContrato) {
+      const finRow = await queryOne<{ saldo: string | null }>(
+        `SELECT "saldo" FROM "FINANCIEROS" WHERE "contrato" = $1 LIMIT 1`,
+        [titularContrato]
+      );
+      saldoAFecha = toNum(finRow?.saldo);
+    }
+    const saldo = Math.max(0, saldoAFecha - valorAplicar);
+
+    // Si el wizard no manda fechaReporte (clientes viejos), default hoy
+    // local del server (la diferencia con la TZ del cliente es de ±1 día,
+    // pero el cliente normalmente la manda explícita igual a su hoy local).
+    const fechaReporteDefault = new Date().toISOString().slice(0, 10);
 
     const data: Partial<PagoTitular> = {
       _id: ids.payment(),
@@ -314,6 +339,7 @@ export const pagosTitularesService = {
       idTercero: input.idTercero ?? null,
       fechaPago: input.fechaPago ?? new Date().toISOString().slice(0, 10),
       fechaVencimiento: input.fechaVencimiento ?? null,
+      fechaReporte: input.fechaReporte ?? fechaReporteDefault,
       plan: input.plan ?? null,
       vlrTotalProg: input.vlrTotalProg ?? null,
       numCuota: input.numCuota ?? null,

@@ -634,6 +634,11 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
           }}
           gestorLabel={currentGestor ? `${currentGestor.nombre} · ${ROLE_LABEL[currentGestor.rol] || currentGestor.rol}` : null}
           existingPagos={pagos}
+          // "Saldo a la Fecha" del wizard = FINANCIEROS.saldo dinámico
+          // (lo que queda debiendo HOY, ya mantenido por syncFinancieroSaldo).
+          // El wizard lo usa para mostrar el campo read-only y computar
+          // "Saldo después de pago" en vivo.
+          saldoActual={Number(financial?.saldo ?? 0)}
           onCreated={loadPagos}
         />
       )}

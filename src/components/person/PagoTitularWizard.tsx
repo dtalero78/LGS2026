@@ -24,8 +24,13 @@ interface PagoTitularWizardProps {
   /** Lista de pagos existentes del titular — usado para auto-populate:
    *  - `vlrTotalProg`/`valorCuota` ← cuota #0
    *  - `numCuota` ← max(numCuota) + 1
-   *  - `fechaVencimiento` ← último pago.fechaPago + 1 mes */
+   *  - `fechaVencimiento` (Fecha Primer Pago) ← cuota#0.fechaVencimiento o
+   *    cuota#0.fechaPago (fecha base contractual) */
   existingPagos?: any[]
+  /** Saldo a la Fecha actual (FINANCIEROS.saldo, dinámico — mantenido por
+   *  syncFinancieroSaldo). El wizard lo usa para mostrar el campo y computar
+   *  "Saldo después de pago" en vivo. */
+  saldoActual?: number
   /** Llamado tras crear pago exitosamente para refrescar la lista padre. */
   onCreated: () => void
 }
@@ -39,6 +44,13 @@ interface DocAdjunto {
 
 interface DraftState {
   fechaPago: string
+  /** Fecha de Reporte — cuándo se registró el pago en el sistema (default hoy local).
+   *  Separada de fechaPago (cuándo realmente pagó el titular). Se persiste en
+   *  PAGOS_TITULARES.fechaReporte (columna nueva mayo 2026). */
+  fechaReporte: string
+  /** Fecha Primer Pago — fecha base contractual (FINANCIEROS.fechaPago).
+   *  Read-only en el wizard; viene auto-poblada de cuota#0. La columna en BD
+   *  sigue llamándose `fechaVencimiento` por compatibilidad legacy. */
   fechaVencimiento: string
   plan: string
   vlrTotalProg: string
@@ -76,6 +88,7 @@ function getLocalToday(): string {
 
 const empty = (): DraftState => ({
   fechaPago: getLocalToday(),
+  fechaReporte: getLocalToday(),
   fechaVencimiento: '',
   plan: '',
   vlrTotalProg: '',
@@ -174,7 +187,7 @@ function MoneyInput({
 }
 
 export default function PagoTitularWizard({
-  isOpen, onClose, titular, gestorLabel, existingPagos, onCreated,
+  isOpen, onClose, titular, gestorLabel, existingPagos, saldoActual, onCreated,
 }: PagoTitularWizardProps) {
   const draftKey = `pago-titular-draft-${titular._id}`
   const [form, setForm] = useState<DraftState>(empty())
@@ -280,8 +293,24 @@ export default function PagoTitularWizard({
     draftRestored.current = true
   }
 
-  // Saldo computado en vivo
-  const saldo = Math.max(0, toNum(form.valorCuota) - toNum(form.valorPagado) - toNum(form.descuento))
+  // ── Derivados read-only desde cuota#0 + saldoActual (prop) ───────────
+  // Snapshot del contrato para mostrar en el wizard.
+  const cuotaCero: any = Array.isArray(existingPagos)
+    ? existingPagos.find((p: any) => Number(p.numCuota) === 0)
+    : null
+  const totalPlanNum    = toNum(String(cuotaCero?.vlrTotalProg ?? form.vlrTotalProg))
+  const inscripcionNum  = toNum(String(cuotaCero?.inscripcion ?? cuotaCero?.valorPagado ?? 0))
+  const saldoFirma      = Math.max(0, totalPlanNum - inscripcionNum)
+  const cuotasTotalNum  = Number(cuotaCero?.cuotasTotal) || 0
+  const saldoFechaNum   = Math.max(0, Number(saldoActual ?? 0))
+
+  // ── Cálculos en vivo de esta captura ──────────────────────────────────
+  // "Valor a Aplicar" = lo que se descuenta del saldo en este pago
+  // "Saldo después de pago" = lo que quedará debiendo tras este pago
+  // El endpoint server-side recomputa `saldo` de forma autoritativa antes
+  // de insertar (no confía en el cliente).
+  const valorAplicar = Math.max(0, toNum(form.valorPagado) - toNum(form.descuento))
+  const saldoDespues = Math.max(0, saldoFechaNum - valorAplicar)
 
   // Upload de documentos (mismo flujo que UploadDocButton)
   const uploadFiles = async (files: File[]) => {
@@ -348,6 +377,7 @@ export default function PagoTitularWizard({
         pagoTercero: form.pagoTercero || null,
         idTercero: form.idTercero || null,
         fechaPago: form.fechaPago,
+        fechaReporte: form.fechaReporte || null,
         fechaVencimiento: form.fechaVencimiento || null,
         plan: form.plan || null,
         vlrTotalProg: form.vlrTotalProg ? toNum(form.vlrTotalProg) : null,
@@ -438,8 +468,9 @@ export default function PagoTitularWizard({
             </div>
           </div>
 
-          {/* Fechas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Fila 1 — Fechas: pago (edit), reporte (edit, default hoy),
+              primer pago (read-only, del contrato) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label htmlFor="fechaPago" className="block text-sm font-medium text-gray-700">
                 Fecha de Pago <span className="text-red-500">*</span>
@@ -451,18 +482,60 @@ export default function PagoTitularWizard({
               />
             </div>
             <div>
+              <label htmlFor="fechaReporte" className="block text-sm font-medium text-gray-700">
+                Fecha de Reporte
+              </label>
+              <input
+                id="fechaReporte" type="date" value={form.fechaReporte}
+                onChange={e => setForm(f => ({ ...f, fechaReporte: e.target.value }))}
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              />
+            </div>
+            <div>
               <label htmlFor="fechaVencimiento" className="block text-sm font-medium text-gray-700">
-                Fecha de Vencimiento
+                Fecha Primer Pago
               </label>
               <input
                 id="fechaVencimiento" type="date" value={form.fechaVencimiento}
-                onChange={e => setForm(f => ({ ...f, fechaVencimiento: e.target.value }))}
-                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                readOnly tabIndex={-1}
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-600 cursor-not-allowed"
               />
             </div>
           </div>
 
-          {/* Plan / Cuota */}
+          {/* Fila 2 — Snapshot del contrato (todos read-only) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <MoneyInput id="vlrTotalProg" label="Total del Programa"
+              value={form.vlrTotalProg} onChange={() => {}} readOnly />
+            <div>
+              <label htmlFor="cuotasTotal" className="block text-sm font-medium text-gray-700">
+                Cuotas Totales
+              </label>
+              <input
+                id="cuotasTotal" type="text" readOnly tabIndex={-1}
+                value={cuotasTotalNum || ''}
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-600 cursor-not-allowed"
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Saldo a la Firma</label>
+              <div className="mt-1 px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm text-gray-700">
+                $ {new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(saldoFirma)}
+              </div>
+            </div>
+            <div>
+              <label htmlFor="numCuota" className="block text-sm font-medium text-gray-700"># Cuota</label>
+              <input
+                id="numCuota" type="text" readOnly tabIndex={-1}
+                value={form.numCuota}
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-600 cursor-not-allowed text-center font-semibold"
+                placeholder="—"
+              />
+            </div>
+          </div>
+
+          {/* Fila 3 — Plan + Saldo a la Fecha + Valor Cuota */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label htmlFor="plan" className="block text-sm font-medium text-gray-700">Plan</label>
@@ -477,32 +550,39 @@ export default function PagoTitularWizard({
                 <option value="Colaborador">Colaborador</option>
               </select>
             </div>
-            <MoneyInput id="vlrTotalProg" label="Total del Programa" value={form.vlrTotalProg} onChange={v => setForm(f => ({ ...f, vlrTotalProg: v }))} />
             <div>
-              <label htmlFor="numCuota" className="block text-sm font-medium text-gray-700"># Cuota</label>
-              <input
-                id="numCuota" type="number" min={0} value={form.numCuota}
-                onChange={e => setForm(f => ({ ...f, numCuota: e.target.value.replace(/[^0-9]/g, '') }))}
-                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                placeholder="0"
-              />
+              <label className="block text-sm font-medium text-gray-700">Saldo a la Fecha</label>
+              <div className="mt-1 px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm font-medium text-gray-800">
+                $ {new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(saldoFechaNum)}
+              </div>
             </div>
+            <MoneyInput id="valorCuota" label="Valor Cuota"
+              value={form.valorCuota} onChange={() => {}} readOnly />
           </div>
 
-          {/* Valores */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <MoneyInput id="valorCuota" label="Valor Cuota" value={form.valorCuota} onChange={v => setForm(f => ({ ...f, valorCuota: v }))} />
-            <MoneyInput id="valorPagado" label="Valor Pagado" value={form.valorPagado} onChange={v => setForm(f => ({ ...f, valorPagado: v }))} required />
-            <MoneyInput id="descuento" label="Descuento" value={form.descuento} onChange={v => setForm(f => ({ ...f, descuento: v }))} />
+          {/* Fila 4 — Cálculo del pago: edit + computed */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <MoneyInput id="valorPagado" label="Valor a Pagar"
+              value={form.valorPagado}
+              onChange={v => setForm(f => ({ ...f, valorPagado: v }))} required />
+            <MoneyInput id="descuento" label="Descuento"
+              value={form.descuento}
+              onChange={v => setForm(f => ({ ...f, descuento: v }))} />
             <div>
-              <label className="block text-sm font-medium text-gray-700">Saldo (calculado)</label>
+              <label className="block text-sm font-medium text-gray-700">Valor a Aplicar</label>
               <div className="mt-1 px-3 py-2 bg-amber-50 border border-amber-200 rounded-md text-sm font-semibold text-amber-900">
-                $ {new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(saldo)}
+                $ {new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(valorAplicar)}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Saldo después de pago</label>
+              <div className="mt-1 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-md text-sm font-semibold text-emerald-900">
+                $ {new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(saldoDespues)}
               </div>
             </div>
           </div>
 
-          {/* Pago / Referencia */}
+          {/* Fila 5 — Medio de Pago / Referencia */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="medioPago" className="block text-sm font-medium text-gray-700">Medio de Pago</label>

@@ -24,7 +24,14 @@ export interface PagoTitular {
   pagoTercero: string | null;
   idTercero: string | null;
   fechaPago: string | null;
+  /** "Fecha Primer Pago" en el wizard — viene del contrato, no editable.
+   *  Mantenemos el nombre legacy `fechaVencimiento` en la BD para no romper
+   *  registros existentes; el wizard simplemente la renderiza con otro label. */
   fechaVencimiento: string | null;
+  /** "Fecha de Reporte" — cuándo se registró el pago en el sistema
+   *  (default hoy en el wizard). Independiente de `fechaPago` (cuándo
+   *  pagó realmente el titular). Nullable para retrocompatibilidad. */
+  fechaReporte: string | null;
   fechaValidacion: string | null;
   plan: number | null;
   vlrTotalProg: number | null;
@@ -75,16 +82,16 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
     const row = await queryOne<PagoTitular>(
       `INSERT INTO "PAGOS_TITULARES" (
          "_id", "idPeople", "numeroId", "gestorRecaudo", "plataforma",
-         "pagoTercero", "idTercero", "fechaPago", "fechaVencimiento",
+         "pagoTercero", "idTercero", "fechaPago", "fechaVencimiento", "fechaReporte",
          "plan", "vlrTotalProg", "numCuota", "cuotasTotal", "valorCuota", "valorPagado",
          "saldo", "descuento", "inscripcion", "medioPago", "numeroReferencia",
          "numeroFactura", "documentosAdjuntos", "validado", "createdBy"
        ) VALUES (
          $1, $2, $3, $4, $5,
-         $6, $7, $8, $9,
-         $10, $11, $12, $13, $14, $15,
-         $16, $17, $18, $19, $20,
-         $21, $22::jsonb, $23, $24
+         $6, $7, $8, $9, $10,
+         $11, $12, $13, $14, $15, $16,
+         $17, $18, $19, $20, $21,
+         $22, $23::jsonb, $24, $25
        )
        RETURNING *`,
       [
@@ -97,6 +104,7 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
         data.idTercero ?? null,
         data.fechaPago ?? null,
         data.fechaVencimiento ?? null,
+        data.fechaReporte ?? null,
         data.plan ?? null,
         data.vlrTotalProg ?? null,
         data.numCuota ?? null,
