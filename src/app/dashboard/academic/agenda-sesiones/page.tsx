@@ -711,7 +711,16 @@ export default function AgendaSesionesPage() {
           clearCacheForMonth(new Date(data.event.dia))
           console.log('🗑️ Cache invalidado solo del mes afectado después de actualizar evento')
         } else {
-          setError('Error al actualizar el evento')
+          // Mostrar el error específico del backend (ValidationError, ConflictError, etc.)
+          // en vez del mensaje genérico — ayuda al admin a entender qué falló.
+          let serverMsg = ''
+          try {
+            const json = await response.json()
+            serverMsg = json?.error || json?.message || ''
+          } catch { /* response sin JSON válido */ }
+          setError(serverMsg
+            ? `Error al actualizar el evento: ${serverMsg}`
+            : `Error al actualizar el evento (HTTP ${response.status})`)
         }
       } else {
         // Crear nuevo evento
