@@ -28,19 +28,26 @@ export const PUT = handlerWithAuth(async (request, { params }, session) => {
 /**
  * DELETE /api/postgres/events/[id]
  *
- * Querystring `motivo` opcional para registrar en el log de Suspended.
+ * Querystring opcionales:
+ *   - `motivo`           — texto que se guarda en ADVISOR_EVENT_LOG.motivoTransicion
+ *   - `skipLog=true`     — modo "Restructuración": NO inserta en
+ *                          ADVISOR_EVENT_LOG (borrado limpio, sin huella en
+ *                          Ctrl Horas del advisor).
+ *   - `deleteBookings`   — true para borrar bookings asociados (default true).
  */
 export const DELETE = handlerWithAuth(async (request, { params }, session) => {
   const { searchParams } = new URL(request.url);
   const deleteBookings = searchParams.get('deleteBookings') === 'true';
   const motivo = searchParams.get('motivo') || undefined;
+  const skipLog = searchParams.get('skipLog') === 'true';
   const actor = (session?.user as any)?.email || 'system';
 
-  const result = await deleteEvent(params.id, deleteBookings, { actor, motivo });
+  const result = await deleteEvent(params.id, deleteBookings, { actor, motivo, skipLog });
 
   return successResponse({
     message: 'Evento eliminado exitosamente',
     eventId: params.id,
     bookingsDeleted: result.bookingsDeleted,
+    skipLog,
   });
 });

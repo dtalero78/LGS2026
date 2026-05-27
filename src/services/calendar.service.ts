@@ -206,20 +206,26 @@ export async function updateEvent(
 /**
  * Delete an event, optionally deleting its bookings too.
  *
- * Hook Ctrl Horas: si el evento tiene advisor asignado, primero registra
+ * Hook Ctrl Horas: si el evento tiene advisor asignado, por DEFAULT registra
  * un snapshot 'Suspended' en ADVISOR_EVENT_LOG. El INSERT del log, el
  * DELETE de bookings y el DELETE del evento son atómicos (transacción SQL).
+ *
+ * Modo Restructuración (`opts.skipLog=true`): el admin marcó el checkbox
+ * "Restructuración" en el modal de cancelar — el evento se borra LIMPIAMENTE
+ * (sin dejar traza en ADVISOR_EVENT_LOG). Útil cuando el evento se elimina
+ * por error de planificación, NO porque la sesión haya sido realmente
+ * suspendida para el advisor.
  */
 export async function deleteEvent(
   eventId: string,
   deleteBookings: boolean = true,
-  opts?: { actor?: string; motivo?: string },
+  opts?: { actor?: string; motivo?: string; skipLog?: boolean },
 ) {
   const event = await CalendarioRepository.findById(eventId);
   if (!event) throw new NotFoundError('Event', eventId);
 
   return await withTransaction(async (client) => {
-    if (event.advisor) {
+    if (event.advisor && !opts?.skipLog) {
       await AdvisorEventLogRepository.insert({
         advisorId:     event.advisor,
         eventoId:      eventId,

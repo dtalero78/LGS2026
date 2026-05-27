@@ -80,7 +80,11 @@ export default function AgendaSesionesPage() {
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
   // Modal eliminar evento con confirmación (Ctrl Horas hook)
   const [deleteTarget, setDeleteTarget] = useState<CalendarEvent | null>(null)
-  const [deleteConfirmChecked, setDeleteConfirmChecked] = useState(false)
+  // Modo de eliminación del evento (mutuamente excluyente):
+  //   'suspension'      → registra snapshot en ADVISOR_EVENT_LOG (Ctrl Horas)
+  //   'restructuracion' → borrado limpio, NO deja registro en el log
+  //   null              → ninguna casilla marcada (botón Eliminar deshabilitado)
+  const [deleteMode, setDeleteMode] = useState<'suspension' | 'restructuracion' | null>(null)
   const [deleteMotivo, setDeleteMotivo] = useState('')
   const [deletingEvent, setDeletingEvent] = useState(false)
 
@@ -649,16 +653,19 @@ export default function AgendaSesionesPage() {
     const ev = events.find(e => e._id === eventId)
     if (!ev) return
     setDeleteTarget(ev)
-    setDeleteConfirmChecked(false)
+    setDeleteMode(null)
     setDeleteMotivo('')
   }
 
   const confirmDelete = async () => {
-    if (!deleteTarget || !deleteConfirmChecked) return
+    if (!deleteTarget || !deleteMode) return
     setDeletingEvent(true)
     try {
       const qs = new URLSearchParams()
       if (deleteMotivo.trim()) qs.set('motivo', deleteMotivo.trim())
+      // Restructuración: borrado limpio sin registro en ADVISOR_EVENT_LOG.
+      // El backend honra skipLog=true para saltar el insert del snapshot.
+      if (deleteMode === 'restructuracion') qs.set('skipLog', 'true')
       const response = await fetch(`/api/postgres/events/${deleteTarget._id}?${qs.toString()}`, {
         method: 'DELETE'
       })
@@ -683,7 +690,7 @@ export default function AgendaSesionesPage() {
   const cancelDelete = () => {
     if (deletingEvent) return
     setDeleteTarget(null)
-    setDeleteConfirmChecked(false)
+    setDeleteMode(null)
     setDeleteMotivo('')
   }
 
@@ -976,20 +983,43 @@ export default function AgendaSesionesPage() {
                   ⚠️ Cancelar evento
                 </h3>
                 <p className="text-sm text-gray-700 mb-4">
-                  Estás por <strong>eliminar</strong> este evento. Esta acción quedará registrada
-                  en el historial de <strong>{advName}</strong> como sesión <strong>SUSPENDIDA</strong>.
+                  Estás por <strong>eliminar</strong> este evento de <strong>{advName}</strong>.
+                  Marca una opción para confirmar (mutuamente excluyentes):
                 </p>
-                <label className="flex items-start gap-2 mb-4 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={deleteConfirmChecked}
-                    onChange={(e) => setDeleteConfirmChecked(e.target.checked)}
-                    className="mt-0.5 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                  />
-                  <span className="text-sm text-gray-800">
-                    Confirmo: esta sesión queda <strong>SUSPENDIDA</strong> para <strong>{advName}</strong>
-                  </span>
-                </label>
+
+                {/* Opciones mutuamente excluyentes — sólo una puede estar marcada */}
+                <div className="space-y-2 mb-4">
+                  <label className="flex items-start gap-2 cursor-pointer p-2 rounded hover:bg-gray-50">
+                    <input
+                      type="checkbox"
+                      checked={deleteMode === 'suspension'}
+                      onChange={(e) => setDeleteMode(e.target.checked ? 'suspension' : null)}
+                      className="mt-0.5 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                    />
+                    <span className="text-sm text-gray-800">
+                      Confirmación Suspensión de sesión para <strong>{advName}</strong>
+                      <span className="block text-xs text-gray-500 mt-0.5">
+                        Queda registrada en Ctrl Horas como sesión SUSPENDIDA.
+                      </span>
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-2 cursor-pointer p-2 rounded hover:bg-gray-50">
+                    <input
+                      type="checkbox"
+                      checked={deleteMode === 'restructuracion'}
+                      onChange={(e) => setDeleteMode(e.target.checked ? 'restructuracion' : null)}
+                      className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-800">
+                      Restructuración
+                      <span className="block text-xs text-gray-500 mt-0.5">
+                        Borrado limpio: el evento se elimina pero <strong>NO queda registro</strong> de suspensión
+                        en Ctrl Horas del advisor.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+
                 <div className="mb-4">
                   <label htmlFor="delete-motivo" className="block text-xs font-medium text-gray-700 mb-1">
                     Motivo (opcional)
@@ -1015,7 +1045,7 @@ export default function AgendaSesionesPage() {
                   <button
                     type="button"
                     onClick={confirmDelete}
-                    disabled={!deleteConfirmChecked || deletingEvent}
+                    disabled={!deleteMode || deletingEvent}
                     className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     {deletingEvent && (
