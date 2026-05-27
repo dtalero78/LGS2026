@@ -74,6 +74,12 @@ export async function enrollStudents(input: EnrollInput) {
     const foundIds = new Set(students.map((s: any) => s._id));
     const missingIds = input.studentIds.filter(id => !foundIds.has(id));
     if (missingIds.length > 0) {
+      // ORDER BY prioriza BENEFICIARIO sobre TITULAR cuando hay duplicados
+      // en PEOPLE con el mismo numeroId (caso "titular es también beneficiario").
+      // Sin este ORDER BY, Postgres elegía arbitrariamente y a veces traía
+      // el TITULAR (que puede tener estadoInactivo=true cuando su contrato
+      // venció), bloqueando agendamientos del estudiante real (BENEFICIARIO).
+      // Mismo patrón que student.service.ts usa para JOIN ACADEMICA-PEOPLE.
       const academicStudents = await queryMany(
         `SELECT DISTINCT ON (a."_id") a."_id",
                 COALESCE(p."numeroId", a."numeroId") as "numeroId",
@@ -87,7 +93,10 @@ export async function enrollStudents(input: EnrollInput) {
                 a."estadoInactivo"::boolean as "academicaEstadoInactivo"
          FROM "ACADEMICA" a
          LEFT JOIN "PEOPLE" p ON a."numeroId" = p."numeroId"
-         WHERE a."_id" = ANY($1::text[])`,
+         WHERE a."_id" = ANY($1::text[])
+         ORDER BY a."_id",
+                  CASE WHEN p."tipoUsuario" IN ('BENEFICIARIO','BENEFICIARIA') THEN 0 ELSE 1 END,
+                  p."_createdDate" ASC NULLS LAST`,
         [missingIds]
       );
       students = [...students, ...academicStudents];
