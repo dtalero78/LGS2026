@@ -137,19 +137,6 @@ function PlatCards({ rows, metricKey = 'asistieron' }: {
   )
 }
 
-// ── Stat Row ───────────────────────────────────────────────────────────
-function StatRow({ label, value, color: c }: { label: string; value: number; color: string }) {
-  return (
-    <div className="flex justify-between items-center py-1.5 border-b border-gray-100 last:border-0">
-      <div className="flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: c }} />
-        <span className="text-sm text-gray-600">{label}</span>
-      </div>
-      <span className="text-sm font-semibold text-gray-900">{value.toLocaleString()}</span>
-    </div>
-  )
-}
-
 // ── Section Card ───────────────────────────────────────────────────────
 function SectionCard({ title, subtitle, section, metricKey = 'asistieron', metricLabel = 'Asist.',
   loading, isComplementaria = false }: {
@@ -157,14 +144,30 @@ function SectionCard({ title, subtitle, section, metricKey = 'asistieron', metri
   metricKey?: string; metricLabel?: string; loading: boolean; isComplementaria?: boolean
 }) {
   const totalComp = section.asistieron
+  // Totales consolidados de la sección (usados a la derecha del header)
+  const sectionTotal   = (section as any).total       ?? section.porPlataforma.reduce((a, r) => a + r.total, 0)
+  const sectionMetric  = (section as any)[metricKey]  ?? section.porPlataforma.reduce((a, r) => a + ((r as any)[metricKey] ?? 0), 0)
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-start justify-between mb-4 gap-4">
         <div>
           <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide">{title}</h3>
           <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>
         </div>
-        {loading && <span className="text-xs text-gray-400 animate-pulse">Cargando...</span>}
+        {/* Totales de la sección — antes vivían en el panel izquierdo; ahora
+            van inline al lado del título para que sea inmediato leer el resumen
+            del bloque sin desviar la mirada al aside. */}
+        <div className="flex items-center gap-4 flex-shrink-0">
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">Total</p>
+            <p className="text-lg font-bold text-gray-900 leading-none">{sectionTotal.toLocaleString()}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">{metricLabel}</p>
+            <p className="text-lg font-bold text-blue-700 leading-none">{sectionMetric.toLocaleString()}</p>
+          </div>
+          {loading && <span className="text-xs text-gray-400 animate-pulse">Cargando...</span>}
+        </div>
       </div>
 
       <PlatDonut rows={section.porPlataforma} metricKey={metricKey} metricLabel={metricLabel} hideAbsences={isComplementaria} />
@@ -181,6 +184,22 @@ function SectionCard({ title, subtitle, section, metricKey = 'asistieron', metri
       )}
     </div>
   )
+}
+
+// ── Consolidación por país (Sesiones + Jumps + Training + Clubes) ─────
+interface ConsolidatedRow { plataforma: string; total: number; asistieron: number }
+
+function consolidatePorPais(sections: Section[]): ConsolidatedRow[] {
+  const map = new Map<string, ConsolidatedRow>()
+  for (const s of sections) {
+    for (const row of s.porPlataforma) {
+      const cur = map.get(row.plataforma) ?? { plataforma: row.plataforma, total: 0, asistieron: 0 }
+      cur.total += row.total
+      cur.asistieron += row.asistieron
+      map.set(row.plataforma, cur)
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => b.total - a.total)
 }
 
 // ── Main Page ──────────────────────────────────────────────────────────
@@ -262,35 +281,107 @@ export default function InformeXPaisPage() {
     <DashboardLayout>
       <div className="flex gap-5 min-h-screen">
 
-        {/* ── Left Panel ── */}
-        <aside className="w-56 flex-shrink-0">
+        {/* ── Left Panel ──
+            Antes mostraba el total de cada sección individualmente. Ahora
+            esos números se moved al header de cada SectionCard. El panel
+            izquierdo se reutiliza para dos cuadros consolidados por país:
+            (1) Sesiones+Jumps+Training+Clubes — total y asistieron combinados
+            (2) Complementarias — total, generadas y % por país             */}
+        <aside className="w-64 flex-shrink-0">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sticky top-4">
-            <h2 className="text-base font-bold text-gray-900 mb-1">Resumen</h2>
-            <p className="text-xs text-gray-400 mb-4">{startDate} → {endDate}</p>
+            <h2 className="text-base font-bold text-gray-900 mb-1">Consolidado por País</h2>
+            <p className="text-xs text-gray-400 mb-3">{startDate} → {endDate}</p>
 
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Sesiones</p>
-            <StatRow label="Total"      value={ses.total}      color="#6b7280" />
-            <StatRow label="Asistieron" value={ses.asistieron} color="#3b82f6" />
+            {/* Consolidado Sesiones + Jumps + Training + Clubes */}
+            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-2">
+              Sesiones + Jumps + Training + Clubes
+            </p>
+            {(() => {
+              const rows = consolidatePorPais([ses, jmp, tr, cl])
+              const totGeneral = rows.reduce((a, r) => a + r.total, 0)
+              const asisGeneral = rows.reduce((a, r) => a + r.asistieron, 0)
+              return (
+                <table className="w-full text-xs mb-4">
+                  <thead>
+                    <tr className="text-gray-400 border-b border-gray-100">
+                      <th className="text-left font-medium pb-1 pr-1">País</th>
+                      <th className="text-right font-medium pb-1 pr-1">Total</th>
+                      <th className="text-right font-medium pb-1">Asist.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.length === 0 ? (
+                      <tr><td colSpan={3} className="text-gray-400 italic py-2">Sin datos</td></tr>
+                    ) : rows.map((r, i) => (
+                      <tr key={r.plataforma} className="border-b border-gray-50 last:border-0">
+                        <td className="py-1 pr-1 text-gray-700 truncate max-w-[80px]" title={r.plataforma}>
+                          <span className="inline-block w-1.5 h-1.5 rounded-full mr-1 align-middle" style={{ backgroundColor: color(i) }} />
+                          {r.plataforma}
+                        </td>
+                        <td className="py-1 pr-1 text-right font-semibold text-gray-900">{r.total.toLocaleString()}</td>
+                        <td className="py-1 text-right text-blue-700 font-medium">{r.asistieron.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                    {rows.length > 0 && (
+                      <tr className="border-t-2 border-gray-300 font-bold">
+                        <td className="pt-1.5 pr-1 text-gray-800">TOTAL</td>
+                        <td className="pt-1.5 pr-1 text-right text-gray-900">{totGeneral.toLocaleString()}</td>
+                        <td className="pt-1.5 text-right text-blue-800">{asisGeneral.toLocaleString()}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              )
+            })()}
 
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-4 mb-2">Jumps</p>
-            <StatRow label="Total"     value={jmp.total}     color="#6b7280" />
-            <StatRow label="Aprobaron" value={jmp.aprobaron} color="#10b981" />
-
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-4 mb-2">Training</p>
-            <StatRow label="Total"      value={tr.total}      color="#6b7280" />
-            <StatRow label="Asistieron" value={tr.asistieron} color="#3b82f6" />
-
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-4 mb-2">Clubes</p>
-            <StatRow label="Total"      value={cl.total}      color="#6b7280" />
-            <StatRow label="Asistieron" value={cl.asistieron} color="#3b82f6" />
-
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-4 mb-2">Welcome</p>
-            <StatRow label="Total"      value={wel.total}      color="#6b7280" />
-            <StatRow label="Asistieron" value={wel.asistieron} color="#8b5cf6" />
-
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-4 mb-2">Complementarias</p>
-            <StatRow label="Total"     value={comp.total}      color="#6b7280" />
-            <StatRow label="Generadas" value={comp.asistieron} color="#10b981" />
+            {/* Complementarias por país — Total / Generadas / % */}
+            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-2 mt-3 pt-3 border-t border-gray-200">
+              Complementarias
+            </p>
+            {(() => {
+              const totalGral = comp.porPlataforma.reduce((a, r) => a + r.total, 0)
+              const generGral = comp.porPlataforma.reduce((a, r) => a + r.asistieron, 0)
+              return (
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-gray-400 border-b border-gray-100">
+                      <th className="text-left font-medium pb-1 pr-1">País</th>
+                      <th className="text-right font-medium pb-1 pr-1">Total</th>
+                      <th className="text-right font-medium pb-1 pr-1">Gener.</th>
+                      <th className="text-right font-medium pb-1">%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {comp.porPlataforma.length === 0 ? (
+                      <tr><td colSpan={4} className="text-gray-400 italic py-2">Sin datos</td></tr>
+                    ) : comp.porPlataforma.map((r, i) => {
+                      const pct = r.total > 0 ? ((r.asistieron / r.total) * 100).toFixed(0) : '0'
+                      return (
+                        <tr key={r.plataforma} className="border-b border-gray-50 last:border-0">
+                          <td className="py-1 pr-1 text-gray-700 truncate max-w-[70px]" title={r.plataforma}>
+                            <span className="inline-block w-1.5 h-1.5 rounded-full mr-1 align-middle" style={{ backgroundColor: color(i) }} />
+                            {r.plataforma}
+                          </td>
+                          <td className="py-1 pr-1 text-right font-semibold text-gray-900">{r.total.toLocaleString()}</td>
+                          <td className="py-1 pr-1 text-right text-emerald-700 font-medium">{r.asistieron.toLocaleString()}</td>
+                          <td className="py-1 text-right text-gray-500">{pct}%</td>
+                        </tr>
+                      )
+                    })}
+                    {comp.porPlataforma.length > 0 && (
+                      <tr className="border-t-2 border-gray-300 font-bold">
+                        <td className="pt-1.5 pr-1 text-gray-800">TOTAL</td>
+                        <td className="pt-1.5 pr-1 text-right text-gray-900">{totalGral.toLocaleString()}</td>
+                        <td className="pt-1.5 pr-1 text-right text-emerald-800">{generGral.toLocaleString()}</td>
+                        <td className="pt-1.5 text-right text-gray-600">
+                          {totalGral > 0 ? `${((generGral / totalGral) * 100).toFixed(0)}%` : '0%'}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              )
+            })()}
           </div>
         </aside>
 
