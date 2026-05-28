@@ -65,19 +65,20 @@ function PlatDonut({ rows, metricKey = 'asistieron', metricLabel = 'Asist.', hid
         <text x={cx} y={cy + 9} textAnchor="middle" fontSize="8" fill="#6b7280">TOTAL</text>
       </svg>
 
-      {/* Legend table */}
-      <div className="flex-1 min-w-0">
+      {/* Legend table — ancho del contenido (no w-full) para que las columnas
+          queden juntas y no se abra un gran espacio entre País y las cifras. */}
+      <div className="min-w-0 overflow-x-auto">
         {rows.length === 0
           ? <p className="text-xs text-gray-400 py-6">Sin datos</p>
           : (
-            <table className="w-full text-xs">
+            <table className="text-xs">
               <thead>
                 <tr className="text-gray-400 border-b border-gray-100">
-                  <th className="text-left font-medium pb-1.5 pr-2">País</th>
-                  <th className="text-right font-medium pb-1.5 pr-2">Total</th>
-                  <th className="text-right font-medium pb-1.5 pr-2">{metricLabel}</th>
-                  {!hideAbsences && <th className="text-right font-medium pb-1.5 pr-2">Inasist.</th>}
-                  {!hideAbsences && <th className="text-right font-medium pb-1.5 pr-2">Cancel.</th>}
+                  <th className="text-left font-medium pb-1.5 pr-6">País</th>
+                  <th className="text-right font-medium pb-1.5 pr-6">Total</th>
+                  <th className="text-right font-medium pb-1.5 pr-6">{metricLabel}</th>
+                  {!hideAbsences && <th className="text-right font-medium pb-1.5 pr-6">Inasist.</th>}
+                  {!hideAbsences && <th className="text-right font-medium pb-1.5 pr-6">Cancel.</th>}
                   <th className="text-right font-medium pb-1.5">%</th>
                 </tr>
               </thead>
@@ -88,16 +89,16 @@ function PlatDonut({ rows, metricKey = 'asistieron', metricLabel = 'Asist.', hid
                   const pct     = totalMetric > 0 ? ((val / totalMetric) * 100).toFixed(0) : '0'
                   return (
                     <tr key={row.plataforma} className="border-b border-gray-50 last:border-0">
-                      <td className="py-1.5 pr-2">
+                      <td className="py-1.5 pr-6">
                         <div className="flex items-center gap-1.5">
                           <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color(i) }} />
                           <span className="text-gray-700 font-medium">{row.plataforma}</span>
                         </div>
                       </td>
-                      <td className="py-1.5 pr-2 text-right text-gray-500">{row.total.toLocaleString()}</td>
-                      <td className="py-1.5 pr-2 text-right font-bold" style={{ color: color(i) }}>{val.toLocaleString()}</td>
-                      {!hideAbsences && <td className="py-1.5 pr-2 text-right font-medium text-orange-500">{inasist.toLocaleString()}</td>}
-                      {!hideAbsences && <td className="py-1.5 pr-2 text-right text-gray-400">{(row.cancelaron ?? 0).toLocaleString()}</td>}
+                      <td className="py-1.5 pr-6 text-right text-gray-500">{row.total.toLocaleString()}</td>
+                      <td className="py-1.5 pr-6 text-right font-bold" style={{ color: color(i) }}>{val.toLocaleString()}</td>
+                      {!hideAbsences && <td className="py-1.5 pr-6 text-right font-medium text-orange-500">{inasist.toLocaleString()}</td>}
+                      {!hideAbsences && <td className="py-1.5 pr-6 text-right text-gray-400">{(row.cancelaron ?? 0).toLocaleString()}</td>}
                       <td className="py-1.5 text-right font-semibold text-gray-600">{pct}%</td>
                     </tr>
                   )
