@@ -18,11 +18,15 @@ interface MatriculasData {
   }
   barPendientes: { name: string; value: number }[]
   donut: { name: string; value: number }[]
-  heatmap: { year: number; paises: string[]; data: { pais: string; mes: number; n: number }[] }
+  heatmap: {
+    months: { ym: string; label: string }[]
+    paises: string[]
+    data: { pais: string; ym: string; n: number }[]
+    lgs: { ym: string; n: number }[]
+  }
   meta: { paises: string[]; startDate: string; endDate: string; pais: string | null }
 }
 
-const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 const BAR_COLORS = ['#fbbf24', '#f97316', '#ef4444']
 const DONUT_COLORS: Record<string, string> = { 'aprobadas (sin finalizar)': '#22c55e', 'sin aprobar': '#f59e0b' }
 const today       = new Date().toISOString().substring(0, 10)
@@ -102,17 +106,27 @@ export default function MatriculasPage() {
   const handlePrint = () => window.print()
 
   const c = data?.cards
-  const heatMax = useMemo(() => Math.max(1, ...(data?.heatmap.data ?? []).map(d => d.n)), [data])
+  const heatMax = useMemo(() => Math.max(1,
+    ...(data?.heatmap.data ?? []).map(d => d.n),
+  ), [data])
+  const lgsMax = useMemo(() => Math.max(1, ...(data?.heatmap.lgs ?? []).map(d => d.n)), [data])
   const heatLookup = useMemo(() => {
     const m = new Map<string, number>()
-    for (const d of data?.heatmap.data ?? []) m.set(`${d.pais}-${d.mes}`, d.n)
+    for (const d of data?.heatmap.data ?? []) m.set(`${d.pais}-${d.ym}`, d.n)
     return m
   }, [data])
-  const heatColor = (v: number) => {
+  const lgsLookup = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const d of data?.heatmap.lgs ?? []) m.set(d.ym, d.n)
+    return m
+  }, [data])
+  const colorFor = (v: number, max: number) => {
     if (v <= 0) return '#f8fafc'
-    const t = v / heatMax, mix = (a: number, b: number) => Math.round(a + (b - a) * t)
+    const t = v / max, mix = (a: number, b: number) => Math.round(a + (b - a) * t)
     return `rgb(${mix(0xdb, 0x1d)},${mix(0xea, 0x4e)},${mix(0xfe, 0xd8)})`
   }
+  const heatColor = (v: number) => colorFor(v, heatMax)
+  const lgsColor  = (v: number) => colorFor(v, lgsMax)
 
   const handleCSV = () => {
     if (!c) return
@@ -127,7 +141,8 @@ export default function MatriculasPage() {
       { seccion: 'Personas', metrica: 'Académicos OnHold', valor: c.academicosOnHold },
       { seccion: 'Personas', metrica: 'Académicos Inactivos', valor: c.academicosInactivos },
       ...(data?.barPendientes ?? []).map(b => ({ seccion: 'Pendientes por antigüedad', metrica: b.name, valor: b.value })),
-      ...(data?.heatmap.data ?? []).map(h => ({ seccion: `Aprobadas ${data?.heatmap.year}`, metrica: `${h.pais} · ${MESES[h.mes - 1]}`, valor: h.n })),
+      ...(data?.heatmap.data ?? []).map(h => ({ seccion: 'Aprobadas (12 meses)', metrica: `${h.pais} · ${h.ym}`, valor: h.n })),
+      ...(data?.heatmap.lgs ?? []).map(h => ({ seccion: 'Aprobadas LGS (compañía)', metrica: h.ym, valor: h.n })),
     ]
     exportToExcel(rows, [
       { header: 'Sección', accessor: r => r.seccion },
@@ -280,44 +295,77 @@ export default function MatriculasPage() {
           </div>
         </div>
 
-        {/* Heatmap */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 print-page">
-          <h3 className="text-sm font-semibold text-gray-700 mb-1">Matrículas aprobadas por país y mes</h3>
-          <p className="text-xs text-gray-400 mb-4">Año {data?.heatmap.year ?? ''} — mes de inicio del contrato</p>
-          {loading ? <div className="h-40 bg-gray-100 rounded animate-pulse" />
-            : !(data?.heatmap.paises.length) ? <p className="text-sm text-gray-400 text-center py-8">Sin datos</p>
-            : (
-              <div className="overflow-x-auto">
-                <table className="text-xs border-separate" style={{ borderSpacing: 2 }}>
-                  <thead>
-                    <tr>
-                      <th className="text-left font-medium text-gray-400 pr-2">País</th>
-                      {MESES.map(m => <th key={m} className="font-medium text-gray-400 w-9 text-center">{m}</th>)}
-                      <th className="font-semibold text-gray-500 w-12 text-center pl-2">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data!.heatmap.paises.map(p => {
-                      const rowTotal = MESES.reduce((s, _m, i) => s + (heatLookup.get(`${p}-${i + 1}`) ?? 0), 0)
-                      return (
-                        <tr key={p}>
-                          <td className="pr-2 text-gray-700 whitespace-nowrap">{p}</td>
-                          {MESES.map((_m, i) => {
-                            const v = heatLookup.get(`${p}-${i + 1}`) ?? 0
-                            return (
-                              <td key={i} className="w-9 h-9 text-center align-middle rounded"
-                                style={{ backgroundColor: heatColor(v), color: v / heatMax > 0.55 ? '#fff' : '#374151' }}
-                                title={`${p} · ${MESES[i]}: ${v}`}>{v > 0 ? v : ''}</td>
-                            )
-                          })}
-                          <td className="w-12 text-center font-semibold text-gray-700 pl-2">{rowTotal.toLocaleString()}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+        {/* Heatmaps: izq por país (12 meses móviles) + der consolidado LGS */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          {/* Izquierda: por país × mes (ventana de 12 meses hacia atrás desde la fecha final) */}
+          <div className="xl:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-5 print-page">
+            <h3 className="text-sm font-semibold text-gray-700 mb-1">Matrículas aprobadas por país y mes</h3>
+            <p className="text-xs text-gray-400 mb-4">Últimos 12 meses hasta {endDate} — mes de inicio del contrato</p>
+            {loading ? <div className="h-40 bg-gray-100 rounded animate-pulse" />
+              : !(data?.heatmap.paises.length) ? <p className="text-sm text-gray-400 text-center py-8">Sin datos</p>
+              : (
+                <div className="overflow-x-auto">
+                  <table className="text-xs border-separate" style={{ borderSpacing: 2 }}>
+                    <thead>
+                      <tr>
+                        <th className="text-left font-medium text-gray-400 pr-2">País</th>
+                        {data!.heatmap.months.map(m => <th key={m.ym} className="font-medium text-gray-400 w-10 text-center">{m.label}</th>)}
+                        <th className="font-semibold text-gray-500 w-12 text-center pl-2">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data!.heatmap.paises.map(p => {
+                        const rowTotal = data!.heatmap.months.reduce((s, m) => s + (heatLookup.get(`${p}-${m.ym}`) ?? 0), 0)
+                        return (
+                          <tr key={p}>
+                            <td className="pr-2 text-gray-700 whitespace-nowrap">{p}</td>
+                            {data!.heatmap.months.map(m => {
+                              const v = heatLookup.get(`${p}-${m.ym}`) ?? 0
+                              return (
+                                <td key={m.ym} className="w-10 h-9 text-center align-middle rounded"
+                                  style={{ backgroundColor: heatColor(v), color: v / heatMax > 0.55 ? '#fff' : '#374151' }}
+                                  title={`${p} · ${m.label}: ${v}`}>{v > 0 ? v : ''}</td>
+                              )
+                            })}
+                            <td className="w-12 text-center font-semibold text-gray-700 pl-2">{rowTotal.toLocaleString()}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+          </div>
+
+          {/* Derecha: consolidado LGS (toda la compañía) por mes */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 print-page">
+            <h3 className="text-sm font-semibold text-gray-700 mb-1">Consolidado LGS</h3>
+            <p className="text-xs text-gray-400 mb-4">Toda la compañía — últimos 12 meses</p>
+            {loading ? <div className="h-40 bg-gray-100 rounded animate-pulse" />
+              : !(data?.heatmap.lgs.length) ? <p className="text-sm text-gray-400 text-center py-8">Sin datos</p>
+              : (
+                <div className="space-y-1">
+                  {data!.heatmap.months.map(m => {
+                    const v = lgsLookup.get(m.ym) ?? 0
+                    return (
+                      <div key={m.ym} className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500 w-14 flex-shrink-0">{m.label}</span>
+                        <div className="flex-1 h-6 rounded flex items-center justify-end px-2"
+                          style={{ backgroundColor: lgsColor(v), color: v / lgsMax > 0.55 ? '#fff' : '#374151' }}>
+                          <span className="text-xs font-semibold">{v > 0 ? v.toLocaleString() : ''}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  <div className="flex items-center gap-2 border-t-2 border-gray-200 pt-1.5 mt-1.5">
+                    <span className="text-xs font-bold text-gray-700 w-14 flex-shrink-0">Total</span>
+                    <span className="text-sm font-bold text-indigo-700">
+                      {(data!.heatmap.lgs.reduce((s, x) => s + x.n, 0)).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              )}
+          </div>
         </div>
       </div>
     </DashboardLayout>

@@ -18,8 +18,9 @@ import { InformesPermission } from '@/types/permissions'
  *
  * Definiciones (PEOPLE.tipoUsuario='TITULAR', descartando contratos de prueba
  * — nombre/apellido placeholder, vacío o que contenga 'PRUEBA'):
- *   - x Aprobar  = NO aprobados: aprobacion NULL o NOT IN (Aprobado,Aprobada,FINALIZADA)
- *                  (incluye Rechazado/Devuelto/Retractado/Contrato Nulo/Pendiente).
+ *   - x Aprobar  = pendientes sin decisión (aprobacion NULL). Excluye aprobados/
+ *                  finalizados y los estados ya decididos: Rechazado/Devuelto/
+ *                  Retractado/Contrato Nulo/Pendiente.
  *   - Vigentes   = aprobacion IN (Aprobado,Aprobada) Y estado <> FINALIZADA.
  *   - Finalizados= estado = FINALIZADA.
  *   - Beneficiarios = BENEFICIARIO(/A) cuyo titular es Vigente.
@@ -40,7 +41,10 @@ const NOMBRE_OK = `(
 )`
 const CDATE     = `COALESCE("inicioContrato","fechaContrato",("_createdDate" AT TIME ZONE 'America/Bogota')::date)`
 const APROBADO  = `("aprobacion" IN ('Aprobado','Aprobada'))`
-const NO_APROBADO = `("aprobacion" IS NULL OR "aprobacion" NOT IN ('Aprobado','Aprobada','FINALIZADA'))`
+// x Aprobar = pendientes sin decisión. Excluye aprobados/finalizados Y los
+// estados ya decididos (Rechazado/Devuelto/Retractado/Contrato Nulo/Pendiente).
+const NO_APROBADO = `("aprobacion" IS NULL OR "aprobacion" NOT IN
+  ('Aprobado','Aprobada','FINALIZADA','Rechazado','Devuelto','Retractado','Contrato Nulo','Pendiente'))`
 const STEP_NUM  = `NULLIF(REGEXP_REPLACE("step",'[^0-9]','','g'),'')`
 // $1 = pais, $2 = startDate, $3 = endDate  (embudo de contratos por fecha)
 const PAIS_FECHA = `($1::text IS NULL OR "plataforma" = $1) AND (${CDATE} BETWEEN $2::date AND $3::date)`
@@ -100,10 +104,11 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     academicosInactivos: num(acadInactivosR),
   }
 
-  // Barras: pendientes (no aprobados) por antigüedad sin aprobar
+  // Barras: pendientes (no aprobados) por antigüedad sin aprobar, medida desde
+  // la FECHA FINAL hacia atrás ($3 = endDate; por defecto hoy si no hay filtro).
   const barRow = await queryOne<{ b1: number; b2: number; b3: number }>(`
     WITH p AS (
-      SELECT GREATEST(0, (CURRENT_DATE - ${CDATE})) AS dias
+      SELECT GREATEST(0, ($3::date - ${CDATE})) AS dias
       FROM "PEOPLE" WHERE "tipoUsuario"='TITULAR' AND ${NO_APROBADO} AND ${NOMBRE_OK} AND ${PAIS_FECHA}
     )
     SELECT COUNT(*) FILTER (WHERE dias>=7 AND dias<30)::int b1,
@@ -121,23 +126,42 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     { name: 'Sin aprobar',               value: cards.xAprobar },
   ].filter(d => d.value > 0)
 
-  // Heatmap: matrículas aprobadas por país × mes (año del rango / endDate)
-  const heatYear = Number((endDate || '').substring(0, 4)) || new Date().getFullYear()
-  const heatRows = await query<{ pais: string; mes: number; n: number }>(`
-    SELECT COALESCE(NULLIF(TRIM("plataforma"),''),'Sin país') AS pais,
-           EXTRACT(MONTH FROM COALESCE("inicioContrato","fechaContrato"))::int AS mes,
-           COUNT(*)::int AS n
-    FROM "PEOPLE"
-    WHERE "tipoUsuario"='TITULAR' AND ("aprobacion" IN ('Aprobado','Aprobada','FINALIZADA')) AND ${NOMBRE_OK}
-      AND ($1::text IS NULL OR "plataforma" = $1)
+  // Heatmap: matrículas aprobadas — VENTANA MÓVIL de 12 meses hacia atrás desde
+  // la fecha final. Izquierda: por país (respeta filtro país). Derecha: LGS =
+  // consolidado de TODA la compañía (todos los países, sin filtro de país).
+  const MESES_SHORT = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+  const ed = new Date(`${endDate}T00:00:00`)
+  const months: { ym: string; label: string }[] = []
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(ed.getFullYear(), ed.getMonth() - i, 1)
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    months.push({ ym, label: `${MESES_SHORT[d.getMonth()]} ${String(d.getFullYear()).slice(2)}` })
+  }
+  const heatStart = `${months[0].ym}-01`
+  const APROBADO_HEAT = `"tipoUsuario"='TITULAR' AND ("aprobacion" IN ('Aprobado','Aprobada','FINALIZADA')) AND ${NOMBRE_OK}
       AND COALESCE("inicioContrato","fechaContrato") IS NOT NULL
-      AND EXTRACT(YEAR FROM COALESCE("inicioContrato","fechaContrato")) = $2
-    GROUP BY 1, 2`, [pais, heatYear])
-  const paises = Array.from(new Set(heatRows.rows.map(r => r.pais))).sort()
+      AND COALESCE("inicioContrato","fechaContrato") BETWEEN $1::date AND $2::date`
+
+  const [paisRows, lgsRows] = await Promise.all([
+    query<{ pais: string; ym: string; n: number }>(`
+      SELECT COALESCE(NULLIF(TRIM("plataforma"),''),'Sin país') AS pais,
+             TO_CHAR(COALESCE("inicioContrato","fechaContrato"),'YYYY-MM') AS ym,
+             COUNT(*)::int AS n
+      FROM "PEOPLE"
+      WHERE ${APROBADO_HEAT} AND ($3::text IS NULL OR "plataforma" = $3)
+      GROUP BY 1, 2`, [heatStart, endDate, pais]),
+    query<{ ym: string; n: number }>(`
+      SELECT TO_CHAR(COALESCE("inicioContrato","fechaContrato"),'YYYY-MM') AS ym, COUNT(*)::int AS n
+      FROM "PEOPLE"
+      WHERE ${APROBADO_HEAT}
+      GROUP BY 1`, [heatStart, endDate]),
+  ])
+  const paises = Array.from(new Set(paisRows.rows.map(r => r.pais))).sort()
   const heatmap = {
-    year: heatYear,
+    months,
     paises,
-    data: heatRows.rows.map(r => ({ pais: r.pais, mes: Number(r.mes), n: Number(r.n) })),
+    data: paisRows.rows.map(r => ({ pais: r.pais, ym: r.ym, n: Number(r.n) })),
+    lgs: lgsRows.rows.map(r => ({ ym: r.ym, n: Number(r.n) })),
   }
 
   // Lista de países para el dropdown
