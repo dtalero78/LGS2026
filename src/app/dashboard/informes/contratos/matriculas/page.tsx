@@ -263,7 +263,7 @@ export default function MatriculasPage() {
         <div>
           <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Personas y académicos (estado actual)</p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Card label="Beneficiarios" value={c?.beneficiarios ?? 0} color="#3b82f6" hint="De titulares vigentes" />
+            <Card label="Beneficiarios" value={c?.beneficiarios ?? 0} color="#3b82f6" hint="Total de beneficiarios" />
             <Card label="Académicos Activos" value={c?.academicosActivos ?? 0} color="#0ea5e9" hint="Step 0–49, no inactivos" />
             <Card label="En OnHold" value={c?.academicosOnHold ?? 0} color="#a855f7" hint="Estudiantes pausados" />
             <Card label="Académicos Inactivos" value={c?.academicosInactivos ?? 0} color="#9ca3af" hint="Step 50 (DONE)" />

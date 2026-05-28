@@ -68,20 +68,12 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     queryOne<{ n: number }>(`SELECT COUNT(*)::int n FROM "PEOPLE" WHERE "tipoUsuario"='TITULAR' AND ${NO_APROBADO} AND ${NOMBRE_OK} AND ${PAIS_FECHA}`, pf),
     queryOne<{ n: number }>(`SELECT COUNT(*)::int n FROM "PEOPLE" WHERE "tipoUsuario"='TITULAR' AND ${APROBADO} AND ("estado" IS DISTINCT FROM 'FINALIZADA') AND ${NOMBRE_OK} AND ${PAIS_FECHA}`, pf),
     queryOne<{ n: number }>(`SELECT COUNT(*)::int n FROM "PEOPLE" WHERE "tipoUsuario"='TITULAR' AND "estado"='FINALIZADA' AND ${NOMBRE_OK} AND ${PAIS_FECHA}`, pf),
+    // Beneficiarios TOTAL (estado actual, sólo país). Es el universo de
+    // estudiantes; debe ser >= académicos activos (que son un subconjunto).
     queryOne<{ n: number }>(`
-      SELECT COUNT(*)::int n FROM "PEOPLE" b
-      WHERE b."tipoUsuario" IN ('BENEFICIARIO','BENEFICIARIA')
-        AND ($1::text IS NULL OR b."plataforma" = $1)
-        AND b."titularId" IN (
-          SELECT t."_id" FROM "PEOPLE" t
-          WHERE t."tipoUsuario"='TITULAR' AND (t."aprobacion" IN ('Aprobado','Aprobada'))
-            AND (t."estado" IS DISTINCT FROM 'FINALIZADA')
-            AND (COALESCE(t."inicioContrato",t."fechaContrato",(t."_createdDate" AT TIME ZONE 'America/Bogota')::date) BETWEEN $2::date AND $3::date)
-            AND ( UPPER(COALESCE(t."primerNombre",'')) NOT IN ('TITULAR','BENEFICIARIO','BENEFICIARIA')
-                  AND TRIM(COALESCE(t."primerNombre",'')) <> ''
-                  AND UPPER(COALESCE(t."primerNombre",'')) NOT LIKE '%PRUEBA%'
-                  AND UPPER(COALESCE(t."primerApellido",'')) NOT LIKE '%PRUEBA%' )
-        )`, pf),
+      SELECT COUNT(*)::int n FROM "PEOPLE"
+      WHERE "tipoUsuario" IN ('BENEFICIARIO','BENEFICIARIA')
+        AND ($1::text IS NULL OR "plataforma" = $1) AND ${NOMBRE_OK}`, pp),
     queryOne<{ n: number }>(`
       SELECT COUNT(*)::int n FROM "ACADEMICA"
       WHERE ("estadoInactivo" IS NOT TRUE) AND ($1::text IS NULL OR "plataforma" = $1)
