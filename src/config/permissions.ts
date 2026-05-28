@@ -547,6 +547,20 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Acceso a informes por advisor (Sesiones, Jumps, Training, Clubes, Welcome, Resumen)',
   },
   {
+    code: InformesPermission.ACADEMICA,
+    module: Module.INFORMES,
+    section: 'Informes',
+    name: 'Grupo "Académica"',
+    description: 'Acceso al subgrupo Académica de Informes (Horas Advisor, Usuarios, InfoAcademic User)',
+  },
+  {
+    code: InformesPermission.ACAD_HORAS_ADVISOR,
+    module: Module.INFORMES,
+    section: 'Informes',
+    name: 'Informe "Horas Advisor"',
+    description: 'Acceso a /dashboard/informes/academica/horas-advisor. Sesiones conducted/suspended/cancelled por advisor con filtros, gráficas y exportación CSV',
+  },
+  {
     code: InformesPermission.USUARIOS,
     module: Module.INFORMES,
     section: 'Informes',

@@ -182,6 +182,7 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/dashboard/informes/advisors/welcome':   ['INFORMES.ADVISORS.WELCOME' as Permission],
   '/dashboard/informes/advisors/essential': ['INFORMES.ADVISORS.ESSENTIAL' as Permission],
   '/dashboard/informes/advisors/resumen': ['INFORMES.ADVISORS.RESUMEN' as Permission],
+  '/dashboard/informes/academica/horas-advisor': ['INFORMES.ACADEMICA.HORAS_ADVISOR' as Permission],
   '/dashboard/informes/usuarios': ['INFORMES.USUARIOS' as Permission],
   '/dashboard/informes/contratos': ['INFORMES.CONTRATOS' as Permission],
   '/dashboard/informes/planta/advisors': ['INFORMES.PLANTA.ADVISORS' as Permission],

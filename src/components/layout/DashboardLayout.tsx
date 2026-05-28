@@ -112,8 +112,13 @@ const getNavigation = (userEmail: string) => [
           { name: 'Resumen',   href: '/dashboard/informes/advisors/resumen',    newTab: true },
         ]
       },
-      { name: 'Usuarios', href: '/dashboard/informes/usuarios', newTab: true },
-      { name: 'InfoAcademic User', href: '/dashboard/informes/infoacademic-user', newTab: true },
+      {
+        name: 'Académica', isSubmenu: true, children: [
+          { name: 'Horas Advisor', href: '/dashboard/informes/academica/horas-advisor', newTab: true },
+          { name: 'Usuarios', href: '/dashboard/informes/usuarios', newTab: true },
+          { name: 'InfoAcademic User', href: '/dashboard/informes/infoacademic-user', newTab: true },
+        ]
+      },
       { name: 'Contratos', href: '/dashboard/informes/contratos', newTab: true },
       {
         name: 'Planta', isSubmenu: true, children: [
@@ -256,6 +261,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/dashboard/informes/advisors/welcome':   [InformesPermission.ADV_WELCOME],
     '/dashboard/informes/advisors/essential': [InformesPermission.ADV_ESSENTIAL],
     '/dashboard/informes/advisors/resumen':   [InformesPermission.ADV_RESUMEN],
+    '/dashboard/informes/academica/horas-advisor': [InformesPermission.ACAD_HORAS_ADVISOR],
     '/dashboard/informes/usuarios':           [InformesPermission.USUARIOS],
     '/dashboard/informes/infoacademic-user':  [InformesPermission.USUARIOS],
     '/dashboard/informes/contratos':          [InformesPermission.CONTRATOS],
@@ -389,6 +395,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       InformesPermission.ASISTENCIA,
       InformesPermission.PROGRAMACION,
       InformesPermission.ADVISORS,
+      InformesPermission.ACADEMICA,
       InformesPermission.USUARIOS,
       InformesPermission.CONTRATOS,
       InformesPermission.PLANTA,
@@ -496,6 +503,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     'Asistencia':    [InformesPermission.ASISTENCIA],
     'Programación':  [InformesPermission.PROGRAMACION],
     'Advisors':      [InformesPermission.ADVISORS],
+    // Académica acepta el permiso de grupo nuevo + USUARIOS (compat: los ítems
+    // Usuarios/InfoAcademic se movieron aquí) + el permiso del reporte nuevo,
+    // para que ningún rol pierda acceso a lo que ya veía.
+    'Académica':     [InformesPermission.ACADEMICA, InformesPermission.USUARIOS, InformesPermission.ACAD_HORAS_ADVISOR],
     'Planta':        [InformesPermission.PLANTA],
     'Estadísticas':  [InformesPermission.ESTADISTICAS],
   }
