@@ -559,6 +559,7 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
   { code: InformesPermission.ACAD_USUARIOS_EXP,      module: Module.INFORMES, section: 'Académica', name: '↳ Descargar CSV (Usuarios)',      description: 'Botón Exportar CSV del informe Académica → Usuarios' },
   { code: InformesPermission.ACAD_INFOACADEMIC,      module: Module.INFORMES, section: 'Académica', name: 'Informe "InfoAcademic User"',     description: 'Ver el informe Académica → InfoAcademic User (reporte ejecutivo)' },
   { code: InformesPermission.ACAD_HOLD_VIGENCIAS,    module: Module.INFORMES, section: 'Académica', name: 'Informe "Hold & Vigencias"',      description: 'Ver el monitoreo del cron: desbloqueos por OnHold vencido, bloqueos por contrato vencido e inconsistencias (no procesados) con su causa' },
+  { code: InformesPermission.ACAD_X_NIVELES,         module: Module.INFORMES, section: 'Académica', name: 'Informe "X Niveles"',             description: 'Ver el listado de usuarios académicos por nivel (BN1…DONE o todos) con filtros de fecha, conteo y exportación CSV' },
   { code: InformesPermission.ACAD_INFOACADEMIC_EXP,  module: Module.INFORMES, section: 'Académica', name: '↳ Descargar CSV (InfoAcademic)',  description: 'Botón Exportar CSV del informe Académica → InfoAcademic User' },
   { code: InformesPermission.ACAD_INFOACADEMIC_PDF,  module: Module.INFORMES, section: 'Académica', name: '↳ Imprimir / PDF (InfoAcademic)', description: 'Botón Imprimir / generar PDF del informe Académica → InfoAcademic User' },
 
