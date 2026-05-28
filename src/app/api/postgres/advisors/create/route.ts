@@ -40,12 +40,31 @@ export const POST = handler(async (request: Request) => {
 
   // Also create USUARIOS_ROLES entry so the advisor can log in
   const password = body.clave?.trim() || 'LGS2026';
-  await queryOne(
+  const emailLower = email.trim().toLowerCase();
+  const inserted = await queryOne<{ _id: string }>(
     `INSERT INTO "USUARIOS_ROLES" ("_id", "email", "password", "nombre", "rol", "activo", "numberid", "_createdDate", "_updatedDate")
      VALUES ($1, $2, $3, $4, 'ADVISOR', true, $5, NOW(), NOW())
-     ON CONFLICT ("email") DO NOTHING`,
-    [ids.advisor(), email.trim().toLowerCase(), password, nombreCompleto, body.numeroId?.trim().toUpperCase() || null]
+     ON CONFLICT ("email") DO NOTHING
+     RETURNING "_id"`,
+    [ids.advisor(), emailLower, password, nombreCompleto, body.numeroId?.trim().toUpperCase() || null]
   );
 
-  return successResponse({ advisor, message: 'Advisor creado exitosamente' });
+  // Relación formal ADVISORS -> USUARIOS_ROLES (análoga a ACADEMICA.usuarioId).
+  // Si hubo conflicto (la cuenta ya existía), resolvemos su _id por email.
+  let usuarioRolId = inserted?._id ?? null;
+  if (!usuarioRolId) {
+    const existing = await queryOne<{ _id: string }>(
+      `SELECT "_id" FROM "USUARIOS_ROLES" WHERE LOWER("email") = LOWER($1) LIMIT 1`,
+      [emailLower]
+    );
+    usuarioRolId = existing?._id ?? null;
+  }
+  if (usuarioRolId) {
+    await queryOne(
+      `UPDATE "ADVISORS" SET "usuarioRolId" = $1, "_updatedDate" = NOW() WHERE "_id" = $2`,
+      [usuarioRolId, advisorId]
+    );
+  }
+
+  return successResponse({ advisor: { ...(advisor as any), usuarioRolId }, message: 'Advisor creado exitosamente' });
 });

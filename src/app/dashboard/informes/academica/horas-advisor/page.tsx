@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
 import { exportToExcel } from '@/lib/export-excel'
 
@@ -14,18 +14,34 @@ interface HorasRow {
   advisorNombre: string
   plataforma: string | null
   numeroId: string | null
+  activo: boolean
+  sesiones: number
+  jumps: number
+  training: number
+  clubes: number
+  welcome: number
+  essential: number
+  otros: number
   conducted: number
   suspended: number
   cancelled: number
   total: number
 }
 
+interface Totals {
+  sesiones: number; jumps: number; training: number; clubes: number
+  welcome: number; essential: number; otros: number
+  conducted: number; suspended: number; cancelled: number; total: number
+  advisorsActivos: number; advisorsInactivosConActividad: number
+}
+
 interface ReportData {
   table: HorasRow[]
-  totals: { conducted: number; suspended: number; cancelled: number; total: number }
+  totals: Totals
   charts: {
     barByAdvisor: { name: string; fullName: string; conducted: number; suspended: number; cancelled: number }[]
     donut: { name: string; value: number }[]
+    byType: { name: string; value: number }[]
   }
   meta: { plataformas: string[]; advisors: Advisor[] }
 }
@@ -35,6 +51,27 @@ const STATE_COLORS: Record<string, string> = {
   suspended: '#f59e0b',
   cancelled: '#ef4444',
 }
+
+const TYPE_COLORS: Record<string, string> = {
+  sesiones:  '#3b82f6',
+  jumps:     '#ef4444',
+  training:  '#f97316',
+  clubes:    '#22c55e',
+  welcome:   '#a855f7',
+  essential: '#0ea5e9',
+  otros:     '#9ca3af',
+}
+
+const TIPO_OPTIONS: { value: string; label: string }[] = [
+  { value: 'all',       label: 'Todos los tipos' },
+  { value: 'sesiones',  label: 'Sesiones' },
+  { value: 'jumps',     label: 'Jumps' },
+  { value: 'training',  label: 'Training' },
+  { value: 'clubes',    label: 'Clubes' },
+  { value: 'welcome',   label: 'Welcome' },
+  { value: 'essential', label: 'Essential (ESS)' },
+  { value: 'otros',     label: 'Otros' },
+]
 
 const today       = new Date().toISOString().substring(0, 10)
 const firstOfYear = `${new Date().getFullYear()}-01-01`
@@ -95,14 +132,15 @@ export default function HorasAdvisorPage() {
   const [fechaFin,    setFechaFin]    = useState(today)
   const [plataforma,  setPlataforma]  = useState('')
   const [advisorId,   setAdvisorId]   = useState('')
+  const [tipo,        setTipo]        = useState('all')
   const [data,    setData]    = useState<ReportData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState<string | null>(null)
 
-  const fetchData = useCallback(async (fi: string, ff: string, plat: string, aid: string) => {
+  const fetchData = useCallback(async (fi: string, ff: string, plat: string, aid: string, tp: string) => {
     setLoading(true); setError(null)
     try {
-      const qs = new URLSearchParams({ fechaInicio: fi, fechaFin: ff })
+      const qs = new URLSearchParams({ fechaInicio: fi, fechaFin: ff, tipo: tp })
       if (plat) qs.set('plataforma', plat)
       if (aid)  qs.set('advisorId', aid)
       const res  = await fetch(`/api/postgres/reports/academica/horas-advisor?${qs}`, { cache: 'no-store' })
@@ -114,12 +152,12 @@ export default function HorasAdvisorPage() {
     finally { setLoading(false) }
   }, [])
 
-  useEffect(() => { fetchData(firstOfYear, today, '', '') }, [fetchData])
+  useEffect(() => { fetchData(firstOfYear, today, '', '', 'all') }, [fetchData])
 
-  const handleApply = () => fetchData(fechaInicio, fechaFin, plataforma, advisorId)
+  const handleApply = () => fetchData(fechaInicio, fechaFin, plataforma, advisorId, tipo)
   const handleClear = () => {
-    setFechaInicio(firstOfYear); setFechaFin(today); setPlataforma(''); setAdvisorId('')
-    fetchData(firstOfYear, today, '', '')
+    setFechaInicio(firstOfYear); setFechaFin(today); setPlataforma(''); setAdvisorId(''); setTipo('all')
+    fetchData(firstOfYear, today, '', '', 'all')
   }
 
   const handleExport = () => {
@@ -130,6 +168,14 @@ export default function HorasAdvisorPage() {
         { header: 'Advisor',    accessor: r => r.advisorNombre },
         { header: 'NumeroId',   accessor: r => r.numeroId ?? '' },
         { header: 'País',       accessor: r => r.plataforma ?? '' },
+        { header: 'Activo',     accessor: r => (r.activo ? 'Sí' : 'No') },
+        { header: 'Sesiones',   accessor: r => r.sesiones },
+        { header: 'Jumps',      accessor: r => r.jumps },
+        { header: 'Training',   accessor: r => r.training },
+        { header: 'Clubes',     accessor: r => r.clubes },
+        { header: 'Welcome',    accessor: r => r.welcome },
+        { header: 'Essential',  accessor: r => r.essential },
+        { header: 'Otros',      accessor: r => r.otros },
         { header: 'Conducted',  accessor: r => r.conducted },
         { header: 'Suspended',  accessor: r => r.suspended },
         { header: 'Cancelled',  accessor: r => r.cancelled },
@@ -140,7 +186,6 @@ export default function HorasAdvisorPage() {
   }
 
   const totals = data?.totals
-  // Filtra el dropdown de advisors por plataforma seleccionada
   const advisorOptions = useMemo(() => {
     const all = data?.meta?.advisors ?? []
     return plataforma ? all.filter(a => a.pais === plataforma) : all
@@ -154,7 +199,7 @@ export default function HorasAdvisorPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Informe de horas Advisor</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Sesiones conducted, suspended y cancelled por advisor en el período seleccionado.
+            Sesiones conducted (por tipo), suspended y cancelled por advisor en el período seleccionado.
           </p>
         </div>
 
@@ -165,8 +210,8 @@ export default function HorasAdvisorPage() {
               <label htmlFor="ha-plataforma" className="block text-xs text-gray-500 mb-1">País</label>
               <select id="ha-plataforma" value={plataforma}
                 onChange={e => { setPlataforma(e.target.value); setAdvisorId('') }}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[150px]">
-                <option value="">Todas</option>
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[140px]">
+                <option value="">Todos</option>
                 {(data?.meta?.plataformas ?? []).map(p => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
@@ -176,6 +221,13 @@ export default function HorasAdvisorPage() {
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[180px]">
                 <option value="">Todos los advisors</option>
                 {advisorOptions.map(a => <option key={a._id} value={a._id}>{a.nombreCompleto}</option>)}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="ha-tipo" className="block text-xs text-gray-500 mb-1">Tipo</label>
+              <select id="ha-tipo" value={tipo} onChange={e => setTipo(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[150px]">
+                {TIPO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
             <div>
@@ -214,14 +266,15 @@ export default function HorasAdvisorPage() {
         )}
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <KpiCard label="Advisors Activos" value={(totals?.advisorsActivos ?? 0).toLocaleString()} color="#6366f1" />
           <KpiCard label="Total Sesiones" value={(totals?.total ?? 0).toLocaleString()} color="#3b82f6" />
           <KpiCard label="Conducted" value={(totals?.conducted ?? 0).toLocaleString()} color={STATE_COLORS.conducted} />
           <KpiCard label="Suspended" value={(totals?.suspended ?? 0).toLocaleString()} color={STATE_COLORS.suspended} />
           <KpiCard label="Cancelled" value={(totals?.cancelled ?? 0).toLocaleString()} color={STATE_COLORS.cancelled} />
         </div>
 
-        {/* Charts: barras horizontales (izq) + dona (der) */}
+        {/* Fila 1: barras horizontales por advisor (izq) + dona por estado (der) */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
           <div className="xl:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-5">
             <h3 className="text-sm font-semibold text-gray-700 mb-4">Sesiones por Advisor y Estado</h3>
@@ -259,11 +312,49 @@ export default function HorasAdvisorPage() {
           </div>
         </div>
 
+        {/* Gráfica nueva: composición de Conducted por tipo (entre fila 1 y el detalle) */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">Conducted por Tipo de Evento</h3>
+          {loading ? (
+            <div className="h-48 bg-gray-100 rounded animate-pulse" />
+          ) : !data?.charts.byType.length ? (
+            <p className="text-sm text-gray-400 text-center py-10">Sin datos</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={Math.max(200, data.charts.byType.length * 40)}>
+              <BarChart data={data.charts.byType} layout="vertical"
+                margin={{ top: 4, right: 40, bottom: 4, left: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f3f4f6" />
+                <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={90} />
+                <Tooltip formatter={(value: number) => [value, 'Conducted']} />
+                <Bar dataKey="value" name="Conducted" radius={[0, 4, 4, 0]}>
+                  {data.charts.byType.map((d, i) => (
+                    <Cell key={i} fill={TYPE_COLORS[d.name.toLowerCase()] ?? '#9ca3af'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
         {/* Detalle */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
           <div className="px-5 py-4 border-b border-gray-100">
             <h3 className="text-sm font-semibold text-gray-800">Detalle por Advisor</h3>
-            <p className="text-xs text-gray-400 mt-0.5">{(data?.table.length ?? 0).toLocaleString()} advisors</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {(data?.table.length ?? 0).toLocaleString()} advisors
+              {' · '}
+              <span className="text-indigo-600">{totals?.advisorsActivos ?? 0} activos</span>
+              {(totals?.advisorsInactivosConActividad ?? 0) > 0 && (
+                <>
+                  {' · '}
+                  <span className="text-red-600">{totals?.advisorsInactivosConActividad} inactivos con agendamiento</span>
+                </>
+              )}
+            </p>
+            <p className="text-[11px] text-gray-400 mt-1">
+              <span className="text-red-600 font-medium">Nombre en rojo</span> = advisor inactivo que tuvo agendamientos en el período.
+            </p>
           </div>
           {loading ? (
             <div className="p-8 text-center">
@@ -274,11 +365,11 @@ export default function HorasAdvisorPage() {
             <p className="text-sm text-gray-400 text-center p-8">Sin datos para el período seleccionado.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm whitespace-nowrap">
                 <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
                   <tr>
-                    {['#', 'Advisor', 'NumeroId', 'Conducted', 'Suspended', 'Cancelled', 'Total Booking'].map(h => (
-                      <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    {['#', 'Advisor', 'NumeroId', 'Sesiones', 'Jumps', 'Training', 'Clubes', 'Welcome', 'Essential', 'Otros', 'Conducted', 'Suspended', 'Cancelled', 'Total'].map(h => (
+                      <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -286,11 +377,21 @@ export default function HorasAdvisorPage() {
                   {data.table.map((row, i) => (
                     <tr key={row.advisorId} className="hover:bg-gray-50 transition-colors">
                       <td className="px-3 py-2.5 text-gray-400 text-xs">{i + 1}</td>
-                      <td className="px-3 py-2.5 font-medium text-gray-900 max-w-[200px] truncate" title={row.advisorNombre}>{row.advisorNombre}</td>
+                      <td className={`px-3 py-2.5 font-medium max-w-[200px] truncate ${row.activo ? 'text-gray-900' : 'text-red-600'}`}
+                        title={row.activo ? row.advisorNombre : `${row.advisorNombre} (inactivo, con agendamientos en el período)`}>
+                        {row.advisorNombre}{!row.activo && ' ⚠'}
+                      </td>
                       <td className="px-3 py-2.5 text-gray-600 font-mono text-xs">{row.numeroId ?? '—'}</td>
-                      <td className="px-3 py-2.5 text-center"><span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold">{row.conducted}</span></td>
-                      <td className="px-3 py-2.5 text-center"><span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold">{row.suspended}</span></td>
-                      <td className="px-3 py-2.5 text-center"><span className="px-2 py-0.5 bg-red-100 text-red-600 rounded-full text-xs font-semibold">{row.cancelled}</span></td>
+                      <td className="px-3 py-2.5 text-center text-blue-700">{row.sesiones}</td>
+                      <td className="px-3 py-2.5 text-center text-red-600">{row.jumps}</td>
+                      <td className="px-3 py-2.5 text-center text-orange-600">{row.training}</td>
+                      <td className="px-3 py-2.5 text-center text-green-700">{row.clubes}</td>
+                      <td className="px-3 py-2.5 text-center text-purple-600">{row.welcome}</td>
+                      <td className="px-3 py-2.5 text-center text-sky-600">{row.essential}</td>
+                      <td className="px-3 py-2.5 text-center text-gray-500">{row.otros}</td>
+                      <td className="px-3 py-2.5 text-center font-semibold text-green-700">{row.conducted}</td>
+                      <td className="px-3 py-2.5 text-center text-amber-700">{row.suspended}</td>
+                      <td className="px-3 py-2.5 text-center text-red-600">{row.cancelled}</td>
                       <td className="px-3 py-2.5 text-right font-bold text-gray-900">{row.total}</td>
                     </tr>
                   ))}
@@ -298,6 +399,13 @@ export default function HorasAdvisorPage() {
                 <tfoot className="bg-gray-50 border-t-2 border-gray-200">
                   <tr className="font-semibold text-gray-900">
                     <td className="px-3 py-3" colSpan={3}>Totales</td>
+                    <td className="px-3 py-3 text-center text-blue-700">{totals?.sesiones ?? 0}</td>
+                    <td className="px-3 py-3 text-center text-red-600">{totals?.jumps ?? 0}</td>
+                    <td className="px-3 py-3 text-center text-orange-600">{totals?.training ?? 0}</td>
+                    <td className="px-3 py-3 text-center text-green-700">{totals?.clubes ?? 0}</td>
+                    <td className="px-3 py-3 text-center text-purple-600">{totals?.welcome ?? 0}</td>
+                    <td className="px-3 py-3 text-center text-sky-600">{totals?.essential ?? 0}</td>
+                    <td className="px-3 py-3 text-center text-gray-500">{totals?.otros ?? 0}</td>
                     <td className="px-3 py-3 text-center text-green-700">{totals?.conducted ?? 0}</td>
                     <td className="px-3 py-3 text-center text-amber-700">{totals?.suspended ?? 0}</td>
                     <td className="px-3 py-3 text-center text-red-600">{totals?.cancelled ?? 0}</td>
