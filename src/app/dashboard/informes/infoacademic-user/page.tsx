@@ -284,13 +284,13 @@ export default function InfoAcademicUserPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <PermissionGuard permission={InformesPermission.USUARIOS_EXPORTAR}>
+                <PermissionGuard permission={InformesPermission.ACAD_INFOACADEMIC_EXP}>
                   <button type="button" onClick={handleCSV}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700">
                     <ArrowDownTrayIcon className="h-4 w-4" /> CSV
                   </button>
                 </PermissionGuard>
-                <PermissionGuard permission={InformesPermission.USUARIOS_IMPRIMIR}>
+                <PermissionGuard permission={InformesPermission.ACAD_INFOACADEMIC_PDF}>
                   <button type="button" onClick={handlePrint}
                     title="En el diálogo de impresión, desactive 'Encabezados y pies de página' para ocultar la URL del navegador"
                     className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">

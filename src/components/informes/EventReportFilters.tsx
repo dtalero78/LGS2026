@@ -1,8 +1,8 @@
 'use client'
 
 import type { FilterState } from './event-report.types'
+import type { Permission } from '@/types/permissions'
 import { PermissionGuard } from '@/components/permissions/PermissionGuard'
-import { InformesPermission } from '@/types/permissions'
 
 interface Props {
   filters:            FilterState
@@ -15,11 +15,12 @@ interface Props {
   horas:              string[]
   advisors:           string[]
   loading:            boolean
+  exportPermission:   Permission
 }
 
 export default function EventReportFilters({
   filters, onChange, onApply, onClear, onExport,
-  showTipoClubFilter, niveles, horas, advisors, loading,
+  showTipoClubFilter, niveles, horas, advisors, loading, exportPermission,
 }: Props) {
   const set = (key: keyof FilterState, val: string) =>
     onChange({ ...filters, [key]: val })
@@ -88,7 +89,7 @@ export default function EventReportFilters({
             className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
             Limpiar filtros
           </button>
-          <PermissionGuard permission={InformesPermission.PROGRAMACION_EXPORTAR}>
+          <PermissionGuard permission={exportPermission}>
             <button type="button" onClick={onExport} disabled={loading}
               className="px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
               <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">

@@ -195,7 +195,7 @@ export default function HorariosPage() {
               >
                 Limpiar filtros
               </button>
-              <PermissionGuard permission={InformesPermission.ESTADISTICAS_EXPORTAR}>
+              <PermissionGuard permission={InformesPermission.EST_HORARIOS_EXP}>
                 <button
                   type="button" onClick={handleCSV} disabled={loading}
                   className="px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"

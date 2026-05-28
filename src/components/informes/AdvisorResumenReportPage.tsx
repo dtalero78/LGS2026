@@ -228,7 +228,7 @@ export default function AdvisorResumenReportPage() {
                 className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
                 Limpiar filtros
               </button>
-              <PermissionGuard permission={InformesPermission.ADVISORS_EXPORTAR}>
+              <PermissionGuard permission={InformesPermission.ADV_RESUMEN_EXP}>
                 <button type="button" onClick={handleExport} disabled={loading || !data?.table.length}
                   className="px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-1.5">
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -320,6 +320,7 @@ export default function AdvisorResumenReportPage() {
             loading={loading}
             onRowClick={row => setSelectedEventId(row._id)}
             filters={{ fechaInicio, fechaFin }}
+            exportPermission={InformesPermission.ADV_RESUMEN_EXP}
           />
         ) : (
           /* Modo resumen: tabla consolidada por advisor */

@@ -132,14 +132,9 @@ const getNavigation = (userEmail: string) => [
           { name: 'Horarios', href: '/dashboard/informes/estadisticas/horarios', newTab: true },
         ]
       },
-      // Tableros por área (en construcción) — hijos de Informes
-      { name: 'Administración', href: '/dashboard/tableros/administracion' },
-      { name: 'Gerencia',       href: '/dashboard/tableros/gerencia' },
-      { name: 'Académica',      href: '/dashboard/tableros/academica' },
-      { name: 'Servicio',       href: '/dashboard/tableros/servicio' },
-      { name: 'Recaudo',        href: '/dashboard/tableros/recaudo' },
-      { name: 'Comercial',      href: '/dashboard/tableros/comercial' },
-      { name: 'Sistema',        href: '/dashboard/tableros/sistema' },
+      // Nota: las áreas Administración/Gerencia/Servicio/Recaudo/Comercial/Sistema
+      // ya no son "tableros" en construcción; reaparecerán como secciones aquí
+      // cuando tengan su primer informe (igual que Académica).
     ],
   },
   {
@@ -263,20 +258,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/dashboard/informes/advisors/resumen':   [InformesPermission.ADV_RESUMEN],
     '/dashboard/informes/academica/horas-advisor': [InformesPermission.ACAD_HORAS_ADVISOR],
     '/dashboard/informes/usuarios':           [InformesPermission.USUARIOS],
-    '/dashboard/informes/infoacademic-user':  [InformesPermission.USUARIOS],
+    '/dashboard/informes/infoacademic-user':  [InformesPermission.ACAD_INFOACADEMIC],
     '/dashboard/informes/contratos':          [InformesPermission.CONTRATOS],
     '/dashboard/informes/planta/advisors': [InformesPermission.PLANTA_ADVISORS],
     '/dashboard/informes/planta/administrativos': [InformesPermission.PLANTA_ADMINISTRATIVOS],
     '/dashboard/informes/estadisticas':         [InformesPermission.EST_NIVELES],
     '/dashboard/informes/estadisticas/horarios': [InformesPermission.EST_HORARIOS],
-    // Nivel 2 — Tableros por área
-    '/dashboard/tableros/administracion': [InformesPermission.TABLERO_ADMINISTRACION],
-    '/dashboard/tableros/gerencia':       [InformesPermission.TABLERO_GERENCIA],
-    '/dashboard/tableros/academica':      [InformesPermission.TABLERO_ACADEMICA],
-    '/dashboard/tableros/servicio':       [InformesPermission.TABLERO_SERVICIO],
-    '/dashboard/tableros/recaudo':        [InformesPermission.TABLERO_RECAUDO],
-    '/dashboard/tableros/comercial':      [InformesPermission.TABLERO_COMERCIAL],
-    '/dashboard/tableros/sistema':        [InformesPermission.TABLERO_SISTEMA],
 
     // Servicio
     '/dashboard/servicio/welcome-session': [
@@ -388,28 +375,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       // ACADEMICO.MATERIAL.*
       AcademicoPermission.ACTUALIZAR_MATERIAL,
     ],
-    'Informes': [
-      InformesPermission.VER,
-      InformesPermission.BENEFICIARIOS,
-      InformesPermission.EXPORTAR,
-      InformesPermission.ASISTENCIA,
-      InformesPermission.PROGRAMACION,
-      InformesPermission.ADVISORS,
-      InformesPermission.ACADEMICA,
-      InformesPermission.USUARIOS,
-      InformesPermission.CONTRATOS,
-      InformesPermission.PLANTA,
-      InformesPermission.ESTADISTICAS,
-      // Tableros por área (nivel 2 standalone) — un usuario con sólo un
-      // tablero asignado igual debe ver el grupo Informes para alcanzarlo.
-      InformesPermission.TABLERO_ADMINISTRACION,
-      InformesPermission.TABLERO_GERENCIA,
-      InformesPermission.TABLERO_ACADEMICA,
-      InformesPermission.TABLERO_SERVICIO,
-      InformesPermission.TABLERO_RECAUDO,
-      InformesPermission.TABLERO_COMERCIAL,
-      InformesPermission.TABLERO_SISTEMA,
-    ],
+    // El grupo Informes se muestra si el usuario tiene CUALQUIER permiso de
+    // Informes (el abuelo VER, un ítem de informe o un botón). Las secciones
+    // (Asistencia, etc.) aparecen solas según los ítems permitidos (2 marcas).
+    'Informes': Object.values(InformesPermission),
     'Servicio': [
       // SERVICIO.WELCOME.*
       ServicioPermission.WELCOME_CARGAR_EVENTOS,
@@ -498,19 +467,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return true
   })
 
-  // Permisos por sub-grupo de Informes (isSubmenu: true)
-  const informesSubmenuPermissions: Record<string, Permission[]> = {
-    'Asistencia':    [InformesPermission.ASISTENCIA],
-    'Programación':  [InformesPermission.PROGRAMACION],
-    'Advisors':      [InformesPermission.ADVISORS],
-    // Académica acepta el permiso de grupo nuevo + USUARIOS (compat: los ítems
-    // Usuarios/InfoAcademic se movieron aquí) + el permiso del reporte nuevo,
-    // para que ningún rol pierda acceso a lo que ya veía.
-    'Académica':     [InformesPermission.ACADEMICA, InformesPermission.USUARIOS, InformesPermission.ACAD_HORAS_ADVISOR],
-    'Planta':        [InformesPermission.PLANTA],
-    'Estadísticas':  [InformesPermission.ESTADISTICAS],
-  }
-
     // Also filter children of each navigation item based on page permissions
   const finalNavigation = filteredNavigation.map(item => {
     if (!item.children) return item
@@ -555,11 +511,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         return mPerms ? hasAnyPermission(mPerms) : false
       }
 
-      // Sub-grupos con isSubmenu (ej: Asistencia, Programación, Advisors dentro de Informes)
-      // Visible sii: tiene el permiso de grupo (nivel 2) Y le queda ≥1 nieto visible
-      // tras el filtrado de nivel 3. Esto honra los 3 niveles independientes.
-      if (child.isSubmenu && informesSubmenuPermissions[child.name]) {
-        if (!hasAnyPermission(informesSubmenuPermissions[child.name])) return false
+      // Sub-grupos de Informes (Asistencia, Programación, Advisors, Académica,
+      // Planta, Estadísticas): modelo de 2 marcas — la sección se muestra si le
+      // queda ≥1 ítem visible tras el filtrado de nivel 3 (no necesita permiso
+      // propio de sección). Basta marcar el abuelo "Informes" + el ítem.
+      if (child.isSubmenu && item.name === 'Informes') {
         return (child.children?.length ?? 0) > 0
       }
 

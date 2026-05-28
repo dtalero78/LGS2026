@@ -2,7 +2,7 @@
 
 import { exportToExcel } from '@/lib/export-excel'
 import { PermissionGuard } from '@/components/permissions/PermissionGuard'
-import { InformesPermission } from '@/types/permissions'
+import type { Permission } from '@/types/permissions'
 
 export interface SessionRow {
   _id:           string
@@ -24,9 +24,10 @@ interface Props {
   loading: boolean
   onRowClick: (row: SessionRow) => void
   filters: { fechaInicio: string; fechaFin: string }
+  exportPermission: Permission
 }
 
-export default function AdvisorScheduleTable({ data, loading, onRowClick, filters }: Props) {
+export default function AdvisorScheduleTable({ data, loading, onRowClick, filters, exportPermission }: Props) {
   const handleExport = () => {
     exportToExcel(
       data,
@@ -56,7 +57,7 @@ export default function AdvisorScheduleTable({ data, loading, onRowClick, filter
             {data.length.toLocaleString()} sesiones · Haz clic en una fila para ver los usuarios
           </p>
         </div>
-        <PermissionGuard permission={InformesPermission.ADVISORS_EXPORTAR}>
+        <PermissionGuard permission={exportPermission}>
           <button type="button" onClick={handleExport} disabled={loading || data.length === 0}
             className="px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
             <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">

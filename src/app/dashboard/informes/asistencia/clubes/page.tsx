@@ -260,7 +260,7 @@ export default function InformeClubesPage() {
                   className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
                   Limpiar filtros
                 </button>
-                <PermissionGuard permission={InformesPermission.ASISTENCIA_EXPORTAR}>
+                <PermissionGuard permission={InformesPermission.ASIS_CLUBES_EXP}>
                   <button type="button" onClick={handleCSVTraining} disabled={trLoading}
                     className="px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
                     <DownloadIcon /> Descargar CSV
@@ -331,7 +331,7 @@ export default function InformeClubesPage() {
                   className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
                   Limpiar filtros
                 </button>
-                <PermissionGuard permission={InformesPermission.ASISTENCIA_EXPORTAR}>
+                <PermissionGuard permission={InformesPermission.ASIS_CLUBES_EXP}>
                   <button type="button" onClick={handleCSVClubes} disabled={clLoading}
                     className="px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
                     <DownloadIcon /> Descargar CSV

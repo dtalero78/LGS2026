@@ -125,6 +125,7 @@ export default function AdvisorScheduleReportPage({ reportType }: Props) {
           loading={loading}
           showNivelFilter={config.showNivelFilter}
           showTipoClubFilter={config.showTipoClubFilter}
+          exportPermission={config.exportPermission}
         />
 
         {/* Error */}
@@ -168,6 +169,7 @@ export default function AdvisorScheduleReportPage({ reportType }: Props) {
           loading={loading}
           onRowClick={row => setSelectedId(row._id)}
           filters={{ fechaInicio: filters.fechaInicio, fechaFin: filters.fechaFin }}
+          exportPermission={config.exportPermission}
         />
 
       </div>

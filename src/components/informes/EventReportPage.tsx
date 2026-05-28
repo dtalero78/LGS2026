@@ -90,6 +90,7 @@ export default function EventReportPage({ reportType }: Props) {
           horas={meta.horas}
           advisors={meta.advisors}
           loading={loading}
+          exportPermission={config.exportPermission}
         />
 
         {/* Error */}

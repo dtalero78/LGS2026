@@ -175,7 +175,7 @@ export default function InformesUsuariosPage() {
               <div className="flex items-center gap-3">
                 <span className="text-sm text-gray-500">{records.length} registro{records.length !== 1 ? 's' : ''}</span>
                 {records.length > 0 && (
-                  <PermissionGuard permission={InformesPermission.USUARIOS_EXPORTAR}>
+                  <PermissionGuard permission={InformesPermission.ACAD_USUARIOS_EXP}>
                     <button type="button" onClick={handleCSV}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
                       <ArrowDownTrayIcon className="h-4 w-4" />

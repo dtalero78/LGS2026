@@ -1,4 +1,5 @@
 import type { AdvisorReportType } from '@/app/api/postgres/reports/programacion/advisors/route'
+import { InformesPermission, type Permission } from '@/types/permissions'
 export type { AdvisorReportType }
 
 export interface AdvisorReportConfig {
@@ -11,6 +12,7 @@ export interface AdvisorReportConfig {
   showNivelFilter:    boolean         // false for clubes (use tipoClub) and welcome
   showTipoClubFilter: boolean         // true only for clubes
   accentColor:        string
+  exportPermission:   Permission      // permiso del botón "Exportar CSV" de ESTE informe
 }
 
 export const ADVISOR_REPORT_CONFIGS: Record<AdvisorReportType, AdvisorReportConfig> = {
@@ -24,6 +26,7 @@ export const ADVISOR_REPORT_CONFIGS: Record<AdvisorReportType, AdvisorReportConf
     showNivelFilter:    true,
     showTipoClubFilter: false,
     accentColor:        '#3b82f6',
+    exportPermission:   InformesPermission.ADV_SESIONES_EXP,
   },
   jumps: {
     title:              'Informe de Jumps por Advisor',
@@ -35,6 +38,7 @@ export const ADVISOR_REPORT_CONFIGS: Record<AdvisorReportType, AdvisorReportConf
     showNivelFilter:    true,
     showTipoClubFilter: false,
     accentColor:        '#ef4444',
+    exportPermission:   InformesPermission.ADV_JUMPS_EXP,
   },
   training: {
     title:              'Informe de Training por Advisor',
@@ -46,6 +50,7 @@ export const ADVISOR_REPORT_CONFIGS: Record<AdvisorReportType, AdvisorReportConf
     showNivelFilter:    true,
     showTipoClubFilter: false,
     accentColor:        '#f97316',
+    exportPermission:   InformesPermission.ADV_TRAINING_EXP,
   },
   clubes: {
     title:              'Informe de Clubes por Advisor',
@@ -57,6 +62,7 @@ export const ADVISOR_REPORT_CONFIGS: Record<AdvisorReportType, AdvisorReportConf
     showNivelFilter:    false,
     showTipoClubFilter: true,
     accentColor:        '#22c55e',
+    exportPermission:   InformesPermission.ADV_CLUBES_EXP,
   },
   welcome: {
     title:              'Informe de Welcome por Advisor',
@@ -68,6 +74,7 @@ export const ADVISOR_REPORT_CONFIGS: Record<AdvisorReportType, AdvisorReportConf
     showNivelFilter:    false,
     showTipoClubFilter: false,
     accentColor:        '#a855f7',
+    exportPermission:   InformesPermission.ADV_WELCOME_EXP,
   },
   essential: {
     title:              'Informe Essential por Advisor',
@@ -79,5 +86,6 @@ export const ADVISOR_REPORT_CONFIGS: Record<AdvisorReportType, AdvisorReportConf
     showNivelFilter:    false,
     showTipoClubFilter: false,
     accentColor:        '#0ea5e9',
+    exportPermission:   InformesPermission.ADV_ESSENTIAL_EXP,
   },
 }

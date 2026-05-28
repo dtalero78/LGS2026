@@ -225,7 +225,7 @@ export default function NivelesPage() {
               >
                 Limpiar filtros
               </button>
-              <PermissionGuard permission={InformesPermission.ESTADISTICAS_EXPORTAR}>
+              <PermissionGuard permission={InformesPermission.EST_NIVELES_EXP}>
                 <button type="button" onClick={handleCSV} disabled={loading}
                   className="px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
                 >

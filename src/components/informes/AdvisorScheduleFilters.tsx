@@ -1,7 +1,7 @@
 'use client'
 
 import { PermissionGuard } from '@/components/permissions/PermissionGuard'
-import { InformesPermission } from '@/types/permissions'
+import type { Permission } from '@/types/permissions'
 
 export interface AdvisorFilterState {
   fechaInicio:  string
@@ -24,11 +24,12 @@ interface Props {
   loading:            boolean
   showNivelFilter:    boolean
   showTipoClubFilter: boolean
+  exportPermission:   Permission
 }
 
 export default function AdvisorScheduleFilters({
   filters, onChange, onApply, onClear, onExport,
-  advisors, niveles, loading, showNivelFilter, showTipoClubFilter,
+  advisors, niveles, loading, showNivelFilter, showTipoClubFilter, exportPermission,
 }: Props) {
   const set = (key: keyof AdvisorFilterState, val: string) =>
     onChange({ ...filters, [key]: val })
@@ -91,7 +92,7 @@ export default function AdvisorScheduleFilters({
             className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
             Limpiar filtros
           </button>
-          <PermissionGuard permission={InformesPermission.ADVISORS_EXPORTAR}>
+          <PermissionGuard permission={exportPermission}>
             <button type="button" onClick={onExport} disabled={loading}
               className="px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center gap-1.5">
               <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">

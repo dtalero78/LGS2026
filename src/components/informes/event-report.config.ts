@@ -1,4 +1,5 @@
 import type { ReportConfig, ReportType } from './event-report.types'
+import { InformesPermission } from '@/types/permissions'
 
 export const TYPE_COLORS: Record<string, string> = {
   SESSION:  '#3b82f6',   // blue
@@ -19,6 +20,7 @@ export const REPORT_CONFIGS: Record<ReportType, ReportConfig> = {
     ],
     showTipoClubFilter: false,
     colors: { SESSION: '#3b82f6', JUMP: '#ef4444' },
+    exportPermission: InformesPermission.PROG_SESIONES_JUMPS_EXP,
   },
   'training-clubs': {
     title:    'Calendario Training – Clubs',
@@ -30,6 +32,7 @@ export const REPORT_CONFIGS: Record<ReportType, ReportConfig> = {
     ],
     showTipoClubFilter: true,
     colors: { TRAINING: '#f97316', CLUB: '#22c55e' },
+    exportPermission: InformesPermission.PROG_TRAINING_CLUBS_EXP,
   },
   'welcome': {
     title:    'Calendario – Welcome',
@@ -40,5 +43,6 @@ export const REPORT_CONFIGS: Record<ReportType, ReportConfig> = {
     ],
     showTipoClubFilter: false,
     colors: { WELCOME: '#a855f7' },
+    exportPermission: InformesPermission.PROG_WELCOME_EXP,
   },
 }

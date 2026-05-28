@@ -1,3 +1,5 @@
+import type { Permission } from '@/types/permissions'
+
 export type ReportType = 'sessions-jumps' | 'training-clubs' | 'welcome'
 
 export interface FilterState {
@@ -89,4 +91,5 @@ export interface ReportConfig {
   kpiLabels:         { key: string; label: string }[]
   showTipoClubFilter: boolean
   colors:            Record<string, string>
+  exportPermission:  Permission   // permiso del botón "Exportar CSV" de ESTE informe
 }

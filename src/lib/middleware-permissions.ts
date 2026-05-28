@@ -184,19 +184,12 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/dashboard/informes/advisors/resumen': ['INFORMES.ADVISORS.RESUMEN' as Permission],
   '/dashboard/informes/academica/horas-advisor': ['INFORMES.ACADEMICA.HORAS_ADVISOR' as Permission],
   '/dashboard/informes/usuarios': ['INFORMES.USUARIOS' as Permission],
+  '/dashboard/informes/infoacademic-user': ['INFORMES.ACADEMICA.INFOACADEMIC' as Permission],
   '/dashboard/informes/contratos': ['INFORMES.CONTRATOS' as Permission],
   '/dashboard/informes/planta/advisors': ['INFORMES.PLANTA.ADVISORS' as Permission],
   '/dashboard/informes/planta/administrativos': ['INFORMES.PLANTA.ADMINISTRATIVOS' as Permission],
   '/dashboard/informes/estadisticas':          ['INFORMES.ESTADISTICAS.NIVELES' as Permission],
   '/dashboard/informes/estadisticas/horarios': ['INFORMES.ESTADISTICAS.HORARIOS' as Permission],
-  // Nivel 2 — Tableros por área (en construcción)
-  '/dashboard/tableros/administracion': ['INFORMES.TABLERO.ADMINISTRACION' as Permission],
-  '/dashboard/tableros/gerencia':       ['INFORMES.TABLERO.GERENCIA' as Permission],
-  '/dashboard/tableros/academica':      ['INFORMES.TABLERO.ACADEMICA' as Permission],
-  '/dashboard/tableros/servicio':       ['INFORMES.TABLERO.SERVICIO' as Permission],
-  '/dashboard/tableros/recaudo':        ['INFORMES.TABLERO.RECAUDO' as Permission],
-  '/dashboard/tableros/comercial':      ['INFORMES.TABLERO.COMERCIAL' as Permission],
-  '/dashboard/tableros/sistema':        ['INFORMES.TABLERO.SISTEMA' as Permission],
 
   // Mantenimiento - Migrar Contrato
   '/admin/migrar-contrato': [
