@@ -183,8 +183,8 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 - **Utilidad compartida**: `src/lib/export-excel.ts` → `exportToExcel(data, columns, filename)` (client-side, genera CSV con BOM para compatibilidad con Excel y caracteres en español)
 
 ### Jobs Automáticos (Cron)
-134. Expiración automática de contratos (diario 12:00 UTC, marca como FINALIZADA + estadoInactivo)
-135. Reactivación automática de OnHold (diario 6:00 AM UTC, extiende contrato por días pausados)
+134. Expiración automática de contratos (diario 04:00 UTC = 11:00 PM Colombia, marca como FINALIZADA + estadoInactivo)
+135. Reactivación automática de OnHold (diario 03:00 UTC = 10:00 PM Colombia, extiende contrato por días pausados)
 136. Autenticación de cron jobs con CRON_SECRET
 
 ### Panel del Estudiante (Auto-Servicio)
@@ -1203,7 +1203,9 @@ When a student with role ESTUDIANTE loads the panel (`resolveStudentFromSession`
 - Implementation: `src/services/panel-estudiante.service.ts` (resolveStudentFromSession)
 
 ### By Cron Job
-- Daily at 12:00 UTC, the cron job checks all contracts and marks expired ones as FINALIZADA + inactive
+- Daily at 04:00 UTC (11:00 PM Colombia), the cron job checks all contracts and marks expired ones as FINALIZADA + inactive
+- Reactivation of OnHold runs daily at 03:00 UTC (10:00 PM Colombia)
+- **Schedule source of truth**: `scripts/cron-worker.js` (node-cron daemon desplegado como Worker en Digital Ocean vía `.do/app.yaml`). Los horarios reales son 03:00 UTC (`reactivate-onhold`) y 04:00 UTC (`expire-contracts`)
 - Implementation: `src/app/api/cron/expire-contracts/route.ts`
 
 ## Consent System (Consentimiento Declarativo - Firma Digital)
