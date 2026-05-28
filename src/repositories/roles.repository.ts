@@ -5,6 +5,7 @@
  */
 
 import 'server-only';
+import { randomUUID } from 'crypto';
 import { query, queryOne, queryMany, parseJsonbFields } from '@/lib/postgres';
 import { BaseRepository } from './base.repository';
 
@@ -34,17 +35,21 @@ class RolPermisosRepositoryClass extends BaseRepository {
   }
 
   async create(rol: string, permisos: string[], descripcion: string, activo: boolean = true) {
+    // `_id` es NOT NULL sin default; los roles recientes usan UUID. Mantenemos
+    // sincronizadas ambas parejas de fechas: las nativas (`_createdDate`/`_updatedDate`)
+    // y las legacy Wix (`fechaCreacion`/`fechaActualizacion`).
     const row = await queryOne(
-      `INSERT INTO "ROL_PERMISOS" ("rol", "permisos", "descripcion", "activo", "_createdDate", "_updatedDate")
-       VALUES ($1, $2, $3, $4, NOW(), NOW())
+      `INSERT INTO "ROL_PERMISOS" ("_id", "rol", "permisos", "descripcion", "activo", "fechaCreacion", "fechaActualizacion", "_createdDate", "_updatedDate")
+       VALUES ($1, $2, $3, $4, $5, NOW(), NOW(), NOW(), NOW())
        RETURNING *`,
-      [rol, JSON.stringify(permisos), descripcion, activo]
+      [randomUUID(), rol, JSON.stringify(permisos), descripcion, activo]
     );
     return this.parse(row);
   }
 
   async updatePermisos(rol: string, permisos: string[], descripcion?: string) {
-    const updates = [`"permisos" = $1`, `"_updatedDate" = NOW()`];
+    // `fechaActualizacion` (legacy Wix) se mantiene en sync con `_updatedDate`.
+    const updates = [`"permisos" = $1`, `"_updatedDate" = NOW()`, `"fechaActualizacion" = NOW()`];
     const params: any[] = [JSON.stringify(permisos)];
     let idx = 2;
 
