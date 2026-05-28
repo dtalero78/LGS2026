@@ -115,6 +115,7 @@ const getNavigation = (userEmail: string) => [
       {
         name: 'Académica', isSubmenu: true, children: [
           { name: 'Horas Advisor', href: '/dashboard/informes/academica/horas-advisor', newTab: true },
+          { name: 'Hold & Vigencias', href: '/dashboard/informes/academica/hold-vigencias', newTab: true },
           { name: 'Usuarios', href: '/dashboard/informes/usuarios', newTab: true },
           { name: 'InfoAcademic User', href: '/dashboard/informes/infoacademic-user', newTab: true },
         ]
@@ -261,6 +262,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/dashboard/informes/advisors/essential': [InformesPermission.ADV_ESSENTIAL],
     '/dashboard/informes/advisors/resumen':   [InformesPermission.ADV_RESUMEN],
     '/dashboard/informes/academica/horas-advisor': [InformesPermission.ACAD_HORAS_ADVISOR],
+    '/dashboard/informes/academica/hold-vigencias': [InformesPermission.ACAD_HOLD_VIGENCIAS],
     '/dashboard/informes/usuarios':           [InformesPermission.USUARIOS],
     '/dashboard/informes/infoacademic-user':  [InformesPermission.ACAD_INFOACADEMIC],
     '/dashboard/informes/contratos':          [InformesPermission.CONTRATOS],
