@@ -119,7 +119,11 @@ const getNavigation = (userEmail: string) => [
           { name: 'InfoAcademic User', href: '/dashboard/informes/infoacademic-user', newTab: true },
         ]
       },
-      { name: 'Contratos', href: '/dashboard/informes/contratos', newTab: true },
+      {
+        name: 'Contratos', isSubmenu: true, children: [
+          { name: 'Matrículas', href: '/dashboard/informes/contratos/matriculas', newTab: true },
+        ]
+      },
       {
         name: 'Planta', isSubmenu: true, children: [
           { name: 'Advisors', href: '/dashboard/informes/planta/advisors', newTab: true },
@@ -260,6 +264,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/dashboard/informes/usuarios':           [InformesPermission.USUARIOS],
     '/dashboard/informes/infoacademic-user':  [InformesPermission.ACAD_INFOACADEMIC],
     '/dashboard/informes/contratos':          [InformesPermission.CONTRATOS],
+    '/dashboard/informes/contratos/matriculas': [InformesPermission.CONTRATOS_MATRICULAS],
     '/dashboard/informes/planta/advisors': [InformesPermission.PLANTA_ADVISORS],
     '/dashboard/informes/planta/administrativos': [InformesPermission.PLANTA_ADMINISTRATIVOS],
     '/dashboard/informes/estadisticas':         [InformesPermission.EST_NIVELES],

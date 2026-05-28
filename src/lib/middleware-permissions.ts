@@ -186,6 +186,7 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/dashboard/informes/usuarios': ['INFORMES.USUARIOS' as Permission],
   '/dashboard/informes/infoacademic-user': ['INFORMES.ACADEMICA.INFOACADEMIC' as Permission],
   '/dashboard/informes/contratos': ['INFORMES.CONTRATOS' as Permission],
+  '/dashboard/informes/contratos/matriculas': ['INFORMES.CONTRATOS.MATRICULAS' as Permission],
   '/dashboard/informes/planta/advisors': ['INFORMES.PLANTA.ADVISORS' as Permission],
   '/dashboard/informes/planta/administrativos': ['INFORMES.PLANTA.ADMINISTRATIVOS' as Permission],
   '/dashboard/informes/estadisticas':          ['INFORMES.ESTADISTICAS.NIVELES' as Permission],

@@ -562,7 +562,8 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
   { code: InformesPermission.ACAD_INFOACADEMIC_PDF,  module: Module.INFORMES, section: 'Académica', name: '↳ Imprimir / PDF (InfoAcademic)', description: 'Botón Imprimir / generar PDF del informe Académica → InfoAcademic User' },
 
   // -- Sección: Contratos --
-  { code: InformesPermission.CONTRATOS, module: Module.INFORMES, section: 'Contratos', name: 'Informe "Contratos"', description: 'Ver el informe de Contratos' },
+  { code: InformesPermission.CONTRATOS, module: Module.INFORMES, section: 'Contratos', name: 'Informe "Contratos"', description: 'Ver el informe de Contratos (placeholder)' },
+  { code: InformesPermission.CONTRATOS_MATRICULAS, module: Module.INFORMES, section: 'Contratos', name: 'Informe "Matrículas"', description: 'Ver el informe Contratos → Matrículas (por aprobar / vigentes / finalizados, académicos, barras, dona y heatmap por país)' },
 
   // -- Sección: Planta --
   { code: InformesPermission.PLANTA_ADVISORS,        module: Module.INFORMES, section: 'Planta', name: 'Informe "Advisors" (Planta)',        description: 'Ver el informe Planta → Advisors' },
