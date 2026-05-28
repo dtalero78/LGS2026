@@ -119,7 +119,7 @@ function PlatCards({ rows, metricKey = 'asistieron' }: {
   if (!rows.length) return null
   const totalMetric = rows.reduce((s, r) => s + ((r as any)[metricKey] ?? 0), 0)
   return (
-    <div className="mt-4 flex justify-end flex-wrap gap-2">
+    <div className="flex-1 min-w-[240px] flex flex-wrap gap-2 content-start justify-end">
       {rows.map((row, i) => {
         const val = (row as any)[metricKey] ?? 0
         const pct = totalMetric > 0 ? ((val / totalMetric) * 100).toFixed(0) : '0'
@@ -171,18 +171,23 @@ function SectionCard({ title, subtitle, section, metricKey = 'asistieron', metri
         </div>
       </div>
 
-      <PlatDonut rows={section.porPlataforma} metricKey={metricKey} metricLabel={metricLabel} hideAbsences={isComplementaria} />
+      {/* Una sola fila: donut + tabla (izquierda) y las tarjetas de país
+          llenando el costado derecho. Antes las tarjetas quedaban sueltas
+          abajo, dejando una zona vacía en forma de L. */}
+      <div className="flex flex-wrap items-start gap-5">
+        <PlatDonut rows={section.porPlataforma} metricKey={metricKey} metricLabel={metricLabel} hideAbsences={isComplementaria} />
 
-      {isComplementaria ? (
-        <div className="mt-4 flex justify-end">
-          <div className="rounded-lg px-5 py-3 text-center" style={{ backgroundColor: '#10b981' + '18' }}>
-            <p className="text-2xl font-bold" style={{ color: '#10b981' }}>{totalComp.toLocaleString()}</p>
-            <p className="text-xs text-gray-500 mt-1">Generadas</p>
+        {isComplementaria ? (
+          <div className="flex-1 min-w-[240px] flex justify-end items-start">
+            <div className="rounded-lg px-5 py-3 text-center" style={{ backgroundColor: '#10b981' + '18' }}>
+              <p className="text-2xl font-bold" style={{ color: '#10b981' }}>{totalComp.toLocaleString()}</p>
+              <p className="text-xs text-gray-500 mt-1">Generadas</p>
+            </div>
           </div>
-        </div>
-      ) : (
-        <PlatCards rows={section.porPlataforma} metricKey={metricKey} />
-      )}
+        ) : (
+          <PlatCards rows={section.porPlataforma} metricKey={metricKey} />
+        )}
+      </div>
     </div>
   )
 }
