@@ -399,7 +399,13 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
          agg."ultimaCuotaPagada"                 AS "ultimaCuotaPagada",
          f."fechaPago"                           AS "fechaPrimerPago"
        FROM "PEOPLE" p
-       LEFT JOIN "FINANCIEROS" f ON f."contrato" = p."contrato"
+       LEFT JOIN LATERAL (
+         SELECT ff."saldo", ff."fechaPago"
+         FROM "FINANCIEROS" ff
+         WHERE ff."contrato" = p."contrato"
+         ORDER BY ff."_createdDate" DESC NULLS LAST
+         LIMIT 1
+       ) f ON true
        LEFT JOIN LATERAL (
          SELECT pt0."tipoCartera", pt0."tipoCarteraHistory", pt0."_updatedDate"
          FROM "PAGOS_TITULARES" pt0
