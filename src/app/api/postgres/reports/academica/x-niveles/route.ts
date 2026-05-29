@@ -26,6 +26,20 @@ const MAX_ROWS = 8000
 const NIVEL_ORDER = ['BN1', 'BN2', 'BN3', 'P1', 'P2', 'P3', 'F1', 'F2', 'F3', 'MASTER', 'IELTS', 'B2FIRST', 'TOEFL', 'WELCOME', 'ESS', 'DONE']
 const nivelRank = (n: string) => { const i = NIVEL_ORDER.indexOf(n); return i >= 0 ? i : 999 }
 
+// Steps CANÓNICOS del currículo por nivel (no de los datos, que pueden traer
+// registros sucios — ej. P2 con "Step 26", que en realidad es de P3).
+// Niveles principales = 5 steps consecutivos: BN1=1–5, BN2=6–10, … F3=41–45.
+const MAIN_LEVELS = ['BN1', 'BN2', 'BN3', 'P1', 'P2', 'P3', 'F1', 'F2', 'F3']
+const SPECIAL_STEPS: Record<string, string[]> = {
+  WELCOME: ['WELCOME'], ESS: ['Step 0'],
+  MASTER: ['Step 46'], IELTS: ['Step 47'], B2FIRST: ['Step 48'], TOEFL: ['Step 49'], DONE: ['Step 50'],
+}
+function canonicalSteps(nivel: string): string[] {
+  const mi = MAIN_LEVELS.indexOf(nivel)
+  if (mi >= 0) { const start = 1 + mi * 5; return Array.from({ length: 5 }, (_, k) => `Step ${start + k}`) }
+  return SPECIAL_STEPS[nivel] ?? []
+}
+
 export const GET = handlerWithAuth(async (req, _ctx, session) => {
   await requirePermission(session, InformesPermission.ACAD_X_NIVELES)
 
@@ -76,15 +90,9 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     SELECT DISTINCT "nivel" FROM "ACADEMICA" WHERE "nivel" IS NOT NULL AND TRIM("nivel") <> ''`)
   const niveles = nivelesRes.rows.map(r => r.nivel).sort((a, b) => nivelRank(a) - nivelRank(b) || a.localeCompare(b))
 
-  // Steps disponibles para el nivel seleccionado (ordenados numéricamente).
-  // Vacío cuando no hay nivel ('Todos') — el filtro de step aplica por nivel.
-  const stepsDisponibles = nivel
-    ? (await query<{ step: string }>(`
-        SELECT "step" FROM "ACADEMICA"
-        WHERE "nivel" = $1 AND "step" IS NOT NULL AND TRIM("step") <> ''
-        GROUP BY "step"
-        ORDER BY NULLIF(REGEXP_REPLACE("step", '[^0-9]', '', 'g'), '')::int NULLS LAST, "step"`, [nivel])).rows.map(r => r.step)
-    : []
+  // Steps disponibles para el dropdown = los CANÓNICOS del nivel (currículo),
+  // no los distinct de ACADEMICA (que incluyen datos sucios). Vacío si 'Todos'.
+  const stepsDisponibles = nivel ? canonicalSteps(nivel) : []
 
   return successResponse({
     rows: rowsRes.rows,
