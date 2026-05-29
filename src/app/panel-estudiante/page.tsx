@@ -31,6 +31,7 @@ import MaterialsList from '@/components/panel-estudiante/MaterialsList'
 import WhatsAppContacts from '@/components/panel-estudiante/WhatsAppContacts'
 import AdvisorComments from '@/components/panel-estudiante/AdvisorComments'
 import ClassHistory from '@/components/panel-estudiante/ClassHistory'
+import JumpExamBanner from '@/components/panel-estudiante/JumpExamBanner'
 
 function PanelEstudianteContent() {
   const [showBookingFlow, setShowBookingFlow] = useState(false)
@@ -208,6 +209,9 @@ function PanelEstudianteContent() {
 
       {/* Main Content */}
       <div className="px-6 pt-8 pb-6 space-y-6">
+        {/* Jump exam banner (only when eligible) */}
+        <JumpExamBanner />
+
         {/* 3. Student Info Card + Attendance Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Student Info Card */}

@@ -502,6 +502,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     name: 'Selector de Advisor en Control Horas',
     description: 'Habilita el dropdown para seleccionar/consultar el Control de Horas de CUALQUIER advisor (no sólo el propio). Sin este permiso el usuario sólo ve su propia info. SUPER_ADMIN/ADMIN lo tienen implícito.',
   },
+  {
+    code: AcademicoPermission.JUMP_EVAL_REVISAR,
+    module: Module.ACADEMICO,
+    section: 'Evaluaciones Jump',
+    name: 'Revisar Evaluaciones Jump (Bot Tutor)',
+    description: 'Acceso a /dashboard/academic/jump-evaluaciones. Permite revisar los reportes del bot tutor del examen Jump y aprobar/rechazar (al aprobar se crea el booking del Jump y avanza el step).',
+  },
 
   // ========== INFORMES MODULE ==========
   // Abuelo: muestra el grupo Informes en el sidebar. Cada informe se habilita

@@ -117,6 +117,9 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/dashboard/academic/control-horas': [
     'ACADEMICO.CONTROL_HORAS.VER' as Permission,
   ],
+  '/dashboard/academic/jump-evaluaciones': [
+    'ACADEMICO.JUMP_EVAL.REVISAR' as Permission,
+  ],
 
   // Panel Advisor
   '/panel-advisor': [

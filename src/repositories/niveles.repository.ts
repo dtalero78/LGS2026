@@ -95,6 +95,26 @@ class NivelesRepositoryClass extends BaseRepository {
     );
     return row?.contenido ?? null;
   }
+
+  /**
+   * Get every step of a nivel with its `contenido`, ordered numerically by step.
+   *
+   * Used by the Jump tutor: a Jump evaluates the WHOLE level, so the bot needs
+   * the aggregated content of all steps (e.g. BN1 → Step 1..5), not just the
+   * jump step. Steps without contenido are returned with `null` so the caller
+   * can decide how to render them.
+   */
+  async findStepsContenidoByNivel(
+    nivel: string
+  ): Promise<Array<{ step: string; description: string | null; contenido: string | null }>> {
+    return queryMany<{ step: string; description: string | null; contenido: string | null }>(
+      `SELECT "step", "description", "contenido"
+       FROM "NIVELES"
+       WHERE "code" = $1
+       ORDER BY NULLIF(REGEXP_REPLACE("step", '\\D', '', 'g'), '')::int ASC NULLS LAST, "step" ASC`,
+      [nivel]
+    );
+  }
 }
 
 // ── STEP_OVERRIDES ──
