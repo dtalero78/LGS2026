@@ -58,6 +58,17 @@ export default function StudentAcademic({ student, classes: initialClasses, view
   const [loadingSteps, setLoadingSteps] = useState(false)
   const [updatingSteps, setUpdatingSteps] = useState<{[key: string]: boolean}>({})
 
+  // Modal de confirmación + motivo obligatorio para override de step.
+  // Cualquier cambio (marcar completo / quitar override) registra entry en
+  // STEP_OVERRIDES.notaoverrideHistory con motivo + actor + accion + before/after.
+  const [overrideModal, setOverrideModal] = useState<{
+    step: string
+    willEnable: boolean    // true = marcar completado | false = quitar override (soft-delete)
+    motivo: string
+    confirm: boolean
+    saving: boolean
+  } | null>(null)
+
   // Cargar todos los advisors de una sola vez (tabla pequeña)
   useEffect(() => {
     const loadAdvisorNames = async () => {
@@ -152,70 +163,53 @@ export default function StudentAcademic({ student, classes: initialClasses, view
     }
   }
 
-  const handleStepToggle = async (stepData: {_id: string, step: string, checkCompletado: boolean}) => {
-    const stepId = stepData._id
-    setUpdatingSteps(prev => ({ ...prev, [stepId]: true }))
+  // El toggle ya no escribe directamente — abre el modal de confirmación con motivo.
+  // El cambio real se ejecuta desde confirmOverrideChange tras motivo + checkbox.
+  const handleStepToggle = (stepData: {_id: string, step: string, checkCompletado: boolean}) => {
+    setOverrideModal({
+      step: stepData.step,
+      willEnable: !stepData.checkCompletado,
+      motivo: '',
+      confirm: false,
+      saving: false,
+    })
+  }
 
+  const confirmOverrideChange = async () => {
+    if (!overrideModal) return
+    const { step, willEnable, motivo, confirm } = overrideModal
+    if (!confirm || !motivo.trim()) return
+
+    setOverrideModal({ ...overrideModal, saving: true })
+    setUpdatingSteps(prev => ({ ...prev, [step]: true }))
     try {
-      console.log('🔄 Toggling step:', stepData)
-
-      // Toggle the checkbox state
-      const newCompleted = !stepData.checkCompletado
-
-      // Create or delete step override
-      if (newCompleted) {
-        // Create step override
-        const response = await fetch(`/api/postgres/students/${student.numeroId}/step-override`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ step: stepData.step, completado: true, nivel: student.nivel })
-        })
-
-        if (!response.ok) {
-          throw new Error(`HTTP error: ${response.status}`)
-        }
-
-        const result = await response.json()
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to create step override')
-        }
-
-        console.log('✅ Step override created:', result)
-      } else {
-        // Delete step override
-        const response = await fetch(`/api/postgres/students/${student.numeroId}/step-override?step=${encodeURIComponent(stepData.step)}`, {
-          method: 'DELETE'
-        })
-
-        if (!response.ok) {
-          throw new Error(`HTTP error: ${response.status}`)
-        }
-
-        const result = await response.json()
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to delete step override')
-        }
-
-        console.log('✅ Step override deleted:', result)
+      // POST único: completado=true (marcar) o completado=null (quitar = soft-delete).
+      // Motivo obligatorio se valida también server-side; actor sale de la sesión.
+      const response = await fetch(`/api/postgres/students/${student.numeroId}/step-override`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          step,
+          completado: willEnable ? true : null,
+          motivo: motivo.trim(),
+          nivel: student.nivel,
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || `HTTP ${response.status}`)
       }
 
-      // Update local state
       setSteps(prevSteps =>
-        prevSteps.map(step =>
-          step._id === stepId
-            ? { ...step, checkCompletado: newCompleted }
-            : step
-        )
+        prevSteps.map(s => s.step === step ? { ...s, checkCompletado: willEnable } : s)
       )
-
-      // Note: Automatic step recalculation would be handled by Wix backend
-      // The step override functionality is now complete and working
-
-    } catch (error) {
-      console.error('❌ Error updating step override:', error)
-      alert(`Error al actualizar step: ${error instanceof Error ? error.message : 'Error desconocido'}`)
+      setOverrideModal(null)
+    } catch (error: any) {
+      console.error('❌ Error en override:', error)
+      alert(`Error al cambiar override: ${error?.message || 'Error desconocido'}`)
+      setOverrideModal(om => om ? { ...om, saving: false } : null)
     } finally {
-      setUpdatingSteps(prev => ({ ...prev, [stepId]: false }))
+      setUpdatingSteps(prev => ({ ...prev, [step]: false }))
     }
   }
 
@@ -956,7 +950,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
         )}
 
         <div className="mt-4 text-xs text-gray-500">
-          Usa los botones toggle para marcar/desmarcar steps manualmente. Los cambios se guardan automáticamente.
+          Cada cambio en un override (marcar como completado o quitarlo) requiere un <strong>motivo</strong> y queda registrado en el historial auditable del estudiante.
         </div>
       </div>
     </div>
@@ -1500,6 +1494,69 @@ export default function StudentAcademic({ student, classes: initialClasses, view
                     )}
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmación + motivo para override de step (auditable) */}
+      {overrideModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4">
+            <div className="fixed inset-0 bg-gray-900/60" onClick={() => !overrideModal.saving && setOverrideModal(null)} />
+            <div className="relative bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {overrideModal.willEnable
+                  ? `Marcar ${overrideModal.step} como COMPLETADO`
+                  : `Quitar override de ${overrideModal.step}`}
+              </h3>
+              <p className="mt-2 text-sm text-gray-600">
+                {overrideModal.willEnable
+                  ? 'Este step se considerará aprobado por administración aunque no se cumplan las clases del currículo.'
+                  : 'El override se quitará (soft-delete). El step volverá a calcularse desde los bookings.'} El cambio queda registrado con tu usuario, fecha y motivo en el historial auditable.
+              </p>
+
+              <label className="block mt-4 text-sm font-medium text-gray-700">Motivo (obligatorio)</label>
+              <textarea
+                rows={3}
+                value={overrideModal.motivo}
+                onChange={e => setOverrideModal(om => om ? { ...om, motivo: e.target.value } : null)}
+                disabled={overrideModal.saving}
+                placeholder="Describe brevemente por qué aplicas este cambio…"
+                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+
+              <label className="mt-4 flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={overrideModal.confirm}
+                  onChange={e => setOverrideModal(om => om ? { ...om, confirm: e.target.checked } : null)}
+                  disabled={overrideModal.saving}
+                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                />
+                Confirmo este cambio
+              </label>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setOverrideModal(null)}
+                  disabled={overrideModal.saving}
+                  className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmOverrideChange}
+                  disabled={!overrideModal.confirm || !overrideModal.motivo.trim() || overrideModal.saving}
+                  className={`px-4 py-2 text-sm rounded-lg text-white font-medium ${
+                    overrideModal.willEnable ? 'bg-primary-600 hover:bg-primary-700' : 'bg-amber-600 hover:bg-amber-700'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  {overrideModal.saving ? 'Guardando…' : overrideModal.willEnable ? 'Marcar completado' : 'Quitar override'}
+                </button>
               </div>
             </div>
           </div>

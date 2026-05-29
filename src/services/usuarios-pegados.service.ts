@@ -255,10 +255,12 @@ export async function findPegados(opts?: { force?: boolean }): Promise<PegadosRe
     bookingsBySid.set(b.sid, arr);
   }
 
+  // isCompleted IS NOT NULL excluye los overrides soft-deleted (que conservan
+  // la fila e historial pero ya no están activos como decisión).
   const overridesRows = await queryMany<{ studentId: string; step: string; isCompleted: boolean }>(
     `SELECT "studentId", "step", "isCompleted"
      FROM "STEP_OVERRIDES"
-     WHERE "studentId" = ANY($1::text[])`,
+     WHERE "studentId" = ANY($1::text[]) AND "isCompleted" IS NOT NULL`,
     [academicaIds],
   );
 
@@ -390,7 +392,8 @@ async function reconcileOne(
     );
 
     const overridesRows = await queryMany<{ step: string; isCompleted: boolean }>(
-      `SELECT "step", "isCompleted" FROM "STEP_OVERRIDES" WHERE "studentId" = $1`,
+      `SELECT "step", "isCompleted" FROM "STEP_OVERRIDES"
+       WHERE "studentId" = $1 AND "isCompleted" IS NOT NULL`,
       [academicaId],
     );
     const overrides = new Map<string, boolean>();
