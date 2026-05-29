@@ -26,6 +26,10 @@ const MAX_ROWS = 8000
 const NIVEL_ORDER = ['BN1', 'BN2', 'BN3', 'P1', 'P2', 'P3', 'F1', 'F2', 'F3', 'MASTER', 'IELTS', 'B2FIRST', 'TOEFL', 'WELCOME', 'ESS', 'DONE']
 const nivelRank = (n: string) => { const i = NIVEL_ORDER.indexOf(n); return i >= 0 ? i : 999 }
 
+// Niveles de examen internacional que SIEMPRE deben ofrecerse en el dropdown/chips
+// aunque no tengan usuarios activos (para poder filtrarlos). Step canónico: 47/48/49.
+const ALWAYS_SHOW_NIVELES = ['IELTS', 'B2FIRST', 'TOEFL']
+
 // Steps CANÓNICOS del currículo por nivel (no de los datos, que pueden traer
 // registros sucios — ej. P2 con "Step 26", que en realidad es de P3).
 // Niveles principales = 5 steps consecutivos: BN1=1–5, BN2=6–10, … F3=41–45.
@@ -92,7 +96,8 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
   const nivelesRes = await query<{ nivel: string }>(`
     SELECT DISTINCT "nivel" FROM "ACADEMICA"
     WHERE "nivel" IS NOT NULL AND TRIM("nivel") <> '' AND "estadoInactivo" IS NOT TRUE`)
-  const niveles = nivelesRes.rows.map(r => r.nivel).sort((a, b) => nivelRank(a) - nivelRank(b) || a.localeCompare(b))
+  const niveles = Array.from(new Set([...nivelesRes.rows.map(r => r.nivel), ...ALWAYS_SHOW_NIVELES]))
+    .sort((a, b) => nivelRank(a) - nivelRank(b) || a.localeCompare(b))
 
   // Steps disponibles para el dropdown = los CANÓNICOS del nivel (currículo),
   // no los distinct de ACADEMICA (que incluyen datos sucios). Vacío si 'Todos'.
@@ -103,9 +108,12 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     total,
     capped: total > MAX_ROWS,
     maxRows: MAX_ROWS,
-    porNivel: porNivelRes.rows
-      .map(r => ({ nivel: r.nivel, n: Number(r.n) }))
-      .sort((a, b) => nivelRank(a.nivel) - nivelRank(b.nivel) || a.nivel.localeCompare(b.nivel)),
+    porNivel: (() => {
+      const m = new Map(porNivelRes.rows.map(r => [r.nivel, Number(r.n)]))
+      for (const n of ALWAYS_SHOW_NIVELES) if (!m.has(n)) m.set(n, 0)  // siempre presentes, aun con 0
+      return Array.from(m, ([nivel, n]) => ({ nivel, n }))
+        .sort((a, b) => nivelRank(a.nivel) - nivelRank(b.nivel) || a.nivel.localeCompare(b.nivel))
+    })(),
     meta: { niveles, stepsDisponibles, nivel: nivel ?? '', step: step ?? '', startDate: startDate ?? '', endDate: endDate ?? '' },
   })
 })
