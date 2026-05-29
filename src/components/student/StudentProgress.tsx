@@ -7,6 +7,16 @@ interface StudentProgressProps {
   student: Student
 }
 
+interface OverrideHistoryEntry {
+  fecha: string
+  accion: 'MARCADO_COMPLETO' | 'MARCADO_INCOMPLETO' | 'OVERRIDE_QUITADO'
+  isCompletedBefore: boolean | null
+  isCompletedAfter: boolean | null
+  motivo: string
+  realizadoPor: string
+  realizadoPorNombre?: string | null
+}
+
 interface StepProgress {
   step: string
   esJump: boolean
@@ -21,6 +31,7 @@ interface StepProgress {
   mensaje: string | null
   hasOverride: boolean
   overrideCompletado: boolean | null
+  notaOverrideHistory?: OverrideHistoryEntry[]
   complementariaEligible?: boolean
 }
 
@@ -53,6 +64,20 @@ export default function StudentProgress({ student }: StudentProgressProps) {
   const [progressData, setProgressData] = useState<ProgressData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Modal con timeline del historial de override (Opción C)
+  const [historyModal, setHistoryModal] = useState<{ step: string; entries: OverrideHistoryEntry[] } | null>(null)
+
+  const fmtDate = (iso: string) => {
+    try { return new Date(iso).toLocaleString() } catch { return iso }
+  }
+  const accionLabel = (a: OverrideHistoryEntry['accion']) =>
+    a === 'MARCADO_COMPLETO'   ? 'Marcado completo' :
+    a === 'MARCADO_INCOMPLETO' ? 'Marcado incompleto' :
+                                 'Override quitado'
+  const accionColor = (a: OverrideHistoryEntry['accion']) =>
+    a === 'MARCADO_COMPLETO'   ? 'bg-purple-100 text-purple-700' :
+    a === 'MARCADO_INCOMPLETO' ? 'bg-orange-100 text-orange-700' :
+                                 'bg-gray-100 text-gray-700'
 
   useEffect(() => {
     loadProgressData()
@@ -248,18 +273,27 @@ export default function StudentProgress({ student }: StudentProgressProps) {
                               Pendiente
                             </span>
                           )}
-                          {s.hasOverride && (
-                            <span
-                              className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                                s.overrideCompletado === true
-                                  ? 'bg-purple-100 text-purple-700'
-                                  : 'bg-orange-100 text-orange-700'
-                              }`}
-                              title={s.overrideCompletado === true ? 'Completado manualmente por administrador' : 'Marcado como incompleto por administrador'}
-                            >
-                              ✎ {s.overrideCompletado === true ? 'Override ✓' : 'Override ✗'}
-                            </span>
-                          )}
+                          {s.hasOverride && (() => {
+                            const history = s.notaOverrideHistory ?? []
+                            const last = history[history.length - 1]
+                            const lastInfo = last
+                              ? `${last.motivo}\n— ${last.realizadoPorNombre || last.realizadoPor} · ${fmtDate(last.fecha)}\n(Clic para ver historial completo: ${history.length} ${history.length === 1 ? 'cambio' : 'cambios'})`
+                              : 'Sin historial registrado (override creado antes del registro auditable). Clic para ver detalle.'
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => setHistoryModal({ step: s.step, entries: history })}
+                                className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium cursor-pointer hover:ring-2 hover:ring-offset-1 ${
+                                  s.overrideCompletado === true
+                                    ? 'bg-purple-100 text-purple-700 hover:ring-purple-300'
+                                    : 'bg-orange-100 text-orange-700 hover:ring-orange-300'
+                                }`}
+                                title={lastInfo}
+                              >
+                                ✎ {s.overrideCompletado === true ? 'Override ✓' : 'Override ✗'}
+                              </button>
+                            )
+                          })()}
                         </div>
                       </td>
                       <td className="py-2 px-3 text-xs text-gray-500 italic">
@@ -308,6 +342,55 @@ export default function StudentProgress({ student }: StudentProgressProps) {
           Actualizar
         </button>
       </div>
+
+      {/* Modal — historial auditable del override (Opción C) */}
+      {historyModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4">
+            <div className="fixed inset-0 bg-gray-900/60" onClick={() => setHistoryModal(null)} />
+            <div className="relative bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Historial del override</h3>
+                  <p className="text-sm text-gray-500">{historyModal.step} — {historyModal.entries.length} {historyModal.entries.length === 1 ? 'cambio registrado' : 'cambios registrados'}</p>
+                </div>
+                <button type="button" onClick={() => setHistoryModal(null)} className="text-gray-400 hover:text-gray-600" title="Cerrar">✕</button>
+              </div>
+
+              {historyModal.entries.length === 0 ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
+                  Este override está activo pero <strong>no tiene historial registrado</strong>. Esto significa que fue creado antes de que se implementara el registro auditable (mayo 2026). Cualquier cambio futuro sí quedará registrado aquí.
+                </div>
+              ) : (
+                <ul className="space-y-3">
+                  {[...historyModal.entries].reverse().map((e, idx) => (
+                    <li key={idx} className="border-l-4 border-gray-200 pl-3 py-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${accionColor(e.accion)}`}>{accionLabel(e.accion)}</span>
+                        <span className="text-xs text-gray-500">{fmtDate(e.fecha)}</span>
+                        <span className="text-[10px] text-gray-400">
+                          {e.isCompletedBefore === null ? '∅' : e.isCompletedBefore ? '✓' : '✗'}
+                          {' → '}
+                          {e.isCompletedAfter === null ? '∅' : e.isCompletedAfter ? '✓' : '✗'}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-800 mt-1 whitespace-pre-wrap">{e.motivo}</p>
+                      <p className="text-[11px] text-gray-500 mt-0.5">
+                        Por: {e.realizadoPorNombre || e.realizadoPor || '—'}
+                        {e.realizadoPorNombre && e.realizadoPor && <span className="text-gray-400"> · {e.realizadoPor}</span>}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <div className="mt-5 flex justify-end">
+                <button type="button" onClick={() => setHistoryModal(null)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cerrar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -158,8 +158,13 @@ export async function generateReport(studentId: string) {
     .sort((a, b) => (extractStepNumber(a) ?? 0) - (extractStepNumber(b) ?? 0));
 
   // Get all overrides for this student at once (avoid N+1)
-  // Uses ACADEMICA _id — matches how step-override route stores them
+  // Uses ACADEMICA _id — matches how step-override route stores them.
+  // Guardamos la fila completa para poder exponer notaoverrideHistory en el
+  // visor admin "¿Cómo voy?" (timeline auditable del override).
   const overrides = await StepOverridesRepository.findByStudentId(overrideStudentId);
+  const overrideRowMap = new Map<string, any>(
+    overrides.map((o: any) => [o.step, o])
+  );
   const overrideMap = new Map(
     overrides.map((o: any) => [o.step, o.isCompleted])
   );
@@ -266,6 +271,18 @@ export async function generateReport(studentId: string) {
       mensaje += ' Puedes realizar una actividad complementaria.';
     }
 
+    // Si hay override (activo o histórico), exponemos su historial para que
+    // el visor admin abra un modal con la timeline (Opción C).
+    const overrideRow = overrideRowMap.get(stepName);
+    let notaOverrideHistory: any[] = [];
+    if (overrideRow?.notaoverrideHistory) {
+      try {
+        notaOverrideHistory = Array.isArray(overrideRow.notaoverrideHistory)
+          ? overrideRow.notaoverrideHistory
+          : JSON.parse(overrideRow.notaoverrideHistory);
+      } catch { notaOverrideHistory = []; }
+    }
+
     return {
       step: stepName,
       esJump,
@@ -281,6 +298,7 @@ export async function generateReport(studentId: string) {
       mensaje,
       hasOverride,
       overrideCompletado,
+      notaOverrideHistory,
       complementariaEligible,
     };
   });

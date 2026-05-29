@@ -7,6 +7,7 @@
  * Se despliega como un Worker separado en Digital Ocean.
  *
  * Tareas programadas:
+ * - reconcile-pegados: Diariamente a las 9:00 PM Colombia (02:00 UTC)
  * - reactivate-onhold: Diariamente a las 10:00 PM Colombia (03:00 UTC)
  * - expire-contracts: Diariamente a las 11:00 PM Colombia (04:00 UTC)
  */
@@ -30,6 +31,37 @@ if (!CRON_SECRET) {
 
 console.log('Cron Worker iniciado');
 console.log(`URL base: ${NEXTAUTH_URL}`);
+
+/**
+ * Ejecuta el cron de reconciliacion nocturna de usuarios pegados.
+ * Solo toca casos limpios (sin overrides, sin clrHistoric). Los demas
+ * quedan listados en el informe Hold & Vigencias para revision manual.
+ */
+async function executeReconcilePegados() {
+  const timestamp = getLocalTimestamp();
+  console.log(`\n[${timestamp}] Ejecutando reconcile-pegados...`);
+
+  try {
+    const response = await fetch(`${NEXTAUTH_URL}/api/cron/reconcile-pegados`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${CRON_SECRET}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      console.log(`[${timestamp}] Completado: ${data.message}`);
+      console.log(`   Procesados: ${data.processed}, Exitosos: ${data.successful}, Fallidos: ${data.failed}`);
+    } else {
+      console.error(`[${timestamp}] Error: ${data.error || 'Unknown error'}`);
+    }
+  } catch (error) {
+    console.error(`[${timestamp}] Error de conexion:`, error.message);
+  }
+}
 
 /**
  * Ejecuta el cron de reactivacion de OnHold
@@ -92,6 +124,12 @@ async function executeExpireContracts() {
 // Programar tareas
 // ================
 
+// Reconciliar pegados (casos limpios): Diariamente a las 02:00 UTC (9:00 PM Colombia)
+cron.schedule('0 2 * * *', executeReconcilePegados, {
+  scheduled: true,
+  timezone: 'UTC'
+});
+
 // Reactivar OnHold: Diariamente a las 03:00 UTC (10:00 PM Colombia)
 cron.schedule('0 3 * * *', executeReactivateOnHold, {
   scheduled: true,
@@ -105,14 +143,22 @@ cron.schedule('0 4 * * *', executeExpireContracts, {
 });
 
 console.log('Tareas programadas:');
+console.log('   - reconcile-pegados: Diariamente a las 02:00 UTC (9:00 PM Colombia)');
 console.log('   - reactivate-onhold: Diariamente a las 03:00 UTC (10:00 PM Colombia)');
 console.log('   - expire-contracts: Diariamente a las 04:00 UTC (11:00 PM Colombia)');
 
 // Ejecutar inmediatamente si se pasa el argumento --run-now
 if (process.argv.includes('--run-now')) {
   console.log('\nEjecutando inmediatamente (--run-now)...');
+  executeReconcilePegados();
   executeReactivateOnHold();
   executeExpireContracts();
+}
+
+// Ejecutar solo reconcile-pegados si se pasa --reconcile-pegados
+if (process.argv.includes('--reconcile-pegados')) {
+  console.log('\nEjecutando reconcile-pegados...');
+  executeReconcilePegados();
 }
 
 // Ejecutar solo expire-contracts si se pasa --expire-contracts
