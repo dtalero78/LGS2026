@@ -71,7 +71,7 @@ export default function XNivelesPage() {
           <AcademicCapIcon className="h-7 w-7 text-indigo-600" />
           <div>
             <h1 className="text-2xl font-bold text-gray-900">X Niveles</h1>
-            <p className="text-sm text-gray-500">Usuarios académicos por nivel (BN1…DONE o todos), con conteo y exportación.</p>
+            <p className="text-sm text-gray-500">Usuarios académicos <span className="font-medium">activos</span> por nivel (BN1…DONE o todos), con conteo y exportación.</p>
           </div>
         </div>
 

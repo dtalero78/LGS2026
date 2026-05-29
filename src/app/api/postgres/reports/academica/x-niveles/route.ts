@@ -7,8 +7,8 @@ import { InformesPermission } from '@/types/permissions'
 /**
  * GET /api/postgres/reports/academica/x-niveles?nivel&startDate&endDate
  *
- * Listado de usuarios en ACADEMICA por nivel. Columnas: nombre, id (numeroId),
- * correo, nivel, step. Conteo total + desglose por nivel.
+ * Listado de usuarios ACTIVOS en ACADEMICA por nivel (estadoInactivo IS NOT TRUE).
+ * Columnas: nombre, id (numeroId), correo, nivel, step. Conteo total + desglose por nivel.
  *
  * Filtros:
  *   - nivel: código exacto (BN1, BN2, …, DONE) o vacío/'todos' = todos.
@@ -52,8 +52,10 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
   const endDate   = searchParams.get('endDate') || null
 
   // $1 nivel, $2 startDate, $3 endDate, $4 step (todos opcionales)
+  // Solo usuarios ACTIVOS: "estadoInactivo" IS NOT TRUE (excluye true; false/NULL = activo).
   const where = `
     "nivel" IS NOT NULL AND TRIM("nivel") <> ''
+    AND "estadoInactivo" IS NOT TRUE
     AND ($1::text IS NULL OR "nivel" = $1)
     AND ($2::date IS NULL OR ${CDATE} >= $2::date)
     AND ($3::date IS NULL OR ${CDATE} <= $3::date)
@@ -81,13 +83,15 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
   const porNivelRes = await query<{ nivel: string; n: number }>(`
     SELECT "nivel", COUNT(*)::int n FROM "ACADEMICA"
     WHERE "nivel" IS NOT NULL AND TRIM("nivel") <> ''
+      AND "estadoInactivo" IS NOT TRUE
       AND ($1::date IS NULL OR ${CDATE} >= $1::date)
       AND ($2::date IS NULL OR ${CDATE} <= $2::date)
     GROUP BY "nivel" ORDER BY n DESC`, [startDate, endDate])
 
   // Niveles disponibles para el dropdown (orden pedagógico, no alfabético)
   const nivelesRes = await query<{ nivel: string }>(`
-    SELECT DISTINCT "nivel" FROM "ACADEMICA" WHERE "nivel" IS NOT NULL AND TRIM("nivel") <> ''`)
+    SELECT DISTINCT "nivel" FROM "ACADEMICA"
+    WHERE "nivel" IS NOT NULL AND TRIM("nivel") <> '' AND "estadoInactivo" IS NOT TRUE`)
   const niveles = nivelesRes.rows.map(r => r.nivel).sort((a, b) => nivelRank(a) - nivelRank(b) || a.localeCompare(b))
 
   // Steps disponibles para el dropdown = los CANÓNICOS del nivel (currículo),
