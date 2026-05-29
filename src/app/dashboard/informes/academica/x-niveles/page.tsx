@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { ArrowDownTrayIcon, AcademicCapIcon } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { exportToExcel } from '@/lib/export-excel'
+import { PermissionGuard } from '@/components/permissions/PermissionGuard'
+import { InformesPermission } from '@/types/permissions'
 
 interface Row { nombre: string; id: string; correo: string | null; nivel: string; step: string | null }
 interface Data {
@@ -108,10 +110,12 @@ export default function XNivelesPage() {
                 className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium">Aplicar filtro</button>
               <button type="button" onClick={handleClear} disabled={loading}
                 className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">Limpiar</button>
-              <button type="button" onClick={handleCSV} disabled={loading || !data?.rows.length}
-                className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
-                <ArrowDownTrayIcon className="h-4 w-4" /> Descargar CSV
-              </button>
+              <PermissionGuard permission={InformesPermission.ACAD_X_NIVELES_EXP}>
+                <button type="button" onClick={handleCSV} disabled={loading || !data?.rows.length}
+                  className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
+                  <ArrowDownTrayIcon className="h-4 w-4" /> Descargar CSV
+                </button>
+              </PermissionGuard>
             </div>
           </div>
           <p className="text-[11px] text-gray-400 mt-2">El filtro de fecha aplica sobre la fecha de contrato del registro académico. Vacío = todos.</p>

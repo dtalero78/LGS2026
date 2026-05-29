@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { ArrowPathIcon, ArrowDownTrayIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { exportToExcel } from '@/lib/export-excel'
+import { PermissionGuard } from '@/components/permissions/PermissionGuard'
+import { InformesPermission } from '@/types/permissions'
 
 interface CronHealth {
   lastRun: string | null; status: string | null; hoursSince: number | null
@@ -125,8 +127,10 @@ export default function HoldVigenciasPage() {
               className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">Limpiar</button>
             <button type="button" onClick={() => fetchData(startDate, endDate)}
               className="inline-flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"><ArrowPathIcon className="h-4 w-4" />Recargar</button>
-            <button type="button" onClick={handleCSV} disabled={loading || !data}
-              className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"><ArrowDownTrayIcon className="h-4 w-4" />CSV</button>
+            <PermissionGuard permission={InformesPermission.ACAD_HOLD_VIGENCIAS_EXP}>
+              <button type="button" onClick={handleCSV} disabled={loading || !data}
+                className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"><ArrowDownTrayIcon className="h-4 w-4" />CSV</button>
+            </PermissionGuard>
           </div>
         </div>
 
