@@ -843,6 +843,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Acceso a /admin/generar-contrato. Regenera el PDF del contrato y lo sube al Drive (sobreescribiendo el anterior) sin reenviar el WhatsApp al cliente. Útil cuando se detecta un error en un contrato ya generado',
   },
   {
+    code: MantenimientoPermission.CONTRATOS_PRUEBA,
+    module: Module.MANTENIMIENTO,
+    section: 'Usuarios',
+    name: 'Página "Contratos Prueba"',
+    description: 'Acceso a /admin/contratos-prueba. Lista los contratos creados como prueba (prefijo PRB-) y permite purgarlos en cascada (PEOPLE + ACADEMICA + ACADEMICA_BOOKINGS + FINANCIEROS + PAGOS_TITULARES + STEP_OVERRIDES + COMPLEMENTARIA_ATTEMPTS + USUARIOS_ROLES). Cada purga deja snapshot completo en PURGE_LOG (reversible si se identifica error). Acción destructiva — recomendado SUPER_ADMIN únicamente',
+  },
+  {
     code: MantenimientoPermission.AVISOS_TICKER,
     module: Module.MANTENIMIENTO,
     section: 'Avisos',

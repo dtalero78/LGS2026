@@ -132,6 +132,9 @@ function CrearContratoContent() {
   const [contrato, setContrato] = useState('');
   const [loadingContrato, setLoadingContrato] = useState(false);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
+  // Contrato de prueba: prefijo PRB- en el número, no afecta el consecutivo
+  // real, queda visible con badge naranja y se descarta de informes.
+  const [esContratoPrueba, setEsContratoPrueba] = useState(false);
   const draftRestored = useRef(false);
   const saveTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -142,13 +145,13 @@ function CrearContratoContent() {
     saveTimer.current = setTimeout(() => {
       try {
         localStorage.setItem(DRAFT_KEY, JSON.stringify({
-          titular, financial, beneficiarios, titularEsBeneficiario, currentStep, contrato,
+          titular, financial, beneficiarios, titularEsBeneficiario, currentStep, contrato, esContratoPrueba,
           savedAt: Date.now()
         }))
       } catch {}
     }, 500)
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
-  }, [titular, financial, beneficiarios, titularEsBeneficiario, currentStep, contrato])
+  }, [titular, financial, beneficiarios, titularEsBeneficiario, currentStep, contrato, esContratoPrueba])
 
   // Restore draft on mount
   useEffect(() => {
@@ -182,6 +185,7 @@ function CrearContratoContent() {
       if (draft.titularEsBeneficiario !== undefined) setTitularEsBeneficiario(draft.titularEsBeneficiario)
       if (draft.currentStep) setCurrentStep(draft.currentStep)
       if (draft.contrato) setContrato(draft.contrato)
+      if (draft.esContratoPrueba !== undefined) setEsContratoPrueba(draft.esContratoPrueba)
       delete (window as any).__contractDraft
     }
     setShowDraftBanner(false)
@@ -195,12 +199,17 @@ function CrearContratoContent() {
     draftRestored.current = true
   }
 
-  // Auto-generate contract number when plataforma changes
-  const fetchNextContractNumber = useCallback(async (plataforma: string) => {
-    if (!plataforma) { setContrato(''); return; }
+  // Auto-generate contract number when plataforma or "es prueba" change.
+  // Si es prueba → genera PRB-NNNNN-YY (consecutivo independiente).
+  // Si no → consecutivo normal del país (sin contaminarse por los PRB-).
+  const fetchNextContractNumber = useCallback(async (plataforma: string, prueba: boolean) => {
+    if (!prueba && !plataforma) { setContrato(''); return; }
     setLoadingContrato(true);
     try {
-      const res = await fetch(`/api/postgres/contracts/next-number?plataforma=${encodeURIComponent(plataforma)}`);
+      const qs = prueba
+        ? `prueba=true`
+        : `plataforma=${encodeURIComponent(plataforma)}`;
+      const res = await fetch(`/api/postgres/contracts/next-number?${qs}`);
       if (res.ok) {
         const data = await res.json();
         setContrato(data.contrato);
@@ -213,8 +222,8 @@ function CrearContratoContent() {
   }, []);
 
   useEffect(() => {
-    fetchNextContractNumber(titular.plataforma);
-  }, [titular.plataforma, fetchNextContractNumber]);
+    fetchNextContractNumber(titular.plataforma, esContratoPrueba);
+  }, [titular.plataforma, esContratoPrueba, fetchNextContractNumber]);
 
   // Get phone prefix based on selected country (without '+')
   const getPhonePrefix = () => {
@@ -396,6 +405,7 @@ function CrearContratoContent() {
           })),
           titularEsBeneficiario,
           clientToday,
+          esContratoPrueba,
         })
       });
 
@@ -429,10 +439,36 @@ function CrearContratoContent() {
       <PermissionGuard permission={ComercialPermission.MODIFICAR_CONTRATO}>
         <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Crear Contrato</h1>
-          <p className="mt-2 text-gray-600">Complete el formulario para crear un nuevo contrato</p>
+        <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Crear Contrato</h1>
+            <p className="mt-2 text-gray-600">Complete el formulario para crear un nuevo contrato</p>
+          </div>
+          {/* Checkbox de contrato de prueba — naranja, prominente */}
+          <label
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 cursor-pointer transition-colors select-none ${
+              esContratoPrueba
+                ? 'bg-orange-100 border-orange-500 text-orange-800 shadow-sm'
+                : 'bg-white border-orange-300 text-orange-700 hover:bg-orange-50'
+            }`}
+            title="Los contratos de prueba reciben prefijo PRB- y se descartan automáticamente de los informes. Pueden borrarse en Mantenimiento > Usuarios > Contratos Prueba."
+          >
+            <input
+              type="checkbox"
+              checked={esContratoPrueba}
+              onChange={e => setEsContratoPrueba(e.target.checked)}
+              className="h-4 w-4 rounded border-orange-400 text-orange-600 focus:ring-orange-500"
+            />
+            <span className="text-sm font-semibold">🧪 Contrato de prueba</span>
+          </label>
         </div>
+
+        {/* Banner persistente cuando está marcado, para que el comercial no lo olvide */}
+        {esContratoPrueba && (
+          <div className="mb-4 bg-orange-50 border-l-4 border-orange-500 rounded-lg p-3 text-sm text-orange-800">
+            <strong>Modo prueba activo.</strong> Este contrato se creará con número <code className="px-1 py-0.5 bg-orange-100 rounded text-orange-900">{contrato || 'PRB-...'}</code>, NO aparecerá en informes y podrá ser purgado en <em>Mantenimiento › Usuarios › Contratos Prueba</em>. Desmarca el checkbox si es real.
+          </div>
+        )}
 
         {/* Draft restore banner */}
         {showDraftBanner && (

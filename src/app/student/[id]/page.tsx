@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import StudentTabs from '@/components/student/StudentTabs'
 import EstadoBadge from '@/components/common/EstadoBadge'
+import { ContratoPruebaBadge } from '@/components/common/ContratoPruebaBadge'
 import { getProfile, getAcademicHistory } from '@/services/student.service'
 import { PermissionGuard } from '@/components/permissions'
 import { StudentPermission } from '@/types/permissions'
@@ -68,9 +69,12 @@ async function StudentContent({ studentId }: { studentId: string }) {
         <div className="card">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className={`text-2xl font-bold ${suspendida ? 'text-red-600' : 'text-gray-900'}`}>
-                {student.primerNombre} {student.primerApellido}
-              </h1>
+              <div className="flex items-center flex-wrap gap-3">
+                <h1 className={`text-2xl font-bold ${suspendida ? 'text-red-600' : 'text-gray-900'}`}>
+                  {student.primerNombre} {student.primerApellido}
+                </h1>
+                <ContratoPruebaBadge contrato={student.contrato} />
+              </div>
               <div className="mt-1 flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-gray-500">
                 <span>ID: {student.numeroId || 'No disponible'}</span>
                 <span>Contrato: {student.contrato || 'No disponible'}</span>

@@ -12,6 +12,7 @@ export const GET = handlerWithAuth(async () => {
      FROM "PEOPLE"
      WHERE "tipoUsuario" = 'TITULAR'
        AND ("aprobacion" IS NULL OR "aprobacion" != 'Aprobado')
+       AND COALESCE("contrato",'') NOT LIKE 'PRB-%'
      ORDER BY "_createdDate" DESC`
   );
 

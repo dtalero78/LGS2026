@@ -20,18 +20,40 @@ const CODIGOS_PAIS: Record<string, string> = {
   'Perú': '04',
 };
 
-/** Generate next contract number server-side (atomic, avoids race conditions) */
-async function generateContractNumber(plataforma: string): Promise<string> {
+/**
+ * Generate next contract number server-side (atomic, avoids race conditions).
+ *
+ * - esPrueba=false → `<CODIGO_PAIS>-NNNNN-YY` (consecutivo del país, excluye PRB-).
+ * - esPrueba=true  → `PRB-NNNNN-YY` (consecutivo INDEPENDIENTE para pruebas,
+ *                    NO contamina el secuencial real, plataforma ignorada para el número).
+ */
+async function generateContractNumber(plataforma: string, esPrueba: boolean): Promise<string> {
+  const anoActual = new Date().getFullYear().toString().slice(-2);
+
+  if (esPrueba) {
+    const patron = `PRB-%-${anoActual}`;
+    const result = await query(
+      `SELECT MAX(CAST(SPLIT_PART("contrato", '-', 2) AS INTEGER)) AS max_num
+       FROM "PEOPLE"
+       WHERE "contrato" LIKE $1
+         AND SPLIT_PART("contrato", '-', 2) ~ '^[0-9]+$'`,
+      [patron]
+    );
+    const maxNumero = result.rows[0]?.max_num || 0;
+    const siguiente = (maxNumero + 1).toString().padStart(5, '0');
+    return `PRB-${siguiente}-${anoActual}`;
+  }
+
   const codigoPais = CODIGOS_PAIS[plataforma];
   if (!codigoPais) throw new ValidationError(`País no válido: ${plataforma}`);
 
-  const anoActual = new Date().getFullYear().toString().slice(-2);
   const patron = `${codigoPais}-%-${anoActual}`;
 
   const result = await query(
     `SELECT MAX(CAST(SPLIT_PART("contrato", '-', 2) AS INTEGER)) AS max_num
      FROM "PEOPLE"
      WHERE "contrato" LIKE $1
+       AND "contrato" NOT LIKE 'PRB-%'
        AND SPLIT_PART("contrato", '-', 2) ~ '^[0-9]+$'`,
     [patron]
   );
@@ -50,9 +72,11 @@ function normalizeTipoPlan(v: any): TipoPlan | null {
 }
 
 export const POST = handlerWithAuth(async (request, _ctx, session) => {
-  const { titular, financial, beneficiarios, titularEsBeneficiario, clientToday } = await request.json();
+  const { titular, financial, beneficiarios, titularEsBeneficiario, clientToday, esContratoPrueba } = await request.json();
+  const esPrueba = esContratoPrueba === true;
 
-  if (!titular?.plataforma) throw new ValidationError('plataforma is required');
+  // Plataforma sólo es obligatoria para contratos REALES; en pruebas se permite sin plataforma.
+  if (!esPrueba && !titular?.plataforma) throw new ValidationError('plataforma is required');
   if (!titular?.numeroId || !titular?.primerNombre || !titular?.primerApellido) {
     throw new ValidationError('titular with numeroId, primerNombre, and primerApellido is required');
   }
@@ -63,8 +87,9 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
     throw new ValidationError(`tipoPlan debe ser uno de: ${VALID_TIPO_PLAN.join(', ')}`);
   }
 
-  // Generate contract number server-side to avoid race conditions
-  const contrato = await generateContractNumber(titular.plataforma);
+  // Generate contract number server-side to avoid race conditions.
+  // Si es prueba → PRB-NNNNN-YY (consecutivo independiente, no afecta el real).
+  const contrato = await generateContractNumber(titular.plataforma, esPrueba);
 
   // Calculate finalContrato = today + vigencia months
   const vigenciaMeses = parseInt(financial?.vigencia || '0', 10);

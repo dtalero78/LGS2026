@@ -57,9 +57,16 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
 
   // $1 nivel, $2 startDate, $3 endDate, $4 step (todos opcionales)
   // Solo usuarios ACTIVOS: "estadoInactivo" IS NOT TRUE (excluye true; false/NULL = activo).
+  // Excluye contratos de prueba (prefijo PRB-) — el filtro se resuelve via NOT EXISTS
+  // contra PEOPLE por numeroId (ACADEMICA no guarda el contrato directamente).
   const where = `
     "nivel" IS NOT NULL AND TRIM("nivel") <> ''
     AND "estadoInactivo" IS NOT TRUE
+    AND NOT EXISTS (
+      SELECT 1 FROM "PEOPLE" pp
+      WHERE pp."numeroId" = "ACADEMICA"."numeroId"
+        AND COALESCE(pp."contrato",'') LIKE 'PRB-%'
+    )
     AND ($1::text IS NULL OR "nivel" = $1)
     AND ($2::date IS NULL OR ${CDATE} >= $2::date)
     AND ($3::date IS NULL OR ${CDATE} <= $3::date)
@@ -88,6 +95,11 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     SELECT "nivel", COUNT(*)::int n FROM "ACADEMICA"
     WHERE "nivel" IS NOT NULL AND TRIM("nivel") <> ''
       AND "estadoInactivo" IS NOT TRUE
+      AND NOT EXISTS (
+        SELECT 1 FROM "PEOPLE" pp
+        WHERE pp."numeroId" = "ACADEMICA"."numeroId"
+          AND COALESCE(pp."contrato",'') LIKE 'PRB-%'
+      )
       AND ($1::date IS NULL OR ${CDATE} >= $1::date)
       AND ($2::date IS NULL OR ${CDATE} <= $2::date)
     GROUP BY "nivel" ORDER BY n DESC`, [startDate, endDate])

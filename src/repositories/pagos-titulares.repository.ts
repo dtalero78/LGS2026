@@ -145,7 +145,11 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
     limit: number;
     offset: number;
   }): Promise<{ rows: any[]; total: number }> {
-    const conds: string[] = [`COALESCE(pt."numCuota", 0) > 0`]; // excluye cuota #0
+    const conds: string[] = [
+      `COALESCE(pt."numCuota", 0) > 0`, // excluye cuota #0
+      // Excluye contratos de prueba (PRB-) — viven solo en /admin/contratos-prueba.
+      `COALESCE(p."contrato",'') NOT LIKE 'PRB-%'`,
+    ];
     const params: any[] = [];
     let i = 1;
 
@@ -271,6 +275,8 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
       `p."tipoUsuario" = 'TITULAR'`,
       `p."gestorRecaudo" IS NOT NULL`,
       `p."gestorRecaudo" <> ''`,
+      // Excluye contratos de prueba (prefijo PRB-) — viven solo en /admin/contratos-prueba.
+      `COALESCE(p."contrato",'') NOT LIKE 'PRB-%'`,
     ];
     const params: any[] = [];
     let i = 1;

@@ -82,6 +82,7 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
            (CURRENT_DATE - "fechaFinOnHold"::date) AS "diasVencido"
     FROM "PEOPLE"
     WHERE "estadoInactivo" = true AND "fechaFinOnHold" IS NOT NULL AND "fechaFinOnHold"::date <= CURRENT_DATE
+      AND COALESCE("contrato",'') NOT LIKE 'PRB-%'
     ORDER BY "fechaFinOnHold" ASC`)
   const vigRows = await query<any>(`
     SELECT "_id", TRIM(CONCAT("primerNombre",' ',"primerApellido")) AS nombre, "numeroId", "plataforma", "contrato",
@@ -91,6 +92,7 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     WHERE "tipoUsuario" = 'BENEFICIARIO' AND "estadoInactivo" = false
       AND "finalContrato" IS NOT NULL AND "finalContrato" < (CURRENT_DATE - INTERVAL '1 day')
       AND ("estado" IS NULL OR "estado" != 'FINALIZADA')
+      AND COALESCE("contrato",'') NOT LIKE 'PRB-%'
     ORDER BY "finalContrato" ASC`)
 
   const ymd = (v: any) => (v ? new Date(v).toISOString().substring(0, 10) : null)

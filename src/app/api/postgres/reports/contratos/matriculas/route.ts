@@ -31,13 +31,16 @@ import { InformesPermission } from '@/types/permissions'
  * Gateado por INFORMES.CONTRATOS.MATRICULAS (SUPER_ADMIN/ADMIN bypass).
  */
 
-// Filtro de contrato "real" (no placeholder / no vacío / no PRUEBA)
+// Filtro de contrato "real" (no placeholder / no vacío / no PRUEBA legacy / no PRB-).
+// El prefijo PRB- es la convención canónica (mayo 2026); los filtros por
+// nombre 'PRUEBA' quedan como red de seguridad para datos viejos.
 const NOMBRE_OK = `(
   UPPER(COALESCE("primerNombre",'')) NOT IN ('TITULAR','BENEFICIARIO','BENEFICIARIA')
   AND UPPER(COALESCE("primerApellido",'')) NOT IN ('TITULAR','BENEFICIARIO','BENEFICIARIA')
   AND TRIM(COALESCE("primerNombre",'')) <> ''
   AND UPPER(COALESCE("primerNombre",'')) NOT LIKE '%PRUEBA%'
   AND UPPER(COALESCE("primerApellido",'')) NOT LIKE '%PRUEBA%'
+  AND COALESCE("contrato",'') NOT LIKE 'PRB-%'
 )`
 const CDATE     = `COALESCE("inicioContrato","fechaContrato",("_createdDate" AT TIME ZONE 'America/Bogota')::date)`
 const APROBADO  = `("aprobacion" IN ('Aprobado','Aprobada'))`

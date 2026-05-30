@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import PersonTabs from '@/components/person/PersonTabs'
 import EstadoBadge from '@/components/common/EstadoBadge'
+import { ContratoPruebaBadge } from '@/components/common/ContratoPruebaBadge'
 import { PermissionGuard } from '@/components/permissions'
 import { PersonPermission } from '@/types/permissions'
 import { isAdminSuspended } from '@/lib/contract-status'
@@ -91,9 +92,12 @@ async function PersonContent({ personId, initialTab }: { personId: string; initi
         <div className="card">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className={`text-2xl font-bold ${suspendida ? 'text-red-600' : 'text-gray-900'}`}>
-                {personData.person.primerNombre} {personData.person.primerApellido}
-              </h1>
+              <div className="flex items-center flex-wrap gap-3">
+                <h1 className={`text-2xl font-bold ${suspendida ? 'text-red-600' : 'text-gray-900'}`}>
+                  {personData.person.primerNombre} {personData.person.primerApellido}
+                </h1>
+                <ContratoPruebaBadge contrato={personData.person.contrato} />
+              </div>
               <div className="mt-1 space-y-1">
                 <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-gray-500">
                   <span>ID: {personData.person.numeroId || 'No disponible'}</span>

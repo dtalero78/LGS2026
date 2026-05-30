@@ -221,7 +221,8 @@ export async function findPegados(opts?: { force?: boolean }): Promise<PegadosRe
      ) p ON true
      WHERE a."nivel" = ANY($1::text[])
        AND (a."estadoInactivo" IS NULL OR a."estadoInactivo" = false)
-       AND a."step" IS NOT NULL`,
+       AND a."step" IS NOT NULL
+       AND COALESCE(p."contrato",'') NOT LIKE 'PRB-%'`,
     [NIVELES_CODES],
   );
 
