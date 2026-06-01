@@ -58,3 +58,21 @@ export function formatEtapaNivel(nivel: string | null | undefined): string {
   const etapa = getEtapaForNivel(n);
   return etapa ? `${etapa} - ${n.toUpperCase()}` : n;
 }
+
+/**
+ * Formatea "ETAPA - NIVEL - STEP" para vistas admin que quieren ver las
+ * 3 dimensiones juntas. Si falta el step, devuelve solo "ETAPA - NIVEL".
+ *
+ *   formatEtapaNivelStep('BN2', 'Step 7') → 'BEGINNER - BN2 - Step 7'
+ *   formatEtapaNivelStep('BN2', '')       → 'BEGINNER - BN2'
+ *   formatEtapaNivelStep('', 'Step 7')    → ''
+ */
+export function formatEtapaNivelStep(
+  nivel: string | null | undefined,
+  step: string | null | undefined,
+): string {
+  const base = formatEtapaNivel(nivel);
+  if (!base) return '';
+  const s = step ? String(step).trim() : '';
+  return s ? `${base} - ${s}` : base;
+}
