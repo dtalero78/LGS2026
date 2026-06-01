@@ -40,7 +40,7 @@ export default function SinEvaluarCard() {
   // Estado vacío (sin pendientes) — paleta neutra verde-grisácea
   if (!hasPending) {
     return (
-      <div className="bg-gradient-to-br from-emerald-50 to-gray-50 border-2 border-emerald-200 rounded-2xl p-5 shadow-sm h-full flex flex-col">
+      <div className="bg-gradient-to-br from-emerald-50 to-gray-50 border-2 border-emerald-200 rounded-2xl p-5 shadow-sm">
         <div className="flex items-start gap-3 mb-2">
           <div className="p-2 bg-emerald-200 rounded-lg flex-shrink-0">
             <CheckCircleIcon className="h-6 w-6 text-emerald-700" />
@@ -52,11 +52,9 @@ export default function SinEvaluarCard() {
             </p>
           </div>
         </div>
-        <div className="flex-1 flex items-center justify-center text-center py-4">
-          <p className="text-sm text-gray-500">
-            🎉 No tienes sesiones por evaluar esta semana.
-          </p>
-        </div>
+        <p className="text-sm text-gray-500 text-center py-2">
+          🎉 No tienes sesiones por evaluar esta semana.
+        </p>
       </div>
     )
   }
@@ -64,7 +62,7 @@ export default function SinEvaluarCard() {
   // Con pendientes — paleta naranja original
   return (
     <>
-      <div className="bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-300 rounded-2xl p-5 shadow-sm h-full flex flex-col">
+      <div className="bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-300 rounded-2xl p-5 shadow-sm">
         <div className="flex items-start gap-3 mb-3">
           <div className="p-2 bg-orange-200 rounded-lg flex-shrink-0"><StarIcon className="h-6 w-6 text-orange-700" /></div>
           <div className="flex-1 min-w-0">
@@ -77,7 +75,7 @@ export default function SinEvaluarCard() {
           </div>
         </div>
 
-        <ul className="space-y-2 flex-1 overflow-y-auto">
+        <ul className="space-y-2">
           {rows.map(r => (
             <li
               key={r.bookingId}

@@ -317,8 +317,9 @@ function PanelEstudianteContent() {
         </div>
 
         {/* Evaluación + Comentarios: 2 columnas (Sin Evaluar a la izquierda, Comentarios a la derecha).
-            La columna izquierda colapsa cuando no hay pendientes y AdvisorComments ocupa todo el ancho.  */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            items-start: cada card toma su altura natural — evita el espacio vacío naranja
+            cuando AdvisorComments es más alto que la lista de pendientes. */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
           <div className="lg:col-span-1">
             <SinEvaluarCard />
           </div>
