@@ -235,8 +235,13 @@ function PanelEstudianteContent() {
         {/* Jump exam banner (only when eligible) */}
         <JumpExamBanner />
 
-        {/* 3. Student Info Card + Attendance Stats */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Grid principal de 2 columnas con cards apiladas:
+              Izq (1/3): NEXT SESSION + SinEvaluar
+              Der (2/3): Stats + Eventos + AdvisorComments
+            items-start para que cada columna mida su contenido natural. */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+          {/* Columna izquierda — NEXT SESSION arriba, SinEvaluar abajo */}
+          <div className="space-y-4">
           {/* Student Info Card */}
           <div className="bg-gradient-to-br from-primary-600 to-primary-800 rounded-xl p-5 text-white">
             {meQuery.isLoading ? (
@@ -300,8 +305,11 @@ function PanelEstudianteContent() {
               </div>
             )}
           </div>
+          {/* SinEvaluar debajo de NEXT SESSION (misma columna izquierda) */}
+          <SinEvaluarCard />
+          </div>
 
-          {/* Stats Cards + Events stacked */}
+          {/* Columna derecha — Stats + Eventos arriba, AdvisorComments abajo */}
           <div className="lg:col-span-2 space-y-4">
             <AttendanceStats
               stats={statsQuery.data?.stats}
@@ -313,17 +321,6 @@ function PanelEstudianteContent() {
               onCancel={handleCancel}
               isCancelling={cancelMutation.isLoading}
             />
-          </div>
-        </div>
-
-        {/* Evaluación + Comentarios: 2 columnas (Sin Evaluar a la izquierda, Comentarios a la derecha).
-            items-start: cada card toma su altura natural — evita el espacio vacío naranja
-            cuando AdvisorComments es más alto que la lista de pendientes. */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-          <div className="lg:col-span-1">
-            <SinEvaluarCard />
-          </div>
-          <div className="lg:col-span-2">
             <AdvisorComments
               data={commentsQuery.data}
               isLoading={commentsQuery.isLoading}
