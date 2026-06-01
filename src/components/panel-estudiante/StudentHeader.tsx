@@ -2,6 +2,7 @@
 
 import { signOut } from 'next-auth/react'
 import { ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline'
+import { formatEtapaNivel } from '@/lib/etapas'
 
 interface StudentHeaderProps {
   profile: any
@@ -27,8 +28,8 @@ export default function StudentHeader({ profile, isLoading }: StudentHeaderProps
   const nombre   = profile?.primerNombre  || ''
   const apellido = profile?.primerApellido || ''
   const nivel    = profile?.nivel          || ''
-  const step     = profile?.effectiveStep  || profile?.step || ''
   const foto     = profile?.foto           || null
+  const etapaLabel = formatEtapaNivel(nivel)
 
   // Only DO Spaces URLs are publicly accessible; wix:// URLs are not
   const fotoUrl = foto && foto.startsWith('https://') ? foto : null
@@ -62,9 +63,9 @@ export default function StudentHeader({ profile, isLoading }: StudentHeaderProps
 
         {/* Right: nivel badge + logout */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          {nivel && (
+          {etapaLabel && (
             <span className="text-xs font-medium bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full whitespace-nowrap">
-              {nivel}{step ? ` - ${step}` : ''}
+              {etapaLabel}
             </span>
           )}
           <button
