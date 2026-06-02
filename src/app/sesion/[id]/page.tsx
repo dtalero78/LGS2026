@@ -219,9 +219,14 @@ export default function SesionPage() {
 
   // Para mostrar banners coherentes:
   //   - Si la sesión ya está cerrada → no mostramos nada (badge ✓ del botón ya lo dice).
+  //   - Si está EN CURSO (0..+120) Y no cerrada → banner ámbar "Sesión en curso"
+  //     (con countdown del momento límite para registrar).
   //   - Si expiró Y advisor (no coordinator) → banner ámbar bloqueante.
   //   - Si es coordinator entrando a una sesión vencida → banner azul informativo.
   const sesionCerrada = evento.sesionCerrada === true
+  const showInProgressBanner = !sesionCerrada
+    && windowState.minutesElapsed >= 0
+    && windowState.minutesElapsed <= 120
   const showExpiredAdvisorBanner = !sesionCerrada && windowState.isExpired
   const showCoordinatorBanner = !sesionCerrada && windowState.isCoordinator && windowState.minutesElapsed > 120
 
@@ -229,6 +234,26 @@ export default function SesionPage() {
     <DashboardLayout>
       <PermissionGuard permission={AcademicoPermission.IR_A_SESION}>
         <div className="space-y-6">
+          {/* Banner: sesión EN CURSO (entre 0 y +120 min) */}
+          {showInProgressBanner && (
+            <div className="bg-amber-50 border-l-4 border-amber-500 rounded-r-lg p-4 flex items-start gap-3">
+              <ClockIcon className="h-6 w-6 text-amber-600 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-amber-900">
+                  Sesión en curso · iniciada hace {windowState.minutesElapsed} min
+                </p>
+                <p className="text-sm text-amber-800 mt-0.5">
+                  {windowState.canRegister
+                    ? <>Recuerda <strong>marcar asistencia</strong> y luego <strong>registrar la sesión</strong>. {windowState.minutesUntilExpire !== null && <>Tienes {windowState.minutesUntilExpire} min antes de que se cierre la ventana de registro.</>}</>
+                    : windowState.minutesUntilRegister !== null
+                      ? <>Ya puedes <strong>marcar asistencia</strong>. El botón "Registrar Sesión" se habilita en {windowState.minutesUntilRegister} min.</>
+                      : <>Ya puedes marcar asistencia y registrar la sesión.</>
+                  }
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Banner expirado (advisor) */}
           {showExpiredAdvisorBanner && (
             <div className="bg-amber-50 border-l-4 border-amber-500 rounded-r-lg p-4 flex items-start gap-3">
