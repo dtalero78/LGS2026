@@ -66,6 +66,7 @@ jsconfig.json
 /sin-plataforma-*.csv
 /financieros-*.csv
 /financieros-*.json
+/academica-sin-*.csv
 # Scripts de diagnóstico one-off (con numeroId / _id específicos de un usuario).
 # Los reutilizables (verify-*, inspect-*) sí se commitean — los uso-único no.
 /scripts/diag-*.js
