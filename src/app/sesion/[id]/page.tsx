@@ -319,7 +319,9 @@ export default function SesionPage() {
                       ? 'La sesión ya está cerrada — los registros son de solo lectura.'
                       : windowState.isExpired
                         ? EXPIRED_MESSAGE
-                        : null
+                        : (windowState.minutesElapsed < 0 && !windowState.isCoordinator)
+                          ? `El evento comienza a las ${format(new Date(evento.dia), 'HH:mm')} (faltan ${Math.abs(windowState.minutesElapsed)} min) — podrás marcar asistencia cuando inicie.`
+                          : null
                   }
                 />
               ),
@@ -404,18 +406,38 @@ function RegistrarSesionButton({
       .catch(() => { /* mantener default true */ })
   }, [session, evento.advisor])
 
-  // beforeunload — aplica para el actor que está en ventana operativa
-  // (advisor propio o coordinator) y la sesión no está cerrada.
+  // beforeunload — se activa DESDE el inicio del evento (no solo desde +30).
+  //
+  // Ventanas:
+  //   - Antes del inicio (minutesElapsed < 0): no aplica (no hay sesión aún).
+  //   - Entre 0 y +30 min: aplica — el advisor debe marcar asistencia y NO
+  //     debe salir antes de poder registrar (botón se habilita a +30).
+  //   - Entre +30 y +120 min: aplica — debe registrar antes de cerrar.
+  //   - >+120 (expired): NO aplica al advisor (no puede hacer nada). El
+  //     coordinador sí puede seguir actuando, pero respetamos su decisión
+  //     de cerrar la pestaña si quiere.
+  //
+  // Aplica para advisor propio O coordinator (cualquiera que esté gestionando).
   useEffect(() => {
     if (evento.sesionCerrada || !requiereRegistro) return
-    if (!windowState.canRegister) return  // fuera de ventana operativa
+    const activeForAdvisor = isMyEvent && !windowState.isExpired && windowState.minutesElapsed >= 0
+    const activeForCoord = windowState.isCoordinator && windowState.minutesElapsed >= 0
+    if (!activeForAdvisor && !activeForCoord) return
+
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault()
-      e.returnValue = 'La sesión no se ha registrado. ¿Salir igual?'
+      e.returnValue = 'La sesión está en curso o pendiente de registrar. ¿Salir igual?'
     }
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
-  }, [evento.sesionCerrada, requiereRegistro, windowState.canRegister])
+  }, [
+    evento.sesionCerrada,
+    requiereRegistro,
+    isMyEvent,
+    windowState.isExpired,
+    windowState.isCoordinator,
+    windowState.minutesElapsed,
+  ])
 
   // Visibilidad: advisor propio o coordinator. Si nada de eso, no se renderiza.
   const canSee = isMyEvent || windowState.isCoordinator
@@ -441,9 +463,19 @@ function RegistrarSesionButton({
       )
     }
     if (windowState.minutesUntilRegister !== null) {
+      // Si el evento ya empezó (minutesElapsed >= 0), marcar asistencia
+      // mientras tanto. Si no, simplemente esperar.
+      const yaEmpezo = windowState.minutesElapsed >= 0
       return (
-        <span className="px-3 py-2 text-xs text-gray-500 italic" title="Disponible 30 min después del inicio">
-          Registro disponible en {windowState.minutesUntilRegister} min
+        <span
+          className={`px-3 py-2 text-xs italic rounded ${
+            yaEmpezo ? 'text-amber-700 bg-amber-50 border border-amber-200' : 'text-gray-500'
+          }`}
+          title={yaEmpezo ? 'Marca asistencia ahora; el botón Registrar se habilitará a los 30 min.' : 'Disponible 30 min después del inicio'}
+        >
+          {yaEmpezo
+            ? `Marca asistencia · Registro en ${windowState.minutesUntilRegister} min`
+            : `Registro disponible en ${windowState.minutesUntilRegister} min`}
         </span>
       )
     }
