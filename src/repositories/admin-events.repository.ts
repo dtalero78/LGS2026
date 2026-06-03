@@ -255,6 +255,10 @@ export const AdminEventsRepository = {
   /**
    * Agregado mensual de horas registradas vs sin registrar para un advisor.
    * Usado por el Dashboard advisor y Control de Horas.
+   *
+   * IMPORTANTE: solo cuenta eventos PASADOS (fechaInicio <= NOW()). Los eventos
+   * futuros del mes no se incluyen — los KPIs reflejan actividad realmente
+   * ocurrida, no agenda futura.
    */
   async aggregateHoursByAdvisorMonth(advisorId: string, year: number, month: number): Promise<{
     registradas: number;
@@ -269,7 +273,8 @@ export const AdminEventsRepository = {
        FROM "ADMIN_EVENTS"
        WHERE "advisorId" = $1
          AND "fechaInicio" >= $2::timestamptz
-         AND "fechaInicio" <  $3::timestamptz`,
+         AND "fechaInicio" <  $3::timestamptz
+         AND "fechaInicio" <= NOW()`,
       [advisorId, from, to],
     );
     return {

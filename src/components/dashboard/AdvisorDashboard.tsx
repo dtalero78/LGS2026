@@ -148,13 +148,20 @@ export default function AdvisorDashboard() {
       else if (t === 'WELCOME') k.welcome++
     }
 
+    // KPIs solo cuentan eventos que YA ocurrieron (fechaEvento <= NOW).
+    // Eventos futuros del mes son agenda, no actividad real.
+    const nowMs = Date.now()
+    const isPast = (iso: string | null | undefined) =>
+      iso != null && new Date(iso).getTime() <= nowMs
     data.vigentes.forEach(v => {
+      if (!isPast(v.fechaEvento)) return
       countTipoStep(v.tipo, v.step)
       k.conducted++
       if (v.sesionCerrada === true) k.effective++
       else                          k.sinRegistrar++
     })
     data.historicos.forEach(h => {
+      if (!isPast(h.fechaEvento)) return
       countTipoStep(h.tipo, h.step)
       if (h.estado === 'Canceled')  k.canceled++
       if (h.estado === 'Suspended') k.suspended++
@@ -179,9 +186,11 @@ export default function AdvisorDashboard() {
     const result = { conducted: mkMatrix(), canceled: mkMatrix() }
     if (!data) return result
 
+    const nowMs = Date.now()
     const addEvent = (iso: string, bucket: 'conducted' | 'canceled') => {
       const d = new Date(iso)
       if (d.getFullYear() !== year || d.getMonth() + 1 !== month) return
+      if (d.getTime() > nowMs) return         // heatmap = actividad pasada
       const wd = (d.getDay() + 6) % 7         // 0=Lun, 6=Dom
       const hIdx = HOURS.indexOf(d.getHours())
       if (hIdx < 0) return                     // fuera de 06-21

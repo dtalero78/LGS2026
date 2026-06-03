@@ -284,6 +284,11 @@ function ControlHorasContent() {
       administrative: 0,
     }
     if (!data) return t
+    // KPIs solo cuentan eventos que YA ocurrieron (fechaEvento <= NOW).
+    // Eventos futuros del mes están agendados pero aún no son "actividad real".
+    const nowMs = Date.now()
+    const isPast = (iso: string | null | undefined) =>
+      iso != null && new Date(iso).getTime() <= nowMs
     const countByTipo = (tipo: string | null) => {
       switch ((tipo || '').toUpperCase()) {
         case 'SESSION': t.sessions++; break
@@ -292,12 +297,14 @@ function ControlHorasContent() {
       }
     }
     data.vigentes.forEach(v => {
+      if (!isPast(v.fechaEvento)) return
       countByTipo(v.tipo)
       t.conducted++
       if (v.sesionCerrada === true) t.effective++
       else                          t.sinRegistrar++
     })
     data.historicos.forEach(h => {
+      if (!isPast(h.fechaEvento)) return
       countByTipo(h.tipo)
       if (h.estado === 'Canceled')  t.canceled++
       if (h.estado === 'Suspended') t.suspended++
