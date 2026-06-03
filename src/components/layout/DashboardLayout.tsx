@@ -175,6 +175,11 @@ const getNavigation = (userEmail: string) => [
         ],
       },
       {
+        name: 'Plantillas', isSubmenu: true, children: [
+          { name: 'Gestión', href: '/admin/plantillas/gestion', newTab: true },
+        ],
+      },
+      {
         name: 'Usuarios', isSubmenu: true, children: [
           { name: 'Bloqueo Contrato', href: '/admin/bloqueo-contrato', newTab: true },
           { name: 'Clear Historic',   href: '/admin/clear-historic',   newTab: true },
@@ -346,6 +351,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ],
     '/admin/actualizar-videos': [
       MantenimientoPermission.ACTUALIZAR_VIDEOS,
+    ],
+    '/admin/plantillas/gestion': [
+      MantenimientoPermission.PLANTILLAS_GESTION,
     ],
     '/admin/scripts/usuarios-pegados': [
       MantenimientoPermission.SCRIPTS_USUARIOS_PEGADOS,
