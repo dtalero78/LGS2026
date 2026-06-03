@@ -307,10 +307,12 @@ function AdvisorAvatar({ fotoUrl, inicial }: { fotoUrl: string | null; inicial: 
 }
 
 function KpiCard({ label, value, color, big }: { label: string; value: number; color: string; big?: boolean }) {
+  // Mismo padding y altura que las cards normales; solo la card 'big' tiene
+  // borde mas grueso para destacar — la altura final coincide visualmente.
   return (
-    <div className={`${color} border-2 rounded-lg ${big ? 'px-4 py-3' : 'px-3 py-2'} text-center`}>
-      <div className={big ? 'text-4xl font-bold' : 'text-2xl font-bold'}>{value}</div>
-      <div className={big ? 'text-xs uppercase tracking-wide font-semibold mt-1' : 'text-[10px] uppercase tracking-wide font-semibold'}>{label}</div>
+    <div className={`${color} ${big ? 'border-2' : 'border'} rounded-lg px-3 py-2 text-center`}>
+      <div className="text-2xl font-bold">{value}</div>
+      <div className={big ? 'text-xs uppercase tracking-wide font-semibold' : 'text-[10px] uppercase tracking-wide font-semibold'}>{label}</div>
     </div>
   )
 }
