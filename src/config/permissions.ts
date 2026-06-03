@@ -887,6 +887,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Acceso a /admin/actualizar-videos. Gestión de videos instructivos del panel estudiante y videos por nivel/step',
   },
   {
+    code: MantenimientoPermission.PLANTILLAS_GESTION,
+    module: Module.MANTENIMIENTO,
+    section: 'Plantillas',
+    name: 'Página "Gestión de Plantillas"',
+    description: 'Acceso a /admin/plantillas/gestion. CRUD de plantillas de mensajes WhatsApp usadas en envío individual y masivo',
+  },
+  {
     code: MantenimientoPermission.SCRIPTS_USUARIOS_PEGADOS,
     module: Module.MANTENIMIENTO,
     section: 'Scripts',

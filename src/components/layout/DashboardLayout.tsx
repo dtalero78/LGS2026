@@ -175,6 +175,12 @@ const getNavigation = (userEmail: string) => [
         ],
       },
       {
+        name: 'Mensajes', isSubmenu: true, children: [
+          { name: 'Plantillas', href: '/admin/plantillas/gestion', newTab: true },
+          { name: 'Gestión',    href: '/admin/envio-mensajes',     newTab: true },
+        ],
+      },
+      {
         name: 'Usuarios', isSubmenu: true, children: [
           { name: 'Bloqueo Contrato', href: '/admin/bloqueo-contrato', newTab: true },
           { name: 'Clear Historic',   href: '/admin/clear-historic',   newTab: true },
@@ -182,7 +188,6 @@ const getNavigation = (userEmail: string) => [
           { name: 'Edición Contrato', href: '/admin/edicion-contrato', newTab: true },
           { name: 'Generar Contrato', href: '/admin/generar-contrato', newTab: true },
           { name: 'Migrar Contrato',  href: '/admin/migrar-contrato',  newTab: true },
-          { name: 'Envío Mensajes',   href: '/admin/envio-mensajes',   newTab: true },
           { name: 'Crea UserRol',     href: '/admin/roles/create',     newTab: true },
         ],
       },
@@ -346,6 +351,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ],
     '/admin/actualizar-videos': [
       MantenimientoPermission.ACTUALIZAR_VIDEOS,
+    ],
+    '/admin/plantillas/gestion': [
+      MantenimientoPermission.PLANTILLAS_GESTION,
     ],
     '/admin/scripts/usuarios-pegados': [
       MantenimientoPermission.SCRIPTS_USUARIOS_PEGADOS,
