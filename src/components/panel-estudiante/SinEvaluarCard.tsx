@@ -67,10 +67,10 @@ export default function SinEvaluarCard() {
           <div className="p-2 bg-orange-200 rounded-lg flex-shrink-0"><StarIcon className="h-6 w-6 text-orange-700" /></div>
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-bold text-orange-900">
-              Sin Evaluar · {rows.length} {rows.length === 1 ? 'sesión' : 'sesiones'}
+              Sin Calificar · {rows.length} {rows.length === 1 ? 'sesión' : 'sesiones'}
             </h3>
             <p className="text-xs text-orange-800 mt-0.5">
-              Selecciona una sesión y comparte tu feedback.
+              Selecciona una sesión y llena la encuesta.
             </p>
           </div>
         </div>

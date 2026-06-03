@@ -188,7 +188,7 @@ export default function EvaluacionModal({
               type="button"
               onClick={() => !mutation.isLoading && onClose()}
               disabled={mutation.isLoading}
-              className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              className="px-4 py-2 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 font-semibold"
             >
               {laterButtonLabel}
             </button>
