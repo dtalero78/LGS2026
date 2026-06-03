@@ -302,10 +302,15 @@ function ControlHorasContent() {
       if (h.estado === 'Canceled')  t.canceled++
       if (h.estado === 'Suspended') t.suspended++
     })
-    // Sumar admin events (registradas → effective + administrative; sin registrar → sinRegistrar)
-    t.effective       += adminEventsAgg.registradas
-    t.sinRegistrar    += adminEventsAgg.sinRegistrar
-    t.administrative   = adminEventsAgg.registradas
+    // Admin events:
+    //   - Effective suma las registradas (horas ya "marcadas tarjeta").
+    //   - Hours without recording suma las sin registrar (pendientes).
+    //   - Administrative muestra el TOTAL del mes (registradas + sin registrar).
+    //     Así se cumple la identidad visible al advisor:
+    //       effective = conducted + administrative - hoursWithoutRecording
+    t.effective      += adminEventsAgg.registradas
+    t.sinRegistrar   += adminEventsAgg.sinRegistrar
+    t.administrative  = adminEventsAgg.registradas + adminEventsAgg.sinRegistrar
     return t
   }, [data, adminEventsAgg])
 

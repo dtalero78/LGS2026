@@ -159,10 +159,15 @@ export default function AdvisorDashboard() {
       if (h.estado === 'Canceled')  k.canceled++
       if (h.estado === 'Suspended') k.suspended++
     })
-    // Admin events: registrados → effective + administrative; sin registrar → sinRegistrar
-    k.effective       += adminAgg.registradas
-    k.sinRegistrar    += adminAgg.sinRegistrar
-    k.administrative   = adminAgg.registradas
+    // Admin events:
+    //   - Effective suma las registradas (horas ya "marcadas tarjeta").
+    //   - Hours without recording suma las sin registrar (pendientes).
+    //   - Administrative muestra el TOTAL del mes (registradas + sin registrar).
+    //     Así se cumple la identidad visible al advisor:
+    //       effective = conducted + administrative - hoursWithoutRecording
+    k.effective      += adminAgg.registradas
+    k.sinRegistrar   += adminAgg.sinRegistrar
+    k.administrative  = adminAgg.registradas + adminAgg.sinRegistrar
     return k
   }, [data, adminAgg])
 
