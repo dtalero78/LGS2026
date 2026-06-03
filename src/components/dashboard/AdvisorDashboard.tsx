@@ -95,15 +95,19 @@ export default function AdvisorDashboard() {
       })
   }, [email])
 
-  // Paso 2 — cargar vista mensual del mes corriente
+  // Paso 2 — cargar vista mensual del mes corriente (CALENDARIO + admin events)
+  const [adminAgg, setAdminAgg] = useState<{ registradas: number; sinRegistrar: number }>({ registradas: 0, sinRegistrar: 0 })
   useEffect(() => {
     if (!advisor?._id) return
     setLoading(true); setError(null)
-    fetch(`/api/postgres/advisors/${advisor._id}/control-horas?year=${year}&month=${month}`, { cache: 'no-store' })
-      .then(r => r.json())
-      .then(j => {
-        if (!j.success) throw new Error(j.error || 'Error cargando datos')
-        setData({ vigentes: j.vigentes ?? [], historicos: j.historicos ?? [] })
+    Promise.all([
+      fetch(`/api/postgres/advisors/${advisor._id}/control-horas?year=${year}&month=${month}`, { cache: 'no-store' }).then(r => r.json()),
+      fetch(`/api/postgres/advisors/${advisor._id}/admin-events?year=${year}&month=${month}`, { cache: 'no-store' }).then(r => r.json()),
+    ])
+      .then(([j1, j2]) => {
+        if (!j1.success) throw new Error(j1.error || 'Error cargando datos')
+        setData({ vigentes: j1.vigentes ?? [], historicos: j1.historicos ?? [] })
+        if (j2?.success) setAdminAgg(j2.aggregate || { registradas: 0, sinRegistrar: 0 })
       })
       .catch((e: any) => setError(e?.message || 'Error desconocido'))
       .finally(() => setLoading(false))
@@ -133,6 +137,7 @@ export default function AdvisorDashboard() {
       sessions: 0, training: 0, clubs: 0, welcome: 0,
       conducted: 0, canceled: 0, suspended: 0,
       effective: 0, sinRegistrar: 0,
+      administrative: 0,
     }
     if (!data) return k
 
@@ -154,8 +159,12 @@ export default function AdvisorDashboard() {
       if (h.estado === 'Canceled')  k.canceled++
       if (h.estado === 'Suspended') k.suspended++
     })
+    // Admin events: registrados → effective + administrative; sin registrar → sinRegistrar
+    k.effective       += adminAgg.registradas
+    k.sinRegistrar    += adminAgg.sinRegistrar
+    k.administrative   = adminAgg.registradas
     return k
-  }, [data])
+  }, [data, adminAgg])
 
   // Heatmaps Día × Hora del mes (Lun-Dom × 06:00-21:00).
   // 2 matrices: conducted (azul) y canceled (rojo). Agregado por weekday × hora.
@@ -216,10 +225,11 @@ export default function AdvisorDashboard() {
         </div>
       </div>
 
-      {/* KPIs destacados — Effective Hours + Hours without recording.
-          Effective = vigentes con sesionCerrada=true. Without recording =
-          vigentes sin cerrar (advisor o coord no las ha registrado todavía). */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* KPIs destacados — Effective | Sin registrar | Administrative.
+          Administrative ya está sumado en Effective; se muestra como tercer KPI
+          para que el advisor sepa cuántas de sus horas efectivas vienen de
+          eventos administrativos (Training/Support/...). */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <KpiCard
           label="Effective Hours"
           value={kpis.effective}
@@ -230,6 +240,12 @@ export default function AdvisorDashboard() {
           label="Hours without recording"
           value={kpis.sinRegistrar}
           color="bg-amber-50    border-amber-400    text-amber-700"
+          big
+        />
+        <KpiCard
+          label="Administrative Hours"
+          value={kpis.administrative}
+          color="bg-violet-50   border-violet-400   text-violet-700"
           big
         />
       </div>
