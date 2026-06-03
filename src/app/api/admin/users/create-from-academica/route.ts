@@ -41,11 +41,16 @@ interface AcademicaPreview {
  * filas), prefiere BENEFICIARIO sobre TITULAR (igual que otros flujos).
  */
 async function findAcademicaByNumeroId(numeroId: string): Promise<AcademicaPreview | null> {
+  // TRIM en `email` en BD para limpiar dato sucio (espacios al borde
+  // típicos de migración Wix). Si no se hace acá, el lookup posterior contra
+  // USUARIOS_ROLES (UNIQUE email) falla porque el INSERT trimea cliente-side
+  // y choca con el registro existente sin espacio.
   return queryOne<AcademicaPreview>(
     `SELECT
        "_id", "numeroId",
        "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
-       "email", "celular", "contrato", "plataforma", "tipoUsuario",
+       TRIM("email") AS "email",
+       "celular", "contrato", "plataforma", "tipoUsuario",
        "nivel", "step", "clave", "estadoInactivo"
      FROM "ACADEMICA"
      WHERE "numeroId" = $1
@@ -69,13 +74,15 @@ function joinNames(first: string | null, second: string | null): string {
 }
 
 /**
- * Detecta el usuario USUARIOS_ROLES existente con un email dado (case-insensitive).
- * Devuelve el rol + nombre para mostrar en el error si hay duplicado.
+ * Detecta el usuario USUARIOS_ROLES existente con un email dado
+ * (case-insensitive + tolerante a espacios al borde — algunos registros de
+ * ACADEMICA migrados de Wix tienen un espacio al final del email). Sin TRIM
+ * en BD, el INSERT post-trim cliente fallaba con el UNIQUE constraint del email.
  */
 async function findExistingByEmail(email: string) {
   return queryOne<{ _id: string; nombre: string; rol: string; activo: boolean | null }>(
     `SELECT "_id", "nombre", "rol", "activo" FROM "USUARIOS_ROLES"
-     WHERE LOWER("email") = LOWER($1) LIMIT 1`,
+     WHERE LOWER(TRIM("email")) = LOWER(TRIM($1)) LIMIT 1`,
     [email],
   );
 }
