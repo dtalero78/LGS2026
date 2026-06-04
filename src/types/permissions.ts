@@ -155,6 +155,18 @@ export enum AcademicoPermission {
 
   // Evaluaciones Jump (Bot Tutor) — revisar/aprobar reportes del bot
   JUMP_EVAL_REVISAR = 'ACADEMICO.JUMP_EVAL.REVISAR',
+
+  // Performance Evaluation — dashboard de evaluaciones de estudiantes a advisors
+  PERFORMANCE_EVAL_VER       = 'ACADEMICO.PERFORMANCE_EVAL.VER',
+  PERFORMANCE_EVAL_EXPORTAR  = 'ACADEMICO.PERFORMANCE_EVAL.EXPORTAR',
+
+  // Sesiones sin gestión — backlog de eventos pasados sin cerrar
+  SESIONES_SIN_GESTION_VER   = 'ACADEMICO.SESIONES_SIN_GESTION.VER',
+
+  // Admin Events — eventos administrativos del advisor (Training/Support/...)
+  ADMIN_EVENTS_GESTIONAR  = 'ACADEMICO.ADMIN_EVENTS.GESTIONAR',  // crear/editar/eliminar
+  ADMIN_EVENTS_REGISTRAR  = 'ACADEMICO.ADMIN_EVENTS.REGISTRAR',  // advisor registra timeout+notas
+  ADMIN_EVENTS_VER_TODOS  = 'ACADEMICO.ADMIN_EVENTS.VER_TODOS',  // ver de cualquier advisor
 }
 
 /**
@@ -314,6 +326,8 @@ export enum MantenimientoPermission {
   AVISOS_BANNER     = 'MANTENIMIENTO.AVISOS.BANNER',
   // Material
   ACTUALIZAR_VIDEOS = 'MANTENIMIENTO.MATERIAL.ACTUALIZAR_VIDEOS',
+  // Plantillas
+  PLANTILLAS_GESTION = 'MANTENIMIENTO.PLANTILLAS.GESTION',
   // Scripts
   SCRIPTS_USUARIOS_PEGADOS = 'MANTENIMIENTO.SCRIPTS.USUARIOS_PEGADOS',
   SCRIPTS_CONSULTA         = 'MANTENIMIENTO.SCRIPTS.CONSULTA',

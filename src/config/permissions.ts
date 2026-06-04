@@ -509,6 +509,48 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     name: 'Revisar Evaluaciones Jump (Bot Tutor)',
     description: 'Acceso a /dashboard/academic/jump-evaluaciones. Permite revisar los reportes del bot tutor del examen Jump y aprobar/rechazar (al aprobar se crea el booking del Jump y avanza el step).',
   },
+  {
+    code: AcademicoPermission.PERFORMANCE_EVAL_VER,
+    module: Module.ACADEMICO,
+    section: 'Performance Evaluation',
+    name: 'Ver Dashboard Performance Evaluation',
+    description: 'Acceso a /dashboard/academic/performance-evaluation. KPIs, ranking Top 5 / Bottom 5 advisors, distribución de calificaciones, evolución mensual y tabla de comentarios. Pensado para roles COORDINADOR_ACADEMICO / ACADEMICO_JEFE. Sujeto al feature flag global performance_eval_mode (off / beta / on).',
+  },
+  {
+    code: AcademicoPermission.PERFORMANCE_EVAL_EXPORTAR,
+    module: Module.ACADEMICO,
+    section: 'Performance Evaluation',
+    name: '↳ Descargar CSV (Performance Evaluation)',
+    description: 'Botón Exportar CSV del informe Performance Evaluation.',
+  },
+  {
+    code: AcademicoPermission.SESIONES_SIN_GESTION_VER,
+    module: Module.ACADEMICO,
+    section: 'Sesiones sin gestión',
+    name: 'Página "Sesiones sin gestión"',
+    description: 'Acceso a /dashboard/academic/sesiones-sin-gestion. Lista de eventos pasados sin registrar (sesionCerrada=false) con filtros por fecha y advisor. Muestra inscritos/asistencia marcada para detectar si el advisor empezó pero no cerró, y un acceso directo al panel del evento para que el coordinador gestione el cierre.',
+  },
+  {
+    code: AcademicoPermission.ADMIN_EVENTS_GESTIONAR,
+    module: Module.ACADEMICO,
+    section: 'Eventos Administrativos',
+    name: 'Página "Eventos Administrativos" — crear / editar / eliminar',
+    description: 'Acceso a /dashboard/academic/eventos-administrativos. Crear eventos administrativos del advisor (Training/Support/Observation/Meeting/Development), asignarlos a uno o varios advisors, editarlos o eliminarlos. Pensado para SUPER_ADMIN / ADMIN / COORDINADOR_ACADEMICO.',
+  },
+  {
+    code: AcademicoPermission.ADMIN_EVENTS_REGISTRAR,
+    module: Module.ACADEMICO,
+    section: 'Eventos Administrativos',
+    name: 'Registrar Evento Administrativo (advisor)',
+    description: 'Permite que el advisor marque como registrado un evento administrativo asignado a él, dentro de su ventana de +40 / +120 min. El rol ADVISOR lo tiene por default.',
+  },
+  {
+    code: AcademicoPermission.ADMIN_EVENTS_VER_TODOS,
+    module: Module.ACADEMICO,
+    section: 'Eventos Administrativos',
+    name: 'Ver Eventos Administrativos de cualquier advisor',
+    description: 'Acceso al listado completo de eventos administrativos sin restricción de advisor. Cada advisor siempre ve los suyos sin necesidad de este permiso.',
+  },
 
   // ========== INFORMES MODULE ==========
   // Abuelo: muestra el grupo Informes en el sidebar. Cada informe se habilita
@@ -871,6 +913,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     section: 'Material',
     name: 'Página "Actualizar Videos"',
     description: 'Acceso a /admin/actualizar-videos. Gestión de videos instructivos del panel estudiante y videos por nivel/step',
+  },
+  {
+    code: MantenimientoPermission.PLANTILLAS_GESTION,
+    module: Module.MANTENIMIENTO,
+    section: 'Plantillas',
+    name: 'Página "Gestión de Plantillas"',
+    description: 'Acceso a /admin/plantillas/gestion. CRUD de plantillas de mensajes WhatsApp usadas en envío individual y masivo',
   },
   {
     code: MantenimientoPermission.SCRIPTS_USUARIOS_PEGADOS,

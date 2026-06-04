@@ -42,7 +42,10 @@ const getNavigation = (userEmail: string) => [
       { name: 'Panel Advisor', href: `/panel-advisor?email=${encodeURIComponent(userEmail)}` },
       { name: 'Actualizar Material', href: '/dashboard/academic/actualizar-material', newTab: true },
       { name: 'Control Horas', href: '/dashboard/academic/control-horas' },
+      { name: 'Eventos Administrativos', href: '/dashboard/academic/eventos-administrativos', newTab: true },
+      { name: 'Sesiones sin gestión', href: '/dashboard/academic/sesiones-sin-gestion', newTab: true },
       { name: 'Evaluaciones Jump', href: '/dashboard/academic/jump-evaluaciones' },
+      { name: 'Performance Evaluation', href: '/dashboard/academic/performance-evaluation', newTab: true },
     ],
   },
   {
@@ -174,6 +177,12 @@ const getNavigation = (userEmail: string) => [
         ],
       },
       {
+        name: 'Mensajes', isSubmenu: true, children: [
+          { name: 'Plantillas', href: '/admin/plantillas/gestion', newTab: true },
+          { name: 'Gestión',    href: '/admin/envio-mensajes',     newTab: true },
+        ],
+      },
+      {
         name: 'Usuarios', isSubmenu: true, children: [
           { name: 'Bloqueo Contrato', href: '/admin/bloqueo-contrato', newTab: true },
           { name: 'Clear Historic',   href: '/admin/clear-historic',   newTab: true },
@@ -181,8 +190,7 @@ const getNavigation = (userEmail: string) => [
           { name: 'Edición Contrato', href: '/admin/edicion-contrato', newTab: true },
           { name: 'Generar Contrato', href: '/admin/generar-contrato', newTab: true },
           { name: 'Migrar Contrato',  href: '/admin/migrar-contrato',  newTab: true },
-          { name: 'Envío Mensajes',   href: '/admin/envio-mensajes',   newTab: true },
-          { name: 'Crear Rol',        href: '/admin/roles/create',     newTab: true },
+          { name: 'Crea UserRol',     href: '/admin/roles/create',     newTab: true },
         ],
       },
       {
@@ -247,8 +255,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/dashboard/academic/control-horas': [
       AcademicoPermission.CONTROL_HORAS_VER,
     ],
+    '/dashboard/academic/sesiones-sin-gestion': [
+      AcademicoPermission.SESIONES_SIN_GESTION_VER,
+    ],
+    '/dashboard/academic/eventos-administrativos': [
+      AcademicoPermission.ADMIN_EVENTS_GESTIONAR,
+    ],
     '/dashboard/academic/jump-evaluaciones': [
       AcademicoPermission.JUMP_EVAL_REVISAR,
+    ],
+    '/dashboard/academic/performance-evaluation': [
+      AcademicoPermission.PERFORMANCE_EVAL_VER,
     ],
     '/panel-advisor': [
       AcademicoPermission.ADVISOR_VER_ENLACE,
@@ -342,6 +359,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ],
     '/admin/actualizar-videos': [
       MantenimientoPermission.ACTUALIZAR_VIDEOS,
+    ],
+    '/admin/plantillas/gestion': [
+      MantenimientoPermission.PLANTILLAS_GESTION,
     ],
     '/admin/scripts/usuarios-pegados': [
       MantenimientoPermission.SCRIPTS_USUARIOS_PEGADOS,

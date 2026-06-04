@@ -9,6 +9,7 @@ import { PermissionGuard } from '@/components/permissions'
 import { StudentPermission } from '@/types/permissions'
 import { formatDateTimeColombia } from '@/lib/utils'
 import { isAdminSuspended } from '@/lib/contract-status'
+import { formatEtapaNivelStep } from '@/lib/etapas'
 
 // Force dynamic rendering to prevent page caching
 export const dynamic = 'force-dynamic'
@@ -78,8 +79,7 @@ async function StudentContent({ studentId }: { studentId: string }) {
               <div className="mt-1 flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-gray-500">
                 <span>ID: {student.numeroId || 'No disponible'}</span>
                 <span>Contrato: {student.contrato || 'No disponible'}</span>
-                <span>Nivel: {student.nivel || 'No asignado'}</span>
-                <span>Step: {student.step || 'No asignado'}</span>
+                <span>Programa: {formatEtapaNivelStep(student.nivel, student.step) || 'No asignado'}</span>
                 <EstadoBadge estado={student.estado} prefix="Estado: " />
               </div>
             </div>

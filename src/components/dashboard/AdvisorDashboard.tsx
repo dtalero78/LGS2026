@@ -95,15 +95,19 @@ export default function AdvisorDashboard() {
       })
   }, [email])
 
-  // Paso 2 — cargar vista mensual del mes corriente
+  // Paso 2 — cargar vista mensual del mes corriente (CALENDARIO + admin events)
+  const [adminAgg, setAdminAgg] = useState<{ registradas: number; sinRegistrar: number }>({ registradas: 0, sinRegistrar: 0 })
   useEffect(() => {
     if (!advisor?._id) return
     setLoading(true); setError(null)
-    fetch(`/api/postgres/advisors/${advisor._id}/control-horas?year=${year}&month=${month}`, { cache: 'no-store' })
-      .then(r => r.json())
-      .then(j => {
-        if (!j.success) throw new Error(j.error || 'Error cargando datos')
-        setData({ vigentes: j.vigentes ?? [], historicos: j.historicos ?? [] })
+    Promise.all([
+      fetch(`/api/postgres/advisors/${advisor._id}/control-horas?year=${year}&month=${month}`, { cache: 'no-store' }).then(r => r.json()),
+      fetch(`/api/postgres/advisors/${advisor._id}/admin-events?year=${year}&month=${month}`, { cache: 'no-store' }).then(r => r.json()),
+    ])
+      .then(([j1, j2]) => {
+        if (!j1.success) throw new Error(j1.error || 'Error cargando datos')
+        setData({ vigentes: j1.vigentes ?? [], historicos: j1.historicos ?? [] })
+        if (j2?.success) setAdminAgg(j2.aggregate || { registradas: 0, sinRegistrar: 0 })
       })
       .catch((e: any) => setError(e?.message || 'Error desconocido'))
       .finally(() => setLoading(false))
@@ -123,8 +127,18 @@ export default function AdvisorDashboard() {
   // ── Derivados ────────────────────────────────────────────────────────────
   // KPIs del mes — desglose por tipo y por estado.
   // Training se separa de "Clubs (otros)" mirando el prefijo del step.
+  //
+  // Effective Hours / Hours without recording son las 2 caras del Conducted:
+  //   - effective = vigentes con sesionCerrada=true (registradas por advisor o coord)
+  //   - sinRegistrar = vigentes con sesionCerrada=false/null (pendientes)
+  // effective + sinRegistrar = conducted.
   const kpis = useMemo(() => {
-    const k = { sessions: 0, training: 0, clubs: 0, welcome: 0, conducted: 0, canceled: 0, suspended: 0 }
+    const k = {
+      sessions: 0, training: 0, clubs: 0, welcome: 0,
+      conducted: 0, canceled: 0, suspended: 0,
+      effective: 0, sinRegistrar: 0,
+      administrative: 0,
+    }
     if (!data) return k
 
     const countTipoStep = (tipo: string | null, step: string | null) => {
@@ -134,14 +148,35 @@ export default function AdvisorDashboard() {
       else if (t === 'WELCOME') k.welcome++
     }
 
-    data.vigentes.forEach(v => { countTipoStep(v.tipo, v.step); k.conducted++ })
+    // KPIs solo cuentan eventos que YA ocurrieron (fechaEvento <= NOW).
+    // Eventos futuros del mes son agenda, no actividad real.
+    const nowMs = Date.now()
+    const isPast = (iso: string | null | undefined) =>
+      iso != null && new Date(iso).getTime() <= nowMs
+    data.vigentes.forEach(v => {
+      if (!isPast(v.fechaEvento)) return
+      countTipoStep(v.tipo, v.step)
+      k.conducted++
+      if (v.sesionCerrada === true) k.effective++
+      else                          k.sinRegistrar++
+    })
     data.historicos.forEach(h => {
+      if (!isPast(h.fechaEvento)) return
       countTipoStep(h.tipo, h.step)
       if (h.estado === 'Canceled')  k.canceled++
       if (h.estado === 'Suspended') k.suspended++
     })
+    // Admin events:
+    //   - Effective suma las registradas (horas ya "marcadas tarjeta").
+    //   - Hours without recording suma las sin registrar (pendientes).
+    //   - Administrative muestra el TOTAL del mes (registradas + sin registrar).
+    //     Así se cumple la identidad visible al advisor:
+    //       effective = conducted + administrative - hoursWithoutRecording
+    k.effective      += adminAgg.registradas
+    k.sinRegistrar   += adminAgg.sinRegistrar
+    k.administrative  = adminAgg.registradas + adminAgg.sinRegistrar
     return k
-  }, [data])
+  }, [data, adminAgg])
 
   // Heatmaps Día × Hora del mes (Lun-Dom × 06:00-21:00).
   // 2 matrices: conducted (azul) y canceled (rojo). Agregado por weekday × hora.
@@ -151,9 +186,11 @@ export default function AdvisorDashboard() {
     const result = { conducted: mkMatrix(), canceled: mkMatrix() }
     if (!data) return result
 
+    const nowMs = Date.now()
     const addEvent = (iso: string, bucket: 'conducted' | 'canceled') => {
       const d = new Date(iso)
       if (d.getFullYear() !== year || d.getMonth() + 1 !== month) return
+      if (d.getTime() > nowMs) return         // heatmap = actividad pasada
       const wd = (d.getDay() + 6) % 7         // 0=Lun, 6=Dom
       const hIdx = HOURS.indexOf(d.getHours())
       if (hIdx < 0) return                     // fuera de 06-21
@@ -202,7 +239,32 @@ export default function AdvisorDashboard() {
         </div>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs destacados — Effective | Sin registrar | Administrative.
+          Administrative ya está sumado en Effective; se muestra como tercer KPI
+          para que el advisor sepa cuántas de sus horas efectivas vienen de
+          eventos administrativos (Training/Support/...). */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <KpiCard
+          label="Effective Hours"
+          value={kpis.effective}
+          color="bg-emerald-50  border-emerald-400  text-emerald-700"
+          big
+        />
+        <KpiCard
+          label="Hours without recording"
+          value={kpis.sinRegistrar}
+          color="bg-amber-50    border-amber-400    text-amber-700"
+          big
+        />
+        <KpiCard
+          label="Administrative Hours"
+          value={kpis.administrative}
+          color="bg-violet-50   border-violet-400   text-violet-700"
+          big
+        />
+      </div>
+
+      {/* KPIs detalle */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
         <KpiCard label="Sessions"  value={kpis.sessions}  color="bg-blue-50    border-blue-300    text-blue-700" />
         <KpiCard label="Training"  value={kpis.training}  color="bg-orange-50  border-orange-300  text-orange-700" />
@@ -274,11 +336,13 @@ function AdvisorAvatar({ fotoUrl, inicial }: { fotoUrl: string | null; inicial: 
   )
 }
 
-function KpiCard({ label, value, color }: { label: string; value: number; color: string }) {
+function KpiCard({ label, value, color, big }: { label: string; value: number; color: string; big?: boolean }) {
+  // Mismo padding y altura que las cards normales; solo la card 'big' tiene
+  // borde mas grueso para destacar — la altura final coincide visualmente.
   return (
-    <div className={`${color} border rounded-lg px-3 py-2 text-center`}>
+    <div className={`${color} ${big ? 'border-2' : 'border'} rounded-lg px-3 py-2 text-center`}>
       <div className="text-2xl font-bold">{value}</div>
-      <div className="text-[10px] uppercase tracking-wide font-semibold">{label}</div>
+      <div className={big ? 'text-xs uppercase tracking-wide font-semibold' : 'text-[10px] uppercase tracking-wide font-semibold'}>{label}</div>
     </div>
   )
 }

@@ -26,6 +26,9 @@ import MyEventsSection from '@/components/panel-estudiante/MyEventsSection'
 import { formatDate } from '@/lib/utils'
 import AttendanceStats from '@/components/panel-estudiante/AttendanceStats'
 import BookingFlow from '@/components/panel-estudiante/BookingFlow'
+import SinEvaluarCard from '@/components/panel-estudiante/SinEvaluarCard'
+import EvaluacionModal from '@/components/panel-estudiante/EvaluacionModal'
+import { useEvaluacionesPendientes } from '@/hooks/use-evaluations'
 import ProgressReport from '@/components/panel-estudiante/ProgressReport'
 import MaterialsList from '@/components/panel-estudiante/MaterialsList'
 import WhatsAppContacts from '@/components/panel-estudiante/WhatsAppContacts'
@@ -94,7 +97,27 @@ function PanelEstudianteContent() {
     }
   }
 
+  // Soft prompt: si hay evaluaciones pendientes (semana actual, asistidas, sin evaluar),
+  // al hacer click en "Agendar" abrimos el modal de evaluación con la PRIMERA pendiente.
+  // El usuario puede evaluar y luego continuar, o usar "Evaluar más tarde y agendar"
+  // para bypassear y abrir el wizard normal (la pendiente sigue en la lista).
+  const evalPendientesQuery = useEvaluacionesPendientes()
+  const pendientesRows = evalPendientesQuery.data?.featureEnabled ? (evalPendientesQuery.data.rows ?? []) : []
+  const [softPrompt, setSoftPrompt] = useState<{ tipo?: string } | null>(null)
+
   const openBooking = (tipo?: string) => {
+    if (pendientesRows.length > 0) {
+      setSoftPrompt({ tipo })
+      return
+    }
+    setBookingTipo(tipo)
+    setShowBookingFlow(true)
+  }
+
+  /** "Evaluar más tarde y agendar" — bypass + abre wizard. */
+  const handleEvaluarMasTarde = () => {
+    const tipo = softPrompt?.tipo
+    setSoftPrompt(null)
     setBookingTipo(tipo)
     setShowBookingFlow(true)
   }
@@ -212,8 +235,13 @@ function PanelEstudianteContent() {
         {/* Jump exam banner (only when eligible) */}
         <JumpExamBanner />
 
-        {/* 3. Student Info Card + Attendance Stats */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Grid principal de 2 columnas con cards apiladas:
+              Izq (1/3): NEXT SESSION + SinEvaluar
+              Der (2/3): Stats + Eventos + AdvisorComments
+            items-start para que cada columna mida su contenido natural. */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+          {/* Columna izquierda — NEXT SESSION arriba, SinEvaluar abajo */}
+          <div className="space-y-4">
           {/* Student Info Card */}
           <div className="bg-gradient-to-br from-primary-600 to-primary-800 rounded-xl p-5 text-white">
             {meQuery.isLoading ? (
@@ -277,8 +305,11 @@ function PanelEstudianteContent() {
               </div>
             )}
           </div>
+          {/* SinEvaluar debajo de NEXT SESSION (misma columna izquierda) */}
+          <SinEvaluarCard />
+          </div>
 
-          {/* Stats Cards + Events stacked */}
+          {/* Columna derecha — Stats + Eventos arriba, AdvisorComments abajo */}
           <div className="lg:col-span-2 space-y-4">
             <AttendanceStats
               stats={statsQuery.data?.stats}
@@ -290,14 +321,12 @@ function PanelEstudianteContent() {
               onCancel={handleCancel}
               isCancelling={cancelMutation.isLoading}
             />
+            <AdvisorComments
+              data={commentsQuery.data}
+              isLoading={commentsQuery.isLoading}
+            />
           </div>
         </div>
-
-        {/* 5. Advisor Comments (full width) */}
-        <AdvisorComments
-          data={commentsQuery.data}
-          isLoading={commentsQuery.isLoading}
-        />
 
         {/* 5. Let's Go assistance */}
         <WhatsAppContacts />
@@ -396,6 +425,20 @@ function PanelEstudianteContent() {
         <BookingFlow
           onClose={() => { setShowBookingFlow(false); setBookingTipo(undefined) }}
           initialTipo={bookingTipo}
+        />
+      )}
+
+      {/* Soft prompt: si hay evaluaciones pendientes al intentar agendar.
+          "Evaluar más tarde y agendar" bypassea — la pendiente queda para evaluar luego. */}
+      {softPrompt && pendientesRows.length > 0 && (
+        <EvaluacionModal
+          item={pendientesRows[0]}
+          onClose={handleEvaluarMasTarde}
+          onSubmitted={() => {
+            // Tras enviar la evaluación, abrimos directo el wizard de booking.
+            handleEvaluarMasTarde()
+          }}
+          laterButtonLabel="Evaluar más tarde y agendar"
         />
       )}
 
