@@ -30,7 +30,7 @@ const DIMS = [
   {
     key: 'puntualidad',
     label: 'Puntualidad y organización',
-    quote: 'La clase comenzó y terminó a tiempo.',
+    quote: 'La sesión comenzó y terminó a tiempo.',
   },
   {
     key: 'claridad',
@@ -40,12 +40,12 @@ const DIMS = [
   {
     key: 'actividades',
     label: 'Participación y variedad de actividades',
-    quote: 'La clase tuvo actividades variadas y me permitió participar.',
+    quote: 'La sesión tuvo actividades variadas y me permitió participar.',
   },
   {
     key: 'ambiente',
     label: 'Ambiente de aprendizaje',
-    quote: 'Me sentí cómodo/a participando durante la clase.',
+    quote: 'Me sentí cómodo/a participando durante la sesión.',
   },
 ] as const
 
@@ -115,7 +115,7 @@ export default function EvaluacionModal({
           <div className="flex items-start justify-between mb-4">
             <div>
               <h3 className="text-xl font-bold text-gray-900">⭐ Evalúa tu sesión</h3>
-              <p className="text-xs text-gray-400">Tu feedback nos ayuda a mejorar las clases</p>
+              <p className="text-xs text-gray-400">Tu feedback nos ayuda a mejorar las sesiones</p>
             </div>
             <button type="button" onClick={() => !mutation.isLoading && onClose()}
               className="text-gray-400 hover:text-gray-600 text-2xl leading-none" title="Cerrar">&times;</button>
