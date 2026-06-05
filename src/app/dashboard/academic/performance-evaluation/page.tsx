@@ -210,10 +210,25 @@ export default function PerformanceEvaluationPage() {
             </div>
           </div>
 
-          {/* Top 5 / Bottom 5 — fila clickeable abre radar del advisor */}
+          {/* Top 5 / 5 Promedios más bajos — fila clickeable abre radar del advisor.
+              El "más bajos" filtra a promedio < 4 — si no hay, mensaje verde
+              de buenas noticias en vez de "Sin datos suficientes". */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <RankingCard title="🏆 Top 5 mejor calificados" subtitle="mín. 5 evaluaciones · clic para ver desglose" rows={top5} color="emerald" onClickRow={setRadarAdvisor} />
-            <RankingCard title="⚠ Bottom 5 peor calificados" subtitle="mín. 5 evaluaciones · clic para ver desglose" rows={bot5} color="red" onClickRow={setRadarAdvisor} />
+            <RankingCard
+              title="🏆 Top 5 Mejor Promedio"
+              subtitle="mín. 5 evaluaciones · clic para ver desglose"
+              rows={top5}
+              color="emerald"
+              onClickRow={setRadarAdvisor}
+            />
+            <RankingCard
+              title="⚠ 5 Promedios Más Bajos"
+              subtitle="advisors con promedio < 4 ★ · clic para ver desglose"
+              rows={bot5.filter((r: any) => Number(r.promedio) < 4)}
+              color="red"
+              onClickRow={setRadarAdvisor}
+              emptyMessage="No hay advisors con promedios por debajo de 4 ★"
+            />
           </div>
 
           {/* Distribución + Evolución */}
@@ -335,19 +350,29 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub?: string
 }
 
 function RankingCard({
-  title, subtitle, rows, color, onClickRow,
+  title, subtitle, rows, color, onClickRow, emptyMessage,
 }: {
   title: string; subtitle: string; rows: any[]; color: 'emerald' | 'red';
   onClickRow?: (advisor: any) => void;
+  emptyMessage?: string;
 }) {
   const dotColor = color === 'emerald' ? 'bg-emerald-500' : 'bg-red-500'
+  // Estilo del empty state: si la card es "red" y el mensaje es custom (caso
+  // 5 Promedios Más Bajos sin advisors bajo 4★) lo presentamos en verde como
+  // "buena noticia". Si no, gris neutro estándar.
+  const isGoodNews = color === 'red' && !!emptyMessage
+  const emptyText = emptyMessage || 'Sin datos suficientes'
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
       <div className="px-5 py-3 border-b border-gray-100">
         <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
         <p className="text-[11px] text-gray-400">{subtitle}</p>
       </div>
-      {rows.length === 0 ? <p className="p-6 text-center text-sm text-gray-400">Sin datos suficientes</p> : (
+      {rows.length === 0 ? (
+        <p className={`p-6 text-center text-sm ${isGoodNews ? 'text-emerald-700 font-medium' : 'text-gray-400'}`}>
+          {isGoodNews ? '🎉 ' : ''}{emptyText}
+        </p>
+      ) : (
         <ol className="divide-y divide-gray-100">
           {rows.map((r, i) => (
             <li key={r.advisorId}>
