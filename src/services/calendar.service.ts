@@ -5,12 +5,14 @@
  */
 
 import 'server-only';
+import { randomUUID } from 'crypto';
 import { CalendarioRepository, EventFilters } from '@/repositories/calendar.repository';
 import { BookingRepository } from '@/repositories/booking.repository';
 import { AdvisorEventLogRepository } from '@/repositories/advisor-event-log.repository';
 import { NotFoundError, ValidationError, ConflictError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 import { withTransaction } from '@/lib/postgres';
+import { isEventoCompartible, reasonNotCompartible, MAX_NIVELES_COMPARTIDOS, extractClubPrefix } from '@/lib/evento-compartido';
 
 const MAX_ADVISOR_REASSIGNMENTS = 2;
 
@@ -57,6 +59,14 @@ export async function getEventById(eventId: string) {
 
 /**
  * Create a new calendar event.
+ *
+ * Si `data.compartidoCon` viene con 1-2 elementos, se crea un grupo compartido:
+ *   - El evento base + las filas adicionales reciben el MISMO `eventoCompartidoId` (UUID).
+ *   - Cada fila adicional tiene su propio nivel + step pero comparte advisor,
+ *     hora, tipo, zoom, límite.
+ *   - Solo se permite si `isEventoCompartible(tipo, step)` es true.
+ *   - Devuelve el evento base; los hermanos quedan en BD para que cada nivel
+ *     los vea normalmente.
  */
 export async function createEvent(data: {
   dia: string;
@@ -73,6 +83,8 @@ export async function createEvent(data: {
   limiteUsuarios?: number;
   club?: string;
   observaciones?: string;
+  /** Niveles adicionales para evento compartido (max MAX_NIVELES_COMPARTIDOS-1). */
+  compartidoCon?: Array<{ nivel: string; step?: string; nombreEvento?: string; tituloONivel?: string }>;
 }) {
   if (!data.dia) throw new ValidationError('dia is required');
   if (!data.hora) throw new ValidationError('hora is required');
@@ -80,7 +92,47 @@ export async function createEvent(data: {
 
   const tipo = data.tipo;
 
-  const eventData: Record<string, any> = {
+  // Validación de compartibilidad: si vienen niveles adicionales,
+  // verificamos que el evento base sea compartible y que los niveles
+  // adicionales sean distintos al base + únicos entre sí.
+  const compartidoCon = Array.isArray(data.compartidoCon) ? data.compartidoCon : [];
+  const isCompartido = compartidoCon.length > 0;
+  let eventoCompartidoId: string | null = null;
+
+  if (isCompartido) {
+    if (compartidoCon.length > MAX_NIVELES_COMPARTIDOS - 1) {
+      throw new ValidationError(`Máximo ${MAX_NIVELES_COMPARTIDOS - 1} niveles adicionales (total ${MAX_NIVELES_COMPARTIDOS}).`);
+    }
+    if (!isEventoCompartible(tipo, data.step)) {
+      throw new ValidationError(reasonNotCompartible(tipo, data.step) || 'Este evento no se puede compartir.');
+    }
+    const baseNivel = (data.nivel || '').trim().toUpperCase();
+    const todosNiveles = [baseNivel, ...compartidoCon.map(c => (c.nivel || '').trim().toUpperCase())];
+    const uniqueLevels = new Set(todosNiveles.filter(Boolean));
+    if (uniqueLevels.size !== todosNiveles.length) {
+      throw new ValidationError('Los niveles del grupo compartido deben ser distintos.');
+    }
+    // Si el evento base es CLUB, los hermanos deben ser del MISMO tipo de club
+    // (no mezclar KARAOKE con LISTENING, etc.). Para SESSION Jumps no aplica
+    // porque cada nivel tiene su step numérico distinto.
+    if ((tipo || '').toUpperCase() === 'CLUB') {
+      const basePrefix = extractClubPrefix(data.step);
+      if (!basePrefix) {
+        throw new ValidationError('No se pudo determinar el tipo de club del step base.');
+      }
+      for (const adic of compartidoCon) {
+        const adicPrefix = extractClubPrefix(adic.step);
+        if (adicPrefix !== basePrefix) {
+          throw new ValidationError(
+            `Todos los niveles del grupo deben ser del mismo tipo de club. Base = ${basePrefix}, nivel ${adic.nivel} = ${adicPrefix || 'desconocido'}.`,
+          );
+        }
+      }
+    }
+    eventoCompartidoId = randomUUID();
+  }
+
+  const baseEventData: Record<string, any> = {
     _id: ids.event(),
     dia: data.dia,
     fecha: data.fecha || data.dia.split('T')[0],
@@ -97,9 +149,35 @@ export async function createEvent(data: {
     limiteUsuarios: data.limiteUsuarios || 0,
     club: data.club || null,
     observaciones: data.observaciones || null,
+    eventoCompartidoId,
   };
 
-  return CalendarioRepository.create(eventData);
+  if (!isCompartido) {
+    return CalendarioRepository.create(baseEventData);
+  }
+
+  // Grupo compartido — crear todas las filas en una transacción.
+  return withTransaction(async (client) => {
+    const baseRow = await CalendarioRepository.create(baseEventData, client);
+    for (const adic of compartidoCon) {
+      const adicNivel = (adic.nivel || '').trim();
+      const adicStep  = (adic.step  || data.step || '').trim();
+      const adicNombreEvento = (adic.nombreEvento || data.nombreEvento || data.titulo || '').trim();
+      const adicTituloONivel = adic.tituloONivel
+        || (adicNivel ? `${adicNivel} - ${adicNombreEvento || adicStep}`.trim() : '');
+      const siblingData = {
+        ...baseEventData,
+        _id: ids.event(),
+        nivel: adicNivel,
+        step: adicStep || null,
+        nombreEvento: adicNombreEvento,
+        tituloONivel: adicTituloONivel,
+        titulo: adicNombreEvento || baseEventData.titulo,
+      };
+      await CalendarioRepository.create(siblingData, client);
+    }
+    return baseRow;
+  });
 }
 
 const ALLOWED_EVENT_FIELDS = [
@@ -239,6 +317,36 @@ export async function updateEvent(
     await BookingRepository.updateByEventId(eventId, bookingUpdates);
   }
 
+  // Eventos compartidos: si este evento pertenece a un grupo, propagamos los
+  // campos COMUNES (advisor, hora, dia, linkZoom, tipo, observaciones,
+  // limiteUsuarios, sesionCerrada, timeout, notasadvisor) a los hermanos.
+  // NO propagamos nivel/step/tituloONivel/nombreEvento — esos son específicos
+  // por nivel y los hermanos los mantienen tal cual.
+  // Si el advisor cambió, también propagamos para mantener consistencia
+  // operativa (1 sola clase real del advisor).
+  if ((updated as any).eventoCompartidoId) {
+    const sharedUpdates: Record<string, any> = {};
+    if (data.advisor && data.advisor !== event.advisor) sharedUpdates.advisor = data.advisor;
+    if (data.dia && data.dia !== event.dia) sharedUpdates.dia = data.dia;
+    if (data.hora && data.hora !== event.hora) sharedUpdates.hora = data.hora;
+    if (data.linkZoom && data.linkZoom !== event.linkZoom) sharedUpdates.linkZoom = data.linkZoom;
+    if (data.tipo && data.tipo !== event.tipo) { sharedUpdates.tipo = data.tipo; sharedUpdates.evento = data.tipo; }
+    if (data.observaciones !== undefined && data.observaciones !== event.observaciones) sharedUpdates.observaciones = data.observaciones;
+    if (data.limiteUsuarios !== undefined && data.limiteUsuarios !== event.limiteUsuarios) sharedUpdates.limiteUsuarios = data.limiteUsuarios;
+    if (Object.keys(sharedUpdates).length > 0) {
+      const n = await CalendarioRepository.updateGroupSiblings(eventId, sharedUpdates);
+      // Propaga a los bookings de los hermanos también (no sólo del evento principal).
+      if (n > 0 && Object.keys(bookingUpdates).length > 0) {
+        const siblings = await CalendarioRepository.findGroupSiblings(eventId);
+        for (const sib of siblings) {
+          if (sib._id !== eventId) {
+            await BookingRepository.updateByEventId(sib._id, bookingUpdates);
+          }
+        }
+      }
+    }
+  }
+
   return updated;
 }
 
@@ -258,42 +366,59 @@ export async function updateEvent(
 export async function deleteEvent(
   eventId: string,
   deleteBookings: boolean = true,
-  opts?: { actor?: string; motivo?: string; skipLog?: boolean },
+  opts?: { actor?: string; motivo?: string; skipLog?: boolean; deleteGroup?: boolean },
 ) {
   const event = await CalendarioRepository.findById(eventId);
   if (!event) throw new NotFoundError('Event', eventId);
 
+  // Si es evento compartido y opts.deleteGroup=true, calculamos los hermanos
+  // y los procesamos en cascada (cada uno con su log Suspended + bookings).
+  // Si deleteGroup=false (o no compartido), borra sólo este evento.
+  const isShared = !!(event as any).eventoCompartidoId;
+  const idsToDelete: string[] = [eventId];
+  if (isShared && opts?.deleteGroup) {
+    const siblings = await CalendarioRepository.findGroupSiblings(eventId);
+    for (const s of siblings) {
+      if (s._id !== eventId) idsToDelete.push(s._id);
+    }
+  }
+
   return await withTransaction(async (client) => {
-    if (event.advisor && !opts?.skipLog) {
-      await AdvisorEventLogRepository.insert({
-        advisorId:     event.advisor,
-        eventoId:      eventId,
-        estado:        'Suspended',
-        fechaEvento:   event.dia,
-        horaInicio:    event.hora,
-        tipo:          event.tipo,
-        nivel:         event.nivel,
-        step:          event.step,
-        tituloEvento:  event.tituloONivel || event.titulo || event.nombreEvento,
-        horaFin:       (event as any).timeout ?? null,
-        observaciones: (event as any).notasadvisor ?? null,
-        canceladoPor:  opts?.actor || 'system',
-        motivoTransicion: opts?.motivo || null,
-      }, client);
-    }
-
     let bookingsDeleted = 0;
-    if (deleteBookings) {
-      const r = await client.query(
-        `DELETE FROM "ACADEMICA_BOOKINGS" WHERE "eventoId" = $1 OR "idEvento" = $1 RETURNING "_id"`,
-        [eventId],
-      );
-      bookingsDeleted = r.rowCount ?? 0;
+    for (const id of idsToDelete) {
+      const ev = id === eventId ? event : await CalendarioRepository.findById(id);
+      if (!ev) continue;
+
+      if (ev.advisor && !opts?.skipLog) {
+        await AdvisorEventLogRepository.insert({
+          advisorId:     ev.advisor,
+          eventoId:      id,
+          estado:        'Suspended',
+          fechaEvento:   ev.dia,
+          horaInicio:    ev.hora,
+          tipo:          ev.tipo,
+          nivel:         ev.nivel,
+          step:          ev.step,
+          tituloEvento:  ev.tituloONivel || ev.titulo || ev.nombreEvento,
+          horaFin:       (ev as any).timeout ?? null,
+          observaciones: (ev as any).notasadvisor ?? null,
+          canceladoPor:  opts?.actor || 'system',
+          motivoTransicion: opts?.motivo || null,
+        }, client);
+      }
+
+      if (deleteBookings) {
+        const r = await client.query(
+          `DELETE FROM "ACADEMICA_BOOKINGS" WHERE "eventoId" = $1 OR "idEvento" = $1 RETURNING "_id"`,
+          [id],
+        );
+        bookingsDeleted += r.rowCount ?? 0;
+      }
+
+      await client.query(`DELETE FROM "CALENDARIO" WHERE "_id" = $1`, [id]);
     }
 
-    await client.query(`DELETE FROM "CALENDARIO" WHERE "_id" = $1`, [eventId]);
-
-    return { bookingsDeleted };
+    return { bookingsDeleted, eventsDeleted: idsToDelete.length };
   });
 }
 

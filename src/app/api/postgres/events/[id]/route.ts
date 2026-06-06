@@ -44,20 +44,27 @@ export const PUT = handlerWithAuth(async (request, { params }, session) => {
  *                          ADVISOR_EVENT_LOG (borrado limpio, sin huella en
  *                          Ctrl Horas del advisor).
  *   - `deleteBookings`   — true para borrar bookings asociados (default true).
+ *   - `deleteGroup=true` — si el evento es compartido (eventoCompartidoId),
+ *                          borra también todos sus hermanos del grupo en una
+ *                          sola transacción. Sin esta flag, sólo borra el
+ *                          evento solicitado y los hermanos quedan vivos.
  */
 export const DELETE = handlerWithAuth(async (request, { params }, session) => {
   const { searchParams } = new URL(request.url);
   const deleteBookings = searchParams.get('deleteBookings') === 'true';
   const motivo = searchParams.get('motivo') || undefined;
   const skipLog = searchParams.get('skipLog') === 'true';
+  const deleteGroup = searchParams.get('deleteGroup') === 'true';
   const actor = (session?.user as any)?.email || 'system';
 
-  const result = await deleteEvent(params.id, deleteBookings, { actor, motivo, skipLog });
+  const result = await deleteEvent(params.id, deleteBookings, { actor, motivo, skipLog, deleteGroup });
 
   return successResponse({
     message: 'Evento eliminado exitosamente',
     eventId: params.id,
     bookingsDeleted: result.bookingsDeleted,
+    eventsDeleted: result.eventsDeleted,
     skipLog,
+    deleteGroup,
   });
 });

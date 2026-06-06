@@ -160,6 +160,7 @@ export async function buildMonthlyView(
        c."notasadvisor",
        COALESCE(c."sesionCerrada", false) AS "sesionCerrada",
        c."fechaCierreSesion",
+       c."eventoCompartidoId",
        COALESCE(agg."inscritos",  0) AS "inscritos",
        COALESCE(agg."asistieron", 0) AS "asistieron"
      FROM "CALENDARIO" c
