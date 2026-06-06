@@ -30,6 +30,8 @@ interface VigenteRow {
   nivel: string | null
   step: string | null
   sesionCerrada: boolean
+  /** UUID del grupo compartido — null si el evento es individual. */
+  eventoCompartidoId: string | null
 }
 
 interface HistoricoRow {
@@ -150,11 +152,17 @@ export default function AdvisorDashboard() {
 
     // KPIs solo cuentan eventos que YA ocurrieron (fechaEvento <= NOW).
     // Eventos futuros del mes son agenda, no actividad real.
+    // Eventos compartidos: 1 sola hora real aunque haya 2-3 filas
+    // (deduplicamos por eventoCompartidoId; eventos sueltos usan su _id).
     const nowMs = Date.now()
     const isPast = (iso: string | null | undefined) =>
       iso != null && new Date(iso).getTime() <= nowMs
+    const seenGroups = new Set<string>()
     data.vigentes.forEach(v => {
       if (!isPast(v.fechaEvento)) return
+      const key = v.eventoCompartidoId || v.eventoId
+      if (seenGroups.has(key)) return
+      seenGroups.add(key)
       countTipoStep(v.tipo, v.step)
       k.conducted++
       if (v.sesionCerrada === true) k.effective++
@@ -187,6 +195,7 @@ export default function AdvisorDashboard() {
     if (!data) return result
 
     const nowMs = Date.now()
+    const seenInHeatmap = new Set<string>()
     const addEvent = (iso: string, bucket: 'conducted' | 'canceled') => {
       const d = new Date(iso)
       if (d.getFullYear() !== year || d.getMonth() + 1 !== month) return
@@ -196,7 +205,14 @@ export default function AdvisorDashboard() {
       if (hIdx < 0) return                     // fuera de 06-21
       result[bucket][wd][hIdx]++
     }
-    data.vigentes.forEach(v => addEvent(v.fechaEvento, 'conducted'))
+    // Eventos compartidos: 1 sola celda del heatmap aunque haya 2-3 filas
+    // (la hora real del advisor es 1, no 3).
+    data.vigentes.forEach(v => {
+      const key = v.eventoCompartidoId || v.eventoId
+      if (seenInHeatmap.has(key)) return
+      seenInHeatmap.add(key)
+      addEvent(v.fechaEvento, 'conducted')
+    })
     data.historicos.forEach(h => { if (h.estado === 'Canceled') addEvent(h.fechaEvento, 'canceled') })
     return result
   }, [data, year, month])

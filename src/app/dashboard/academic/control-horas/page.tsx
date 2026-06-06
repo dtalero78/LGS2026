@@ -23,6 +23,8 @@ interface VigenteRow {
   notasadvisor: string | null
   sesionCerrada: boolean
   fechaCierreSesion: string | null
+  /** UUID del grupo compartido; null si no comparte. */
+  eventoCompartidoId: string | null
   inscritos: number
   asistieron: number
   absent: number
@@ -296,8 +298,16 @@ function ControlHorasContent() {
         case 'WELCOME': t.welcome++; break
       }
     }
+    // Eventos compartidos: el advisor da 1 sola hora real aunque haya 2-3
+    // filas (una por nivel). Deduplicamos por `eventoCompartidoId` antes de
+    // contar para no inflar los KPIs. Eventos individuales (compartidoId
+    // NULL) usan su propio _id como clave.
+    const seenGroups = new Set<string>()
     data.vigentes.forEach(v => {
       if (!isPast(v.fechaEvento)) return
+      const key = v.eventoCompartidoId || v.eventoId
+      if (seenGroups.has(key)) return
+      seenGroups.add(key)
       countByTipo(v.tipo)
       t.conducted++
       if (v.sesionCerrada === true) t.effective++
@@ -466,19 +476,23 @@ function ControlHorasContent() {
                 <div key={cell.key} className={`min-h-[110px] p-1.5 border-r border-b border-gray-100 ${isToday ? 'bg-blue-50/40' : 'bg-white'}`}>
                   <div className={`text-xs font-semibold mb-1 ${isToday ? 'text-blue-700' : 'text-gray-700'}`}>{cell.day}</div>
                   <div className="space-y-1">
-                    {cards.map(c => (
+                    {cards.map(c => {
+                      const isShared = c.kind === 'vigente' && !!c.eventoCompartidoId
+                      return (
                       <button
                         key={c.kind === 'vigente' ? c.eventoId : `${c.eventoId}_${c.logId}`}
                         type="button"
                         onClick={() => setSelectedCard(c)}
-                        title={`${c.tipo ?? ''} ${c.nivel ?? ''} ${c.step ?? ''} · ${stateLabel(c)}`}
+                        title={`${c.tipo ?? ''} ${c.nivel ?? ''} ${c.step ?? ''} · ${stateLabel(c)}${isShared ? ' · 🔗 compartido entre niveles' : ''}`}
                         className={`block w-full text-left px-1.5 py-1 rounded text-[11px] font-medium ${colorClass(c)} hover:opacity-90 transition`}
                       >
                         <div className="truncate">
+                          {isShared && <span className="mr-0.5" aria-hidden>🔗</span>}
                           {formatHoraLocal(c.fechaEvento)} - {c.nivel || ''} {c.step ? `· ${c.step}` : ''}
                         </div>
                       </button>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )

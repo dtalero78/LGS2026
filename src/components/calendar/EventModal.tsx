@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { XMarkIcon } from '@heroicons/react/24/outline'
+import { isEventoCompartible, reasonNotCompartible, MAX_NIVELES_COMPARTIDOS } from '@/lib/evento-compartido'
 
 interface CalendarEvent {
   _id: string
@@ -83,6 +84,12 @@ export default function EventModal({
   const [error, setError] = useState<string | null>(null)
   const [isEditMode, setIsEditMode] = useState(false)
   const [savedNombreEvento, setSavedNombreEvento] = useState('')
+
+  // Evento compartido entre niveles (solo modo CREAR — al editar no se cambia
+  // la composición del grupo, sólo los campos comunes que se propagan).
+  // Cada entrada del array es un nivel adicional con su propio step.
+  const [compartidoActivo, setCompartidoActivo] = useState(false)
+  const [compartidoCon, setCompartidoCon] = useState<Array<{ nivel: string; step: string; options: StepOption[] }>>([])
 
   // Cargar códigos únicos al montar el componente
   useEffect(() => {
@@ -342,6 +349,61 @@ export default function EventModal({
   }
 
   // Función que replica exactamente cargarNombreStep() de CALENDARIO.js
+  // Helper sin side-effects: devuelve las opciones (step o club) de un nivel.
+  // Usado por la UI de "Evento compartido" — cada nivel adicional necesita
+  // su propio dropdown de step y no podemos pisar setStepOptions/setClubOptions.
+  const getOptionsForNivelTipo = (nivelCode: string, tipo: 'SESSION' | 'CLUB'): StepOption[] => {
+    const niv = niveles.find(n => n.code === nivelCode)
+    if (!niv) return []
+    if (tipo === 'CLUB') {
+      return (niv.clubs || []).map(c => ({ value: c, label: c }))
+    }
+    return (niv.steps || []).map(s => ({ value: s, label: getStepLabel(s) }))
+  }
+
+  // Compatibilidad del evento actual para activar el toggle de compartido.
+  // En CREAR usa formData.evento + formData.nombreEvento (que ya contiene
+  // el step seleccionado del dropdown). NO se muestra en EDIT — para evitar
+  // que el admin "convierta" un evento existente en compartido (eso requiere
+  // crear los hermanos desde 0).
+  const compartibleHabilitado = !isEditMode
+    && isEventoCompartible(formData.evento, formData.nombreEvento)
+  const compartibleMotivo = !isEditMode
+    ? reasonNotCompartible(formData.evento, formData.nombreEvento)
+    : 'Para compartir entre niveles crea un evento nuevo desde 0 — al editar uno existente sólo cambian sus campos.'
+
+  // Si el toggle queda activo pero el step deja de ser compartible (ej. admin
+  // cambió de SESSION Step 5 a Step 6), apagamos el toggle automáticamente.
+  useEffect(() => {
+    if (!compartibleHabilitado && compartidoActivo) {
+      setCompartidoActivo(false)
+      setCompartidoCon([])
+    }
+  }, [compartibleHabilitado, compartidoActivo])
+
+  // Niveles disponibles para agregar al grupo: cualquiera distinto al base y
+  // que no esté ya elegido por otra entrada del array.
+  const nivelesUsados = new Set<string>([formData.tituloONivel, ...compartidoCon.map(c => c.nivel)])
+
+  const agregarNivelCompartido = () => {
+    if (compartidoCon.length >= MAX_NIVELES_COMPARTIDOS - 1) return
+    setCompartidoCon([...compartidoCon, { nivel: '', step: '', options: [] }])
+  }
+  const quitarNivelCompartido = (idx: number) => {
+    setCompartidoCon(compartidoCon.filter((_, i) => i !== idx))
+  }
+  const actualizarNivelCompartido = (idx: number, nivel: string) => {
+    const options = getOptionsForNivelTipo(nivel, formData.evento)
+    setCompartidoCon(compartidoCon.map((c, i) =>
+      i === idx ? { ...c, nivel, step: '', options } : c
+    ))
+  }
+  const actualizarStepCompartido = (idx: number, step: string) => {
+    setCompartidoCon(compartidoCon.map((c, i) =>
+      i === idx ? { ...c, step } : c
+    ))
+  }
+
   const cargarNombreStep = () => {
     const nivelSeleccionado = formData.tituloONivel
     const tipoEventoSeleccionado = formData.evento
@@ -441,8 +503,21 @@ export default function EventModal({
       const dateTimeString = `${formData.fecha}T${formData.hora}:00`
       const eventDateTime = new Date(dateTimeString)
 
+      // Si el toggle "Evento compartido" está activo, validamos que cada
+      // entrada tenga nivel y step elegidos. La validación de compartibilidad
+      // y unicidad de niveles la repite el backend como defensa en profundidad.
+      let compartidoConPayload: Array<{ nivel: string; step: string }> | undefined
+      if (compartidoActivo && compartidoCon.length > 0) {
+        const incompletos = compartidoCon.filter(c => !c.nivel || !c.step)
+        if (incompletos.length > 0) {
+          setError('Completa nivel y step en cada nivel adicional del evento compartido.')
+          return
+        }
+        compartidoConPayload = compartidoCon.map(c => ({ nivel: c.nivel, step: c.step }))
+      }
+
       // Preparar datos para enviar
-      const eventData = {
+      const eventData: Record<string, any> = {
         dia: eventDateTime.toISOString(),
         evento: formData.evento,
         tituloONivel: formData.tituloONivel,
@@ -450,8 +525,9 @@ export default function EventModal({
         advisor: formData.advisor,
         observaciones: formData.observaciones || undefined,
         limiteUsuarios: Number(formData.limiteUsuarios),
-        linkZoom: formData.linkZoom || undefined
+        linkZoom: formData.linkZoom || undefined,
       }
+      if (compartidoConPayload) eventData.compartidoCon = compartidoConPayload
 
       // Guarda integridad: si estamos editando Y cambia nivel o step (nombreEvento),
       // detectamos antes y mostramos modal apropiado:
@@ -789,6 +865,98 @@ export default function EventModal({
                 placeholder="https://zoom.us/..."
               />
             </div>
+
+            {/* Evento compartido entre niveles — sólo en CREAR */}
+            {!isEditMode && (
+              <div className="border border-indigo-200 bg-indigo-50/40 rounded-lg p-4">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="flex-1 min-w-[280px]">
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-800 select-none">
+                      <input
+                        type="checkbox"
+                        checked={compartidoActivo}
+                        onChange={e => {
+                          setCompartidoActivo(e.target.checked)
+                          if (!e.target.checked) setCompartidoCon([])
+                        }}
+                        disabled={!compartibleHabilitado}
+                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      Evento compartido entre niveles
+                    </label>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {compartibleHabilitado
+                        ? `Crea el mismo evento en hasta ${MAX_NIVELES_COMPARTIDOS - 1} niveles adicionales (misma hora/advisor/zoom). Para el advisor cuenta como 1 sola hora.`
+                        : (compartibleMotivo || 'Selecciona primero un nivel y step compartible.')}
+                    </p>
+                  </div>
+                </div>
+
+                {compartidoActivo && compartibleHabilitado && (
+                  <div className="mt-4 space-y-2">
+                    {compartidoCon.map((c, idx) => (
+                      <div key={idx} className="flex items-end gap-2 flex-wrap">
+                        <div className="flex-1 min-w-[140px]">
+                          <label className="block text-xs text-gray-600 mb-1">Nivel adicional #{idx + 1}</label>
+                          <select
+                            value={c.nivel}
+                            onChange={e => actualizarNivelCompartido(idx, e.target.value)}
+                            className="input w-full"
+                          >
+                            <option value="">— Seleccionar nivel —</option>
+                            {codigosNivel
+                              .filter(code => !nivelesUsados.has(code) || code === c.nivel)
+                              .map(code => (
+                                <option key={code} value={code}>{code}</option>
+                              ))}
+                          </select>
+                        </div>
+                        <div className="flex-1 min-w-[160px]">
+                          <label className="block text-xs text-gray-600 mb-1">Step / Club</label>
+                          <select
+                            value={c.step}
+                            onChange={e => actualizarStepCompartido(idx, e.target.value)}
+                            className="input w-full"
+                            disabled={!c.nivel}
+                          >
+                            <option value="">— Seleccionar —</option>
+                            {c.options.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => quitarNivelCompartido(idx)}
+                          className="text-xs text-red-600 hover:text-red-800 px-2 py-1.5"
+                          title="Quitar este nivel del grupo"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                    {compartidoCon.length < MAX_NIVELES_COMPARTIDOS - 1 && (
+                      <button
+                        type="button"
+                        onClick={agregarNivelCompartido}
+                        className="text-xs text-indigo-700 hover:text-indigo-900 font-medium"
+                      >
+                        + Agregar nivel ({compartidoCon.length + 1} de {MAX_NIVELES_COMPARTIDOS - 1})
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Banner informativo en EDIT de evento compartido */}
+            {isEditMode && (editingEvent as any)?.eventoCompartidoId && (
+              <div className="border-l-4 border-indigo-500 bg-indigo-50 rounded-r-lg p-3 text-sm text-indigo-900">
+                <strong>🔗 Evento compartido entre niveles.</strong> Los cambios en
+                advisor, hora, link de Zoom u observaciones se propagarán a los demás
+                eventos del grupo. Nivel y step se mantienen por evento.
+              </div>
+            )}
 
             {/* Observaciones */}
             <div>
