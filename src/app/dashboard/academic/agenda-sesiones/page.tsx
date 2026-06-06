@@ -80,6 +80,10 @@ export default function AgendaSesionesPage() {
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
   // Modal eliminar evento con confirmación (Ctrl Horas hook)
   const [deleteTarget, setDeleteTarget] = useState<CalendarEvent | null>(null)
+  // Si el evento a eliminar pertenece a un grupo compartido, aquí se cargan
+  // los hermanos para preguntar al admin si quiere borrarlos también.
+  const [deleteGroupSiblings, setDeleteGroupSiblings] = useState<any[]>([])
+  const [deleteGroupChecked, setDeleteGroupChecked] = useState(false)
   // Modo de eliminación del evento (mutuamente excluyente):
   //   'suspension'      → registra snapshot en ADVISOR_EVENT_LOG (Ctrl Horas)
   //   'restructuracion' → borrado limpio, NO deja registro en el log
@@ -648,13 +652,29 @@ export default function AgendaSesionesPage() {
     setShowEventModal(true)
   }
 
-  // Estado para modal de eliminación con confirmación (Ctrl Horas hook)
-  const handleDeleteEvent = (eventId: string) => {
+  // Estado para modal de eliminación con confirmación (Ctrl Horas hook).
+  // Si el evento pertenece a un grupo compartido (eventoCompartidoId), también
+  // cargamos los hermanos para que el admin pueda elegir borrarlos en cascada.
+  const handleDeleteEvent = async (eventId: string) => {
     const ev = events.find(e => e._id === eventId)
     if (!ev) return
     setDeleteTarget(ev)
     setDeleteMode(null)
     setDeleteMotivo('')
+    setDeleteGroupSiblings([])
+    setDeleteGroupChecked(false)
+    // Fire-and-forget — si falla, simplemente no se muestra la sección de grupo.
+    try {
+      const res = await fetch(`/api/postgres/events/${eventId}/group`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data?.isShared && Array.isArray(data.siblings)) {
+          setDeleteGroupSiblings(data.siblings)
+          // Default: borrar todo el grupo (operativamente es 1 sola clase).
+          setDeleteGroupChecked(true)
+        }
+      }
+    } catch { /* ignorar errores de red — el modal abre igual */ }
   }
 
   const confirmDelete = async () => {
@@ -666,15 +686,24 @@ export default function AgendaSesionesPage() {
       // Restructuración: borrado limpio sin registro en ADVISOR_EVENT_LOG.
       // El backend honra skipLog=true para saltar el insert del snapshot.
       if (deleteMode === 'restructuracion') qs.set('skipLog', 'true')
+      // Si es grupo compartido y el checkbox está marcado, pedimos al backend
+      // borrar todos los hermanos en cascada (1 sola transacción).
+      const isGroupDelete = deleteGroupSiblings.length > 1 && deleteGroupChecked
+      if (isGroupDelete) qs.set('deleteGroup', 'true')
       const response = await fetch(`/api/postgres/events/${deleteTarget._id}?${qs.toString()}`, {
         method: 'DELETE'
       })
 
       if (response.ok) {
+        const deletedIds = isGroupDelete
+          ? new Set(deleteGroupSiblings.map((s: any) => s._id))
+          : new Set([deleteTarget._id])
         const deletedEvent = events.find(e => e._id === deleteTarget._id)
-        setEvents(prev => prev.filter(e => e._id !== deleteTarget._id))
+        setEvents(prev => prev.filter(e => !deletedIds.has(e._id)))
         if (deletedEvent) clearCacheForMonth(deletedEvent.dia)
         setDeleteTarget(null)
+        setDeleteGroupSiblings([])
+        setDeleteGroupChecked(false)
       } else {
         const json = await response.json().catch(() => ({}))
         setError(json.error || 'Error al eliminar el evento')
@@ -995,6 +1024,39 @@ export default function AgendaSesionesPage() {
                   Estás por <strong>eliminar</strong> este evento de <strong>{advName}</strong>.
                   Marca una opción para confirmar (mutuamente excluyentes):
                 </p>
+
+                {/* Evento compartido: opción de borrar todo el grupo en cascada */}
+                {deleteGroupSiblings.length > 1 && (
+                  <div className="mb-4 border-l-4 border-indigo-500 bg-indigo-50 rounded-r-lg p-3 text-sm">
+                    <p className="text-indigo-900 mb-2">
+                      🔗 <strong>Evento compartido entre {deleteGroupSiblings.length} niveles.</strong>
+                    </p>
+                    <ul className="text-xs text-indigo-800 mb-2 list-disc list-inside">
+                      {deleteGroupSiblings.map((s: any) => (
+                        <li key={s._id}>
+                          {s.nivel || '—'}{s.nombreEvento ? ` · ${s.nombreEvento}` : (s.step ? ` · ${s.step}` : '')}
+                          {s._id === deleteTarget._id && <span className="ml-1 text-indigo-600 font-medium">(este)</span>}
+                        </li>
+                      ))}
+                    </ul>
+                    <label className="flex items-start gap-2 cursor-pointer text-indigo-900">
+                      <input
+                        type="checkbox"
+                        checked={deleteGroupChecked}
+                        onChange={(e) => setDeleteGroupChecked(e.target.checked)}
+                        className="mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-xs">
+                        Eliminar también los otros {deleteGroupSiblings.length - 1} eventos del grupo
+                        <span className="block text-indigo-700">
+                          {deleteGroupChecked
+                            ? 'Operativamente es 1 sola clase — borrar todos es lo natural.'
+                            : 'Si lo desactivas, los hermanos quedan como eventos independientes.'}
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+                )}
 
                 {/* Opciones mutuamente excluyentes — sólo una puede estar marcada */}
                 <div className="space-y-2 mb-4">

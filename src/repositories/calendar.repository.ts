@@ -215,18 +215,66 @@ class CalendarioRepositoryClass extends BaseRepository {
   /**
    * Create an event
    */
-  async create(data: Record<string, any>) {
+  /**
+   * Lista los eventos hermanos del mismo grupo compartido (incluye al evento
+   * pasado). Si el evento no es compartido (eventoCompartidoId NULL), devuelve
+   * sólo ese evento.
+   */
+  async findGroupSiblings(eventId: string) {
+    return queryMany(
+      `SELECT c.*, a."primerNombre" AS "advisorPrimerNombre",
+              a."primerApellido" AS "advisorPrimerApellido",
+              a."nombreCompleto" AS "advisorNombreCompleto"
+         FROM "CALENDARIO" c
+         LEFT JOIN "ADVISORS" a ON c."advisor" = a."_id"
+        WHERE c."_id" = $1
+           OR c."eventoCompartidoId" = (
+              SELECT "eventoCompartidoId" FROM "CALENDARIO"
+               WHERE "_id" = $1 AND "eventoCompartidoId" IS NOT NULL
+           )
+        ORDER BY c."nivel" ASC NULLS LAST`,
+      [eventId]
+    );
+  }
+
+  /**
+   * Aplica un UPDATE a TODAS las filas que comparten el `eventoCompartidoId`
+   * del evento pasado (excluyendo al evento mismo, que ya fue actualizado).
+   * Sólo se permiten campos compartidos entre niveles (advisor/hora/linkZoom/
+   * tipo/observaciones/limiteUsuarios). NO toca nivel/step/tituloONivel —
+   * esos son específicos por fila.
+   */
+  async updateGroupSiblings(eventId: string, fields: Record<string, any>) {
+    const cols = Object.keys(fields);
+    if (cols.length === 0) return 0;
+    const sets = cols.map((c, i) => `"${c}" = $${i + 1}`).join(', ');
+    const idx = cols.length;
+    const sql = `
+      UPDATE "CALENDARIO"
+         SET ${sets}, "_updatedDate" = NOW()
+       WHERE "_id" != $${idx + 1}
+         AND "eventoCompartidoId" = (
+           SELECT "eventoCompartidoId" FROM "CALENDARIO"
+            WHERE "_id" = $${idx + 1} AND "eventoCompartidoId" IS NOT NULL
+         )`;
+    const r = await query(sql, [...Object.values(fields), eventId]);
+    return r.rowCount ?? 0;
+  }
+
+  async create(data: Record<string, any>, client?: any) {
     const columns = Object.keys(data);
     const values = Object.values(data);
     const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
     const columnList = columns.map((c) => `"${c}"`).join(', ');
 
-    return queryOne(
-      `INSERT INTO "CALENDARIO" (${columnList}, "inscritos", "origen", "_createdDate", "_updatedDate")
+    const sql = `INSERT INTO "CALENDARIO" (${columnList}, "inscritos", "origen", "_createdDate", "_updatedDate")
        VALUES (${placeholders}, 0, 'POSTGRES', NOW(), NOW())
-       RETURNING *`,
-      values
-    );
+       RETURNING *`;
+    if (client) {
+      const r = await client.query(sql, values);
+      return r.rows[0] ?? null;
+    }
+    return queryOne(sql, values);
   }
 
   /**

@@ -30,6 +30,8 @@ interface VigenteRow {
   nivel: string | null
   step: string | null
   sesionCerrada: boolean
+  /** UUID del grupo compartido — null si el evento es individual. */
+  eventoCompartidoId: string | null
 }
 
 interface HistoricoRow {
@@ -149,17 +151,32 @@ export default function AdvisorDashboard() {
     }
 
     // KPIs solo cuentan eventos que YA ocurrieron (fechaEvento <= NOW).
-    // Eventos futuros del mes son agenda, no actividad real.
+    // Eventos compartidos: agrupamos por `eventoCompartidoId` y aplicamos
+    // la regla "any closed → Effective": si AL MENOS UNO de los hermanos
+    // está cerrado, el grupo cuenta como Effective (1 sola hora real).
+    // Esto blinda el caso de advisor que cierra P1 y abandona — el KPI
+    // refleja que dio la clase aunque P2/P3 queden abiertos en el calendario.
     const nowMs = Date.now()
     const isPast = (iso: string | null | undefined) =>
       iso != null && new Date(iso).getTime() <= nowMs
+    type GroupState = { tipo: string | null; step: string | null; sesionCerrada: boolean }
+    const groups = new Map<string, GroupState>()
     data.vigentes.forEach(v => {
       if (!isPast(v.fechaEvento)) return
-      countTipoStep(v.tipo, v.step)
-      k.conducted++
-      if (v.sesionCerrada === true) k.effective++
-      else                          k.sinRegistrar++
+      const key = v.eventoCompartidoId || v.eventoId
+      const existing = groups.get(key)
+      if (!existing) {
+        groups.set(key, { tipo: v.tipo, step: v.step, sesionCerrada: v.sesionCerrada === true })
+      } else if (v.sesionCerrada === true) {
+        existing.sesionCerrada = true
+      }
     })
+    for (const g of groups.values()) {
+      countTipoStep(g.tipo, g.step)
+      k.conducted++
+      if (g.sesionCerrada) k.effective++
+      else                 k.sinRegistrar++
+    }
     data.historicos.forEach(h => {
       if (!isPast(h.fechaEvento)) return
       countTipoStep(h.tipo, h.step)
@@ -187,6 +204,7 @@ export default function AdvisorDashboard() {
     if (!data) return result
 
     const nowMs = Date.now()
+    const seenInHeatmap = new Set<string>()
     const addEvent = (iso: string, bucket: 'conducted' | 'canceled') => {
       const d = new Date(iso)
       if (d.getFullYear() !== year || d.getMonth() + 1 !== month) return
@@ -196,7 +214,14 @@ export default function AdvisorDashboard() {
       if (hIdx < 0) return                     // fuera de 06-21
       result[bucket][wd][hIdx]++
     }
-    data.vigentes.forEach(v => addEvent(v.fechaEvento, 'conducted'))
+    // Eventos compartidos: 1 sola celda del heatmap aunque haya 2-3 filas
+    // (la hora real del advisor es 1, no 3).
+    data.vigentes.forEach(v => {
+      const key = v.eventoCompartidoId || v.eventoId
+      if (seenInHeatmap.has(key)) return
+      seenInHeatmap.add(key)
+      addEvent(v.fechaEvento, 'conducted')
+    })
     data.historicos.forEach(h => { if (h.estado === 'Canceled') addEvent(h.fechaEvento, 'canceled') })
     return result
   }, [data, year, month])

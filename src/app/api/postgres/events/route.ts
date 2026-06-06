@@ -27,6 +27,20 @@ export const POST = handlerWithAuth(async (request) => {
     tituloONivel = nivel + (step ? ` - ${step}` : '');
   }
 
+  // body.compartidoCon (opcional): array de niveles adicionales para crear
+  // un grupo compartido (1-2 elementos). Cada elemento puede traer su propio
+  // step / nombreEvento / tituloONivel; si no, se reutilizan los del base.
+  const compartidoCon = Array.isArray(body.compartidoCon)
+    ? body.compartidoCon
+        .filter((c: any) => c && typeof c.nivel === 'string' && c.nivel.trim())
+        .map((c: any) => ({
+          nivel: c.nivel.trim(),
+          step: typeof c.step === 'string' ? c.step.trim() : undefined,
+          nombreEvento: typeof c.nombreEvento === 'string' ? c.nombreEvento.trim() : undefined,
+          tituloONivel: typeof c.tituloONivel === 'string' ? c.tituloONivel.trim() : undefined,
+        }))
+    : undefined;
+
   const event = await createEvent({
     dia: body.dia,
     hora,
@@ -41,6 +55,7 @@ export const POST = handlerWithAuth(async (request) => {
     limiteUsuarios: body.limiteUsuarios || 30,
     club: body.club,
     observaciones: body.observaciones,
+    compartidoCon,
   });
 
   return successResponse({

@@ -23,6 +23,8 @@ interface VigenteRow {
   notasadvisor: string | null
   sesionCerrada: boolean
   fechaCierreSesion: string | null
+  /** UUID del grupo compartido; null si no comparte. */
+  eventoCompartidoId: string | null
   inscritos: number
   asistieron: number
   absent: number
@@ -296,13 +298,31 @@ function ControlHorasContent() {
         case 'WELCOME': t.welcome++; break
       }
     }
+    // Eventos compartidos: el advisor da 1 sola hora real aunque haya 2-3
+    // filas (una por nivel). Agrupamos por `eventoCompartidoId` y aplicamos
+    // la regla "any closed → Effective": si AL MENOS UNO de los hermanos
+    // está cerrado, el grupo cuenta como Effective. Así un advisor que
+    // cierra P1 pero abandona antes de P2/P3 igual suma 1 Effective (no 3
+    // sin registrar). Los hermanos sin cerrar siguen visibles en el
+    // calendario para que el Coordinador pueda terminarlos si quiere.
+    type GroupState = { tipo: string | null; sesionCerrada: boolean }
+    const groups = new Map<string, GroupState>()
     data.vigentes.forEach(v => {
       if (!isPast(v.fechaEvento)) return
-      countByTipo(v.tipo)
-      t.conducted++
-      if (v.sesionCerrada === true) t.effective++
-      else                          t.sinRegistrar++
+      const key = v.eventoCompartidoId || v.eventoId
+      const existing = groups.get(key)
+      if (!existing) {
+        groups.set(key, { tipo: v.tipo, sesionCerrada: v.sesionCerrada === true })
+      } else if (v.sesionCerrada === true) {
+        existing.sesionCerrada = true
+      }
     })
+    for (const g of groups.values()) {
+      countByTipo(g.tipo)
+      t.conducted++
+      if (g.sesionCerrada) t.effective++
+      else                 t.sinRegistrar++
+    }
     data.historicos.forEach(h => {
       if (!isPast(h.fechaEvento)) return
       countByTipo(h.tipo)
@@ -466,19 +486,23 @@ function ControlHorasContent() {
                 <div key={cell.key} className={`min-h-[110px] p-1.5 border-r border-b border-gray-100 ${isToday ? 'bg-blue-50/40' : 'bg-white'}`}>
                   <div className={`text-xs font-semibold mb-1 ${isToday ? 'text-blue-700' : 'text-gray-700'}`}>{cell.day}</div>
                   <div className="space-y-1">
-                    {cards.map(c => (
+                    {cards.map(c => {
+                      const isShared = c.kind === 'vigente' && !!c.eventoCompartidoId
+                      return (
                       <button
                         key={c.kind === 'vigente' ? c.eventoId : `${c.eventoId}_${c.logId}`}
                         type="button"
                         onClick={() => setSelectedCard(c)}
-                        title={`${c.tipo ?? ''} ${c.nivel ?? ''} ${c.step ?? ''} · ${stateLabel(c)}`}
+                        title={`${c.tipo ?? ''} ${c.nivel ?? ''} ${c.step ?? ''} · ${stateLabel(c)}${isShared ? ' · 🔗 compartido entre niveles' : ''}`}
                         className={`block w-full text-left px-1.5 py-1 rounded text-[11px] font-medium ${colorClass(c)} hover:opacity-90 transition`}
                       >
                         <div className="truncate">
+                          {isShared && <span className="mr-0.5" aria-hidden>🔗</span>}
                           {formatHoraLocal(c.fechaEvento)} - {c.nivel || ''} {c.step ? `· ${c.step}` : ''}
                         </div>
                       </button>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )

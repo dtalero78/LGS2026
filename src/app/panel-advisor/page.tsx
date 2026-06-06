@@ -476,19 +476,23 @@ function PanelAdvisorContent() {
                         <HolidayBadge date={date} size="xs" />
                       </div>
                       <div className="space-y-1">
-                        {dayEvents.slice(0, 3).map(event => (
+                        {dayEvents.slice(0, 3).map(event => {
+                          const isShared = !!(event as any).eventoCompartidoId
+                          return (
                           <div
                             key={event._id}
                             className={`text-xs px-1 py-0.5 rounded text-white truncate ${getEventColor(event.evento || event.tipo || '')} cursor-pointer hover:opacity-80`}
-                            title={`${event.evento || event.tipo || ''} - ${event.tituloONivel} ${event.nombreEvento || ''}`}
+                            title={`${event.evento || event.tipo || ''} - ${event.tituloONivel} ${event.nombreEvento || ''}${isShared ? ' (compartido entre niveles)' : ''}`}
                             onClick={(e) => {
                               e.stopPropagation()
                               handleEventClick(event)
                             }}
                           >
+                            {isShared && <span className="mr-0.5" aria-hidden>🔗</span>}
                             {format(new Date(event.dia), 'HH:mm')} - {event.tituloONivel}
                           </div>
-                        ))}
+                          )
+                        })}
                         {dayEvents.length > 3 && (
                           <div className="text-xs text-gray-500">
                             +{dayEvents.length - 3} más
