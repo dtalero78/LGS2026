@@ -1,5 +1,5 @@
 /**
- * GET /api/postgres/libros-interactivos/[nivel]
+ * GET /api/postgres/libros-interactivos/[nivel]?preview=1
  *
  * Metadata del libro asociado al nivel:
  *   - libroCodigo, libroTitulo
@@ -9,17 +9,25 @@
  *
  * Si el flag está OFF o el nivel no tiene libro asignado, devuelve
  * `available: false` (sin error) para que la UI muestre el botón clásico (Wix).
+ *
+ * `?preview=1` + rol SUPER_ADMIN/ADMIN: bypass del flag global. Permite a un
+ * admin validar el visor antes de activar la feature para todos los
+ * estudiantes. Si el rol no es admin el preview se ignora silenciosamente.
  */
-import { handler, successResponse } from '@/lib/api-helpers';
+import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { LibrosInteractivosService } from '@/services/libros-interactivos.service';
 import { NotFoundError } from '@/lib/errors';
 
-export const GET = handler(async (_req, ctx) => {
+export const GET = handlerWithAuth(async (req, ctx, session) => {
   const nivel = decodeURIComponent(ctx.params.nivel || '').toUpperCase().trim();
   if (!nivel) return successResponse({ available: false });
 
+  const role = (session.user as any)?.role;
+  const isAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN';
+  const preview = new URL(req.url).searchParams.get('preview') === '1' && isAdmin;
+
   const featureActive = await LibrosInteractivosService.isFeatureActive();
-  if (!featureActive) {
+  if (!featureActive && !preview) {
     return successResponse({ available: false, featureActive: false });
   }
 
@@ -27,14 +35,15 @@ export const GET = handler(async (_req, ctx) => {
     const metadata = await LibrosInteractivosService.getMetadataForNivel(nivel);
     return successResponse({
       available: true,
-      featureActive: true,
+      featureActive,
+      previewMode: preview && !featureActive,
       ...metadata,
     });
   } catch (err: any) {
     // Si el libro no existe o no tiene páginas, no es un error de aplicación:
     // simplemente la feature no está disponible para ese nivel todavía.
     if (err instanceof NotFoundError) {
-      return successResponse({ available: false, featureActive: true });
+      return successResponse({ available: false, featureActive });
     }
     throw err;
   }

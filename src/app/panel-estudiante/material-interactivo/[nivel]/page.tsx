@@ -29,6 +29,7 @@ import {
 interface Metadata {
   available: boolean
   featureActive?: boolean
+  previewMode?: boolean
   libroCodigo?: string
   libroTitulo?: string
   totalPaginas?: number
@@ -39,6 +40,12 @@ export default function MaterialInteractivoPage() {
   const router = useRouter()
   const params = useParams<{ nivel: string }>()
   const nivel = (params?.nivel || '').toString().toUpperCase()
+
+  // Modo preview: solo SUPER_ADMIN/ADMIN puede usarlo (el server valida).
+  // Cuando preview=1 + admin → bypass del feature flag global.
+  const isPreview = typeof window !== 'undefined'
+    && new URLSearchParams(window.location.search).get('preview') === '1'
+  const previewQsFirst = isPreview ? '?preview=1' : ''
 
   const [meta, setMeta] = useState<Metadata | null>(null)
   const [page, setPage] = useState(1)
@@ -51,7 +58,7 @@ export default function MaterialInteractivoPage() {
   useEffect(() => {
     let cancelled = false
     setError(null)
-    fetch(`/api/postgres/libros-interactivos/${encodeURIComponent(nivel)}`)
+    fetch(`/api/postgres/libros-interactivos/${encodeURIComponent(nivel)}${previewQsFirst}`)
       .then(r => r.json())
       .then((json: Metadata) => {
         if (cancelled) return
@@ -196,6 +203,13 @@ export default function MaterialInteractivoPage() {
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
+      {/* Banner Preview (solo admin que entró con ?preview=1) */}
+      {meta.previewMode && (
+        <div className="bg-amber-100 border-b border-amber-300 text-amber-900 text-xs text-center py-1.5 px-3">
+          🧪 <strong>Modo PREVIEW</strong> — el feature flag está OFF; estás viendo el visor como admin. Los estudiantes todavía no lo ven.
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between shadow-sm">
         <button
