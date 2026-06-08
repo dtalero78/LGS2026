@@ -253,6 +253,9 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/admin/scripts/consulta': [
     'MANTENIMIENTO.SCRIPTS.CONSULTA' as Permission,
   ],
+  '/admin/diagnostico': [
+    'MANTENIMIENTO.DIAGNOSTICO.VER' as Permission,
+  ],
 
   // Recaudos - Gestión
   '/dashboard/recaudos/gestion': [

@@ -205,6 +205,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
           { name: 'Consulta', href: '/admin/scripts/consulta', newTab: true },
         ],
       },
+      { name: 'Diagnóstico', href: '/admin/diagnostico', newTab: true },
     ],
   },
 ]
@@ -374,6 +375,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ],
     '/admin/scripts/consulta': [
       MantenimientoPermission.SCRIPTS_CONSULTA,
+    ],
+    '/admin/diagnostico': [
+      MantenimientoPermission.DIAGNOSTICO,
     ],
     // Recaudos
     '/dashboard/recaudos/gestion': [
