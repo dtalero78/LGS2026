@@ -1,0 +1,131 @@
+const secuencia = [
+  { pagina: 1, nombre: "group15" },
+  { pagina: 2, nombre: "image99" },
+  { pagina: 3, nombre: "group14" },
+  { pagina: 4, nombre: "group13" },
+  { pagina: 5, nombre: "image96" },
+  { pagina: 6, nombre: "group12" },
+  { pagina: 7, nombre: "image94" },
+  { pagina: 8, nombre: "group11" },
+  { pagina: 9, nombre: "group10" },
+  { pagina: 10, nombre: "image91" },
+  { pagina: 11, nombre: "image90" },
+  { pagina: 12, nombre: "image89" },
+  { pagina: 13, nombre: "image88" },
+  { pagina: 14, nombre: "image87" },
+  { pagina: 15, nombre: "image86" },
+  { pagina: 16, nombre: "image85" },
+  { pagina: 17, nombre: "image84" },
+  { pagina: 18, nombre: "group9" },
+  { pagina: 19, nombre: "image82" },
+  { pagina: 20, nombre: "group8" },
+  { pagina: 21, nombre: "group7" },
+  { pagina: 22, nombre: "image79" },
+  { pagina: 23, nombre: "image78" },
+  { pagina: 24, nombre: "image77" },
+  { pagina: 25, nombre: "image76" },
+  { pagina: 26, nombre: "image75" },
+  { pagina: 27, nombre: "image74" },
+  { pagina: 28, nombre: "image73" },
+  { pagina: 29, nombre: "image72" },
+  { pagina: 30, nombre: "image71" },
+  { pagina: 31, nombre: "image70" },
+  { pagina: 32, nombre: "image69" },
+  { pagina: 33, nombre: "image68" },
+  { pagina: 34, nombre: "image67" },
+  { pagina: 35, nombre: "group6" },
+  { pagina: 36, nombre: "image65" },
+  { pagina: 37, nombre: "group5" },
+  { pagina: 38, nombre: "group4" },
+  { pagina: 39, nombre: "image62" },
+  { pagina: 40, nombre: "image61" },
+  { pagina: 41, nombre: "image60" },
+  { pagina: 42, nombre: "image59" },
+  { pagina: 43, nombre: "image58" },
+  { pagina: 44, nombre: "image57" },
+  { pagina: 45, nombre: "image56" },
+  { pagina: 46, nombre: "image55" },
+  { pagina: 47, nombre: "image54" },
+  { pagina: 48, nombre: "image53" },
+  { pagina: 49, nombre: "image52" },
+  { pagina: 50, nombre: "group3" },
+  { pagina: 51, nombre: "group2" },
+  { pagina: 52, nombre: "group1" },
+  { pagina: 53, nombre: "image48" },
+  { pagina: 54, nombre: "image47" },
+  { pagina: 55, nombre: "image46" },
+  { pagina: 56, nombre: "image45" },
+  { pagina: 57, nombre: "image44" },
+  { pagina: 58, nombre: "image43" },
+  { pagina: 59, nombre: "image42" },
+  { pagina: 60, nombre: "image41" },
+  { pagina: 61, nombre: "image40" },
+  { pagina: 62, nombre: "image39" },
+  { pagina: 63, nombre: "image38" },
+  { pagina: 64, nombre: "image37" },
+  { pagina: 65, nombre: "image36" },
+  { pagina: 66, nombre: "image35" },
+  { pagina: 67, nombre: "image34" },
+  { pagina: 68, nombre: "image33" },
+  { pagina: 69, nombre: "image32" },
+  { pagina: 70, nombre: "image31" },
+  { pagina: 71, nombre: "image30" },
+  { pagina: 72, nombre: "image29" },
+  { pagina: 73, nombre: "image28" },
+  { pagina: 74, nombre: "image27" },
+  { pagina: 75, nombre: "image26" },
+  { pagina: 76, nombre: "image25" },
+  { pagina: 77, nombre: "image24" },
+  { pagina: 78, nombre: "image23" },
+  { pagina: 79, nombre: "image22" },
+  { pagina: 80, nombre: "image13" },
+  { pagina: 81, nombre: "image12" },
+  { pagina: 82, nombre: "image11" },
+  { pagina: 83, nombre: "image10" },
+  { pagina: 84, nombre: "image9" },
+  { pagina: 85, nombre: "image8" },
+  { pagina: 86, nombre: "image7" },
+  { pagina: 87, nombre: "image6" },
+  { pagina: 88, nombre: "image5" },
+  { pagina: 89, nombre: "image4" },
+  { pagina: 90, nombre: "image3" }
+];
+
+
+
+let currentIndex = 0;
+
+$w.onReady(function () {
+    // Oculta todos los elementos de la secuencia
+    secuencia.forEach(item => {
+        // Asegúrate que los IDs en Wix coincidan con item.nombre
+        $w("#" + item.nombre).hide();
+    });
+
+    // Muestra el primer elemento (group15)
+    $w("#" + secuencia[currentIndex].nombre).show();
+});
+
+$w('#adelanteButton').onClick((event) => {
+    // Oculta el elemento actual
+    $w("#" + secuencia[currentIndex].nombre).hide();
+
+    // Comprueba que no sea el último elemento y actualiza el índice
+    if (currentIndex < secuencia.length - 1) {
+        currentIndex++;
+    }
+    // Muestra el siguiente elemento
+    $w("#" + secuencia[currentIndex].nombre).show();
+})
+
+$w('#atrasButton').onClick((event) => {
+    // Oculta el elemento actual
+    $w("#" + secuencia[currentIndex].nombre).hide();
+
+    // Comprueba que no sea el primer elemento y actualiza el índice
+    if (currentIndex > 0) {
+        currentIndex--;
+    }
+    // Muestra el elemento anterior
+    $w("#" + secuencia[currentIndex].nombre).show();
+})
