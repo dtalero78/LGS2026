@@ -3,13 +3,15 @@
 import { ArrowDownTrayIcon, BookOpenIcon, GlobeAltIcon } from '@heroicons/react/24/outline'
 
 const INTERACTIVE_MATERIAL_URLS: Record<string, string> = {
-  'F3': 'https://www.lgsplataforma.com/material-f3',
-  'P1': 'https://www.lgsplataforma.com/material-p1',
-  'P2': 'https://www.lgsplataforma.com/material-p2',
-  'P3': 'https://www.lgsplataforma.com/material-p3',
   'BN1': 'https://www.lgsplataforma.com/material-bn1',
   'BN2': 'https://www.lgsplataforma.com/material-bn2',
   'BN3': 'https://www.lgsplataforma.com/material-bn3',
+  'P1':  'https://www.lgsplataforma.com/material-p1',
+  'P2':  'https://www.lgsplataforma.com/material-p2',
+  'P3':  'https://www.lgsplataforma.com/material-p3',
+  'F1':  'https://www.lgsplataforma.com/material-f1',
+  'F2':  'https://www.lgsplataforma.com/material-f2',
+  'F3':  'https://www.lgsplataforma.com/material-f3',
 }
 
 function getInteractiveMaterialUrl(nivel: string): string | null {
