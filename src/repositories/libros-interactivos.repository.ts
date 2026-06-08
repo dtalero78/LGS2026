@@ -162,21 +162,37 @@ class NivelLibroBindingRepositoryClass {
     );
   }
 
-  /** Lista TODOS los bindings (para el panel admin). */
+  /**
+   * Lista TODOS los bindings (para el panel admin).
+   *
+   * NIVELES tiene una fila por (code, step) — varias por nivel. Como las 3
+   * columnas de binding viven a nivel de code (no step), agrupamos por code.
+   * Usamos MIN(orden) para ordenar pedagógicamente sin meter "orden" en el
+   * GROUP BY (que multiplicaría filas si distintos steps del mismo code
+   * tuvieran orden distinto).
+   */
   async findAll(): Promise<NivelLibroBinding[]> {
     return queryMany<NivelLibroBinding>(
-      `SELECT DISTINCT "code", "libroInteractivoCode", "libroPaginaInicio", "libroPaginaFin"
+      `SELECT "code",
+              MAX("libroInteractivoCode") AS "libroInteractivoCode",
+              MAX("libroPaginaInicio")    AS "libroPaginaInicio",
+              MAX("libroPaginaFin")       AS "libroPaginaFin"
          FROM "NIVELES"
-        ORDER BY "orden" ASC NULLS LAST, "code" ASC`
+        GROUP BY "code"
+        ORDER BY MIN("orden") ASC NULLS LAST, "code" ASC`
     );
   }
 
   /** Lista los niveles que apuntan a un libro específico. */
   async findByLibroCodigo(libroCodigo: string): Promise<NivelLibroBinding[]> {
     return queryMany<NivelLibroBinding>(
-      `SELECT DISTINCT "code", "libroInteractivoCode", "libroPaginaInicio", "libroPaginaFin"
+      `SELECT "code",
+              MAX("libroInteractivoCode") AS "libroInteractivoCode",
+              MAX("libroPaginaInicio")    AS "libroPaginaInicio",
+              MAX("libroPaginaFin")       AS "libroPaginaFin"
          FROM "NIVELES"
         WHERE "libroInteractivoCode" = $1
+        GROUP BY "code"
         ORDER BY "code" ASC`,
       [libroCodigo]
     );
