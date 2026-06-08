@@ -942,6 +942,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     name: 'Página "Consulta de Scripts"',
     description: 'Acceso a /admin/scripts/consulta. Catálogo de los scripts del repositorio con su utilidad, comando de ejecución, parámetros y tipo (lectura/escritura). Buscable y exportable a CSV',
   },
+  {
+    code: MantenimientoPermission.DIAGNOSTICO,
+    module: Module.MANTENIMIENTO,
+    section: 'Diagnóstico',
+    name: 'Página "Diagnóstico de Endpoints"',
+    description: 'Acceso a /admin/diagnostico. Mide tiempos DNS / Connect TCP / TLS handshake / TTFB / Total para endpoints clave de la API desde el navegador del admin (Resource Timing API). Útil para detectar endpoints lentos o cuellos de botella. Sólo lectura — no escribe en BD.',
+  },
 
   // ========== RECAUDOS MODULE (Menú Recaudos) ==========
   {
