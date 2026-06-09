@@ -176,6 +176,52 @@ class NivelLibroBindingRepositoryClass {
   }
 
   /**
+   * 1 query JOIN: binding del nivel + libro (si existe).
+   * Reemplaza 2 queries separadas (findByNivelCode + findByCodigo) por 1.
+   * Devuelve null si el nivel no existe o no tiene libro configurado.
+   */
+  async findNivelWithLibro(code: string): Promise<{
+    nivelCode: string;
+    libroPaginaInicio: number | null;
+    libroPaginaFin: number | null;
+    libro: LibroInteractivoRow | null;
+  } | null> {
+    const row = await queryOne<any>(
+      `SELECT n."code"                 AS "nivelCode",
+              n."libroPaginaInicio",
+              n."libroPaginaFin",
+              l."codigo"               AS "libroCodigo",
+              l."titulo"               AS "libroTitulo",
+              l."totalPaginas"         AS "libroTotalPaginas",
+              l."audios"               AS "libroAudios",
+              l."activo"               AS "libroActivo"
+         FROM "NIVELES" n
+         LEFT JOIN "LIBROS_INTERACTIVOS" l ON l."codigo" = n."libroInteractivoCode"
+        WHERE n."code" = $1
+        LIMIT 1`,
+      [code]
+    );
+    if (!row) return null;
+    const libro: LibroInteractivoRow | null = row.libroCodigo
+      ? {
+          codigo: row.libroCodigo,
+          titulo: row.libroTitulo,
+          totalPaginas: row.libroTotalPaginas,
+          audios: typeof row.libroAudios === 'string' ? JSON.parse(row.libroAudios) : (row.libroAudios || []),
+          activo: row.libroActivo,
+          _createdDate: row._createdDate,
+          _updatedDate: row._updatedDate,
+        }
+      : null;
+    return {
+      nivelCode: row.nivelCode,
+      libroPaginaInicio: row.libroPaginaInicio,
+      libroPaginaFin: row.libroPaginaFin,
+      libro,
+    };
+  }
+
+  /**
    * Lista TODOS los bindings (para el panel admin).
    *
    * NIVELES tiene una fila por (code, step) — varias por nivel. Como las 3
