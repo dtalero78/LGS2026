@@ -1,18 +1,21 @@
 /**
  * Audios de un libro interactivo (admin).
  *
+ * Una página puede tener MÚLTIPLES audios. La unicidad se controla por `key`
+ * (la ruta relativa dentro del libro).
+ *
  * GET  /api/admin/libros-interactivos/[codigo]/audios
- *   Lista los audios actuales del libro.
+ *   Lista todos los audios actuales del libro (de todas las páginas).
  *
  * POST /api/admin/libros-interactivos/[codigo]/audios
  *   Body: { pagina: number, key: string, titulo?: string }
- *   Upsert por página (si ya hay audio en esa página lo reemplaza).
- *   `key` es la ruta RELATIVA dentro del libro: "audio/page-012.mp3".
+ *   Agrega un audio. Si ya existía otro con la MISMA key lo reemplaza
+ *   (idempotente — sirve para re-subir el mismo archivo). Múltiples
+ *   audios en la misma página se permiten siempre que tengan keys distintas.
  *
- * DELETE /api/admin/libros-interactivos/[codigo]/audios?pagina=12
- *   Elimina el audio asociado a esa página (no borra el archivo de Spaces,
- *   solo lo desliga — el archivo queda huérfano y puede limpiarse con un
- *   script posterior).
+ * DELETE /api/admin/libros-interactivos/[codigo]/audios?key=audio/page-008-dialogo.mp3
+ *   Elimina el audio cuya key coincida. NO borra el archivo de Spaces
+ *   (queda huérfano y puede limpiarse con un script posterior).
  */
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { LibrosInteractivosRepository } from '@/repositories/libros-interactivos.repository';
@@ -42,7 +45,7 @@ export const POST = handlerWithAuth(async (req, ctx, session) => {
   if (!key || !key.startsWith('audio/')) {
     throw new ValidationError('key inválida (debe empezar con "audio/")');
   }
-  await LibrosInteractivosRepository.upsertAudio(codigo, { pagina, key, titulo });
+  await LibrosInteractivosRepository.addAudio(codigo, { pagina, key, titulo });
   LibrosInteractivosService.invalidateLibroCache(codigo);
   return successResponse({ ok: true });
 });
@@ -50,12 +53,11 @@ export const POST = handlerWithAuth(async (req, ctx, session) => {
 export const DELETE = handlerWithAuth(async (req, ctx, session) => {
   await requirePermission(session, AcademicoPermission.ACTUALIZAR_MATERIAL);
   const codigo = String(ctx.params.codigo || '').toUpperCase().trim();
-  const paginaStr = new URL(req.url).searchParams.get('pagina');
-  const pagina = paginaStr ? parseInt(paginaStr, 10) : NaN;
-  if (!Number.isInteger(pagina) || pagina < 1) {
-    throw new ValidationError('querystring "pagina" requerida');
+  const key = new URL(req.url).searchParams.get('key');
+  if (!key || !key.startsWith('audio/')) {
+    throw new ValidationError('querystring "key" requerida (debe empezar con "audio/")');
   }
-  await LibrosInteractivosRepository.removeAudio(codigo, pagina);
+  await LibrosInteractivosRepository.removeAudio(codigo, key);
   LibrosInteractivosService.invalidateLibroCache(codigo);
   return successResponse({ ok: true });
 });

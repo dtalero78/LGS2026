@@ -75,11 +75,25 @@ function invalidateLibroCache(libroCodigo: string): void {
   }
 }
 
+export interface VisorAudioInfo {
+  /** Índice (0..N-1) entre los audios de la misma página local. Identifica
+   *  cuál pedir presigned. La key real se mantiene server-only. */
+  idx: number;
+  titulo: string | null;
+}
+
 export interface VisorMetadata {
   libroCodigo: string;
   libroTitulo: string;
   totalPaginas: number;
   totalPaginasLibro: number;
+  /**
+   * Mapa pagina-local → lista de audios disponibles (ordenados por título).
+   * Si una página no tiene audios, no aparece en el map.
+   * Ej: { 8: [{idx:0,titulo:'Diálogo'}, {idx:1,titulo:'María'}, {idx:2,titulo:'John'}] }
+   */
+  audiosPorPagina: Record<number, VisorAudioInfo[]>;
+  /** Compat: lista de páginas-locales con al menos 1 audio. */
   paginasConAudio: number[];
 }
 
@@ -132,16 +146,29 @@ class LibrosInteractivosServiceClass {
     const fin = Math.min(libro.totalPaginas, Math.max(inicio, finRaw));
     const totalPaginas = fin - inicio + 1;
 
-    const paginasConAudioLocales = (libro.audios || [])
+    // Agrupa audios por página local. Misma página puede tener N audios.
+    const audiosPorPagina: Record<number, VisorAudioInfo[]> = {};
+    const audiosOrdenados = [...(libro.audios || [])]
       .filter(a => a.pagina >= inicio && a.pagina <= fin)
-      .map(a => a.pagina - inicio + 1);
+      .sort((a, b) => {
+        if (a.pagina !== b.pagina) return a.pagina - b.pagina;
+        return (a.titulo || '').localeCompare(b.titulo || '');
+      });
+
+    for (const a of audiosOrdenados) {
+      const paginaLocal = a.pagina - inicio + 1;
+      const arr = audiosPorPagina[paginaLocal] || [];
+      arr.push({ idx: arr.length, titulo: a.titulo ?? null });
+      audiosPorPagina[paginaLocal] = arr;
+    }
 
     return {
       libroCodigo: libro.codigo,
       libroTitulo: libro.titulo,
       totalPaginas,
       totalPaginasLibro: libro.totalPaginas,
-      paginasConAudio: paginasConAudioLocales,
+      audiosPorPagina,
+      paginasConAudio: Object.keys(audiosPorPagina).map(Number),
     };
   }
 
@@ -168,19 +195,44 @@ class LibrosInteractivosServiceClass {
     return getPresignedVideoUrl(key, 600);
   }
 
-  /** Presigned URL del audio si existe (cache-friendly). */
-  async getAudioPresignedUrl(nivelCode: string, paginaLocal: number): Promise<string | null> {
+  /**
+   * Presigned URLs de TODOS los audios de una página local.
+   * Retorna array vacío si no hay audios para esa página.
+   * Cada elemento incluye `idx` (orden), `titulo` y `url`.
+   */
+  async getAudiosForPage(
+    nivelCode: string,
+    paginaLocal: number,
+  ): Promise<Array<{ idx: number; titulo: string | null; url: string }>> {
     const resolved = await this.resolveNivelLibro(nivelCode);
-    if (!resolved || !resolved.libro || !resolved.libro.activo) return null;
+    if (!resolved || !resolved.libro || !resolved.libro.activo) return [];
 
     const libro = resolved.libro;
     const inicio = Math.max(1, resolved.libroPaginaInicio ?? 1);
     const paginaLibro = inicio + paginaLocal - 1;
-    const audio = (libro.audios || []).find(a => a.pagina === paginaLibro);
-    if (!audio) return null;
+    const audiosPagina = (libro.audios || [])
+      .filter(a => a.pagina === paginaLibro)
+      .sort((a, b) => (a.titulo || '').localeCompare(b.titulo || ''));
 
-    const key = `materials/interactive/${libro.codigo}/${audio.key}`;
-    return getPresignedVideoUrl(key, 600);
+    if (audiosPagina.length === 0) return [];
+
+    const result = await Promise.all(
+      audiosPagina.map(async (audio, idx) => {
+        const fullKey = `materials/interactive/${libro.codigo}/${audio.key}`;
+        const url = await getPresignedVideoUrl(fullKey, 600);
+        return { idx, titulo: audio.titulo ?? null, url };
+      }),
+    );
+    return result;
+  }
+
+  /**
+   * Compat: presigned URL del PRIMER audio de la página (orden por título).
+   * Mantenido temporalmente por si algún cliente viejo aún consulta de a uno.
+   */
+  async getAudioPresignedUrl(nivelCode: string, paginaLocal: number): Promise<string | null> {
+    const audios = await this.getAudiosForPage(nivelCode, paginaLocal);
+    return audios[0]?.url ?? null;
   }
 
   /** Catálogo admin (no se cachea — el admin debe ver siempre fresh). */
