@@ -523,9 +523,13 @@ function SeccionAudios({ libro, onReload }: { libro: LibroAdmin; onReload: () =>
         <p className="text-xs text-gray-500 italic">Sin audios asignados.</p>
       ) : (
         <div className="bg-white border border-gray-200 rounded overflow-hidden">
+          <div className="px-3 py-1.5 bg-indigo-50 border-b border-indigo-100 text-xs font-semibold text-indigo-700">
+            Total: {libro.audios.length} audio{libro.audios.length === 1 ? '' : 's'}
+          </div>
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-xs text-gray-500">
               <tr>
+                <th className="text-right px-3 py-2 w-12">#</th>
                 <th className="text-right px-3 py-2 w-20">Página</th>
                 <th className="text-left px-3 py-2 w-56">Título</th>
                 <th className="text-left px-3 py-2">Key</th>
@@ -538,10 +542,11 @@ function SeccionAudios({ libro, onReload }: { libro: LibroAdmin; onReload: () =>
                   if (a.pagina !== b.pagina) return a.pagina - b.pagina
                   return (a.titulo || '').localeCompare(b.titulo || '')
                 })
-                .map(a => {
+                .map((a, idx) => {
                   const enEdicion = editing === a.key
                   return (
                     <tr key={a.key} className="border-t border-gray-100">
+                      <td className="px-3 py-2 text-right text-xs text-gray-400 tabular-nums">{idx + 1}</td>
                       <td className="px-3 py-2 text-right font-bold tabular-nums">{a.pagina}</td>
                       <td className="px-3 py-2 text-xs text-gray-700 truncate">
                         {enEdicion ? (
