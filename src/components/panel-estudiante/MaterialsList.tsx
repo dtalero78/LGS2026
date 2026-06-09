@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useQuery } from 'react-query'
 import {
   ArrowDownTrayIcon,
   BookOpenIcon,
@@ -39,17 +39,22 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
   const nivelNormalizado = normalizeNivelCode(nivel)
 
   // Feature flag check: ¿está disponible el visor v2 (LGS) para este nivel?
-  // Solo mostramos el botón nuevo si el endpoint confirma available=true.
-  const [v2Available, setV2Available] = useState(false)
-  useEffect(() => {
-    if (!nivelNormalizado) return
-    let cancelled = false
-    fetch(`/api/postgres/libros-interactivos/${encodeURIComponent(nivelNormalizado)}`)
-      .then(r => r.json())
-      .then(j => { if (!cancelled) setV2Available(Boolean(j?.available)) })
-      .catch(() => { if (!cancelled) setV2Available(false) })
-    return () => { cancelled = true }
-  }, [nivelNormalizado])
+  // React Query con staleTime 5 min — evita queries innecesarias en navegacion
+  // interna y re-renders del componente. Solo refetch al cabo de 5 min o al
+  // hacer un hard refresh del navegador.
+  const { data: libroData } = useQuery(
+    ['libros-interactivos-availability', nivelNormalizado],
+    () =>
+      fetch(`/api/postgres/libros-interactivos/${encodeURIComponent(nivelNormalizado)}`)
+        .then(r => r.json())
+        .catch(() => ({ available: false })),
+    {
+      enabled: Boolean(nivelNormalizado),
+      staleTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    }
+  )
+  const v2Available: boolean = Boolean(libroData?.available)
 
   if (isLoading) {
     return (

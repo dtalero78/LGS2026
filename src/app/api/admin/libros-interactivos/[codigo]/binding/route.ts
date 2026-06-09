@@ -13,6 +13,7 @@
  */
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { NivelLibroBindingRepository } from '@/repositories/libros-interactivos.repository';
+import { LibrosInteractivosService } from '@/services/libros-interactivos.service';
 import { requirePermission } from '@/lib/api-permissions';
 import { AcademicoPermission } from '@/types/permissions';
 import { ValidationError } from '@/lib/errors';
@@ -47,6 +48,9 @@ export const PATCH = handlerWithAuth(async (req, _ctx, session) => {
     libroPaginaInicio: inicio,
     libroPaginaFin: fin,
   });
+
+  // Invalidar cache para que el visor refleje el cambio sin esperar TTL.
+  LibrosInteractivosService.invalidateNivelCache(nivelCode);
 
   return successResponse({ affected, nivelCode });
 });

@@ -16,6 +16,7 @@
  */
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { LibrosInteractivosRepository } from '@/repositories/libros-interactivos.repository';
+import { LibrosInteractivosService } from '@/services/libros-interactivos.service';
 import { requirePermission } from '@/lib/api-permissions';
 import { AcademicoPermission } from '@/types/permissions';
 import { ValidationError, NotFoundError } from '@/lib/errors';
@@ -42,6 +43,7 @@ export const POST = handlerWithAuth(async (req, ctx, session) => {
     throw new ValidationError('key inválida (debe empezar con "audio/")');
   }
   await LibrosInteractivosRepository.upsertAudio(codigo, { pagina, key, titulo });
+  LibrosInteractivosService.invalidateLibroCache(codigo);
   return successResponse({ ok: true });
 });
 
@@ -54,5 +56,6 @@ export const DELETE = handlerWithAuth(async (req, ctx, session) => {
     throw new ValidationError('querystring "pagina" requerida');
   }
   await LibrosInteractivosRepository.removeAudio(codigo, pagina);
+  LibrosInteractivosService.invalidateLibroCache(codigo);
   return successResponse({ ok: true });
 });
