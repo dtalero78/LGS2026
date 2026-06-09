@@ -141,20 +141,30 @@ class LibrosInteractivosRepositoryClass extends BaseRepository<LibroInteractivoR
     );
   }
 
-  /** Agrega un audio sin tocar los existentes (idempotente por página: si ya hay audio en esa página lo reemplaza). */
-  async upsertAudio(codigo: string, audio: LibroAudio): Promise<void> {
+  /**
+   * Agrega un audio. Permite MÚLTIPLES audios en la misma página.
+   * La unicidad se controla por `key` (la ruta dentro del libro):
+   * si ya hay otro audio con la misma key se reemplaza (idempotente),
+   * de lo contrario se agrega a la lista.
+   * Orden final: por página ASC, después por título ASC.
+   */
+  async addAudio(codigo: string, audio: LibroAudio): Promise<void> {
     const libro = await this.findByCodigo(codigo);
     if (!libro) return;
-    const existing = (libro.audios || []).filter(a => a.pagina !== audio.pagina);
+    const existing = (libro.audios || []).filter(a => a.key !== audio.key);
     existing.push(audio);
-    existing.sort((a, b) => a.pagina - b.pagina);
+    existing.sort((a, b) => {
+      if (a.pagina !== b.pagina) return a.pagina - b.pagina;
+      return (a.titulo || '').localeCompare(b.titulo || '');
+    });
     await this.replaceAudios(codigo, existing);
   }
 
-  async removeAudio(codigo: string, pagina: number): Promise<void> {
+  /** Elimina UN audio específico por su key (no por página). */
+  async removeAudio(codigo: string, key: string): Promise<void> {
     const libro = await this.findByCodigo(codigo);
     if (!libro) return;
-    const filtered = (libro.audios || []).filter(a => a.pagina !== pagina);
+    const filtered = (libro.audios || []).filter(a => a.key !== key);
     await this.replaceAudios(codigo, filtered);
   }
 }

@@ -26,6 +26,11 @@ import {
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline'
 
+interface AudioInfo {
+  idx: number
+  titulo: string | null
+}
+
 interface Metadata {
   available: boolean
   featureActive?: boolean
@@ -34,6 +39,14 @@ interface Metadata {
   libroTitulo?: string
   totalPaginas?: number
   paginasConAudio?: number[]
+  /** Mapa pagina-local → lista de audios (nuevo, multi-audio). */
+  audiosPorPagina?: Record<number, AudioInfo[]>
+}
+
+interface AudioPlayable {
+  idx: number
+  titulo: string | null
+  url: string
 }
 
 export default function MaterialInteractivoPage() {
@@ -50,7 +63,7 @@ export default function MaterialInteractivoPage() {
   const [meta, setMeta] = useState<Metadata | null>(null)
   const [page, setPage] = useState(1)
   const [imageCache, setImageCache] = useState<Record<number, string>>({})
-  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [audios, setAudios] = useState<AudioPlayable[]>([])
   const [error, setError] = useState<string | null>(null)
   const touchStartX = useRef<number | null>(null)
 
@@ -90,9 +103,11 @@ export default function MaterialInteractivoPage() {
   }, [nivel, previewQsFirst])
 
   const total = meta?.totalPaginas ?? 0
-  const tieneAudio = useMemo(
-    () => new Set(meta?.paginasConAudio || []),
-    [meta?.paginasConAudio]
+  // Conteo de audios por página (lo usamos para decidir si fetch o no).
+  const audiosPorPagina = meta?.audiosPorPagina || {}
+  const cantidadAudiosPagina = useMemo(
+    () => audiosPorPagina[page]?.length || 0,
+    [audiosPorPagina, page]
   )
 
   // 2) Carga URL de la página actual + pre-cache vecinas
@@ -118,14 +133,10 @@ export default function MaterialInteractivoPage() {
     return () => { cancelled = true }
   }, [page, total, meta?.available, nivel, imageCache])
 
-  // 3) Carga URL de audio si la página actual lo tiene
+  // 3) Carga TODOS los audios de la página actual (puede haber varios)
   useEffect(() => {
-    if (!meta?.available || !total) {
-      setAudioUrl(null)
-      return
-    }
-    if (!tieneAudio.has(page)) {
-      setAudioUrl(null)
+    if (!meta?.available || !total || cantidadAudiosPagina === 0) {
+      setAudios([])
       return
     }
     let cancelled = false
@@ -133,12 +144,12 @@ export default function MaterialInteractivoPage() {
       .then(r => r.json())
       .then(j => {
         if (cancelled) return
-        if (j?.available && j.url) setAudioUrl(j.url)
-        else setAudioUrl(null)
+        if (j?.available && Array.isArray(j.audios)) setAudios(j.audios)
+        else setAudios([])
       })
-      .catch(() => { if (!cancelled) setAudioUrl(null) })
+      .catch(() => { if (!cancelled) setAudios([]) })
     return () => { cancelled = true }
-  }, [page, tieneAudio, meta?.available, total, nivel])
+  }, [page, cantidadAudiosPagina, meta?.available, total, nivel])
 
   // 4) Teclado: ← → para navegar, Esc para volver
   useEffect(() => {
@@ -279,19 +290,25 @@ export default function MaterialInteractivoPage() {
         </button>
       </div>
 
-      {/* Audio + barra de progreso */}
+      {/* Audios + barra de progreso. La pagina puede tener 0..N audios. */}
       <div className="bg-white border-t border-gray-200 px-4 py-2 flex items-center gap-3">
-        {audioUrl ? (
-          <div className="flex-1 flex items-center gap-2">
-            <SpeakerWaveIcon className="h-5 w-5 text-indigo-600 flex-shrink-0" />
-            <audio
-              key={audioUrl}
-              src={audioUrl}
-              controls
-              autoPlay={false}
-              preload="metadata"
-              className="flex-1 max-w-md"
-            />
+        {audios.length > 0 ? (
+          <div className="flex-1 flex flex-col gap-1.5 max-h-32 overflow-y-auto">
+            {audios.map((a) => (
+              <div key={a.url} className="flex items-center gap-2">
+                <SpeakerWaveIcon className="h-4 w-4 text-indigo-600 flex-shrink-0" />
+                <span className="text-xs font-medium text-gray-700 w-32 truncate flex-shrink-0" title={a.titulo || `Audio ${a.idx + 1}`}>
+                  {a.titulo || `Audio ${a.idx + 1}`}
+                </span>
+                <audio
+                  src={a.url}
+                  controls
+                  autoPlay={false}
+                  preload="metadata"
+                  className="flex-1 max-w-md h-8"
+                />
+              </div>
+            ))}
           </div>
         ) : (
           <div className="flex-1 text-xs text-gray-400">Esta página no tiene audio</div>

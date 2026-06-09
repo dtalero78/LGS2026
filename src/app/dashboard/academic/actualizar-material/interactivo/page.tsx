@@ -352,6 +352,7 @@ function SeccionRangos({ libro, onReload }: { libro: LibroAdmin; onReload: () =>
 
 function SeccionAudios({ libro, onReload }: { libro: LibroAdmin; onReload: () => void }) {
   const [paginaNueva, setPaginaNueva] = useState<number | ''>('')
+  const [tituloNuevo, setTituloNuevo] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
 
@@ -365,7 +366,11 @@ function SeccionAudios({ libro, onReload }: { libro: LibroAdmin; onReload: () =>
       const presign = await jsonFetchRetry(`/api/admin/libros-interactivos/${encodeURIComponent(libro.codigo)}/audios/presign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pagina: paginaNueva, contentType: file.type || 'audio/mpeg' }),
+        body: JSON.stringify({
+          pagina: paginaNueva,
+          titulo: tituloNuevo || undefined,
+          contentType: file.type || 'audio/mpeg',
+        }),
       })
 
       const put = await fetch(presign.presignedUrl, {
@@ -378,10 +383,14 @@ function SeccionAudios({ libro, onReload }: { libro: LibroAdmin; onReload: () =>
       await jsonFetchRetry(`/api/admin/libros-interactivos/${encodeURIComponent(libro.codigo)}/audios`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pagina: paginaNueva, key: presign.key }),
+        body: JSON.stringify({
+          pagina: paginaNueva,
+          key: presign.key,
+          titulo: tituloNuevo || undefined,
+        }),
       })
 
-      setFile(null); setPaginaNueva('')
+      setFile(null); setPaginaNueva(''); setTituloNuevo('')
       onReload()
     } catch (e: any) {
       alert(e?.message || 'Error')
@@ -390,10 +399,10 @@ function SeccionAudios({ libro, onReload }: { libro: LibroAdmin; onReload: () =>
     }
   }
 
-  const eliminar = async (pagina: number) => {
-    if (!confirm(`¿Eliminar el audio de la página ${pagina}?`)) return
+  const eliminar = async (key: string, label: string) => {
+    if (!confirm(`¿Eliminar el audio "${label}"?`)) return
     try {
-      await jsonFetchRetry(`/api/admin/libros-interactivos/${encodeURIComponent(libro.codigo)}/audios?pagina=${pagina}`, {
+      await jsonFetchRetry(`/api/admin/libros-interactivos/${encodeURIComponent(libro.codigo)}/audios?key=${encodeURIComponent(key)}`, {
         method: 'DELETE',
       })
       onReload()
@@ -405,11 +414,12 @@ function SeccionAudios({ libro, onReload }: { libro: LibroAdmin; onReload: () =>
   return (
     <div>
       <h3 className="text-sm font-semibold text-gray-700 mb-2">Audios</h3>
+      <p className="text-xs text-gray-500 mb-2">Una página puede tener varios audios. Usa el título para distinguirlos (ej: "Diálogo", "Maria", "John"). Si no pones título, se usa "Audio N".</p>
 
       <div className="bg-white border border-gray-200 rounded p-3 mb-3">
         <div className="flex items-end gap-2 flex-wrap">
           <div>
-            <label htmlFor={`pag-${libro.codigo}`} className="block text-xs text-gray-600 mb-1">Página (del libro completo)</label>
+            <label htmlFor={`pag-${libro.codigo}`} className="block text-xs text-gray-600 mb-1">Página</label>
             <input
               id={`pag-${libro.codigo}`}
               type="number"
@@ -417,11 +427,23 @@ function SeccionAudios({ libro, onReload }: { libro: LibroAdmin; onReload: () =>
               max={libro.totalPaginas || undefined}
               value={paginaNueva}
               onChange={e => setPaginaNueva(e.target.value === '' ? '' : parseInt(e.target.value, 10) || '')}
-              className="w-24 border border-gray-300 rounded px-2 py-1 text-sm tabular-nums"
+              className="w-20 border border-gray-300 rounded px-2 py-1 text-sm tabular-nums"
               placeholder="12"
             />
           </div>
-          <div className="flex-1 min-w-[200px]">
+          <div className="w-44">
+            <label htmlFor={`tit-${libro.codigo}`} className="block text-xs text-gray-600 mb-1">Título (opcional)</label>
+            <input
+              id={`tit-${libro.codigo}`}
+              type="text"
+              maxLength={40}
+              value={tituloNuevo}
+              onChange={e => setTituloNuevo(e.target.value)}
+              className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+              placeholder="Diálogo"
+            />
+          </div>
+          <div className="flex-1 min-w-[180px]">
             <label htmlFor={`audio-${libro.codigo}`} className="block text-xs text-gray-600 mb-1">Archivo MP3</label>
             <input
               id={`audio-${libro.codigo}`}
@@ -450,26 +472,34 @@ function SeccionAudios({ libro, onReload }: { libro: LibroAdmin; onReload: () =>
             <thead className="bg-gray-50 text-xs text-gray-500">
               <tr>
                 <th className="text-right px-3 py-2 w-20">Página</th>
+                <th className="text-left px-3 py-2 w-44">Título</th>
                 <th className="text-left px-3 py-2">Key</th>
                 <th className="text-right px-3 py-2 w-12"></th>
               </tr>
             </thead>
             <tbody>
-              {[...libro.audios].sort((a, b) => a.pagina - b.pagina).map(a => (
-                <tr key={a.pagina} className="border-t border-gray-100">
-                  <td className="px-3 py-2 text-right font-bold tabular-nums">{a.pagina}</td>
-                  <td className="px-3 py-2 text-xs text-gray-600 font-mono truncate">{a.key}</td>
-                  <td className="px-3 py-2 text-right">
-                    <button
-                      onClick={() => eliminar(a.pagina)}
-                      className="text-red-600 hover:text-red-800"
-                      title="Eliminar audio"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {[...libro.audios]
+                .sort((a, b) => {
+                  if (a.pagina !== b.pagina) return a.pagina - b.pagina
+                  return (a.titulo || '').localeCompare(b.titulo || '')
+                })
+                .map(a => (
+                  <tr key={a.key} className="border-t border-gray-100">
+                    <td className="px-3 py-2 text-right font-bold tabular-nums">{a.pagina}</td>
+                    <td className="px-3 py-2 text-xs text-gray-700 truncate">{a.titulo || <span className="italic text-gray-400">(sin título)</span>}</td>
+                    <td className="px-3 py-2 text-xs text-gray-500 font-mono truncate">{a.key}</td>
+                    <td className="px-3 py-2 text-right">
+                      <button
+                        type="button"
+                        onClick={() => eliminar(a.key, a.titulo || `Audio página ${a.pagina}`)}
+                        className="text-red-600 hover:text-red-800"
+                        title="Eliminar audio"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>

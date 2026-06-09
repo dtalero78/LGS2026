@@ -1,13 +1,21 @@
 /**
  * POST /api/admin/libros-interactivos/[codigo]/audios/presign
  *
- * Body: { pagina: number, contentType?: string }
+ * Body: { pagina: number, titulo?: string, contentType?: string }
  *
- * Devuelve una presigned PUT URL para que el admin suba el MP3 directo a
- * Spaces sin pasar por el server (evita 504 con archivos pesados). Después
- * el cliente debe llamar a POST /audios para registrar el audio en BD.
+ * Devuelve presigned PUT URL para subir el MP3 directo a Spaces sin pasar
+ * por el server. La key se construye así:
  *
- * Key resultante: materials/interactive/{codigo}/audio/page-NNN.mp3
+ *   audio/page-NNN[-{slug}].mp3
+ *
+ * donde {slug} es el título normalizado (a-z 0-9 -). Si no se pasa título,
+ * la key queda como audio/page-NNN.mp3 (caso "1 audio por página", legacy).
+ *
+ * Esto permite que una misma página tenga múltiples audios distinguidos por
+ * título (ej. "dialogo", "maria", "john"), todos coexistentes.
+ *
+ * El cliente debe llamar a POST /audios DESPUÉS de hacer el PUT, pasando
+ * el mismo `key` que se devuelve aquí.
  */
 import 'server-only';
 import { NextResponse } from 'next/server';
@@ -18,6 +26,16 @@ import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { requirePermission } from '@/lib/api-permissions';
 import { AcademicoPermission } from '@/types/permissions';
+
+/** Normaliza un título a slug seguro: minúsculas, sin acentos, [a-z0-9-] solamente. */
+function slugify(input: string): string {
+  return input
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // quita acentos
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+}
 
 export async function POST(
   request: Request,
@@ -36,6 +54,7 @@ export async function POST(
   const codigo = String(params.codigo || '').toUpperCase().trim();
   const body = await request.json().catch(() => ({}));
   const pagina = Number(body?.pagina);
+  const tituloRaw = typeof body?.titulo === 'string' ? body.titulo.trim() : '';
   const contentType = body?.contentType || 'audio/mpeg';
 
   if (!codigo) {
@@ -48,7 +67,13 @@ export async function POST(
     );
   }
 
-  const relKey = `audio/page-${String(pagina).padStart(3, '0')}.mp3`;
+  // Construye la key: audio/page-NNN.mp3 si no hay título,
+  //                   audio/page-NNN-{slug}.mp3 si hay título.
+  const slug = tituloRaw ? slugify(tituloRaw) : '';
+  const paginaPadded = String(pagina).padStart(3, '0');
+  const relKey = slug
+    ? `audio/page-${paginaPadded}-${slug}.mp3`
+    : `audio/page-${paginaPadded}.mp3`;
   const fullKey = `materials/interactive/${codigo}/${relKey}`;
 
   const command = new PutObjectCommand({
@@ -62,7 +87,8 @@ export async function POST(
   return NextResponse.json({
     success: true,
     presignedUrl,
-    key: relKey,    // ← lo que el cliente debe enviar al endpoint POST /audios
+    key: relKey,    // ← el cliente lo envía al POST /audios para registrar
     fullKey,         // informativo
+    titulo: tituloRaw || null,
   });
 }
