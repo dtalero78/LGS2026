@@ -23,12 +23,16 @@
 
 ---
 
-## 1. Inventario de tablas (25 reales)
+## 1. Inventario de tablas (25 en código · 30 en la BD)
 
-> ⚠️ **Hallazgo:** ARCHITECTURE.md documenta **21 tablas**, pero ese conteo se
-> mide con `grep src/repositories/*.ts`. Hay **4 tablas más** que se acceden
-> **fuera de la capa repositorio** (audit logs + healthcheck) y por eso no se
-> contaban. El total real es **25**.
+> ⚠️ **Hallazgo (3 niveles de conteo):**
+> - ARCHITECTURE.md documentaba **21 tablas** (medido con `grep src/repositories/*.ts`).
+> - El código real toca **25** (las 21 + 4 audit/infra fuera de la capa repo).
+> - La **BD en vivo tenía 30 tablas** — había **5 huérfanas/legacy** que el código
+>   ya no usa (ver [§5](#5-hallazgos-arquitectónicos)). El **2026-06-10 se eliminó
+>   `CALENDARIO_BACKUP_20260414`** (22.819 filas, 7,2 MB → BD de 293 a 286 MB),
+>   quedando **29 tablas**. Huérfanas restantes: `CLUBS`, `COMMENTS`,
+>   `NIVELES_MATERIAL`, `_schema_version`.
 
 | # | Tabla | Capa de acceso | Naturaleza |
 |---|---|---|---|
@@ -197,62 +201,148 @@ Servicios ordenados por amplitud de acceso (cuántas tablas tocan vía sus repos
 
 ## 5. Hallazgos arquitectónicos
 
-1. **4 tablas acceden SQL fuera de la capa repositorio** (`CRON_RUNS`,
-   `auditautoaprov`, `PURGE_LOG`, `MATERIAL_AUDIT`). Son audit/infra y de bajo
-   riesgo, pero rompen la regla "el service nunca ejecuta SQL / todo pasa por un repo".
-2. **`FINANCIEROS` tiene escrituras dispersas en 4+ rutas API** mientras su
-   repositorio es solo-lectura. Si algún día cambia el esquema de `FINANCIEROS`,
-   hay que tocar `financial.repository`, `postgres/financial`, `postgres/contracts`,
-   `admin/migrar-contrato`, la purga y `pagos-titulares.service`. Candidato a
-   consolidar en `financial.repository`.
-3. **El conteo "21 tablas" de ARCHITECTURE.md está desactualizado** — el método de
-   medición no ve las tablas accedidas fuera de `src/repositories`. Real: **25**.
-4. **`ACADEMICA_BOOKINGS` es el cuello de botella** (§6): la tabla más grande y la
-   query más cara del sistema pasan por ella.
+1. **🔴 Bug de esquema: `comments.repository` apunta a una tabla inexistente.**
+   El repo consulta `"COMENTARIOS"` (`FROM/INTO "COMENTARIOS"`), pero esa tabla
+   **no existe en la BD**. Lo que existe es `COMMENTS` (vacía, 0 filas, índices
+   `idx_comments_*`). Cualquier llamada al path de comentarios daría error de SQL
+   en runtime. Acción: confirmar si es código muerto o renombrar a `COMMENTS`.
+2. **🟠 Estadísticas del planner obsoletas.** `n_live_tup` está desfasado ~100–190×
+   respecto al conteo real (PEOPLE: 59 vs **11.017**; ACADEMICA: 33 vs **6.305**;
+   ACADEMICA_BOOKINGS: 2.571 vs **169.698**). El planner toma decisiones con datos
+   basura → planes subóptimos en las queries calientes. Acción: `ANALYZE` (o revisar
+   `autovacuum_analyze_scale_factor` en la BD managed).
+3. **🟠 ~25 MB en índices sin uso (0 scans).** Incluye ~11 MB sobre la tabla más
+   caliente: `idx_bookings_asistencia` (4,1 MB), `idx_bookings_fecha` (3,7 MB),
+   `idx_bookings_student` (3,4 MB) — todos con 0 scans pero penalizando cada
+   INSERT/UPDATE de `ACADEMICA_BOOKINGS` (la tabla con más escrituras). Lista
+   completa en [§7](#índices-sin-uso-candidatos-a-drop).
+4. **🟠 Tablas huérfanas/legacy en producción** (existen en la BD, el código no
+   las usa). ✅ **`CALENDARIO_BACKUP_20260414` eliminada el 2026-06-10** (22.819
+   filas, 7,2 MB liberados). Restantes (vacías, bajo impacto): `CLUBS`, `COMMENTS`,
+   `NIVELES_MATERIAL`, `_schema_version` — candidatas a `DROP` tras confirmar.
+5. **🟡 4 tablas acceden SQL fuera de la capa repositorio** (`CRON_RUNS`,
+   `auditautoaprov`, `PURGE_LOG`, `MATERIAL_AUDIT`). Audit/infra de bajo riesgo,
+   pero rompen la regla "todo pasa por un repo".
+6. **🟡 `FINANCIEROS` tiene escrituras dispersas en 4+ rutas API** mientras su
+   repositorio es solo-lectura (INSERT en `postgres/financial`, `postgres/contracts`,
+   `admin/migrar-contrato`; UPDATE de `saldo` en `pagos-titulares.service`). Candidato
+   a consolidar en `financial.repository`.
+7. **🔴 `ACADEMICA_BOOKINGS` es el cuello de botella absoluto:** 169.698 filas, 210 MB
+   (**72 % de la BD entera**), y por ella pasa la query más cara del sistema (§6).
 
 ---
 
-## 6. Rendimiento — tablas calientes (datos reales de diagnóstico)
+## 6. Métricas en vivo (medidas 2026-06-10)
 
-Medido en vivo con `pg_stat_statements` (sesión 2026-06-09, commit `81f1bef`):
+**Conexión:** vía `doctl databases firewalls append` (IP whitelisted temporalmente,
+removida al terminar) + `scripts/db-metrics.js`.
+**Motor:** PostgreSQL **18.4** · BD `defaultdb` · **293 MB** total (→ **286 MB**
+tras dropear la backup huérfana, ver §5.4) · **22/25 conexiones** en uso en el
+snapshot (saturación real — solo 3 libres).
 
-- **Query más cara del sistema:** `findByStudentId` en `booking.repository`
-  (historial de `/student/[id]`) — **7,277 calls × 9.7 s promedio ≈ 19.6 horas**
-  de tiempo de BD acumuladas.
-- **Causa raíz:** `COALESCE(b.eventoId, b.idEvento)` en el `JOIN ON CALENDARIO`
-  bloqueaba los índices → **Seq Scan completo de ~165k bookings por estudiante**;
-  más una subquery anidada `PEOPLE → ACADEMICA` que corría dentro del Seq Scan (O(n²)).
-- **Fixes aplicados:** reescritura del JOIN + 2 índices `CREATE INDEX CONCURRENTLY`:
-  `idx_academica_lower_email (LOWER(email))` y `idx_bookings_fechaevento (fechaEvento)`.
-- **Contexto de infraestructura:** BD **basic `db-s-1vcpu-1gb`**, `max_connections ≈ 22`.
-  El pool de la app se bajó de `max=25` a **`max=8`** para no saturarla con 2+ réplicas
-  (ver `src/lib/postgres.ts`).
+### Tamaño y volumen por tabla (top, conteos reales)
 
-> Estos números son la línea base. Para el estado **actual** de tamaños, dead tuples
-> e índices sin uso, correr la recolección de §7.
+> ⚠️ Los conteos vienen de `SELECT count(*)`. **`n_live_tup` de `pg_stat` estaba
+> desfasado ~100–190×** (ver hallazgo §5.2) — no usar esa columna como verdad.
+
+| Tabla | Filas reales | Total | Tabla | Índices | % de la BD |
+|---|--:|--:|--:|--:|--:|
+| `ACADEMICA_BOOKINGS` | **169.698** | 210 MB | 144 MB | 66 MB | **72 %** |
+| `CALENDARIO` | 26.956 | 25 MB | 18 MB | 7,3 MB | 9 % |
+| `PEOPLE` | 11.017 | 20 MB | 14 MB | 5,8 MB | 7 % |
+| ~~`CALENDARIO_BACKUP_20260414`~~ | 22.819 | 7,2 MB | — | — | ✅ eliminada 06-10 |
+| `ACADEMICA` | 6.305 | 6,2 MB | 4,5 MB | 1,7 MB | 2 % |
+| `COMPLEMENTARIA_ATTEMPTS` | ~varios | 4,8 MB | 3,1 MB | 1,7 MB | 1,6 % |
+| `ACADEMICA_BOOKING_EVALUATIONS` | 2.900 | 2,7 MB | 1,8 MB | 1 MB | 0,9 % |
+| `USUARIOS_ROLES` | 6.274 | 2,6 MB | 1,1 MB | 1,5 MB | 0,9 % |
+| `FINANCIEROS` | 2.820 | 2,5 MB | 1,4 MB | 1 MB | 0,9 % |
+
+> **`ACADEMICA_BOOKINGS` sola es el 72 % de la BD.** Tiene 144 MB de tabla con
+> mucho bloat (1.852 dead tuples) + 66 MB en 13 índices.
+
+### Top queries por tiempo total de BD (`pg_stat_statements`, acumulado)
+
+| # | Calls | Media | Tiempo total | Query (proceso) |
+|--:|--:|--:|--:|---|
+| 1 | 7.477 | **9.737 ms** | **20,2 h** | `findByStudentId` — historial de `/student/[id]` (`booking.repository`) |
+| 2 | **148.660** | 79 ms | 3,3 h | `SELECT * FROM ACADEMICA WHERE LOWER(email)=…` (volumen brutal de calls) |
+| 3 | 67.497 | 105 ms | 2,0 h | bookings+step del progreso (`COALESCE(c.step,b.step)`) |
+| 4 | 1.946 | 2.183 ms | 1,2 h | `ACADEMICA + PEOPLE` join (perfil/búsqueda) |
+| 5 | 5.280 | 721 ms | 1,1 h | listado de `CALENDARIO` (agenda) |
+| 6 | 258 | **7.792 ms** | 0,6 h | `COUNT(*) FROM ACADEMICA_BOOKINGS WHERE fechaEvento BETWEEN …` (dashboard) |
+| 7 | 165 | **11.426 ms** | 0,5 h | asistencias por nivel/plataforma (informe) |
+
+**Lecturas clave:**
+- La query #1 (`findByStudentId`) **sigue costando ~9,7 s de media** pese al fix
+  `81f1bef`. ⚠️ Las stats de `pg_stat_statements` son **acumuladas y no se
+  resetearon tras el fix**, así que esto NO prueba que el fix falló — pero tampoco
+  se puede confirmar mejora. **Acción: `SELECT pg_stat_statements_reset()` y volver
+  a medir** para aislar el efecto.
+- La query #2 con **148.660 calls** huele a **N+1 / falta de caché**: se resuelve el
+  `ACADEMICA by email` una y otra vez por request. Candidata a cachear.
+- Varios `COUNT(*)` de dashboard sobre `ACADEMICA_BOOKINGS` tardan **7–11 s** — son
+  los que justifican el cache server de 60 s del dashboard.
+
+### Índices más usados (confirman las tablas calientes)
+
+| Índice | Scans | Tabla |
+|---|--:|---|
+| `idx_people_numeroid_multi` | **15.760.114** | PEOPLE |
+| `CALENDARIO_pkey` | 9.442.844 | CALENDARIO |
+| `PEOPLE_pkey` | 546.490 | PEOPLE |
+| `idx_bookings_idevento` | 534.898 | ACADEMICA_BOOKINGS |
+| `idx_bookings_evento` | 493.698 | ACADEMICA_BOOKINGS |
+| `idx_bookings_student_fecha` | 271.556 | ACADEMICA_BOOKINGS |
+
+### Índices sin uso (candidatos a DROP)
+
+**0 scans** desde el último reset de stats. Top por tamaño (≈25 MB en total):
+
+| Índice | Size | Tabla |
+|---|--:|---|
+| `idx_bookings_asistencia` | 4,1 MB | ACADEMICA_BOOKINGS |
+| `idx_bookings_fecha` | 3,7 MB | ACADEMICA_BOOKINGS |
+| `idx_bookings_student` | 3,4 MB | ACADEMICA_BOOKINGS |
+| `idx_calendario_fecha_tipo` | 944 kB | CALENDARIO |
+| `idx_calendario_nivel` | 792 kB | CALENDARIO |
+| `idx_calendario_fecha_hora` | 616 kB | CALENDARIO |
+| `idx_people_numeroid` | 552 kB | PEOPLE |
+| `idx_people_titular` | 400 kB | PEOPLE |
+| `idx_people_extension_history` | 336 kB | PEOPLE |
+| `idx_people_onhold_history` | 240 kB | PEOPLE |
+| (+ ~25 índices más de 16–280 kB en PEOPLE, FINANCIEROS, ACADEMICA, evals…) | | |
+
+> ⚠️ Antes de dropear: los `idx_bookings_asistencia/fecha/student` podrían tener
+> 0 scans solo porque las stats se resetearon hace poco. Confirmar con un par de
+> días de tráfico o con `pg_stat_statements` que ninguna query crítica los necesita.
+> Los GIN sobre JSONB (`idx_people_onhold_history`, `idx_people_extension_history`)
+> probablemente nunca se usan en WHERE — esos sí son drop seguro.
+
+### Acciones recomendadas (priorizadas)
+
+1. **`ANALYZE`** (o `VACUUM ANALYZE`) — stats desfasadas 190× están envenenando el planner. Bajo riesgo, alto impacto.
+2. **`SELECT pg_stat_statements_reset()`** y re-medir 24–48 h para validar el fix `81f1bef` y aislar índices realmente muertos.
+3. **Cachear el lookup `ACADEMICA by email`** (148k calls) — probable N+1.
+4. ✅ **Hecho:** `DROP` de la backup huérfana `CALENDARIO_BACKUP_20260414` (7,2 MB liberados, 2026-06-10). Pendiente: GIN JSONB sin uso + las 4 tablas huérfanas vacías.
+5. **Resolver el bug `COMENTARIOS`** (§5.1).
 
 ---
 
-## 7. Métricas en vivo (PENDIENTE)
+## 7. Reproducir / refrescar las métricas
 
-La conexión directa a la BD está bloqueada desde este entorno (firewall *Trusted
-Sources* de DigitalOcean). Para completar esta sección con tamaños reales,
-filas vivas/muertas, índices sin uso y top queries:
+```bash
+# 1) Whitelist temporal de tu IP (doctl ya autenticado):
+doctl databases firewalls append 08d65733-6811-420c-a0a1-a71d6b3b9c6d --rule ip_addr:$(curl -s ifconfig.me)
+# 2) Recolectar:
+node scripts/db-metrics.js          # imprime resumen + escribe scripts/_db-metrics-out.json
+# 3) Quitar la IP al terminar (recomendado):
+doctl databases firewalls remove 08d65733-6811-420c-a0a1-a71d6b3b9c6d --uuid <uuid-de-tu-regla>
+```
 
-1. **Habilitar acceso:** en el panel de DigitalOcean → Databases → `lgs-db` →
-   Settings → *Trusted Sources*, agregar la IP desde la que se corre el script
-   (o correrlo desde el droplet/App Platform que ya está en la lista).
-2. **Correr el recolector** (ya incluido en el repo):
-   ```bash
-   node scripts/db-metrics.js
-   ```
-   Imprime un resumen y escribe `scripts/_db-metrics-out.json` con: tamaño por
-   tabla, `n_live_tup`/`n_dead_tup`, `seq_scan` vs `idx_scan`, índices por tamaño,
-   índices sin uso (`idx_scan = 0`) y top 25 de `pg_stat_statements`.
-3. **Pegar los resultados** aquí (tabla de tamaños + top queries + índices sin uso).
-
-Alternativa sin firewall: usar el visor in-app `/dblgs` (DBA-light) o
-`/admin/diagnostico` (mide TTFB por endpoint), que corren desde la app ya whitelisted.
+`lgs-db` = cluster `08d65733-6811-420c-a0a1-a71d6b3b9c6d`. Alternativa sin tocar
+firewall: correr el script desde el droplet/App Platform ya whitelisted, o usar el
+visor in-app `/dblgs`. El `_db-metrics-out.json` es un artefacto efímero (no se
+commitea — está en `.gitignore`).
 
 ---
 
