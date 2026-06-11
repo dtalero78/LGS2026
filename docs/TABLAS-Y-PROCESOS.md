@@ -324,8 +324,8 @@ snapshot (saturación real — solo 3 libres).
 
 ### Acciones recomendadas (priorizadas)
 
-1. **`ANALYZE`** (o `VACUUM ANALYZE`) — stats desfasadas 190× están envenenando el planner. Bajo riesgo, alto impacto.
-2. **`SELECT pg_stat_statements_reset()`** y re-medir 24–48 h para validar el fix `81f1bef` y aislar índices realmente muertos.
+1. ⏳ **`ANALYZE`** — stats desfasadas 190× están envenenando el planner. Bajo riesgo, alto impacto. **Agendado: tarea Windows `LGS-DB-Analyze-20260611`, 2026-06-11 21:00 COT** (`scripts/run-analyze.js`).
+2. ⏳ **`SELECT pg_stat_statements_reset()`** y re-medir 24–48 h para validar el fix `81f1bef` y aislar índices realmente muertos. **Incluido en la misma tarea agendada** (corre tras el ANALYZE).
 3. **Cachear el lookup `ACADEMICA by email`** (148k calls) — probable N+1.
 4. ✅ **Hecho (2026-06-10):** dropeadas 4 tablas huérfanas (`CALENDARIO_BACKUP_20260414`, `COMMENTS`, `CLUBS`, `NIVELES_MATERIAL`) → 293→286 MB. Pendiente: GIN JSONB sin uso.
 5. ✅ **Hecho (2026-06-10):** resuelto el bug `COMENTARIOS` — repo muerto + endpoint legacy eliminados (§5.1, §5.4).
