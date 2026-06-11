@@ -33,7 +33,8 @@ export interface PagoTitular {
    *  pagó realmente el titular). Nullable para retrocompatibilidad. */
   fechaReporte: string | null;
   fechaValidacion: string | null;
-  plan: number | null;
+  /** "Tipo Plan": 'Contado' | 'Credito' | 'Colaborador' | null (categórico, no numérico). */
+  plan: string | null;
   vlrTotalProg: number | null;
   numCuota: number | null;
   valorCuota: number | null;

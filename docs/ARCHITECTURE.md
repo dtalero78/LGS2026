@@ -7,7 +7,7 @@
 ## TL;DR
 
 - **Monolito modular** Next.js 14 (App Router) + PostgreSQL.
-- **Una sola BD** (DigitalOcean managed) con 21 tablas.
+- **Una sola BD** (DigitalOcean managed) con **26 tablas** (20 vía repositorios + audit/infra; tras la limpieza de huérfanas del 2026-06-10). Detalle en [TABLAS-Y-PROCESOS.md](TABLAS-Y-PROCESOS.md).
 - **5 capas** de separación bien definidas: Hook → API Route → Service → Repository → PostgreSQL.
 - **Bajo acoplamiento** entre módulos: solo 5 cross-imports entre los 22 services.
 - **14 módulos funcionales** organizados por dominio en `/dashboard/*` y `/admin/*`.
@@ -19,8 +19,8 @@ Métricas (junio 2026):
 | LOC TS/TSX | ~93,000 |
 | Endpoints API | 225 |
 | Páginas Next.js | 93 |
-| Tablas PostgreSQL | 21 |
-| Repositories | 21 |
+| Tablas PostgreSQL | 26 (tras limpieza 2026-06-10) |
+| Repositories | 20 |
 | Services | 22 |
 
 ---
@@ -32,7 +32,7 @@ graph LR
   H[Hook<br/><i>useStudent()</i>] --> R[API Route<br/><i>app/api/postgres/...</i>]
   R --> S[Service<br/><i>student.service.ts</i>]
   S --> Rep[Repository<br/><i>people.repository.ts</i>]
-  Rep --> DB[(PostgreSQL<br/><i>21 tablas</i>)]
+  Rep --> DB[(PostgreSQL<br/><i>26 tablas</i>)]
 
   style H fill:#ec4899,color:#fff
   style R fill:#3b82f6,color:#fff
@@ -126,7 +126,7 @@ graph TB
 |---|---|---|---|---|---|
 | 1 | **Auth/RBAC** | `USUARIOS_ROLES`, `ROL_PERMISOS` | `roles` | — | Cross-cutting |
 | 2 | **Académico** ★ | `NIVELES`, `CALENDARIO`, `ACADEMICA_BOOKINGS`, `STEP_OVERRIDES`, `ADVISORS`, `ADVISOR_EVENT_LOG`, `ADVISOR_NOTES_AUDIT`, `ADMIN_EVENTS`, `JUMP_EVALUATIONS` | `academica`, `booking`, `calendar`, `niveles`, `advisor`, `advisor-event-log`, `advisor-notes-audit`, `admin-events`, `jump-evaluation` | `calendar`, `enrollment`, `progress`, `student`, `student-booking`, `special-nivel`, `advisor-event-log`, `admin-events`, `jump-tutor` | **CORE** |
-| 3 | **Comercial** | `PEOPLE`, `FINANCIEROS`, `COMENTARIOS` | `people`, `comments`, `financial` | `contract`, `consent`, `bloqueo-contrato` | Medio |
+| 3 | **Comercial** | `PEOPLE` (+ `PEOPLE.comentarios`), `FINANCIEROS` | `people`, `financial` | `contract`, `consent`, `bloqueo-contrato` | Medio |
 | 4 | **Recaudos** | `PAGOS_TITULARES` | `pagos-titulares` | `pagos-titulares` | Bajo |
 | 5 | **Aprobación** | — (usa `PEOPLE.aprobacion`) | — | — | Medio |
 | 6 | **Servicio** | — (usa `PEOPLE` + `CALENDARIO`) | — | `exam-intern` | Alto |
@@ -143,14 +143,13 @@ graph TB
 
 ---
 
-## 3. Tablas PostgreSQL (21)
+## 3. Tablas PostgreSQL (26 tras limpieza 2026-06-10)
 
 ```mermaid
 erDiagram
   PEOPLE ||--o{ ACADEMICA : "tiene perfil académico"
   PEOPLE ||--o{ FINANCIEROS : "tiene contrato"
   PEOPLE ||--o{ PAGOS_TITULARES : "registra pagos"
-  PEOPLE ||--o{ COMENTARIOS : "comentarios"
   ACADEMICA ||--o{ ACADEMICA_BOOKINGS : "se inscribe en"
   ACADEMICA ||--o{ STEP_OVERRIDES : "overrides admin"
   ACADEMICA ||--o{ COMPLEMENTARIA_ATTEMPTS : "rinde quizzes"
@@ -169,7 +168,20 @@ erDiagram
 - `APP_CONFIG` — Key-value para feature flags, ticker, banner
 - `MESSAGE_TEMPLATES` — Plantillas WhatsApp con placeholders
 - `ADVISOR_NOTES_AUDIT` — Audit log de ediciones a notas (append-only)
-- `CRON_RUNS` — Healthcheck de jobs
+
+### Tablas accedidas fuera de la capa repositorio (audit/infra)
+
+Estas 4 tablas no tienen repositorio propio — se acceden por SQL directo en
+`src/lib` o en rutas API. Por eso el conteo histórico de "21 tablas" (medido con
+`grep src/repositories/*.ts`) las omitía. En la BD viva había 30 tablas; tras la
+limpieza de huérfanas del 2026-06-10 quedan **26** (ver [TABLAS-Y-PROCESOS.md](TABLAS-Y-PROCESOS.md)).
+
+- `CRON_RUNS` — Healthcheck de jobs (`src/lib/cron-runs.ts`)
+- `auditautoaprov` — Audit de auto-aprobación de consentimiento (ruta `consent/[id]/auto-approve`)
+- `PURGE_LOG` — Audit de purga de contratos de prueba (ruta `admin/contratos-prueba/purge`)
+- `MATERIAL_AUDIT` — Audit de cambios en material interactivo (ruta `postgres/materials/manage`)
+
+> Mapeo completo tabla → procesos en [TABLAS-Y-PROCESOS.md](TABLAS-Y-PROCESOS.md).
 
 ---
 
@@ -404,8 +416,10 @@ find src/app/api -name "route.ts" | wc -l
 # Páginas
 find src/app -name "page.tsx" | wc -l
 
-# Tablas
+# Tablas (SOLO capa repositorio — subcuenta: omite las tablas audit/infra fuera de repos)
 grep -h 'FROM "\|UPDATE "\|INSERT INTO "' src/repositories/*.ts | grep -oE '"[A-Z_][A-Z_0-9]*"' | sort -u | wc -l
+# Tablas reales (incluye accesos fuera de repos)
+grep -rhoE '(FROM|INTO|UPDATE|DELETE FROM) "[A-Za-z_]+"' src/repositories src/lib src/app | grep -oE '"[A-Za-z_]+"' | sort -u | wc -l
 
 # Cross-imports entre services
 grep -hE "^import.*services/" src/services/*.ts | grep -v "@/lib\|@/repositories\|@/types\|errors\|api-helpers" | sort -u
