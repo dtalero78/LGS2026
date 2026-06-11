@@ -35,6 +35,8 @@ yarn-error.log*
 
 # output efimero de scripts/db-metrics.js (snapshot de metricas de BD)
 scripts/_db-metrics-out.json
+# logs del ANALYZE programado (scripts/scheduled-analyze.ps1)
+scripts/analyze-*.log
 
 # typescript
 *.tsbuildinfo
