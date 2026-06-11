@@ -7,7 +7,7 @@
 ## TL;DR
 
 - **Monolito modular** Next.js 14 (App Router) + PostgreSQL.
-- **Una sola BD** (DigitalOcean managed) con 21 tablas.
+- **Una sola BD** (DigitalOcean managed) con 25 tablas (21 vía repositorios + 4 audit/infra accedidas fuera de la capa repo).
 - **5 capas** de separación bien definidas: Hook → API Route → Service → Repository → PostgreSQL.
 - **Bajo acoplamiento** entre módulos: solo 5 cross-imports entre los 22 services.
 - **14 módulos funcionales** organizados por dominio en `/dashboard/*` y `/admin/*`.
@@ -19,7 +19,7 @@ Métricas (junio 2026):
 | LOC TS/TSX | ~93,000 |
 | Endpoints API | 225 |
 | Páginas Next.js | 93 |
-| Tablas PostgreSQL | 21 |
+| Tablas PostgreSQL | 25 (21 vía repos + 4 audit/infra) |
 | Repositories | 21 |
 | Services | 22 |
 
@@ -32,7 +32,7 @@ graph LR
   H[Hook<br/><i>useStudent()</i>] --> R[API Route<br/><i>app/api/postgres/...</i>]
   R --> S[Service<br/><i>student.service.ts</i>]
   S --> Rep[Repository<br/><i>people.repository.ts</i>]
-  Rep --> DB[(PostgreSQL<br/><i>21 tablas</i>)]
+  Rep --> DB[(PostgreSQL<br/><i>25 tablas</i>)]
 
   style H fill:#ec4899,color:#fff
   style R fill:#3b82f6,color:#fff
@@ -143,7 +143,7 @@ graph TB
 
 ---
 
-## 3. Tablas PostgreSQL (21)
+## 3. Tablas PostgreSQL (25)
 
 ```mermaid
 erDiagram
@@ -169,7 +169,19 @@ erDiagram
 - `APP_CONFIG` — Key-value para feature flags, ticker, banner
 - `MESSAGE_TEMPLATES` — Plantillas WhatsApp con placeholders
 - `ADVISOR_NOTES_AUDIT` — Audit log de ediciones a notas (append-only)
-- `CRON_RUNS` — Healthcheck de jobs
+
+### Tablas accedidas fuera de la capa repositorio (audit/infra)
+
+Estas 4 tablas no tienen repositorio propio — se acceden por SQL directo en
+`src/lib` o en rutas API. Por eso el conteo histórico de "21 tablas" (medido con
+`grep src/repositories/*.ts`) las omitía. Total real: **25**.
+
+- `CRON_RUNS` — Healthcheck de jobs (`src/lib/cron-runs.ts`)
+- `auditautoaprov` — Audit de auto-aprobación de consentimiento (ruta `consent/[id]/auto-approve`)
+- `PURGE_LOG` — Audit de purga de contratos de prueba (ruta `admin/contratos-prueba/purge`)
+- `MATERIAL_AUDIT` — Audit de cambios en material interactivo (ruta `postgres/materials/manage`)
+
+> Mapeo completo tabla → procesos en [TABLAS-Y-PROCESOS.md](TABLAS-Y-PROCESOS.md).
 
 ---
 
@@ -404,8 +416,10 @@ find src/app/api -name "route.ts" | wc -l
 # Páginas
 find src/app -name "page.tsx" | wc -l
 
-# Tablas
+# Tablas (SOLO capa repositorio — subcuenta: omite las 4 tablas audit/infra. Real: 25)
 grep -h 'FROM "\|UPDATE "\|INSERT INTO "' src/repositories/*.ts | grep -oE '"[A-Z_][A-Z_0-9]*"' | sort -u | wc -l
+# Tablas reales (incluye accesos fuera de repos)
+grep -rhoE '(FROM|INTO|UPDATE|DELETE FROM) "[A-Za-z_]+"' src/repositories src/lib src/app | grep -oE '"[A-Za-z_]+"' | sort -u | wc -l
 
 # Cross-imports entre services
 grep -hE "^import.*services/" src/services/*.ts | grep -v "@/lib\|@/repositories\|@/types\|errors\|api-helpers" | sort -u
