@@ -27,12 +27,13 @@
 
 > ⚠️ **Hallazgo (3 niveles de conteo):**
 > - ARCHITECTURE.md documentaba **21 tablas** (medido con `grep src/repositories/*.ts`).
-> - El código real toca **25** (las 21 + 4 audit/infra fuera de la capa repo).
-> - La **BD en vivo tenía 30 tablas** — había **5 huérfanas/legacy** que el código
->   ya no usa (ver [§5](#5-hallazgos-arquitectónicos)). El **2026-06-10 se eliminó
->   `CALENDARIO_BACKUP_20260414`** (22.819 filas, 7,2 MB → BD de 293 a 286 MB),
->   quedando **29 tablas**. Huérfanas restantes: `CLUBS`, `COMMENTS`,
->   `NIVELES_MATERIAL`, `_schema_version`.
+> - El código real toca **20 tablas** vía repos (eran 21; el 2026-06-10 se eliminó
+>   el repo muerto `comments` que apuntaba a la inexistente `COMENTARIOS`).
+> - La **BD en vivo tenía 30 tablas** — había **5 huérfanas/legacy**. **Limpieza
+>   2026-06-10:** se dropearon `CALENDARIO_BACKUP_20260414` (22.819 filas, 7,2 MB),
+>   `COMMENTS`, `CLUBS` y `NIVELES_MATERIAL` (las 3 vacías) → **BD de 293 a 286 MB,
+>   quedan 26 tablas**. Único huérfano conservado: `_schema_version` (vestigio de
+>   migración, 32 kB). Ver [§5](#5-hallazgos-arquitectónicos).
 
 | # | Tabla | Capa de acceso | Naturaleza |
 |---|---|---|---|
@@ -42,7 +43,7 @@
 | 4 | `CALENDARIO` | repo `calendar` | Núcleo — eventos/sesiones |
 | 5 | `FINANCIEROS` | repo `financial` (solo lectura) + **rutas API** (escritura) | Contrato financiero |
 | 6 | `PAGOS_TITULARES` | repo `pagos-titulares` | Recaudos |
-| 7 | `COMENTARIOS` | repo `comments` | Comentarios de estudiante |
+| — | ~~`COMENTARIOS`~~ | ~~repo `comments`~~ | ❌ No existía; repo muerto eliminado. Comentarios viven en `PEOPLE.comentarios` (`text[]`) |
 | 8 | `ACADEMICA_BOOKING_EVALUATIONS` | repo `evaluations` | Valoración de sesiones (encuesta) |
 | 9 | `STEP_OVERRIDES` | repo `niveles` (`StepOverridesRepository`) | Overrides manuales de step |
 | 10 | `COMPLEMENTARIA_ATTEMPTS` | repo `complementaria` | Quizzes AI |
@@ -138,7 +139,7 @@ Leyenda CRUD: **C**=insert · **R**=select · **U**=update · **D**=delete.
 |---|---|---|---|
 | `FINANCIEROS` | `financial` (**solo R**) | R en repo; **C/U/D en rutas** | ⚠️ Escrituras fuera de repo: INSERT en `postgres/financial`, `postgres/contracts`, `admin/migrar-contrato`; DELETE en purga; UPDATE de `saldo` en `pagos-titulares.service` (`syncFinancieroSaldo`) |
 | `PAGOS_TITULARES` | `pagos-titulares` | CRUD | Centro de Validación de Pagos; lee `PEOPLE` y `FINANCIEROS` por JOIN. Índices: `idPeople`, `numeroId`, `fechaPago`, `validado` |
-| `COMENTARIOS` | `comments` | C, R | Comentarios del estudiante (consumido directo por rutas, no por un service) |
+| `PEOPLE.comentarios` | (rutas directas) | R, U | Comentarios del estudiante — campo `text[]` en `PEOPLE`, vía `people/[id]/comments` y `panel-estudiante/comments`. (El repo `comments`→`COMENTARIOS` era código muerto; eliminado 2026-06-10) |
 
 ### Auth, mantenimiento e infraestructura
 
@@ -201,11 +202,12 @@ Servicios ordenados por amplitud de acceso (cuántas tablas tocan vía sus repos
 
 ## 5. Hallazgos arquitectónicos
 
-1. **🔴 Bug de esquema: `comments.repository` apunta a una tabla inexistente.**
-   El repo consulta `"COMENTARIOS"` (`FROM/INTO "COMENTARIOS"`), pero esa tabla
-   **no existe en la BD**. Lo que existe es `COMMENTS` (vacía, 0 filas, índices
-   `idx_comments_*`). Cualquier llamada al path de comentarios daría error de SQL
-   en runtime. Acción: confirmar si es código muerto o renombrar a `COMMENTS`.
+1. ✅ **RESUELTO (2026-06-10): bug de esquema `comments.repository` → `COMENTARIOS`.**
+   El repo consultaba `"COMENTARIOS"`, tabla que **no existía**. Se confirmó que era
+   **código muerto** (ningún importador) — la feature real de comentarios usa
+   `PEOPLE.comentarios` (`text[]`) vía `people/[id]/comments` y `panel-estudiante/comments`.
+   Se eliminó `src/repositories/comments.repository.ts`. La tabla vacía `COMMENTS`
+   (huérfana, otro vestigio) se dropeó en la misma limpieza.
 2. **🟠 Estadísticas del planner obsoletas.** `n_live_tup` está desfasado ~100–190×
    respecto al conteo real (PEOPLE: 59 vs **11.017**; ACADEMICA: 33 vs **6.305**;
    ACADEMICA_BOOKINGS: 2.571 vs **169.698**). El planner toma decisiones con datos
@@ -216,10 +218,12 @@ Servicios ordenados por amplitud de acceso (cuántas tablas tocan vía sus repos
    `idx_bookings_student` (3,4 MB) — todos con 0 scans pero penalizando cada
    INSERT/UPDATE de `ACADEMICA_BOOKINGS` (la tabla con más escrituras). Lista
    completa en [§7](#índices-sin-uso-candidatos-a-drop).
-4. **🟠 Tablas huérfanas/legacy en producción** (existen en la BD, el código no
-   las usa). ✅ **`CALENDARIO_BACKUP_20260414` eliminada el 2026-06-10** (22.819
-   filas, 7,2 MB liberados). Restantes (vacías, bajo impacto): `CLUBS`, `COMMENTS`,
-   `NIVELES_MATERIAL`, `_schema_version` — candidatas a `DROP` tras confirmar.
+4. ✅ **RESUELTO (2026-06-10): tablas huérfanas/legacy.** Se dropearon 4 tras
+   verificar 0 filas y 0 referencias vivas: `CALENDARIO_BACKUP_20260414` (22.819
+   filas, 7,2 MB — backup manual del 14-abr), `COMMENTS`, `CLUBS`, y
+   `NIVELES_MATERIAL` (junto con su endpoint muerto `materials/usuario`, superado por
+   `NIVELES.materialUsuario`). BD: 293 → 286 MB. Se **conservó `_schema_version`**
+   (vestigio de migración, 32 kB, sin impacto).
 5. **🟡 4 tablas acceden SQL fuera de la capa repositorio** (`CRON_RUNS`,
    `auditautoaprov`, `PURGE_LOG`, `MATERIAL_AUDIT`). Audit/infra de bajo riesgo,
    pero rompen la regla "todo pasa por un repo".
@@ -323,8 +327,8 @@ snapshot (saturación real — solo 3 libres).
 1. **`ANALYZE`** (o `VACUUM ANALYZE`) — stats desfasadas 190× están envenenando el planner. Bajo riesgo, alto impacto.
 2. **`SELECT pg_stat_statements_reset()`** y re-medir 24–48 h para validar el fix `81f1bef` y aislar índices realmente muertos.
 3. **Cachear el lookup `ACADEMICA by email`** (148k calls) — probable N+1.
-4. ✅ **Hecho:** `DROP` de la backup huérfana `CALENDARIO_BACKUP_20260414` (7,2 MB liberados, 2026-06-10). Pendiente: GIN JSONB sin uso + las 4 tablas huérfanas vacías.
-5. **Resolver el bug `COMENTARIOS`** (§5.1).
+4. ✅ **Hecho (2026-06-10):** dropeadas 4 tablas huérfanas (`CALENDARIO_BACKUP_20260414`, `COMMENTS`, `CLUBS`, `NIVELES_MATERIAL`) → 293→286 MB. Pendiente: GIN JSONB sin uso.
+5. ✅ **Hecho (2026-06-10):** resuelto el bug `COMENTARIOS` — repo muerto + endpoint legacy eliminados (§5.1, §5.4).
 
 ---
 
