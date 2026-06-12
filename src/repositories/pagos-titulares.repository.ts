@@ -141,6 +141,8 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
     fechaHasta?: string | null;
     search?: string | null;
     gestorRecaudo?: string | null;
+    /** Filtro explícito de plataforma elegido por el usuario (ej 'Chile'). Compone con el scope RBAC. */
+    plataforma?: string | null;
     /** Scope de plataforma del usuario logueado (filtra titulares.plataforma) */
     plataformaScope?: PlataformaScope | null;
     limit: number;
@@ -163,6 +165,13 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
     if (opts.gestorRecaudo && opts.gestorRecaudo.trim()) {
       conds.push(`pt."gestorRecaudo" = $${i}`);
       params.push(opts.gestorRecaudo.trim()); i++;
+    }
+
+    // Filtro explícito de plataforma elegido por el usuario (case-insensitive
+    // para tolerar variantes legacy). Compone con el scope RBAC vía AND.
+    if (opts.plataforma && opts.plataforma.trim()) {
+      conds.push(`LOWER(p."plataforma") = LOWER($${i})`);
+      params.push(opts.plataforma.trim()); i++;
     }
 
     if (opts.search && opts.search.trim()) {
