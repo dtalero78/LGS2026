@@ -52,6 +52,8 @@ interface DisplayUser {
 }
 
 const GESTOR_ROLES_FILTRO = ['RECAUDO_ASIST', 'RECAUDOS_JEFE']
+// Plataformas existentes en PEOPLE.plataforma (titulares).
+const PLATAFORMAS = ['Chile', 'Colombia', 'Ecuador', 'Perú']
 const ROLE_LABEL: Record<string, string> = {
   RECAUDO_ASIST: 'Asistente',
   RECAUDOS_JEFE: 'Jefe',
@@ -95,6 +97,7 @@ export default function AsignacionRecaudosPage() {
   const [search, setSearch] = useState('')
   const [estadoCartera, setEstadoCartera] = useState<'' | 'normal' | 'prejuridico' | 'ultimopago' | 'penalidad'>('')
   const [gestorFiltro, setGestorFiltro] = useState('')
+  const [plataformaFiltro, setPlataformaFiltro] = useState('')
   const [fechaInicio, setFechaInicio] = useState('')
   const [fechaFin, setFechaFin] = useState('')
 
@@ -115,6 +118,7 @@ export default function AsignacionRecaudosPage() {
       if (search.trim()) qs.set('search', search.trim())
       if (estadoCartera) qs.set('estadoCartera', estadoCartera)
       if (canFiltrarGestor && gestorFiltro) qs.set('gestorRecaudo', gestorFiltro)
+      if (plataformaFiltro) qs.set('plataforma', plataformaFiltro)
       if (fechaInicio) qs.set('fechaInicio', fechaInicio)
       if (fechaFin) qs.set('fechaFin', fechaFin)
       qs.set('page', String(pageToUse))
@@ -130,7 +134,7 @@ export default function AsignacionRecaudosPage() {
     } finally {
       setLoading(false)
     }
-  }, [search, estadoCartera, gestorFiltro, fechaInicio, fechaFin, page, canFiltrarGestor])
+  }, [search, estadoCartera, gestorFiltro, plataformaFiltro, fechaInicio, fechaFin, page, canFiltrarGestor])
 
   // Carga de gestores (solo si el rol los puede filtrar)
   useEffect(() => {
@@ -147,7 +151,7 @@ export default function AsignacionRecaudosPage() {
 
   const handleAplicar = () => fetchTitulares(true)
   const handleLimpiar = () => {
-    setSearch(''); setEstadoCartera(''); setGestorFiltro(''); setFechaInicio(''); setFechaFin('')
+    setSearch(''); setEstadoCartera(''); setGestorFiltro(''); setPlataformaFiltro(''); setFechaInicio(''); setFechaFin('')
     setTimeout(() => fetchTitulares(true), 0)
   }
 
@@ -215,7 +219,7 @@ export default function AsignacionRecaudosPage() {
           </div>
 
           {/* Filtros */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4 grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+          <div className="bg-white border border-gray-200 rounded-lg p-4 grid grid-cols-1 md:grid-cols-7 gap-3 items-end">
             <div className="md:col-span-2">
               <label htmlFor="search" className="block text-xs font-medium text-gray-700">Buscar (titular, ID, contrato)</label>
               <div className="mt-1 relative">
@@ -262,6 +266,19 @@ export default function AsignacionRecaudosPage() {
               </select>
             </div>
             <div>
+              <label htmlFor="plataformaFiltro" className="block text-xs font-medium text-gray-700">Plataforma</label>
+              <select
+                id="plataformaFiltro" value={plataformaFiltro}
+                onChange={e => setPlataformaFiltro(e.target.value)}
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              >
+                <option value="">Todas</option>
+                {PLATAFORMAS.map(pf => (
+                  <option key={pf} value={pf}>{pf}</option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label htmlFor="fechaInicio" className="block text-xs font-medium text-gray-700">Contrato desde</label>
               <input
                 id="fechaInicio" type="date" value={fechaInicio}
@@ -277,7 +294,7 @@ export default function AsignacionRecaudosPage() {
                 className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
               />
             </div>
-            <div className="md:col-span-6 flex items-center justify-end gap-2 pt-2">
+            <div className="md:col-span-7 flex items-center justify-end gap-2 pt-2">
               <button type="button" onClick={handleLimpiar}
                 className="px-3 py-1.5 text-xs text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50">
                 Limpiar filtros

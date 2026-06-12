@@ -158,6 +158,7 @@ export const pagosTitularesService = {
       gestorRecaudo?: string | null;
       fechaDesde?: string | null;
       fechaHasta?: string | null;
+      plataforma?: string | null;
       page?: number;
       pageSize?: number;
     },
@@ -228,6 +229,7 @@ export const pagosTitularesService = {
       estadoCartera: opts.estadoCartera ?? null,
       fechaDesde: opts.fechaDesde ?? null,
       fechaHasta: opts.fechaHasta ?? null,
+      plataforma: opts.plataforma ?? null,
       plataformaScope,
       limit: pageSize,
       offset,

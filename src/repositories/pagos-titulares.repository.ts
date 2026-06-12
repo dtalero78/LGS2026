@@ -276,6 +276,8 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
     estadoCartera?: string | null;
     fechaDesde?: string | null;
     fechaHasta?: string | null;
+    /** Filtro explícito de plataforma elegido por el usuario (ej 'Chile'). Compone con el scope RBAC. */
+    plataforma?: string | null;
     /** Scope de plataforma del usuario logueado (filtra titulares.plataforma) */
     plataformaScope?: PlataformaScope | null;
     limit: number;
@@ -299,6 +301,13 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
         params.push(...scope.params);
         i += scope.params.length;
       }
+    }
+
+    // Filtro explícito de plataforma elegido por el usuario (case-insensitive
+    // para tolerar variantes legacy). Compone con el scope RBAC vía AND.
+    if (opts.plataforma && opts.plataforma.trim()) {
+      conds.push(`LOWER(p."plataforma") = LOWER($${i})`);
+      params.push(opts.plataforma.trim()); i++;
     }
 
     // Filtro role-based: si el caller pasa un array no vacío, restringe.
