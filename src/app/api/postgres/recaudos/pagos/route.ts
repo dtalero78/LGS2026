@@ -1,7 +1,7 @@
 /**
  * API: /api/postgres/recaudos/pagos
  *
- * GET ?estado=&fechaInicio=&fechaFin=&search=&page=&pageSize=
+ * GET ?estado=&fechaInicio=&fechaFin=&search=&gestorRecaudo=&plataforma=&page=&pageSize=
  *   → lista paginada de pagos del Centro de Validación de Pagos.
  *
  * Excluye cuota #0 (inscripción auto-validada al crear el contrato).
@@ -29,6 +29,7 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
   const fechaFin       = searchParams.get('fechaFin')      || null;
   const search         = searchParams.get('search')        || null;
   const gestorRecaudo  = searchParams.get('gestorRecaudo') || null;
+  const plataforma     = searchParams.get('plataforma')    || null;
   const page           = parseInt(searchParams.get('page') || '1', 10) || 1;
   const pageSize       = parseInt(searchParams.get('pageSize') || '50', 10) || 50;
 
@@ -43,6 +44,7 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
       fechaHasta: fechaFin,
       search,
       gestorRecaudo,
+      plataforma,
       page,
       pageSize,
     },

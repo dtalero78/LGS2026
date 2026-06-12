@@ -55,6 +55,9 @@ const ROLE_LABEL: Record<string, string> = {
 
 const PAGE_SIZE = 50
 
+// Plataformas existentes en PEOPLE.plataforma (titulares de pagos).
+const PLATAFORMAS = ['Chile', 'Colombia', 'Ecuador', 'Perú']
+
 function getLocalToday(): string {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -76,6 +79,7 @@ export default function GestionRecaudosPage() {
   const [fechaInicio, setFechaInicio] = useState('')
   const [fechaFin, setFechaFin] = useState('')
   const [gestorFiltro, setGestorFiltro] = useState('')
+  const [plataformaFiltro, setPlataformaFiltro] = useState('')
 
   // Datos
   const [pagos, setPagos] = useState<PagoRow[]>([])
@@ -101,6 +105,7 @@ export default function GestionRecaudosPage() {
       if (fechaInicio) qs.set('fechaInicio', fechaInicio)
       if (fechaFin) qs.set('fechaFin', fechaFin)
       if (gestorFiltro) qs.set('gestorRecaudo', gestorFiltro)
+      if (plataformaFiltro) qs.set('plataforma', plataformaFiltro)
       qs.set('page', String(pageToUse))
       qs.set('pageSize', String(PAGE_SIZE))
       const data = await api.get<{ pagos: PagoRow[]; total: number; page: number }>(
@@ -114,7 +119,7 @@ export default function GestionRecaudosPage() {
     } finally {
       setLoading(false)
     }
-  }, [estado, search, fechaInicio, fechaFin, gestorFiltro, page])
+  }, [estado, search, fechaInicio, fechaFin, gestorFiltro, plataformaFiltro, page])
 
   // Carga inicial
   useEffect(() => {
@@ -133,7 +138,7 @@ export default function GestionRecaudosPage() {
 
   const handleAplicarFiltros = () => fetchPagos(true)
   const handleLimpiar = () => {
-    setEstado('pendiente'); setSearch(''); setFechaInicio(''); setFechaFin(''); setGestorFiltro('')
+    setEstado('pendiente'); setSearch(''); setFechaInicio(''); setFechaFin(''); setGestorFiltro(''); setPlataformaFiltro('')
     setTimeout(() => fetchPagos(true), 0)
   }
 
@@ -245,7 +250,7 @@ export default function GestionRecaudosPage() {
           </div>
 
           {/* Filtros */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4 grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+          <div className="bg-white border border-gray-200 rounded-lg p-4 grid grid-cols-1 md:grid-cols-7 gap-3 items-end">
             <div className="md:col-span-2">
               <label htmlFor="search" className="block text-xs font-medium text-gray-700">Buscar (titular, ID, contrato)</label>
               <div className="mt-1 relative">
@@ -289,6 +294,19 @@ export default function GestionRecaudosPage() {
               </select>
             </div>
             <div>
+              <label htmlFor="plataformaFiltro" className="block text-xs font-medium text-gray-700">Plataforma</label>
+              <select
+                id="plataformaFiltro" value={plataformaFiltro}
+                onChange={e => setPlataformaFiltro(e.target.value)}
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              >
+                <option value="">Todas</option>
+                {PLATAFORMAS.map(pf => (
+                  <option key={pf} value={pf}>{pf}</option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label htmlFor="fechaInicio" className="block text-xs font-medium text-gray-700">Fecha desde</label>
               <input
                 id="fechaInicio" type="date" value={fechaInicio}
@@ -304,7 +322,7 @@ export default function GestionRecaudosPage() {
                 className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
               />
             </div>
-            <div className="md:col-span-6 flex items-center justify-end gap-2 pt-2">
+            <div className="md:col-span-7 flex items-center justify-end gap-2 pt-2">
               <button
                 type="button" onClick={handleLimpiar}
                 className="px-3 py-1.5 text-xs text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
