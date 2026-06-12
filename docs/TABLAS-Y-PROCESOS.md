@@ -208,11 +208,18 @@ Servicios ordenados por amplitud de acceso (cuántas tablas tocan vía sus repos
    `PEOPLE.comentarios` (`text[]`) vía `people/[id]/comments` y `panel-estudiante/comments`.
    Se eliminó `src/repositories/comments.repository.ts`. La tabla vacía `COMMENTS`
    (huérfana, otro vestigio) se dropeó en la misma limpieza.
-2. **🟠 Estadísticas del planner obsoletas.** `n_live_tup` está desfasado ~100–190×
-   respecto al conteo real (PEOPLE: 59 vs **11.017**; ACADEMICA: 33 vs **6.305**;
-   ACADEMICA_BOOKINGS: 2.571 vs **169.698**). El planner toma decisiones con datos
-   basura → planes subóptimos en las queries calientes. Acción: `ANALYZE` (o revisar
-   `autovacuum_analyze_scale_factor` en la BD managed).
+2. **🟢 DESCARTADO: las estadísticas del planner NO estaban obsoletas.** Inicialmente
+   se sospechó por el `n_live_tup` desfasado ~190× (PEOPLE: 59 vs 11.017;
+   ACADEMICA_BOOKINGS: 2.571 vs 169.698). Pero al correr el `ANALYZE` (2026-06-12) se
+   verificó que **`reltuples` —la cifra que realmente usa el planner— ya era correcta
+   ANTES** del ANALYZE (ACADEMICA_BOOKINGS 168.291, PEOPLE 10.887, ACADEMICA 6.289;
+   ~1% del real). El desfase de 190× era solo de los **contadores acumulados de
+   monitoreo** (`n_live_tup`, `seq_scan`…), que la BD managed **resetea en cada
+   failover** — distinto de `pg_statistic`. **Conclusión:** las queries lentas NO se
+   deben a stats malas, sino a la **estructura de las queries** (`COALESCE` en JOIN,
+   N+1 del `ACADEMICA by-email`) y al tamaño de la instancia. El `ANALYZE` se corrió
+   igual como higiene (inofensivo) y se reseteó `pg_stat_statements` para una medición
+   limpia (ver §6).
 3. **🟠 ~25 MB en índices sin uso (0 scans).** Incluye ~11 MB sobre la tabla más
    caliente: `idx_bookings_asistencia` (4,1 MB), `idx_bookings_fecha` (3,7 MB),
    `idx_bookings_student` (3,4 MB) — todos con 0 scans pero penalizando cada
@@ -277,11 +284,12 @@ snapshot (saturación real — solo 3 libres).
 | 7 | 165 | **11.426 ms** | 0,5 h | asistencias por nivel/plataforma (informe) |
 
 **Lecturas clave:**
-- La query #1 (`findByStudentId`) **sigue costando ~9,7 s de media** pese al fix
-  `81f1bef`. ⚠️ Las stats de `pg_stat_statements` son **acumuladas y no se
-  resetearon tras el fix**, así que esto NO prueba que el fix falló — pero tampoco
-  se puede confirmar mejora. **Acción: `SELECT pg_stat_statements_reset()` y volver
-  a medir** para aislar el efecto.
+- La query #1 (`findByStudentId`) figura con **~9,7 s de media** pese al fix
+  `81f1bef`, pero estas cifras eran **acumuladas** (mezclaban ejecuciones pre y
+  post-fix), así que NO probaban ni que falló ni que mejoró. ✅ **El 2026-06-12 se
+  reseteó `pg_stat_statements`** → estos números de arriba son la **foto histórica
+  final**; la medición limpia post-fix se obtiene re-corriendo `db-metrics.js` el
+  2026-06-13/14.
 - La query #2 con **148.660 calls** huele a **N+1 / falta de caché**: se resuelve el
   `ACADEMICA by email` una y otra vez por request. Candidata a cachear.
 - Varios `COUNT(*)` de dashboard sobre `ACADEMICA_BOOKINGS` tardan **7–11 s** — son
@@ -324,8 +332,8 @@ snapshot (saturación real — solo 3 libres).
 
 ### Acciones recomendadas (priorizadas)
 
-1. ⏳ **`ANALYZE`** — stats desfasadas 190× están envenenando el planner. Bajo riesgo, alto impacto. **Agendado: tarea Windows `LGS-DB-Analyze-20260611`, 2026-06-11 21:00 COT** (`scripts/run-analyze.js`).
-2. ⏳ **`SELECT pg_stat_statements_reset()`** y re-medir 24–48 h para validar el fix `81f1bef` y aislar índices realmente muertos. **Incluido en la misma tarea agendada** (corre tras el ANALYZE).
+1. ✅ **Hecho (2026-06-12):** `ANALYZE` de toda la BD (19,7s). Resultado: confirmó que el planner ya tenía buenas stats (ver §5.2) — no cambió nada, fue higiene. Las stats NO eran la causa de las queries lentas.
+2. ✅ **Hecho (2026-06-12):** `pg_stat_statements_reset()` ejecutado → línea base limpia desde las 08:18. **Re-medir con `db-metrics.js` el 2026-06-13/14** y comparar contra el top de queries de esta sección para validar el fix `81f1bef` y aislar índices realmente muertos.
 3. **Cachear el lookup `ACADEMICA by email`** (148k calls) — probable N+1.
 4. ✅ **Hecho (2026-06-10):** dropeadas 4 tablas huérfanas (`CALENDARIO_BACKUP_20260414`, `COMMENTS`, `CLUBS`, `NIVELES_MATERIAL`) → 293→286 MB. Pendiente: GIN JSONB sin uso.
 5. ✅ **Hecho (2026-06-10):** resuelto el bug `COMENTARIOS` — repo muerto + endpoint legacy eliminados (§5.1, §5.4).
