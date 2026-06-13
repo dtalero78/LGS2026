@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { BanknotesIcon, CheckBadgeIcon, ArrowPathIcon, ArrowDownTrayIcon, MagnifyingGlassIcon, XMarkIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
+import { BanknotesIcon, CheckBadgeIcon, ArrowPathIcon, ArrowDownTrayIcon, MagnifyingGlassIcon, XMarkIcon, DocumentTextIcon, PaperClipIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
 import { RecaudosPermission, PersonPermission } from '@/types/permissions'
@@ -11,6 +11,13 @@ import { formatCurrency } from '@/lib/utils'
 import { api, handleApiError } from '@/hooks/use-api'
 import { usePermissions } from '@/hooks/usePermissions'
 import { exportToExcel } from '@/lib/export-excel'
+
+interface DocAdjunto {
+  url: string
+  nombre?: string | null
+  tipo?: string | null
+  fechaSubida?: string | null
+}
 
 interface PagoRow {
   _id: string
@@ -35,6 +42,7 @@ interface PagoRow {
   titular_numeroId: string
   titular_contrato: string | null
   titular_plataforma: string | null
+  documentosAdjuntos: DocAdjunto[] | null
 }
 
 interface DisplayUser {
@@ -92,6 +100,9 @@ export default function GestionRecaudosPage() {
   const [validateModal, setValidateModal] = useState<{ id: string; numCuota: number | null; titular: string } | null>(null)
   const [facturaInput, setFacturaInput] = useState('')
   const [validating, setValidating] = useState(false)
+
+  // Modal documentos adjuntos del pago
+  const [docsModal, setDocsModal] = useState<{ titular: string; numCuota: number | null; docs: DocAdjunto[] } | null>(null)
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -419,6 +430,20 @@ export default function GestionRecaudosPage() {
                           </td>
                           <td className="px-3 py-2 text-right">
                             <div className="flex items-center justify-end gap-1.5">
+                              {Array.isArray(p.documentosAdjuntos) && p.documentosAdjuntos.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setDocsModal({
+                                    titular: titularNombre,
+                                    numCuota: p.numCuota,
+                                    docs: p.documentosAdjuntos as DocAdjunto[],
+                                  })}
+                                  title="Ver documentos del pago"
+                                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200"
+                                >
+                                  <PaperClipIcon className="h-3.5 w-3.5" /> Docs ({p.documentosAdjuntos.length})
+                                </button>
+                              )}
                               {!p.validado && canValidar && (
                                 <button
                                   type="button"
@@ -526,6 +551,61 @@ export default function GestionRecaudosPage() {
                   className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50"
                 >
                   {validating ? 'Validando…' : 'Validar Pago'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Modal documentos adjuntos */}
+        {docsModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <PaperClipIcon className="h-5 w-5 text-gray-500" />
+                  Documentos del pago
+                </h3>
+                <button type="button" onClick={() => setDocsModal(null)} title="Cerrar" className="text-gray-400 hover:text-gray-600">
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+              <p className="text-sm text-gray-600">
+                {docsModal.titular}{docsModal.numCuota != null ? ` · cuota ${docsModal.numCuota}` : ''} — {docsModal.docs.length} documento(s).
+              </p>
+              <ul className="space-y-3">
+                {docsModal.docs.map((d, i) => {
+                  const isImg = (d.tipo || '').startsWith('image/') || /\.(jpe?g|png|webp|heic|gif)$/i.test(d.url || '')
+                  return (
+                    <li key={i} className="border border-gray-200 rounded-lg p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{d.nombre || `Documento ${i + 1}`}</p>
+                          <p className="text-[11px] text-gray-500">{d.tipo || 'archivo'}{d.fechaSubida ? ` · ${fmtDate(d.fechaSubida)}` : ''}</p>
+                        </div>
+                        <a
+                          href={d.url} target="_blank" rel="noopener noreferrer"
+                          className="shrink-0 inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700"
+                        >
+                          <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" /> Abrir
+                        </a>
+                      </div>
+                      {isImg && (
+                        <a href={d.url} target="_blank" rel="noopener noreferrer" className="block mt-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={d.url} alt={d.nombre || 'documento'} className="max-h-48 rounded border border-gray-100 object-contain" />
+                        </a>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+              <div className="flex justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={() => setDocsModal(null)}
+                  className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cerrar
                 </button>
               </div>
             </div>
