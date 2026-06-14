@@ -24,6 +24,8 @@ import {
   ChevronRightIcon,
   SpeakerWaveIcon,
   ExclamationTriangleIcon,
+  MagnifyingGlassPlusIcon,
+  MagnifyingGlassMinusIcon,
 } from '@heroicons/react/24/outline'
 
 interface AudioInfo {
@@ -64,8 +66,12 @@ export default function MaterialInteractivoPage() {
   const [page, setPage] = useState(1)
   const [imageCache, setImageCache] = useState<Record<number, string>>({})
   const [audios, setAudios] = useState<AudioPlayable[]>([])
+  const [zoomed, setZoomed] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const touchStartX = useRef<number | null>(null)
+  // Páginas que ya reintentamos tras un error de carga (evita loop infinito).
+  // Se limpia por página al cargar OK, así una expiración posterior puede reintentar.
+  const retryRef = useRef<Set<number>>(new Set())
 
   // 1) Carga metadata — con reintento si BD esta saturada (500 esporadico)
   useEffect(() => {
@@ -113,7 +119,8 @@ export default function MaterialInteractivoPage() {
   // 2) Carga URL de la página actual + pre-cache vecinas
   useEffect(() => {
     if (!meta?.available || !total) return
-    const targetPages = [page, page - 1, page + 1].filter(p => p >= 1 && p <= total)
+    // ±2 páginas para aguantar navegación rápida (antes solo ±1).
+    const targetPages = [page, page - 1, page + 1, page - 2, page + 2].filter(p => p >= 1 && p <= total)
     let cancelled = false
 
     ;(async () => {
@@ -125,6 +132,9 @@ export default function MaterialInteractivoPage() {
           if (cancelled) return
           if (j?.success && j.url) {
             setImageCache(prev => ({ ...prev, [p]: j.url }))
+            // Precarga el bitmap en la caché del navegador → cambio de página
+            // instantáneo (no espera la descarga al renderizar el <img>).
+            const im = new Image(); im.src = j.url
           }
         } catch { /* silent */ }
       }
@@ -151,6 +161,9 @@ export default function MaterialInteractivoPage() {
     return () => { cancelled = true }
   }, [page, cantidadAudiosPagina, meta?.available, total, nivel])
 
+  // Cada página nueva arranca en modo "ajustar" (sin zoom).
+  useEffect(() => { setZoomed(false) }, [page])
+
   // 4) Teclado: ← → para navegar, Esc para volver
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -170,9 +183,25 @@ export default function MaterialInteractivoPage() {
     if (touchStartX.current == null) return
     const dx = e.changedTouches[0].clientX - touchStartX.current
     touchStartX.current = null
+    if (zoomed) return            // en zoom el gesto hace pan, no navega
     if (Math.abs(dx) < 50) return
     if (dx > 0)      setPage(p => Math.max(1, p - 1))
     else             setPage(p => Math.min(total, p + 1))
+  }
+
+  // Auto-reparación: si la imagen falla (presigned URL expirado o fallo
+  // transitorio), pedimos una URL fresca una vez por página.
+  const refreshPageUrl = async (p: number) => {
+    try {
+      const r = await fetch(`/api/postgres/libros-interactivos/${encodeURIComponent(nivel)}/page?n=${p}&_=${Date.now()}`)
+      const j = await r.json()
+      if (j?.success && j.url) setImageCache(prev => ({ ...prev, [p]: j.url }))
+    } catch { /* silent */ }
+  }
+  const handleImgError = (p: number) => {
+    if (retryRef.current.has(p)) return
+    retryRef.current.add(p)
+    refreshPageUrl(p)
   }
 
   if (error) {
@@ -248,56 +277,30 @@ export default function MaterialInteractivoPage() {
           <span className="font-semibold text-gray-800">{meta.libroTitulo}</span>
           <span className="text-gray-500 ml-2">— {nivel}</span>
         </div>
-        <div className="text-xs text-gray-500 tabular-nums">
-          Página <span className="font-bold text-gray-800">{page}</span> / {total}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setZoomed(z => !z)}
+            title={zoomed ? 'Reducir' : 'Ampliar imagen'}
+            aria-label={zoomed ? 'Reducir' : 'Ampliar imagen'}
+            className="p-1.5 rounded-md text-gray-600 hover:bg-gray-100"
+          >
+            {zoomed ? <MagnifyingGlassMinusIcon className="h-5 w-5" /> : <MagnifyingGlassPlusIcon className="h-5 w-5" />}
+          </button>
+          <div className="text-xs text-gray-500 tabular-nums">
+            Página <span className="font-bold text-gray-800">{page}</span> / {total}
+          </div>
         </div>
       </div>
 
-      {/* Visor */}
-      <div className="flex-1 flex items-center justify-center px-2 sm:px-6 py-4 select-none">
-        <button
-          type="button"
-          onClick={() => canPrev && setPage(p => p - 1)}
-          disabled={!canPrev}
-          className="flex-shrink-0 mr-2 sm:mr-4 w-10 sm:w-12 h-12 sm:h-12 rounded-full bg-indigo-600 text-white shadow-lg disabled:opacity-30 disabled:cursor-not-allowed hover:bg-indigo-700 transition-colors flex items-center justify-center"
-          aria-label="Página anterior"
-        >
-          <ChevronLeftIcon className="h-6 w-6" />
-        </button>
-
-        <div className="flex-1 max-w-3xl bg-white rounded-lg shadow-xl overflow-hidden flex items-center justify-center" style={{ minHeight: 400 }}>
-          {currentUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={currentUrl}
-              alt={`Página ${page}`}
-              className="max-h-[78vh] w-auto"
-              draggable={false}
-            />
-          ) : (
-            <div className="text-sm text-gray-400">Cargando página…</div>
-          )}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => canNext && setPage(p => p + 1)}
-          disabled={!canNext}
-          className="flex-shrink-0 ml-2 sm:ml-4 w-10 sm:w-12 h-12 sm:h-12 rounded-full bg-indigo-600 text-white shadow-lg disabled:opacity-30 disabled:cursor-not-allowed hover:bg-indigo-700 transition-colors flex items-center justify-center"
-          aria-label="Página siguiente"
-        >
-          <ChevronRightIcon className="h-6 w-6" />
-        </button>
-      </div>
-
-      {/* Audios + barra de progreso. La pagina puede tener 0..N audios. */}
-      <div className="bg-white border-t border-gray-200 px-4 py-2 flex items-center gap-3">
+      {/* Audio + progreso — ARRIBA, siempre visible (antes estaba al fondo). */}
+      <div className="bg-white border-b border-gray-200 px-3 sm:px-4 py-2 flex items-center gap-3">
+        <SpeakerWaveIcon className="h-4 w-4 text-indigo-600 flex-shrink-0" />
         {audios.length > 0 ? (
-          <div className="flex-1 flex flex-col gap-1.5 max-h-32 overflow-y-auto">
+          <div className="flex-1 flex flex-col gap-1.5 max-h-28 overflow-y-auto">
             {audios.map((a) => (
               <div key={a.url} className="flex items-center gap-2">
-                <SpeakerWaveIcon className="h-4 w-4 text-indigo-600 flex-shrink-0" />
-                <span className="text-xs font-medium text-gray-700 w-32 truncate flex-shrink-0" title={a.titulo || `Audio ${a.idx + 1}`}>
+                <span className="text-xs font-medium text-gray-700 w-24 sm:w-32 truncate flex-shrink-0" title={a.titulo || `Audio ${a.idx + 1}`}>
                   {a.titulo || `Audio ${a.idx + 1}`}
                 </span>
                 <audio
@@ -311,14 +314,62 @@ export default function MaterialInteractivoPage() {
             ))}
           </div>
         ) : (
-          <div className="flex-1 text-xs text-gray-400">Esta página no tiene audio</div>
+          <span className="flex-1 text-xs text-gray-400">Esta página no tiene audio</span>
         )}
-        <div className="w-32 sm:w-48 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+        <div className="hidden sm:block w-40 bg-gray-200 rounded-full h-1.5 overflow-hidden flex-shrink-0">
           <div
             className="bg-indigo-600 h-full transition-all"
             style={{ width: `${(page / (total || 1)) * 100}%` }}
           />
         </div>
+      </div>
+
+      {/* Visor — imagen grande directa sobre el fondo (sin tarjeta blanca),
+          flechas overlay y tap-para-zoom. */}
+      <div className={`relative flex-1 px-2 py-3 select-none ${zoomed ? 'overflow-auto' : 'overflow-hidden flex items-center justify-center'}`}>
+        {currentUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={currentUrl}
+            alt={`Página ${page}`}
+            onClick={() => setZoomed(z => !z)}
+            onError={() => handleImgError(page)}
+            onLoad={() => retryRef.current.delete(page)}
+            draggable={false}
+            className={zoomed
+              ? 'block mx-auto max-w-none rounded-lg shadow-xl cursor-zoom-out'
+              : 'max-h-[86vh] max-w-full object-contain rounded-lg shadow-xl cursor-zoom-in'}
+            style={zoomed ? { width: '170%' } : undefined}
+          />
+        ) : (
+          <div className="text-sm text-gray-400">Cargando página…</div>
+        )}
+
+        {!zoomed && (
+          <>
+            <button
+              type="button"
+              onClick={() => canPrev && setPage(p => p - 1)}
+              disabled={!canPrev}
+              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-indigo-600/90 text-white shadow-lg disabled:opacity-25 disabled:cursor-not-allowed hover:bg-indigo-700 transition-colors flex items-center justify-center"
+              aria-label="Página anterior"
+            >
+              <ChevronLeftIcon className="h-6 w-6" />
+            </button>
+            <button
+              type="button"
+              onClick={() => canNext && setPage(p => p + 1)}
+              disabled={!canNext}
+              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-indigo-600/90 text-white shadow-lg disabled:opacity-25 disabled:cursor-not-allowed hover:bg-indigo-700 transition-colors flex items-center justify-center"
+              aria-label="Página siguiente"
+            >
+              <ChevronRightIcon className="h-6 w-6" />
+            </button>
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] text-gray-600 bg-white/80 rounded-full px-2 py-0.5 pointer-events-none">
+              Toca la imagen para ampliar
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

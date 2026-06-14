@@ -192,7 +192,9 @@ class LibrosInteractivosServiceClass {
 
     const paginaLibro = inicio + paginaLocal - 1;
     const key = `materials/interactive/${libro.codigo}/page-${String(paginaLibro).padStart(3, '0')}.jpg`;
-    return getPresignedVideoUrl(key, 600);
+    // TTL 1h: el cliente cachea la URL; con 10min expiraba a mitad de la lectura
+    // (ícono de imagen rota). El cliente además se auto-repara con onError.
+    return getPresignedVideoUrl(key, 3600);
   }
 
   /**
@@ -219,7 +221,7 @@ class LibrosInteractivosServiceClass {
     const result = await Promise.all(
       audiosPagina.map(async (audio, idx) => {
         const fullKey = `materials/interactive/${libro.codigo}/${audio.key}`;
-        const url = await getPresignedVideoUrl(fullKey, 600);
+        const url = await getPresignedVideoUrl(fullKey, 3600); // TTL 1h (igual que páginas)
         return { idx, titulo: audio.titulo ?? null, url };
       }),
     );
