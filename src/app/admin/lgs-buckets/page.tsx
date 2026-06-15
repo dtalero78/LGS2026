@@ -8,15 +8,17 @@
  * MANTENIMIENTO.LGS_BUCKETS.VER (SUPER_ADMIN/ADMIN bypass).
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import toast from 'react-hot-toast'
 import {
   CircleStackIcon, ArrowPathIcon, MagnifyingGlassIcon,
-  ArrowDownTrayIcon, ArrowTopRightOnSquareIcon, UserCircleIcon,
+  ArrowDownTrayIcon, ArrowTopRightOnSquareIcon, UserCircleIcon, ArrowUpTrayIcon,
 } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
 import { MantenimientoPermission } from '@/types/permissions'
 import { api, handleApiError } from '@/hooks/use-api'
+import { usePermissions } from '@/hooks/usePermissions'
 
 interface FotoItem {
   id: string
@@ -50,9 +52,40 @@ async function descargar(url: string, filename: string) {
   }
 }
 
-function FotoCard({ item }: { item: FotoItem }) {
+function FotoCard({ item, tipo, canEdit, onReplaced }: {
+  item: FotoItem
+  tipo: 'advisor' | 'usuario'
+  canEdit: boolean
+  onReplaced: (id: string, url: string, filename: string | null) => void
+}) {
   const [broken, setBroken] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
   const fname = item.filename || `${item.nombre}.jpg`
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    e.target.value = ''
+    if (!f) return
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('tipo', tipo)
+      fd.append('id', item.id)
+      fd.append('file', f)
+      const res = await fetch('/api/admin/lgs-buckets/replace', { method: 'POST', body: fd })
+      const json = await res.json()
+      if (!res.ok || !json?.success) throw new Error(json?.details || json?.error || `Error ${res.status}`)
+      toast.success('Foto reemplazada')
+      setBroken(false)
+      onReplaced(item.id, json.url, json.filename ?? null)
+    } catch (err: any) {
+      toast.error(`No se pudo reemplazar: ${err?.message || ''}`)
+    } finally {
+      setUploading(false)
+    }
+  }
+
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden bg-white flex flex-col">
       <div className="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
@@ -99,12 +132,35 @@ function FotoCard({ item }: { item: FotoItem }) {
             </a>
           )}
         </div>
+        {canEdit && (
+          <>
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp,image/heic"
+              className="hidden"
+              aria-label={`Reemplazar foto de ${item.nombre}`}
+              title="Reemplazar foto"
+              onChange={handleFile}
+            />
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => inputRef.current?.click()}
+              className="mt-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-[11px] font-medium text-amber-800 bg-amber-100 rounded hover:bg-amber-200 disabled:opacity-50"
+            >
+              <ArrowUpTrayIcon className="h-3.5 w-3.5" /> {uploading ? 'Subiendo…' : 'Reemplazar'}
+            </button>
+          </>
+        )}
       </div>
     </div>
   )
 }
 
 export default function LgsBucketsPage() {
+  const { hasPermission } = usePermissions()
+  const canEdit = hasPermission(MantenimientoPermission.LGS_BUCKETS_EDITAR)
   const [tab, setTab] = useState<'advisors' | 'usuarios'>('advisors')
 
   // Advisors
@@ -169,6 +225,12 @@ export default function LgsBucketsPage() {
   }, [page])
 
   const items = tab === 'advisors' ? advisors : usuarios
+
+  const handleReplaced = (id: string, url: string, filename: string | null) => {
+    const upd = (arr: FotoItem[]) => arr.map(it => it.id === id ? { ...it, url, filename } : it)
+    if (tab === 'advisors') setAdvisors(upd)
+    else setUsuarios(upd)
+  }
 
   return (
     <DashboardLayout>
@@ -251,7 +313,15 @@ export default function LgsBucketsPage() {
             </p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-              {items.map(it => <FotoCard key={it.id} item={it} />)}
+              {items.map(it => (
+                <FotoCard
+                  key={it.id}
+                  item={it}
+                  tipo={tab === 'advisors' ? 'advisor' : 'usuario'}
+                  canEdit={canEdit}
+                  onReplaced={handleReplaced}
+                />
+              ))}
             </div>
           )}
 

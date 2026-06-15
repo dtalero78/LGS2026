@@ -336,6 +336,7 @@ export enum MantenimientoPermission {
   DIAGNOSTICO              = 'MANTENIMIENTO.DIAGNOSTICO.VER',
   // Lgs-Buckets (visor de fotos de Spaces)
   LGS_BUCKETS              = 'MANTENIMIENTO.LGS_BUCKETS.VER',
+  LGS_BUCKETS_EDITAR       = 'MANTENIMIENTO.LGS_BUCKETS.EDITAR',
 }
 
 /**

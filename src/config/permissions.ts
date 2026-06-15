@@ -956,6 +956,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     name: 'Página "Lgs-Buckets"',
     description: 'Acceso a /admin/lgs-buckets. Visor de las fotos almacenadas en DO Spaces (lgs-bucket): fotos de advisors (ADVISORS.fotoAdvisor) y de usuarios (ACADEMICA.foto), con preview y descarga. Sólo lectura — no sube ni borra archivos.',
   },
+  {
+    code: MantenimientoPermission.LGS_BUCKETS_EDITAR,
+    module: Module.MANTENIMIENTO,
+    section: 'Lgs-Buckets',
+    name: 'Reemplazar foto (Lgs-Buckets)',
+    description: 'Permite reemplazar la foto de un advisor o usuario desde /admin/lgs-buckets (sube una nueva imagen a Spaces y actualiza ADVISORS.fotoAdvisor / ACADEMICA.foto). Acción de escritura — separada del permiso de sólo lectura.',
+  },
 
   // ========== RECAUDOS MODULE (Menú Recaudos) ==========
   {
