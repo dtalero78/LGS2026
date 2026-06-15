@@ -949,6 +949,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     name: 'Página "Diagnóstico de Endpoints"',
     description: 'Acceso a /admin/diagnostico. Mide tiempos DNS / Connect TCP / TLS handshake / TTFB / Total para endpoints clave de la API desde el navegador del admin (Resource Timing API). Útil para detectar endpoints lentos o cuellos de botella. Sólo lectura — no escribe en BD.',
   },
+  {
+    code: MantenimientoPermission.LGS_BUCKETS,
+    module: Module.MANTENIMIENTO,
+    section: 'Lgs-Buckets',
+    name: 'Página "Lgs-Buckets"',
+    description: 'Acceso a /admin/lgs-buckets. Visor de las fotos almacenadas en DO Spaces (lgs-bucket): fotos de advisors (ADVISORS.fotoAdvisor) y de usuarios (ACADEMICA.foto), con preview y descarga. Sólo lectura — no sube ni borra archivos.',
+  },
 
   // ========== RECAUDOS MODULE (Menú Recaudos) ==========
   {

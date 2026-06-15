@@ -206,6 +206,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
         ],
       },
       { name: 'Diagnóstico', href: '/admin/diagnostico', newTab: true },
+      { name: 'Lgs-Buckets', href: '/admin/lgs-buckets', newTab: true },
     ],
   },
 ]
@@ -378,6 +379,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ],
     '/admin/diagnostico': [
       MantenimientoPermission.DIAGNOSTICO,
+    ],
+    '/admin/lgs-buckets': [
+      MantenimientoPermission.LGS_BUCKETS,
     ],
     // Recaudos
     '/dashboard/recaudos/gestion': [

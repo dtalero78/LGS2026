@@ -259,6 +259,9 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/admin/diagnostico': [
     'MANTENIMIENTO.DIAGNOSTICO.VER' as Permission,
   ],
+  '/admin/lgs-buckets': [
+    'MANTENIMIENTO.LGS_BUCKETS.VER' as Permission,
+  ],
 
   // Recaudos - Gestión
   '/dashboard/recaudos/gestion': [
