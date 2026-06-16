@@ -157,6 +157,27 @@ export async function toggleStatus(id: string, active: boolean, opts: ToggleStat
   // suspendcount only grows on INACTIVACION; REACTIVACION leaves it intact.
   const updated = await PeopleRepository.toggleStatusWithSuspendData(id, wantInactive, suspendData);
 
+  // Resync `estado` al REACTIVAR: si quedó stale (ej. ANULADO de cuando el
+  // contrato fue anulado pre-aprobación), lo derivamos del `aprobacion` actual
+  // para que coincida con la realidad. Mismo mapeo que PATCH /people/[id].
+  // (En INACTIVACION manual no forzamos `estado` — no hay un estado canónico de
+  //  "suspensión administrativa"; lo refleja `estadoInactivo` + suspenddata.)
+  if (!wantInactive) {
+    const apro = ((person as any).aprobacion || '').toString();
+    let nuevoEstado: string | null = null;
+    if (apro === 'Aprobado')        nuevoEstado = Number((person as any).extensionCount) > 0 ? 'CON EXTENSION' : 'ACTIVA';
+    else if (apro === 'Pendiente')  nuevoEstado = 'PENDIENTE';
+    else if (apro === 'Retractado') nuevoEstado = 'RETRACTADO';
+    if (nuevoEstado && nuevoEstado !== (person as any).estado) {
+      try {
+        await query(`UPDATE "PEOPLE" SET "estado" = $1, "_updatedDate" = NOW() WHERE "_id" = $2`, [nuevoEstado, id]);
+        (updated as any).estado = nuevoEstado;
+      } catch (err) {
+        console.warn('⚠️ Could not resync estado for', id, err);
+      }
+    }
+  }
+
   // Sync estadoInactivo in ACADEMICA (match by numeroId)
   if (person.numeroId) {
     try {

@@ -371,23 +371,26 @@ export const PATCH = handlerWithAuth(async (
   let beneficiariesInactivated = 0;
 
   if (body.aprobacion && INACTIVE_STATES.includes(body.aprobacion) && parsedPerson.contrato) {
-    // Mark the titular as inactive
+    // Titular: estadoInactivo=true + estado=ANULADO (el estado del titular ya
+    // quedó ANULADO vía el mapeo de body.estado; lo reafirmamos por consistencia).
     await query(
-      `UPDATE "PEOPLE" SET "estadoInactivo" = true, "_updatedDate" = NOW() WHERE "_id" = $1`,
+      `UPDATE "PEOPLE" SET "estadoInactivo" = true, "estado" = 'ANULADO', "_updatedDate" = NOW() WHERE "_id" = $1`,
       [personId]
     );
     parsedPerson.estadoInactivo = true;
+    parsedPerson.estado = 'ANULADO';
 
-    // Mark all beneficiaries of this contract as inactive
+    // Beneficiarios del contrato: estadoInactivo=true + estado=ANULADO (antes
+    // solo se inactivaban; el `estado` quedaba sin sincronizar).
     const inactiveResult = await query(
       `UPDATE "PEOPLE"
-       SET "estadoInactivo" = true, "_updatedDate" = NOW()
+       SET "estadoInactivo" = true, "estado" = 'ANULADO', "_updatedDate" = NOW()
        WHERE "contrato" = $1 AND "tipoUsuario" = 'BENEFICIARIO'`,
       [parsedPerson.contrato]
     );
     beneficiariesInactivated = inactiveResult.rowCount || 0;
 
-    console.log(`🔴 [PostgreSQL People] Estado "${body.aprobacion}": titular + ${beneficiariesInactivated} beneficiarios marcados como inactivos`);
+    console.log(`🔴 [PostgreSQL People] Estado "${body.aprobacion}" → ANULADO: titular + ${beneficiariesInactivated} beneficiarios`);
   }
 
   console.log('✅ [PostgreSQL People] Person updated successfully');
