@@ -246,6 +246,24 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
   }
 
   /**
+   * Append atómico de documentos al array JSONB `documentosAdjuntos`.
+   * Usa `||` de jsonb para concatenar sin leer-modificar-escribir.
+   * Permitido aun en pagos validados: solo agrega evidencia de soporte,
+   * no modifica datos financieros.
+   */
+  async appendDocumentos(id: string, docs: any[]): Promise<PagoTitular | null> {
+    const row = await queryOne<PagoTitular>(
+      `UPDATE "PAGOS_TITULARES"
+       SET "documentosAdjuntos" = COALESCE("documentosAdjuntos", '[]'::jsonb) || $2::jsonb,
+           "_updatedDate" = NOW()
+       WHERE "_id" = $1
+       RETURNING *`,
+      [id, JSON.stringify(docs)]
+    );
+    return this.parse(row);
+  }
+
+  /**
    * Lista de titulares ASIGNADOS a gestores de recaudo (page Asignación).
    *
    * Devuelve un row por titular con agregaciones de sus pagos:

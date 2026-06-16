@@ -393,6 +393,30 @@ export const pagosTitularesService = {
     return updated;
   },
 
+  /**
+   * Adjunta documentos a un pago YA registrado, incluso si está validado
+   * (solo agrega evidencia de soporte — no toca campos financieros). Cada doc
+   * debe traer al menos `url`. No reemplaza los existentes, los concatena.
+   */
+  async addDocumentos(id: string, docs: any[]): Promise<PagoTitular> {
+    const existing = await PagosTitularesRepository.findById(id);
+    if (!existing) throw new NotFoundError('PAGOS_TITULARES', id);
+
+    const clean = (Array.isArray(docs) ? docs : [])
+      .filter(d => d && typeof d.url === 'string' && d.url.trim())
+      .map(d => ({
+        url: String(d.url).trim(),
+        nombre: d.nombre ? String(d.nombre) : null,
+        tipo: d.tipo ? String(d.tipo) : null,
+        fechaSubida: d.fechaSubida ? String(d.fechaSubida) : new Date().toISOString(),
+      }));
+    if (!clean.length) throw new ValidationError('No hay documentos válidos para adjuntar');
+
+    const updated = await PagosTitularesRepository.appendDocumentos(id, clean);
+    if (!updated) throw new ValidationError('No se pudo adjuntar la documentación');
+    return updated;
+  },
+
   async validar(
     id: string,
     validadoPor: string,

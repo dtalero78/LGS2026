@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
-import { CheckBadgeIcon, TrashIcon, PlusIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
+import { CheckBadgeIcon, TrashIcon, PlusIcon, DocumentTextIcon, PaperClipIcon, ArrowTopRightOnSquareIcon, ArrowUpTrayIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { Person, FinancialData } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { PermissionGuard } from '@/components/permissions'
@@ -69,6 +69,11 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
   const [validateModal, setValidateModal] = useState<{ id: string; numCuota: number | null } | null>(null)
   const [facturaInput, setFacturaInput] = useState('')
   const [validating, setValidating] = useState(false)
+  const canRegistrarPago = hasPermission(PersonPermission.PAGOS_REGISTRAR)
+  const canRecibo = hasPermission(PersonPermission.PAGOS_RECIBO)
+  // Modal de documentos adjuntos del pago (ver + adjuntar después de registrar)
+  const [docsModal, setDocsModal] = useState<{ pago: any } | null>(null)
+  const [uploadingDoc, setUploadingDoc] = useState(false)
 
   // Cambio Estado Cartera modal state
   const [showCarteraModal, setShowCarteraModal] = useState(false)
@@ -93,6 +98,44 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
   useEffect(() => {
     if (isTitular && canVerPagos) loadPagos()
   }, [isTitular, canVerPagos, loadPagos])
+
+  // Adjuntar documentos a un pago ya registrado: sube a Spaces (reusa el
+  // endpoint de contratos) y los agrega vía el endpoint dedicado de pagos.
+  const handleAttachDocs = async (files: File[]) => {
+    if (!docsModal || !files.length) return
+    setUploadingDoc(true)
+    try {
+      const nuevos: any[] = []
+      for (const file of files) {
+        const fd = new FormData()
+        fd.append('file', file)
+        const res = await fetch(`/api/contracts/${person._id}/upload-url`, { method: 'POST', body: fd })
+        const j = await res.json()
+        if (!res.ok || !j?.publicUrl) throw new Error(j?.details || j?.error || `Error subiendo ${file.name}`)
+        nuevos.push({ url: j.publicUrl, nombre: file.name, tipo: file.type, fechaSubida: new Date().toISOString() })
+      }
+      const data = await api.post<{ pago: any }>(
+        `/api/postgres/pagos-titulares/${docsModal.pago._id}/documentos`,
+        { documentos: nuevos }
+      )
+      toast.success(`${nuevos.length} documento(s) adjuntado(s)`)
+      setDocsModal({ pago: data.pago })
+      loadPagos()
+    } catch (err: any) {
+      toast.error(`No se pudo adjuntar: ${err?.message || ''}`)
+    } finally {
+      setUploadingDoc(false)
+    }
+  }
+
+  const openDocsPicker = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.multiple = true
+    input.accept = 'image/jpeg,image/jpg,image/png,image/webp,image/heic,application/pdf'
+    input.onchange = () => handleAttachDocs(Array.from(input.files || []))
+    input.click()
+  }
 
   const openValidarModal = (id: string, numCuota: number | null) => {
     setFacturaInput('')
@@ -600,6 +643,20 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                             <td className="px-3 py-2 text-gray-700 text-xs">{p.numeroFactura || '—'}</td>
                             <td className="px-3 py-2 text-right">
                               <div className="flex items-center justify-end gap-1">
+                                {/* Documentos: ver/adjuntar evidencia del pago (incluso ya validado) */}
+                                <button
+                                  type="button"
+                                  onClick={() => setDocsModal({ pago: p })}
+                                  title={`Documentos del pago${Array.isArray(p.documentosAdjuntos) && p.documentosAdjuntos.length ? ` (${p.documentosAdjuntos.length})` : ''}`}
+                                  className="relative p-1 text-gray-500 hover:text-gray-800"
+                                >
+                                  <PaperClipIcon className="h-4 w-4" />
+                                  {Array.isArray(p.documentosAdjuntos) && p.documentosAdjuntos.length > 0 && (
+                                    <span className="absolute -top-1.5 -right-1.5 bg-indigo-600 text-white text-[9px] leading-none rounded-full px-1 py-0.5">
+                                      {p.documentosAdjuntos.length}
+                                    </span>
+                                  )}
+                                </button>
                                 {/* Recibo: disponible apenas se registra el pago (NO requiere validado).
                                     Para RECAUDO_ASIST ésta es la única acción visible. */}
                                 <PermissionGuard permission={PersonPermission.PAGOS_RECIBO}>
@@ -752,6 +809,82 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
               >
                 Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Documentos del Pago (ver + adjuntar, incluso ya validado) ──────── */}
+      {docsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <PaperClipIcon className="h-5 w-5 text-gray-500" />
+                Documentos del pago{docsModal.pago.numCuota != null ? ` · cuota ${docsModal.pago.numCuota}` : ''}
+              </h3>
+              <button type="button" onClick={() => setDocsModal(null)} title="Cerrar" className="text-gray-400 hover:text-gray-600">
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            {Array.isArray(docsModal.pago.documentosAdjuntos) && docsModal.pago.documentosAdjuntos.length > 0 ? (
+              <ul className="space-y-3">
+                {docsModal.pago.documentosAdjuntos.map((d: any, i: number) => {
+                  const isImg = (d.tipo || '').startsWith('image/') || /\.(jpe?g|png|webp|heic|gif)$/i.test(d.url || '')
+                  return (
+                    <li key={i} className="border border-gray-200 rounded-lg p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{d.nombre || `Documento ${i + 1}`}</p>
+                          <p className="text-[11px] text-gray-500">{d.tipo || 'archivo'}{d.fechaSubida ? ` · ${new Date(d.fechaSubida).toLocaleDateString('es')}` : ''}</p>
+                        </div>
+                        <a href={d.url} target="_blank" rel="noopener noreferrer" className="shrink-0 inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700">
+                          <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" /> Abrir
+                        </a>
+                      </div>
+                      {isImg && (
+                        <a href={d.url} target="_blank" rel="noopener noreferrer" className="block mt-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={d.url} alt={d.nombre || 'documento'} className="max-h-40 rounded border border-gray-100 object-contain" />
+                        </a>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            ) : (
+              <p className="text-sm text-gray-400 italic">Este pago no tiene documentos adjuntos.</p>
+            )}
+
+            {canRegistrarPago && (
+              <div className="border-t border-gray-100 pt-3">
+                <button
+                  type="button"
+                  disabled={uploadingDoc}
+                  onClick={openDocsPicker}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  <ArrowUpTrayIcon className="h-4 w-4" /> {uploadingDoc ? 'Subiendo…' : 'Adjuntar documentos'}
+                </button>
+                <p className="text-[11px] text-gray-400 mt-1">JPG, PNG, WEBP, HEIC o PDF (máx 20MB c/u). Permitido incluso en pagos validados.</p>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between pt-1 border-t border-gray-100">
+              {canRecibo ? (
+                <button
+                  type="button"
+                  onClick={() => handleGenerarRecibo(docsModal.pago._id)}
+                  title={docsModal.pago.numeroRecibo ? `Descargar recibo ${docsModal.pago.numeroRecibo}` : 'Generar e imprimir recibo de pago'}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 mt-3"
+                >
+                  <DocumentTextIcon className="h-4 w-4" /> Imprimir recibo
+                </button>
+              ) : <span />}
+              <button type="button" onClick={() => setDocsModal(null)} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 mt-3">
+                Cerrar
               </button>
             </div>
           </div>
