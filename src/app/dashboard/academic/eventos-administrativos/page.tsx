@@ -6,7 +6,7 @@ import { PermissionGuard } from '@/components/permissions/PermissionGuard'
 import { AcademicoPermission } from '@/types/permissions'
 import {
   CalendarIcon, PlusIcon, TrashIcon, ArrowPathIcon,
-  XMarkIcon, ExclamationTriangleIcon, CheckCircleIcon,
+  XMarkIcon, ExclamationTriangleIcon, CheckCircleIcon, UserPlusIcon,
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 import { ADMIN_EVENT_TIPOS, ADMIN_EVENT_TIPO_META, type AdminEventTipo } from '@/lib/admin-event-window'
@@ -101,6 +101,14 @@ export default function EventosAdministrativosPage() {
   // Eliminar
   const [deleteTarget, setDeleteTarget] = useState<{ kind: 'one' | 'group'; item: Item } | null>(null)
   const [deleting, setDeleting] = useState(false)
+
+  // Agregar advisors a un grupo existente
+  const [addTarget, setAddTarget] = useState<Item | null>(null)
+  const [addSelected, setAddSelected] = useState<string[]>([])
+  const [addConflicts, setAddConflicts] = useState<ConflictDetail[]>([])
+  const [addChecked, setAddChecked] = useState(false)
+  const [addChecking, setAddChecking] = useState(false)
+  const [addSubmitting, setAddSubmitting] = useState(false)
 
   // Cargar advisors
   useEffect(() => {
@@ -230,6 +238,66 @@ export default function EventosAdministrativosPage() {
       toast.error(e?.message || 'Error al crear')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const openAdd = (item: Item) => {
+    setAddTarget(item); setAddSelected([]); setAddConflicts([]); setAddChecked(false)
+  }
+
+  // Advisors ya presentes en el grupo (derivado de los items cargados)
+  const addGroupAdvisorIds = useMemo(() => {
+    if (!addTarget) return new Set<string>()
+    return new Set(items.filter(i => i.eventGroupId === addTarget.eventGroupId).map(i => i.advisorId))
+  }, [addTarget, items])
+
+  // Candidatos = advisors activos que NO están ya en el grupo
+  const addCandidates = useMemo(
+    () => advisors.filter(a => !addGroupAdvisorIds.has(a._id)),
+    [advisors, addGroupAdvisorIds],
+  )
+
+  const handleCheckAddConflicts = async () => {
+    if (!addTarget || addSelected.length === 0) { toast.error('Selecciona al menos un advisor'); return }
+    setAddChecking(true)
+    try {
+      const r = await fetch('/api/postgres/admin-events/check-conflict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ advisorIds: addSelected, fechaInicio: addTarget.fechaInicio, horas: addTarget.horas }),
+      })
+      const j = await r.json()
+      if (!r.ok || !j.success) throw new Error(j?.error || `Error ${r.status}`)
+      setAddConflicts(j.conflicts as ConflictDetail[]); setAddChecked(true)
+      if (j.conflicts.length === 0) toast.success('Sin conflictos — puedes agregar')
+      else toast.error(`${j.conflicts.length} conflicto(s) detectados`)
+    } catch (e: any) {
+      toast.error(e?.message || 'Error verificando conflictos')
+    } finally {
+      setAddChecking(false)
+    }
+  }
+
+  const handleAdd = async () => {
+    if (!addTarget) return
+    if (!addChecked) { toast.error('Verifica conflictos antes de agregar'); return }
+    if (addConflicts.length > 0) { toast.error('Hay conflictos sin resolver'); return }
+    setAddSubmitting(true)
+    try {
+      const r = await fetch(`/api/postgres/admin-events/group/${addTarget.eventGroupId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ advisorIds: addSelected }),
+      })
+      const j = await r.json()
+      if (!r.ok || !j.success) throw new Error(j?.error || `Error ${r.status}`)
+      const extra = j.skipped?.length ? ` · ${j.skipped.length} ya estaban` : ''
+      toast.success(`${j.added} advisor(s) agregado(s)${extra}`)
+      setAddTarget(null); load()
+    } catch (e: any) {
+      toast.error(e?.message || 'Error al agregar advisors')
+    } finally {
+      setAddSubmitting(false)
     }
   }
 
@@ -379,6 +447,12 @@ export default function EventosAdministrativosPage() {
                         </td>
                         <td className="px-3 py-2 text-right">
                           <div className="inline-flex gap-1">
+                            <button type="button"
+                              onClick={() => openAdd(it)}
+                              title="Agregar advisors a este evento (mismo grupo)"
+                              className="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded">
+                              <UserPlusIcon className="h-4 w-4" />
+                            </button>
                             {!it.registrado && (
                               <button type="button"
                                 onClick={() => setDeleteTarget({ kind: 'one', item: it })}
@@ -599,6 +673,103 @@ export default function EventosAdministrativosPage() {
                   className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50">
                   {deleting ? 'Eliminando…' : 'Eliminar'}
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Agregar advisors a grupo existente */}
+        {addTarget && (
+          <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-black bg-opacity-60 overflow-y-auto">
+            <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl my-8">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Agregar advisors al evento</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {ADMIN_EVENT_TIPO_META[addTarget.tipo].label} · {fechaCorta(addTarget.fechaInicio)} · {addTarget.horas}h
+                    {addTarget.titulo ? ` · ${addTarget.titulo}` : ''}
+                  </p>
+                </div>
+                <button type="button" onClick={() => !addSubmitting && setAddTarget(null)}
+                  title="Cerrar" aria-label="Cerrar"
+                  className="text-gray-400 hover:text-gray-600">
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+
+              <p className="text-[11px] text-gray-500 mb-2">
+                Ya en el evento: {addGroupAdvisorIds.size}. Se copian tipo/fecha/duración; los registros existentes no se tocan.
+              </p>
+
+              {addCandidates.length === 0 ? (
+                <p className="text-sm text-gray-500 py-4 text-center">Todos los advisors activos ya están en este evento.</p>
+              ) : (
+                <div className="border border-gray-200 rounded-lg max-h-56 overflow-y-auto p-2 bg-gray-50">
+                  {addCandidates.map(a => {
+                    const sel = addSelected.includes(a._id)
+                    return (
+                      <label key={a._id} className="flex items-center gap-2 text-sm hover:bg-white px-2 py-1 rounded cursor-pointer">
+                        <input type="checkbox" checked={sel}
+                          onChange={() => {
+                            setAddSelected(s => sel ? s.filter(id => id !== a._id) : [...s, a._id])
+                            setAddChecked(false)
+                          }} />
+                        {a.nombre}
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+              <p className="text-[11px] text-gray-500 mt-1">{addSelected.length} seleccionado(s).</p>
+
+              {/* Conflictos */}
+              {addConflicts.length > 0 && (
+                <div className="mt-3 bg-red-50 border-2 border-red-300 rounded-lg p-3">
+                  <div className="flex items-start gap-2 mb-2">
+                    <ExclamationTriangleIcon className="h-5 w-5 text-red-600 flex-shrink-0" />
+                    <p className="text-sm font-semibold text-red-900">
+                      {addConflicts.length} conflicto(s) — el académico prima, resuélvelos antes de agregar:
+                    </p>
+                  </div>
+                  <ul className="space-y-1 text-xs text-red-800 max-h-32 overflow-y-auto">
+                    {addConflicts.map((c, i) => (
+                      <li key={i} className="flex items-center gap-2">
+                        <span className={`px-1.5 rounded text-[10px] font-medium ${
+                          c.source === 'CALENDARIO' ? 'bg-blue-200 text-blue-900' : 'bg-violet-200 text-violet-900'
+                        }`}>{c.source === 'CALENDARIO' ? 'Académico' : 'Admin'}</span>
+                        <span>{c.advisorNombre || c.advisorId}</span><span>·</span>
+                        <span className="font-mono">{fechaCorta(c.fecha)}</span>
+                        {c.descripcion && <span>· {c.descripcion}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {addChecked && addConflicts.length === 0 && (
+                <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-lg p-2 flex items-center gap-2">
+                  <CheckCircleIcon className="h-5 w-5 text-emerald-600" />
+                  <p className="text-sm text-emerald-800">Sin conflictos — listo para agregar.</p>
+                </div>
+              )}
+
+              <div className="mt-5 flex justify-between items-center gap-2 pt-3 border-t border-gray-100">
+                <button type="button" onClick={handleCheckAddConflicts}
+                  disabled={addSubmitting || addChecking || addSelected.length === 0}
+                  className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">
+                  {addChecking ? 'Verificando…' : '🔍 Verificar conflictos'}
+                </button>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setAddTarget(null)} disabled={addSubmitting}
+                    className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">
+                    Cancelar
+                  </button>
+                  <button type="button" onClick={handleAdd}
+                    disabled={addSubmitting || !addChecked || addConflicts.length > 0 || addSelected.length === 0}
+                    title={!addChecked ? 'Verifica conflictos primero' : addConflicts.length > 0 ? 'Resuelve los conflictos' : ''}
+                    className="px-4 py-2 text-sm font-semibold text-white bg-violet-600 rounded-lg hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    {addSubmitting ? 'Agregando…' : `✓ Agregar ${addSelected.length}`}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
