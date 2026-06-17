@@ -324,10 +324,11 @@ export async function updateEvent(
   }
 
   // Eventos compartidos: si este evento pertenece a un grupo, propagamos los
-  // campos COMUNES (advisor, hora, dia, linkZoom, tipo, observaciones,
-  // limiteUsuarios, sesionCerrada, timeout, notasadvisor) a los hermanos.
-  // NO propagamos nivel/step/tituloONivel/nombreEvento — esos son específicos
-  // por nivel y los hermanos los mantienen tal cual.
+  // campos COMUNES (advisor, hora, dia, linkZoom, tipo, observaciones) a los
+  // hermanos.
+  // NO propagamos nivel/step/tituloONivel/nombreEvento NI `limiteUsuarios` —
+  // esos son específicos por nivel/club: cada club del grupo puede tener un
+  // cupo distinto, así que cambiar el límite de uno NO debe afectar a los otros.
   // Si el advisor cambió, también propagamos para mantener consistencia
   // operativa (1 sola clase real del advisor).
   if ((updated as any).eventoCompartidoId) {
@@ -338,7 +339,6 @@ export async function updateEvent(
     if (data.linkZoom && data.linkZoom !== event.linkZoom) sharedUpdates.linkZoom = data.linkZoom;
     if (data.tipo && data.tipo !== event.tipo) { sharedUpdates.tipo = data.tipo; sharedUpdates.evento = data.tipo; }
     if (data.observaciones !== undefined && data.observaciones !== event.observaciones) sharedUpdates.observaciones = data.observaciones;
-    if (data.limiteUsuarios !== undefined && data.limiteUsuarios !== event.limiteUsuarios) sharedUpdates.limiteUsuarios = data.limiteUsuarios;
     if (Object.keys(sharedUpdates).length > 0) {
       const n = await CalendarioRepository.updateGroupSiblings(eventId, sharedUpdates);
       // Propaga a los bookings de los hermanos también (no sólo del evento principal).
