@@ -135,6 +135,10 @@ function CrearContratoContent() {
   // Contrato de prueba: prefijo PRB- en el número, no afecta el consecutivo
   // real, queda visible con badge naranja y se descarta de informes.
   const [esContratoPrueba, setEsContratoPrueba] = useState(false);
+  // Confirmación al salir del paso 2 si el titular NO está marcado como beneficiario
+  const [showBenefConfirm, setShowBenefConfirm] = useState(false);
+  // Confirmación al CREAR si nadie tomará clases (sin beneficiarios y titular no beneficiario)
+  const [showNoBenefConfirm, setShowNoBenefConfirm] = useState(false);
   const draftRestored = useRef(false);
   const saveTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -350,6 +354,16 @@ function CrearContratoContent() {
     }
   };
 
+  // Avanza un paso (con el cálculo de saldo al salir del paso 3).
+  const advanceStep = () => {
+    if (currentStep === 3) {
+      calculateBalance();
+    }
+    if (currentStep < 7) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
   // Handle next button
   const handleNext = () => {
     if (!validateStep(currentStep)) {
@@ -359,13 +373,20 @@ function CrearContratoContent() {
 
     setError('');
 
-    if (currentStep === 3) {
-      calculateBalance();
+    // Guard paso 2: si el titular NO está marcado como beneficiario, confirmar
+    // (error común — olvidar marcar que el titular también toma clases).
+    if (currentStep === 2 && !titularEsBeneficiario) {
+      setShowBenefConfirm(true);
+      return;
     }
 
-    if (currentStep < 7) {
-      setCurrentStep(currentStep + 1);
-    }
+    advanceStep();
+  };
+
+  // Confirmación del modal: continuar sin que el titular sea beneficiario.
+  const confirmTitularNoBeneficiario = () => {
+    setShowBenefConfirm(false);
+    advanceStep();
   };
 
   // Handle previous button
@@ -376,8 +397,19 @@ function CrearContratoContent() {
     }
   };
 
-  // Submit contract
-  const handleSubmit = async () => {
+  // Guard del botón "Crear Contrato": si nadie tomará clases (sin beneficiarios
+  // y titular no es beneficiario), confirma antes de crear.
+  const handleSubmit = () => {
+    if (beneficiarios.length === 0 && !titularEsBeneficiario) {
+      setShowNoBenefConfirm(true);
+      return;
+    }
+    doSubmit();
+  };
+
+  // Creación real del contrato.
+  const doSubmit = async () => {
+    setShowNoBenefConfirm(false);
     setLoading(true);
     setError('');
     setSuccess('');
@@ -1246,6 +1278,80 @@ function CrearContratoContent() {
           </div>
         </div>
         </div>
+
+        {/* Modal: confirmar que el titular NO será beneficiario (guard del paso 2) */}
+        {showBenefConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
+              <h3 className="text-lg font-bold text-gray-900">⚠️ El titular no tomará el programa</h3>
+              <p className="text-sm text-gray-700">
+                Recuerda: el titular <strong>no está marcado como beneficiario</strong>, por lo que
+                <strong> no tomará clases ni el programa</strong> — solo quedará como responsable del
+                contrato. ¿Qué deseas hacer?
+              </p>
+              <div className="flex flex-col gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => { setTitularEsBeneficiario(true); setShowBenefConfirm(false); advanceStep(); }}
+                  className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                >
+                  Marcar al titular como beneficiario
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmTitularNoBeneficiario}
+                  className="w-full px-4 py-2 text-sm font-medium text-gray-800 bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  Aceptar y seguir
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowBenefConfirm(false)}
+                  className="w-full px-2 py-1 text-xs text-gray-400 hover:text-gray-600"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: confirmar creación sin beneficiarios (nadie tomará clases) */}
+        {showNoBenefConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
+              <h3 className="text-lg font-bold text-gray-900">⚠️ Sin beneficiarios</h3>
+              <p className="text-sm text-gray-700">
+                Este contrato <strong>no tiene beneficiarios</strong> y el titular <strong>no es
+                beneficiario</strong>, así que <strong>nadie quedará inscrito en el programa</strong>.
+                ¿Deseas crear el contrato de todas formas?
+              </p>
+              <div className="flex flex-col gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowNoBenefConfirm(false)}
+                  className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                >
+                  Volver y agregar beneficiario
+                </button>
+                <button
+                  type="button"
+                  onClick={doSubmit}
+                  className="w-full px-4 py-2 text-sm font-medium text-gray-800 bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  Crear de todas formas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowNoBenefConfirm(false)}
+                  className="w-full px-2 py-1 text-xs text-gray-400 hover:text-gray-600"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </PermissionGuard>
     </DashboardLayout>
   );
