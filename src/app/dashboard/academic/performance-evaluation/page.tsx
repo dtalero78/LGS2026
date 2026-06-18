@@ -603,6 +603,24 @@ function ByAdvisorView({
   const advCom    = advData?.comentarios ?? []
   const fullGen   = genData?.rankingFull ?? []
 
+  // Evolución mensual comparada: promedio del advisor vs promedio del grupo
+  // (mismo mes). Iteramos sobre los meses con evals del advisor.
+  const evoComp = useMemo(() => {
+    const genEvo: any[] = genData?.evolucionMensual ?? []
+    const genByMes = new Map<string, any>(genEvo.map((e: any) => [e.mes, e]))
+    return advEvo.map((e: any) => {
+      const g = genByMes.get(e.mes)
+      const genProm = g ? Number(g.promedio) : null
+      return {
+        mes: e.mes,
+        advProm: Number(e.promedio),
+        advEvals: e.evaluaciones,
+        genProm,
+        delta: genProm != null ? Math.round((Number(e.promedio) - genProm) * 100) / 100 : null,
+      }
+    })
+  }, [advEvo, genData])
+
   // Posición en ranking general (1-based) entre advisors con ≥5 evals.
   const posicion = useMemo(() => {
     if (!advisorId || !fullGen.length) return null
@@ -612,7 +630,6 @@ function ByAdvisorView({
   }, [advisorId, fullGen])
 
   const distrMax = Math.max(1, ...advDistr.map((d: any) => d.total))
-  const evoMax   = Math.max(1, ...advEvo.map((e: any) => e.evaluaciones))
 
   // Genera badge de delta: ▲ +0.04 (verde) o ▼ −0.03 (rojo) o = (gris).
   const renderDelta = (advVal: number | null, genVal: number | null, suffix = '') => {
@@ -817,16 +834,34 @@ function ByAdvisorView({
               )}
             </div>
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-              <h3 className="text-sm font-semibold text-gray-800 mb-3">Evolución mensual · {advisorSelected?.nombre || ''}</h3>
-              {advEvo.length === 0 ? <p className="text-sm text-gray-400">Sin datos</p> : (
-                <div className="space-y-2">
-                  {advEvo.map((e: any) => (
-                    <div key={e.mes} className="flex items-center gap-3">
-                      <span className="text-xs text-gray-600 w-16">{e.mes}</span>
-                      <div className="flex-1 bg-gray-100 rounded h-5 relative overflow-hidden">
-                        <div className="h-full bg-indigo-500" style={{ width: `${(e.evaluaciones / evoMax) * 100}%` }} />
+              <h3 className="text-sm font-semibold text-gray-800 mb-1">Evolución mensual · {advisorSelected?.nombre || ''}</h3>
+              <div className="flex items-center gap-3 mb-3 text-[11px] text-gray-500">
+                <span className="inline-flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm bg-indigo-500" /> Advisor</span>
+                <span className="inline-flex items-center gap-1"><span className="inline-block w-0.5 h-3 bg-gray-600" /> Promedio del grupo</span>
+              </div>
+              {evoComp.length === 0 ? <p className="text-sm text-gray-400">Sin datos</p> : (
+                <div className="space-y-3">
+                  {evoComp.map((e: any) => (
+                    <div key={e.mes}>
+                      <div className="flex items-center justify-between text-xs mb-0.5">
+                        <span className="text-gray-600">{e.mes} · {e.advEvals} eval.</span>
+                        <span className="text-gray-700">
+                          <strong className="text-indigo-700">{e.advProm}★</strong>
+                          {e.genProm != null && <span className="text-gray-400"> vs grupo {e.genProm}★</span>}
+                          {e.delta != null && (
+                            <span className={`ml-1 font-semibold ${e.delta >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                              ({e.delta >= 0 ? '+' : ''}{e.delta})
+                            </span>
+                          )}
+                        </span>
                       </div>
-                      <span className="text-xs text-gray-700 w-20 text-right">{e.promedio} ★ · {e.evaluaciones}</span>
+                      {/* Barra = promedio del advisor (escala 0–5); línea = promedio del grupo */}
+                      <div className="relative bg-gray-100 rounded h-5 overflow-hidden" title={`Advisor ${e.advProm}★${e.genProm != null ? ` · Grupo ${e.genProm}★` : ''}`}>
+                        <div className="h-full bg-indigo-500" style={{ width: `${(e.advProm / 5) * 100}%` }} />
+                        {e.genProm != null && (
+                          <div className="absolute top-0 bottom-0 w-0.5 bg-gray-700" style={{ left: `${(e.genProm / 5) * 100}%` }} />
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
