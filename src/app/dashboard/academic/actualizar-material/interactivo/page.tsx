@@ -364,8 +364,34 @@ function SeccionRangos({ libro, onReload }: { libro: LibroAdmin; onReload: () =>
   )
 }
 
+/**
+ * Mapea una página de LIBRO a su(s) nivel(es) + página local, usando los rangos
+ * (bindings). Un libro lo comparten varios niveles como rangos de páginas; el
+ * estudiante ve la "página local" del nivel, no la del libro. Normalmente una
+ * página de libro cae en un solo nivel (devuelve 1 elemento).
+ */
+function bookToNivelLocal(
+  bookPage: number,
+  niveles: NivelBinding[],
+  totalPaginas: number,
+): Array<{ code: string; local: number }> {
+  const out: Array<{ code: string; local: number }> = []
+  for (const n of niveles) {
+    const inicio = n.libroPaginaInicio ?? 1
+    const fin = n.libroPaginaFin ?? totalPaginas
+    if (bookPage >= inicio && bookPage <= fin) {
+      out.push({ code: n.code, local: bookPage - inicio + 1 })
+    }
+  }
+  return out
+}
+
 function SeccionAudios({ libro, onReload }: { libro: LibroAdmin; onReload: () => void }) {
   const [paginaNueva, setPaginaNueva] = useState<number | ''>('')
+  // Helper "asignar por nivel": el admin elige nivel + página local y se calcula
+  // la página de LIBRO (evita el error de confundir página local con la del libro).
+  const [selNivel, setSelNivel] = useState('')
+  const [selLocal, setSelLocal] = useState<number | ''>('')
   const [tituloNuevo, setTituloNuevo] = useState('')
   const [tituloTocado, setTituloTocado] = useState(false) // ¿el admin escribió en el input?
   const [file, setFile] = useState<File | null>(null)
@@ -381,6 +407,24 @@ function SeccionAudios({ libro, onReload }: { libro: LibroAdmin; onReload: () =>
       setTituloNuevo(titleFromFilename(f.name))
     }
   }
+
+  // Sincroniza el helper nivel+local → página de libro.
+  const syncNivelLocal = (code: string, local: number | '') => {
+    setSelNivel(code)
+    setSelLocal(local)
+    if (code && typeof local === 'number' && local >= 1) {
+      const n = libro.niveles.find(x => x.code === code)
+      if (n) {
+        const inicio = n.libroPaginaInicio ?? 1
+        setPaginaNueva(inicio + local - 1)
+      }
+    }
+  }
+
+  // Equivalencia de la página de libro actual → nivel(es) + página local.
+  const equivNueva = typeof paginaNueva === 'number'
+    ? bookToNivelLocal(paginaNueva, libro.niveles, libro.totalPaginas)
+    : []
 
   const startEdit = (key: string, tituloActual: string | null) => {
     setEditing(key)
@@ -471,19 +515,66 @@ function SeccionAudios({ libro, onReload }: { libro: LibroAdmin; onReload: () =>
       <p className="text-xs text-gray-500 mb-2">Una página puede tener varios audios. Usa el título para distinguirlos (ej: "Diálogo", "Maria", "John"). Si no pones título, se usa "Audio N".</p>
 
       <div className="bg-white border border-gray-200 rounded p-3 mb-3">
+        {/* Helper: asignar por nivel + página local → calcula la página de LIBRO.
+            Evita confundir la página local (la que ve el estudiante) con la del libro. */}
+        {libro.niveles.length > 0 && (
+          <div className="mb-3 pb-3 border-b border-gray-100">
+            <p className="text-[11px] text-gray-500 mb-1.5">
+              💡 La página del <strong>libro</strong> no es la que ve el estudiante. Elige el <strong>nivel</strong> y la
+              <strong> página local</strong> y se calcula la página de libro automáticamente.
+            </p>
+            <div className="flex items-end gap-2 flex-wrap">
+              <div>
+                <label htmlFor={`seln-${libro.codigo}`} className="block text-xs text-gray-600 mb-1">Nivel</label>
+                <select
+                  id={`seln-${libro.codigo}`}
+                  value={selNivel}
+                  onChange={e => syncNivelLocal(e.target.value, selLocal)}
+                  className="border border-gray-300 rounded px-2 py-1 text-sm"
+                >
+                  <option value="">—</option>
+                  {libro.niveles.map(n => <option key={n.code} value={n.code}>{n.code}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor={`sell-${libro.codigo}`} className="block text-xs text-gray-600 mb-1">Página local (la que ve el estudiante)</label>
+                <input
+                  id={`sell-${libro.codigo}`}
+                  type="number"
+                  min={1}
+                  value={selLocal}
+                  onChange={e => syncNivelLocal(selNivel, e.target.value === '' ? '' : parseInt(e.target.value, 10) || '')}
+                  className="w-24 border border-gray-300 rounded px-2 py-1 text-sm tabular-nums"
+                  placeholder="32"
+                  title="Página local del nivel"
+                />
+              </div>
+              {selNivel && typeof selLocal === 'number' && typeof paginaNueva === 'number' && (
+                <span className="text-xs text-emerald-700 pb-1.5">→ página de libro <strong>{paginaNueva}</strong></span>
+              )}
+            </div>
+          </div>
+        )}
         <div className="flex items-end gap-2 flex-wrap">
           <div>
-            <label htmlFor={`pag-${libro.codigo}`} className="block text-xs text-gray-600 mb-1">Página</label>
+            <label htmlFor={`pag-${libro.codigo}`} className="block text-xs text-gray-600 mb-1">Página (libro)</label>
             <input
               id={`pag-${libro.codigo}`}
               type="number"
               min={1}
               max={libro.totalPaginas || undefined}
               value={paginaNueva}
-              onChange={e => setPaginaNueva(e.target.value === '' ? '' : parseInt(e.target.value, 10) || '')}
+              onChange={e => { setPaginaNueva(e.target.value === '' ? '' : parseInt(e.target.value, 10) || ''); setSelNivel(''); setSelLocal('') }}
               className="w-20 border border-gray-300 rounded px-2 py-1 text-sm tabular-nums"
               placeholder="12"
             />
+            {typeof paginaNueva === 'number' && (
+              <p className="text-[10px] mt-0.5 leading-tight">
+                {equivNueva.length > 0
+                  ? <span className="text-emerald-600">= {equivNueva.map(e => `${e.code} local ${e.local}`).join(', ')}</span>
+                  : <span className="text-amber-600">⚠ fuera de los rangos por nivel</span>}
+              </p>
+            )}
           </div>
           <div className="w-44">
             <label htmlFor={`tit-${libro.codigo}`} className="block text-xs text-gray-600 mb-1">Título (opcional)</label>
@@ -530,7 +621,8 @@ function SeccionAudios({ libro, onReload }: { libro: LibroAdmin; onReload: () =>
             <thead className="bg-gray-50 text-xs text-gray-500">
               <tr>
                 <th className="text-right px-3 py-2 w-12">#</th>
-                <th className="text-right px-3 py-2 w-20">Página</th>
+                <th className="text-right px-3 py-2 w-20">Página (libro)</th>
+                <th className="text-left px-3 py-2 w-28">Nivel · local</th>
                 <th className="text-left px-3 py-2 w-56">Título</th>
                 <th className="text-left px-3 py-2">Key</th>
                 <th className="text-right px-3 py-2 w-20">Acciones</th>
@@ -548,6 +640,14 @@ function SeccionAudios({ libro, onReload }: { libro: LibroAdmin; onReload: () =>
                     <tr key={a.key} className="border-t border-gray-100">
                       <td className="px-3 py-2 text-right text-xs text-gray-400 tabular-nums">{idx + 1}</td>
                       <td className="px-3 py-2 text-right font-bold tabular-nums">{a.pagina}</td>
+                      <td className="px-3 py-2 text-left text-xs">
+                        {(() => {
+                          const eq = bookToNivelLocal(a.pagina, libro.niveles, libro.totalPaginas)
+                          return eq.length > 0
+                            ? <span className="text-gray-700">{eq.map(e => `${e.code} · ${e.local}`).join(', ')}</span>
+                            : <span className="text-amber-600">fuera de rango</span>
+                        })()}
+                      </td>
                       <td className="px-3 py-2 text-xs text-gray-700 truncate">
                         {enEdicion ? (
                           <div className="flex items-center gap-1">
