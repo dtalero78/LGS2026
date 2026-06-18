@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowDownTrayIcon, ArrowPathIcon, StarIcon, UserGroupIcon, UserCircleIcon } from '@heroicons/react/24/solid'
+import { ArrowDownTrayIcon, ArrowPathIcon, StarIcon, UserGroupIcon, UserCircleIcon, PrinterIcon } from '@heroicons/react/24/solid'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { exportToExcel } from '@/lib/export-excel'
 import { PermissionGuard } from '@/components/permissions/PermissionGuard'
@@ -109,7 +109,7 @@ export default function PerformanceEvaluationPage() {
       <PermissionGuard permission={AcademicoPermission.PERFORMANCE_EVAL_VER}>
         <div className="space-y-5 pb-10">
           {/* Header con tabs */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 no-print">
             <StarIcon className="h-7 w-7 text-amber-500" />
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Performance Evaluation</h1>
@@ -122,7 +122,7 @@ export default function PerformanceEvaluationPage() {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 border-b border-gray-200">
+          <div className="flex gap-1 border-b border-gray-200 no-print">
             <button
               type="button"
               onClick={() => setView('general')}
@@ -656,10 +656,34 @@ function ByAdvisorView({
   const advisorSelected = advisorsList.find(a => a._id === advisorId)
   const isLoading = advisorStatsQ.isLoading || generalStatsQ.isLoading
 
+  const { data: session } = useSession()
+  const handlePrint = () => window.print()
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 watermark">
+      <style>{`
+        @media print {
+          .no-print, nav, footer { display: none !important; }
+          .print-header { display: flex !important; }
+          .print-expand { max-height: none !important; overflow: visible !important; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; }
+          .print-page { page-break-inside: avoid; }
+          @page { size: letter portrait; margin: 12mm 15mm 12mm 15mm; }
+          .watermark::after {
+            content: ''; position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%) rotate(-25deg);
+            width: 380px; height: 380px;
+            background: url('/logo.png') center / contain no-repeat;
+            opacity: 0.04; z-index: 9999; pointer-events: none;
+          }
+          table { page-break-inside: auto; }
+          tr { page-break-inside: avoid; }
+          thead { display: table-header-group; }
+        }
+        @media screen { .print-header { display: none !important; } }
+      `}</style>
       {/* Filtros: fechas + tipo + activos/inactivos/todos + dropdown advisor */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-end gap-2 flex-wrap">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-end gap-2 flex-wrap no-print">
         <div>
           <label htmlFor="bya-start" className="block text-xs text-gray-500 mb-1">Desde</label>
           <input id="bya-start" type="date" value={filterDates.startDate}
@@ -723,8 +747,33 @@ function ByAdvisorView({
 
       {advisorId && !isLoading && advKpi && (
         <>
-          {/* Header del advisor */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3 flex-wrap">
+          {/* Cabecera SOLO para impresión (logo + datos del advisor + período) */}
+          <div className="print-header items-start justify-between mb-6 pb-4 border-b-2 border-indigo-600">
+            <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="Let's Go Speak" className="h-14 w-auto" />
+              <div>
+                <p className="text-sm font-bold text-gray-900">Let&apos;s Go Speak — Performance Evaluation</p>
+                <p className="text-[11px] text-gray-500">
+                  Generado: {new Date().toLocaleString('es-CO')} · Por: {session?.user?.name || session?.user?.email || '—'}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-base font-bold text-gray-900">Reporte de Desempeño</p>
+              <p className="text-sm text-gray-700">{advisorSelected?.nombre || advisorId}</p>
+              <p className="text-[11px] text-gray-500">
+                {advKpi.totalEvaluaciones} evals · Prom {advKpi.promedioGeneral}★
+                {posicion ? ` · Posición #${posicion.posicion} de ${posicion.total}` : ''}
+              </p>
+              <p className="text-[11px] text-gray-500">
+                Período: {filterDates.startDate || '—'} a {filterDates.endDate || '—'}{filterDates.tipo ? ` · Tipo: ${filterDates.tipo}` : ''}
+              </p>
+            </div>
+          </div>
+
+          {/* Header del advisor (pantalla) */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3 flex-wrap no-print">
             <UserCircleIcon className="h-10 w-10 text-indigo-500" />
             <div className="flex-1 min-w-0">
               <h2 className="text-lg font-bold text-gray-900 truncate">{advisorSelected?.nombre || advisorId}</h2>
@@ -734,6 +783,11 @@ function ByAdvisorView({
                 {posicion && <span className="ml-2 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-[11px] font-medium">Posición #{posicion.posicion} de {posicion.total}</span>}
               </p>
             </div>
+            <button type="button" onClick={handlePrint}
+              title="En el diálogo de impresión, desactive 'Encabezados y pies de página' para un PDF limpio."
+              className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+              <PrinterIcon className="h-4 w-4" />Imprimir / PDF
+            </button>
             {canExport && (
               <button type="button" onClick={handleCSV} disabled={!advCom.length}
                 className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
@@ -743,7 +797,7 @@ function ByAdvisorView({
           </div>
 
           {/* KPIs con comparativos */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 print-page">
             <KpiCompare
               label="Total Evaluaciones"
               value={advKpi.totalEvaluaciones?.toLocaleString() ?? '—'}
@@ -776,7 +830,7 @@ function ByAdvisorView({
           </div>
 
           {/* Métricas por dimensión — advisor vs general */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm print-page">
             <div className="px-5 py-3 border-b border-gray-100">
               <h3 className="text-sm font-semibold text-gray-800">Métricas por dimensión · advisor vs promedio general</h3>
               <p className="text-[11px] text-gray-400">Promedio del advisor en barra sólida; el promedio general aparece debajo como referencia.</p>
@@ -816,7 +870,7 @@ function ByAdvisorView({
           </div>
 
           {/* Distribución + Evolución */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 print-page">
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
               <h3 className="text-sm font-semibold text-gray-800 mb-3">Distribución de calificaciones · {advisorSelected?.nombre || ''}</h3>
               {advDistr.length === 0 ? <p className="text-sm text-gray-400">Sin datos</p> : (
@@ -870,13 +924,13 @@ function ByAdvisorView({
           </div>
 
           {/* Comentarios del advisor */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm print-page">
             <div className="px-5 py-3 border-b border-gray-100">
               <h3 className="text-sm font-semibold text-gray-800">Comentarios recibidos por {advisorSelected?.nombre || ''}</h3>
               <p className="text-[11px] text-gray-400">{advCom.length} {advCom.length === 1 ? 'comentario' : 'comentarios'}</p>
             </div>
             {advCom.length === 0 ? <p className="p-6 text-center text-sm text-gray-400">Sin comentarios en el período</p> : (
-              <ul className="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
+              <ul className="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto print-expand">
                 {advCom.map((c: any) => (
                   <li key={c._id} className="px-5 py-3">
                     <div className="flex items-center gap-2 text-xs text-gray-500 mb-1 flex-wrap">
