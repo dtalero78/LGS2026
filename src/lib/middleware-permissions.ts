@@ -271,14 +271,19 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
     'RECAUDOS.ASIGNACION.VER' as Permission,
   ],
 
-  // Aprobación
+  // Aprobación → Centro de Aprobaciones (CENTRO_VER + acción para roles ya configurados)
   '/dashboard/aprobacion': [
+    'APROBACION.CENTRO.VER' as Permission,
     'APROBACION.MODIFICAR.ACTUALIZAR' as Permission,
     'APROBACION.MODIFICAR.EXPORTAR_CSV' as Permission,
     'APROBACION.MODIFICAR.CONTRATO' as Permission,
     'APROBACION.MODIFICAR.ENVIAR_PDF' as Permission,
     'APROBACION.MODIFICAR.DESCARGAR' as Permission,
     'APROBACION.MODIFICAR.APROBACION_AUTONOMA' as Permission,
+  ],
+  // Aprobación → Conversión Titular (su propio permiso)
+  '/dashboard/aprobacion/conversion-titular': [
+    'APROBACION.CONVERSION_TITULAR.VER' as Permission,
   ],
 };
 

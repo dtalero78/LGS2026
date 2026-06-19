@@ -352,6 +352,10 @@ export enum RecaudosPermission {
  * Permisos del módulo APROBACION (Menú Aprobación)
  */
 export enum AprobacionPermission {
+  // Items del menú Aprobación (visibilidad por ítem)
+  CENTRO_VER = 'APROBACION.CENTRO.VER',
+  CONVERSION_TITULAR_VER = 'APROBACION.CONVERSION_TITULAR.VER',
+
   // Modificar (usado en Wix)
   ACTUALIZAR = 'APROBACION.MODIFICAR.ACTUALIZAR',
   EXPORTAR_CSV = 'APROBACION.MODIFICAR.EXPORTAR_CSV',

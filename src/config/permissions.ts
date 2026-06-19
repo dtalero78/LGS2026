@@ -801,6 +801,20 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
 
   // ========== APROBACION MODULE (/dashboard/aprobacion) ==========
   {
+    code: AprobacionPermission.CENTRO_VER,
+    module: Module.APROBACION,
+    section: 'Menú Aprobación',
+    name: 'Ítem "Centro de Aprobaciones"',
+    description: 'Ver el ítem y la página del Centro de Aprobaciones en el menú',
+  },
+  {
+    code: AprobacionPermission.CONVERSION_TITULAR_VER,
+    module: Module.APROBACION,
+    section: 'Menú Aprobación',
+    name: 'Ítem "Conversión Titular"',
+    description: 'Ver el ítem y la página de Conversión Titular en el menú',
+  },
+  {
     code: AprobacionPermission.ACTUALIZAR,
     module: Module.APROBACION,
     section: 'Lista de Aprobaciones',

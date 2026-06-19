@@ -80,8 +80,11 @@ const getNavigation = (userEmail: string, userRole: string) => [
   },
   {
     name: 'Aprobación',
-    href: '/dashboard/aprobacion',
     icon: ShieldCheckIcon,
+    children: [
+      { name: 'Centro de Aprobaciones', href: '/dashboard/aprobacion' },
+      { name: 'Conversión Titular', href: '/dashboard/aprobacion/conversion-titular' },
+    ],
   },
   {
     name: 'Recaudos',
@@ -390,14 +393,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/dashboard/recaudos/asignacion': [
       RecaudosPermission.ASIGNACION_VER,
     ],
-    // Aprobación
+    // Aprobación → Centro de Aprobaciones. CENTRO_VER es el permiso del ítem;
+    // se conservan los de acción para no romper roles ya configurados.
     '/dashboard/aprobacion': [
+      AprobacionPermission.CENTRO_VER,
       AprobacionPermission.ACTUALIZAR,
       AprobacionPermission.EXPORTAR_CSV,
       AprobacionPermission.VER_CONTRATO,
       AprobacionPermission.ENVIAR_PDF,
       AprobacionPermission.DESCARGAR,
       AprobacionPermission.APROBACION_AUTONOMA,
+    ],
+    // Aprobación → Conversión Titular (proceso adicional, su propio permiso).
+    '/dashboard/aprobacion/conversion-titular': [
+      AprobacionPermission.CONVERSION_TITULAR_VER,
     ],
   }
 
@@ -455,7 +464,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       ComercialPermission.VER_PROSPECTOS,
     ],
     'Aprobación': [
-      // APROBACION.MODIFICAR.*
+      // Items del menú + APROBACION.MODIFICAR.*
+      AprobacionPermission.CENTRO_VER,
+      AprobacionPermission.CONVERSION_TITULAR_VER,
       AprobacionPermission.ACTUALIZAR,
       AprobacionPermission.EXPORTAR_CSV,
       AprobacionPermission.VER_CONTRATO,
