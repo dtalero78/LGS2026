@@ -6,17 +6,19 @@
  *   - Duplica la fila del TITULAR en PEOPLE cambiando solo `tipoUsuario` a
  *     BENEFICIARIO (todos los demás campos se copian verbatim; `_id` nuevo,
  *     `titularId` apuntando al titular, fechas NOW()).
- *   - Lo ubica en WELCOME creando su registro en ACADEMICA.
- *   - Queda listo para ser aprobado (no se crea login ni financiero — eso ocurre
- *     después en el flujo normal de aprobación/registro).
+ *   - NO crea ACADEMICA ni asigna nivel: queda como beneficiario para ser
+ *     aprobado, y el nivel + el registro en ACADEMICA se resuelven en ese
+ *     proceso de aprobación (igual que cualquier beneficiario nuevo). Tampoco
+ *     se crea login ni financiero.
+ *
+ * Validación previa: si ya existe un BENEFICIARIO con el id, email o celular del
+ * titular, NO se convierte (la UI muestra un modal de advertencia y cancela).
  *
  * El beneficiario queda enlazado al titular por `contrato` compartido, así que
  * aparece automáticamente en /person/[titularId] (pestaña Administración).
  */
 import 'server-only';
 import { PeopleRepository } from '@/repositories/people.repository';
-import { AcademicaRepository } from '@/repositories/academica.repository';
-import { withTransaction } from '@/lib/postgres';
 import { ids } from '@/lib/id-generator';
 import { NotFoundError, ConflictError } from '@/lib/errors';
 
@@ -26,32 +28,43 @@ const nombreCompleto = (p: any) =>
     .join(' ')
     .trim();
 
-/** Busca el titular por contrato + numeroId y reporta si ya fue convertido. */
+/** Busca el titular por contrato + numeroId y reporta si ya existe el beneficiario. */
 export async function lookupTitular(contrato: string, numeroId: string) {
   const c = contrato.trim();
   const n = numeroId.trim();
-  const titular = await PeopleRepository.findTitularByContratoAndNumeroId(c, n);
+  const titular: any = await PeopleRepository.findTitularByContratoAndNumeroId(c, n);
   if (!titular) return { found: false as const };
 
-  const yaConvertido = await PeopleRepository.existsBeneficiarioByNumeroIdAndContrato(n, c);
+  // Advertencia: ¿ya existe un beneficiario con el id/email/celular del titular?
+  const existente: any = await PeopleRepository.findBeneficiarioByTitularData(
+    titular.numeroId, titular.email ?? null, titular.celular ?? null
+  );
   return {
     found: true as const,
-    yaConvertido,
+    beneficiarioExistente: existente
+      ? {
+          nombre: nombreCompleto(existente),
+          numeroId: existente.numeroId,
+          email: existente.email ?? null,
+          celular: existente.celular ?? null,
+          contrato: existente.contrato ?? null,
+        }
+      : null,
     titular: {
-      _id: (titular as any)._id,
+      _id: titular._id,
       nombre: nombreCompleto(titular),
-      numeroId: (titular as any).numeroId,
-      celular: (titular as any).celular ?? null,
-      email: (titular as any).email ?? null,
-      contrato: (titular as any).contrato,
-      plataforma: (titular as any).plataforma ?? null,
+      numeroId: titular.numeroId,
+      celular: titular.celular ?? null,
+      email: titular.email ?? null,
+      contrato: titular.contrato,
+      plataforma: titular.plataforma ?? null,
     },
   };
 }
 
 /**
- * Ejecuta la conversión: duplica el titular como beneficiario (PEOPLE) + lo ubica
- * en WELCOME (ACADEMICA), todo en una transacción.
+ * Ejecuta la conversión: duplica el titular como BENEFICIARIO en PEOPLE.
+ * Bloquea si ya existe un beneficiario con el id/email/celular del titular.
  */
 export async function convertirTitular(contrato: string, numeroId: string) {
   const c = contrato.trim();
@@ -60,30 +73,17 @@ export async function convertirTitular(contrato: string, numeroId: string) {
   const titular: any = await PeopleRepository.findTitularByContratoAndNumeroId(c, n);
   if (!titular) throw new NotFoundError('Titular', `${c} / ${n}`);
 
-  if (await PeopleRepository.existsBeneficiarioByNumeroIdAndContrato(n, c)) {
-    throw new ConflictError('Este titular ya fue convertido en beneficiario para este contrato');
+  const existente: any = await PeopleRepository.findBeneficiarioByTitularData(
+    titular.numeroId, titular.email ?? null, titular.celular ?? null
+  );
+  if (existente) {
+    const ref = [nombreCompleto(existente), existente.numeroId, existente.contrato ? `contrato ${existente.contrato}` : null]
+      .filter(Boolean).join(' · ');
+    throw new ConflictError(`Ya existe un beneficiario con los datos del titular (${ref}). No se puede convertir.`);
   }
 
   const newBenefId = ids.person();
-
-  const beneficiario: any = await withTransaction(async (client) => {
-    const benef = await PeopleRepository.duplicateTitularAsBeneficiario(titular._id, newBenefId, client);
-    await AcademicaRepository.createWelcomeRecord(
-      {
-        _id: ids.academic(),
-        numeroId: titular.numeroId,
-        primerNombre: titular.primerNombre,
-        segundoNombre: titular.segundoNombre,
-        primerApellido: titular.primerApellido,
-        segundoApellido: titular.segundoApellido,
-        email: titular.email,
-        celular: titular.celular,
-        plataforma: titular.plataforma,
-      },
-      client
-    );
-    return benef;
-  });
+  const beneficiario: any = await PeopleRepository.duplicateTitularAsBeneficiario(titular._id, newBenefId);
 
   return {
     titularId: titular._id,

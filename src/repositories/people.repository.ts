@@ -420,14 +420,26 @@ class PeopleRepositoryClass extends BaseRepository {
     return this.parse(row);
   }
 
-  /** ¿Ya existe el beneficiario para ese numeroId + contrato? (idempotencia). */
-  async existsBeneficiarioByNumeroIdAndContrato(numeroId: string, contrato: string): Promise<boolean> {
-    const row = await queryOne(
-      `SELECT 1 FROM "PEOPLE"
-       WHERE "numeroId" = $1 AND "contrato" = $2 AND "tipoUsuario" = 'BENEFICIARIO' LIMIT 1`,
-      [numeroId, contrato]
+  /**
+   * Busca un BENEFICIARIO existente que coincida con los datos identificatorios
+   * del titular: mismo numeroId, o mismo email, o mismo celular (ignorando
+   * valores vacíos). Sirve para advertir/cancelar la conversión si la persona
+   * ya figura como beneficiario en cualquier contrato. Devuelve el match o null.
+   */
+  async findBeneficiarioByTitularData(numeroId: string, email: string | null, celular: string | null) {
+    return queryOne(
+      `SELECT "_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
+              "email", "celular", "contrato"
+       FROM "PEOPLE"
+       WHERE "tipoUsuario" = 'BENEFICIARIO'
+         AND (
+           "numeroId" = $1
+           OR (COALESCE($2, '') <> '' AND "email" = $2)
+           OR (COALESCE($3, '') <> '' AND "celular" = $3)
+         )
+       LIMIT 1`,
+      [numeroId, email, celular]
     );
-    return !!row;
   }
 
   /**
