@@ -33,7 +33,9 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config({ path: '.env.local' });
 
-const CSV = path.join('docs', 'Cuota0CL.csv');
+const csvArg = process.argv.find(a => a.startsWith('--csv='));
+const CSV = csvArg ? csvArg.slice('--csv='.length) : path.join('docs', 'Cuota0CL.csv');
+const REPORT = path.basename(CSV).replace(/\.csv$/i, '') + '-report.csv';
 const APPLY = process.argv.includes('--apply');
 const NO_SYNC = process.argv.includes('--no-sync');
 
@@ -80,9 +82,21 @@ function parseCsv(text) {
 (async () => {
   const raw = fs.readFileSync(CSV, 'latin1');
   const rows = parseCsv(raw);
-  const header = rows.shift(); // NM-0;CONTRATO;TITULAR;CEDULA
+  const header = rows.shift();
+  // Mapeo de columnas por nombre de header (tolera distinto orden entre CSVs).
+  const norm = h => String(h || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const H = header.map(norm);
+  const colContrato = H.findIndex(h => h === 'contrato');
+  const colTitular  = H.findIndex(h => h.includes('titular'));
+  const colCedula   = H.findIndex(h => /cedula|documento|numero id|^id$/.test(h));
+  if (colContrato < 0) { console.error('ERROR: no se encontró columna "Contrato" en el header:', header.join(';')); process.exit(1); }
   const recs = rows
-    .map(r => ({ num: (r[0] || '').trim(), contrato: (r[1] || '').trim(), titular: (r[2] || '').trim(), cedula: (r[3] || '').trim() }))
+    .map((r, i) => ({
+      num: String(i + 1),
+      contrato: (r[colContrato] || '').trim(),
+      titular: colTitular >= 0 ? (r[colTitular] || '').trim() : '',
+      cedula:  colCedula  >= 0 ? (r[colCedula]  || '').trim() : '',
+    }))
     .filter(r => r.contrato);
   console.log(`\n===== BACKFILL CUOTA #0 (${APPLY ? 'APPLY' : 'DRY-RUN'}${NO_SYNC ? ' --no-sync' : ''}) =====`);
   console.log(`CSV: ${CSV}  ·  filas de datos: ${recs.length}`);
@@ -174,7 +188,7 @@ function parseCsv(text) {
   // --- reportes ---
   const csvLine = a => a.map(x => `"${String(x ?? '').replace(/"/g, '""')}"`).join(',');
   const dump = (file, hdr, lines) => fs.writeFileSync(path.join('docs', file), '﻿' + [csvLine(hdr), ...lines].join('\r\n'), 'utf8');
-  dump('cuota0-report.csv',
+  dump(REPORT,
     ['num', 'accion', 'contratoCSV', 'contratoBD', 'titular', 'peopleId', 'inscripcion', 'fechaPago', 'saldoAntes', 'saldoDespues'],
     [
       ...buckets.crear.map(({ r, t, inscripcion, fechaPago, saldoAntes, saldoDespues }) =>
@@ -188,7 +202,7 @@ function parseCsv(text) {
       ...buckets.ambiguo.map(({ r, t }) => csvLine(['AMBIGUO', r.num, r.contrato, t.map(x => x.contrato).join(' | '), r.titular, t.map(x => x._id).join(' | '), '', '', '', ''])),
       ...buckets.noEncontrado.map(({ r }) => csvLine(['NO_ENCONTRADO', r.num, r.contrato, '', r.titular, '', '', '', '', ''])),
     ]);
-  console.log(`\nReporte detallado: docs/cuota0-report.csv`);
+  console.log(`\nReporte detallado: docs/${REPORT}`);
 
   // --- APPLY ---
   let creados = 0, fallidos = 0;
@@ -247,7 +261,7 @@ function parseCsv(text) {
     }
     console.log(`\n🟢 APPLY: cuota #0 creadas: ${creados}  ·  fallidas: ${fallidos}`);
   } else if (!APPLY) {
-    console.log(`\n🟡 DRY-RUN — no se escribió nada. Para aplicar: node scripts/backfill-cuota0-inscripcion.js --apply`);
+    console.log(`\n🟡 DRY-RUN — no se escribió nada. Para aplicar: node scripts/backfill-cuota0-inscripcion.js --csv=${CSV} --apply`);
   }
 
   await client.end();
