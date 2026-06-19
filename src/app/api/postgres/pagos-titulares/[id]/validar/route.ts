@@ -5,7 +5,7 @@
  *      fechaValidacion = la del cliente (YYYY-MM-DD en su TZ local) o
  *                        CURRENT_DATE si no se envía,
  *      validadoPor    = session.user.email,
- *      numeroFactura  (requerido).
+ *      numeroFactura  (OPCIONAL — se guarda vacío si no se envía).
  *
  * El cliente envía su `fechaValidacion` para evitar corrimiento de día
  * por diferencias TZ entre el navegador del usuario y el server.

@@ -97,7 +97,7 @@ export default function GestionRecaudosPage() {
   const [displayUsers, setDisplayUsers] = useState<DisplayUser[]>([])
 
   // Modal validar
-  const [validateModal, setValidateModal] = useState<{ id: string; numCuota: number | null; titular: string } | null>(null)
+  const [validateModal, setValidateModal] = useState<{ id: string; numCuota: number | null; titular: string; medioPago: string | null } | null>(null)
   const [facturaInput, setFacturaInput] = useState('')
   const [validating, setValidating] = useState(false)
 
@@ -159,13 +159,13 @@ export default function GestionRecaudosPage() {
       id: p._id,
       numCuota: p.numCuota,
       titular: `${p.titular_primerNombre} ${p.titular_primerApellido}`.trim(),
+      medioPago: p.medioPago,
     })
   }
 
   const handleValidar = async () => {
     if (!validateModal) return
-    const factura = facturaInput.trim()
-    if (!factura) { toast.error('Número de factura requerido'); return }
+    const factura = facturaInput.trim() // opcional
     setValidating(true)
     try {
       await api.post(`/api/postgres/pagos-titulares/${validateModal.id}/validar`, {
@@ -515,12 +515,14 @@ export default function GestionRecaudosPage() {
                 </button>
               </div>
               <p className="text-sm text-gray-600">
-                Confirma la validación del pago{validateModal.numCuota != null ? ` (cuota ${validateModal.numCuota})` : ''}
-                {' '}de <strong>{validateModal.titular}</strong>. Ingresa el <strong>número de factura</strong>; la fecha de validación quedará registrada como hoy.
+                Confirme la validación del pago{validateModal.numCuota != null ? ` (cuota ${validateModal.numCuota})` : ''}
+                {' '}de <strong>{validateModal.titular}</strong>
+                {validateModal.medioPago ? <>, con el medio de pago <strong>{validateModal.medioPago}</strong></> : ''}.
+                {' '}Si posee el <strong>número de factura</strong>, ingréselo; la fecha de validación quedará registrada hoy.
               </p>
               <div>
                 <label htmlFor="factura-input" className="block text-sm font-medium text-gray-700 mb-1">
-                  # Factura <span className="text-red-500">*</span>
+                  # Factura <span className="text-gray-400 font-normal">(opcional)</span>
                 </label>
                 <input
                   id="factura-input"
@@ -532,8 +534,8 @@ export default function GestionRecaudosPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
                 />
               </div>
-              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
-                ⚠️ Una vez validado, el pago no se puede editar ni eliminar.
+              <p className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+                ⚠️ UNA VEZ VALIDADO, EL PAGO NO SE PUEDE EDITAR NI ELIMINAR.
               </p>
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
@@ -547,7 +549,7 @@ export default function GestionRecaudosPage() {
                 <button
                   type="button"
                   onClick={handleValidar}
-                  disabled={validating || !facturaInput.trim()}
+                  disabled={validating}
                   className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50"
                 >
                   {validating ? 'Validando…' : 'Validar Pago'}

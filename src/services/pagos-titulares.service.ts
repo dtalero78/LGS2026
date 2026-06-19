@@ -427,8 +427,8 @@ export const pagosTitularesService = {
     if (!existing) throw new NotFoundError('PAGOS_TITULARES', id);
     if (existing.validado) throw new ValidationError('El pago ya está validado');
 
+    // El número de factura es OPCIONAL: si no se proporciona, se guarda vacío.
     const factura = (numeroFactura || '').trim();
-    if (!factura) throw new ValidationError('Número de factura es requerido para validar');
 
     const updated = await PagosTitularesRepository.validar(id, validadoPor, factura, fechaValidacion);
     if (!updated) throw new ValidationError('No se pudo validar el pago');
