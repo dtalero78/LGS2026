@@ -344,6 +344,7 @@ export enum MantenimientoPermission {
  */
 export enum RecaudosPermission {
   GESTION_VER         = 'RECAUDOS.GESTION.VER',
+  BANCOS_VER          = 'RECAUDOS.BANCOS.VER',
   ASIGNACION_VER      = 'RECAUDOS.ASIGNACION.VER',
   ASIGNACION_EXPORTAR = 'RECAUDOS.ASIGNACION.EXPORTAR',
 }

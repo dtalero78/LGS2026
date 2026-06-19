@@ -984,7 +984,14 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     module: Module.RECAUDOS,
     section: 'Gestión',
     name: 'Sub-ítem "Gestión" (sidebar Recaudos)',
-    description: 'Acceso al grupo Recaudos > Gestión en el sidebar. Página de gestión de pagos/recaudos (en construcción)',
+    description: 'Acceso al Centro de Validación de Pagos (Recaudos > Gestión): pestañas Pagos pendientes e Inscripciones pendientes, validación de pagos',
+  },
+  {
+    code: RecaudosPermission.BANCOS_VER,
+    module: Module.RECAUDOS,
+    section: 'Bancos',
+    name: 'Sub-ítem "Bancos" (sidebar Recaudos)',
+    description: 'Acceso a /dashboard/recaudos/bancos — misma consulta del Centro de Validación pero filtrada/agrupada por Medio de Pago',
   },
   {
     code: RecaudosPermission.ASIGNACION_VER,

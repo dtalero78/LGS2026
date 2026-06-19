@@ -177,8 +177,10 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
     //    Cuota #0 representa el pago de inscripción realizado al firmar:
     //      - valorPagado = inscripción (la plata efectivamente recibida)
     //      - inscripcion = inscripción (etiqueta semántica, redundante con valorPagado)
-    //      - validado    = true (la inscripción se considera validada al crear el contrato)
-    //      - validadoPor / fechaValidacion = sesión actual / hoy
+    //      - validado    = false → nace PENDIENTE. Se valida en Recaudos →
+    //                      "Inscripciones pendientes". Sólo al validarla cuenta
+    //                      en el saldo (syncFinancieroSaldo suma validados).
+    //      - validadoPor / fechaValidacion = null (se llenan al validar)
     //      - gestorRecaudo = USUARIOS_ROLES._id del comercial que crea el contrato
     //                       (titular.asesor email → _id; fallback session.user.email).
     //    Si falla NO rompe la creación del contrato (log y se continúa).
@@ -221,7 +223,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
            COALESCE($15::date, CURRENT_DATE), $6::date, 0, $7, $8,
            $9, $10, $11, $12, 0,
            $13, '[]'::jsonb,
-           true, COALESCE($15::date, CURRENT_DATE), $14,
+           false, NULL, NULL,
            $14, 'normal', $16, NOW(), NOW()
          ) RETURNING "_id"`,
         [

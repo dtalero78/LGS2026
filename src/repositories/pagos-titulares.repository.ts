@@ -137,10 +137,14 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
    */
   async findAllWithTitular(opts: {
     estado?: 'validado' | 'pendiente';
+    /** 'regular' (cuotas numCuota>0, default) | 'inscripcion' (cuota #0). */
+    cuotaTipo?: 'regular' | 'inscripcion';
     fechaDesde?: string | null;
     fechaHasta?: string | null;
     search?: string | null;
     gestorRecaudo?: string | null;
+    /** Filtro por medio de pago (panel Bancos). */
+    medioPago?: string | null;
     /** Filtro explícito de plataforma elegido por el usuario (ej 'Chile'). Compone con el scope RBAC. */
     plataforma?: string | null;
     /** Scope de plataforma del usuario logueado (filtra titulares.plataforma) */
@@ -148,8 +152,12 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
     limit: number;
     offset: number;
   }): Promise<{ rows: any[]; total: number }> {
+    // cuota #0 = inscripción (pestaña "Inscripciones pendientes"); resto = cuotas regulares.
+    const cuotaCond = opts.cuotaTipo === 'inscripcion'
+      ? `COALESCE(pt."numCuota", 0) = 0`
+      : `COALESCE(pt."numCuota", 0) > 0`;
     const conds: string[] = [
-      `COALESCE(pt."numCuota", 0) > 0`, // excluye cuota #0
+      cuotaCond,
       // Excluye contratos de prueba (PRB-) — viven solo en /admin/contratos-prueba.
       `COALESCE(p."contrato",'') NOT LIKE 'PRB-%'`,
     ];
@@ -165,6 +173,11 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
     if (opts.gestorRecaudo && opts.gestorRecaudo.trim()) {
       conds.push(`pt."gestorRecaudo" = $${i}`);
       params.push(opts.gestorRecaudo.trim()); i++;
+    }
+
+    if (opts.medioPago && opts.medioPago.trim()) {
+      conds.push(`pt."medioPago" = $${i}`);
+      params.push(opts.medioPago.trim()); i++;
     }
 
     // Filtro explícito de plataforma elegido por el usuario (case-insensitive
@@ -232,6 +245,17 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
     );
 
     return { rows: this.parseMany(rows), total };
+  }
+
+  /** Lista los medios de pago distintos (para el dropdown del panel Bancos). */
+  async findDistinctMediosPago(): Promise<string[]> {
+    const rows = await queryMany<{ medioPago: string }>(
+      `SELECT DISTINCT "medioPago"
+       FROM "PAGOS_TITULARES"
+       WHERE "medioPago" IS NOT NULL AND TRIM("medioPago") <> ''
+       ORDER BY "medioPago"`
+    );
+    return rows.map(r => r.medioPago);
   }
 
   /**

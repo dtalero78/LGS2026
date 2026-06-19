@@ -91,6 +91,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
     icon: BanknotesIcon,
     children: [
       { name: 'Gestión',    href: '/dashboard/recaudos/gestion',    newTab: true },
+      { name: 'Bancos',     href: '/dashboard/recaudos/bancos',     newTab: true },
       { name: 'Asignación', href: '/dashboard/recaudos/asignacion', newTab: true },
     ],
   },
@@ -390,6 +391,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/dashboard/recaudos/gestion': [
       RecaudosPermission.GESTION_VER,
     ],
+    '/dashboard/recaudos/bancos': [
+      RecaudosPermission.BANCOS_VER,
+    ],
     '/dashboard/recaudos/asignacion': [
       RecaudosPermission.ASIGNACION_VER,
     ],
@@ -476,6 +480,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ],
     'Recaudos': [
       RecaudosPermission.GESTION_VER,
+      RecaudosPermission.BANCOS_VER,
       RecaudosPermission.ASIGNACION_VER,
     ],
   }

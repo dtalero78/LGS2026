@@ -244,14 +244,20 @@ export const pagosTitularesService = {
    * Aplica scope de plataforma del usuario logueado (RECAUDOS_JEFE) sobre
    * `PEOPLE.plataforma` del titular. SUPER_ADMIN/ADMIN bypassean.
    */
+  async listMediosPago(): Promise<string[]> {
+    return PagosTitularesRepository.findDistinctMediosPago();
+  },
+
   async listForGestion(
     session: { role: string; email?: string | null },
     opts: {
       estado?: 'validado' | 'pendiente';
+      cuotaTipo?: 'regular' | 'inscripcion';
       fechaDesde?: string | null;
       fechaHasta?: string | null;
       search?: string | null;
       gestorRecaudo?: string | null;
+      medioPago?: string | null;
       plataforma?: string | null;
       page?: number;
       pageSize?: number;
@@ -271,10 +277,12 @@ export const pagosTitularesService = {
 
     const { rows, total } = await PagosTitularesRepository.findAllWithTitular({
       estado: opts.estado,
+      cuotaTipo: opts.cuotaTipo ?? 'regular',
       fechaDesde: opts.fechaDesde ?? null,
       fechaHasta: opts.fechaHasta ?? null,
       search: opts.search ?? null,
       gestorRecaudo: opts.gestorRecaudo ?? null,
+      medioPago: opts.medioPago ?? null,
       plataforma: opts.plataforma ?? null,
       plataformaScope,
       limit: pageSize,
