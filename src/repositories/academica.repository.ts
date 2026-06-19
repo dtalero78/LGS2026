@@ -5,7 +5,8 @@
  */
 
 import 'server-only';
-import { queryOne, queryMany, parseJsonbFields } from '@/lib/postgres';
+import type { PoolClient } from 'pg';
+import { query, queryOne, queryMany, parseJsonbFields } from '@/lib/postgres';
 import { BaseRepository } from './base.repository';
 import { NotFoundError } from '@/lib/errors';
 
@@ -160,6 +161,42 @@ class AcademicaRepositoryClass extends BaseRepository {
        RETURNING *`,
       values
     );
+  }
+
+  /**
+   * Crea el registro académico en WELCOME para un beneficiario recién convertido
+   * desde un titular. Acepta un cliente de transacción opcional para atomicidad.
+   */
+  async createWelcomeRecord(
+    data: {
+      _id: string;
+      numeroId: string;
+      primerNombre: string;
+      segundoNombre?: string | null;
+      primerApellido: string;
+      segundoApellido?: string | null;
+      email?: string | null;
+      celular?: string | null;
+      plataforma?: string | null;
+    },
+    client?: PoolClient
+  ) {
+    const run = client
+      ? (sql: string, p: any[]) => client.query(sql, p)
+      : (sql: string, p: any[]) => query(sql, p);
+    await run(
+      `INSERT INTO "ACADEMICA" (
+         "_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
+         "email", "celular", "nivel", "step", "plataforma", "estadoInactivo",
+         "_createdDate", "_updatedDate"
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'WELCOME','WELCOME',$9,false,NOW(),NOW())`,
+      [
+        data._id, data.numeroId, data.primerNombre, data.segundoNombre ?? null,
+        data.primerApellido, data.segundoApellido ?? null,
+        data.email ?? null, data.celular ?? null, data.plataforma ?? null,
+      ]
+    );
+    return data._id;
   }
 
   /**

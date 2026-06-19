@@ -5,6 +5,7 @@
  */
 
 import 'server-only';
+import type { PoolClient } from 'pg';
 import { query, queryOne, queryMany, parseJsonbFields } from '@/lib/postgres';
 import { BaseRepository } from './base.repository';
 import { NotFoundError } from '@/lib/errors';
@@ -405,6 +406,71 @@ class PeopleRepositoryClass extends BaseRepository {
       `SELECT * FROM "PEOPLE" WHERE "numeroId" = $1 AND "tipoUsuario" = 'BENEFICIARIO' LIMIT 1`,
       [numeroId]
     );
+  }
+
+  // ── Conversión Titular → Beneficiario ──
+
+  /** Titular exacto por contrato + numeroId (para validar la coincidencia). */
+  async findTitularByContratoAndNumeroId(contrato: string, numeroId: string) {
+    const row = await queryOne(
+      `SELECT * FROM "PEOPLE"
+       WHERE "contrato" = $1 AND "numeroId" = $2 AND "tipoUsuario" = 'TITULAR' LIMIT 1`,
+      [contrato, numeroId]
+    );
+    return this.parse(row);
+  }
+
+  /** ¿Ya existe el beneficiario para ese numeroId + contrato? (idempotencia). */
+  async existsBeneficiarioByNumeroIdAndContrato(numeroId: string, contrato: string): Promise<boolean> {
+    const row = await queryOne(
+      `SELECT 1 FROM "PEOPLE"
+       WHERE "numeroId" = $1 AND "contrato" = $2 AND "tipoUsuario" = 'BENEFICIARIO' LIMIT 1`,
+      [numeroId, contrato]
+    );
+    return !!row;
+  }
+
+  /**
+   * Duplica TODAS las columnas de un TITULAR como una nueva fila BENEFICIARIO.
+   * Solo se transforma `tipoUsuario` (TITULAR → BENEFICIARIO); además se asigna
+   * `_id` nuevo, `titularId` = _id del titular y `_createdDate`/`_updatedDate`.
+   * El resto se copia verbatim (incluido JSONB — `INSERT ... SELECT` conserva el
+   * tipo nativo, sin round-trip en JS). Las columnas se leen de information_schema
+   * para que sea robusto ante cambios de esquema.
+   */
+  async duplicateTitularAsBeneficiario(titularId: string, newId: string, client?: PoolClient) {
+    const run = client
+      ? (sql: string, p: any[]) => client.query(sql, p)
+      : (sql: string, p: any[]) => query(sql, p);
+
+    const colsRes = await run(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'PEOPLE'
+       ORDER BY ordinal_position`,
+      []
+    );
+    const cols: string[] = colsRes.rows.map((r: any) => r.column_name);
+
+    // Expresiones SQL que sobrescriben columnas puntuales; el resto se copia tal cual.
+    // Cast explícito ::text — un parámetro suelto en la lista del SELECT no tiene
+    // contexto de tipo y Postgres no puede deducirlo ("inconsistent types").
+    const overrides: Record<string, string> = {
+      _id: '$2::text',
+      tipoUsuario: `'BENEFICIARIO'`,
+      titularId: '$1::text',
+      _createdDate: 'NOW()',
+      _updatedDate: 'NOW()',
+    };
+    const colList = cols.map((c) => `"${c}"`).join(', ');
+    const selectList = cols.map((c) => (overrides[c] ? `${overrides[c]} AS "${c}"` : `"${c}"`)).join(', ');
+
+    const res = await run(
+      `INSERT INTO "PEOPLE" (${colList})
+       SELECT ${selectList} FROM "PEOPLE" WHERE "_id" = $1 AND "tipoUsuario" = 'TITULAR'
+       RETURNING *`,
+      [titularId, newId]
+    );
+    return this.parse(res.rows[0]);
   }
 }
 
