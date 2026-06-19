@@ -35,11 +35,11 @@ class EvaluationsRepositoryClass extends BaseRepository {
    * Excluye: cancelados, no-show, WELCOME, COMPLEMENTARIA.
    * Usa CALENDARIO JOIN para tomar tipo/nivel/step reales del evento.
    *
-   * Ventana semanal: PostgreSQL `date_trunc('week', NOW())` arranca en LUNES
-   * (ISO 8601). Tomamos [lunes 00:00, lunes próxima semana 00:00). Lo que cae
-   * fuera de esa ventana se considera expirado para evaluación.
+   * Ventana semanal: semana ISO (lunes-domingo) en la hora LOCAL del estudiante
+   * ($2 = TZ IANA), no en UTC, para que coincida con la semana que ve en el panel.
+   * Tomamos [lunes 00:00 local, lunes próxima semana 00:00 local).
    */
-  async findEligibleByStudent(academicaId: string) {
+  async findEligibleByStudent(academicaId: string, tz: string) {
     return queryMany<any>(
       `SELECT
          b."_id"                                      AS "bookingId",
@@ -65,13 +65,15 @@ class EvaluationsRepositoryClass extends BaseRepository {
          AND COALESCE(c."tipo", b."tipoEvento", b."tipo", '') IN ('SESSION', 'CLUB')
          AND COALESCE(c."dia", b."fechaEvento") IS NOT NULL
          AND COALESCE(c."dia", b."fechaEvento") <= NOW()
-         AND COALESCE(c."dia", b."fechaEvento") >= date_trunc('week', NOW())
-         AND COALESCE(c."dia", b."fechaEvento") <  date_trunc('week', NOW()) + INTERVAL '7 days'
+         AND (COALESCE(c."dia", b."fechaEvento") AT TIME ZONE $2)
+             >= date_trunc('week', NOW() AT TIME ZONE $2)
+         AND (COALESCE(c."dia", b."fechaEvento") AT TIME ZONE $2)
+             <  date_trunc('week', NOW() AT TIME ZONE $2) + INTERVAL '7 days'
          AND NOT EXISTS (
            SELECT 1 FROM "ACADEMICA_BOOKING_EVALUATIONS" e WHERE e."bookingId" = b."_id"
          )
        ORDER BY COALESCE(c."dia", b."fechaEvento") DESC`,
-      [academicaId]
+      [academicaId, tz]
     );
   }
 

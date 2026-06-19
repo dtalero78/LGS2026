@@ -12,6 +12,7 @@ import { StepOverridesRepository } from '@/repositories/niveles.repository';
 import { ValidationError, ConflictError, NotFoundError, ForbiddenError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 import { queryMany, queryOne } from '@/lib/postgres';
+import { tzForPlataforma } from '@/lib/timezone';
 
 // --- Helpers (mirrors progress.service.ts logic) ---
 
@@ -338,21 +339,16 @@ export async function bookEvent(
     }
   }
 
-  // 6. Check weekly limits
-  const eventDay = eventDiaToUTC(event.dia);
-  const dayOfWeek = eventDay.getDay();
-  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  const weekStart = new Date(eventDay);
-  weekStart.setDate(eventDay.getDate() + mondayOffset);
-  weekStart.setHours(0, 0, 0, 0);
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6);
-  weekEnd.setHours(23, 59, 59, 999);
+  // 6. Check weekly limits — "misma semana" se evalúa en la hora LOCAL del
+  //    estudiante (TZ por plataforma), no en UTC, para que la semana ISO
+  //    (lunes-domingo) coincida con la que el estudiante ve en el panel.
+  const tz = tzForPlataforma(studentData.plataforma);
+  const eventDiaIso = eventDiaToUTC(event.dia).toISOString();
 
   const weeklyCounts = await BookingRepository.countWeeklyBookingsByType(
     studentId,
-    weekStart.toISOString(),
-    weekEnd.toISOString()
+    eventDiaIso,
+    tz
   );
 
   const weeklyMap: Record<string, number> = {};
@@ -379,8 +375,8 @@ export async function bookEvent(
     if (isTraining) {
       const currentTrainings = await BookingRepository.countWeeklyTrainingBookings(
         studentId,
-        weekStart.toISOString(),
-        weekEnd.toISOString()
+        eventDiaIso,
+        tz
       );
       if (currentTrainings >= WEEKLY_TRAINING_LIMIT) {
         throw new ConflictError(`Límite semanal alcanzado: máximo ${WEEKLY_TRAINING_LIMIT} TRAINING por semana`);
@@ -388,10 +384,11 @@ export async function bookEvent(
     }
   }
 
-  // 6. Check no duplicate session on same day
+  // 7. Check no duplicate session on same day — "mismo día" en la hora LOCAL del
+  //    estudiante (no UTC), para no confundir una sesión de las 8 PM con la del
+  //    día siguiente.
   if (eventTipo === 'SESSION') {
-    const dateStr = eventDay.toISOString().split('T')[0];
-    const hasSameDay = await BookingRepository.existsSameDaySession(studentId, dateStr);
+    const hasSameDay = await BookingRepository.existsSameDaySession(studentId, eventDiaIso, tz);
     if (hasSameDay) {
       throw new ConflictError('Ya tienes una sesión agendada para este día');
     }

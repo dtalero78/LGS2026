@@ -504,13 +504,17 @@ class BookingRepositoryClass extends BaseRepository {
     );
   }
 
-  async countWeeklyBookingsByType(studentId: string, weekStart: string, weekEnd: string) {
+  // "Misma semana" = misma semana ISO (lunes-domingo) en la hora LOCAL del
+  // estudiante ($3 = TZ IANA). Se compara contra la semana local del evento que
+  // se intenta agendar ($2 = su `dia`). date_trunc en hora local evita que un
+  // evento domingo-noche / lunes-madrugada caiga en la semana UTC equivocada.
+  async countWeeklyBookingsByType(studentId: string, eventDia: string, tz: string) {
     return queryMany(
       `SELECT COALESCE("tipo", "tipoEvento") as tipo, COUNT(*)::int as count
        FROM "ACADEMICA_BOOKINGS"
        WHERE ("idEstudiante" = $1 OR "studentId" = $1)
-         AND "fechaEvento" >= $2::timestamp
-         AND "fechaEvento" <= $3::timestamp
+         AND date_trunc('week', "fechaEvento" AT TIME ZONE $3)
+             = date_trunc('week', $2::timestamptz AT TIME ZONE $3)
          AND "cancelo" = false
          AND NOT (
            COALESCE("nivel", "tituloONivel") = 'WELCOME'
@@ -518,22 +522,22 @@ class BookingRepositoryClass extends BaseRepository {
            AND ("asistio" = true OR "asistencia" = true)
          )
        GROUP BY COALESCE("tipo", "tipoEvento")`,
-      [studentId, weekStart, weekEnd]
+      [studentId, eventDia, tz]
     );
   }
 
-  async countWeeklyTrainingBookings(studentId: string, weekStart: string, weekEnd: string): Promise<number> {
+  async countWeeklyTrainingBookings(studentId: string, eventDia: string, tz: string): Promise<number> {
     const row = await queryOne<{ count: number }>(
       `SELECT COUNT(*)::int as count
        FROM "ACADEMICA_BOOKINGS"
        WHERE ("idEstudiante" = $1 OR "studentId" = $1)
-         AND "fechaEvento" >= $2::timestamp
-         AND "fechaEvento" <= $3::timestamp
+         AND date_trunc('week', "fechaEvento" AT TIME ZONE $3)
+             = date_trunc('week', $2::timestamptz AT TIME ZONE $3)
          AND "cancelo" = false
          AND (
            COALESCE("nombreEvento", "step", '') ILIKE 'TRAINING%'
          )`,
-      [studentId, weekStart, weekEnd]
+      [studentId, eventDia, tz]
     );
     return row?.count ?? 0;
   }
@@ -550,15 +554,19 @@ class BookingRepositoryClass extends BaseRepository {
     return !!row;
   }
 
-  async existsSameDaySession(studentId: string, dateStr: string): Promise<boolean> {
+  // "Mismo día" = mismo día calendario en la hora LOCAL del estudiante ($3 = TZ
+  // IANA), comparado contra el día local del evento que se intenta agendar
+  // ($2 = su `dia`). Antes usaba DATE("fechaEvento") en UTC, lo que contaba una
+  // sesión de las 8 PM (Colombia) como del día siguiente y bloqueaba agendar.
+  async existsSameDaySession(studentId: string, eventDia: string, tz: string): Promise<boolean> {
     const row = await queryOne(
       `SELECT 1 FROM "ACADEMICA_BOOKINGS"
        WHERE ("idEstudiante" = $1 OR "studentId" = $1)
-         AND DATE("fechaEvento") = $2::date
+         AND ("fechaEvento" AT TIME ZONE $3)::date = ($2::timestamptz AT TIME ZONE $3)::date
          AND COALESCE("tipo", "tipoEvento") = 'SESSION'
          AND "cancelo" = false
        LIMIT 1`,
-      [studentId, dateStr]
+      [studentId, eventDia, tz]
     );
     return !!row;
   }

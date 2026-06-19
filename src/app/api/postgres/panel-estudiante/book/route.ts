@@ -4,6 +4,7 @@ import { resolveStudentFromSession } from '@/services/panel-estudiante.service';
 import { bookEvent } from '@/services/student-booking.service';
 import { isEnabledForEmail, findEvaluablesForStudent } from '@/services/evaluations.service';
 import { ValidationError } from '@/lib/errors';
+import { tzForPlataforma } from '@/lib/timezone';
 
 export const POST = handlerWithAuth(async (request, context, session) => {
   const student = await resolveStudentFromSession(session);
@@ -20,7 +21,7 @@ export const POST = handlerWithAuth(async (request, context, session) => {
   // entran al set de pendientes.
   const email = (session?.user as any)?.email ?? '';
   if (await isEnabledForEmail(email)) {
-    const pendientes = await findEvaluablesForStudent(bookingId);
+    const pendientes = await findEvaluablesForStudent(bookingId, tzForPlataforma((student as any).plataforma));
     if (pendientes.length > 0) {
       throw new ValidationError(
         `Tienes ${pendientes.length} evaluación${pendientes.length > 1 ? 'es' : ''} pendiente${pendientes.length > 1 ? 's' : ''}. Debes evaluarlas antes de agendar una nueva clase.`

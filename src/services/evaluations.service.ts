@@ -22,6 +22,7 @@ import { ValidationError, ForbiddenError, ConflictError, NotFoundError } from '@
 import { ids } from '@/lib/id-generator';
 import { checkProfanity, PROFANITY_MESSAGE } from '@/lib/profanity-filter';
 import { moderateText } from '@/lib/openai-moderation';
+import { DEFAULT_TZ } from '@/lib/timezone';
 
 export type FeatureMode = 'off' | 'beta' | 'on';
 
@@ -91,9 +92,10 @@ export async function isEnabledForEmail(email: string | null | undefined): Promi
   return f.betaUsers.includes(String(email).toLowerCase());
 }
 
-/** Bookings ASISTIDOS sin evaluar de la semana actual — entrada para tarjeta "Sin Evaluar". */
-export async function findEvaluablesForStudent(academicaId: string) {
-  return EvaluationsRepository.findEligibleByStudent(academicaId);
+/** Bookings ASISTIDOS sin evaluar de la semana actual — entrada para tarjeta "Sin Evaluar".
+ *  `tz` = zona local del estudiante (por plataforma) para la ventana semanal lunes-domingo. */
+export async function findEvaluablesForStudent(academicaId: string, tz: string = DEFAULT_TZ) {
+  return EvaluationsRepository.findEligibleByStudent(academicaId, tz);
 }
 
 /**
