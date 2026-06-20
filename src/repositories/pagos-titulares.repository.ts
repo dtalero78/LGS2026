@@ -41,6 +41,8 @@ export interface PagoTitular {
   valorPagado: number | null;
   saldo: number | null;
   descuento: number | null;
+  /** "Valor a Aplicar" = max(0, valorPagado − descuento). Lo que reduce el saldo. */
+  valorAplicado: number | null;
   inscripcion: number | null;
   cuotasTotal: number | null;
   numeroRecibo: string | null;
@@ -85,14 +87,14 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
          "_id", "idPeople", "numeroId", "gestorRecaudo", "plataforma",
          "pagoTercero", "idTercero", "fechaPago", "fechaVencimiento", "fechaReporte",
          "plan", "vlrTotalProg", "numCuota", "cuotasTotal", "valorCuota", "valorPagado",
-         "saldo", "descuento", "inscripcion", "medioPago", "numeroReferencia",
+         "saldo", "descuento", "valorAplicado", "inscripcion", "medioPago", "numeroReferencia",
          "numeroFactura", "documentosAdjuntos", "validado", "createdBy"
        ) VALUES (
          $1, $2, $3, $4, $5,
          $6, $7, $8, $9, $10,
          $11, $12, $13, $14, $15, $16,
-         $17, $18, $19, $20, $21,
-         $22, $23::jsonb, $24, $25
+         $17, $18, $19, $20, $21, $22,
+         $23, $24::jsonb, $25, $26
        )
        RETURNING *`,
       [
@@ -114,6 +116,7 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
         data.valorPagado ?? null,
         data.saldo ?? null,
         data.descuento ?? 0,
+        data.valorAplicado ?? null,
         data.inscripcion ?? null,
         data.medioPago ?? null,
         data.numeroReferencia ?? null,

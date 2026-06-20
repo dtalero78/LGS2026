@@ -226,14 +226,14 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
         `INSERT INTO "PAGOS_TITULARES" (
            "_id", "idPeople", "numeroId", "gestorRecaudo", "plataforma",
            "fechaPago", "fechaVencimiento", "numCuota", "cuotasTotal", "vlrTotalProg",
-           "valorCuota", "valorPagado", "inscripcion", "saldo", "descuento",
+           "valorCuota", "valorPagado", "inscripcion", "saldo", "descuento", "valorAplicado",
            "medioPago", "documentosAdjuntos",
            "validado", "fechaValidacion", "validadoPor",
            "createdBy", "tipoCartera", "plan", "_createdDate", "_updatedDate"
          ) VALUES (
            $1, $2, $3, $4, $5,
            COALESCE($6::date, CURRENT_DATE), $7::date, 0, $8, $9,
-           $10, $11, $12, $13, 0,
+           $10, $11, $12, $13, 0, $11,
            $14, '[]'::jsonb,
            true, COALESCE($6::date, CURRENT_DATE), 'SISTEMA',
            $15, 'normal', $16, NOW(), NOW()

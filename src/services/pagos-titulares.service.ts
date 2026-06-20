@@ -316,14 +316,13 @@ export const pagosTitularesService = {
     }
 
     // Saldo del pago = "Saldo después de pago" en el wizard
-    // (= Saldo a la Fecha actual − (Valor a Pagar − Descuento)).
+    // (= Saldo a la Fecha actual − Valor a Aplicar, donde Valor a Aplicar = Valor a Pagar).
+    // El descuento NO reduce el saldo (es informativo: "Valor Pagado Descuento").
     // Saldo a la Fecha lo obtenemos de FINANCIEROS.saldo (mantenido al día
     // por syncFinancieroSaldo). Para cuota#0 no aplica — esa fila se inserta
     // directamente en /api/postgres/contracts y /api/admin/migrar-contrato
     // con su propia lógica; este path es para cuotas posteriores.
     const valorPagadoNum = toNum(input.valorPagado);
-    const descuentoNum   = toNum(input.descuento);
-    const valorAplicar   = Math.max(0, valorPagadoNum - descuentoNum);
 
     let saldoAFecha = 0;
     const titularContrato = (titular as any).contrato as string | undefined;
@@ -334,7 +333,7 @@ export const pagosTitularesService = {
       );
       saldoAFecha = toNum(finRow?.saldo);
     }
-    const saldo = Math.max(0, saldoAFecha - valorAplicar);
+    const saldo = Math.max(0, saldoAFecha - valorPagadoNum);
 
     // Si el wizard no manda fechaReporte (clientes viejos), default hoy
     // local del server (la diferencia con la TZ del cliente es de ±1 día,
@@ -359,6 +358,7 @@ export const pagosTitularesService = {
       valorPagado: input.valorPagado ?? null,
       saldo,
       descuento: input.descuento ?? 0,
+      valorAplicado: valorPagadoNum, // "Valor a Aplicar" = Valor a Pagar (lo que reduce el saldo)
       inscripcion: input.inscripcion ?? null,
       medioPago: input.medioPago ?? null,
       numeroReferencia: input.numeroReferencia ?? null,

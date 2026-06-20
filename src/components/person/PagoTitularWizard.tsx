@@ -18,6 +18,8 @@ interface PagoTitularWizardProps {
     gestorRecaudo?: string | null
     primerNombre?: string
     primerApellido?: string
+    /** Tipo Plan del titular (PEOPLE.plan) — se muestra read-only y se guarda en el pago. */
+    plan?: string | null
   }
   /** Display label of gestor recaudo to show in read-only field. */
   gestorLabel?: string | null
@@ -154,8 +156,8 @@ function formatMoney(v: string): string {
 }
 
 function MoneyInput({
-  id, label, value, onChange, required = false, readOnly = false,
-}: { id: string; label: string; value: string; onChange: (v: string) => void; required?: boolean; readOnly?: boolean }) {
+  id, label, value, onChange, required = false, readOnly = false, highlight = false,
+}: { id: string; label: string; value: string; onChange: (v: string) => void; required?: boolean; readOnly?: boolean; highlight?: boolean }) {
   return (
     <div>
       <label htmlFor={id} className="block text-sm font-medium text-gray-700">
@@ -176,8 +178,9 @@ function MoneyInput({
             onChange(cleaned)
           }}
           className={
-            `w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 ` +
-            (readOnly ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : '')
+            `w-full pl-7 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 ` +
+            (readOnly ? 'bg-gray-100 text-gray-600 cursor-not-allowed border-gray-300 '
+              : highlight ? 'bg-blue-50 border-blue-300 ' : 'border-gray-300 ')
           }
           placeholder="0"
         />
@@ -256,6 +259,7 @@ export default function PagoTitularWizard({
     setForm({
       ...empty(),
       plataforma: titular.plataforma || '',
+      plan: titular.plan || '',   // Plan read-only = Tipo Plan del titular (PEOPLE.plan)
       ...computeAutoDefaults(),
     })
     draftRestored.current = true
@@ -288,7 +292,7 @@ export default function PagoTitularWizard({
   const discardDraft = () => {
     localStorage.removeItem(draftKey)
     delete (window as any).__pagoDraft
-    setForm({ ...empty(), plataforma: titular.plataforma || '', ...computeAutoDefaults() })
+    setForm({ ...empty(), plataforma: titular.plataforma || '', plan: titular.plan || '', ...computeAutoDefaults() })
     setShowDraftBanner(false)
     draftRestored.current = true
   }
@@ -305,12 +309,13 @@ export default function PagoTitularWizard({
   const saldoFechaNum   = Math.max(0, Number(saldoActual ?? 0))
 
   // ── Cálculos en vivo de esta captura ──────────────────────────────────
-  // "Valor a Aplicar" = lo que se descuenta del saldo en este pago
-  // "Saldo después de pago" = lo que quedará debiendo tras este pago
+  // "Valor Pagado Descuento" = Valor a Pagar − Descuento (valorAplicar)
+  // "Valor a Aplicar"        = Valor a Pagar (lo que reduce el saldo)
+  // "Saldo después de pago"  = Saldo a la Fecha − Valor a Aplicar (= − Valor a Pagar)
   // El endpoint server-side recomputa `saldo` de forma autoritativa antes
   // de insertar (no confía en el cliente).
-  const valorAplicar = Math.max(0, toNum(form.valorPagado) - toNum(form.descuento))
-  const saldoDespues = Math.max(0, saldoFechaNum - valorAplicar)
+  const valorAplicar = Math.max(0, toNum(form.valorPagado) - toNum(form.descuento)) // "Valor Pagado Descuento"
+  const saldoDespues = Math.max(0, saldoFechaNum - toNum(form.valorPagado))          // − Valor a Pagar
 
   // Upload de documentos (mismo flujo que UploadDocButton)
   const uploadFiles = async (files: File[]) => {
@@ -536,20 +541,13 @@ export default function PagoTitularWizard({
             </div>
           </div>
 
-          {/* Fila 3 — Plan + Saldo a la Fecha + Valor Cuota */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Fila 3 — Plan + Saldo a la Fecha + Valor Cuota + Valor a Pagar (una sola línea) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label htmlFor="plan" className="block text-sm font-medium text-gray-700">Plan</label>
-              <select
-                id="plan" value={form.plan}
-                onChange={e => setForm(f => ({ ...f, plan: e.target.value }))}
-                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-              >
-                <option value="">Seleccione</option>
-                <option value="Contado">Contado</option>
-                <option value="Credito">Credito</option>
-                <option value="Colaborador">Colaborador</option>
-              </select>
+              <label className="block text-sm font-medium text-gray-700">Plan</label>
+              <div className="mt-1 px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm font-medium text-gray-800">
+                {form.plan || '—'}
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Saldo a la Fecha</label>
@@ -559,20 +557,26 @@ export default function PagoTitularWizard({
             </div>
             <MoneyInput id="valorCuota" label="Valor Cuota"
               value={form.valorCuota} onChange={() => {}} readOnly />
-          </div>
-
-          {/* Fila 4 — Cálculo del pago: edit + computed */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <MoneyInput id="valorPagado" label="Valor a Pagar"
               value={form.valorPagado}
-              onChange={v => setForm(f => ({ ...f, valorPagado: v }))} required />
+              onChange={v => setForm(f => ({ ...f, valorPagado: v }))} required highlight />
+          </div>
+
+          {/* Fila 5 — Descuento + computados (mismos cálculos actuales) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <MoneyInput id="descuento" label="Descuento"
               value={form.descuento}
               onChange={v => setForm(f => ({ ...f, descuento: v }))} />
             <div>
+              <label className="block text-sm font-medium text-gray-700">Valor Pagado Descuento</label>
+              <div className="mt-1 px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm font-semibold text-gray-800">
+                $ {new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(valorAplicar)}
+              </div>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700">Valor a Aplicar</label>
               <div className="mt-1 px-3 py-2 bg-amber-50 border border-amber-200 rounded-md text-sm font-semibold text-amber-900">
-                $ {new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(valorAplicar)}
+                $ {new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(toNum(form.valorPagado))}
               </div>
             </div>
             <div>

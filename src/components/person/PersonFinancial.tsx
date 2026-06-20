@@ -727,6 +727,7 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
             gestorRecaudo: gestorRecaudoId,
             primerNombre: person.primerNombre,
             primerApellido: person.primerApellido,
+            plan: (person as any).plan ?? null,
           }}
           gestorLabel={currentGestor ? `${currentGestor.nombre} · ${ROLE_LABEL[currentGestor.rol] || currentGestor.rol}` : null}
           existingPagos={pagos}
