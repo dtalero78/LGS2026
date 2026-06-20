@@ -139,6 +139,10 @@ function CrearContratoContent() {
   const [showBenefConfirm, setShowBenefConfirm] = useState(false);
   // Confirmación al CREAR si nadie tomará clases (sin beneficiarios y titular no beneficiario)
   const [showNoBenefConfirm, setShowNoBenefConfirm] = useState(false);
+  // Confirmación al crear cuando SÍ hay beneficiarios o el titular es beneficiario.
+  const [showCreateConfirm, setShowCreateConfirm] = useState(false);
+  // Aviso de beneficiario(s) en blanco (sin datos) al intentar crear.
+  const [showBlankBenefWarning, setShowBlankBenefWarning] = useState(false);
   const draftRestored = useRef(false);
   const saveTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -319,6 +323,10 @@ function CrearContratoContent() {
   };
 
   // Validate current step
+  // Email válido: contiene @ con texto antes/después + dominio con punto, y SIN
+  // espacios (el regex rechaza cualquier espacio, incluidos inicio/fin).
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
   const validateStep = (step: number): boolean => {
     switch (step) {
       case 1:
@@ -337,7 +345,7 @@ function CrearContratoContent() {
                titular.celular !== '';
       case 4:
         return titular.ingresos !== '' &&
-               titular.email !== '' &&
+               isValidEmail(titular.email) &&
                titular.genero !== '';
       case 5:
         return titular.referenciaUno !== '' &&
@@ -367,7 +375,12 @@ function CrearContratoContent() {
   // Handle next button
   const handleNext = () => {
     if (!validateStep(currentStep)) {
-      setError('Por favor complete todos los campos requeridos');
+      // Mensaje específico para email inválido en el paso 4.
+      if (currentStep === 4 && titular.email !== '' && !isValidEmail(titular.email)) {
+        setError('El correo no es válido. Debe contener @ (correo@dominio.com) y no llevar espacios.');
+      } else {
+        setError('Por favor complete todos los campos requeridos');
+      }
       return;
     }
 
@@ -399,17 +412,54 @@ function CrearContratoContent() {
 
   // Guard del botón "Crear Contrato": si nadie tomará clases (sin beneficiarios
   // y titular no es beneficiario), confirma antes de crear.
-  const handleSubmit = () => {
-    if (beneficiarios.length === 0 && !titularEsBeneficiario) {
+  // Beneficiario "en blanco" = sin nombre, sin apellido y sin ID.
+  const isBeneficiarioBlank = (b: Beneficiario) =>
+    !(b.primerNombre || '').trim() && !(b.primerApellido || '').trim() && !(b.numeroId || '').trim();
+
+  // Continúa al flujo normal de confirmación con la lista dada de beneficiarios.
+  const continuarConfirmacion = (lista: Beneficiario[]) => {
+    if (lista.length === 0 && !titularEsBeneficiario) {
       setShowNoBenefConfirm(true);
+    } else {
+      setShowCreateConfirm(true);
+    }
+  };
+
+  const handleSubmit = () => {
+    // 1) ¿Hay beneficiario(s) en blanco? → avisar (llenar o borrar).
+    if (beneficiarios.some(isBeneficiarioBlank)) {
+      setShowBlankBenefWarning(true);
       return;
     }
-    doSubmit();
+    // 2) Flujo normal de confirmación.
+    continuarConfirmacion(beneficiarios);
+  };
+
+  // "Borrar y continuar": elimina los beneficiarios en blanco y sigue al flujo.
+  const descartarBlancosYContinuar = () => {
+    const limpios = beneficiarios.filter(b => !isBeneficiarioBlank(b));
+    setBeneficiarios(limpios);
+    setShowBlankBenefWarning(false);
+    continuarConfirmacion(limpios);
   };
 
   // Creación real del contrato.
   const doSubmit = async () => {
     setShowNoBenefConfirm(false);
+    setShowCreateConfirm(false);
+    setShowBlankBenefWarning(false);
+
+    // Validación de correos (defensa también si vienen de un borrador guardado).
+    if (titular.email !== '' && !isValidEmail(titular.email)) {
+      setError('El correo del titular no es válido. Debe contener @ (correo@dominio.com) y no llevar espacios.');
+      return;
+    }
+    const benefMailMalo = beneficiarios.find(b => (b.email ?? '').trim() !== '' && !isValidEmail((b.email ?? '').trim()));
+    if (benefMailMalo) {
+      setError(`El correo del beneficiario ${benefMailMalo.primerNombre || ''} no es válido. Debe contener @ y no llevar espacios.`);
+      return;
+    }
+
     setLoading(true);
     setError('');
     setSuccess('');
@@ -776,7 +826,7 @@ function CrearContratoContent() {
                   <input
                     type="tel"
                     value={titular.celular}
-                    onChange={(e) => setTitular({...titular, celular: e.target.value})}
+                    onChange={(e) => setTitular({...titular, celular: e.target.value.replace(/\D/g, '')})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     placeholder="Número sin prefijo"
                   />
@@ -788,7 +838,7 @@ function CrearContratoContent() {
                   <input
                     type="tel"
                     value={titular.telefono}
-                    onChange={(e) => setTitular({...titular, telefono: e.target.value})}
+                    onChange={(e) => setTitular({...titular, telefono: e.target.value.replace(/\D/g, '')})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
@@ -807,8 +857,9 @@ function CrearContratoContent() {
                   </label>
                   <input
                     type="text"
-                    value={titular.ingresos}
-                    onChange={(e) => setTitular({...titular, ingresos: e.target.value})}
+                    value={titular.ingresos ? formatNumber(titular.ingresos) : ''}
+                    onChange={(e) => setTitular({...titular, ingresos: e.target.value.replace(/\D/g, '')})}
+                    placeholder="0"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
@@ -819,7 +870,8 @@ function CrearContratoContent() {
                   <input
                     type="email"
                     value={titular.email}
-                    onChange={(e) => setTitular({...titular, email: e.target.value})}
+                    onChange={(e) => setTitular({...titular, email: e.target.value.replace(/\s/g, '')})}
+                    placeholder="correo@dominio.com"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
@@ -901,7 +953,7 @@ function CrearContratoContent() {
                       <input
                         type="tel"
                         value={titular.telRefUno}
-                        onChange={(e) => setTitular({...titular, telRefUno: e.target.value})}
+                        onChange={(e) => setTitular({...titular, telRefUno: e.target.value.replace(/\D/g, '')})}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                       />
                     </div>
@@ -940,7 +992,7 @@ function CrearContratoContent() {
                       <input
                         type="tel"
                         value={titular.telRefDos}
-                        onChange={(e) => setTitular({...titular, telRefDos: e.target.value})}
+                        onChange={(e) => setTitular({...titular, telRefDos: e.target.value.replace(/\D/g, '')})}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                       />
                     </div>
@@ -1205,7 +1257,8 @@ function CrearContratoContent() {
                           <input
                             type="email"
                             value={beneficiario.email}
-                            onChange={(e) => updateBeneficiario(index, 'email', e.target.value)}
+                            onChange={(e) => updateBeneficiario(index, 'email', e.target.value.replace(/\s/g, ''))}
+                            placeholder="correo@dominio.com"
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                           />
                         </div>
@@ -1214,7 +1267,7 @@ function CrearContratoContent() {
                           <input
                             type="tel"
                             value={beneficiario.celular}
-                            onChange={(e) => updateBeneficiario(index, 'celular', e.target.value)}
+                            onChange={(e) => updateBeneficiario(index, 'celular', e.target.value.replace(/\D/g, ''))}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                             placeholder="Número sin prefijo"
                           />
@@ -1347,6 +1400,95 @@ function CrearContratoContent() {
                   className="w-full px-2 py-1 text-xs text-gray-400 hover:text-gray-600"
                 >
                   Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmación de creación: muestra estado del titular + lista de beneficiarios */}
+        {showCreateConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
+              <h3 className="text-lg font-bold text-gray-900">Confirmar creación del contrato</h3>
+
+              {/* Estado del titular como beneficiario — en la parte superior */}
+              {titularEsBeneficiario ? (
+                <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm font-semibold text-green-800">
+                  ✅ El titular SERÁ beneficiario (también tomará clases).
+                </div>
+              ) : (
+                <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2 text-sm text-gray-600">
+                  El titular NO está marcado como beneficiario (no tomará clases).
+                </div>
+              )}
+
+              {/* Lista de beneficiarios */}
+              {beneficiarios.length > 0 ? (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">
+                    Beneficiarios a inscribir ({beneficiarios.length}):
+                  </p>
+                  <ul className="divide-y divide-gray-100 border border-gray-200 rounded-lg max-h-60 overflow-y-auto">
+                    {beneficiarios.map((b, idx) => (
+                      <li key={idx} className="px-3 py-2 text-sm flex items-center justify-between gap-2">
+                        <span className="font-medium text-gray-900 truncate">
+                          {`${b.primerNombre || ''} ${b.primerApellido || ''}`.trim() || '—'}
+                        </span>
+                        <span className="text-xs text-gray-500 whitespace-nowrap">ID {b.numeroId || '—'}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-600">
+                  No hay beneficiarios adicionales; solo el titular quedará inscrito.
+                </p>
+              )}
+
+              <div className="flex flex-col gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => { setShowCreateConfirm(false); doSubmit(); }}
+                  className="w-full px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
+                >
+                  Confirmar y crear contrato
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateConfirm(false)}
+                  className="w-full px-4 py-2 text-sm font-medium text-gray-800 bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Aviso: beneficiario(s) en blanco al intentar crear */}
+        {showBlankBenefWarning && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
+              <h3 className="text-lg font-bold text-gray-900">⚠️ Beneficiario sin información</h3>
+              <p className="text-sm text-gray-700">
+                Hay <strong>{beneficiarios.filter(isBeneficiarioBlank).length} beneficiario(s) sin datos</strong>.
+                ¿Desea llenar sus datos o borrarlo(s)?
+              </p>
+              <div className="flex flex-col gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowBlankBenefWarning(false)}
+                  className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                >
+                  Llenar datos
+                </button>
+                <button
+                  type="button"
+                  onClick={descartarBlancosYContinuar}
+                  className="w-full px-4 py-2 text-sm font-medium text-gray-800 bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  Borrar y continuar
                 </button>
               </div>
             </div>
