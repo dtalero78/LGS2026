@@ -41,6 +41,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Resolver el TITULAR del contrato para enlazar titularId + heredar la fecha
+    // de inicio de contrato. Así el beneficiario nace completo (no depende de la
+    // aprobación para tener estos datos). Si el contrato no tiene titular, ambos
+    // quedan null.
+    let titularId: string | null = null
+    let inicioContrato: string | null = null
+    if (body.contrato) {
+      const titRes = await query(
+        `SELECT "_id", COALESCE("inicioContrato"::text, "fechaContrato"::text) AS inicio
+         FROM "PEOPLE" WHERE "contrato" = $1 AND "tipoUsuario" = 'TITULAR'
+         ORDER BY "_createdDate" LIMIT 1`,
+        [body.contrato]
+      )
+      if (titRes.rows[0]) {
+        titularId = titRes.rows[0]._id
+        inicioContrato = titRes.rows[0].inicio
+      }
+    }
+
     // Generate unique ID
     const personId = `per_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
@@ -49,11 +68,11 @@ export async function POST(request: NextRequest) {
       `INSERT INTO "PEOPLE" (
         "_id", "numeroId", "primerNombre", "segundoNombre",
         "primerApellido", "segundoApellido", "email", "celular",
-        "fechaNacimiento", "tipoUsuario", "contrato", "nivel", "step",
+        "fechaNacimiento", "tipoUsuario", "contrato", "titularId", "inicioContrato", "nivel", "step",
         "plataforma", "aprobacion", "estadoInactivo",
         "origen", "_createdDate", "_updatedDate"
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, 'BENEFICIARIO', $10, $11, $12, $13, 'Pendiente', false,
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, 'BENEFICIARIO', $10, $11, $12::date, $13, $14, $15, 'Pendiente', false,
         'POSTGRES', NOW(), NOW()
       )
       RETURNING *`,
@@ -68,6 +87,8 @@ export async function POST(request: NextRequest) {
         body.celular || null,
         body.fechaNacimiento || null,
         body.contrato || null,
+        titularId,
+        inicioContrato,
         body.nivel || null,
         body.step || null,
         body.plataforma || null
