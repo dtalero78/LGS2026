@@ -17,6 +17,8 @@ import { ids } from '@/lib/id-generator';
 import { query, queryOne } from '@/lib/postgres';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { computePlataformaScope, getSessionPlataforma, buildPlataformaWhereSql, type PlataformaScope } from '@/lib/recaudos-scope';
+import { spacesClient, SPACES_BUCKET, SPACES_CDN } from '@/lib/spaces';
+import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
 
@@ -422,6 +424,32 @@ export const pagosTitularesService = {
 
     const updated = await PagosTitularesRepository.appendDocumentos(id, clean);
     if (!updated) throw new ValidationError('No se pudo adjuntar la documentación');
+    return updated;
+  },
+
+  /**
+   * Elimina un documento adjunto del pago (por su `url`), incluso si el pago
+   * está validado (solo evidencia de soporte). Best-effort: también borra el
+   * objeto en DO Spaces si la url pertenece a nuestro bucket.
+   */
+  async removeDocumento(id: string, url: string): Promise<PagoTitular> {
+    const existing = await PagosTitularesRepository.findById(id);
+    if (!existing) throw new NotFoundError('PAGOS_TITULARES', id);
+    const u = (url || '').trim();
+    if (!u) throw new ValidationError('url del documento requerida');
+
+    const updated = await PagosTitularesRepository.removeDocumento(id, u);
+    if (!updated) throw new ValidationError('No se pudo eliminar el documento');
+
+    // Best-effort: borrar el archivo de Spaces (si es de nuestro bucket).
+    try {
+      if (u.startsWith(SPACES_CDN + '/')) {
+        const key = decodeURIComponent(u.slice(SPACES_CDN.length + 1));
+        await spacesClient.send(new DeleteObjectCommand({ Bucket: SPACES_BUCKET, Key: key }));
+      }
+    } catch (err: any) {
+      console.warn(`[pagos-titulares] no se pudo borrar el objeto de Spaces: ${err?.message || err}`);
+    }
     return updated;
   },
 

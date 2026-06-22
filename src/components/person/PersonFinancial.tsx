@@ -128,6 +128,27 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
     }
   }
 
+  // Eliminar un documento adjunto del pago (en caso de error). Quita la entrada
+  // del array y borra el archivo de Spaces (best-effort en el backend).
+  const handleDeleteDoc = async (url: string) => {
+    if (!docsModal) return
+    if (!window.confirm('¿Eliminar este documento del pago? Esta acción no se puede deshacer.')) return
+    try {
+      const res = await fetch(`/api/postgres/pagos-titulares/${docsModal.pago._id}/documentos`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+      const j = await res.json()
+      if (!res.ok) throw new Error(j?.error || 'Error eliminando documento')
+      toast.success('Documento eliminado')
+      setDocsModal({ pago: j.pago })
+      loadPagos()
+    } catch (err: any) {
+      toast.error(`No se pudo eliminar: ${err?.message || ''}`)
+    }
+  }
+
   const openDocsPicker = () => {
     const input = document.createElement('input')
     input.type = 'file'
@@ -841,9 +862,21 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                           <p className="text-sm font-medium text-gray-900 truncate">{d.nombre || `Documento ${i + 1}`}</p>
                           <p className="text-[11px] text-gray-500">{d.tipo || 'archivo'}{d.fechaSubida ? ` · ${new Date(d.fechaSubida).toLocaleDateString('es')}` : ''}</p>
                         </div>
-                        <a href={d.url} target="_blank" rel="noopener noreferrer" className="shrink-0 inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700">
-                          <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" /> Abrir
-                        </a>
+                        <div className="shrink-0 flex items-center gap-1.5">
+                          <a href={d.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700">
+                            <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" /> Abrir
+                          </a>
+                          {canRegistrarPago && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteDoc(d.url)}
+                              title="Eliminar documento"
+                              className="inline-flex items-center px-2 py-1 text-xs font-medium text-red-600 bg-red-50 rounded hover:bg-red-100"
+                            >
+                              <TrashIcon className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       {isImg && (
                         <a href={d.url} target="_blank" rel="noopener noreferrer" className="block mt-2">

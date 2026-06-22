@@ -291,6 +291,26 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
   }
 
   /**
+   * Quita del array `documentosAdjuntos` el elemento cuyo `url` coincide.
+   * Permitido aun en pagos validados (solo evidencia, no datos financieros).
+   */
+  async removeDocumento(id: string, url: string): Promise<PagoTitular | null> {
+    const row = await queryOne<PagoTitular>(
+      `UPDATE "PAGOS_TITULARES"
+       SET "documentosAdjuntos" = COALESCE((
+             SELECT jsonb_agg(elem)
+             FROM jsonb_array_elements(COALESCE("documentosAdjuntos", '[]'::jsonb)) elem
+             WHERE elem->>'url' <> $2
+           ), '[]'::jsonb),
+           "_updatedDate" = NOW()
+       WHERE "_id" = $1
+       RETURNING *`,
+      [id, url]
+    );
+    return this.parse(row);
+  }
+
+  /**
    * Lista de titulares ASIGNADOS a gestores de recaudo (page Asignación).
    *
    * Devuelve un row por titular con agregaciones de sus pagos:

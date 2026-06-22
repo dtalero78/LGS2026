@@ -19,3 +19,11 @@ export const POST = handlerWithAuth(async (req, ctx, session) => {
   const pago = await pagosTitularesService.addDocumentos(ctx.params.id, body?.documentos);
   return successResponse({ pago });
 });
+
+// DELETE { url } → quita un documento adjunto del pago (en caso de error).
+export const DELETE = handlerWithAuth(async (req, ctx, session) => {
+  await requirePermission(session, PersonPermission.PAGOS_REGISTRAR);
+  const body = await req.json();
+  const pago = await pagosTitularesService.removeDocumento(ctx.params.id, body?.url);
+  return successResponse({ pago });
+});
