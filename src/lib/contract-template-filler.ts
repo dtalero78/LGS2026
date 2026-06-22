@@ -88,6 +88,20 @@ export function fillContractTemplate(
       `---`;
   }
 
+  // "Saldo a pagar" del contrato = saldo a la FIRMA = totalPlan − inscripción
+  // (valor contractual fijo, lo que se financia en cuotas). NO se usa el
+  // FINANCIEROS.saldo dinámico: desde que la inscripción (cuota #0) nace
+  // PENDIENTE, ese saldo incluye la inscripción hasta que Recaudos la valide,
+  // lo que haría aparecer el total sin descontar en el contrato.
+  const _parseNum = (v: any): number | null => {
+    if (v == null) return null;
+    const n = Number(String(v).replace(/[^0-9.-]/g, ''));
+    return Number.isFinite(n) ? n : null;
+  };
+  const _totalPlanNum = _parseNum(financial?.totalPlan);
+  const _inscNum = _parseNum(financial?.pagoInscripcion);
+  const _saldoFirma = _totalPlanNum != null ? Math.max(0, _totalPlanNum - (_inscNum ?? 0)) : null;
+
   // Build data map
   const data: Record<string, string> = {
     contrato: titular?.contrato || '',
@@ -110,7 +124,7 @@ export function fillContractTemplate(
     beneficiarios: beneficiariosText,
     totalPlan: financial?.totalPlan != null ? String(financial.totalPlan) : '',
     pagoInscripcion: financial?.pagoInscripcion != null ? String(financial.pagoInscripcion) : '',
-    saldo: financial?.saldo != null ? String(financial.saldo) : '',
+    saldo: _saldoFirma != null ? String(_saldoFirma) : (financial?.saldo != null ? String(financial.saldo) : ''),
     numeroCuotas: financial?.numeroCuotas != null ? String(financial.numeroCuotas) : '',
     valorCuota: financial?.valorCuota != null ? String(financial.valorCuota) : '',
     formaPago: financial?.formaPago || '',
