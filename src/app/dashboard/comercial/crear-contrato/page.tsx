@@ -754,7 +754,7 @@ function CrearContratoContent() {
                       className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                     />
                     <label htmlFor="titularEsBeneficiario" className="ml-2 block text-lg font-bold text-gray-900 cursor-pointer">
-                      ¿Este titular será beneficiario? (tomará clases)
+                      ¿Este titular será beneficiario? (tomará el programa)
                     </label>
                     <span className="invisible group-hover:visible absolute left-0 top-full mt-1 bg-gray-800 text-white text-sm rounded px-3 py-1.5 whitespace-nowrap z-10">
                       Marque esta opción si el titular también tomará clases de inglés
