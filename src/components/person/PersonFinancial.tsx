@@ -242,6 +242,15 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
 
   const currentGestor = recaudoUsers.find(u => u._id === gestorRecaudoId) || null
 
+  // Asesor Comercial que creó el contrato (PEOPLE.asesor guarda su email).
+  // Se resuelve a nombre vía displayUsers (incluye COMERCIAL); si no se halla,
+  // se muestra el valor crudo (email).
+  const asesorRaw = ((person as any).asesor || '').toString().trim()
+  const asesorUser = asesorRaw
+    ? displayUsers.find(u => (u.email || '').toLowerCase() === asesorRaw.toLowerCase()) || null
+    : null
+  const asesorNombre = asesorUser?.nombre || asesorRaw || ''
+
   const openAssignModal = () => {
     setSelectedUserId(gestorRecaudoId || '')
     setShowAssignModal(true)
@@ -476,6 +485,18 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">💰 Información de Pagos</h3>
         <div className="bg-white border border-gray-200 rounded-lg p-6">
+          {/* Asesor Comercial que hizo el contrato (only for TITULAR) */}
+          {isTitular && (
+            <div className="mb-4 pb-4 border-b border-gray-200">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Asesor Comercial</label>
+              {asesorNombre ? (
+                <span className="text-sm font-semibold text-gray-900">{asesorNombre}</span>
+              ) : (
+                <p className="text-sm text-gray-400 italic">—</p>
+              )}
+            </div>
+          )}
+
           {/* Ejecutivo de Recaudos badge (only for TITULAR) */}
           {isTitular && (
             <div className="mb-4 pb-4 border-b border-gray-200">

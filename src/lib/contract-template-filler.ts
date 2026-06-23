@@ -74,8 +74,8 @@ export function fillContractTemplate(
 
     const ejecutivoLineas =
       (ejecutivoComercial && (ejecutivoComercial.nombre || ejecutivoComercial.email))
-        ? `Ejecutivo Comercial: ${ejecutivoComercial.nombre || ''}\n` +
-          `Correo del ejecutivo: ${ejecutivoComercial.email || ''}\n`
+        ? `Asesor Comercial: ${ejecutivoComercial.nombre || ''}\n` +
+          `Correo del asesor: ${ejecutivoComercial.email || ''}\n`
         : '';
 
     firmaText =

@@ -56,7 +56,7 @@ const CAMPOS_TITULAR: FieldDef[] = [
   { campo: 'cargo', label: 'Cargo' },
   { campo: 'genero', label: 'Genero', tipo: 'select', opciones: ['Masculino', 'Femenino', 'Otro'] },
   { campo: 'medioPago', label: 'Medio de Pago' },
-  { campo: 'asesor', label: 'Asesor' },
+  { campo: 'asesor', label: 'Asesor Comercial' },
 ]
 
 const CAMPOS_REFERENCIAS: FieldDef[] = [
