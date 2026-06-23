@@ -405,6 +405,31 @@ npm run build                  # Production build with memory optimization
 npm run start                 # Start production server on port 3001
 ```
 
+## Running DB Scripts / Managed DB Access
+
+**Importante**: `DATABASE_URL` en `.env.local` apunta a la **BD de PRODUCCIÓN** (Digital Ocean Managed PostgreSQL, cluster `08d65733-6811-420c-a0a1-a71d6b3b9c6d`). No hay BD local — el dev server y todos los scripts hablan con producción. Por eso, si el dev server muestra "connection timeout" / "no me deja ver en local", es casi siempre el **firewall** (la IP no está whitelisteada), no un bug.
+
+### Acceso por Trusted Sources (firewall)
+La BD solo acepta conexiones desde IPs en su whitelist. La IP del entorno de desarrollo **cambia entre sesiones**, así que el flujo para correr cualquier script o usar el dev server con datos es:
+
+```bash
+MYIP=$(curl -s https://api.ipify.org)                                              # IP actual
+doctl databases firewalls append 08d65733-6811-420c-a0a1-a71d6b3b9c6d --rule ip_addr:$MYIP
+# ... esperar ~8-10s a que propague, luego correr el script / usar el dev server ...
+# al terminar, REMOVER la IP (higiene de seguridad):
+doctl databases firewalls list 08d65733-6811-420c-a0a1-a71d6b3b9c6d | awk -v ip="$MYIP" '$0~ip{print $1}' \
+  | xargs -I{} doctl databases firewalls remove 08d65733-6811-420c-a0a1-a71d6b3b9c6d --uuid {}
+```
+
+Conexión típica en los scripts: `new Client({ connectionString: DATABASE_URL.replace(/[?&]sslmode=[^&]*/g,''), ssl: { rejectUnauthorized: false } })`.
+
+### Convención de scripts (`scripts/*.js`)
+- **Idempotentes** y **dry-run por defecto**: corren sin escribir hasta pasar **`--apply`** (algunos además exigen `--motivo`). Las migraciones de esquema usan `ADD COLUMN IF NOT EXISTS` / `CREATE TABLE IF NOT EXISTS`.
+- Escrituras de datos en **transacción** (`BEGIN`/`COMMIT`/`ROLLBACK`); para validar SQL sin persistir, envolver en `BEGIN … ROLLBACK`.
+- Leen `.env.local` con `require('dotenv').config({ path: '.env.local' })`.
+- **Gitignored**: `scripts/diag-*.js` (diagnósticos ad-hoc) y `*.csv` (datos sensibles) — los CSV de entrada/reporte viven solo en `docs/` local.
+- Catálogo navegable de todos los scripts (utilidad, parámetros, lectura/escritura) en **`/admin/scripts/consulta`** (lee `scripts/` del FS, nunca los ejecuta).
+
 ## Key Implementation Details
 
 ### Authentication System
