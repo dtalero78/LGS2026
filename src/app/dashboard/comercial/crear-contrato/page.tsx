@@ -416,8 +416,44 @@ function CrearContratoContent() {
   const isBeneficiarioBlank = (b: Beneficiario) =>
     !(b.primerNombre || '').trim() && !(b.primerApellido || '').trim() && !(b.numeroId || '').trim();
 
+  // Valida que ningún beneficiario repita el correo del titular ni de otro
+  // beneficiario (BLOQUEANTE). Devuelve mensaje de error o null.
+  const validarCorreosBeneficiarios = (lista: Beneficiario[]): string | null => {
+    const norm = (s?: string) => (s || '').trim().toLowerCase();
+    const titEmail = norm(titular.email);
+    const vistos = new Set<string>();
+    for (const b of lista) {
+      const e = norm(b.email);
+      if (!e) continue;
+      const nombre = `${b.primerNombre || ''} ${b.primerApellido || ''}`.trim() || 'sin nombre';
+      // Excepción: si se marcó "Titular será beneficiario", se permite que un
+      // beneficiario tenga el mismo correo del titular.
+      if (titEmail && e === titEmail && !titularEsBeneficiario) {
+        return `El correo del beneficiario ${nombre} es el mismo del titular. Cada beneficiario debe tener un correo distinto.`;
+      }
+      if (vistos.has(e)) {
+        return `Dos beneficiarios tienen el mismo correo (${b.email}). Cada beneficiario debe tener un correo distinto.`;
+      }
+      vistos.add(e);
+    }
+    return null;
+  };
+
+  // Beneficiarios cuyo celular coincide con el del titular (solo ADVERTENCIA).
+  const benefsMismoCelularTitular = (lista: Beneficiario[]): Beneficiario[] => {
+    const tc = (titular.celular || '').replace(/\D/g, '');
+    if (!tc) return [];
+    return lista.filter(b => {
+      const bc = (b.celular || '').replace(/\D/g, '');
+      return bc && bc === tc;
+    });
+  };
+
   // Continúa al flujo normal de confirmación con la lista dada de beneficiarios.
   const continuarConfirmacion = (lista: Beneficiario[]) => {
+    // Correos duplicados (titular o entre beneficiarios) → bloquea.
+    const errCorreo = validarCorreosBeneficiarios(lista);
+    if (errCorreo) { setError(errCorreo); return; }
     if (lista.length === 0 && !titularEsBeneficiario) {
       setShowNoBenefConfirm(true);
     } else {
@@ -459,6 +495,9 @@ function CrearContratoContent() {
       setError(`El correo del beneficiario ${benefMailMalo.primerNombre || ''} no es válido. Debe contener @ y no llevar espacios.`);
       return;
     }
+    // Correos duplicados (titular/entre beneficiarios) — bloquea (excepción: titular beneficiario).
+    const errDupCorreo = validarCorreosBeneficiarios(beneficiarios);
+    if (errDupCorreo) { setError(errDupCorreo); return; }
 
     setLoading(true);
     setError('');
@@ -1445,6 +1484,16 @@ function CrearContratoContent() {
                   No hay beneficiarios adicionales; solo el titular quedará inscrito.
                 </p>
               )}
+
+              {/* Advertencia (no bloquea): beneficiario(s) con el mismo celular del titular */}
+              {(() => {
+                const dup = benefsMismoCelularTitular(beneficiarios)
+                return dup.length > 0 ? (
+                  <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+                    ⚠️ {dup.length === 1 ? 'Un beneficiario tiene' : `${dup.length} beneficiarios tienen`} el mismo celular que el titular ({titular.celular}). Verifica que sea correcto — puedes continuar.
+                  </div>
+                ) : null
+              })()}
 
               <div className="flex flex-col gap-2 pt-1">
                 <button
