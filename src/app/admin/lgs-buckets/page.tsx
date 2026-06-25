@@ -13,6 +13,7 @@ import toast from 'react-hot-toast'
 import {
   CircleStackIcon, ArrowPathIcon, MagnifyingGlassIcon,
   ArrowDownTrayIcon, ArrowTopRightOnSquareIcon, UserCircleIcon, ArrowUpTrayIcon,
+  PencilSquareIcon, XMarkIcon,
 } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
@@ -52,11 +53,12 @@ async function descargar(url: string, filename: string) {
   }
 }
 
-function FotoCard({ item, tipo, canEdit, onReplaced }: {
+function FotoCard({ item, tipo, canEdit, onReplaced, onEditData }: {
   item: FotoItem
   tipo: 'advisor' | 'usuario'
   canEdit: boolean
   onReplaced: (id: string, url: string, filename: string | null) => void
+  onEditData?: () => void
 }) {
   const [broken, setBroken] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -108,7 +110,19 @@ function FotoCard({ item, tipo, canEdit, onReplaced }: {
         )}
       </div>
       <div className="p-2 flex-1 flex flex-col gap-1">
-        <p className="text-xs font-semibold text-gray-900 truncate" title={item.nombre}>{item.nombre}</p>
+        {onEditData ? (
+          <button
+            type="button"
+            onClick={onEditData}
+            title="Editar datos del advisor"
+            className="text-left text-xs font-semibold text-indigo-700 hover:text-indigo-900 hover:underline truncate inline-flex items-center gap-1"
+          >
+            <PencilSquareIcon className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{item.nombre}</span>
+          </button>
+        ) : (
+          <p className="text-xs font-semibold text-gray-900 truncate" title={item.nombre}>{item.nombre}</p>
+        )}
         {item.numeroId ? <p className="text-[11px] text-gray-500 truncate">ID {item.numeroId}</p> : null}
         {item.email ? <p className="text-[11px] text-gray-500 truncate" title={item.email}>{item.email}</p> : null}
         {item.nivel ? <p className="text-[11px] text-gray-400 truncate">{item.nivel}{item.step ? ` · ${item.step}` : ''}</p> : null}
@@ -158,6 +172,182 @@ function FotoCard({ item, tipo, canEdit, onReplaced }: {
   )
 }
 
+interface AdvisorForm {
+  primerNombre: string
+  primerApellido: string
+  email: string
+  numeroId: string
+  telefono: string
+  pais: string
+  zoom: string
+  domicilio: string
+  fechaNacimiento: string
+  clave: string
+}
+
+const EMPTY_FORM: AdvisorForm = {
+  primerNombre: '', primerApellido: '', email: '', numeroId: '', telefono: '',
+  pais: '', zoom: '', domicilio: '', fechaNacimiento: '', clave: '',
+}
+
+/** Modal para editar los datos del advisor (los mismos que captura /nuevo-advisor). */
+function AdvisorEditModal({ advisorId, advisorNombre, onClose, onSaved }: {
+  advisorId: string
+  advisorNombre: string
+  onClose: () => void
+  onSaved: (id: string, nombre: string, email: string) => void
+}) {
+  const [form, setForm] = useState<AdvisorForm>(EMPTY_FORM)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [tieneUsuarioRol, setTieneUsuarioRol] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    ;(async () => {
+      setLoading(true)
+      try {
+        const data = await api.get<{ advisor: AdvisorForm & { tieneUsuarioRol: boolean } }>(`/api/postgres/advisors/${advisorId}`)
+        if (!active) return
+        const a = data.advisor
+        setForm({
+          primerNombre: a.primerNombre || '', primerApellido: a.primerApellido || '',
+          email: a.email || '', numeroId: a.numeroId || '', telefono: a.telefono || '',
+          pais: a.pais || '', zoom: a.zoom || '', domicilio: a.domicilio || '',
+          fechaNacimiento: a.fechaNacimiento || '', clave: '',
+        })
+        setTieneUsuarioRol(a.tieneUsuarioRol)
+      } catch (err) {
+        handleApiError(err, 'No se pudieron cargar los datos del advisor')
+        if (active) onClose()
+      } finally {
+        if (active) setLoading(false)
+      }
+    })()
+    return () => { active = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [advisorId])
+
+  const set = (k: keyof AdvisorForm, v: string) => setForm(f => ({ ...f, [k]: v }))
+  const onlyDigits = (v: string) => v.replace(/\D/g, '')
+  const noSpaces = (v: string) => v.replace(/\s/g, '')
+  const idClean = (v: string) => v.toUpperCase().replace(/[^A-Z0-9-]/g, '')
+
+  const save = async () => {
+    setError(null)
+    if (!form.primerNombre.trim()) return setError('El primer nombre es requerido')
+    if (!form.primerApellido.trim()) return setError('El primer apellido es requerido')
+    const email = form.email.trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setError('El correo no es válido. Debe contener @ y un dominio, sin espacios')
+    if (form.clave && form.clave.length < 4) return setError('La clave debe tener al menos 4 caracteres')
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/postgres/advisors/${advisorId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, email }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json?.success) throw new Error(json?.details || json?.error || `Error ${res.status}`)
+      toast.success('Datos del advisor actualizados')
+      onSaved(advisorId, json.nombre || `${form.primerNombre} ${form.primerApellido}`.trim(), json.email || email)
+    } catch (err: any) {
+      setError(err?.message || 'No se pudo guardar')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 sticky top-0 bg-white">
+          <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+            <PencilSquareIcon className="h-5 w-5 text-indigo-600" /> Editar advisor
+          </h2>
+          <button type="button" onClick={onClose} title="Cerrar" className="text-gray-400 hover:text-gray-600">
+            <XMarkIcon className="h-5 w-5" />
+          </button>
+        </div>
+
+        {loading ? (
+          <p className="p-10 text-sm text-gray-400 italic text-center">Cargando…</p>
+        ) : (
+          <div className="p-5 space-y-3">
+            <p className="text-[11px] text-gray-400">{advisorNombre}</p>
+            {!tieneUsuarioRol && (
+              <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+                Este advisor no tiene cuenta de login asociada (USUARIOS_ROLES). Se editan solo los datos de ADVISORS; el número de identificación y la clave no se guardarán.
+              </p>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Primer nombre *" value={form.primerNombre} onChange={v => set('primerNombre', v)} />
+              <Field label="Primer apellido *" value={form.primerApellido} onChange={v => set('primerApellido', v)} />
+            </div>
+            <Field label="Email *" value={form.email} onChange={v => set('email', noSpaces(v))} type="email" />
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Número de identificación" value={form.numeroId} onChange={v => set('numeroId', idClean(v))} disabled={!tieneUsuarioRol} />
+              <Field label="Celular / Teléfono" value={form.telefono} onChange={v => set('telefono', onlyDigits(v))} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="País" value={form.pais} onChange={v => set('pais', v)} />
+              <Field label="Fecha de nacimiento" value={form.fechaNacimiento} onChange={v => set('fechaNacimiento', v)} type="date" />
+            </div>
+            <Field label="Link de Zoom" value={form.zoom} onChange={v => set('zoom', v)} />
+            <Field label="Domicilio" value={form.domicilio} onChange={v => set('domicilio', v)} />
+            <Field
+              label={tieneUsuarioRol ? 'Nueva clave (dejar en blanco para no cambiar)' : 'Clave (requiere cuenta de login)'}
+              value={form.clave}
+              onChange={v => set('clave', noSpaces(v))}
+              type="password"
+              disabled={!tieneUsuarioRol}
+              placeholder={tieneUsuarioRol ? '••••' : ''}
+            />
+            <p className="text-[11px] text-gray-400">La foto se cambia con el botón "Reemplazar" de la tarjeta.</p>
+
+            {error && (
+              <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1.5">{error}</p>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button type="button" onClick={onClose} disabled={saving} className="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 disabled:opacity-50">
+                Cancelar
+              </button>
+              <button type="button" onClick={save} disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700 disabled:opacity-50">
+                {saving ? 'Guardando…' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function Field({ label, value, onChange, type = 'text', disabled = false, placeholder = '' }: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  type?: string
+  disabled?: boolean
+  placeholder?: string
+}) {
+  return (
+    <label className="block">
+      <span className="block text-[11px] font-medium text-gray-600 mb-0.5">{label}</span>
+      <input
+        type={type}
+        value={value}
+        disabled={disabled}
+        placeholder={placeholder}
+        onChange={e => onChange(e.target.value)}
+        className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md text-sm disabled:bg-gray-100 disabled:text-gray-400"
+      />
+    </label>
+  )
+}
+
 export default function LgsBucketsPage() {
   const { hasPermission } = usePermissions()
   const canEdit = hasPermission(MantenimientoPermission.LGS_BUCKETS_EDITAR)
@@ -174,6 +364,7 @@ export default function LgsBucketsPage() {
   const [total, setTotal] = useState(0)
 
   const [loading, setLoading] = useState(false)
+  const [editing, setEditing] = useState<FotoItem | null>(null)
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const fetchAdvisors = useCallback(async () => {
@@ -230,6 +421,11 @@ export default function LgsBucketsPage() {
     const upd = (arr: FotoItem[]) => arr.map(it => it.id === id ? { ...it, url, filename } : it)
     if (tab === 'advisors') setAdvisors(upd)
     else setUsuarios(upd)
+  }
+
+  const handleAdvisorSaved = (id: string, nombre: string, email: string) => {
+    setAdvisors(arr => arr.map(it => it.id === id ? { ...it, nombre, email } : it))
+    setEditing(null)
   }
 
   return (
@@ -320,6 +516,7 @@ export default function LgsBucketsPage() {
                   tipo={tab === 'advisors' ? 'advisor' : 'usuario'}
                   canEdit={canEdit}
                   onReplaced={handleReplaced}
+                  onEditData={tab === 'advisors' && canEdit ? () => setEditing(it) : undefined}
                 />
               ))}
             </div>
@@ -351,6 +548,15 @@ export default function LgsBucketsPage() {
                 </button>
               </div>
             </div>
+          )}
+
+          {editing && (
+            <AdvisorEditModal
+              advisorId={editing.id}
+              advisorNombre={editing.nombre}
+              onClose={() => setEditing(null)}
+              onSaved={handleAdvisorSaved}
+            />
           )}
         </div>
       </PermissionGuard>
