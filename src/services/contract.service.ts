@@ -209,19 +209,25 @@ export async function deactivateOnHold(studentId: string) {
     throw new ValidationError('Student does not have a contract end date');
   }
 
-  // Calculate paused days
+  // Calculate paused days — solo se acreditan los días REALMENTE pausados.
+  // Reintegro temprano (desactivación manual ANTES de fechaFinOnHold): el
+  // estudiante quiere reincorporarse antes, así que el período a sumar a
+  // finalContrato es (hoy − fechaOnHold), NO el período planeado completo.
+  // Desactivación en/después de fechaFinOnHold (período cumplido, o cron/login
+  // que corren cuando hoy ≥ fin): efectivo = fechaFinOnHold → período completo.
   const fechaOnHold = new Date(person.fechaOnHold);
   const fechaFinOnHold = new Date(person.fechaFinOnHold);
-  const daysPaused = Math.ceil(
-    (fechaFinOnHold.getTime() - fechaOnHold.getTime()) / (1000 * 60 * 60 * 24)
-  );
+  const today = new Date();
+  const effectiveEnd = today < fechaFinOnHold ? today : fechaFinOnHold;
+  const daysPaused = Math.max(0, Math.ceil(
+    (effectiveEnd.getTime() - fechaOnHold.getTime()) / (1000 * 60 * 60 * 24)
+  ));
 
   // Extend contract automatically
   const currentFinal = new Date(person.finalContrato);
   const newFinal = new Date(currentFinal);
   newFinal.setDate(newFinal.getDate() + daysPaused);
 
-  const today = new Date();
   const newVigencia = Math.ceil(
     (newFinal.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
   );
