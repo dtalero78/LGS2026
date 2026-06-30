@@ -59,7 +59,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
     icon: SpeakerWaveIcon,
     children: [
       { name: 'Welcome Session', href: '/dashboard/servicio/welcome-session' },
-      { name: 'Lista de Sesiones', href: '/dashboard/servicio/lista-sesiones' },
+      { name: 'Asistencia Sesiones', href: '/dashboard/servicio/lista-sesiones' },
       { name: 'Usuarios sin perfil creado', href: '/dashboard/servicio/sin-registro' },
       {
         name: 'Exam. Intern.', isSubmenu: true, children: [

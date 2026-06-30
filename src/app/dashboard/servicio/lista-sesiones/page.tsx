@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
 import { ServicioPermission } from '@/types/permissions'
@@ -24,15 +24,29 @@ interface ClassSession {
   plataforma?: string
 }
 
+// Fecha local de hoy en formato YYYY-MM-DD (para los inputs date)
+const localToday = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+// Suma N días a una fecha YYYY-MM-DD (para que el rango "hasta" sea inclusivo,
+// ya que el backend filtra c."dia" < endDate de forma exclusiva).
+const addDays = (dateStr: string, n: number) => {
+  const d = new Date(dateStr + 'T00:00:00')
+  d.setDate(d.getDate() + n)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export default function ListaSesionesPage() {
   const [sessions, setSessions] = useState<ClassSession[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Estados para filtros
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  // Estados para filtros — por defecto el ÚLTIMO DÍA (hoy)
+  const [startDate, setStartDate] = useState(localToday())
+  const [endDate, setEndDate] = useState(localToday())
   const [attendanceFilter, setAttendanceFilter] = useState<'all' | 'attended' | 'not-attended'>('all')
+  const [nivelFilter, setNivelFilter] = useState('all')
   const [searchApellido, setSearchApellido] = useState('')
 
   const loadSessions = async () => {
@@ -43,7 +57,9 @@ export default function ListaSesionesPage() {
       // Build query params for GET request
       const params = new URLSearchParams()
       if (startDate) params.set('startDate', startDate)
-      if (endDate) params.set('endDate', endDate)
+      // El backend usa c."dia" < endDate (exclusivo), así que enviamos +1 día
+      // para que la fecha "hasta" quede incluida (cubre todo ese día).
+      if (endDate) params.set('endDate', addDays(endDate, 1))
 
       const hasDateFilter = startDate || endDate
       const logMessage = hasDateFilter
@@ -91,8 +107,17 @@ export default function ListaSesionesPage() {
     }
   }
 
+  // Carga inicial: muestra el último día (hoy) al entrar
+  useEffect(() => {
+    loadSessions()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Niveles disponibles en los datos cargados (para el dropdown de filtro)
+  const nivelesDisponibles = [...new Set(sessions.map((s) => s.nivel).filter(Boolean) as string[])].sort()
+
   // Función para filtrar y ordenar sesiones
-  // El filtro de fecha ahora se hace en el backend, solo filtramos por apellido y asistencia
+  // El filtro de fecha ahora se hace en el backend, solo filtramos por apellido, nivel y asistencia
   const filteredEvents = sessions
     .filter((event) => {
       // Filtro por apellido
@@ -101,6 +126,11 @@ export default function ListaSesionesPage() {
         if (!apellidoCompleto.includes(searchApellido.toLowerCase().trim())) {
           return false
         }
+      }
+
+      // Filtro por nivel
+      if (nivelFilter !== 'all' && (event.nivel || '') !== nivelFilter) {
+        return false
       }
 
       // Filtro por asistencia
@@ -127,9 +157,10 @@ export default function ListaSesionesPage() {
   console.log(`📊 Total sesiones: ${sessions.length}, Filtradas: ${filteredEvents.length}`)
 
   const clearFilters = () => {
-    setStartDate('')
-    setEndDate('')
+    setStartDate(localToday())
+    setEndDate(localToday())
     setAttendanceFilter('all')
+    setNivelFilter('all')
     setSearchApellido('')
   }
 
@@ -149,7 +180,7 @@ export default function ListaSesionesPage() {
       <PermissionGuard permission={ServicioPermission.SESIONES_CARGAR_EVENTOS}>
         <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">📚 Lista de Sesiones</h1>
+          <h1 className="text-2xl font-bold text-gray-900">📋 Asistencia Sesiones</h1>
         </div>
 
         <div className="card">
@@ -157,12 +188,13 @@ export default function ListaSesionesPage() {
             <div className="flex items-center justify-end gap-3">
               <button
                 onClick={() => exportToExcel(filteredEvents, [
-                  { header: 'Nombre', accessor: (e) => `${e.primerNombre} ${e.primerApellido}`.trim() },
-                  { header: 'Celular', accessor: (e) => e.celular || '' },
+                  { header: 'Nivel', accessor: (e) => e.nivel || 'N/A' },
                   { header: 'Fecha Evento', accessor: (e) => formatDateTime(e.fechaEvento) },
+                  { header: 'Usuario', accessor: (e) => `${e.primerNombre} ${e.primerApellido}`.trim() },
                   { header: 'Step', accessor: (e) => e.step || 'N/A' },
+                  { header: 'Advisor', accessor: (e) => e.advisor || 'N/A' },
                   { header: 'Asistencia', accessor: (e) => e.asistencia === true ? 'Asistió' : e.asistencia === false ? 'No asistió' : new Date(e.fechaEvento) > new Date() ? 'Pendiente' : 'No asistió' },
-                ], `lista-sesiones-${new Date().toISOString().split('T')[0]}`)}
+                ], `asistencia-sesiones-${new Date().toISOString().split('T')[0]}`)}
                 disabled={filteredEvents.length === 0}
                 className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg shadow-sm transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -199,7 +231,7 @@ export default function ListaSesionesPage() {
           <div className="card-content">
             {/* Filtros */}
             <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+              <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
                 <div>
                   <label htmlFor="searchApellido" className="block text-sm font-medium text-gray-700 mb-1">
                     Buscar por apellido
@@ -212,6 +244,23 @@ export default function ListaSesionesPage() {
                     placeholder="Apellido..."
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
                   />
+                </div>
+
+                <div>
+                  <label htmlFor="nivelFilter" className="block text-sm font-medium text-gray-700 mb-1">
+                    Nivel
+                  </label>
+                  <select
+                    id="nivelFilter"
+                    value={nivelFilter}
+                    onChange={(e) => setNivelFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  >
+                    <option value="all">Todos</option>
+                    {nivelesDisponibles.map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -292,10 +341,11 @@ export default function ListaSesionesPage() {
                 <table className="table">
                   <thead className="table-header">
                     <tr>
-                      <th className="table-header-cell">Nombre Completo</th>
-                      <th className="table-header-cell">Celular</th>
+                      <th className="table-header-cell">Nivel</th>
                       <th className="table-header-cell">Fecha Evento</th>
+                      <th className="table-header-cell">Usuario</th>
                       <th className="table-header-cell">Step</th>
+                      <th className="table-header-cell">Advisor</th>
                       <th className="table-header-cell">Asistencia</th>
                     </tr>
                   </thead>
@@ -308,14 +358,9 @@ export default function ListaSesionesPage() {
                           className="hover:bg-gray-50 cursor-pointer transition-colors duration-150"
                         >
                           <td className="table-cell">
-                            <div className="text-sm font-medium text-gray-900">
-                              {`${session.primerNombre} ${session.primerApellido}`.trim()}
-                            </div>
-                          </td>
-                          <td className="table-cell">
-                            <div className="text-sm text-gray-500">
-                              {session.celular || 'N/A'}
-                            </div>
+                            <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                              {session.nivel || 'N/A'}
+                            </span>
                           </td>
                           <td className="table-cell">
                             <div className="text-sm text-gray-500">
@@ -323,9 +368,19 @@ export default function ListaSesionesPage() {
                             </div>
                           </td>
                           <td className="table-cell">
+                            <div className="text-sm font-medium text-gray-900">
+                              {`${session.primerNombre} ${session.primerApellido}`.trim()}
+                            </div>
+                          </td>
+                          <td className="table-cell">
                             <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
                               {session.step || 'N/A'}
                             </span>
+                          </td>
+                          <td className="table-cell">
+                            <div className="text-sm text-gray-500">
+                              {session.advisor || 'N/A'}
+                            </div>
                           </td>
                           <td className="table-cell">
                             <span className={`badge ${
@@ -359,7 +414,7 @@ export default function ListaSesionesPage() {
                       </tr>
                     ) : (
                       <tr>
-                        <td colSpan={5} className="table-cell text-center py-8">
+                        <td colSpan={6} className="table-cell text-center py-8">
                           <div className="flex items-center justify-center">
                             <svg className="animate-spin h-8 w-8 text-blue-400" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
