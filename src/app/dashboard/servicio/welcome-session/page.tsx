@@ -112,9 +112,12 @@ export default function WelcomeSessionPage() {
         return false
       }
       if (attendanceFilter === 'not-attended') {
-        // No asistió = asistencia false OR (asistencia undefined Y fecha ya pasó)
+        // "No asistió" = asistencia false, o sin marcar (null/undefined) y el
+        // evento ya pasó. Se usa `== null` (no `=== undefined`) para capturar
+        // también los bookings con asistio NULL — coherente con el badge, que
+        // muestra "No asistió" en esos mismos casos.
         const eventHasPassed = new Date(event.fechaEvento) <= new Date()
-        if (!(event.asistencia === false || (event.asistencia === undefined && eventHasPassed))) {
+        if (!(event.asistencia === false || (event.asistencia == null && eventHasPassed))) {
           return false
         }
       }
@@ -257,10 +260,19 @@ export default function WelcomeSessionPage() {
                   </select>
                 </div>
 
-                <div>
+                <div className="flex items-end gap-2">
                   <button
+                    type="button"
+                    onClick={loadWelcomeEvents}
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    {loading ? 'Aplicando...' : 'Aplicar filtros'}
+                  </button>
+                  <button
+                    type="button"
                     onClick={clearFilters}
-                    className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
                     Limpiar filtros
                   </button>

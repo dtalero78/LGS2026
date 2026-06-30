@@ -381,9 +381,27 @@ class BookingRepositoryClass extends BaseRepository {
          COUNT(*) OVER (PARTITION BY COALESCE(ab."studentId", ab."idEstudiante")) as "totalSesionesWelcome"
        FROM "ACADEMICA_BOOKINGS" ab
        LEFT JOIN "CALENDARIO" c ON (c."_id" = ab."eventoId" OR c."_id" = ab."idEvento")
-       LEFT JOIN "ACADEMICA" a ON (ab."studentId" = a."_id" OR ab."idEstudiante" = a."_id")
-       LEFT JOIN "PEOPLE" p ON a."numeroId" = p."numeroId"
-         AND (p."tipoUsuario" = 'BENEFICIARIO' OR p."tipoUsuario" = 'BENEFICIARIA')
+       -- LATERAL + LIMIT 1: garantizan 1 fila por booking. Sin esto, cuando un
+       -- estudiante tiene registros DUPLICADOS en ACADEMICA o PEOPLE (mismo
+       -- numeroId, caso BENEFICIARIO duplicado), el JOIN plano multiplicaba la
+       -- fila del booking → personas repetidas en la tabla y conteo de sesiones
+       -- inflado (COUNT OVER contaba las filas duplicadas).
+       LEFT JOIN LATERAL (
+         SELECT aa."primerNombre", aa."primerApellido", aa."segundoNombre",
+                aa."segundoApellido", aa."celular", aa."numeroId", aa."plataforma"
+         FROM "ACADEMICA" aa
+         WHERE aa."_id" = ab."studentId" OR aa."_id" = ab."idEstudiante"
+         LIMIT 1
+       ) a ON true
+       LEFT JOIN LATERAL (
+         SELECT pp."primerNombre", pp."primerApellido", pp."segundoNombre",
+                pp."segundoApellido", pp."celular", pp."numeroId", pp."plataforma"
+         FROM "PEOPLE" pp
+         WHERE pp."numeroId" = a."numeroId"
+           AND (pp."tipoUsuario" = 'BENEFICIARIO' OR pp."tipoUsuario" = 'BENEFICIARIA')
+         ORDER BY pp."_createdDate" ASC
+         LIMIT 1
+       ) p ON true
        WHERE ${conditions.join(' AND ')}
        ORDER BY COALESCE(c."dia", ab."fechaEvento") ASC, ab."primerApellido" ASC, ab."primerNombre" ASC`,
       params
