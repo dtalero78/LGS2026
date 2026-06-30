@@ -109,11 +109,14 @@ export default function ListaSesionesPage() {
     }
   }
 
-  // Carga inicial: muestra el último día (hoy) al entrar
+  // Carga automática al montar (default = ayer) y cada vez que cambia el rango
+  // de fechas — así la tabla SIEMPRE refleja el rango seleccionado sin tener
+  // que pulsar "Cargar Sesiones". Nivel/asistencia/apellido se filtran en
+  // cliente (instantáneo). El filtro de fecha es backend, por eso re-fetch.
   useEffect(() => {
     loadSessions()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [startDate, endDate])
 
   // Niveles disponibles en los datos cargados (para el dropdown de filtro)
   const nivelesDisponibles = [...new Set(sessions.map((s) => s.nivel).filter(Boolean) as string[])].sort()
@@ -140,9 +143,11 @@ export default function ListaSesionesPage() {
         return false
       }
       if (attendanceFilter === 'not-attended') {
-        // No asistió = asistencia false OR (asistencia undefined Y fecha ya pasó)
+        // "No asistió" = asistencia false, o sin marcar (null/undefined) y el
+        // evento ya pasó. `== null` captura también asistio NULL — coherente
+        // con el badge, que muestra "No asistió" en esos casos.
         const eventHasPassed = new Date(event.fechaEvento) <= new Date()
-        if (!(event.asistencia === false || (event.asistencia === undefined && eventHasPassed))) {
+        if (!(event.asistencia === false || (event.asistencia == null && eventHasPassed))) {
           return false
         }
       }
