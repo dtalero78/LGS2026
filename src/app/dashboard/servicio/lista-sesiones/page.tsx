@@ -36,15 +36,17 @@ const addDays = (dateStr: string, n: number) => {
   d.setDate(d.getDate() + n)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
+// Último día ANTES de hoy (= ayer). Es el default del informe.
+const localYesterday = () => addDays(localToday(), -1)
 
 export default function ListaSesionesPage() {
   const [sessions, setSessions] = useState<ClassSession[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Estados para filtros — por defecto el ÚLTIMO DÍA (hoy)
-  const [startDate, setStartDate] = useState(localToday())
-  const [endDate, setEndDate] = useState(localToday())
+  // Estados para filtros — por defecto el último día ANTES de hoy (ayer)
+  const [startDate, setStartDate] = useState(localYesterday())
+  const [endDate, setEndDate] = useState(localYesterday())
   const [attendanceFilter, setAttendanceFilter] = useState<'all' | 'attended' | 'not-attended'>('all')
   const [nivelFilter, setNivelFilter] = useState('all')
   const [searchApellido, setSearchApellido] = useState('')
@@ -157,8 +159,8 @@ export default function ListaSesionesPage() {
   console.log(`📊 Total sesiones: ${sessions.length}, Filtradas: ${filteredEvents.length}`)
 
   const clearFilters = () => {
-    setStartDate(localToday())
-    setEndDate(localToday())
+    setStartDate(localYesterday())
+    setEndDate(localYesterday())
     setAttendanceFilter('all')
     setNivelFilter('all')
     setSearchApellido('')
