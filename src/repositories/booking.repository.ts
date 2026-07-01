@@ -430,8 +430,13 @@ class BookingRepositoryClass extends BaseRepository {
       paramIdx++;
     }
 
+    // DISTINCT ON (ab."_id"): 1 fila por booking. Sin esto, cuando un estudiante
+    // tiene registros DUPLICADOS en PEOPLE/ACADEMICA (mismo numeroId, BENEFICIARIO
+    // duplicado), el JOIN plano multiplicaba la fila → bookings repetidos en la
+    // tabla con `_id` repetido → colisión de `key` en React (al cambiar el filtro
+    // dejaba filas viejas pegadas, p.ej. "Asistió" bajo el filtro "No asistió").
     return queryMany(
-      `SELECT
+      `SELECT DISTINCT ON (ab."_id")
          ab."_id",
          COALESCE(ab."primerNombre", a."primerNombre", p."primerNombre", '') as "primerNombre",
          COALESCE(ab."primerApellido", a."primerApellido", p."primerApellido", '') as "primerApellido",
@@ -452,7 +457,7 @@ class BookingRepositoryClass extends BaseRepository {
        LEFT JOIN "PEOPLE" p ON a."numeroId" = p."numeroId" AND p."tipoUsuario" = 'BENEFICIARIO'
        LEFT JOIN "ADVISORS" adv ON c."advisor" = adv."_id"
        WHERE ${conditions.join(' AND ')}
-       ORDER BY c."dia" DESC, ab."primerApellido" ASC, ab."primerNombre" ASC`,
+       ORDER BY ab."_id", c."dia" DESC`,
       params
     );
   }
