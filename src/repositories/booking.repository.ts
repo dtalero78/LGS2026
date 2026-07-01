@@ -444,7 +444,16 @@ class BookingRepositoryClass extends BaseRepository {
          COALESCE(p."segundoApellido", a."segundoApellido", '') as "segundoApellido",
          COALESCE(p."celular", a."celular", '') as "celular",
          c."dia" as "fechaEvento",
-         ab."asistio" as "asistencia",
+         -- La verdad de asistencia es asistio OR asistencia (mismas dos columnas
+         -- que usa el diagnóstico "¿Cómo voy?"). En datos migrados de Wix quedó
+         -- asistencia=true con asistio NULL/false, así que leer solo asistio
+         -- marcaba como "No asistió" a quienes SÍ asistieron. Preserva NULL
+         -- (ambas sin marcar) para que el badge muestre "Pendiente".
+         CASE
+           WHEN ab."asistio" IS TRUE OR ab."asistencia" IS TRUE THEN true
+           WHEN ab."asistio" IS FALSE OR ab."asistencia" IS FALSE THEN false
+           ELSE NULL
+         END as "asistencia",
          COALESCE(p."numeroId", a."numeroId", '') as "numeroId",
          COALESCE(ab."studentId", ab."idEstudiante") as "idEstudiante",
          COALESCE(c."nivel", ab."nivel") as "nivel",
