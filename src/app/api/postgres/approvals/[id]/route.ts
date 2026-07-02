@@ -45,11 +45,17 @@ export const PUT = handlerWithAuth(async (request, { params }) => {
 
   const estadoOperativo = APROBACION_TO_ESTADO[estadoFinal] ?? null;
 
+  // Al aprobar, sella fechaIngreso con el día de hoy — pero solo la primera vez
+  // (COALESCE no pisa una fecha existente). Consistente con /people/[id]/approve.
+  const sealFecha = estadoFinal === 'Aprobado'
+    ? `, "fechaIngreso" = COALESCE("fechaIngreso", NOW())`
+    : '';
+
   const result = await query(
     `UPDATE "PEOPLE"
      SET "aprobacion" = $1,
          "estado" = COALESCE($2, "estado"),
-         "_updatedDate" = NOW()
+         "_updatedDate" = NOW()${sealFecha}
      WHERE "_id" = $3 RETURNING *`,
     [estadoFinal, estadoOperativo, params.id]
   );
