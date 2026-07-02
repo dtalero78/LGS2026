@@ -37,6 +37,7 @@ interface Contrato {
   hashConsentimiento?: string
   documentacion?: string[]
   _createdDate: Date
+  fechaIngreso?: string | Date | null
   fechaProximaGestion?: Date
 }
 
@@ -299,7 +300,8 @@ export default function AprobacionPage() {
                 { header: 'Celular', accessor: (c) => c.celular },
                 { header: 'Email', accessor: (c) => c.email },
                 { header: 'Estado', accessor: (c) => getEstadoDisplay(c).text },
-                { header: 'Fecha', accessor: (c) => new Date(c._createdDate).toLocaleDateString() },
+                { header: 'Fecha Contrato', accessor: (c) => new Date(c._createdDate).toLocaleDateString() },
+                { header: 'Fecha Aprobación', accessor: (c) => c.fechaIngreso ? new Date(c.fechaIngreso).toLocaleDateString() : '' },
               ], `aprobaciones-${new Date().toISOString().split('T')[0]}`)}
               disabled={getFilteredData().length === 0}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50"
@@ -460,13 +462,16 @@ export default function AprobacionPage() {
                       Contrato
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Fecha Contrato
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Contacto
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Estado
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Fecha
+                      Fecha Aprobación
                     </th>
                   </tr>
                 </thead>
@@ -500,6 +505,9 @@ export default function AprobacionPage() {
                           <div className="text-sm text-gray-900">{contrato.contrato}</div>
                           <div className="text-sm text-gray-500">{contrato.plataforma}</div>
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(contrato._createdDate).toLocaleDateString()}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">{contrato.celular}</div>
                           <div className="text-sm text-gray-500">{contrato.email}</div>
@@ -510,7 +518,7 @@ export default function AprobacionPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(contrato._createdDate).toLocaleDateString()}
+                          {contrato.fechaIngreso ? new Date(contrato.fechaIngreso).toLocaleDateString() : ''}
                         </td>
                       </tr>
                     )
