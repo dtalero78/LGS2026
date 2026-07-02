@@ -28,7 +28,7 @@ export const GET = handlerWithAuth(async (_req, _ctx, session) => {
        AND "aprobacion" = 'Aprobado'
        AND "estadoInactivo" IS NOT TRUE
        AND "estado" = 'ACTIVA'
-     ORDER BY "_createdDate" DESC`
+     ORDER BY "fechaIngreso" DESC NULLS LAST, "_createdDate" DESC`
   );
 
   return successResponse({
