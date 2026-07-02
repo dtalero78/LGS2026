@@ -238,32 +238,30 @@ export default function RecaudosAprobacionesPage() {
                     className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
                 </div>
               </div>
-              {canAssign && (
-                <div className="lg:col-span-3">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Gestor de Recaudos (destino)</label>
-                  <div className="flex gap-2">
+            </div>
+            {canAssign && (
+              <div className="mt-3 flex items-end justify-between gap-4">
+                <span className="text-sm text-gray-600 pb-2">{selectedIds.size} seleccionado(s)</span>
+                <div className="flex items-end gap-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Gestor de Recaudos (destino)</label>
                     <select value={gestorTarget} onChange={(e) => setGestorTarget(e.target.value)}
-                      className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                      className="min-w-[240px] px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                       <option value="">Selecciona…</option>
                       {gestores.map(g => (
                         <option key={g._id} value={g._id}>{g.nombre || 'Sin nombre'} · {GESTOR_LABEL[g.rol] || g.rol}</option>
                       ))}
                     </select>
                   </div>
+                  <button
+                    type="button"
+                    onClick={openConfirm}
+                    disabled={selectedIds.size === 0 || !gestorTarget}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <UserCheck className="w-4 h-4" /> Asignación masiva
+                  </button>
                 </div>
-              )}
-            </div>
-            {canAssign && (
-              <div className="mt-3 flex items-center justify-between">
-                <span className="text-sm text-gray-600">{selectedIds.size} seleccionado(s)</span>
-                <button
-                  type="button"
-                  onClick={openConfirm}
-                  disabled={selectedIds.size === 0 || !gestorTarget}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-50"
-                >
-                  <UserCheck className="w-4 h-4" /> Asignación masiva
-                </button>
               </div>
             )}
           </div>
