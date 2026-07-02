@@ -73,13 +73,16 @@ async function approveOnePerson(
     }
 
     const setClause = extraFields.length > 0 ? `, ${extraFields.join(', ')}` : '';
+    // Al aprobar se sella la fecha de ingreso con el día de hoy (titular y
+    // beneficiarios). No pisa el valor si ya estaba aprobado: este UPDATE solo
+    // corre en la primera aprobación (el skip de arriba lo garantiza).
     await query(
-      `UPDATE "PEOPLE" SET "aprobacion" = 'Aprobado', "estado" = 'ACTIVA'${setClause}, "_updatedDate" = NOW() WHERE "_id" = $1`,
+      `UPDATE "PEOPLE" SET "aprobacion" = 'Aprobado', "estado" = 'ACTIVA', "fechaIngreso" = NOW()${setClause}, "_updatedDate" = NOW() WHERE "_id" = $1`,
       [personId, ...extraValues]
     );
   } else {
     await query(
-      `UPDATE "PEOPLE" SET "aprobacion" = 'Aprobado', "estado" = 'ACTIVA', "_updatedDate" = NOW() WHERE "_id" = $1`,
+      `UPDATE "PEOPLE" SET "aprobacion" = 'Aprobado', "estado" = 'ACTIVA', "fechaIngreso" = NOW(), "_updatedDate" = NOW() WHERE "_id" = $1`,
       [personId]
     );
   }
@@ -294,10 +297,10 @@ export const POST = handlerWithAuth(async (
         console.log(`✅ [Approve] inicioContrato propagado al beneficiario: ${titular.inicioContrato}`);
       }
 
-      // Auto-approve titular if still pending
+      // Auto-approve titular if still pending (también sella su fechaIngreso hoy)
       if (titular.aprobacion !== 'Aprobado') {
         await query(
-          `UPDATE "PEOPLE" SET "aprobacion" = 'Aprobado', "_updatedDate" = NOW() WHERE "_id" = $1`,
+          `UPDATE "PEOPLE" SET "aprobacion" = 'Aprobado', "fechaIngreso" = NOW(), "_updatedDate" = NOW() WHERE "_id" = $1`,
           [titular._id]
         );
         titularAutoApproved = true;
