@@ -301,7 +301,6 @@ export default function AprobacionPage() {
                 { header: 'Email', accessor: (c) => c.email },
                 { header: 'Estado', accessor: (c) => getEstadoDisplay(c).text },
                 { header: 'Fecha Contrato', accessor: (c) => new Date(c._createdDate).toLocaleDateString() },
-                { header: 'Fecha Aprobación', accessor: (c) => c.fechaIngreso ? new Date(c.fechaIngreso).toLocaleDateString() : '' },
               ], `aprobaciones-${new Date().toISOString().split('T')[0]}`)}
               disabled={getFilteredData().length === 0}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50"
@@ -347,7 +346,10 @@ export default function AprobacionPage() {
                 onChange={(e) => setFilters(prev => ({ ...prev, estado: e.target.value }))}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                {ESTADOS_APROBACION.map(estado => (
+                {/* "Aprobado" se excluye: este listado solo trae contratos NO
+                    aprobados (ver /api/postgres/approvals/pending). Los aprobados
+                    se consultan en "Contratos aprobados". */}
+                {ESTADOS_APROBACION.filter(e => e.value !== 'Aprobado').map(estado => (
                   <option key={estado.value} value={estado.value}>
                     {estado.label}
                   </option>
@@ -470,9 +472,6 @@ export default function AprobacionPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Estado
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Fecha Aprobación
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -516,9 +515,6 @@ export default function AprobacionPage() {
                           <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${estado.color}`}>
                             {estado.text}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {contrato.fechaIngreso ? new Date(contrato.fechaIngreso).toLocaleDateString() : ''}
                         </td>
                       </tr>
                     )

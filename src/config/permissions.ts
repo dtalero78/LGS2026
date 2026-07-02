@@ -815,6 +815,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Ver el ítem y la página de Conversión Titular en el menú',
   },
   {
+    code: AprobacionPermission.CONTRATOS_APROBADOS_VER,
+    module: Module.APROBACION,
+    section: 'Menú Aprobación',
+    name: 'Ítem "Contratos aprobados"',
+    description: 'Ver el ítem y la página de Contratos Aprobados (Aprobados/Inactivos/Finalizados)',
+  },
+  {
     code: AprobacionPermission.ACTUALIZAR,
     module: Module.APROBACION,
     section: 'Lista de Aprobaciones',

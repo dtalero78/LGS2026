@@ -356,6 +356,7 @@ export enum AprobacionPermission {
   // Items del menú Aprobación (visibilidad por ítem)
   CENTRO_VER = 'APROBACION.CENTRO.VER',
   CONVERSION_TITULAR_VER = 'APROBACION.CONVERSION_TITULAR.VER',
+  CONTRATOS_APROBADOS_VER = 'APROBACION.CONTRATOS_APROBADOS.VER',
 
   // Modificar (usado en Wix)
   ACTUALIZAR = 'APROBACION.MODIFICAR.ACTUALIZAR',

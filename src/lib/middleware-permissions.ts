@@ -288,6 +288,10 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/dashboard/aprobacion/conversion-titular': [
     'APROBACION.CONVERSION_TITULAR.VER' as Permission,
   ],
+  // Aprobación → Contratos aprobados (su propio permiso)
+  '/dashboard/aprobacion/contratos-aprobados': [
+    'APROBACION.CONTRATOS_APROBADOS.VER' as Permission,
+  ],
 };
 
 /**
