@@ -211,13 +211,13 @@ export default function RecaudosAprobacionesPage() {
           {/* Filtros */}
           <div className="card p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
-              <div className="lg:col-span-3">
+              <div className="lg:col-span-4">
                 <label htmlFor="searchApellido" className="block text-sm font-medium text-gray-700 mb-1">Buscar por apellido o nombre</label>
                 <input type="text" id="searchApellido" placeholder="Apellido o nombre..." value={searchApellido}
                   onChange={(e) => setSearchApellido(e.target.value)}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
               </div>
-              <div className="lg:col-span-2">
+              <div className="lg:col-span-3">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Plataforma</label>
                 <select value={plataformaFiltro} onChange={(e) => setPlataformaFiltro(e.target.value)}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
@@ -225,7 +225,7 @@ export default function RecaudosAprobacionesPage() {
                   {plataformasDisponibles.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
-              <div className="lg:col-span-4">
+              <div className="lg:col-span-5">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Rango de fechas (contrato)</label>
                 <div className="flex gap-2">
                   <input type="date"
