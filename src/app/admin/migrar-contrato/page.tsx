@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
+import { PermissionGuard } from '@/components/permissions'
+import { MantenimientoPermission } from '@/types/permissions'
 import { ArrowLeftIcon, ArrowRightIcon, PlusIcon, TrashIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
@@ -288,6 +290,7 @@ export default function MigrarContratoPage() {
 
   return (
     <DashboardLayout>
+      <PermissionGuard permission={MantenimientoPermission.MIGRAR_CONTRATO} showDefaultMessage>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -895,6 +898,7 @@ export default function MigrarContratoPage() {
           </div>
         </div>
       )}
+      </PermissionGuard>
     </DashboardLayout>
   )
 }

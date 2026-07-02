@@ -11,6 +11,8 @@ import {
   CheckCircleIcon,
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
+import { PermissionGuard } from '@/components/permissions'
+import { MantenimientoPermission } from '@/types/permissions'
 
 /* ─────────────────────────────── types ─────────────────────────────── */
 
@@ -138,6 +140,7 @@ export default function ClearHistoricPage() {
     (lookupResult?.counts?.stepOverrides ?? 0)
 
   return (
+    <PermissionGuard permission={MantenimientoPermission.CLEAR_HISTORIC} showDefaultMessage>
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-2xl mx-auto space-y-6">
 
@@ -459,5 +462,6 @@ export default function ClearHistoricPage() {
         </div>
       )}
     </div>
+    </PermissionGuard>
   )
 }
