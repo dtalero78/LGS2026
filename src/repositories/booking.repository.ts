@@ -378,6 +378,7 @@ class BookingRepositoryClass extends BaseRepository {
          ab."nivel",
          ab."advisor",
          COALESCE(p."plataforma", a."plataforma", '') as "plataforma",
+         COALESCE(p."contrato", a."contrato", '') as "contrato",
          COUNT(*) OVER (PARTITION BY COALESCE(ab."studentId", ab."idEstudiante")) as "totalSesionesWelcome"
        FROM "ACADEMICA_BOOKINGS" ab
        LEFT JOIN "CALENDARIO" c ON (c."_id" = ab."eventoId" OR c."_id" = ab."idEvento")
@@ -388,14 +389,14 @@ class BookingRepositoryClass extends BaseRepository {
        -- inflado (COUNT OVER contaba las filas duplicadas).
        LEFT JOIN LATERAL (
          SELECT aa."primerNombre", aa."primerApellido", aa."segundoNombre",
-                aa."segundoApellido", aa."celular", aa."numeroId", aa."plataforma"
+                aa."segundoApellido", aa."celular", aa."numeroId", aa."plataforma", aa."contrato"
          FROM "ACADEMICA" aa
          WHERE aa."_id" = ab."studentId" OR aa."_id" = ab."idEstudiante"
          LIMIT 1
        ) a ON true
        LEFT JOIN LATERAL (
          SELECT pp."primerNombre", pp."primerApellido", pp."segundoNombre",
-                pp."segundoApellido", pp."celular", pp."numeroId", pp."plataforma"
+                pp."segundoApellido", pp."celular", pp."numeroId", pp."plataforma", pp."contrato"
          FROM "PEOPLE" pp
          WHERE pp."numeroId" = a."numeroId"
            AND (pp."tipoUsuario" = 'BENEFICIARIO' OR pp."tipoUsuario" = 'BENEFICIARIA')

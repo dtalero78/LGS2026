@@ -17,6 +17,7 @@ interface WelcomeEvent {
   fechaEvento: string
   asistencia?: boolean
   numeroId: string
+  contrato?: string
   idEstudiante: string
   nivel?: string
   advisor?: string
@@ -101,8 +102,11 @@ export default function WelcomeSessionPage() {
     .filter((event) => {
       // Filtro por apellido
       if (searchApellido.trim()) {
+        const term = searchApellido.toLowerCase().trim()
         const apellidoCompleto = `${event.primerApellido || ''} ${event.segundoApellido || ''}`.toLowerCase()
-        if (!apellidoCompleto.includes(searchApellido.toLowerCase().trim())) {
+        const id = (event.numeroId || '').toLowerCase()
+        // Buscar por apellido O por número de identificación (ID)
+        if (!apellidoCompleto.includes(term) && !id.includes(term)) {
           return false
         }
       }
@@ -162,6 +166,8 @@ export default function WelcomeSessionPage() {
               <button
                 onClick={() => exportToExcel(filteredEvents, [
                   { header: 'Nombre', accessor: (e) => `${e.primerNombre} ${e.primerApellido}`.trim() },
+                  { header: 'ID', accessor: (e) => e.numeroId || '' },
+                  { header: 'Contrato', accessor: (e) => e.contrato || '' },
                   { header: 'Celular', accessor: (e) => e.celular || '' },
                   { header: 'Fecha Evento', accessor: (e) => formatDateTime(e.fechaEvento) },
                   { header: 'Sesiones', accessor: (e) => e.totalSesionesWelcome || 0 },
@@ -206,14 +212,14 @@ export default function WelcomeSessionPage() {
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                 <div>
                   <label htmlFor="searchApellido" className="block text-sm font-medium text-gray-700 mb-1">
-                    Buscar por apellido
+                    Buscar por apellido o ID
                   </label>
                   <input
                     type="text"
                     id="searchApellido"
                     value={searchApellido}
                     onChange={(e) => setSearchApellido(e.target.value)}
-                    placeholder="Apellido..."
+                    placeholder="Apellido o ID..."
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
                   />
                 </div>
@@ -306,6 +312,7 @@ export default function WelcomeSessionPage() {
                   <thead className="table-header">
                     <tr>
                       <th className="table-header-cell">Nombre Completo</th>
+                      <th className="table-header-cell">Contrato</th>
                       <th className="table-header-cell">Celular</th>
                       <th className="table-header-cell">Fecha Evento</th>
                       <th className="table-header-cell">Sesiones</th>
@@ -323,6 +330,12 @@ export default function WelcomeSessionPage() {
                           <td className="table-cell">
                             <div className="text-sm font-medium text-gray-900">
                               {`${event.primerNombre} ${event.primerApellido}`.trim()}
+                            </div>
+                            <div className="text-xs text-gray-400">{event.numeroId}</div>
+                          </td>
+                          <td className="table-cell">
+                            <div className="text-sm text-gray-700">
+                              {event.contrato || '—'}
                             </div>
                           </td>
                           <td className="table-cell">
@@ -355,7 +368,7 @@ export default function WelcomeSessionPage() {
                       ))
                     ) : !loading ? (
                       <tr>
-                        <td colSpan={5} className="table-cell text-center py-8">
+                        <td colSpan={6} className="table-cell text-center py-8">
                           <div className="text-gray-500">
                             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -372,7 +385,7 @@ export default function WelcomeSessionPage() {
                       </tr>
                     ) : (
                       <tr>
-                        <td colSpan={5} className="table-cell text-center py-8">
+                        <td colSpan={6} className="table-cell text-center py-8">
                           <div className="flex items-center justify-center">
                             <svg className="animate-spin h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
