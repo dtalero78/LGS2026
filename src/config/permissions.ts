@@ -1014,6 +1014,20 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     name: 'Botón "Exportar Excel" en Asignación',
     description: 'Permite descargar a Excel la tabla de titulares asignados. SUPER_ADMIN y ADMIN siempre pueden; otros roles requieren este permiso explícito',
   },
+  {
+    code: RecaudosPermission.APROBACIONES_VER,
+    module: Module.RECAUDOS,
+    section: 'Aprobaciones',
+    name: 'Sub-ítem "Aprobaciones" (sidebar Recaudos)',
+    description: 'Acceso a /dashboard/recaudos/aprobaciones — lista de titulares aprobados activos para asignar gestor de recaudo',
+  },
+  {
+    code: RecaudosPermission.APROBACIONES_ASIGNAR,
+    module: Module.RECAUDOS,
+    section: 'Aprobaciones',
+    name: 'Asignación masiva de gestor en Aprobaciones',
+    description: 'Permite asignar masivamente un ejecutivo de recaudo (gestorRecaudo) a los contratos seleccionados en Aprobaciones',
+  },
 ];
 
 // ============================================================================
