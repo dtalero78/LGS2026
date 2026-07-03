@@ -353,10 +353,10 @@ function ControlHorasContent() {
     t.effective      += adminEventsAgg.registradas
     t.sinRegistrar   += adminEventsAgg.sinRegistrar
     t.administrative  = adminEventsAgg.registradas + adminEventsAgg.sinRegistrar
-    // Total Hours = effective + administrative − (sin asistentes × 0.5).
-    // Cada sesión conducida sin asistentes descuenta media hora, SALVO que el
-    // advisor sea de planta (checkbox "Advisor Planta") → no se descuenta.
-    t.totalHours = t.effective + t.administrative - (advisorPlanta ? 0 : t.sinAsistentes * 0.5)
+    // Total Hours = effective − (sin asistentes × 0.5). NO suma las horas
+    // administrativas. Cada sesión conducida sin asistentes descuenta media
+    // hora, SALVO que el advisor sea de planta ("Advisor Planta") → no descuenta.
+    t.totalHours = t.effective - (advisorPlanta ? 0 : t.sinAsistentes * 0.5)
     return t
   }, [data, adminEventsAgg, advisorPlanta])
 
