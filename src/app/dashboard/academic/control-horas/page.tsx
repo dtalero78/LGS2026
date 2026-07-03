@@ -118,6 +118,10 @@ function ControlHorasContent() {
 
   const [selectedCard, setSelectedCard] = useState<EventCard | null>(null)
 
+  // "Advisor Planta": si está marcado, Total Hours NO descuenta la media hora por
+  // sesión conducida sin asistentes (un advisor de planta cobra por disponibilidad).
+  const [advisorPlanta, setAdvisorPlanta] = useState(false)
+
   // Caché client por (advisor, año, mes). Evita refetch al navegar adelante/atrás
   // entre meses ya consultados en la misma sesión. Se invalida sólo en:
   //   - botón Recargar (fetchMonth(true))
@@ -341,10 +345,11 @@ function ControlHorasContent() {
     t.sinRegistrar   += adminEventsAgg.sinRegistrar
     t.administrative  = adminEventsAgg.registradas + adminEventsAgg.sinRegistrar
     // Total Hours = effective + administrative − (sin asistentes × 0.5).
-    // Cada sesión conducida sin asistentes descuenta media hora.
-    t.totalHours = t.effective + t.administrative - t.sinAsistentes * 0.5
+    // Cada sesión conducida sin asistentes descuenta media hora, SALVO que el
+    // advisor sea de planta (checkbox "Advisor Planta") → no se descuenta.
+    t.totalHours = t.effective + t.administrative - (advisorPlanta ? 0 : t.sinAsistentes * 0.5)
     return t
-  }, [data, adminEventsAgg])
+  }, [data, adminEventsAgg, advisorPlanta])
 
   // Build calendar grid: filas x 7 columnas (Lun-Dom)
   const calendarCells = useMemo(() => {
@@ -441,6 +446,19 @@ function ControlHorasContent() {
           <LegendDot color="bg-yellow-500" label="Suspended" />
           <LegendDot color="bg-red-500"    label="Canceled" />
         </div>
+
+        {/* Advisor Planta: si se marca, Total Hours NO descuenta la media hora por
+            sesión conducida sin asistentes (advisor de planta cobra disponibilidad). */}
+        <label htmlFor="advisor-planta" className="flex items-center gap-2 cursor-pointer select-none whitespace-nowrap">
+          <span className="text-sm font-medium text-gray-700">Advisor Planta</span>
+          <input
+            id="advisor-planta"
+            type="checkbox"
+            checked={advisorPlanta}
+            onChange={e => setAdvisorPlanta(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-slate-600 focus:ring-slate-500 cursor-pointer"
+          />
+        </label>
       </div>
 
       {/* Tarjetas destacadas: Effective | Sin registrar | Administrative (incluida en Effective) */}
