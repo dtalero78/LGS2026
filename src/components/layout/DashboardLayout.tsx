@@ -75,6 +75,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
     icon: UsersIcon,
     children: [
       { name: 'Crear Contrato', href: '/dashboard/comercial/crear-contrato' },
+      { name: 'Matrículas', href: '/dashboard/comercial/matriculas' },
       { name: 'Subir Lote', href: '/subir-lote', superAdminOnly: true },
     ],
   },
