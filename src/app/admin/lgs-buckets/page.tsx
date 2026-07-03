@@ -182,12 +182,13 @@ interface AdvisorForm {
   zoom: string
   domicilio: string
   fechaNacimiento: string
+  esPlanta: boolean
   clave: string
 }
 
 const EMPTY_FORM: AdvisorForm = {
   primerNombre: '', primerApellido: '', email: '', numeroId: '', telefono: '',
-  pais: '', zoom: '', domicilio: '', fechaNacimiento: '', clave: '',
+  pais: '', zoom: '', domicilio: '', fechaNacimiento: '', esPlanta: false, clave: '',
 }
 
 /** Modal para editar los datos del advisor (los mismos que captura /nuevo-advisor). */
@@ -215,7 +216,7 @@ function AdvisorEditModal({ advisorId, advisorNombre, onClose, onSaved }: {
           primerNombre: a.primerNombre || '', primerApellido: a.primerApellido || '',
           email: a.email || '', numeroId: a.numeroId || '', telefono: a.telefono || '',
           pais: a.pais || '', zoom: a.zoom || '', domicilio: a.domicilio || '',
-          fechaNacimiento: a.fechaNacimiento || '', clave: '',
+          fechaNacimiento: a.fechaNacimiento || '', esPlanta: a.esPlanta === true, clave: '',
         })
         setTieneUsuarioRol(a.tieneUsuarioRol)
       } catch (err) {
@@ -296,6 +297,16 @@ function AdvisorEditModal({ advisorId, advisorNombre, onClose, onSaved }: {
             </div>
             <Field label="Link de Zoom" value={form.zoom} onChange={v => set('zoom', v)} />
             <Field label="Domicilio" value={form.domicilio} onChange={v => set('domicilio', v)} />
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.esPlanta}
+                onChange={e => setForm(f => ({ ...f, esPlanta: e.target.checked }))}
+                className="h-4 w-4 rounded border-gray-300 text-slate-600 focus:ring-slate-500 cursor-pointer"
+              />
+              <span className="text-sm text-gray-700">Advisor de planta</span>
+              <span className="text-xs text-gray-400">(en Control de Horas, Total Hours no descuenta sesiones sin asistentes)</span>
+            </label>
             <Field
               label={tieneUsuarioRol ? 'Nueva clave (dejar en blanco para no cambiar)' : 'Clave (requiere cuenta de login)'}
               value={form.clave}

@@ -47,7 +47,7 @@ export const GET = handlerWithAuth(async (_req, ctx, session) => {
 
   const adv = await queryOne<any>(
     `SELECT "_id","primerNombre","primerApellido","nombreCompleto","email","zoom",
-            "telefono","pais","domicilioadvisor","fechaNacimiento","fotoAdvisor","usuarioRolId"
+            "telefono","pais","domicilioadvisor","fechaNacimiento","fotoAdvisor","esPlanta","usuarioRolId"
        FROM "ADVISORS" WHERE "_id" = $1 LIMIT 1`,
     [id]
   );
@@ -67,6 +67,7 @@ export const GET = handlerWithAuth(async (_req, ctx, session) => {
       domicilio: adv.domicilioadvisor || '',
       fechaNacimiento: adv.fechaNacimiento ? String(adv.fechaNacimiento).slice(0, 10) : '',
       numeroId: ur?.numberid || '',
+      esPlanta: adv.esPlanta === true,
       tieneUsuarioRol: !!ur,
     },
   });
@@ -99,6 +100,7 @@ export const PATCH = handlerWithAuth(async (req, ctx, session) => {
   const pais = body.pais?.trim() || null;
   const domicilio = body.domicilio?.trim() || null;
   const fechaNacimiento = body.fechaNacimiento?.trim() || null;
+  const esPlanta = body.esPlanta === true;
   const clave = (body.clave || '').trim();
   if (clave && /\s/.test(clave)) throw new ValidationError('La clave no puede contener espacios');
   if (clave && clave.length < 4) throw new ValidationError('La clave debe tener al menos 4 caracteres');
@@ -166,9 +168,10 @@ export const PATCH = handlerWithAuth(async (req, ctx, session) => {
             "pais"             = $7,
             "domicilioadvisor" = $8,
             "fechaNacimiento"  = $9,
+            "esPlanta"         = $10,
             "_updatedDate"     = NOW()
-      WHERE "_id" = $10`,
-    [primerNombre, primerApellido, nombreCompleto, email, zoomNorm, telefono, pais, domicilio, fechaNacimiento, id]
+      WHERE "_id" = $11`,
+    [primerNombre, primerApellido, nombreCompleto, email, zoomNorm, telefono, pais, domicilio, fechaNacimiento, esPlanta, id]
   );
 
   // ── Update USUARIOS_ROLES (si existe la cuenta vinculada) ──

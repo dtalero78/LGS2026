@@ -12,7 +12,7 @@ import { buildDynamicUpdate } from '@/lib/query-builder';
 const ADVISOR_COLUMNS = `
   "_id", "email", "primerNombre", "primerApellido", "nombreCompleto",
   "pais", "zoom", "activo", "fotoAdvisor", "domicilioadvisor", "fechaNacimiento",
-  "usuarioRolId", "_createdDate", "_updatedDate"
+  "esPlanta", "usuarioRolId", "_createdDate", "_updatedDate"
 `;
 
 class AdvisorRepositoryClass extends BaseRepository {

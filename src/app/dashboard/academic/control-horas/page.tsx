@@ -59,6 +59,7 @@ interface AdvisorOption {
   primerNombre?: string
   primerApellido?: string
   fotoAdvisor?: string | null
+  esPlanta?: boolean
 }
 
 type EventCard =
@@ -148,6 +149,7 @@ function ControlHorasContent() {
             primerNombre: a.primerNombre,
             primerApellido: a.primerApellido,
             fotoAdvisor: a.fotoAdvisor ?? null,
+            esPlanta: a.esPlanta === true,
           }))
           setAdvisors(list)
           if (list[0]) setAdvisorId(list[0]._id)
@@ -167,6 +169,7 @@ function ControlHorasContent() {
               primerNombre: a.primerNombre,
               primerApellido: a.primerApellido,
               fotoAdvisor: a.fotoAdvisor ?? null,
+              esPlanta: a.esPlanta === true,
             })
           } else {
             setError('Tu usuario no está registrado como advisor')
@@ -183,6 +186,12 @@ function ControlHorasContent() {
     const found = advisors.find(a => a._id === advisorId)
     if (found) setCurrentAdvisor(found)
   }, [advisorId, advisors, canPickAdvisor])
+
+  // La casilla "Advisor Planta" arranca según el atributo persistido del advisor
+  // (ADVISORS.esPlanta). Sigue siendo editable en la vista como override puntual.
+  useEffect(() => {
+    setAdvisorPlanta(currentAdvisor?.esPlanta === true)
+  }, [currentAdvisor?._id, currentAdvisor?.esPlanta])
 
   // Cargar presigned URL de la foto cuando cambia el advisor seleccionado.
   useEffect(() => {
