@@ -55,6 +55,12 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
     }
   )
   const v2Available: boolean = Boolean(libroData?.available)
+  // Botón clásico (Wix): visible por defecto. El admin puede apagarlo
+  // (material_interactivo_clasico_activo). Red de seguridad: si el visor v2 NO
+  // está disponible para el nivel, se muestra igual para no dejar al estudiante
+  // sin material.
+  const clasicoActivo: boolean = libroData?.clasicoActivo !== false
+  const showClassic = clasicoActivo || !v2Available
 
   if (isLoading) {
     return (
@@ -113,8 +119,8 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
         </a>
       )}
 
-      {/* Wix (clásico) — sigue mientras dure la coexistencia */}
-      {classicUrl && (
+      {/* Wix (clásico) — visible si el flag está ON o si el v2 no está disponible */}
+      {classicUrl && showClassic && (
         <a
           href={classicUrl}
           target="_blank"

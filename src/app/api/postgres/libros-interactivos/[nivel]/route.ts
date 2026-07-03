@@ -19,8 +19,13 @@ import { LibrosInteractivosService } from '@/services/libros-interactivos.servic
 import { NotFoundError } from '@/lib/errors';
 
 export const GET = handlerWithAuth(async (req, ctx, session) => {
+  // clasicoActivo: controla si la UI muestra el botón "Material Interactivo
+  // (clásico)" (Wix). Se devuelve en TODAS las respuestas para que MaterialsList
+  // lo conozca aunque el visor v2 no esté disponible para el nivel.
+  const clasicoActivo = await LibrosInteractivosService.isClasicoActive();
+
   const nivel = decodeURIComponent(ctx.params.nivel || '').toUpperCase().trim();
-  if (!nivel) return successResponse({ available: false });
+  if (!nivel) return successResponse({ available: false, clasicoActivo });
 
   const role = (session.user as any)?.role;
   const isAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN';
@@ -28,7 +33,7 @@ export const GET = handlerWithAuth(async (req, ctx, session) => {
 
   const featureActive = await LibrosInteractivosService.isFeatureActive();
   if (!featureActive && !preview) {
-    return successResponse({ available: false, featureActive: false });
+    return successResponse({ available: false, featureActive: false, clasicoActivo });
   }
 
   try {
@@ -36,6 +41,7 @@ export const GET = handlerWithAuth(async (req, ctx, session) => {
     return successResponse({
       available: true,
       featureActive,
+      clasicoActivo,
       previewMode: preview && !featureActive,
       ...metadata,
     });
@@ -43,7 +49,7 @@ export const GET = handlerWithAuth(async (req, ctx, session) => {
     // Si el libro no existe o no tiene páginas, no es un error de aplicación:
     // simplemente la feature no está disponible para ese nivel todavía.
     if (err instanceof NotFoundError) {
-      return successResponse({ available: false, featureActive });
+      return successResponse({ available: false, featureActive, clasicoActivo });
     }
     throw err;
   }

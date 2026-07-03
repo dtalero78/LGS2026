@@ -26,6 +26,10 @@ import { AppConfigRepository } from '@/repositories/config.repository';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 
 const FEATURE_FLAG_KEY = 'material_interactivo_v2_activo';
+// Flag independiente para mostrar/ocultar el botón "Material Interactivo (clásico)"
+// (enlace Wix). Default TRUE (si el registro no existe) → preserva el comportamiento
+// actual hasta que un admin lo apague.
+const CLASICO_FLAG_KEY = 'material_interactivo_clasico_activo';
 
 // ── Cache module-level (vive entre requests dentro de la misma instancia) ──
 
@@ -47,6 +51,7 @@ const FLAG_TTL_MS  = 60 * 1000;       // 1 min — flag puede activarse y querem
 
 const nivelCache = new Map<string, { value: NivelLibroResolved | null; expires: number }>();
 let flagCache: { value: boolean; expires: number } | null = null;
+let clasicoFlagCache: { value: boolean; expires: number } | null = null;
 
 function getNivelCached(code: string): NivelLibroResolved | null | undefined {
   const hit = nivelCache.get(code);
@@ -112,6 +117,25 @@ class LibrosInteractivosServiceClass {
   async setFeatureActive(active: boolean, actor: string): Promise<void> {
     await AppConfigRepository.set(FEATURE_FLAG_KEY, active ? 'true' : 'false', '#ffffff', actor);
     flagCache = null;
+  }
+
+  /**
+   * ¿Debe mostrarse el botón "Material Interactivo (clásico)" (enlace Wix)?
+   * Default TRUE si el registro no existe (comportamiento actual preservado).
+   */
+  async isClasicoActive(): Promise<boolean> {
+    const now = Date.now();
+    if (clasicoFlagCache && clasicoFlagCache.expires > now) return clasicoFlagCache.value;
+    const row = await AppConfigRepository.get(CLASICO_FLAG_KEY);
+    const value = row ? row.value === 'true' : true;
+    clasicoFlagCache = { value, expires: now + FLAG_TTL_MS };
+    return value;
+  }
+
+  /** Activa/desactiva el botón clásico (admin). Invalida cache. */
+  async setClasicoActive(active: boolean, actor: string): Promise<void> {
+    await AppConfigRepository.set(CLASICO_FLAG_KEY, active ? 'true' : 'false', '#ffffff', actor);
+    clasicoFlagCache = null;
   }
 
   /**
