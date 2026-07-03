@@ -117,11 +117,13 @@ function Content() {
   const [libros, setLibros] = useState<LibroAdmin[]>([])
   const [featureActive, setFeatureActive] = useState(false)
   const [clasicoActive, setClasicoActive] = useState(true)
+  const [ejerciciosActive, setEjerciciosActive] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [expandedCodigo, setExpandedCodigo] = useState<string | null>(null)
   const [savingFlag, setSavingFlag] = useState(false)
   const [savingClasico, setSavingClasico] = useState(false)
+  const [savingEjercicios, setSavingEjercicios] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -131,6 +133,7 @@ function Content() {
       setLibros(j.libros || [])
       setFeatureActive(Boolean(j.featureActive))
       setClasicoActive(j.clasicoActive !== false)
+      setEjerciciosActive(Boolean(j.ejerciciosActive))
     } catch (e: any) {
       setError(e?.message || 'Error')
     } finally {
@@ -169,6 +172,22 @@ function Content() {
       alert(e?.message || 'Error')
     } finally {
       setSavingClasico(false)
+    }
+  }
+
+  const toggleEjercicios = async () => {
+    setSavingEjercicios(true)
+    try {
+      const j = await jsonFetchRetry('/api/admin/libros-interactivos/feature-flag', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: !ejerciciosActive, flag: 'ejercicios' }),
+      })
+      setEjerciciosActive(j.active)
+    } catch (e: any) {
+      alert(e?.message || 'Error')
+    } finally {
+      setSavingEjercicios(false)
     }
   }
 
@@ -228,6 +247,31 @@ function Content() {
             className={`px-4 py-2 rounded-lg text-sm font-semibold shrink-0 ${clasicoActive ? 'bg-gray-600 hover:bg-gray-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'} disabled:opacity-50`}
           >
             {savingClasico ? '...' : clasicoActive ? 'Apagar clásico' : 'Encender clásico'}
+          </button>
+        </div>
+      </div>
+
+      {/* Fase 2 — ejercicios de práctica (auto-gradables, generados por IA) */}
+      <div className={`rounded-xl border-l-4 p-4 mb-6 ${ejerciciosActive ? 'bg-amber-50 border-amber-500' : 'bg-gray-50 border-gray-400'}`}>
+        <div className="flex items-start gap-3">
+          <PencilSquareIcon className={`h-6 w-6 flex-shrink-0 ${ejerciciosActive ? 'text-amber-600' : 'text-gray-500'}`} />
+          <div className="flex-1">
+            <p className={`text-sm font-semibold ${ejerciciosActive ? 'text-amber-900' : 'text-gray-700'}`}>
+              {ejerciciosActive
+                ? 'Fase 2 ACTIVA — los estudiantes ven la tarjeta "Ejercicios de práctica" de su step.'
+                : 'Fase 2 INACTIVA — los estudiantes no ven los ejercicios de práctica.'}
+            </p>
+            <p className="text-xs text-gray-700 mt-0.5">
+              Ejercicios de práctica auto-gradables (opción múltiple, verdadero/falso, completar), generados por IA desde el contenido del step. Es <strong>solo práctica</strong>: no afecta el step ni el diagnóstico del estudiante.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={toggleEjercicios}
+            disabled={savingEjercicios}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold shrink-0 ${ejerciciosActive ? 'bg-gray-600 hover:bg-gray-700 text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'} disabled:opacity-50`}
+          >
+            {savingEjercicios ? '...' : ejerciciosActive ? 'Desactivar' : 'Activar'}
           </button>
         </div>
       </div>

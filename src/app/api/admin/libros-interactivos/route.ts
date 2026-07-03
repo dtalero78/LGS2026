@@ -12,10 +12,11 @@ import { AcademicoPermission } from '@/types/permissions';
 
 export const GET = handlerWithAuth(async (_req, _ctx, session) => {
   await requirePermission(session, AcademicoPermission.ACTUALIZAR_MATERIAL);
-  const [libros, featureActive, clasicoActive] = await Promise.all([
+  const [libros, featureActive, clasicoActive, ejerciciosActive] = await Promise.all([
     LibrosInteractivosService.listAllForAdmin(),
     LibrosInteractivosService.isFeatureActive(),
     LibrosInteractivosService.isClasicoActive(),
+    LibrosInteractivosService.isEjerciciosActive(),
   ]);
-  return successResponse({ libros, featureActive, clasicoActive });
+  return successResponse({ libros, featureActive, clasicoActive, ejerciciosActive });
 });

@@ -30,6 +30,9 @@ const FEATURE_FLAG_KEY = 'material_interactivo_v2_activo';
 // (enlace Wix). Default TRUE (si el registro no existe) → preserva el comportamiento
 // actual hasta que un admin lo apague.
 const CLASICO_FLAG_KEY = 'material_interactivo_clasico_activo';
+// Flag de la Fase 2 (ejercicios de práctica auto-gradables). Default FALSE si no
+// existe → la feature no se ve hasta que un admin la encienda.
+const EJERCICIOS_FLAG_KEY = 'material_interactivo_ejercicios_activo';
 
 // ── Cache module-level (vive entre requests dentro de la misma instancia) ──
 
@@ -52,6 +55,7 @@ const FLAG_TTL_MS  = 60 * 1000;       // 1 min — flag puede activarse y querem
 const nivelCache = new Map<string, { value: NivelLibroResolved | null; expires: number }>();
 let flagCache: { value: boolean; expires: number } | null = null;
 let clasicoFlagCache: { value: boolean; expires: number } | null = null;
+let ejerciciosFlagCache: { value: boolean; expires: number } | null = null;
 
 function getNivelCached(code: string): NivelLibroResolved | null | undefined {
   const hit = nivelCache.get(code);
@@ -136,6 +140,22 @@ class LibrosInteractivosServiceClass {
   async setClasicoActive(active: boolean, actor: string): Promise<void> {
     await AppConfigRepository.set(CLASICO_FLAG_KEY, active ? 'true' : 'false', '#ffffff', actor);
     clasicoFlagCache = null;
+  }
+
+  /** ¿Está activa la Fase 2 (ejercicios de práctica)? Default FALSE si no existe. */
+  async isEjerciciosActive(): Promise<boolean> {
+    const now = Date.now();
+    if (ejerciciosFlagCache && ejerciciosFlagCache.expires > now) return ejerciciosFlagCache.value;
+    const row = await AppConfigRepository.get(EJERCICIOS_FLAG_KEY);
+    const value = row?.value === 'true';
+    ejerciciosFlagCache = { value, expires: now + FLAG_TTL_MS };
+    return value;
+  }
+
+  /** Activa/desactiva la Fase 2 (admin). Invalida cache. */
+  async setEjerciciosActive(active: boolean, actor: string): Promise<void> {
+    await AppConfigRepository.set(EJERCICIOS_FLAG_KEY, active ? 'true' : 'false', '#ffffff', actor);
+    ejerciciosFlagCache = null;
   }
 
   /**

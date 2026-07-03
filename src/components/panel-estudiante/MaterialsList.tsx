@@ -6,6 +6,7 @@ import {
   BookOpenIcon,
   GlobeAltIcon,
   SparklesIcon,
+  PencilSquareIcon,
 } from '@heroicons/react/24/outline'
 
 const INTERACTIVE_MATERIAL_URLS: Record<string, string> = {
@@ -61,6 +62,8 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
   // sin material.
   const clasicoActivo: boolean = libroData?.clasicoActivo !== false
   const showClassic = clasicoActivo || !v2Available
+  // Fase 2 — ejercicios de práctica (flag independiente).
+  const ejerciciosActivo: boolean = Boolean(libroData?.ejerciciosActivo)
 
   if (isLoading) {
     return (
@@ -115,6 +118,22 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-emerald-900">Material Interactivo</p>
             <p className="text-xs text-emerald-600">{nivelNormalizado} — nueva versión</p>
+          </div>
+        </a>
+      )}
+
+      {/* Fase 2 — Ejercicios de práctica (auto-gradables) del step actual */}
+      {ejerciciosActivo && (
+        <a
+          href="/panel-estudiante/ejercicios-interactivos"
+          className="flex items-center gap-3 p-3 mb-3 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors group border border-amber-200"
+        >
+          <div className="flex-shrink-0 w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center group-hover:bg-amber-200">
+            <PencilSquareIcon className="h-5 w-5 text-amber-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-900">Ejercicios de práctica</p>
+            <p className="text-xs text-amber-600">Practica tu step actual — sin nota</p>
           </div>
         </a>
       )}
