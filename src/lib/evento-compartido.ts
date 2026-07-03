@@ -9,17 +9,14 @@
  * REGLAS DE COMPARTIBILIDAD:
  *   - SESSION step múltiplo de 5 (Jumps: 5, 10, 15, 20, 25, 30, 35, 40, 45)
  *   - SESSION Step 46 (MASTER)
- *   - CLUB todos los tipos EXCEPTO TRAINING
+ *   - CLUB todos los tipos (incluido TRAINING)
  *   - Cualquier otro tipo / step → NO compartible
  *
  * Helpers sin `server-only` para reutilizar en frontend y backend.
  */
 
-/** Máximo de filas que puede tener un grupo compartido (1 base + 2 extras). */
-export const MAX_NIVELES_COMPARTIDOS = 3;
-
-/** Prefijos de clubs que NO se pueden compartir (TRAINING es por step específico). */
-const CLUB_NO_COMPARTIBLE_PREFIXES = ['TRAINING'];
+/** Máximo de filas que puede tener un grupo compartido (1 base + 3 extras). */
+export const MAX_NIVELES_COMPARTIDOS = 4;
 
 /** Extrae el número del step ("Step 5" → 5; "TRAINING - Step 10" → 10). */
 export function extractStepNumber(step: string | null | undefined): number | null {
@@ -47,9 +44,8 @@ export function isEventoCompartible(tipo: string | null | undefined, step: strin
   }
 
   if (t === 'CLUB') {
-    // Todos los tipos de club excepto TRAINING.
-    const prefix = String(step || '').trim().toUpperCase().split('-')[0].trim();
-    return !CLUB_NO_COMPARTIBLE_PREFIXES.includes(prefix);
+    // Todos los tipos de club son compartibles (incluido TRAINING).
+    return true;
   }
 
   // WELCOME y otros: no compartibles.
@@ -90,10 +86,7 @@ export function reasonNotCompartible(tipo: string | null | undefined, step: stri
     }
     return 'Solo las sesiones Jump (Steps 5, 10, ..., 45) y MASTER (Step 46) se pueden compartir.';
   }
-  if (t === 'CLUB') {
-    const prefix = String(step || '').trim().toUpperCase().split('-')[0].trim();
-    if (prefix === 'TRAINING') return 'Los clubs TRAINING son por step específico y no se comparten entre niveles.';
-    return 'Este club no se puede compartir.';
-  }
+  // Todos los CLUB son compartibles → esta rama no se alcanza; se deja el
+  // fallback genérico por si en el futuro se restringe algún tipo de club.
   return 'Tipo no compartible.';
 }
