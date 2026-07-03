@@ -286,6 +286,24 @@ function ControlHorasContent() {
     return m
   }, [data])
 
+  // Eventos administrativos por día (bloques violeta, solo display — el KPI
+  // "Administrative Hours" ya los suma). Agrupados en la hora LOCAL del cliente.
+  const adminByDay = useMemo(() => {
+    const m = new Map<string, any[]>()
+    for (const ae of adminEventsList) {
+      if (!ae?.fechaInicio) continue
+      const d = new Date(ae.fechaInicio)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      const arr = m.get(key) ?? []
+      arr.push(ae)
+      m.set(key, arr)
+    }
+    m.forEach(arr => arr.sort((a, b) =>
+      formatHoraLocal(a.fechaInicio).localeCompare(formatHoraLocal(b.fechaInicio))
+    ))
+    return m
+  }, [adminEventsList])
+
   // Totales del mes — por tipo (vigentes + históricos), por estado, y registro.
   //
   // Effective Hours = sesiones académicas cerradas (1h c/u) + admin events
@@ -459,6 +477,7 @@ function ControlHorasContent() {
           <LegendDot color="bg-green-500"  label="CLUB" />
           <LegendDot color="bg-purple-500" label="WELCOME" />
           <LegendDot color="bg-orange-500" label="Sin asistentes" />
+          <LegendDot color="bg-violet-600" label="Administrativo" />
           <LegendDot color="bg-yellow-500" label="Suspended" />
           <LegendDot color="bg-red-500"    label="Canceled" />
         </div>
@@ -545,6 +564,16 @@ function ControlHorasContent() {
                       </button>
                       )
                     })}
+                    {/* Eventos administrativos (solo display — cuentan en Administrative Hours) */}
+                    {(adminByDay.get(cell.key) ?? []).map(ae => (
+                      <div
+                        key={ae._id}
+                        title={`[ADMIN ${ae.tipo}] ${ae.titulo || ''} · ${ae.horas}h${ae.registrado ? ' (registrado)' : ' (sin registrar)'}`}
+                        className={`block w-full text-left px-1.5 py-1 rounded text-[11px] font-medium truncate ${ae.registrado ? 'bg-violet-600 text-white' : 'bg-violet-300 text-violet-900'}`}
+                      >
+                        {formatHoraLocal(ae.fechaInicio)} · {ae.titulo || ae.tipo}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )
