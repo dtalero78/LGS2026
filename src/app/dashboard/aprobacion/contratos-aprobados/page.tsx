@@ -26,6 +26,7 @@ interface Contrato {
 
 interface FilterState {
   categoria: string
+  plataforma: string
   fechaInicio: Date | null
   fechaFin: Date | null
 }
@@ -57,7 +58,7 @@ export default function ContratosAprobadosPage() {
   const [contratos, setContratos] = useState<Contrato[]>([])
   const [loading, setLoading] = useState(true)
   const [searchApellido, setSearchApellido] = useState('')
-  const [filters, setFilters] = useState<FilterState>({ categoria: 'Aprobados', fechaInicio: null, fechaFin: null })
+  const [filters, setFilters] = useState<FilterState>({ categoria: 'Aprobados', plataforma: '', fechaInicio: null, fechaFin: null })
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(0)
 
@@ -98,6 +99,10 @@ export default function ContratosAprobadosPage() {
     if (filters.categoria) {
       data = data.filter(c => c.categoria === filters.categoria)
     }
+    if (filters.plataforma) {
+      const p = filters.plataforma.toLowerCase().trim()
+      data = data.filter(c => (c.plataforma || '').toLowerCase().trim() === p)
+    }
     if (filters.fechaInicio) {
       data = data.filter(c => new Date(c._createdDate) >= filters.fechaInicio!)
     }
@@ -127,9 +132,14 @@ export default function ContratosAprobadosPage() {
   useEffect(() => {
     updatePagination(getFilteredData())
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allContratos, searchApellido, filters.categoria, filters.fechaInicio, filters.fechaFin])
+  }, [allContratos, searchApellido, filters.categoria, filters.plataforma, filters.fechaInicio, filters.fechaFin])
 
   const filteredCount = getFilteredData().length
+
+  // Opciones de plataforma derivadas de los datos cargados (distintas, ordenadas).
+  const plataformaOptions = Array.from(
+    new Set(allContratos.map(c => (c.plataforma || '').trim()).filter(Boolean))
+  ).sort()
 
   return (
     <DashboardLayout>
@@ -178,7 +188,7 @@ export default function ContratosAprobadosPage() {
           {/* Filtros */}
           <div className="card p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
-              <div className="lg:col-span-4">
+              <div className="lg:col-span-3">
                 <label htmlFor="searchApellido" className="block text-sm font-medium text-gray-700 mb-1">
                   Buscar por apellido o nombre
                 </label>
@@ -192,7 +202,7 @@ export default function ContratosAprobadosPage() {
                 />
               </div>
 
-              <div className="lg:col-span-3">
+              <div className="lg:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
                 <select
                   value={filters.categoria}
@@ -201,6 +211,20 @@ export default function ContratosAprobadosPage() {
                 >
                   {CATEGORIAS.map(o => (
                     <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="lg:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Plataforma</label>
+                <select
+                  value={filters.plataforma}
+                  onChange={(e) => setFilters(prev => ({ ...prev, plataforma: e.target.value }))}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Todas</option>
+                  {plataformaOptions.map(p => (
+                    <option key={p} value={p}>{p}</option>
                   ))}
                 </select>
               </div>
