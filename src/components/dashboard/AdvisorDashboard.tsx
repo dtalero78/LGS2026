@@ -21,7 +21,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { ClockIcon } from '@heroicons/react/24/outline'
-import { eventParts } from '@/lib/event-time'
 
 interface VigenteRow {
   source: 'CALENDARIO'
@@ -75,11 +74,9 @@ export default function AdvisorDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // "Mes actual" en hora de Colombia (TZ canónica), no la del navegador → el
-  // dashboard del advisor muestra el mismo mes se consulte desde cualquier país.
-  const todayParts = eventParts(new Date())
-  const year = todayParts.year
-  const month = todayParts.month   // 1-12
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = today.getMonth() + 1   // 1-12
 
   // Paso 1 — resolver ADVISORS._id desde el email de sesión
   useEffect(() => {
@@ -209,14 +206,13 @@ export default function AdvisorDashboard() {
     const nowMs = Date.now()
     const seenInHeatmap = new Set<string>()
     const addEvent = (iso: string, bucket: 'conducted' | 'canceled') => {
-      // Día/hora/mes en la TZ canónica (Colombia), no la del navegador → el
-      // heatmap y el filtro de mes son idénticos se consulte desde cualquier país.
-      const p = eventParts(iso)
-      if (p.year !== year || p.month !== month) return
-      if (new Date(iso).getTime() > nowMs) return   // heatmap = actividad pasada
-      const wd = p.weekdayMon0                        // 0=Lun, 6=Dom
-      const hIdx = HOURS.indexOf(p.hour)
-      if (hIdx < 0) return                            // fuera de 06-21
+      // Día/hora/mes en la zona LOCAL del cliente.
+      const d = new Date(iso)
+      if (d.getFullYear() !== year || d.getMonth() + 1 !== month) return
+      if (d.getTime() > nowMs) return          // heatmap = actividad pasada
+      const wd = (d.getDay() + 6) % 7          // 0=Lun, 6=Dom
+      const hIdx = HOURS.indexOf(d.getHours())
+      if (hIdx < 0) return                      // fuera de 06-21
       result[bucket][wd][hIdx]++
     }
     // Eventos compartidos: 1 sola celda del heatmap aunque haya 2-3 filas

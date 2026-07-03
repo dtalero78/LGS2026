@@ -18,7 +18,6 @@ import {
 } from '@heroicons/react/24/outline'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, addMonths, subMonths, addDays, subDays } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { eventDayKey, eventHora, todayDayKeyLocal } from '@/lib/event-time'
 import HolidayBadge from '@/components/common/HolidayBadge'
 import { usePermissions } from '@/hooks/usePermissions'
 import { AcademicoPermission } from '@/types/permissions'
@@ -183,9 +182,9 @@ function PanelAdvisorContent() {
       setEventsLoading(true)
 
       // Rango del mes ampliado ±1 día para cubrir la frontera de zona horaria:
-      // los eventos luego se agrupan por día en hora de Colombia (eventDayKey),
-      // así que traemos también los del borde (un evento de la noche del último
-      // día cae en el día 1 del mes siguiente en UTC).
+      // los eventos se agrupan por día en la hora LOCAL del cliente, así que
+      // traemos también los del borde (un evento cerca de medianoche puede caer
+      // en el día vecino según la TZ del navegador).
       const monthStart = startOfMonth(currentMonth)
       const monthEnd = endOfMonth(currentMonth)
 
@@ -306,17 +305,13 @@ function PanelAdvisorContent() {
     setShowEventDetailModal(true)
   }
 
-  // Agrupar por día en hora de Colombia (TZ canónica) — no la del navegador.
-  // `date` es el día literal de la celda del calendario; lo comparamos por su
-  // clave YYYY-MM-DD contra el día del evento en hora de Colombia.
+  // Agrupar por día en la hora LOCAL del cliente (cada advisor ve su hora).
   const getEventsForDay = (date: Date) => {
-    const key = format(date, 'yyyy-MM-dd')
-    return events.filter(event => eventDayKey(event.dia) === key)
+    return events.filter(event => isSameDay(new Date(event.dia), date))
   }
 
   const getAdminEventsForDay = (date: Date) => {
-    const key = format(date, 'yyyy-MM-dd')
-    return adminEvents.filter(ae => eventDayKey(ae.fechaInicio) === key)
+    return adminEvents.filter(ae => isSameDay(new Date(ae.fechaInicio), date))
   }
 
   const getEventColor = (tipo: string) => {
@@ -463,7 +458,7 @@ function PanelAdvisorContent() {
                   const dayEvents = getEventsForDay(date)
                   const isCurrentMonth = date.getMonth() === currentMonth.getMonth()
                   const isSelected = selectedDate && isSameDay(date, selectedDate)
-                  const isToday = format(date, 'yyyy-MM-dd') === todayDayKeyLocal()
+                  const isToday = isSameDay(date, new Date())
 
                   return (
                     <div
@@ -495,7 +490,7 @@ function PanelAdvisorContent() {
                             }}
                           >
                             {isShared && <span className="mr-0.5" aria-hidden>🔗</span>}
-                            {eventHora(event.dia)} - {event.tituloONivel}
+                            {format(new Date(event.dia), 'HH:mm')} - {event.tituloONivel}
                           </div>
                           )
                         })}

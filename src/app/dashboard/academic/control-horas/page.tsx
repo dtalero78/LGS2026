@@ -8,7 +8,6 @@ import { usePermissions } from '@/hooks/usePermissions'
 import { AcademicoPermission } from '@/types/permissions'
 import { ClockIcon, ChevronLeftIcon, ChevronRightIcon, ArrowPathIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
-import { eventDayKey, eventHora, todayDayKeyLocal, PLATFORM_TZ } from '@/lib/event-time'
 
 interface VigenteRow {
   source: 'CALENDARIO'
@@ -74,10 +73,14 @@ const WEEKDAYS_ES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
  * legacy que en datos históricos quedó guardado como hora UTC (no local) y
  * NO se debe usar para mostrar.
  */
-// Hora del evento SIEMPRE en la TZ canónica (Colombia), no la del navegador →
-// el conteo/horario es idéntico se consulte desde Chile, España, México, etc.
+// Hora del evento en la zona LOCAL del cliente (cada advisor ve su hora).
 function formatHoraLocal(iso: string | null | undefined): string {
-  return eventHora(iso)
+  if (!iso) return '--:--'
+  try {
+    return new Date(iso).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', hour12: false })
+  } catch {
+    return '--:--'
+  }
 }
 
 /** TZ del navegador, usada para pasar al backend en validaciones server-side. */
@@ -261,14 +264,15 @@ function ControlHorasContent() {
     setMonth(m); setYear(y)
   }
 
-  // Agrupar cards por día del mes (key = "YYYY-MM-DD" en la TZ canónica de los
-  // eventos = Colombia). Antes se usaba la TZ del navegador → un evento de la
-  // noche caía en un día/mes distinto según el país de quien consultaba.
+  // Agrupar cards por día del mes en la hora LOCAL del cliente (cada advisor ve
+  // su hora). El CONTEO mensual (a qué mes pertenece cada evento) lo fija el
+  // servidor en hora de Colombia — ver monthRangeLocal en advisor-event-log.service.
   const cardsByDay = useMemo(() => {
     const m = new Map<string, EventCard[]>()
     if (!data) return m
     const push = (c: EventCard) => {
-      const key = eventDayKey(c.fechaEvento)
+      const d = new Date(c.fechaEvento)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
       const arr = m.get(key) ?? []
       arr.push(c)
       m.set(key, arr)
@@ -518,7 +522,7 @@ function ControlHorasContent() {
                 return <div key={cell.key} className="min-h-[110px] bg-gray-50 border-r border-b border-gray-100" />
               }
               const cards = cardsByDay.get(cell.key) ?? []
-              const isToday = cell.key === todayDayKeyLocal()
+              const isToday = cell.key === `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
               return (
                 <div key={cell.key} className={`min-h-[110px] p-1.5 border-r border-b border-gray-100 ${isToday ? 'bg-blue-50/40' : 'bg-white'}`}>
                   <div className={`text-xs font-semibold mb-1 ${isToday ? 'text-blue-700' : 'text-gray-700'}`}>{cell.day}</div>
@@ -689,9 +693,9 @@ function EventDetailModal({
     setAdminMotivo('')
   }, [card])
 
-  // Fecha del evento formateada en la TZ canónica (Colombia), no la del navegador.
+  // Fecha del evento formateada en la zona LOCAL del cliente.
   const fechaStr = new Date(card.fechaEvento).toLocaleDateString('es', {
-    weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', timeZone: PLATFORM_TZ,
+    weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
   })
 
   const agend = card.kind === 'vigente' ? card.inscritos : 0
