@@ -281,7 +281,7 @@ function ControlHorasContent() {
   const totales = useMemo(() => {
     const t = {
       sessions: 0, clubs: 0, welcome: 0,
-      conducted: 0, canceled: 0, suspended: 0,
+      conducted: 0, sinAsistentes: 0, canceled: 0, suspended: 0,
       effective: 0, sinRegistrar: 0,
       administrative: 0,
     }
@@ -305,21 +305,25 @@ function ControlHorasContent() {
     // cierra P1 pero abandona antes de P2/P3 igual suma 1 Effective (no 3
     // sin registrar). Los hermanos sin cerrar siguen visibles en el
     // calendario para que el Coordinador pueda terminarlos si quiere.
-    type GroupState = { tipo: string | null; sesionCerrada: boolean }
+    // asistieron se acumula entre hermanos del grupo (evento compartido): el
+    // grupo cuenta como "sin asistentes" si NINGÚN nivel tuvo asistentes.
+    type GroupState = { tipo: string | null; sesionCerrada: boolean; asistieron: number }
     const groups = new Map<string, GroupState>()
     data.vigentes.forEach(v => {
       if (!isPast(v.fechaEvento)) return
       const key = v.eventoCompartidoId || v.eventoId
       const existing = groups.get(key)
       if (!existing) {
-        groups.set(key, { tipo: v.tipo, sesionCerrada: v.sesionCerrada === true })
-      } else if (v.sesionCerrada === true) {
-        existing.sesionCerrada = true
+        groups.set(key, { tipo: v.tipo, sesionCerrada: v.sesionCerrada === true, asistieron: v.asistieron || 0 })
+      } else {
+        if (v.sesionCerrada === true) existing.sesionCerrada = true
+        existing.asistieron += (v.asistieron || 0)
       }
     })
     for (const g of groups.values()) {
       countByTipo(g.tipo)
       t.conducted++
+      if (g.asistieron === 0) t.sinAsistentes++   // sesión conducida sin asistentes
       if (g.sesionCerrada) t.effective++
       else                 t.sinRegistrar++
     }
@@ -448,11 +452,12 @@ function ControlHorasContent() {
 
       {/* Tarjetas de totales del mes */}
       {data && !loading && !error && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-2 mb-4">
           <TotalCard label="Sessions"  value={totales.sessions}  color="bg-blue-50  border-blue-300  text-blue-700" />
           <TotalCard label="Clubs"     value={totales.clubs}     color="bg-green-50 border-green-300 text-green-700" />
           <TotalCard label="Welcome"   value={totales.welcome}   color="bg-purple-50 border-purple-300 text-purple-700" />
           <TotalCard label="Conducted" value={totales.conducted} color="bg-sky-50   border-sky-300   text-sky-700" />
+          <TotalCard label="Sin Asistentes" value={totales.sinAsistentes} color="bg-orange-50 border-orange-300 text-orange-700" />
           <TotalCard label="Canceled"  value={totales.canceled}  color="bg-red-50   border-red-300   text-red-700" />
           <TotalCard label="Suspended" value={totales.suspended} color="bg-yellow-50 border-yellow-300 text-yellow-800" />
         </div>
