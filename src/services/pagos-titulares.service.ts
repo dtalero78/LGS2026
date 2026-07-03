@@ -56,7 +56,15 @@ const TIPO_CARTERA_VALIDOS_READ = [...TIPO_CARTERA_VALIDOS, ...TIPO_CARTERA_LEGA
 
 function toNum(v: any): number {
   if (v === null || v === undefined || v === '') return 0;
-  const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+  let s = String(v).trim();
+  // Formato "europeo/Perú" con coma decimal (ej. "3.780,00", "270,00"): el punto
+  // es separador de MILES y la coma es DECIMAL. Sin este caso, parseFloat leía
+  // "3.780,00" → "3.780.00" → 3.78 (saldo mal calculado → tarjeta en $0).
+  // Los valores SIN coma (ej. "1540000", "270.00" que devuelve numeric) se dejan
+  // como están: parseFloat los maneja bien.
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  const n = parseFloat(s.replace(/[^0-9.\-]/g, ''));
   return Number.isFinite(n) ? n : 0;
 }
 
