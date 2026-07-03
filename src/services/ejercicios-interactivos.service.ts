@@ -19,6 +19,7 @@ import { ValidationError, NotFoundError } from '@/lib/errors';
  */
 
 const NUM_EJERCICIOS = 8;
+const APROBACION_MIN = 70;  // % mínimo para "aprobado"
 
 /** Pregunta tal como la ve el estudiante (SIN la respuesta correcta). */
 export interface EjercicioPublico {
@@ -79,7 +80,7 @@ class EjerciciosInteractivosServiceClass {
    * o string (fill_blank).
    */
   async grade(nivel: string, step: string, answers: any[]): Promise<{
-    total: number; correctas: number; porcentaje: number; resultados: ResultadoPregunta[];
+    total: number; correctas: number; porcentaje: number; aprobado: boolean; consejo: string; resultados: ResultadoPregunta[];
   }> {
     const set = await EjerciciosInteractivosRepository.findByNivelStep(nivel, step);
     if (!set || !Array.isArray(set.preguntas) || set.preguntas.length === 0) {
@@ -104,7 +105,44 @@ class EjerciciosInteractivosServiceClass {
 
     const correctas = resultados.filter(r => r.correcto).length;
     const total = resultados.length;
-    return { total, correctas, porcentaje: total ? Math.round((correctas / total) * 100) : 0, resultados };
+    const porcentaje = total ? Math.round((correctas / total) * 100) : 0;
+    const aprobado = porcentaje >= APROBACION_MIN;
+    // Consejo final generado por IA (aprobación/ánimo si aprobó, tip de estudio
+    // si no). Degrada a un mensaje fijo si OpenAI falla → nunca rompe la práctica.
+    const consejo = await this.generarConsejo(set.preguntas, resultados, porcentaje, aprobado, nivel, step);
+    return { total, correctas, porcentaje, aprobado, consejo, resultados };
+  }
+
+  /** Feedback final del estudiante generado por IA (en español, breve). */
+  private async generarConsejo(
+    preguntas: Ejercicio[], resultados: ResultadoPregunta[], porcentaje: number,
+    aprobado: boolean, nivel: string, step: string,
+  ): Promise<string> {
+    const fallback = aprobado
+      ? '¡Buen trabajo! Vas por buen camino, sigue practicando.'
+      : 'Aún no llegas al 70%. Repasa el contenido del step y vuelve a intentarlo, ¡tú puedes!';
+    try {
+      const falladas = preguntas.filter((_, i) => !resultados[i]?.correcto).map(p => p.enunciado).slice(0, 6);
+      const OpenAI = (await import('openai')).default;
+      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const resp = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        temperature: 0.6,
+        messages: [
+          {
+            role: 'system',
+            content: `Eres un profesor de inglés motivador. Un estudiante (nivel ${nivel}, ${step}) hizo una práctica y obtuvo ${porcentaje}% (${aprobado ? 'APROBÓ, ≥70%' : 'NO alcanzó el 70%'}). Escribe en ESPAÑOL, 2-3 frases, tuteando al estudiante: si aprobó, felicítalo brevemente y anímalo a seguir; si no aprobó, dale un consejo concreto de estudio basado en los temas que falló. No menciones el porcentaje exacto. Sé cálido y breve.`,
+          },
+          {
+            role: 'user',
+            content: falladas.length ? `Preguntas que falló:\n- ${falladas.join('\n- ')}` : 'No falló ninguna pregunta.',
+          },
+        ],
+      });
+      return resp.choices[0].message.content?.trim() || fallback;
+    } catch {
+      return fallback;
+    }
   }
 
   /**

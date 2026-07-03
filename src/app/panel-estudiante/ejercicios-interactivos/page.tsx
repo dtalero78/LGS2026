@@ -23,7 +23,7 @@ export default function EjerciciosInteractivosPage() {
   const [preguntas, setPreguntas] = useState<Pregunta[]>([])
   const [answers, setAnswers] = useState<any[]>([])
   const [resultados, setResultados] = useState<Resultado[] | null>(null)
-  const [score, setScore] = useState<{ correctas: number; total: number; porcentaje: number } | null>(null)
+  const [score, setScore] = useState<{ correctas: number; total: number; porcentaje: number; aprobado: boolean; consejo: string } | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   const load = async () => {
@@ -61,7 +61,7 @@ export default function EjerciciosInteractivosPage() {
       const j = await r.json()
       if (!r.ok) { alert(j?.error || 'Error al calificar'); return }
       setResultados(j.resultados || [])
-      setScore({ correctas: j.correctas, total: j.total, porcentaje: j.porcentaje })
+      setScore({ correctas: j.correctas, total: j.total, porcentaje: j.porcentaje, aprobado: Boolean(j.aprobado), consejo: j.consejo || '' })
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch { alert('Error al calificar. Intenta de nuevo.') }
     finally { setSubmitting(false) }
@@ -99,13 +99,21 @@ export default function EjerciciosInteractivosPage() {
           </div>
         ) : (
           <>
-            {/* Score banner */}
+            {/* Score banner + consejo IA */}
             {score && (
-              <div className={`rounded-xl p-4 mb-4 border ${score.porcentaje >= 60 ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
-                <p className={`text-lg font-bold ${score.porcentaje >= 60 ? 'text-emerald-800' : 'text-amber-800'}`}>
-                  {score.correctas}/{score.total} correctas ({score.porcentaje}%)
-                </p>
-                <p className="text-xs text-gray-600 mt-0.5">Es solo práctica — repite las veces que quieras.</p>
+              <div className={`rounded-xl p-4 mb-4 border ${score.aprobado ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${score.aprobado ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'}`}>
+                    {score.aprobado ? '✓ Aprobado' : 'Sigue practicando'}
+                  </span>
+                  <p className={`text-lg font-bold ${score.aprobado ? 'text-emerald-800' : 'text-amber-800'}`}>
+                    {score.correctas}/{score.total} ({score.porcentaje}%)
+                  </p>
+                </div>
+                {score.consejo && (
+                  <p className={`text-sm mt-2 ${score.aprobado ? 'text-emerald-900' : 'text-amber-900'}`}>{score.consejo}</p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">Se aprueba con 70%. Es práctica — repite las veces que quieras.</p>
               </div>
             )}
 
