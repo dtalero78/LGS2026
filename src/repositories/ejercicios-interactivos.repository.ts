@@ -38,6 +38,15 @@ export const EjerciciosInteractivosRepository = {
     );
   },
 
+  /** Lista todos los sets generados (para el panel admin). */
+  async listAll(): Promise<{ nivel: string; step: string; count: number; updatedAt: string }[]> {
+    const r = await query(
+      `SELECT "nivel","step", COALESCE(jsonb_array_length("preguntas"),0)::int AS "count", "_updatedDate"
+         FROM "EJERCICIOS_INTERACTIVOS" ORDER BY "nivel","step"`,
+    );
+    return r.rows.map((x: any) => ({ nivel: x.nivel, step: x.step, count: x.count, updatedAt: x._updatedDate }));
+  },
+
   /** UPSERT por (nivel, step): reemplaza el set si ya existía (regenerar). */
   async upsert(row: { _id: string; nivel: string; step: string; preguntas: Ejercicio[]; generatedBy: string | null }): Promise<void> {
     await query(

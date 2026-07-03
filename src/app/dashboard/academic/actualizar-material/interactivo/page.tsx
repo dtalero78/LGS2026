@@ -124,6 +124,10 @@ function Content() {
   const [savingFlag, setSavingFlag] = useState(false)
   const [savingClasico, setSavingClasico] = useState(false)
   const [savingEjercicios, setSavingEjercicios] = useState(false)
+  const [ejercicioSets, setEjercicioSets] = useState<{ nivel: string; step: string; count: number; updatedAt: string }[]>([])
+  const [genNivel, setGenNivel] = useState('')
+  const [genStep, setGenStep] = useState('')
+  const [regenBusy, setRegenBusy] = useState<string | null>(null)
 
   const load = async () => {
     setLoading(true)
@@ -134,6 +138,7 @@ function Content() {
       setFeatureActive(Boolean(j.featureActive))
       setClasicoActive(j.clasicoActive !== false)
       setEjerciciosActive(Boolean(j.ejerciciosActive))
+      loadEjercicioSets()
     } catch (e: any) {
       setError(e?.message || 'Error')
     } finally {
@@ -172,6 +177,31 @@ function Content() {
       alert(e?.message || 'Error')
     } finally {
       setSavingClasico(false)
+    }
+  }
+
+  const loadEjercicioSets = async () => {
+    try {
+      const j = await jsonFetchRetry('/api/admin/libros-interactivos/ejercicios')
+      setEjercicioSets(j.sets || [])
+    } catch { /* silencioso */ }
+  }
+
+  const regenerar = async (nivel: string, step: string) => {
+    const key = `${nivel}|${step}`
+    setRegenBusy(key)
+    try {
+      const j = await jsonFetchRetry('/api/admin/libros-interactivos/ejercicios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nivel, step }),
+      })
+      await loadEjercicioSets()
+      alert(`✅ ${j.count} ejercicios generados para ${j.nivel} · ${j.step}`)
+    } catch (e: any) {
+      alert(e?.message || 'Error al generar. Verifica que el step tenga contenido.')
+    } finally {
+      setRegenBusy(null)
     }
   }
 
@@ -275,6 +305,62 @@ function Content() {
           </button>
         </div>
       </div>
+
+      {/* Fase 2 — generar / regenerar ejercicios por step */}
+      <details className="bg-white border border-amber-200 rounded-xl p-4 mb-6" open>
+        <summary className="cursor-pointer font-semibold text-amber-900 flex items-center gap-2">
+          <PencilSquareIcon className="h-5 w-5 text-amber-600" /> Ejercicios de práctica — generar / regenerar
+        </summary>
+        <div className="mt-3">
+          <p className="text-xs text-gray-600 mb-3">
+            Los ejercicios se generan con IA la primera vez que un estudiante entra a su step. Aquí puedes <strong>pre-generarlos</strong> o <strong>regenerarlos</strong> (ej. si quedaron con errores o cambió el contenido del step). El nivel se guarda en MAYÚSCULAS y el step tal cual (ej. <code>Step 2</code>).
+          </p>
+          {/* Formulario generar/regenerar puntual */}
+          <div className="flex flex-wrap items-end gap-2 mb-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Nivel</label>
+              <input value={genNivel} onChange={e => setGenNivel(e.target.value.toUpperCase())}
+                placeholder="BN1" className="px-3 py-2 border rounded-lg text-sm w-28" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Step</label>
+              <input value={genStep} onChange={e => setGenStep(e.target.value)}
+                placeholder="Step 2" className="px-3 py-2 border rounded-lg text-sm w-32" />
+            </div>
+            <button type="button"
+              onClick={() => regenerar(genNivel.toUpperCase().trim(), genStep.trim())}
+              disabled={!genNivel.trim() || !genStep.trim() || regenBusy === `${genNivel.toUpperCase().trim()}|${genStep.trim()}`}
+              className="px-4 py-2 rounded-lg text-sm font-semibold bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50">
+              {regenBusy === `${genNivel.toUpperCase().trim()}|${genStep.trim()}` ? 'Generando...' : 'Generar / Regenerar'}
+            </button>
+          </div>
+
+          {/* Sets ya generados */}
+          {ejercicioSets.length === 0 ? (
+            <p className="text-xs text-gray-400">Aún no hay ejercicios generados.</p>
+          ) : (
+            <div className="border border-gray-100 rounded-lg divide-y">
+              {ejercicioSets.map(s => {
+                const key = `${s.nivel}|${s.step}`
+                return (
+                  <div key={key} className="flex items-center justify-between px-3 py-2 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-800">{s.nivel} · {s.step}</span>
+                      <span className="text-xs text-gray-400 ml-2">{s.count} ejercicios · {s.updatedAt ? new Date(s.updatedAt).toLocaleDateString() : ''}</span>
+                    </div>
+                    <button type="button"
+                      onClick={() => regenerar(s.nivel, s.step)}
+                      disabled={regenBusy === key}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50">
+                      {regenBusy === key ? 'Generando...' : 'Regenerar'}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </details>
 
       {/* Instructivo subida PDF */}
       <details className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-6 text-sm">

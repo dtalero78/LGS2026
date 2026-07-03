@@ -107,6 +107,25 @@ class EjerciciosInteractivosServiceClass {
     return { total, correctas, porcentaje: total ? Math.round((correctas / total) * 100) : 0, resultados };
   }
 
+  /**
+   * (Admin) Fuerza la regeneración del set del step: llama a la IA de nuevo y
+   * reemplaza el set cacheado. Lanza NotFoundError si el step no tiene contenido.
+   */
+  async regenerateForStep(nivel: string, step: string): Promise<{ count: number }> {
+    const contenido = await NivelesRepository.findContenidoByNivelAndStep(nivel, step);
+    if (!contenido) throw new NotFoundError('ContenidoStep', `${nivel} ${step}`);
+    const preguntas = await this.generarConIA(contenido, nivel, step);
+    await EjerciciosInteractivosRepository.upsert({
+      _id: randomUUID(), nivel, step, preguntas, generatedBy: 'openai:gpt-4o-mini',
+    });
+    return { count: preguntas.length };
+  }
+
+  /** (Admin) Lista los sets ya generados. */
+  async listSets() {
+    return EjerciciosInteractivosRepository.listAll();
+  }
+
   // ── IA ──
   private async generarConIA(contenido: string, nivel: string, step: string): Promise<Ejercicio[]> {
     const OpenAI = (await import('openai')).default;
