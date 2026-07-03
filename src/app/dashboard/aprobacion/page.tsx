@@ -43,6 +43,7 @@ interface Contrato {
 
 interface FilterState {
   estado: string
+  plataforma: string
   fechaInicio: Date | null
   fechaFin: Date | null
 }
@@ -70,6 +71,7 @@ export default function AprobacionPage() {
     // Default = "Firmado sin aprobar" para que el aprobador entre directo al
     // backlog operativo (contratos que el cliente ya firmó y esperan visto bueno).
     estado: 'Firmado sin aprobar',
+    plataforma: '',
     fechaInicio: null,
     fechaFin: null
   })
@@ -165,6 +167,12 @@ export default function AprobacionPage() {
       }
     }
 
+    // Filtrar por plataforma
+    if (filters.plataforma) {
+      const p = filters.plataforma.toLowerCase().trim()
+      data = data.filter(c => (c.plataforma || '').toLowerCase().trim() === p)
+    }
+
     // Filtrar por fechas
     if (filters.fechaInicio) {
       data = data.filter(c => new Date(c._createdDate) >= filters.fechaInicio!)
@@ -185,7 +193,12 @@ export default function AprobacionPage() {
       const filtered = getFilteredData()
       updatePagination(filtered)
     }
-  }, [searchApellido, filters.estado, filters.fechaInicio, filters.fechaFin])
+  }, [searchApellido, filters.estado, filters.plataforma, filters.fechaInicio, filters.fechaFin])
+
+  // Opciones de plataforma derivadas de los datos cargados (distintas, ordenadas).
+  const plataformaOptions = Array.from(
+    new Set(allContratos.map(c => (c.plataforma || '').trim()).filter(Boolean))
+  ).sort()
 
   // Obtener estado display
   const getEstadoDisplay = (contrato: Contrato) => {
@@ -322,7 +335,7 @@ export default function AprobacionPage() {
         <div className="card p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
             {/* Búsqueda por apellido/nombre */}
-            <div className="lg:col-span-4">
+            <div className="lg:col-span-3">
               <label htmlFor="searchApellido" className="block text-sm font-medium text-gray-700 mb-1">
                 Buscar por apellido o nombre
               </label>
@@ -337,7 +350,7 @@ export default function AprobacionPage() {
             </div>
 
             {/* Filtro de estado */}
-            <div className="lg:col-span-3">
+            <div className="lg:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Estado
               </label>
@@ -353,6 +366,24 @@ export default function AprobacionPage() {
                   <option key={estado.value} value={estado.value}>
                     {estado.label}
                   </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filtro de plataforma */}
+            <div className="lg:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Plataforma
+              </label>
+              <select
+                aria-label="Plataforma"
+                value={filters.plataforma}
+                onChange={(e) => setFilters(prev => ({ ...prev, plataforma: e.target.value }))}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Todas</option>
+                {plataformaOptions.map(p => (
+                  <option key={p} value={p}>{p}</option>
                 ))}
               </select>
             </div>
@@ -403,7 +434,7 @@ export default function AprobacionPage() {
         {/* Información de resultados */}
         <div className="flex justify-between items-center">
           <h2 className="text-lg font-semibold">
-            {searchApellido || filters.estado || filters.fechaInicio || filters.fechaFin
+            {searchApellido || filters.estado || filters.plataforma || filters.fechaInicio || filters.fechaFin
               ? `Registros filtrados (${getFilteredData().length})`
               : `Registros pendientes de aprobación (${allContratos.length})`
             }
