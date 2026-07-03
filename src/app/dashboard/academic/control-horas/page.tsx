@@ -283,7 +283,7 @@ function ControlHorasContent() {
       sessions: 0, clubs: 0, welcome: 0,
       conducted: 0, sinAsistentes: 0, canceled: 0, suspended: 0,
       effective: 0, sinRegistrar: 0,
-      administrative: 0,
+      administrative: 0, totalHours: 0,
     }
     if (!data) return t
     // KPIs solo cuentan eventos que YA ocurrieron (fechaEvento <= NOW).
@@ -342,6 +342,9 @@ function ControlHorasContent() {
     t.effective      += adminEventsAgg.registradas
     t.sinRegistrar   += adminEventsAgg.sinRegistrar
     t.administrative  = adminEventsAgg.registradas + adminEventsAgg.sinRegistrar
+    // Total Hours = effective + administrative − (sin asistentes × 0.5).
+    // Cada sesión conducida sin asistentes descuenta media hora.
+    t.totalHours = t.effective + t.administrative - t.sinAsistentes * 0.5
     return t
   }, [data, adminEventsAgg])
 
@@ -436,6 +439,7 @@ function ControlHorasContent() {
           <LegendDot color="bg-blue-500"   label="SESSION" />
           <LegendDot color="bg-green-500"  label="CLUB" />
           <LegendDot color="bg-purple-500" label="WELCOME" />
+          <LegendDot color="bg-orange-500" label="Sin asistentes" />
           <LegendDot color="bg-yellow-500" label="Suspended" />
           <LegendDot color="bg-red-500"    label="Canceled" />
         </div>
@@ -443,10 +447,11 @@ function ControlHorasContent() {
 
       {/* Tarjetas destacadas: Effective | Sin registrar | Administrative (incluida en Effective) */}
       {data && !loading && !error && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-2">
           <TotalCard label="Effective Hours"        value={totales.effective}      color="bg-emerald-50 border-emerald-400 text-emerald-700" />
           <TotalCard label="Hours without recording" value={totales.sinRegistrar}   color="bg-amber-50   border-amber-400   text-amber-700" />
           <TotalCard label="Administrative Hours"   value={totales.administrative} color="bg-violet-50  border-violet-400  text-violet-700" />
+          <TotalCard label="Total Hours"            value={totales.totalHours}     color="bg-slate-100  border-slate-400   text-slate-700" />
         </div>
       )}
 
@@ -457,7 +462,7 @@ function ControlHorasContent() {
           <TotalCard label="Clubs"     value={totales.clubs}     color="bg-green-50 border-green-300 text-green-700" />
           <TotalCard label="Welcome"   value={totales.welcome}   color="bg-purple-50 border-purple-300 text-purple-700" />
           <TotalCard label="Conducted" value={totales.conducted} color="bg-sky-50   border-sky-300   text-sky-700" />
-          <TotalCard label="Sin Asistentes" value={totales.sinAsistentes} color="bg-orange-50 border-orange-300 text-orange-700" />
+          <TotalCard label="Without Assistants" value={totales.sinAsistentes} color="bg-orange-50 border-orange-300 text-orange-700" />
           <TotalCard label="Canceled"  value={totales.canceled}  color="bg-red-50   border-red-300   text-red-700" />
           <TotalCard label="Suspended" value={totales.suspended} color="bg-yellow-50 border-yellow-300 text-yellow-800" />
         </div>
@@ -601,7 +606,14 @@ function colorClass(c: EventCard): string {
     if (c.estado === 'Canceled') return 'bg-red-500 text-white'
     if (c.estado === 'Suspended') return 'bg-yellow-500 text-yellow-900'
   }
-  switch ((c.tipo || '').toUpperCase()) {
+  const tipo = (c.tipo || '').toUpperCase()
+  // Sesión o Club ya ocurrido SIN asistentes → naranja.
+  if (c.kind === 'vigente' && (tipo === 'SESSION' || tipo === 'CLUB')
+      && new Date(c.fechaEvento).getTime() <= Date.now()
+      && (c.asistieron || 0) === 0) {
+    return 'bg-orange-500 text-white'
+  }
+  switch (tipo) {
     case 'SESSION': return 'bg-blue-500 text-white'
     case 'CLUB':    return 'bg-green-500 text-white'
     case 'WELCOME': return 'bg-purple-500 text-white'
@@ -664,7 +676,12 @@ function EventDetailModal({
       if (card.estado === 'Canceled') return 'bg-red-500 text-white'
       if (card.estado === 'Suspended') return 'bg-yellow-500 text-yellow-900'
     }
-    switch ((card.tipo || '').toUpperCase()) {
+    const tipo = (card.tipo || '').toUpperCase()
+    if (card.kind === 'vigente' && (tipo === 'SESSION' || tipo === 'CLUB')
+        && new Date(card.fechaEvento).getTime() <= Date.now() && attend === 0) {
+      return 'bg-orange-500 text-white'
+    }
+    switch (tipo) {
       case 'SESSION': return 'bg-blue-500 text-white'
       case 'CLUB':    return 'bg-green-500 text-white'
       case 'WELCOME': return 'bg-purple-500 text-white'
