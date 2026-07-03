@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { isEventoCompartible, reasonNotCompartible, MAX_NIVELES_COMPARTIDOS, extractClubPrefix } from '@/lib/evento-compartido'
+import { eventLocalToUTC, eventDayKey, eventHora } from '@/lib/event-time'
 
 interface CalendarEvent {
   _id: string
@@ -150,8 +151,6 @@ export default function EventModal({
   // Inicializar formulario cuando hay un evento para editar o cuando se abre el modal
   useEffect(() => {
     if (editingEvent) {
-      const eventDate = new Date(editingEvent.dia)
-
       // Extraer advisor ID si viene como objeto
       let advisorId = editingEvent.advisor
       if (typeof editingEvent.advisor === 'object' && editingEvent.advisor !== null) {
@@ -169,8 +168,11 @@ export default function EventModal({
         || editingEvent.tituloONivel
 
       setFormData({
-        fecha: format(eventDate, 'yyyy-MM-dd'),
-        hora: format(eventDate, 'HH:mm'),
+        // Poblar el picker con la fecha/hora del evento en hora de Colombia (TZ
+        // canónica), NO en la TZ del navegador — así editar desde otro país no
+        // desplaza la hora del evento.
+        fecha: eventDayKey(editingEvent.dia),
+        hora: eventHora(editingEvent.dia),
         evento: (editingEvent.evento || editingEvent.tipo || 'SESSION') as 'SESSION' | 'CLUB',
         tituloONivel: resolvedNivel,
         nombreEvento: nombreEventoValue,
@@ -589,9 +591,10 @@ export default function EventModal({
         return
       }
 
-      // Combinar fecha y hora para crear la fecha completa
-      const dateTimeString = `${formData.fecha}T${formData.hora}:00`
-      const eventDateTime = new Date(dateTimeString)
+      // Combinar fecha y hora → instante UTC, interpretando la hora SIEMPRE como
+      // hora de Colombia (TZ canónica). Determinista: el mismo "18:00" queda en
+      // el mismo instante sin importar el país desde donde se cree el evento.
+      const diaISO = eventLocalToUTC(formData.fecha, formData.hora)
 
       // Si el toggle "Evento compartido" está activo, validamos que cada
       // entrada tenga nivel y step elegidos. La validación de compartibilidad
@@ -608,7 +611,8 @@ export default function EventModal({
 
       // Preparar datos para enviar
       const eventData: Record<string, any> = {
-        dia: eventDateTime.toISOString(),
+        dia: diaISO,
+        fecha: formData.fecha,
         evento: formData.evento,
         tituloONivel: formData.tituloONivel,
         nombreEvento: formData.nombreEvento || undefined,

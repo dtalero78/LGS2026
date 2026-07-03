@@ -26,6 +26,7 @@ import { ValidationError, ForbiddenError, NotFoundError } from '@/lib/errors';
 import { AdvisorEventLogRepository, AdvisorEventLogRow } from '@/repositories/advisor-event-log.repository';
 import { AdvisorNotesAuditRepository } from '@/repositories/advisor-notes-audit.repository';
 import { getSessionWindow } from '@/lib/session-window';
+import { monthRangeLocal } from '@/lib/event-time';
 
 const TIMEOUT_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 const EDIT_WINDOW_MIN_MINUTES = 30;
@@ -89,11 +90,12 @@ export interface MonthlyView {
 
 // ────────────────────────────── helpers ──────────────────────────────
 
+// Rango [inicio, finExclusivo) del mes en hora de Colombia (America/Bogota), la
+// TZ canónica de los eventos. Antes se calculaba en UTC, lo que excluía del mes
+// los eventos de la tarde-noche del último día (que en UTC caen en el día 1 del
+// mes siguiente) → horas que "desaparecían" del conteo mensual del advisor.
 function monthRange(year: number, month: number): { fromISO: string; toISO: string } {
-  // [first day of month, first day of next month)
-  const from = new Date(Date.UTC(year, month - 1, 1));
-  const to   = new Date(Date.UTC(year, month, 1));
-  return { fromISO: from.toISOString(), toISO: to.toISOString() };
+  return monthRangeLocal(year, month);
 }
 
 /**

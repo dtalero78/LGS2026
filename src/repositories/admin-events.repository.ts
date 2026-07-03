@@ -13,6 +13,7 @@
 import 'server-only';
 import { query, queryOne, queryMany } from '@/lib/postgres';
 import type { AdminEventTipo } from '@/lib/admin-event-window';
+import { monthRangeLocal } from '@/lib/event-time';
 
 export interface AdminEventRow {
   _id: string;
@@ -114,8 +115,8 @@ export const AdminEventsRepository = {
    * Lista mensual para un advisor específico (panel-advisor + ctrl-horas).
    */
   async listForAdvisorMonth(advisorId: string, year: number, month: number): Promise<AdminEventRow[]> {
-    const from = new Date(Date.UTC(year, month - 1, 1)).toISOString();
-    const to   = new Date(Date.UTC(year, month, 1)).toISOString();
+    // Mes en hora de Colombia (TZ canónica) — ver src/lib/event-time.ts.
+    const { fromISO: from, toISO: to } = monthRangeLocal(year, month);
     return queryMany<AdminEventRow>(
       `SELECT * FROM "ADMIN_EVENTS"
        WHERE "advisorId" = $1
@@ -264,8 +265,8 @@ export const AdminEventsRepository = {
     registradas: number;
     sinRegistrar: number;
   }> {
-    const from = new Date(Date.UTC(year, month - 1, 1)).toISOString();
-    const to   = new Date(Date.UTC(year, month, 1)).toISOString();
+    // Mes en hora de Colombia (TZ canónica) — ver src/lib/event-time.ts.
+    const { fromISO: from, toISO: to } = monthRangeLocal(year, month);
     const row = await queryOne<{ registradas: string | number | null; sin_registrar: string | number | null }>(
       `SELECT
          COALESCE(SUM("horas") FILTER (WHERE "registrado" = true),  0) AS "registradas",

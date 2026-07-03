@@ -16,8 +16,9 @@ import {
   BookOpenIcon,
   ArrowDownTrayIcon
 } from '@heroicons/react/24/outline'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, addMonths, subMonths } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, addMonths, subMonths, addDays, subDays } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { eventDayKey, eventHora, todayDayKeyLocal } from '@/lib/event-time'
 import HolidayBadge from '@/components/common/HolidayBadge'
 import { usePermissions } from '@/hooks/usePermissions'
 import { AcademicoPermission } from '@/types/permissions'
@@ -181,12 +182,15 @@ function PanelAdvisorContent() {
     try {
       setEventsLoading(true)
 
-      // Usar el mes actual del calendario
+      // Rango del mes ampliado ±1 día para cubrir la frontera de zona horaria:
+      // los eventos luego se agrupan por día en hora de Colombia (eventDayKey),
+      // así que traemos también los del borde (un evento de la noche del último
+      // día cae en el día 1 del mes siguiente en UTC).
       const monthStart = startOfMonth(currentMonth)
       const monthEnd = endOfMonth(currentMonth)
 
-      const startDate = monthStart.toISOString().split('T')[0]
-      const endDate = monthEnd.toISOString().split('T')[0]
+      const startDate = format(subDays(monthStart, 1), 'yyyy-MM-dd')
+      const endDate = format(addDays(monthEnd, 1), 'yyyy-MM-dd')
 
       const response = await fetch(`/api/postgres/calendar/events?startDate=${startDate}&endDate=${endDate}&advisor=${encodeURIComponent(advisor._id)}&limit=1000`)
 
@@ -302,15 +306,17 @@ function PanelAdvisorContent() {
     setShowEventDetailModal(true)
   }
 
+  // Agrupar por día en hora de Colombia (TZ canónica) — no la del navegador.
+  // `date` es el día literal de la celda del calendario; lo comparamos por su
+  // clave YYYY-MM-DD contra el día del evento en hora de Colombia.
   const getEventsForDay = (date: Date) => {
-    return events.filter(event => {
-      const eventDate = new Date(event.dia)
-      return isSameDay(eventDate, date)
-    })
+    const key = format(date, 'yyyy-MM-dd')
+    return events.filter(event => eventDayKey(event.dia) === key)
   }
 
   const getAdminEventsForDay = (date: Date) => {
-    return adminEvents.filter(ae => isSameDay(new Date(ae.fechaInicio), date))
+    const key = format(date, 'yyyy-MM-dd')
+    return adminEvents.filter(ae => eventDayKey(ae.fechaInicio) === key)
   }
 
   const getEventColor = (tipo: string) => {
@@ -457,7 +463,7 @@ function PanelAdvisorContent() {
                   const dayEvents = getEventsForDay(date)
                   const isCurrentMonth = date.getMonth() === currentMonth.getMonth()
                   const isSelected = selectedDate && isSameDay(date, selectedDate)
-                  const isToday = isSameDay(date, new Date())
+                  const isToday = format(date, 'yyyy-MM-dd') === todayDayKeyLocal()
 
                   return (
                     <div
@@ -489,7 +495,7 @@ function PanelAdvisorContent() {
                             }}
                           >
                             {isShared && <span className="mr-0.5" aria-hidden>🔗</span>}
-                            {format(new Date(event.dia), 'HH:mm')} - {event.tituloONivel}
+                            {eventHora(event.dia)} - {event.tituloONivel}
                           </div>
                           )
                         })}

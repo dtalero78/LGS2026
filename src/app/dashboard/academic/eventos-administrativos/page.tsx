@@ -10,6 +10,7 @@ import {
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 import { ADMIN_EVENT_TIPOS, ADMIN_EVENT_TIPO_META, type AdminEventTipo } from '@/lib/admin-event-window'
+import { eventLocalToUTC } from '@/lib/event-time'
 
 interface AdvisorOption { _id: string; nombre: string }
 
@@ -169,7 +170,8 @@ export default function EventosAdministrativosPage() {
 
   const fechaInicioISO = useMemo(() => {
     if (!form.fecha || !form.hora) return ''
-    return new Date(`${form.fecha}T${form.hora}:00`).toISOString()
+    // Hora interpretada SIEMPRE como Colombia (TZ canónica), no la del navegador.
+    return eventLocalToUTC(form.fecha, form.hora)
   }, [form.fecha, form.hora])
 
   const handleCheckConflicts = async () => {
