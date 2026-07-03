@@ -322,14 +322,14 @@ function ControlHorasContent() {
     // calendario para que el Coordinador pueda terminarlos si quiere.
     // asistieron se acumula entre hermanos del grupo (evento compartido): el
     // grupo cuenta como "sin asistentes" si NINGÚN nivel tuvo asistentes.
-    type GroupState = { tipo: string | null; sesionCerrada: boolean; asistieron: number }
+    type GroupState = { tipo: string | null; sesionCerrada: boolean; asistieron: number; compartido: boolean }
     const groups = new Map<string, GroupState>()
     data.vigentes.forEach(v => {
       if (!isPast(v.fechaEvento)) return
       const key = v.eventoCompartidoId || v.eventoId
       const existing = groups.get(key)
       if (!existing) {
-        groups.set(key, { tipo: v.tipo, sesionCerrada: v.sesionCerrada === true, asistieron: v.asistieron || 0 })
+        groups.set(key, { tipo: v.tipo, sesionCerrada: v.sesionCerrada === true, asistieron: v.asistieron || 0, compartido: !!v.eventoCompartidoId })
       } else {
         if (v.sesionCerrada === true) existing.sesionCerrada = true
         existing.asistieron += (v.asistieron || 0)
@@ -338,7 +338,8 @@ function ControlHorasContent() {
     for (const g of groups.values()) {
       countByTipo(g.tipo)
       t.conducted++
-      if (g.asistieron === 0) t.sinAsistentes++   // sesión conducida sin asistentes
+      // Without Assistants: conducido con 0 asistentes Y que NO sea compartido.
+      if (g.asistieron === 0 && !g.compartido) t.sinAsistentes++
       if (g.sesionCerrada) t.effective++
       else                 t.sinRegistrar++
     }
@@ -638,8 +639,9 @@ function colorClass(c: EventCard): string {
     if (c.estado === 'Suspended') return 'bg-yellow-500 text-yellow-900'
   }
   const tipo = (c.tipo || '').toUpperCase()
-  // Sesión o Club ya ocurrido SIN asistentes → naranja.
+  // Sesión o Club ya ocurrido SIN asistentes y NO compartido → naranja.
   if (c.kind === 'vigente' && (tipo === 'SESSION' || tipo === 'CLUB')
+      && !c.eventoCompartidoId
       && new Date(c.fechaEvento).getTime() <= Date.now()
       && (c.asistieron || 0) === 0) {
     return 'bg-orange-500 text-white'
@@ -711,6 +713,7 @@ function EventDetailModal({
     }
     const tipo = (card.tipo || '').toUpperCase()
     if (card.kind === 'vigente' && (tipo === 'SESSION' || tipo === 'CLUB')
+        && !card.eventoCompartidoId
         && new Date(card.fechaEvento).getTime() <= Date.now() && attend === 0) {
       return 'bg-orange-500 text-white'
     }
