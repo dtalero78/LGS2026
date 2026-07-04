@@ -450,13 +450,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Descargar estadísticas académicas como CSV',
   },
 
-  // -- Página: Advisors (/dashboard/academic/advisors) --
+  // -- Página: Lista Advisors (/dashboard/academic/advisors) --
   {
     code: AcademicoPermission.LISTA_ADVISORS_VER,
     module: Module.ACADEMICO,
     section: 'Advisors',
-    name: 'Página "Lista de Advisors"',
-    description: 'Acceso a /dashboard/academic/advisors con lista de profesores',
+    name: 'Página "Lista Advisors"',
+    description: 'Acceso a /dashboard/academic/advisors con la lista de profesores',
   },
   {
     code: AcademicoPermission.ADVISOR_VER_ENLACE,
