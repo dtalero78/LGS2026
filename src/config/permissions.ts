@@ -798,6 +798,20 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     name: 'Página "Prospectos"',
     description: 'Acceso al pipeline comercial de prospectos',
   },
+  {
+    code: ComercialPermission.MATRICULAS_VER,
+    module: Module.COMERCIAL,
+    section: 'Matrículas',
+    name: 'Página "Matrículas"',
+    description: 'Acceso a /dashboard/comercial/matriculas: consulta de todos los contratos con filtros (asesor, número, estado, plataforma, fechas) y exportación.',
+  },
+  {
+    code: ComercialPermission.MATRICULAS_BORRAR,
+    module: Module.COMERCIAL,
+    section: 'Matrículas',
+    name: '↳ Borrar matrícula (contratos SIN FIRMAR)',
+    description: 'Habilita el borrado en cascada de un contrato SIN FIRMAR (titular + beneficiarios + FINANCIEROS + PAGOS_TITULARES). Solo aplica a contratos sin consentimiento ni aprobación; el borrado queda auditado en PURGE_LOG.',
+  },
 
   // ========== APROBACION MODULE (/dashboard/aprobacion) ==========
   {

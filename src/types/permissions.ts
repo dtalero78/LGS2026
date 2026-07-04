@@ -306,6 +306,10 @@ export enum ComercialPermission {
 
   // Prospectos
   VER_PROSPECTOS = 'COMERCIAL.PROSPECTOS.VER',
+
+  // Matrículas
+  MATRICULAS_VER = 'COMERCIAL.MATRICULAS.VER',
+  MATRICULAS_BORRAR = 'COMERCIAL.MATRICULAS.BORRAR',
 }
 
 /**

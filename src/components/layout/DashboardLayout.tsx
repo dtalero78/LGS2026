@@ -343,6 +343,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       ComercialPermission.DESCARGAR,
       ComercialPermission.APROBACION_AUTONOMA,
     ],
+    '/dashboard/comercial/matriculas': [
+      ComercialPermission.MATRICULAS_VER,
+    ],
     '/subir-lote': [
       ComercialPermission.MODIFICAR_CONTRATO,
     ],

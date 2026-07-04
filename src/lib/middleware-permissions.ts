@@ -181,6 +181,9 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/dashboard/comercial/prospectos': [
     'COMERCIAL.PROSPECTOS.VER' as Permission,
   ],
+  '/dashboard/comercial/matriculas': [
+    'COMERCIAL.MATRICULAS.VER' as Permission,
+  ],
 
   // Informes — rutas específicas por grupo
   // Nivel 3 — cada reporte con su permiso específico (nieto)
