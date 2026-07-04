@@ -812,6 +812,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     name: '↳ Borrar matrícula (contratos SIN FIRMAR)',
     description: 'Habilita el borrado en cascada de un contrato SIN FIRMAR (titular + beneficiarios + FINANCIEROS + PAGOS_TITULARES). Solo aplica a contratos sin consentimiento ni aprobación; el borrado queda auditado en PURGE_LOG.',
   },
+  {
+    code: ComercialPermission.MATRICULAS_DETALLE,
+    module: Module.COMERCIAL,
+    section: 'Matrículas',
+    name: '↳ Ver detalle de matrícula (tarjetas)',
+    description: 'Acceso a la vista de resumen de una matrícula (/dashboard/comercial/matriculas/[id]): tarjeta del titular con el estado de la matrícula + tarjetas de beneficiarios con su estado de perfil académico (nivel/step o "sin perfil").',
+  },
 
   // ========== APROBACION MODULE (/dashboard/aprobacion) ==========
   {

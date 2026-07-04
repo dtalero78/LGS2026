@@ -269,7 +269,7 @@ export default function MatriculasPage() {
                                 className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed" />
                             </td>
                           )}
-                          <td className="px-6 py-4 whitespace-nowrap cursor-pointer" onClick={() => window.open(`/person/${c._id}`, '_blank')}>
+                          <td className="px-6 py-4 whitespace-nowrap cursor-pointer" onClick={() => window.open(`/dashboard/comercial/matriculas/${c._id}`, '_blank')}>
                             <div className="flex items-center">
                               <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center"><User className="h-5 w-5 text-blue-600" /></div>
                               <div className="ml-4">
