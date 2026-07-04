@@ -103,7 +103,9 @@ export default function AprobacionPage() {
         if (result.success && result.approvals) {
           console.log('✅ Registros pendientes cargados:', result.count)
           setAllContratos(result.approvals)
-          updatePagination(result.approvals)
+          // Aplicar el filtro ACTUAL (default "Firmado sin aprobar") sobre los
+          // datos recién cargados — antes se paginaba la lista cruda sin filtrar.
+          updatePagination(getFilteredData(result.approvals))
         } else {
           console.error('Error en respuesta:', result.error)
           setAllContratos([])
@@ -143,8 +145,8 @@ export default function AprobacionPage() {
   }
 
   // Obtener datos filtrados (incluye búsqueda local por apellido/nombre)
-  const getFilteredData = (): Contrato[] => {
-    let data = [...allContratos]
+  const getFilteredData = (source: Contrato[] = allContratos): Contrato[] => {
+    let data = [...source]
 
     // Filtrar por apellido/nombre (búsqueda local)
     if (searchApellido.trim()) {
