@@ -186,6 +186,101 @@ export async function createEvent(data: {
   });
 }
 
+/**
+ * Agrega niveles a un evento existente, convirtiéndolo en compartido (o ampliando
+ * un grupo ya compartido). Restricciones:
+ *   - El evento base debe ser de un tipo compartible (Jump / MASTER / CLUB).
+ *   - Debe ser FUTURO (dia > ahora) y NO estar cerrado (sesionCerrada != true).
+ *   - Total de niveles (existentes + nuevos) ≤ MAX_NIVELES_COMPARTIDOS.
+ *   - Niveles nuevos distintos entre sí y de los existentes.
+ *   - Para CLUB, todos del mismo tipo de club que el base.
+ * Si el evento no era compartido, genera el eventoCompartidoId y lo setea al base.
+ */
+export async function addLevelsToEvent(
+  eventId: string,
+  nuevos: Array<{ nivel: string; step: string; nombreEvento?: string }>,
+): Promise<{ eventoCompartidoId: string; added: number }> {
+  const event = await CalendarioRepository.findById(eventId);
+  if (!event) throw new NotFoundError('Event', eventId);
+
+  const tipo = (event.tipo || event.evento || '').toUpperCase();
+  const baseStepRef = event.step || event.nombreEvento;
+
+  if (!isEventoCompartible(tipo, baseStepRef)) {
+    throw new ValidationError(reasonNotCompartible(tipo, baseStepRef) || 'Este evento no se puede compartir.');
+  }
+  if (new Date(event.dia).getTime() <= Date.now()) {
+    throw new ValidationError('Solo se pueden agregar niveles a eventos futuros (aún no ocurridos).');
+  }
+  if ((event as any).sesionCerrada === true) {
+    throw new ValidationError('El evento ya está cerrado; no se pueden agregar niveles.');
+  }
+
+  const lista = Array.isArray(nuevos) ? nuevos.filter(n => n && (n.nivel || '').trim() && (n.step || '').trim()) : [];
+  if (lista.length === 0) throw new ValidationError('Debes indicar al menos un nivel con su step.');
+
+  const siblings = await CalendarioRepository.findGroupSiblings(eventId);
+  const existingLevels = new Set(siblings.map((s: any) => (s.nivel || '').trim().toUpperCase()));
+
+  if (siblings.length + lista.length > MAX_NIVELES_COMPARTIDOS) {
+    throw new ValidationError(`Máximo ${MAX_NIVELES_COMPARTIDOS} niveles por grupo (ya hay ${siblings.length}).`);
+  }
+
+  const nuevosLevels = lista.map(n => (n.nivel || '').trim().toUpperCase());
+  const seen = new Set<string>();
+  for (const nl of nuevosLevels) {
+    if (existingLevels.has(nl)) throw new ValidationError(`El nivel ${nl} ya está en el grupo.`);
+    if (seen.has(nl)) throw new ValidationError(`Nivel ${nl} repetido en la selección.`);
+    seen.add(nl);
+  }
+
+  if (tipo === 'CLUB') {
+    const basePrefix = extractClubPrefix(baseStepRef);
+    if (!basePrefix) throw new ValidationError('No se pudo determinar el tipo de club del evento base.');
+    for (const n of lista) {
+      const p = extractClubPrefix(n.step);
+      if (p !== basePrefix) {
+        throw new ValidationError(`Todos los niveles deben ser del mismo tipo de club (base = ${basePrefix}, ${n.nivel} = ${p || 'desconocido'}).`);
+      }
+    }
+  }
+
+  const cid = (event as any).eventoCompartidoId || randomUUID();
+
+  return withTransaction(async (client) => {
+    // Si el base aún no era compartido, marcarlo con el nuevo UUID.
+    if (!(event as any).eventoCompartidoId) {
+      await client.query(`UPDATE "CALENDARIO" SET "eventoCompartidoId" = $2 WHERE "_id" = $1`, [eventId, cid]);
+    }
+    for (const n of lista) {
+      const adicNivel = (n.nivel || '').trim();
+      const adicStep = (n.step || '').trim();
+      const adicNombre = (n.nombreEvento || adicStep).trim();
+      const siblingData: Record<string, any> = {
+        _id: ids.event(),
+        dia: event.dia,
+        fecha: event.fecha || new Date(event.dia).toISOString().split('T')[0],
+        hora: event.hora,
+        advisor: event.advisor,
+        nivel: adicNivel,
+        step: adicStep,
+        tipo,
+        evento: tipo,
+        titulo: adicNombre,
+        nombreEvento: adicNombre,
+        tituloONivel: adicNivel ? `${adicNivel} - ${adicNombre}` : '',
+        linkZoom: event.linkZoom || null,
+        limiteUsuarios: event.limiteUsuarios || 0,
+        club: (event as any).club || null,
+        observaciones: event.observaciones || null,
+        eventoCompartidoId: cid,
+      };
+      await CalendarioRepository.create(siblingData, client);
+    }
+    return { eventoCompartidoId: cid, added: lista.length };
+  });
+}
+
 const ALLOWED_EVENT_FIELDS = [
   'dia', 'hora', 'advisor', 'nivel', 'step', 'tipo', 'evento', 'titulo',
   'nombreEvento', 'tituloONivel', 'linkZoom', 'limiteUsuarios', 'club', 'observaciones',

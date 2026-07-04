@@ -724,6 +724,15 @@ export default function AgendaSesionesPage() {
   }
 
   const handleEventSave = async (eventData: any) => {
+    // Flujo "Agregar niveles al grupo" (el modal ya hizo el POST) → solo refrescar.
+    if (eventData?.__levelsAdded) {
+      setShowEventModal(false)
+      setEditingEvent(null)
+      const d = eventData.dia ? new Date(eventData.dia) : new Date()
+      try { clearCacheForMonth(d) } catch { /* noop */ }
+      await loadInitialData(d)
+      return
+    }
     try {
       if (editingEvent) {
         // Actualizar evento existente
