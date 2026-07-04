@@ -38,20 +38,24 @@ const getNavigation = (userEmail: string, userRole: string) => [
     children: [
       { name: 'Agenda Sesiones', href: '/dashboard/academic/agenda-sesiones' },
       { name: 'Agenda Académica', href: '/dashboard/academic/agenda-academica' },
-      { name: 'Lista Advisors', href: '/dashboard/academic/advisors' },
-      // Si el usuario logueado ES advisor, su email va en la URL para abrir SU panel.
-      // Para coordinadores/admins el link va SIN email — el panel auto-selecciona
-      // el primer advisor del dropdown (si pasamos el email del coordinador, el
-      // endpoint /by-email retorna 404 y la página muestra "Error al buscar advisor").
-      { name: 'Panel Advisor', href: userRole === 'ADVISOR'
-        ? `/panel-advisor?email=${encodeURIComponent(userEmail)}`
-        : '/panel-advisor' },
+      {
+        name: 'Advisors', isSubmenu: true, children: [
+          { name: 'Lista Advisors', href: '/dashboard/academic/advisors' },
+          // Si el usuario logueado ES advisor, su email va en la URL para abrir SU panel.
+          // Para coordinadores/admins el link va SIN email — el panel auto-selecciona
+          // el primer advisor del dropdown (si pasamos el email del coordinador, el
+          // endpoint /by-email retorna 404 y la página muestra "Error al buscar advisor").
+          { name: 'Panel Advisor', href: userRole === 'ADVISOR'
+            ? `/panel-advisor?email=${encodeURIComponent(userEmail)}`
+            : '/panel-advisor' },
+          { name: 'Control Horas', href: '/dashboard/academic/control-horas' },
+          { name: 'Sesiones sin registro', href: '/dashboard/academic/sesiones-sin-gestion', newTab: true },
+          { name: 'Performance Evaluation', href: '/dashboard/academic/performance-evaluation', newTab: true },
+        ],
+      },
       { name: 'Actualizar Material', href: '/dashboard/academic/actualizar-material', newTab: true },
-      { name: 'Control Horas', href: '/dashboard/academic/control-horas' },
       { name: 'Eventos Administrativos', href: '/dashboard/academic/eventos-administrativos', newTab: true },
-      { name: 'Sesiones sin gestión', href: '/dashboard/academic/sesiones-sin-gestion', newTab: true },
       { name: 'Evaluaciones Jump', href: '/dashboard/academic/jump-evaluaciones' },
-      { name: 'Performance Evaluation', href: '/dashboard/academic/performance-evaluation', newTab: true },
     ],
   },
   {
@@ -595,10 +599,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       }
 
       // Sub-grupos de Informes (Asistencia, Programación, Advisors, Académica,
-      // Planta, Estadísticas): modelo de 2 marcas — la sección se muestra si le
-      // queda ≥1 ítem visible tras el filtrado de nivel 3 (no necesita permiso
-      // propio de sección). Basta marcar el abuelo "Informes" + el ítem.
-      if (child.isSubmenu && item.name === 'Informes') {
+      // Planta, Estadísticas) y el submenú "Advisors" de Académico: modelo de 2
+      // marcas — la sección se muestra si le queda ≥1 ítem visible tras el
+      // filtrado de nivel 3 (no necesita permiso propio de sección). Así un rol
+      // sin permisos de advisor NO ve el grupo "Advisors" vacío.
+      if (child.isSubmenu && (item.name === 'Informes' || item.name === 'Académico')) {
         return (child.children?.length ?? 0) > 0
       }
 
