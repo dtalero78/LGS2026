@@ -25,6 +25,7 @@ interface CalendarEvent {
   linkZoom?: string
   inscritos?: number
   asistieron?: number
+  eventoCompartidoId?: string | null
   _createdDate?: string | Date
 }
 
@@ -175,6 +176,7 @@ export default function CalendarView({
                     title={`${getEventType(event)} - ${event.tituloONivel} ${event.nombreEvento || ''}\nAdvisor: ${event.advisorNombre || 'Sin asignar'}\nInscritos: ${event.inscritos || 0}/${event.limiteUsuarios}\nAsistieron: ${event.asistieron || 0}`}
                   >
                     <div className="truncate">
+                      {event.eventoCompartidoId && <span className="mr-0.5" aria-label="Compartido">🔗</span>}
                       {format(new Date(event.dia), 'HH:mm')} {getEventType(event)}
                     </div>
                     <div className="truncate text-[10px] opacity-75">
