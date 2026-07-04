@@ -376,12 +376,11 @@ function ControlHorasContent() {
     t.effective      += adminEventsAgg.registradas
     t.sinRegistrar   += adminEventsAgg.sinRegistrar
     t.administrative  = adminEventsAgg.registradas + adminEventsAgg.sinRegistrar
-    // Total Hours = effective − (sin asistentes × 0.5) − canceladas − suspendidas.
-    // NO suma las horas administrativas. Cada sesión conducida sin asistentes
-    // descuenta media hora (SALVO advisor de planta → no descuenta); cada evento
-    // CANCELADO (reasignado a otro advisor) o SUSPENDIDO (evento eliminado)
-    // descuenta 1 hora completa (no lo dictó este advisor).
-    t.totalHours = t.effective - (advisorPlanta ? 0 : t.sinAsistentes * 0.5) - t.canceled - t.suspended
+    // Total Hours = Effective − (sin asistentes × 0.5). Las administrativas
+    // registradas ya están dentro de Effective. Cada sesión conducida sin
+    // asistentes descuenta media hora, SALVO advisor de planta → no descuenta.
+    // Canceladas/suspendidas NO se restan aquí (no forman parte de Effective).
+    t.totalHours = t.effective - (advisorPlanta ? 0 : t.sinAsistentes * 0.5)
     return t
   }, [data, adminEventsAgg, advisorPlanta])
 
