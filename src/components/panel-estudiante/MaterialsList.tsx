@@ -38,6 +38,8 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
   const materials = data?.materials || []
   const nivel = data?.nivel || ''
   const nivelNormalizado = normalizeNivelCode(nivel)
+  // WELCOME es onboarding: no tiene material ni ejercicios de práctica.
+  const isWelcome = nivelNormalizado === 'WELCOME'
 
   // Feature flag check: ¿está disponible el visor v2 (LGS) para este nivel?
   // React Query con staleTime 5 min — evita queries innecesarias en navegacion
@@ -99,6 +101,8 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
   }
 
   const classicUrl = getInteractiveMaterialUrl(nivel)
+  // Para WELCOME no se muestra material ni ejercicios.
+  const shownMaterials = isWelcome ? [] : allMaterials
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
@@ -107,7 +111,7 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
       </h3>
 
       {/* v2 (LGS) — solo si el flag global está ON y el nivel tiene libro configurado */}
-      {v2Available && (
+      {v2Available && !isWelcome && (
         <a
           href={`/panel-estudiante/material-interactivo/${encodeURIComponent(nivelNormalizado)}`}
           className="flex items-center gap-3 p-3 mb-3 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors group border border-emerald-200"
@@ -123,7 +127,7 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
       )}
 
       {/* Fase 2 — Ejercicios de práctica (auto-gradables) del step actual */}
-      {ejerciciosActivo && (
+      {ejerciciosActivo && !isWelcome && (
         <a
           href="/panel-estudiante/ejercicios-interactivos"
           className="flex items-center gap-3 p-3 mb-3 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors group border border-amber-200"
@@ -139,7 +143,7 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
       )}
 
       {/* Wix (clásico) — visible si el flag está ON o si el v2 no está disponible */}
-      {classicUrl && showClassic && (
+      {classicUrl && showClassic && !isWelcome && (
         <a
           href={classicUrl}
           target="_blank"
@@ -158,14 +162,14 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
         </a>
       )}
 
-      {allMaterials.length === 0 ? (
+      {shownMaterials.length === 0 ? (
         <div className="text-center py-8 text-gray-400">
           <BookOpenIcon className="h-10 w-10 mx-auto mb-2 text-gray-300" />
           <p className="text-sm">No hay material disponible para tu nivel</p>
         </div>
       ) : (
         <div className="space-y-2 max-h-[400px] overflow-y-auto">
-          {allMaterials.map((mat, idx) => (
+          {shownMaterials.map((mat, idx) => (
             <a
               key={idx}
               href={mat.url}
