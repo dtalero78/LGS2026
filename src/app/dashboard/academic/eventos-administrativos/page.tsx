@@ -6,7 +6,7 @@ import { PermissionGuard } from '@/components/permissions/PermissionGuard'
 import { AcademicoPermission } from '@/types/permissions'
 import {
   CalendarIcon, PlusIcon, TrashIcon, ArrowPathIcon,
-  XMarkIcon, ExclamationTriangleIcon, CheckCircleIcon, UserPlusIcon,
+  XMarkIcon, ExclamationTriangleIcon, CheckCircleIcon, UserPlusIcon, ClockIcon,
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 import { ADMIN_EVENT_TIPOS, ADMIN_EVENT_TIPO_META, type AdminEventTipo } from '@/lib/admin-event-window'
@@ -110,6 +110,13 @@ export default function EventosAdministrativosPage() {
   const [addChecking, setAddChecking] = useState(false)
   const [addSubmitting, setAddSubmitting] = useState(false)
 
+  // Registro (marcar tarjeta) en bloque desde el panel admin
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [registerOpen, setRegisterOpen] = useState(false)
+  const [regTimeout, setRegTimeout] = useState('')
+  const [regNotas, setRegNotas] = useState('')
+  const [registering, setRegistering] = useState(false)
+
   // Cargar advisors
   useEffect(() => {
     fetch('/api/postgres/advisors')
@@ -141,6 +148,7 @@ export default function EventosAdministrativosPage() {
       const j = await r.json()
       if (!r.ok || !j.success) throw new Error(j?.error || `Error ${r.status}`)
       setItems(j.items)
+      setSelected(new Set())
     } catch (e: any) {
       setError(e?.message || 'Error al cargar'); setItems([])
     } finally {
@@ -321,6 +329,68 @@ export default function EventosAdministrativosPage() {
     }
   }
 
+  // ─── Registro en bloque ────────────────────────────────────────────────
+  const pendingItems = useMemo(() => items.filter(i => !i.registrado), [items])
+  const selectedItems = useMemo(
+    () => items.filter(i => selected.has(i._id) && !i.registrado),
+    [items, selected],
+  )
+  const allPendingSelected = pendingItems.length > 0 && pendingItems.every(i => selected.has(i._id))
+
+  const toggleOne = (id: string) =>
+    setSelected(prev => {
+      const n = new Set(prev)
+      if (n.has(id)) n.delete(id); else n.add(id)
+      return n
+    })
+  const toggleAllPending = () =>
+    setSelected(prev => (allPendingSelected ? new Set() : new Set(pendingItems.map(i => i._id))))
+
+  // Hora de fin nominal (inicio + duración) en HH:MM local.
+  const finNominalHHMM = (iso: string, horas: number) => {
+    const end = new Date(new Date(iso).getTime() + horas * 3_600_000)
+    return `${PAD(end.getHours())}:${PAD(end.getMinutes())}`
+  }
+
+  const openRegister = () => {
+    if (selectedItems.length === 0) return
+    // Time Out por defecto: 1 evento → su hora de fin nominal; varios → hora actual.
+    const def = selectedItems.length === 1
+      ? finNominalHHMM(selectedItems[0].fechaInicio, selectedItems[0].horas)
+      : `${PAD(new Date().getHours())}:${PAD(new Date().getMinutes())}`
+    setRegTimeout(def); setRegNotas('')
+    setRegisterOpen(true)
+  }
+
+  const TIMEOUT_RE = /^([01]\d|2[0-3]):[0-5]\d$/
+  const handleRegister = async () => {
+    if (!TIMEOUT_RE.test(regTimeout)) { toast.error('Hora de registro inválida (HH:MM)'); return }
+    if (selectedItems.length === 0) return
+    setRegistering(true)
+    let ok = 0, fail = 0
+    const errors: string[] = []
+    for (const it of selectedItems) {
+      try {
+        const r = await fetch(`/api/postgres/admin-events/${it._id}/registrar`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ timeout: regTimeout, notas: regNotas.trim() || null }),
+        })
+        const j = await r.json()
+        if (!r.ok || !j.success) { fail++; errors.push(`${it.advisorNombre || it.advisorId}: ${j?.error || r.status}`) }
+        else ok++
+      } catch (e: any) {
+        fail++; errors.push(`${it.advisorNombre || it.advisorId}: ${e?.message || 'error'}`)
+      }
+    }
+    setRegistering(false)
+    setRegisterOpen(false)
+    if (ok) toast.success(`${ok} evento(s) registrado(s)${fail ? ` · ${fail} con error` : ''}`)
+    else if (fail) toast.error(`No se pudo registrar (${fail})`)
+    if (errors.length) console.warn('Errores de registro admin-events:', errors)
+    load()
+  }
+
   return (
     <DashboardLayout>
       <PermissionGuard permission={AcademicoPermission.ADMIN_EVENTS_GESTIONAR}>
@@ -393,6 +463,26 @@ export default function EventosAdministrativosPage() {
             <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-800">{error}</div>
           )}
 
+          {/* Barra de acción — registro en bloque */}
+          {selectedItems.length > 0 && (
+            <div className="flex items-center justify-between flex-wrap gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5">
+              <p className="text-sm text-emerald-900 font-medium">
+                {selectedItems.length} evento(s) pendiente(s) seleccionado(s)
+              </p>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => setSelected(new Set())}
+                  className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                  Limpiar
+                </button>
+                <button type="button" onClick={openRegister}
+                  className="inline-flex items-center gap-1.5 px-4 py-1.5 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700">
+                  <ClockIcon className="h-4 w-4" />
+                  Registrar evento(s)
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Tabla */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             {loading ? (
@@ -405,6 +495,16 @@ export default function EventosAdministrativosPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr className="text-xs text-gray-500 uppercase">
+                    <th className="px-3 py-2 w-10 text-center">
+                      <input
+                        type="checkbox"
+                        aria-label="Seleccionar todos los pendientes"
+                        title="Seleccionar todos los pendientes visibles"
+                        checked={allPendingSelected}
+                        disabled={pendingItems.length === 0}
+                        onChange={toggleAllPending}
+                      />
+                    </th>
                     <th className="text-left font-medium px-3 py-2">Fecha · Hora</th>
                     <th className="text-left font-medium px-3 py-2 w-32">Tipo</th>
                     <th className="text-left font-medium px-3 py-2">Título / Advisor</th>
@@ -417,7 +517,19 @@ export default function EventosAdministrativosPage() {
                   {items.map(it => {
                     const meta = ADMIN_EVENT_TIPO_META[it.tipo]
                     return (
-                      <tr key={it._id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50">
+                      <tr key={it._id} className={`border-b border-gray-50 last:border-0 hover:bg-gray-50 ${selected.has(it._id) ? 'bg-emerald-50/40' : ''}`}>
+                        <td className="px-3 py-2 text-center">
+                          {!it.registrado ? (
+                            <input
+                              type="checkbox"
+                              aria-label={`Seleccionar evento de ${it.advisorNombre || it.advisorId}`}
+                              checked={selected.has(it._id)}
+                              onChange={() => toggleOne(it._id)}
+                            />
+                          ) : (
+                            <CheckCircleIcon className="h-4 w-4 text-emerald-500 mx-auto" />
+                          )}
+                        </td>
                         <td className="px-3 py-2 text-sm text-gray-900 font-mono">{fechaCorta(it.fechaInicio)}</td>
                         <td className="px-3 py-2">
                           <span className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full font-medium ${meta.color} ${meta.textColor} border`}>
@@ -771,6 +883,97 @@ export default function EventosAdministrativosPage() {
                     {addSubmitting ? 'Agregando…' : `✓ Agregar ${addSelected.length}`}
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Modal Registrar (marcar tarjeta) en bloque */}
+        {registerOpen && (
+          <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-black bg-opacity-60 overflow-y-auto">
+            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl my-8">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-start gap-3">
+                  <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-emerald-100">
+                    <ClockIcon className="h-6 w-6 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">Registrar evento(s) administrativo(s)</h2>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {selectedItems.length} evento(s) seleccionado(s) — marcarás la tarjeta como Coordinador/Admin.
+                    </p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => !registering && setRegisterOpen(false)}
+                  title="Cerrar" aria-label="Cerrar" className="text-gray-400 hover:text-gray-600">
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="bg-blue-50 border-l-4 border-blue-400 rounded-r-lg p-3 mb-4 text-xs text-blue-900">
+                Registras estos eventos por gestión administrativa (bypass de la ventana del advisor).
+                Los que ya pasaron su ventana quedarán marcados como <strong>Por Coordinación</strong>.
+              </div>
+
+              {/* Hora de registro */}
+              <div className="mb-3">
+                <label htmlFor="reg-timeout" className="block text-xs font-medium text-gray-700 mb-1">
+                  Hora de registro (Time Out, HH:MM) <span className="text-red-600">*</span>
+                </label>
+                <input
+                  id="reg-timeout"
+                  type="time"
+                  value={regTimeout}
+                  onChange={e => setRegTimeout(e.target.value)}
+                  className="w-32 border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-mono"
+                />
+                <p className="text-[11px] text-gray-500 mt-1">
+                  Se aplica a todos los eventos seleccionados.
+                  {selectedItems.length === 1 && ' Pre-llenado con la hora de fin nominal del evento.'}
+                </p>
+              </div>
+
+              {/* Notas */}
+              <div className="mb-3">
+                <label htmlFor="reg-notas" className="block text-xs font-medium text-gray-700 mb-1">
+                  Notas (opcional)
+                </label>
+                <textarea
+                  id="reg-notas"
+                  rows={2}
+                  value={regNotas}
+                  onChange={e => setRegNotas(e.target.value)}
+                  placeholder='Si dejas vacío se guarda "no hubo novedades"'
+                  className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
+                />
+              </div>
+
+              {/* Lista de eventos a registrar */}
+              <div className="border border-gray-200 rounded-lg max-h-52 overflow-y-auto divide-y divide-gray-100">
+                {selectedItems.map(it => (
+                  <div key={it._id} className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs">
+                    <div className="min-w-0">
+                      <div className="font-medium text-gray-800 truncate">
+                        {ADMIN_EVENT_TIPO_META[it.tipo].label} · {it.titulo || '—'}
+                      </div>
+                      <div className="text-gray-500 truncate">{it.advisorNombre || it.advisorId}</div>
+                    </div>
+                    <div className="text-right text-gray-500 font-mono whitespace-nowrap">
+                      {fechaCorta(it.fechaInicio)} · {it.horas}h
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Acciones */}
+              <div className="mt-5 flex justify-end gap-2 pt-3 border-t border-gray-100">
+                <button type="button" onClick={() => setRegisterOpen(false)} disabled={registering}
+                  className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">
+                  Cancelar
+                </button>
+                <button type="button" onClick={handleRegister} disabled={registering || !regTimeout}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50">
+                  {registering ? 'Registrando…' : `✓ Registrar ${selectedItems.length}`}
+                </button>
               </div>
             </div>
           </div>
