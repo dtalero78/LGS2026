@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
@@ -400,6 +400,49 @@ function ControlHorasContent() {
     return cells
   }, [year, month])
 
+  // Semanas (bloques de 7 celdas) para la columna "Week Hours".
+  const weeks = useMemo(() => {
+    const w: Array<Array<{ day: number | null; key: string }>> = []
+    for (let i = 0; i < calendarCells.length; i += 7) w.push(calendarCells.slice(i, i + 7))
+    return w
+  }, [calendarCells])
+
+  // Day-key local del instante (mismo formato que cardsByDay: YYYY-MM-DD navegador).
+  const dayKeyOf = (iso: string | null | undefined) => {
+    if (!iso) return ''
+    const d = new Date(iso)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+
+  // Horas EFECTIVAS de una semana: mismo criterio que la tarjeta "Effective Hours"
+  // acotado a los días de esa semana → sesiones/clubs conducidos y CERRADOS (ya
+  // ocurridos, deduplicando eventos compartidos por eventoCompartidoId) + eventos
+  // administrativos REGISTRADOS (suman sus `horas`). La suma de todas las semanas
+  // del mes cuadra con el KPI Effective Hours.
+  const weeklyEffective = (weekKeys: Set<string>): number => {
+    if (!data) return 0
+    const nowMs = Date.now()
+    const groups = new Map<string, { cerrada: boolean }>()
+    for (const v of data.vigentes) {
+      if (new Date(v.fechaEvento).getTime() > nowMs) continue
+      if (!weekKeys.has(dayKeyOf(v.fechaEvento))) continue
+      const key = v.eventoCompartidoId || v.eventoId
+      const g = groups.get(key)
+      if (!g) groups.set(key, { cerrada: v.sesionCerrada === true })
+      else if (v.sesionCerrada === true) g.cerrada = true
+    }
+    let eff = 0
+    for (const g of groups.values()) if (g.cerrada) eff++
+    for (const ae of adminEventsList) {
+      if (!ae?.registrado || !ae.fechaInicio) continue
+      if (new Date(ae.fechaInicio).getTime() > nowMs) continue
+      if (weekKeys.has(dayKeyOf(ae.fechaInicio))) eff += Number(ae.horas) || 0
+    }
+    return eff
+  }
+
+  const fmtHoras = (n: number) => Number.isInteger(n) ? String(n) : n.toFixed(1)
+
   return (
     <div className="max-w-7xl mx-auto p-6">
       {/* Header adaptativo según rol:
@@ -529,52 +572,66 @@ function ControlHorasContent() {
       ) : (
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           {/* Header de días */}
-          <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
+          <div className="grid grid-cols-8 bg-gray-50 border-b border-gray-200">
             {WEEKDAYS_ES.map(d => (
               <div key={d} className="px-2 py-2 text-center text-xs font-semibold text-gray-700">{d}</div>
             ))}
+            <div className="px-2 py-2 text-center text-xs font-semibold text-emerald-700 bg-emerald-50 border-l border-gray-200">Week Hours</div>
           </div>
-          {/* Grid de celdas */}
-          <div className="grid grid-cols-7">
-            {calendarCells.map(cell => {
-              if (cell.day === null) {
-                return <div key={cell.key} className="min-h-[110px] bg-gray-50 border-r border-b border-gray-100" />
-              }
-              const cards = cardsByDay.get(cell.key) ?? []
-              const isToday = cell.key === `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
+          {/* Grid de celdas (7 días + 1 total semanal por fila) */}
+          <div className="grid grid-cols-8">
+            {weeks.map((week, wi) => {
+              const weekKeys = new Set(week.filter(c => c.day !== null).map(c => c.key))
+              const eff = weeklyEffective(weekKeys)
               return (
-                <div key={cell.key} className={`min-h-[110px] p-1.5 border-r border-b border-gray-100 ${isToday ? 'bg-blue-50/40' : 'bg-white'}`}>
-                  <div className={`text-xs font-semibold mb-1 ${isToday ? 'text-blue-700' : 'text-gray-700'}`}>{cell.day}</div>
-                  <div className="space-y-1">
-                    {cards.map(c => {
-                      const isShared = c.kind === 'vigente' && !!c.eventoCompartidoId
-                      return (
-                      <button
-                        key={c.kind === 'vigente' ? c.eventoId : `${c.eventoId}_${c.logId}`}
-                        type="button"
-                        onClick={() => setSelectedCard(c)}
-                        title={`${c.tipo ?? ''} ${c.nivel ?? ''} ${c.step ?? ''} · ${stateLabel(c)}${isShared ? ' · 🔗 compartido entre niveles' : ''}`}
-                        className={`block w-full text-left px-1.5 py-1 rounded text-[11px] font-medium ${colorClass(c)} hover:opacity-90 transition`}
-                      >
-                        <div className="truncate">
-                          {isShared && <span className="mr-0.5" aria-hidden>🔗</span>}
-                          {formatHoraLocal(c.fechaEvento)} - {c.nivel || ''} {c.step ? `· ${c.step}` : ''}
+                <Fragment key={`w-${wi}`}>
+                  {week.map(cell => {
+                    if (cell.day === null) {
+                      return <div key={cell.key} className="min-h-[110px] bg-gray-50 border-r border-b border-gray-100" />
+                    }
+                    const cards = cardsByDay.get(cell.key) ?? []
+                    const isToday = cell.key === `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
+                    return (
+                      <div key={cell.key} className={`min-h-[110px] p-1.5 border-r border-b border-gray-100 ${isToday ? 'bg-blue-50/40' : 'bg-white'}`}>
+                        <div className={`text-xs font-semibold mb-1 ${isToday ? 'text-blue-700' : 'text-gray-700'}`}>{cell.day}</div>
+                        <div className="space-y-1">
+                          {cards.map(c => {
+                            const isShared = c.kind === 'vigente' && !!c.eventoCompartidoId
+                            return (
+                            <button
+                              key={c.kind === 'vigente' ? c.eventoId : `${c.eventoId}_${c.logId}`}
+                              type="button"
+                              onClick={() => setSelectedCard(c)}
+                              title={`${c.tipo ?? ''} ${c.nivel ?? ''} ${c.step ?? ''} · ${stateLabel(c)}${isShared ? ' · 🔗 compartido entre niveles' : ''}`}
+                              className={`block w-full text-left px-1.5 py-1 rounded text-[11px] font-medium ${colorClass(c)} hover:opacity-90 transition`}
+                            >
+                              <div className="truncate">
+                                {isShared && <span className="mr-0.5" aria-hidden>🔗</span>}
+                                {formatHoraLocal(c.fechaEvento)} - {c.nivel || ''} {c.step ? `· ${c.step}` : ''}
+                              </div>
+                            </button>
+                            )
+                          })}
+                          {/* Eventos administrativos (solo display — cuentan en Administrative Hours) */}
+                          {(adminByDay.get(cell.key) ?? []).map(ae => (
+                            <div
+                              key={ae._id}
+                              title={`[ADMIN ${ae.tipo}] ${ae.titulo || ''} · ${ae.horas}h${ae.registrado ? ' (registrado)' : ' (sin registrar)'}`}
+                              className={`block w-full text-left px-1.5 py-1 rounded text-[11px] font-medium truncate ${ae.registrado ? 'bg-violet-600 text-white' : 'bg-violet-300 text-violet-900'}`}
+                            >
+                              {formatHoraLocal(ae.fechaInicio)} · {ae.titulo || ae.tipo}
+                            </div>
+                          ))}
                         </div>
-                      </button>
-                      )
-                    })}
-                    {/* Eventos administrativos (solo display — cuentan en Administrative Hours) */}
-                    {(adminByDay.get(cell.key) ?? []).map(ae => (
-                      <div
-                        key={ae._id}
-                        title={`[ADMIN ${ae.tipo}] ${ae.titulo || ''} · ${ae.horas}h${ae.registrado ? ' (registrado)' : ' (sin registrar)'}`}
-                        className={`block w-full text-left px-1.5 py-1 rounded text-[11px] font-medium truncate ${ae.registrado ? 'bg-violet-600 text-white' : 'bg-violet-300 text-violet-900'}`}
-                      >
-                        {formatHoraLocal(ae.fechaInicio)} · {ae.titulo || ae.tipo}
                       </div>
-                    ))}
+                    )
+                  })}
+                  {/* Total semanal de horas efectivas */}
+                  <div className="min-h-[110px] p-2 border-b border-l border-gray-200 bg-emerald-50/50 flex flex-col items-center justify-center">
+                    <div className={`text-xl font-bold ${eff > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>{fmtHoras(eff)} h</div>
+                    <div className="text-[10px] uppercase tracking-wide text-gray-500 mt-0.5">efectivas</div>
                   </div>
-                </div>
+                </Fragment>
               )
             })}
           </div>
