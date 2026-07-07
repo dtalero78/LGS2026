@@ -10,7 +10,7 @@ import {
   ArrowPathIcon,
 } from '@heroicons/react/24/outline'
 
-type Tipo = 'multiple_choice' | 'true_false' | 'fill_blank'
+type Tipo = 'multiple_choice' | 'true_false' | 'fill_blank' | 'sentence'
 interface Pregunta { tipo: Tipo; enunciado: string; opciones?: string[] }
 interface Resultado { correcto: boolean; respuestaCorrecta: number | boolean | string; explicacion?: string }
 
@@ -179,10 +179,19 @@ export default function EjerciciosInteractivosPage() {
                         className={`w-full px-3 py-2 rounded-lg border text-sm ${graded ? (res?.correcto ? 'border-emerald-400 bg-emerald-50' : 'border-red-300 bg-red-50') : 'border-gray-300 focus:ring-2 focus:ring-amber-400'}`} />
                     )}
 
+                    {/* Sentence — construcción de frase (evaluada por IA) */}
+                    {q.tipo === 'sentence' && (
+                      <textarea disabled={graded} rows={2}
+                        value={answers[i] ?? ''} onChange={e => setAnswer(i, e.target.value)}
+                        placeholder="Escribe tu oración completa en inglés..."
+                        className={`w-full px-3 py-2 rounded-lg border text-sm ${graded ? (res?.correcto ? 'border-emerald-400 bg-emerald-50' : 'border-red-300 bg-red-50') : 'border-gray-300 focus:ring-2 focus:ring-amber-400'}`} />
+                    )}
+
                     {/* Feedback tras calificar */}
                     {graded && res && !res.correcto && (
                       <p className="mt-2 text-xs text-emerald-700">
-                        Respuesta correcta: <strong>{
+                        {q.tipo === 'sentence' ? 'Ejemplo de respuesta: ' : 'Respuesta correcta: '}
+                        <strong>{
                           q.tipo === 'multiple_choice' ? (q.opciones?.[Number(res.respuestaCorrecta)] ?? '')
                           : q.tipo === 'true_false' ? (res.respuestaCorrecta ? 'Verdadero' : 'Falso')
                           : String(res.respuestaCorrecta)

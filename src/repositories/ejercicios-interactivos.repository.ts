@@ -1,15 +1,19 @@
 import 'server-only';
 import { query, queryOne } from '@/lib/postgres';
 
-/** Un ejercicio auto-gradable (los 3 tipos del MVP de Fase 2). */
-export type EjercicioTipo = 'multiple_choice' | 'true_false' | 'fill_blank';
+/**
+ * Un ejercicio de práctica. Auto-gradables sin IA: multiple_choice, true_false,
+ * fill_blank. `sentence` (construcción de frase) se evalúa CON IA.
+ */
+export type EjercicioTipo = 'multiple_choice' | 'true_false' | 'fill_blank' | 'sentence';
 
 export interface Ejercicio {
   tipo: EjercicioTipo;
   enunciado: string;
   opciones?: string[];              // multiple_choice
-  respuestaCorrecta: number | boolean | string; // index | bool | texto
+  respuestaCorrecta: number | boolean | string; // index | bool | texto | frase de ejemplo (sentence)
   aceptadas?: string[];             // fill_blank: variantes válidas
+  criterio?: string;                // sentence: qué debe cumplir la frase (para grading IA)
   explicacion?: string;             // opcional, se muestra tras calificar
 }
 
