@@ -19,6 +19,7 @@ import {
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, addMonths, subMonths, addDays, subDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import HolidayBadge from '@/components/common/HolidayBadge'
+import { AdvisorStatsCards } from '@/components/advisor/AdvisorStatsCards'
 import { usePermissions } from '@/hooks/usePermissions'
 import { AcademicoPermission } from '@/types/permissions'
 
@@ -414,6 +415,15 @@ function PanelAdvisorContent() {
             Descargar Libros
           </button>
         </div>
+
+        {/* Cajas de estadísticas del mes (mismas del dashboard de advisor) */}
+        {advisor && (
+          <AdvisorStatsCards
+            advisorId={advisor._id}
+            year={currentMonth.getFullYear()}
+            month={currentMonth.getMonth() + 1}
+          />
+        )}
 
         {/* Calendar View */}
         <div className="bg-white rounded-lg shadow-sm p-6">
