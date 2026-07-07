@@ -8,7 +8,6 @@ import { usePermissions } from '@/hooks/usePermissions'
 import { AcademicoPermission } from '@/types/permissions'
 import { ClockIcon, ChevronLeftIcon, ChevronRightIcon, ArrowPathIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
-import { computeAdvisorKpis, AdvisorKpiCards } from '@/components/advisor/AdvisorStatsCards'
 
 interface VigenteRow {
   source: 'CALENDARIO'
@@ -123,6 +122,10 @@ function ControlHorasContent() {
 
   const [selectedCard, setSelectedCard] = useState<EventCard | null>(null)
 
+  // "Advisor Planta": si está marcado, Total Hours NO descuenta la media hora por
+  // sesión conducida sin asistentes (un advisor de planta cobra por disponibilidad).
+  const [advisorPlanta, setAdvisorPlanta] = useState(false)
+
   // Caché client por (advisor, año, mes). Evita refetch al navegar adelante/atrás
   // entre meses ya consultados en la misma sesión. Se invalida sólo en:
   //   - botón Recargar (fetchMonth(true))
@@ -186,6 +189,12 @@ function ControlHorasContent() {
     const found = advisors.find(a => a._id === advisorId)
     if (found) setCurrentAdvisor(found)
   }, [advisorId, advisors, canPickAdvisor])
+
+  // La casilla "Advisor Planta" arranca según el atributo persistido del advisor
+  // (ADVISORS.esPlanta). Sigue siendo editable en la vista como override puntual.
+  useEffect(() => {
+    setAdvisorPlanta(currentAdvisor?.esPlanta === true)
+  }, [currentAdvisor?._id, currentAdvisor?.esPlanta])
 
   // Cargar presigned URL de la foto cuando cambia el advisor seleccionado.
   useEffect(() => {
@@ -295,13 +304,85 @@ function ControlHorasContent() {
     return m
   }, [adminEventsList])
 
-  // Cajas de KPIs del mes — mismas del dashboard de advisor (componente
-  // compartido computeAdvisorKpis): Effective / Hours without recording /
-  // Administrative + Sessions / Training / Clubs / Welcome / Conducted /
-  // Canceled / Suspended. La regla (eventos pasados, dedup de compartidos por
-  // eventoCompartidoId "any closed → Effective", admin registrados en
-  // Effective) vive en una sola fuente de verdad.
-  const kpis = useMemo(() => computeAdvisorKpis(data, adminEventsAgg), [data, adminEventsAgg])
+  // Totales del mes — por tipo (vigentes + históricos), por estado, y registro.
+  //
+  // Effective Hours = sesiones académicas cerradas (1h c/u) + admin events
+  //                   registrados (sumando sus horas).
+  // Hours without recording = sesiones académicas vigentes sin cerrar (1h c/u)
+  //                   + admin events sin registrar (sumando sus horas).
+  // Administrative Hours = solo admin events registrados (suma de horas).
+  const totales = useMemo(() => {
+    const t = {
+      sessions: 0, clubs: 0, welcome: 0,
+      conducted: 0, sinAsistentes: 0, canceled: 0, suspended: 0,
+      effective: 0, sinRegistrar: 0,
+      administrative: 0, totalHours: 0,
+    }
+    if (!data) return t
+    // KPIs solo cuentan eventos que YA ocurrieron (fechaEvento <= NOW).
+    // Eventos futuros del mes están agendados pero aún no son "actividad real".
+    const nowMs = Date.now()
+    const isPast = (iso: string | null | undefined) =>
+      iso != null && new Date(iso).getTime() <= nowMs
+    const countByTipo = (tipo: string | null) => {
+      switch ((tipo || '').toUpperCase()) {
+        case 'SESSION': t.sessions++; break
+        case 'CLUB':    t.clubs++; break
+        case 'WELCOME': t.welcome++; break
+      }
+    }
+    // Eventos compartidos: el advisor da 1 sola hora real aunque haya 2-3
+    // filas (una por nivel). Agrupamos por `eventoCompartidoId` y aplicamos
+    // la regla "any closed → Effective": si AL MENOS UNO de los hermanos
+    // está cerrado, el grupo cuenta como Effective. Así un advisor que
+    // cierra P1 pero abandona antes de P2/P3 igual suma 1 Effective (no 3
+    // sin registrar). Los hermanos sin cerrar siguen visibles en el
+    // calendario para que el Coordinador pueda terminarlos si quiere.
+    // asistieron se acumula entre hermanos del grupo (evento compartido): el
+    // grupo cuenta como "sin asistentes" si NINGÚN nivel tuvo asistentes.
+    type GroupState = { tipo: string | null; sesionCerrada: boolean; asistieron: number; compartido: boolean }
+    const groups = new Map<string, GroupState>()
+    data.vigentes.forEach(v => {
+      if (!isPast(v.fechaEvento)) return
+      const key = v.eventoCompartidoId || v.eventoId
+      const existing = groups.get(key)
+      if (!existing) {
+        groups.set(key, { tipo: v.tipo, sesionCerrada: v.sesionCerrada === true, asistieron: v.asistieron || 0, compartido: !!v.eventoCompartidoId })
+      } else {
+        if (v.sesionCerrada === true) existing.sesionCerrada = true
+        existing.asistieron += (v.asistieron || 0)
+      }
+    })
+    for (const g of groups.values()) {
+      countByTipo(g.tipo)
+      t.conducted++
+      // Without Assistants: conducido con 0 asistentes Y que NO sea compartido.
+      if (g.asistieron === 0 && !g.compartido) t.sinAsistentes++
+      if (g.sesionCerrada) t.effective++
+      else                 t.sinRegistrar++
+    }
+    data.historicos.forEach(h => {
+      if (!isPast(h.fechaEvento)) return
+      countByTipo(h.tipo)
+      if (h.estado === 'Canceled')  t.canceled++
+      if (h.estado === 'Suspended') t.suspended++
+    })
+    // Admin events:
+    //   - Effective suma las registradas (horas ya "marcadas tarjeta").
+    //   - Hours without recording suma las sin registrar (pendientes).
+    //   - Administrative muestra el TOTAL del mes (registradas + sin registrar).
+    //     Así se cumple la identidad visible al advisor:
+    //       effective = conducted + administrative - hoursWithoutRecording
+    t.effective      += adminEventsAgg.registradas
+    t.sinRegistrar   += adminEventsAgg.sinRegistrar
+    t.administrative  = adminEventsAgg.registradas + adminEventsAgg.sinRegistrar
+    // Total Hours = Effective − (sin asistentes × 0.5). Las administrativas
+    // registradas ya están dentro de Effective. Cada sesión conducida sin
+    // asistentes descuenta media hora, SALVO advisor de planta → no descuenta.
+    // Canceladas/suspendidas NO se restan aquí (no forman parte de Effective).
+    t.totalHours = t.effective - (advisorPlanta ? 0 : t.sinAsistentes * 0.5)
+    return t
+  }, [data, adminEventsAgg, advisorPlanta])
 
   // Build calendar grid: filas x 7 columnas (Lun-Dom)
   const calendarCells = useMemo(() => {
@@ -442,12 +523,41 @@ function ControlHorasContent() {
           <LegendDot color="bg-yellow-500" label="Suspended" />
           <LegendDot color="bg-red-500"    label="Canceled" />
         </div>
+
+        {/* Advisor Planta: si se marca, Total Hours NO descuenta la media hora por
+            sesión conducida sin asistentes (advisor de planta cobra disponibilidad). */}
+        <label htmlFor="advisor-planta" className="flex items-center gap-2 cursor-pointer select-none whitespace-nowrap">
+          <span className="text-sm font-medium text-gray-700">Advisor Planta</span>
+          <input
+            id="advisor-planta"
+            type="checkbox"
+            checked={advisorPlanta}
+            onChange={e => setAdvisorPlanta(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-slate-600 focus:ring-slate-500 cursor-pointer"
+          />
+        </label>
       </div>
 
-      {/* Cajas de estadísticas del mes (mismas del dashboard de advisor) */}
+      {/* Tarjetas destacadas: Effective | Sin registrar | Administrative (incluida en Effective) */}
       {data && !loading && !error && (
-        <div className="mb-4">
-          <AdvisorKpiCards kpis={kpis} />
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-2">
+          <TotalCard label="Effective Hours"        value={totales.effective}      color="bg-emerald-50 border-emerald-400 text-emerald-700" />
+          <TotalCard label="Hours without recording" value={totales.sinRegistrar}   color="bg-amber-50   border-amber-400   text-amber-700" />
+          <TotalCard label="Administrative Hours"   value={totales.administrative} color="bg-violet-50  border-violet-400  text-violet-700" />
+          <TotalCard label="Total Hours"            value={totales.totalHours}     color="bg-slate-100  border-slate-400   text-slate-700" />
+        </div>
+      )}
+
+      {/* Tarjetas de totales del mes */}
+      {data && !loading && !error && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-2 mb-4">
+          <TotalCard label="Sessions"  value={totales.sessions}  color="bg-blue-50  border-blue-300  text-blue-700" />
+          <TotalCard label="Clubs"     value={totales.clubs}     color="bg-green-50 border-green-300 text-green-700" />
+          <TotalCard label="Welcome"   value={totales.welcome}   color="bg-purple-50 border-purple-300 text-purple-700" />
+          <TotalCard label="Conducted" value={totales.conducted} color="bg-sky-50   border-sky-300   text-sky-700" />
+          <TotalCard label="Without Assistants" value={totales.sinAsistentes} color="bg-orange-50 border-orange-300 text-orange-700" />
+          <TotalCard label="Canceled"  value={totales.canceled}  color="bg-red-50   border-red-300   text-red-700" />
+          <TotalCard label="Suspended" value={totales.suspended} color="bg-yellow-50 border-yellow-300 text-yellow-800" />
         </div>
       )}
 
@@ -581,6 +691,15 @@ function AdvisorAvatar({ fotoUrl, inicial }: { fotoUrl: string | null; inicial: 
             <span className="text-2xl font-bold text-blue-600">{inicial}</span>
           </div>
       }
+    </div>
+  )
+}
+
+function TotalCard({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className={`${color} border rounded-lg px-3 py-2 text-center`}>
+      <div className="text-xl font-bold">{value}</div>
+      <div className="text-[10px] uppercase tracking-wide font-semibold">{label}</div>
     </div>
   )
 }
