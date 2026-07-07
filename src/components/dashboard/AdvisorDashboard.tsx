@@ -22,7 +22,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { ClockIcon } from '@heroicons/react/24/outline'
 import {
-  computeAdvisorKpis, AdvisorKpiCards,
+  computeAdvisorKpis,
+  computeControlHorasKpis, ControlHorasKpiCards,
   type VigenteRow, type HistoricoRow,
 } from '@/components/advisor/AdvisorStatsCards'
 
@@ -32,6 +33,7 @@ interface AdvisorInfo {
   primerApellido?: string
   email: string
   fotoAdvisor?: string | null
+  esPlanta?: boolean
 }
 
 const WEEKDAYS_ES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -110,7 +112,12 @@ export default function AdvisorDashboard() {
   //   - effective = vigentes con sesionCerrada=true (registradas por advisor o coord)
   //   - sinRegistrar = vigentes con sesionCerrada=false/null (pendientes)
   // effective + sinRegistrar = conducted.
+  // `kpis` (con Training) alimenta los donuts de composición.
   const kpis = useMemo(() => computeAdvisorKpis(data, adminAgg), [data, adminAgg])
+  // `hoursKpis` alimenta las cajas estilo Control de Horas (Total Hours +
+  // Without Assistants). Total Hours respeta el esPlanta del advisor (lectura).
+  const esPlanta = advisor?.esPlanta === true
+  const hoursKpis = useMemo(() => computeControlHorasKpis(data, adminAgg, esPlanta), [data, adminAgg, esPlanta])
 
   // Heatmaps Día × Hora del mes (Lun-Dom × 06:00-21:00).
   // 2 matrices: conducted (azul) y canceled (rojo). Agregado por weekday × hora.
@@ -182,8 +189,9 @@ export default function AdvisorDashboard() {
         </div>
       </div>
 
-      {/* Cajas de KPIs del mes (compartidas con /panel-advisor) */}
-      <AdvisorKpiCards kpis={kpis} />
+      {/* Cajas de KPIs del mes — estilo Control de Horas (compartidas con
+          /panel-advisor y Control de Horas), con Advisor Planta de solo lectura */}
+      <ControlHorasKpiCards kpis={hoursKpis} esPlanta={esPlanta} />
 
       {/* Heatmaps Día × Hora del mes — Conducted (azul) | Canceladas (rojo o mensaje) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
