@@ -19,7 +19,6 @@ import {
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, addMonths, subMonths, addDays, subDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import HolidayBadge from '@/components/common/HolidayBadge'
-import { AdvisorHoursCards } from '@/components/advisor/AdvisorStatsCards'
 import { usePermissions } from '@/hooks/usePermissions'
 import { AcademicoPermission } from '@/types/permissions'
 
@@ -29,7 +28,6 @@ interface Advisor {
   primerApellido: string
   email?: string
   fotoAdvisor?: string | null
-  esPlanta?: boolean
 }
 
 interface CalendarioEvent {
@@ -416,16 +414,6 @@ function PanelAdvisorContent() {
             Descargar Libros
           </button>
         </div>
-
-        {/* Cajas de estadísticas del mes (mismas de Control de Horas) */}
-        {advisor && (
-          <AdvisorHoursCards
-            advisorId={advisor._id}
-            year={currentMonth.getFullYear()}
-            month={currentMonth.getMonth() + 1}
-            esPlanta={advisor.esPlanta === true}
-          />
-        )}
 
         {/* Calendar View */}
         <div className="bg-white rounded-lg shadow-sm p-6">
