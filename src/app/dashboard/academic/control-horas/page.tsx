@@ -645,11 +645,12 @@ function ControlHorasContent() {
       {selectedCard && (
         <EventDetailModal
           card={selectedCard}
-          // ADVISOR propio: puede editar sólo vigentes dentro de la ventana temporal.
+          // Rol ADVISOR: en Control de Horas el modal es SOLO LECTURA (el advisor
+          // registra sus sesiones desde /sesion/[id], no desde aquí).
           // ADMIN/SUPER_ADMIN: puede editar SIEMPRE eventos vigentes (vigente=Conducted),
           // pero si la sesión está cerrada se pedirá motivo en el modal de warning.
           // Históricos (Canceled/Suspended) siempre son read-only.
-          canEditNotes={selectedCard.kind === 'vigente' && (isAdmin || selectedCard.canEdit)}
+          canEditNotes={role !== 'ADVISOR' && selectedCard.kind === 'vigente' && (isAdmin || selectedCard.canEdit)}
           isAdminEditor={isAdmin}
           onClose={() => setSelectedCard(null)}
           // Optimistic update: en vez de refetch el mes entero (~150 eventos),
