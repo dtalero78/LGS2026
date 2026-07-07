@@ -7,7 +7,6 @@ import {
   ArrowLeftIcon,
   CheckCircleIcon,
   XCircleIcon,
-  ArrowPathIcon,
 } from '@heroicons/react/24/outline'
 
 type Tipo = 'multiple_choice' | 'true_false' | 'fill_blank' | 'sentence'
@@ -25,17 +24,28 @@ export default function EjerciciosInteractivosPage() {
   const [resultados, setResultados] = useState<Resultado[] | null>(null)
   const [score, setScore] = useState<{ correctas: number; total: number; porcentaje: number; aprobado: boolean; consejo: string } | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [progreso, setProgreso] = useState<{ generados: number; total: number; quedan: number } | null>(null)
+  const [yaCompletado, setYaCompletado] = useState(false)
+  const [prevScore, setPrevScore] = useState<{ porcentaje: number; aprobado: boolean } | null>(null)
 
   const load = async () => {
-    setLoading(true); setResultados(null); setScore(null)
+    setLoading(true); setResultados(null); setScore(null); setYaCompletado(false); setPrevScore(null)
     try {
       const r = await fetch('/api/postgres/panel-estudiante/ejercicios-interactivos', { cache: 'no-store' })
       const j = await r.json()
+      setProgreso(j?.progreso || null)
       if (j?.available) {
         setAvailable(true)
         setNivel(j.nivel || ''); setStep(j.step || '')
-        setPreguntas(j.preguntas || [])
-        setAnswers(new Array((j.preguntas || []).length).fill(undefined))
+        if (j.yaCompletado) {
+          setYaCompletado(true)
+          setPrevScore({ porcentaje: j.porcentaje ?? 0, aprobado: Boolean(j.aprobado) })
+          setPreguntas([]); setAnswers([])
+        } else {
+          setYaCompletado(false); setPrevScore(null)
+          setPreguntas(j.preguntas || [])
+          setAnswers(new Array((j.preguntas || []).length).fill(undefined))
+        }
       } else {
         setAvailable(false)
         setMsg(j?.featureActive === false
@@ -59,18 +69,28 @@ export default function EjerciciosInteractivosPage() {
         body: JSON.stringify({ answers }),
       })
       const j = await r.json()
-      if (!r.ok) { alert(j?.error || 'Error al calificar'); return }
+      if (!r.ok) {
+        // 409 = ya completado (cupo de 1 intento por step) → recargar estado bloqueado
+        if (r.status === 409) { await load(); return }
+        alert(j?.error || 'Error al calificar'); return
+      }
       setResultados(j.resultados || [])
       setScore({ correctas: j.correctas, total: j.total, porcentaje: j.porcentaje, aprobado: Boolean(j.aprobado), consejo: j.consejo || '' })
+      if (j.progreso) setProgreso(j.progreso)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch { alert('Error al calificar. Intenta de nuevo.') }
     finally { setSubmitting(false) }
   }
 
-  const reintentar = () => { setResultados(null); setScore(null); setAnswers(new Array(preguntas.length).fill(undefined)) }
-
   const graded = resultados !== null
   const allAnswered = answers.every(a => a !== undefined && a !== '')
+
+  const progresoCard = progreso && progreso.total > 0 ? (
+    <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-sm text-indigo-900">
+      Has generado <strong>{progreso.generados}</strong> de <strong>{progreso.total}</strong> ejercicios
+      {' '}(hasta tu step actual). Te quedan <strong>{progreso.quedan}</strong>.
+    </div>
+  ) : null
 
   return (
     <div className="min-h-screen bg-gray-50 py-6 px-4">
@@ -93,9 +113,37 @@ export default function EjerciciosInteractivosPage() {
             <p className="mt-3 text-gray-500 text-sm">Preparando tus ejercicios...</p>
           </div>
         ) : !available ? (
-          <div className="bg-white rounded-xl border p-10 text-center">
-            <PencilSquareIcon className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-            <p className="text-gray-600">{msg}</p>
+          <div className="space-y-4">
+            <div className="bg-white rounded-xl border p-10 text-center">
+              <PencilSquareIcon className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+              <p className="text-gray-600">{msg}</p>
+            </div>
+            {progresoCard}
+          </div>
+        ) : yaCompletado ? (
+          /* Cupo agotado: 1 solo intento por step */
+          <div className="space-y-4">
+            <div className="bg-white rounded-xl border border-emerald-200 p-6 text-center">
+              <CheckCircleIcon className="h-10 w-10 mx-auto mb-3 text-emerald-500" />
+              <h2 className="text-lg font-bold text-gray-900">Ya completaste el ejercicio de este step</h2>
+              <p className="text-sm text-gray-600 mt-1">{nivel} · {step}</p>
+              {prevScore && (
+                <p className="mt-3 inline-flex items-center gap-2">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${prevScore.aprobado ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'}`}>
+                    {prevScore.aprobado ? '✓ Aprobado' : 'Sigue practicando'}
+                  </span>
+                  <span className="text-lg font-bold text-gray-800">{prevScore.porcentaje}%</span>
+                </p>
+              )}
+              <p className="text-xs text-gray-500 mt-3">
+                Solo puedes hacer el ejercicio de cada step una vez. Cuando avances de step tendrás uno nuevo.
+              </p>
+            </div>
+            {progresoCard}
+            <button type="button" onClick={() => router.push('/panel-estudiante')}
+              className="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200">
+              Volver
+            </button>
           </div>
         ) : (
           <>
@@ -113,7 +161,12 @@ export default function EjerciciosInteractivosPage() {
                 {score.consejo && (
                   <p className={`text-sm mt-2 ${score.aprobado ? 'text-emerald-900' : 'text-amber-900'}`}>{score.consejo}</p>
                 )}
-                <p className="text-xs text-gray-500 mt-1">Se aprueba con 70%. Es práctica — repite las veces que quieras.</p>
+                <p className="text-xs text-gray-500 mt-1">Se aprueba con 70%. Un solo intento por step.</p>
+                {progreso && progreso.total > 0 && (
+                  <p className="text-xs text-indigo-800 mt-2 font-medium">
+                    Has generado {progreso.generados} de {progreso.total} ejercicios (hasta tu step actual). Te quedan {progreso.quedan}.
+                  </p>
+                )}
               </div>
             )}
 
@@ -214,16 +267,10 @@ export default function EjerciciosInteractivosPage() {
                   {submitting ? 'Revisando...' : allAnswered ? 'Revisar respuestas' : 'Responde todas para revisar'}
                 </button>
               ) : (
-                <>
-                  <button onClick={reintentar}
-                    className="flex-1 px-4 py-3 bg-amber-600 text-white rounded-xl font-semibold hover:bg-amber-700 flex items-center justify-center gap-2">
-                    <ArrowPathIcon className="h-5 w-5" /> Reintentar
-                  </button>
-                  <button onClick={() => router.push('/panel-estudiante')}
-                    className="px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200">
-                    Volver
-                  </button>
-                </>
+                <button type="button" onClick={() => router.push('/panel-estudiante')}
+                  className="flex-1 px-4 py-3 bg-amber-600 text-white rounded-xl font-semibold hover:bg-amber-700">
+                  Volver al panel
+                </button>
               )}
             </div>
           </>

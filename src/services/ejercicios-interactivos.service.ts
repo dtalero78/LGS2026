@@ -6,7 +6,9 @@ import {
   EjercicioTipo,
 } from '@/repositories/ejercicios-interactivos.repository';
 import { NivelesRepository } from '@/repositories/niveles.repository';
+import { EjerciciosIntentosRepository } from '@/repositories/ejercicios-intentos.repository';
 import { ValidationError, NotFoundError } from '@/lib/errors';
+import { randomUUID as uuid } from 'crypto';
 
 /**
  * Fase 2 del Material Interactivo — ejercicios de PRÁCTICA auto-gradables por step.
@@ -28,6 +30,15 @@ function idiomaDeNivel(nivel: string): 'es' | 'en' {
   const code = String(nivel || '').replace(/\s*JUMP\s*/i, '').trim().toUpperCase();
   return NIVELES_EN_ESPANOL.has(code) ? 'es' : 'en';
 }
+
+// Número global del step (1..45 para BN1..F3). "Step 36" / "TRAINING - Step 36" → 36.
+const MAX_STEP_NUM = 45;
+export function extractStepNum(step: string): number | null {
+  const m = String(step || '').match(/(\d+)/);
+  return m ? Number(m[1]) : null;
+}
+
+export interface ProgresoEjercicios { generados: number; total: number; quedan: number }
 
 /** Pregunta tal como la ve el estudiante (SIN la respuesta correcta). */
 export interface EjercicioPublico {
@@ -252,6 +263,48 @@ class EjerciciosInteractivosServiceClass {
   /** (Admin) Lista los sets ya generados. */
   async listSets() {
     return EjerciciosInteractivosRepository.listAll();
+  }
+
+  // ── Cupo por estudiante (1 intento por step) + progreso ──
+
+  /** ¿Ya completó el estudiante el ejercicio de este step? */
+  async getEstadoStep(studentId: string, nivel: string, step: string): Promise<{
+    yaCompletado: boolean; porcentaje: number | null; aprobado: boolean | null;
+  }> {
+    const intento = await EjerciciosIntentosRepository.findByStudentStep(studentId, nivel, step);
+    return {
+      yaCompletado: !!intento,
+      porcentaje: intento?.porcentaje ?? null,
+      aprobado: intento?.aprobado ?? null,
+    };
+  }
+
+  /**
+   * Progreso del estudiante: cuántos ejercicios ha generado y cuántos le quedan
+   * HASTA SU STEP ACTUAL (total = número del step actual, 1..45).
+   */
+  async getProgreso(studentId: string, currentStep: string): Promise<ProgresoEjercicios> {
+    const n = extractStepNum(currentStep);
+    const total = n && n >= 1 ? Math.min(n, MAX_STEP_NUM) : 0;
+    const generados = total > 0 ? await EjerciciosIntentosRepository.countUpToStep(studentId, total) : 0;
+    return { generados, total, quedan: Math.max(0, total - generados) };
+  }
+
+  /** Registra el intento del step (idempotente: 1 por step). */
+  async registrarIntento(input: {
+    studentId: string; numeroId: string | null; nivel: string; step: string;
+    porcentaje: number; aprobado: boolean;
+  }): Promise<boolean> {
+    return EjerciciosIntentosRepository.insertIfAbsent({
+      _id: uuid(),
+      studentId: input.studentId,
+      numeroId: input.numeroId,
+      nivel: input.nivel,
+      step: input.step,
+      stepNum: extractStepNum(input.step),
+      porcentaje: input.porcentaje,
+      aprobado: input.aprobado,
+    });
   }
 
   // ── IA ──

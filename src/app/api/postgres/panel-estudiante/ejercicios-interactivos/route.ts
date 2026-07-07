@@ -21,12 +21,25 @@ export const GET = handlerWithAuth(async (_req, _ctx, session) => {
   const step = (student.step || '').trim();
   if (!nivel || !step) return successResponse({ available: false, featureActive: true });
 
+  const studentId = (student as any).academicaId || (student as any)._id || (student as any).numeroId;
+  const progreso = await EjerciciosInteractivosService.getProgreso(studentId, step);
+
+  // Cupo: 1 solo intento por step. Si ya lo completó → estado bloqueado (sin preguntas).
+  const estado = await EjerciciosInteractivosService.getEstadoStep(studentId, nivel, step);
+  if (estado.yaCompletado) {
+    return successResponse({
+      available: true, featureActive: true, nivel, step,
+      yaCompletado: true, porcentaje: estado.porcentaje, aprobado: estado.aprobado,
+      progreso,
+    });
+  }
+
   try {
     const data = await EjerciciosInteractivosService.getForStep(nivel, step);
-    return successResponse({ available: true, featureActive: true, ...data });
+    return successResponse({ available: true, featureActive: true, yaCompletado: false, progreso, ...data });
   } catch (err: any) {
     if (err instanceof NotFoundError) {
-      return successResponse({ available: false, featureActive: true, nivel, step });
+      return successResponse({ available: false, featureActive: true, nivel, step, progreso });
     }
     throw err;
   }
