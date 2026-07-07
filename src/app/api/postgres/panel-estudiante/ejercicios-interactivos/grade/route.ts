@@ -40,7 +40,7 @@ export const POST = handlerWithAuth(async (req, _ctx, session) => {
     studentId, numeroId, nivel, step,
     porcentaje: result.porcentaje, aprobado: result.aprobado,
   });
-  const progreso = await EjerciciosInteractivosService.getProgreso(studentId, step);
+  const progreso = await EjerciciosInteractivosService.getProgreso(studentId, nivel);
 
   return successResponse({ ...result, progreso });
 });

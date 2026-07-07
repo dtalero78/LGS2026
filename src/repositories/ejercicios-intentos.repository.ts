@@ -32,13 +32,13 @@ export const EjerciciosIntentosRepository = {
     );
   },
 
-  /** Cuántos steps distintos (con stepNum entre 1 y maxStepNum) ha completado. */
-  async countUpToStep(studentId: string, maxStepNum: number): Promise<number> {
+  /** Cuántos ejercicios ha completado el estudiante EN UN NIVEL (1 por step). */
+  async countByStudentNivel(studentId: string, nivel: string): Promise<number> {
     const r = await queryOne<{ n: number }>(
       `SELECT COUNT(*)::int AS n
          FROM "EJERCICIOS_INTENTOS"
-        WHERE "studentId" = $1 AND "stepNum" IS NOT NULL AND "stepNum" >= 1 AND "stepNum" <= $2`,
-      [studentId, maxStepNum],
+        WHERE "studentId" = $1 AND "nivel" = $2`,
+      [studentId, nivel],
     );
     return r?.n ?? 0;
   },

@@ -31,8 +31,8 @@ function idiomaDeNivel(nivel: string): 'es' | 'en' {
   return NIVELES_EN_ESPANOL.has(code) ? 'es' : 'en';
 }
 
-// Número global del step (1..45 para BN1..F3). "Step 36" / "TRAINING - Step 36" → 36.
-const MAX_STEP_NUM = 45;
+// Número global del step. "Step 36" / "TRAINING - Step 36" → 36. Se guarda como
+// metadato en el intento (el contador de progreso ahora es por nivel).
 export function extractStepNum(step: string): number | null {
   const m = String(step || '').match(/(\d+)/);
   return m ? Number(m[1]) : null;
@@ -280,13 +280,13 @@ class EjerciciosInteractivosServiceClass {
   }
 
   /**
-   * Progreso del estudiante: cuántos ejercicios ha generado y cuántos le quedan
-   * HASTA SU STEP ACTUAL (total = número del step actual, 1..45).
+   * Progreso del estudiante EN SU NIVEL ACTUAL: cuántos ejercicios ha generado
+   * y cuántos le quedan. total = # de steps del nivel (ej. BN2 → 5: Steps 6-10
+   * incluyendo el JUMP). generados = ejercicios completados en ese nivel.
    */
-  async getProgreso(studentId: string, currentStep: string): Promise<ProgresoEjercicios> {
-    const n = extractStepNum(currentStep);
-    const total = n && n >= 1 ? Math.min(n, MAX_STEP_NUM) : 0;
-    const generados = total > 0 ? await EjerciciosIntentosRepository.countUpToStep(studentId, total) : 0;
+  async getProgreso(studentId: string, nivel: string): Promise<ProgresoEjercicios> {
+    const total = await NivelesRepository.countStepsByNivel(nivel);
+    const generados = total > 0 ? await EjerciciosIntentosRepository.countByStudentNivel(studentId, nivel) : 0;
     return { generados, total, quedan: Math.max(0, total - generados) };
   }
 

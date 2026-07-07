@@ -22,7 +22,7 @@ export const GET = handlerWithAuth(async (_req, _ctx, session) => {
   if (!nivel || !step) return successResponse({ available: false, featureActive: true });
 
   const studentId = (student as any).academicaId || (student as any)._id || (student as any).numeroId;
-  const progreso = await EjerciciosInteractivosService.getProgreso(studentId, step);
+  const progreso = await EjerciciosInteractivosService.getProgreso(studentId, nivel);
 
   // Cupo: 1 solo intento por step. Si ya lo completó → estado bloqueado (sin preguntas).
   const estado = await EjerciciosInteractivosService.getEstadoStep(studentId, nivel, step);

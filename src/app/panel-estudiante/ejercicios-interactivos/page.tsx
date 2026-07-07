@@ -88,7 +88,7 @@ export default function EjerciciosInteractivosPage() {
   const progresoCard = progreso && progreso.total > 0 ? (
     <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-sm text-indigo-900">
       Has generado <strong>{progreso.generados}</strong> de <strong>{progreso.total}</strong> ejercicios
-      {' '}(hasta tu step actual). Te quedan <strong>{progreso.quedan}</strong>.
+      {' '}de este nivel ({nivel}). Te quedan <strong>{progreso.quedan}</strong>.
     </div>
   ) : null
 
@@ -164,7 +164,7 @@ export default function EjerciciosInteractivosPage() {
                 <p className="text-xs text-gray-500 mt-1">Se aprueba con 70%. Un solo intento por step.</p>
                 {progreso && progreso.total > 0 && (
                   <p className="text-xs text-indigo-800 mt-2 font-medium">
-                    Has generado {progreso.generados} de {progreso.total} ejercicios (hasta tu step actual). Te quedan {progreso.quedan}.
+                    Has generado {progreso.generados} de {progreso.total} ejercicios de este nivel ({nivel}). Te quedan {progreso.quedan}.
                   </p>
                 )}
               </div>
