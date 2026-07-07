@@ -526,17 +526,17 @@ function ControlHorasContent() {
 
         {/* Advisor Planta: si se marca, Total Hours NO descuenta la media hora por
             sesión conducida sin asistentes (advisor de planta cobra disponibilidad).
-            Para rol ADVISOR es SOLO LECTURA (no puede editar su propia condición
-            de planta); admin/coordinadores sí pueden ajustarla. */}
-        <label htmlFor="advisor-planta" className={`flex items-center gap-2 select-none whitespace-nowrap ${role === 'ADVISOR' ? 'cursor-not-allowed opacity-90' : 'cursor-pointer'}`}>
+            SOLO editable por SUPER_ADMIN (Superusuario); el resto de roles la ve
+            en modo solo lectura. */}
+        <label htmlFor="advisor-planta" className={`flex items-center gap-2 select-none whitespace-nowrap ${role === 'SUPER_ADMIN' ? 'cursor-pointer' : 'cursor-not-allowed opacity-90'}`}>
           <span className="text-sm font-medium text-gray-700">Advisor Planta</span>
           <input
             id="advisor-planta"
             type="checkbox"
             checked={advisorPlanta}
-            disabled={role === 'ADVISOR'}
+            disabled={role !== 'SUPER_ADMIN'}
             onChange={e => setAdvisorPlanta(e.target.checked)}
-            className={`h-4 w-4 rounded border-gray-300 text-slate-600 focus:ring-slate-500 ${role === 'ADVISOR' ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+            className={`h-4 w-4 rounded border-gray-300 text-slate-600 focus:ring-slate-500 ${role === 'SUPER_ADMIN' ? 'cursor-pointer' : 'cursor-not-allowed'}`}
           />
         </label>
       </div>
