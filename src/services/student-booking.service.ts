@@ -123,6 +123,20 @@ const WEEKLY_TRAINING_LIMIT = 1;
 const CANCEL_DEADLINE_MINUTES = 60;
 const BOOKING_MIN_ADVANCE_MINUTES = 30;
 
+/**
+ * Un JUMP es una SESSION cuyo step es múltiplo de 5 (Step 5, 10, 15…, 45).
+ * Los JUMP NO cuentan para el límite semanal de 2 sesiones (son adicionales),
+ * y al agendar un JUMP no se aplica ese límite.
+ */
+function stepNumberOf(step?: string | null): number | null {
+  const m = String(step || '').match(/(\d+)/);
+  return m ? Number(m[1]) : null;
+}
+function isJumpStep(step?: string | null): boolean {
+  const n = stepNumberOf(step);
+  return n != null && n > 0 && n % 5 === 0;
+}
+
 // All events in CALENDARIO store correct UTC timestamps (fix applied 2026-04-15).
 // Wix-migrated events were normalized via: dia = (dia::timestamp AT TIME ZONE 'America/Bogota')
 // and origen set to 'POSTGRES'. This function is now a simple wrapper.
@@ -287,14 +301,20 @@ export async function bookEvent(
 ) {
   // 0. Verify student is not blocked (defensa en profundidad — la sesión
   //    JWT puede seguir activa después de inactivar al estudiante).
-  //    Bloquea si CUALQUIERA de ACADEMICA o PEOPLE marca estadoInactivo=true.
+  //    Bloquea si:
+  //      - ACADEMICA.estadoInactivo = true, o
+  //      - algún PEOPLE (beneficiario) con estadoInactivo=true, o su
+  //        estado es 'FINALIZADA' u 'On Hold' (defensa extra por si
+  //        estadoInactivo quedó desincronizado del ciclo de vida).
   const inactivoCheck = await queryOne<{ inactivo: boolean }>(
     `SELECT (
        COALESCE((SELECT a."estadoInactivo"::boolean FROM "ACADEMICA" a WHERE a."_id" = $1 LIMIT 1), false)
-       OR
-       COALESCE((SELECT p."estadoInactivo" FROM "PEOPLE" p
-                 WHERE p."numeroId" = $2 AND p."tipoUsuario" = 'BENEFICIARIO'
-                 ORDER BY p."estadoInactivo" DESC NULLS LAST LIMIT 1), false)
+       OR EXISTS (
+         SELECT 1 FROM "PEOPLE" p
+          WHERE p."numeroId" = $2 AND p."tipoUsuario" = 'BENEFICIARIO'
+            AND ( p."estadoInactivo" = true
+                  OR UPPER(TRIM(COALESCE(p."estado",''))) IN ('FINALIZADA','ON HOLD') )
+       )
      ) AS inactivo`,
     [studentId, studentData.numeroId || '']
   );
@@ -356,7 +376,11 @@ export async function bookEvent(
     weeklyMap[(row as any).tipo] = (row as any).count;
   }
 
-  if (eventTipo === 'SESSION') {
+  // El límite de 2 sesiones/semana NO aplica a los JUMP (Step múltiplo de 5):
+  // son adicionales. Y el conteo semanal ya excluye los JUMP (ver
+  // countWeeklyBookingsByType), así que agendar sesiones normales tampoco se ve
+  // afectado por haber agendado un JUMP.
+  if (eventTipo === 'SESSION' && !isJumpStep(event.step)) {
     const currentSessions = weeklyMap['SESSION'] || 0;
     if (currentSessions >= WEEKLY_SESSION_LIMIT) {
       throw new ConflictError(`Límite semanal alcanzado: máximo ${WEEKLY_SESSION_LIMIT} sesiones por semana`);

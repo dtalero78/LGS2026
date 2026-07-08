@@ -554,6 +554,13 @@ class BookingRepositoryClass extends BaseRepository {
            AND COALESCE("tipo", "tipoEvento") = 'SESSION'
            AND ("asistio" = true OR "asistencia" = true)
          )
+         -- Los JUMP (SESSION con step múltiplo de 5) NO cuentan para el
+         -- límite semanal de sesiones: son adicionales.
+         AND NOT (
+           COALESCE("tipo", "tipoEvento") = 'SESSION'
+           AND COALESCE(NULLIF(REGEXP_REPLACE(COALESCE("step",''), '[^0-9]', '', 'g'), '')::int, 0) > 0
+           AND COALESCE(NULLIF(REGEXP_REPLACE(COALESCE("step",''), '[^0-9]', '', 'g'), '')::int, 0) % 5 = 0
+         )
        GROUP BY COALESCE("tipo", "tipoEvento")`,
       [studentId, eventDia, tz]
     );
