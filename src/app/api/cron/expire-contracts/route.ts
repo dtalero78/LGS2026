@@ -27,11 +27,13 @@ export async function GET(request: NextRequest) {
     const result = await recordCronRun('expire-contracts', async () => {
       console.log('Cron expire-contracts: [PostgreSQL] Iniciando proceso de verificación de contratos expirados')
 
-      // Solo buscar BENEFICIARIOS activos (no en OnHold) con contrato vencido
+      // Solo buscar BENEFICIARIOS activos (no en OnHold) con contrato vencido.
+      // estadoInactivo IS NULL cuenta como "no inactivo" (activo) — antes el
+      // filtro estricto `= false` dejaba fuera esos NULL y nunca los finalizaba.
       const expiredResult = await query(
         `SELECT * FROM "PEOPLE"
          WHERE "tipoUsuario" = 'BENEFICIARIO'
-           AND "estadoInactivo" = false
+           AND ("estadoInactivo" IS NULL OR "estadoInactivo" = false)
            AND ${CONTRACT_EXPIRED_SQL('"finalContrato"')}
            AND ("estado" IS NULL OR "estado" != 'FINALIZADA')
          ORDER BY "finalContrato" ASC`
