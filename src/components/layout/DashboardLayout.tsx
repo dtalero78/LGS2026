@@ -37,7 +37,8 @@ const getNavigation = (userEmail: string, userRole: string) => [
     icon: AcademicCapIcon,
     children: [
       { name: 'Agenda Sesiones', href: '/dashboard/academic/agenda-sesiones' },
-      { name: 'Agenda Académica', href: '/dashboard/academic/agenda-academica' },
+      { name: 'Agenda Semanal', href: '/dashboard/academic/agenda-academica' },
+      { name: 'Eventos Administrativos', href: '/dashboard/academic/eventos-administrativos', newTab: true },
       {
         name: 'Advisors', isSubmenu: true, children: [
           { name: 'Lista Advisors', href: '/dashboard/academic/advisors' },
@@ -54,7 +55,6 @@ const getNavigation = (userEmail: string, userRole: string) => [
         ],
       },
       { name: 'Actualizar Material', href: '/dashboard/academic/actualizar-material', newTab: true },
-      { name: 'Eventos Administrativos', href: '/dashboard/academic/eventos-administrativos', newTab: true },
       { name: 'Evaluaciones Jump', href: '/dashboard/academic/jump-evaluaciones' },
     ],
   },
