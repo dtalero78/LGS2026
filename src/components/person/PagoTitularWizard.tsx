@@ -189,11 +189,29 @@ function MoneyInput({
   )
 }
 
+// Medios de pago disponibles por plataforma (dropdown de "Medio de Pago").
+const MEDIOS_PAGO_POR_PLATAFORMA: Record<string, string[]> = {
+  chile:    ['Banco Estado', 'Banco Santander', 'Paypal', 'Webpay'],
+  colombia: ['Bancolombia', 'EPAYCO', 'Paypal'],
+  ecuador:  ['Banco Pichincha', 'Banco Guayaquil', 'Banco del Barrio / Guayaquil', 'Paypal', 'Datafast'],
+  peru:     ['Banco BBVA Academic', 'Banco BBVA Rel', 'Paypal', 'Niubiz'],
+}
+// Normaliza la plataforma para el lookup (sin acentos, minúsculas): "Perú" → "peru".
+function normPlataforma(p?: string): string {
+  return (p || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+}
+
 export default function PagoTitularWizard({
   isOpen, onClose, titular, gestorLabel, existingPagos, saldoActual, onCreated,
 }: PagoTitularWizardProps) {
   const draftKey = `pago-titular-draft-${titular._id}`
   const [form, setForm] = useState<DraftState>(empty())
+
+  // Opciones de "Medio de Pago" según la plataforma del titular. Si la
+  // plataforma no matchea ninguna conocida, se ofrece la unión de todas
+  // (fallback) para no dejar el dropdown vacío.
+  const mediosPago = MEDIOS_PAGO_POR_PLATAFORMA[normPlataforma(titular.plataforma)]
+    ?? Array.from(new Set(Object.values(MEDIOS_PAGO_POR_PLATAFORMA).flat()))
   const [submitting, setSubmitting] = useState(false)
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([])
   const [showDraftBanner, setShowDraftBanner] = useState(false)
@@ -591,12 +609,18 @@ export default function PagoTitularWizard({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="medioPago" className="block text-sm font-medium text-gray-700">Medio de Pago</label>
-              <input
-                id="medioPago" type="text" value={form.medioPago}
+              <select
+                id="medioPago" value={form.medioPago}
                 onChange={e => setForm(f => ({ ...f, medioPago: e.target.value }))}
-                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                placeholder="Transferencia, Webpay, PSE, ..."
-              />
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white"
+              >
+                <option value="">Selecciona…</option>
+                {mediosPago.map(m => <option key={m} value={m}>{m}</option>)}
+                {/* Conserva un valor legacy que no esté en la lista de la plataforma */}
+                {form.medioPago && !mediosPago.includes(form.medioPago) && (
+                  <option value={form.medioPago}>{form.medioPago}</option>
+                )}
+              </select>
             </div>
             <div>
               <label htmlFor="numeroReferencia" className="block text-sm font-medium text-gray-700"># Referencia</label>
