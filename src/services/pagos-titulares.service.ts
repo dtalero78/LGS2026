@@ -484,6 +484,45 @@ export const pagosTitularesService = {
   },
 
   /**
+   * Validación EN BLOQUE de pagos/inscripciones. Valida cada id (omite los ya
+   * validados o inexistentes) y recalcula el saldo UNA sola vez por titular
+   * (dedup). Devuelve resumen ok/fail + errores por id. Gateado en el endpoint
+   * por RECAUDOS.APROBACION_MASIVA.
+   */
+  async validarMasivo(
+    ids: string[],
+    validadoPor: string,
+    numeroFactura: string,
+    fechaValidacion: string | null = null,
+  ): Promise<{ ok: number; fail: number; errores: { id: string; error: string }[] }> {
+    const factura = (numeroFactura || '').trim();
+    const idPeopleSet = new Set<string>();
+    const errores: { id: string; error: string }[] = [];
+    let ok = 0;
+
+    for (const id of ids) {
+      try {
+        const existing = await PagosTitularesRepository.findById(id);
+        if (!existing) { errores.push({ id, error: 'no existe' }); continue; }
+        if (existing.validado) { errores.push({ id, error: 'ya validado' }); continue; }
+        const updated = await PagosTitularesRepository.validar(id, validadoPor, factura, fechaValidacion);
+        if (!updated) { errores.push({ id, error: 'no se pudo validar' }); continue; }
+        idPeopleSet.add(existing.idPeople);
+        ok++;
+      } catch (e: any) {
+        errores.push({ id, error: e?.message || 'error' });
+      }
+    }
+
+    // Recalcular saldo una vez por titular afectado.
+    for (const idp of idPeopleSet) {
+      await syncFinancieroSaldo(idp).catch(() => { /* best-effort */ });
+    }
+
+    return { ok, fail: errores.length, errores };
+  },
+
+  /**
    * Elimina un pago.
    * - Pagos pendientes: cualquier rol con `PAGOS_ELIMINAR` puede borrar.
    * - Pagos validados: sólo SUPER_ADMIN / ADMIN. Otros roles reciben error

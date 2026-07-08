@@ -1049,6 +1049,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     name: 'Asignación masiva de gestor en Aprobaciones',
     description: 'Permite asignar masivamente un ejecutivo de recaudo (gestorRecaudo) a los contratos seleccionados en Aprobaciones',
   },
+  {
+    code: RecaudosPermission.APROBACION_MASIVA,
+    module: Module.RECAUDOS,
+    section: 'Gestión',
+    name: 'Aprobación masiva de pagos e inscripciones',
+    description: 'Habilita las casillas de selección + botón "Aprobar seleccionados" para validar pagos e inscripciones EN BLOQUE en el Centro de Validación (Gestión / Bancos)',
+  },
 ];
 
 // ============================================================================

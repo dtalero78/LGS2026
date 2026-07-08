@@ -15,7 +15,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { BanknotesIcon, BuildingLibraryIcon, CheckBadgeIcon, ArrowPathIcon, ArrowDownTrayIcon, MagnifyingGlassIcon, XMarkIcon, DocumentTextIcon, PaperClipIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline'
-import { PersonPermission } from '@/types/permissions'
+import { PersonPermission, RecaudosPermission } from '@/types/permissions'
 import { formatCurrency } from '@/lib/utils'
 import { api, handleApiError } from '@/hooks/use-api'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -69,6 +69,8 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
   const { hasPermission } = usePermissions()
   const canValidar = hasPermission(PersonPermission.PAGOS_VALIDAR)
   const canRecibo = hasPermission(PersonPermission.PAGOS_RECIBO)
+  // Aprobación EN BLOQUE — gateada por rol (permiso propio).
+  const canAprobarMasivo = hasPermission(RecaudosPermission.APROBACION_MASIVA)
 
   const isGestor = variant === 'gestor'
   const lateralLabel = isGestor ? 'Gestor de Recaudo' : 'Medio de Pago'
@@ -99,6 +101,12 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
   const [validating, setValidating] = useState(false)
   const [docsModal, setDocsModal] = useState<{ titular: string; numCuota: number | null; docs: DocAdjunto[] } | null>(null)
 
+  // Selección para aprobación masiva
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [bulkModal, setBulkModal] = useState(false)
+  const [bulkFactura, setBulkFactura] = useState('')
+  const [bulkValidating, setBulkValidating] = useState(false)
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const fetchPagos = useCallback(async (resetPage = false) => {
@@ -119,6 +127,7 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
       const data = await api.get<{ pagos: PagoRow[]; total: number }>(`/api/postgres/recaudos/pagos?${qs.toString()}`)
       setPagos(data.pagos || [])
       setTotal(data.total || 0)
+      setSelected(new Set())
       if (resetPage) setPage(1)
     } catch (err) {
       handleApiError(err, 'Error cargando pagos')
@@ -167,6 +176,38 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
       handleApiError(err, 'Error al validar pago')
     } finally {
       setValidating(false)
+    }
+  }
+
+  // ── Aprobación masiva ──────────────────────────────────────────────────
+  const pendientes = pagos.filter(p => !p.validado)
+  const allPendingSelected = pendientes.length > 0 && pendientes.every(p => selected.has(p._id))
+  const selectedCount = pendientes.filter(p => selected.has(p._id)).length
+
+  const toggleOne = (id: string) => setSelected(prev => {
+    const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n
+  })
+  const toggleAllPending = () => setSelected(prev =>
+    allPendingSelected ? new Set() : new Set(pendientes.map(p => p._id))
+  )
+
+  const handleBulkValidar = async () => {
+    const ids = pendientes.filter(p => selected.has(p._id)).map(p => p._id)
+    if (ids.length === 0) return
+    setBulkValidating(true)
+    try {
+      const r = await api.post<{ ok: number; fail: number }>(
+        `/api/postgres/pagos-titulares/validar-masivo`,
+        { ids, numeroFactura: bulkFactura.trim(), fechaValidacion: getLocalToday() }
+      )
+      const noun = cuotaTipo === 'inscripcion' ? 'inscripción(es)' : 'pago(s)'
+      toast.success(`${r.ok} ${noun} validado(s)${r.fail ? ` · ${r.fail} con error` : ''}`)
+      setBulkModal(false); setBulkFactura('')
+      fetchPagos()
+    } catch (err) {
+      handleApiError(err, 'Error en la aprobación masiva')
+    } finally {
+      setBulkValidating(false)
     }
   }
 
@@ -313,6 +354,21 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
           <span className="text-xs text-gray-500">Página {page} de {totalPages}</span>
         </div>
 
+        {/* Barra de aprobación masiva (solo con permiso + selección) */}
+        {canAprobarMasivo && selectedCount > 0 && (
+          <div className="px-4 py-2 bg-emerald-50 border-b border-emerald-200 flex items-center justify-between flex-wrap gap-2">
+            <span className="text-sm font-medium text-emerald-900">{selectedCount} seleccionado(s)</span>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setSelected(new Set())}
+                className="px-3 py-1.5 text-xs text-gray-700 border border-gray-300 rounded-md bg-white hover:bg-gray-50">Limpiar</button>
+              <button type="button" onClick={() => { setBulkFactura(''); setBulkModal(true) }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 rounded-md hover:bg-emerald-700">
+                <CheckBadgeIcon className="h-4 w-4" /> Aprobar seleccionados
+              </button>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <p className="p-6 text-sm text-gray-400 italic text-center">Cargando…</p>
         ) : pagos.length === 0 ? (
@@ -322,6 +378,14 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
+                  {canAprobarMasivo && (
+                    <th className="px-3 py-2 w-8 text-center">
+                      <input type="checkbox" aria-label="Seleccionar todos los pendientes"
+                        title="Seleccionar todos los pendientes de esta página"
+                        checked={allPendingSelected} disabled={pendientes.length === 0}
+                        onChange={toggleAllPending} />
+                    </th>
+                  )}
                   <th className="px-3 py-2 text-left font-medium text-gray-700">Titular</th>
                   <th className="px-3 py-2 text-left font-medium text-gray-700">Fecha Pago</th>
                   <th className="px-3 py-2 text-left font-medium text-gray-700">Contrato</th>
@@ -339,7 +403,17 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                   const titularNombre = `${p.titular_primerNombre} ${p.titular_primerApellido}`.trim()
                   const g = displayUsers.find(u => u._id === p.gestorRecaudo) || displayUsers.find(u => u.email === p.gestorRecaudo)
                   return (
-                    <tr key={p._id} className="hover:bg-gray-50">
+                    <tr key={p._id} className={`hover:bg-gray-50 ${selected.has(p._id) ? 'bg-emerald-50/40' : ''}`}>
+                      {canAprobarMasivo && (
+                        <td className="px-3 py-2 text-center">
+                          {!p.validado ? (
+                            <input type="checkbox" aria-label={`Seleccionar pago de ${p.titular_primerNombre}`}
+                              checked={selected.has(p._id)} onChange={() => toggleOne(p._id)} />
+                          ) : (
+                            <CheckBadgeIcon className="h-4 w-4 text-emerald-500 mx-auto" />
+                          )}
+                        </td>
+                      )}
                       <td className="px-3 py-2">
                         <Link href={`/person/${p.idPeople}?tab=financiera`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">
                           {titularNombre || '—'}
@@ -433,6 +507,33 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
             <div className="flex items-center justify-end gap-3 pt-2">
               <button type="button" onClick={() => { setValidateModal(null); setFacturaInput('') }} disabled={validating} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
               <button type="button" onClick={handleValidar} disabled={validating} className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50">{validating ? 'Validando…' : 'Validar Pago'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal aprobación masiva */}
+      {bulkModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900">✅ Aprobar {selectedCount} {cuotaTipo === 'inscripcion' ? 'inscripción(es)' : 'pago(s)'}</h3>
+              <button type="button" onClick={() => !bulkValidating && setBulkModal(false)} title="Cerrar" className="text-gray-400 hover:text-gray-600"><XMarkIcon className="h-5 w-5" /></button>
+            </div>
+            <p className="text-sm text-gray-600">
+              Se validarán <strong>{selectedCount}</strong> {cuotaTipo === 'inscripcion' ? 'inscripción(es)' : 'pago(s)'} seleccionado(s).
+              La fecha de validación quedará registrada hoy. El # de factura es opcional y se aplica a todos.
+            </p>
+            <div>
+              <label htmlFor="bulk-factura" className="block text-sm font-medium text-gray-700 mb-1"># Factura <span className="text-gray-400 font-normal">(opcional, para todos)</span></label>
+              <input id="bulk-factura" type="text" value={bulkFactura}
+                onChange={e => setBulkFactura(e.target.value.replace(/[^A-Za-z0-9\-]/g, ''))}
+                placeholder="Alfanumérico" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500" />
+            </div>
+            <p className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">⚠️ UNA VEZ VALIDADOS, LOS PAGOS NO SE PUEDEN EDITAR NI ELIMINAR.</p>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button type="button" onClick={() => setBulkModal(false)} disabled={bulkValidating} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
+              <button type="button" onClick={handleBulkValidar} disabled={bulkValidating} className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50">{bulkValidating ? 'Validando…' : `Aprobar ${selectedCount}`}</button>
             </div>
           </div>
         </div>
