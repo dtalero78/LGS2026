@@ -9,12 +9,14 @@ import { query } from '@/lib/postgres';
  *
  * Informe de contratos ya decididos (titulares). Devuelve las 3 categorías con
  * un campo calculado `categoria` para filtrar en el cliente:
- *   - Aprobados   : aprobacion='Aprobado' AND estadoInactivo IS NOT TRUE (false/null)
- *   - Inactivos   : aprobacion='Aprobado' AND estadoInactivo=true
- *   - Finalizados : aprobacion='FINALIZADA' AND estado='FINALIZADA' (case-insensitive)
+ *   - Finalizados : estado='FINALIZADA' (fin del ciclo de vida)
+ *   - Inactivos   : estadoInactivo=true (inactivo por otra razón, no finalizado)
+ *   - Aprobados   : activo (estadoInactivo != true)
  *
- * Aprobados vs Inactivos se distinguen SOLO por el flag `estadoInactivo` (no por
- * el string `estado`). El CASE evalúa Inactivos primero → mutuamente excluyentes.
+ * El ciclo de vida vive en `estado` (FINALIZADA), NO en `aprobacion` — que es
+ * la decisión de aprobación inmutable ('Aprobado'). El CASE evalúa Finalizados
+ * primero (estado), luego Inactivos (estadoInactivo), y el resto Aprobados.
+ * El WHERE tolera data legacy que aún tenga aprobacion='FINALIZADA'.
  * Excluye PRB-. Gateado por APROBACION.CONTRATOS_APROBADOS.VER.
  */
 export const GET = handlerWithAuth(async (_req, _ctx, session) => {
@@ -26,16 +28,16 @@ export const GET = handlerWithAuth(async (_req, _ctx, session) => {
             "aprobacion", "estado", "estadoInactivo", "hashConsentimiento", "documentacion",
             "_createdDate", "fechaIngreso",
             CASE
-              WHEN "aprobacion" = 'Aprobado' AND "estadoInactivo" = true THEN 'Inactivos'
-              WHEN "aprobacion" = 'Aprobado' THEN 'Aprobados'
-              WHEN UPPER("aprobacion") = 'FINALIZADA' AND "estado" = 'FINALIZADA' THEN 'Finalizados'
+              WHEN "estado" = 'FINALIZADA' THEN 'Finalizados'
+              WHEN "estadoInactivo" = true THEN 'Inactivos'
+              ELSE 'Aprobados'
             END AS "categoria"
      FROM "PEOPLE"
      WHERE "tipoUsuario" = 'TITULAR'
        AND COALESCE("contrato",'') NOT LIKE 'PRB-%'
        AND (
-         "aprobacion" = 'Aprobado'
-         OR (UPPER("aprobacion") = 'FINALIZADA' AND "estado" = 'FINALIZADA')
+         "aprobacion" IN ('Aprobado','Aprobada')
+         OR "estado" = 'FINALIZADA'
        )
      ORDER BY "fechaIngreso" DESC NULLS LAST, "_createdDate" DESC`
   );
