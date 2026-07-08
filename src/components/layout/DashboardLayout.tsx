@@ -181,11 +181,6 @@ const getNavigation = (userEmail: string, userRole: string) => [
         ],
       },
       {
-        name: 'Material', isSubmenu: true, children: [
-          { name: 'Actualizar Videos', href: '/admin/actualizar-videos', newTab: true },
-        ],
-      },
-      {
         name: 'Juegos',
         isSubmenu: true,
         children: [

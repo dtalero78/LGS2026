@@ -4,11 +4,11 @@ export default function ActualizarMaterialPage() {
   const openTab = (path: string) => window.open(path, '_blank', 'noopener,noreferrer')
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-900 mb-2">Actualizar Material</h1>
       <p className="text-gray-500 mb-8">Selecciona el tipo de material que deseas actualizar, esta acción genera registros de auditoría.</p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Usuarios */}
         <button
           type="button"
@@ -60,6 +60,24 @@ export default function ActualizarMaterialPage() {
           <div className="text-center">
             <div className="text-lg font-semibold text-gray-900 group-hover:text-emerald-600 transition-colors">Interactivo</div>
             <div className="text-sm text-gray-500 mt-1">Libros con páginas + audios</div>
+          </div>
+        </button>
+
+        {/* Videos */}
+        <button
+          type="button"
+          onClick={() => openTab('/admin/actualizar-videos')}
+          className="flex flex-col items-center justify-center gap-4 p-10 bg-white border-2 border-gray-200 rounded-2xl shadow-sm hover:border-violet-500 hover:shadow-md transition-all text-left group"
+        >
+          <div className="w-16 h-16 bg-violet-50 rounded-full flex items-center justify-center group-hover:bg-violet-100 transition-colors">
+            <svg className="w-8 h-8 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div className="text-center">
+            <div className="text-lg font-semibold text-gray-900 group-hover:text-violet-600 transition-colors">Videos</div>
+            <div className="text-sm text-gray-500 mt-1">Instructivos y sesiones</div>
           </div>
         </button>
       </div>
