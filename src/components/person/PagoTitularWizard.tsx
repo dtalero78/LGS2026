@@ -6,6 +6,7 @@ import { XMarkIcon, ArrowUpTrayIcon, TrashIcon } from '@heroicons/react/24/outli
 import { api, handleApiError } from '@/hooks/use-api'
 import { PermissionGuard } from '@/components/permissions'
 import { PersonPermission } from '@/types/permissions'
+import { mediosPagoPara } from '@/lib/medios-pago'
 
 interface PagoTitularWizardProps {
   isOpen: boolean
@@ -189,18 +190,6 @@ function MoneyInput({
   )
 }
 
-// Medios de pago disponibles por plataforma (dropdown de "Medio de Pago").
-const MEDIOS_PAGO_POR_PLATAFORMA: Record<string, string[]> = {
-  chile:    ['Banco Estado', 'Banco Santander', 'Paypal', 'Webpay'],
-  colombia: ['Bancolombia', 'EPAYCO', 'Paypal'],
-  ecuador:  ['Banco Pichincha', 'Banco Guayaquil', 'Banco del Barrio / Guayaquil', 'Paypal', 'Datafast'],
-  peru:     ['Banco BBVA Academic', 'Banco BBVA Rel', 'Paypal', 'Niubiz'],
-}
-// Normaliza la plataforma para el lookup (sin acentos, minúsculas): "Perú" → "peru".
-function normPlataforma(p?: string): string {
-  return (p || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
-}
-
 export default function PagoTitularWizard({
   isOpen, onClose, titular, gestorLabel, existingPagos, saldoActual, onCreated,
 }: PagoTitularWizardProps) {
@@ -210,8 +199,7 @@ export default function PagoTitularWizard({
   // Opciones de "Medio de Pago" según la plataforma del titular. Si la
   // plataforma no matchea ninguna conocida, se ofrece la unión de todas
   // (fallback) para no dejar el dropdown vacío.
-  const mediosPago = MEDIOS_PAGO_POR_PLATAFORMA[normPlataforma(titular.plataforma)]
-    ?? Array.from(new Set(Object.values(MEDIOS_PAGO_POR_PLATAFORMA).flat()))
+  const mediosPago = mediosPagoPara(titular.plataforma)
   const [submitting, setSubmitting] = useState(false)
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([])
   const [showDraftBanner, setShowDraftBanner] = useState(false)

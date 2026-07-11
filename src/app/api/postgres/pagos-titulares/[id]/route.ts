@@ -18,7 +18,7 @@ export const GET = handlerWithAuth(async (_req, ctx, session) => {
 });
 
 export const PATCH = handlerWithAuth(async (req, ctx, session) => {
-  await requirePermission(session, PersonPermission.PAGOS_REGISTRAR);
+  await requirePermission(session, PersonPermission.PAGOS_EDITAR);
   const body = await req.json();
   const pago = await pagosTitularesService.update(ctx.params.id, body);
   return successResponse({ pago });

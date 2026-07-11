@@ -14,9 +14,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { BanknotesIcon, BuildingLibraryIcon, CheckBadgeIcon, ArrowPathIcon, ArrowDownTrayIcon, MagnifyingGlassIcon, XMarkIcon, DocumentTextIcon, PaperClipIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline'
+import { BanknotesIcon, BuildingLibraryIcon, CheckBadgeIcon, ArrowPathIcon, ArrowDownTrayIcon, MagnifyingGlassIcon, XMarkIcon, DocumentTextIcon, PaperClipIcon, ArrowTopRightOnSquareIcon, PencilSquareIcon } from '@heroicons/react/24/outline'
 import { PersonPermission, RecaudosPermission } from '@/types/permissions'
 import { formatCurrency } from '@/lib/utils'
+import { mediosPagoPara } from '@/lib/medios-pago'
 import { api, handleApiError } from '@/hooks/use-api'
 import { usePermissions } from '@/hooks/usePermissions'
 import { exportToExcel } from '@/lib/export-excel'
@@ -34,6 +35,7 @@ interface PagoRow {
   fechaValidacion: string | null
   validadoPor: string | null
   numeroFactura: string | null
+  numeroReferencia: string | null
   numeroRecibo: string | null
   gestorRecaudo: string | null
   medioPago: string | null
@@ -69,6 +71,7 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
   const { hasPermission } = usePermissions()
   const canValidar = hasPermission(PersonPermission.PAGOS_VALIDAR)
   const canRecibo = hasPermission(PersonPermission.PAGOS_RECIBO)
+  const canEditar = hasPermission(PersonPermission.PAGOS_EDITAR)
   // Aprobación EN BLOQUE — gateada por rol (permiso propio).
   const canAprobarMasivo = hasPermission(RecaudosPermission.APROBACION_MASIVA)
 
@@ -100,6 +103,11 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
   const [facturaInput, setFacturaInput] = useState('')
   const [validating, setValidating] = useState(false)
   const [docsModal, setDocsModal] = useState<{ titular: string; numCuota: number | null; docs: DocAdjunto[] } | null>(null)
+
+  // Edición de pago pendiente
+  const [editModal, setEditModal] = useState<{ id: string; titular: string; numCuota: number | null } | null>(null)
+  const [editForm, setEditForm] = useState({ fechaPago: '', valorPagado: '', descuento: '', medioPago: '', numeroReferencia: '', numCuota: '' })
+  const [editing, setEditing] = useState(false)
 
   // Selección para aprobación masiva
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -176,6 +184,46 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
       handleApiError(err, 'Error al validar pago')
     } finally {
       setValidating(false)
+    }
+  }
+
+  // ── Editar pago pendiente ──────────────────────────────────────────────
+  const openEditar = (p: PagoRow) => {
+    setEditForm({
+      fechaPago: (p.fechaPago || '').slice(0, 10),
+      valorPagado: p.valorPagado != null ? String(p.valorPagado) : '',
+      descuento: p.descuento != null ? String(p.descuento) : '',
+      medioPago: p.medioPago || '',
+      numeroReferencia: p.numeroReferencia || '',
+      numCuota: p.numCuota != null ? String(p.numCuota) : '',
+    })
+    setEditModal({ id: p._id, titular: `${p.titular_primerNombre} ${p.titular_primerApellido}`.trim(), numCuota: p.numCuota })
+  }
+
+  const editMedios = (() => {
+    const p = pagos.find(x => x._id === editModal?.id)
+    return mediosPagoPara(p?.titular_plataforma ?? undefined)
+  })()
+
+  const handleEditar = async () => {
+    if (!editModal) return
+    setEditing(true)
+    try {
+      await api.patch(`/api/postgres/pagos-titulares/${editModal.id}`, {
+        fechaPago: editForm.fechaPago || null,
+        valorPagado: editForm.valorPagado === '' ? null : Number(editForm.valorPagado),
+        descuento: editForm.descuento === '' ? 0 : Number(editForm.descuento),
+        medioPago: editForm.medioPago.trim() || null,
+        numeroReferencia: editForm.numeroReferencia.trim() || null,
+        numCuota: editForm.numCuota === '' ? null : Number(editForm.numCuota),
+      })
+      toast.success('Pago actualizado')
+      setEditModal(null)
+      fetchPagos()
+    } catch (err) {
+      handleApiError(err, 'Error al actualizar el pago')
+    } finally {
+      setEditing(false)
     }
   }
 
@@ -453,6 +501,11 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                               <PaperClipIcon className="h-3.5 w-3.5" /> Docs ({p.documentosAdjuntos.length})
                             </button>
                           )}
+                          {!p.validado && canEditar && (
+                            <button type="button" onClick={() => openEditar(p)} title="Editar pago" className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-amber-500 rounded hover:bg-amber-600">
+                              <PencilSquareIcon className="h-3.5 w-3.5" /> Editar
+                            </button>
+                          )}
                           {!p.validado && canValidar && (
                             <button type="button" onClick={() => openValidar(p)} title="Validar pago" className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700">
                               <CheckBadgeIcon className="h-3.5 w-3.5" /> Validar
@@ -507,6 +560,54 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
             <div className="flex items-center justify-end gap-3 pt-2">
               <button type="button" onClick={() => { setValidateModal(null); setFacturaInput('') }} disabled={validating} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
               <button type="button" onClick={handleValidar} disabled={validating} className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50">{validating ? 'Validando…' : 'Validar Pago'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal editar pago pendiente */}
+      {editModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900">✏️ Editar {editModal.numCuota === 0 ? 'Inscripción' : 'Pago'}</h3>
+              <button type="button" onClick={() => setEditModal(null)} title="Cerrar" className="text-gray-400 hover:text-gray-600"><XMarkIcon className="h-5 w-5" /></button>
+            </div>
+            <p className="text-sm text-gray-600">Editando el pago de <strong>{editModal.titular}</strong>{editModal.numCuota != null ? (editModal.numCuota === 0 ? ' (inscripción)' : ` (cuota ${editModal.numCuota})`) : ''}.</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="edit-fechaPago" className="block text-sm font-medium text-gray-700 mb-1">Fecha de Pago</label>
+                <input id="edit-fechaPago" type="date" value={editForm.fechaPago} onChange={e => setEditForm(f => ({ ...f, fechaPago: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500" />
+              </div>
+              <div>
+                <label htmlFor="edit-numCuota" className="block text-sm font-medium text-gray-700 mb-1"># Cuota</label>
+                <input id="edit-numCuota" type="number" min={0} value={editForm.numCuota} onChange={e => setEditForm(f => ({ ...f, numCuota: e.target.value.replace(/[^0-9]/g, '') }))} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500" />
+              </div>
+              <div>
+                <label htmlFor="edit-valorPagado" className="block text-sm font-medium text-gray-700 mb-1">Valor Pagado</label>
+                <input id="edit-valorPagado" type="number" min={0} value={editForm.valorPagado} onChange={e => setEditForm(f => ({ ...f, valorPagado: e.target.value.replace(/[^0-9.]/g, '') }))} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500" />
+              </div>
+              <div>
+                <label htmlFor="edit-descuento" className="block text-sm font-medium text-gray-700 mb-1">Descuento</label>
+                <input id="edit-descuento" type="number" min={0} value={editForm.descuento} onChange={e => setEditForm(f => ({ ...f, descuento: e.target.value.replace(/[^0-9.]/g, '') }))} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500" />
+              </div>
+              <div>
+                <label htmlFor="edit-medioPago" className="block text-sm font-medium text-gray-700 mb-1">Medio de Pago</label>
+                <select id="edit-medioPago" value={editForm.medioPago} onChange={e => setEditForm(f => ({ ...f, medioPago: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                  <option value="">— Seleccione —</option>
+                  {editForm.medioPago && !editMedios.includes(editForm.medioPago) && <option value={editForm.medioPago}>{editForm.medioPago}</option>}
+                  {editMedios.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="edit-numeroReferencia" className="block text-sm font-medium text-gray-700 mb-1"># Referencia</label>
+                <input id="edit-numeroReferencia" type="text" value={editForm.numeroReferencia} onChange={e => setEditForm(f => ({ ...f, numeroReferencia: e.target.value.replace(/[^A-Za-z0-9\-]/g, '') }))} placeholder="Alfanumérico" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500" />
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">El saldo se recalcula automáticamente. Solo se pueden editar pagos <strong>pendientes</strong> (no validados).</p>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button type="button" onClick={() => setEditModal(null)} disabled={editing} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
+              <button type="button" onClick={handleEditar} disabled={editing} className="px-4 py-2 text-sm font-medium text-white bg-amber-500 rounded-lg hover:bg-amber-600 disabled:opacity-50">{editing ? 'Guardando…' : 'Guardar Cambios'}</button>
             </div>
           </div>
         </div>

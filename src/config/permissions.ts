@@ -82,6 +82,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Marcar un pago como validado (validado=true, fechaValidacion=hoy, validadoPor=usuario actual). Una vez validado el pago se considera final',
   },
   {
+    code: PersonPermission.PAGOS_EDITAR,
+    module: Module.PERSON,
+    section: 'Financiera',
+    name: 'Botón "Editar Pago"',
+    description: 'Editar un pago pendiente (fecha, valor, descuento, medio de pago, # referencia, # cuota) desde el Centro de Validación. Bloqueado cuando el pago ya está validado',
+  },
+  {
     code: PersonPermission.PAGOS_ELIMINAR,
     module: Module.PERSON,
     section: 'Financiera',
