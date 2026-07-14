@@ -90,6 +90,11 @@ function CrearContratoContent() {
   // Form data
   const [titular, setTitular] = useState({
     asesor: searchParams.get('email') || '',
+    // Nombre y apellido del asesor tal como vienen del CRM (via bridge) →
+    // se guarda en PEOPLE.asesorCreadorContrato. `asesor` sigue siendo el email.
+    asesorCreadorContrato: [searchParams.get('nombre'), searchParams.get('apellido')]
+      .filter(Boolean)
+      .join(' '),
     primerNombre: '',
     segundoNombre: '',
     primerApellido: '',

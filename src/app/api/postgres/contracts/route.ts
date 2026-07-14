@@ -109,8 +109,8 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
       "email", "celular", "telefono", "fechaNacimiento", "domicilio", "ciudad",
       "plataforma", "ingresos", "empresa", "cargo", "genero",
       "referenciaUno", "parentezcoRefUno", "telefonoRefUno", "referenciaDos", "parentezcoRefDos", "telefonoRefDos",
-      "asesor", "tipoUsuario", "contrato", "vigencia", "fechaContrato", "finalContrato", "plan", "origen", "_createdDate", "_updatedDate")
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,'TITULAR',$25,$26,NOW(),$27::date,$28,'POSTGRES',NOW(),NOW()) RETURNING *`,
+      "asesor", "asesorCreadorContrato", "tipoUsuario", "contrato", "vigencia", "fechaContrato", "finalContrato", "plan", "origen", "_createdDate", "_updatedDate")
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$29,'TITULAR',$25,$26,NOW(),$27::date,$28,'POSTGRES',NOW(),NOW()) RETURNING *`,
     [titularId, titular.numeroId, titular.primerNombre, titular.segundoNombre || null,
      titular.primerApellido, titular.segundoApellido || null,
      titular.email || null, titular.celular || null, titular.telefono || null,
@@ -118,7 +118,8 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
      titular.plataforma || null, titular.ingresos || null, titular.empresa || null, titular.cargo || null, titular.genero || null,
      titular.referenciaUno || null, titular.parentezcoRefUno || null, titular.telRefUno || null,
      titular.referenciaDos || null, titular.parentezcoRefDos || null, titular.telRefDos || null,
-     titular.asesor || null, contrato, financial?.vigencia || null, finalContrato, tipoPlan]
+     titular.asesor || null, contrato, financial?.vigencia || null, finalContrato, tipoPlan,
+     titular.asesorCreadorContrato || null]  // $29 → PEOPLE.asesorCreadorContrato
   );
   created.titular = titularResult.rows[0];
 
