@@ -8,6 +8,7 @@ export const POST = handlerWithAuth(async () => {
 
     const stats = {
       totalUsuarios: data.totalUsers,
+      totalActivos: data.activeUsers,
       totalInactivos: data.inactiveUsers,
       sesionesHoy: data.eventsToday,
       usuariosInscritosHoy: data.enrollmentsToday,
@@ -19,7 +20,7 @@ export const POST = handlerWithAuth(async () => {
   } catch (error: any) {
     console.error('📊 Dashboard Stats Error:', error.message);
     return successResponse({
-      stats: { totalUsuarios: 0, totalInactivos: 0, sesionesHoy: 0, usuariosInscritosHoy: 0, advisorsHoy: 0 },
+      stats: { totalUsuarios: 0, totalActivos: 0, totalInactivos: 0, sesionesHoy: 0, usuariosInscritosHoy: 0, advisorsHoy: 0 },
       source: 'fallback',
     });
   }

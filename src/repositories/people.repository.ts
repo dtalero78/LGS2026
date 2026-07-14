@@ -383,9 +383,11 @@ class PeopleRepositoryClass extends BaseRepository {
   // ── Dashboard helpers ──
 
   async countActive(): Promise<number> {
+    // Activo = NO inactivado. `estadoInactivo IS NOT TRUE` incluye false Y NULL
+    // (NULL = nunca inactivado = activo, misma convención que el cron y el resto
+    // de queries). Usar `= false` dejaba fuera ~4k filas con estadoInactivo NULL.
     // Excluye contratos de prueba (PRB-) del conteo del dashboard.
-    // Sin COALESCE en el WHERE — bloquea uso de índices sobre "contrato".
-    return this.count(`WHERE "estadoInactivo" = false AND ("contrato" IS NULL OR "contrato" NOT LIKE 'PRB-%')`);
+    return this.count(`WHERE "estadoInactivo" IS NOT TRUE AND ("contrato" IS NULL OR "contrato" NOT LIKE 'PRB-%')`);
   }
 
   async countInactive(): Promise<number> {
