@@ -16,10 +16,19 @@ export const POST = handlerWithAuth(async (request) => {
     throw new ValidationError('numeroId, primerNombre, primerApellido, and tipoUsuario are required');
   }
 
-  const existing = await queryOne(
-    `SELECT "_id" FROM "PEOPLE" WHERE "numeroId" = $1`, [body.numeroId]
+  // El numeroId debe ser único acá. La ÚNICA excepción permitida en el sistema
+  // es la creación de contrato (titular que además es su propio beneficiario),
+  // que inserta directo en /api/postgres/contracts y no pasa por esta ruta.
+  const existing = await queryOne<{ _id: string; tipoUsuario: string | null; contrato: string | null }>(
+    `SELECT "_id", "tipoUsuario", "contrato" FROM "PEOPLE" WHERE "numeroId" = $1`, [body.numeroId]
   );
-  if (existing) throw new ConflictError(`Person with numeroId ${body.numeroId} already exists`);
+  if (existing) {
+    throw new ConflictError(
+      `Ya existe una persona con el número de identificación ${body.numeroId}` +
+      `${existing.tipoUsuario ? ` (${existing.tipoUsuario}` : ''}` +
+      `${existing.contrato ? ` — contrato ${existing.contrato})` : existing.tipoUsuario ? ')' : ''}.`
+    );
+  }
 
   const personId = ids.person();
 
@@ -36,6 +45,11 @@ export const POST = handlerWithAuth(async (request) => {
     vigencia: body.vigencia, finalContrato: body.finalContrato,
     observaciones: body.observaciones, domicilio: body.domicilio, ciudad: body.ciudad,
     aprobacion: body.aprobacion, fechaIngreso: body.fechaIngreso,
+    // Vínculo formal con el titular + fechas del contrato al que se suma.
+    // Sin `titularId` el beneficiario queda huérfano (la lista de /person/[id]
+    // se arma por `contrato`, pero el vínculo formal se rompe).
+    titularId: body.titularId,
+    inicioContrato: body.inicioContrato, fechaContrato: body.fechaContrato,
   };
 
   for (const [field, value] of Object.entries(optionalFields)) {

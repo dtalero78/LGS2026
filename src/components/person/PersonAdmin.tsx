@@ -515,7 +515,9 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
       numeroId: '',
       fechaNacimiento: '',
       edad: '',
-      pais: '',
+      // Precargado con la plataforma del titular (el beneficiario se suma a SU
+      // contrato). Editable por si el beneficiario está en otro país.
+      pais: person.plataforma || '',
       domicilio: '',
       ciudad: '',
       celularPrefijo: '+57',
@@ -649,9 +651,14 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             fechaNacimiento: beneficiaryData.fechaNacimiento || undefined,
             ciudad: beneficiaryData.ciudad || undefined,
             domicilio: beneficiaryData.domicilio || undefined,
-            // Campos del form
+            // Campos del form (plataforma viene precargada con la del titular)
             plataforma: beneficiaryData.pais || undefined,
-            // Campos heredados del titular
+            // Campos heredados del titular — mismo criterio que Crear Contrato:
+            // el beneficiario se suma al contrato del titular, así que hereda su
+            // vínculo (titularId) y las fechas del contrato.
+            titularId: person._id,
+            inicioContrato: person.inicioContrato || undefined,
+            fechaContrato: person.fechaContrato || undefined,
             finalContrato: person.finalContrato || undefined,
             vigencia: person.vigencia || undefined,
             fechaIngreso: new Date().toISOString(),
