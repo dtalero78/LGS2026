@@ -37,6 +37,14 @@ yarn-error.log*
 scripts/_db-metrics-out.json
 # logs del ANALYZE programado (scripts/scheduled-analyze.ps1)
 scripts/analyze-*.log
+# logs one-off de scripts de datos (docs/*.log)
+docs/*.log
+
+# Mapas/storyboards generados por skills (HTML autocontenido). Son snapshots
+# de un momento del codigo — se regeneran cuando se necesiten. Ademas el mapa
+# de puertas documenta la superficie de ataque (endpoints publicos, flags),
+# asi que no conviene versionarlo.
+.flow-storyboards/
 
 # typescript
 *.tsbuildinfo
