@@ -72,6 +72,12 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
   const [isEditMode, setIsEditMode] = useState(false)
   const [editingBeneficiaryId, setEditingBeneficiaryId] = useState<string | null>(null)
   const [isTogglingContract, setIsTogglingContract] = useState(false)
+  // Snapshot de los valores al abrir "Modificar" — se compara contra el form
+  // para mostrar SOLO lo que cambió en el modal de confirmación.
+  const [originalBeneficiary, setOriginalBeneficiary] = useState<Record<string, string>>({})
+  const [showConfirmChangesModal, setShowConfirmChangesModal] = useState(false)
+  const [pendingChanges, setPendingChanges] = useState<{ label: string; from: string; to: string }[]>([])
+  const [isSavingBeneficiary, setIsSavingBeneficiary] = useState(false)
 
   // Modal "Motivo de suspensión administrativa" — usado por el toggle del
   // contrato y por el botón "Inactivar" individual de beneficiario.
@@ -458,6 +464,18 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         const result = await response.json()
         if (result.success && result.person) {
           const ben = result.person
+          // fechaNacimiento es DATE puro en BD, pero puede llegar como ISO
+          // ("2000-05-12T00:00:00.000Z"); <input type="date"> exige YYYY-MM-DD.
+          const fechaNac = (ben.fechaNacimiento || '').toString().slice(0, 10)
+
+          // Snapshot para el diff del modal de confirmación
+          setOriginalBeneficiary({
+            numeroId: ben.numeroId || '',
+            fechaNacimiento: fechaNac,
+            celular: ben.celular || '',
+            domicilio: ben.domicilio || '',
+            email: ben.email || '',
+          })
 
           setBeneficiaryData({
             primerNombre: ben.primerNombre || '',
@@ -465,7 +483,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             primerApellido: ben.primerApellido || '',
             segundoApellido: ben.segundoApellido || '',
             numeroId: ben.numeroId || '',
-            fechaNacimiento: ben.fechaNacimiento || '',
+            fechaNacimiento: fechaNac,
             edad: ben.edad || '',
             pais: ben.pais || ben.plataforma || '',
             domicilio: ben.domicilio || '',
@@ -552,7 +570,37 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     }
   }
 
+  /**
+   * En modo EDICIÓN no guarda directo: calcula qué campos cambiaron respecto al
+   * snapshot original y abre el modal de confirmación. El PATCH real lo hace
+   * confirmSaveBeneficiary(). En modo CREAR sigue guardando directo.
+   */
   const handleSaveBeneficiary = async () => {
+    if (isEditMode && editingBeneficiaryId) {
+      const normCel = (beneficiaryData.celular || '').replace(/\D/g, '')
+      const campos: { key: string; label: string; now: string }[] = [
+        { key: 'numeroId',        label: 'Número de Identificación', now: (beneficiaryData.numeroId || '').toUpperCase().replace(/[.\s_]/g, '').trim() },
+        { key: 'fechaNacimiento', label: 'Fecha de Nacimiento',      now: beneficiaryData.fechaNacimiento || '' },
+        { key: 'celular',         label: 'Celular',                  now: normCel },
+        { key: 'domicilio',       label: 'Domicilio',                now: beneficiaryData.domicilio || '' },
+        { key: 'email',           label: 'Email',                    now: beneficiaryData.email || '' },
+      ]
+      const diffs = campos
+        .filter(c => c.now !== (originalBeneficiary[c.key] || ''))
+        .map(c => ({ label: c.label, from: originalBeneficiary[c.key] || '—', to: c.now || '—' }))
+
+      if (diffs.length === 0) {
+        alert('No hay cambios para guardar.')
+        return
+      }
+      setPendingChanges(diffs)
+      setShowConfirmChangesModal(true)
+      return
+    }
+    await doSaveBeneficiary()
+  }
+
+  const doSaveBeneficiary = async () => {
     const isEdit = isEditMode && !!editingBeneficiaryId
     // En CREAR: el celular es solo el número local, hay que concatenar el prefijo.
     //   "+57" + "3008021701" → "573008021701"
@@ -568,11 +616,15 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
       let response: Response
 
       if (isEditMode && editingBeneficiaryId) {
-        // PATCH - only contact fields are editable
+        // PATCH — identificación + contacto. El backend normaliza numeroId y
+        // propaga numeroId/email/celular/fechaNacimiento a ACADEMICA y
+        // USUARIOS_ROLES (matcheando por los valores ANTERIORES).
         response = await fetch(`/api/postgres/people/${editingBeneficiaryId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            numeroId: beneficiaryData.numeroId,
+            fechaNacimiento: beneficiaryData.fechaNacimiento || null,
             celular: normalizedCelular || undefined,
             domicilio: beneficiaryData.domicilio,
             email: beneficiaryData.email,
@@ -970,7 +1022,37 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             {/* Edit Mode: Only 3 fields */}
             {isEditMode ? (
               <div className="space-y-4">
-                <h4 className="font-medium text-gray-900 mb-4">Información de Contacto</h4>
+                <h4 className="font-medium text-gray-900 mb-4">Identificación</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Número de Identificación *
+                    </label>
+                    <input
+                      type="text"
+                      value={beneficiaryData.numeroId}
+                      onChange={(e) => handleBeneficiaryDataChange('numeroId', e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))}
+                      className="input-field font-mono"
+                      placeholder="Ej: 18201897-K"
+                    />
+                    <p className="text-xs text-amber-600 mt-1">
+                      ⚠️ Es la llave que une al beneficiario con su registro académico. Al cambiarlo se actualiza también en ACADEMICA y en su usuario de acceso.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Fecha de Nacimiento
+                    </label>
+                    <input
+                      type="date"
+                      value={beneficiaryData.fechaNacimiento}
+                      onChange={(e) => handleBeneficiaryDataChange('fechaNacimiento', e.target.value)}
+                      className="input-field"
+                    />
+                  </div>
+                </div>
+
+                <h4 className="font-medium text-gray-900 mb-4 pt-2">Información de Contacto</h4>
                 <div className="grid grid-cols-1 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1200,7 +1282,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
               <div className="flex justify-end mt-6 pt-4 border-t border-gray-200">
                 <button
                   onClick={handleSaveBeneficiary}
-                  disabled={!beneficiaryData.celular || !beneficiaryData.domicilio || !beneficiaryData.email}
+                  disabled={!beneficiaryData.numeroId?.trim() || !beneficiaryData.celular || !beneficiaryData.domicilio || !beneficiaryData.email}
                   className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Guardar Cambios
@@ -1256,6 +1338,73 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Confirmación de cambios del beneficiario */}
+      {showConfirmChangesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full">
+            <h3 className="text-lg font-bold text-gray-900 mb-1">Confirmar cambios</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Vas a modificar {pendingChanges.length === 1 ? 'el siguiente campo' : `los siguientes ${pendingChanges.length} campos`} del beneficiario. Revisá antes de guardar.
+            </p>
+
+            <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 mb-4">
+              {pendingChanges.map(c => (
+                <div key={c.label} className="px-3 py-2.5">
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{c.label}</div>
+                  <div className="flex items-center gap-2 text-sm flex-wrap">
+                    <span className="line-through text-red-600 bg-red-50 px-1.5 py-0.5 rounded font-mono text-xs break-all">{c.from}</span>
+                    <span className="text-gray-400">→</span>
+                    <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-mono text-xs font-semibold break-all">{c.to}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {pendingChanges.some(c => c.label === 'Número de Identificación') && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
+                <p className="text-xs text-amber-800">
+                  ⚠️ Estás cambiando el <strong>número de identificación</strong>. Se actualizará también en <strong>ACADEMICA</strong> y en su <strong>usuario de acceso</strong> para no romper el vínculo.
+                </p>
+              </div>
+            )}
+            {pendingChanges.some(c => c.label === 'Email') && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                <p className="text-xs text-blue-800">
+                  ℹ️ Al cambiar el <strong>email</strong> también cambia el <strong>usuario con el que inicia sesión</strong>.
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowConfirmChangesModal(false)}
+                disabled={isSavingBeneficiary}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsSavingBeneficiary(true)
+                  try {
+                    await doSaveBeneficiary()
+                    setShowConfirmChangesModal(false)
+                  } finally {
+                    setIsSavingBeneficiary(false)
+                  }
+                }}
+                disabled={isSavingBeneficiary}
+                className="px-5 py-2 text-sm font-semibold text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+              >
+                {isSavingBeneficiary ? 'Guardando…' : 'Confirmar cambios'}
+              </button>
+            </div>
           </div>
         </div>
       )}

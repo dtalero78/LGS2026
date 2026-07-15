@@ -187,6 +187,7 @@ const PEOPLE_UPDATE_FIELDS = [
   'segundoNombre',
   'primerApellido',
   'segundoApellido',
+  'numeroId',
   'email',
   'celular',
   'telefono',
@@ -229,6 +230,16 @@ export const PATCH = handlerWithAuth(async (
     if (!VALID_PLAN.includes(String(body.plan).trim())) {
       throw new ValidationError(`plan debe ser uno de: ${VALID_PLAN.join(', ')}`);
     }
+  }
+
+  // ── Normalización de numeroId ──
+  // Es la llave PEOPLE ↔ ACADEMICA ↔ USUARIOS_ROLES.numberid: se guarda siempre
+  // en MAYÚSCULAS y sin puntos/espacios/guiones bajos (misma convención que el
+  // resto del sistema). No puede quedar vacío.
+  if (body.numeroId !== undefined) {
+    const norm = String(body.numeroId).toUpperCase().replace(/[.\s_]/g, '').trim();
+    if (!norm) throw new ValidationError('El número de identificación no puede quedar vacío');
+    body.numeroId = norm;
   }
 
   // Fetch current person before update (needed for old email to update USUARIOS_ROLES)
@@ -341,15 +352,22 @@ export const PATCH = handlerWithAuth(async (
     'extensionHistory',
   ]);
 
-  // Sync email and celular to ACADEMICA and USUARIOS_ROLES
+  // ── Sync a ACADEMICA / USUARIOS_ROLES ──
+  // `numeroId` es la LLAVE que une PEOPLE ↔ ACADEMICA (y USUARIOS_ROLES.numberid).
+  // Si cambia, hay que propagarlo o el vínculo se rompe. El WHERE usa siempre el
+  // valor ANTERIOR (currentPerson) para poder encontrar las filas a actualizar.
   const syncingEmail = body.email && body.email !== currentPerson.email;
   const syncingCelular = body.celular !== undefined;
+  const syncingNumeroId = body.numeroId !== undefined && body.numeroId !== currentPerson.numeroId;
+  const syncingFechaNac = body.fechaNacimiento !== undefined;
 
-  if ((syncingEmail || syncingCelular) && currentPerson.numeroId) {
+  if ((syncingEmail || syncingCelular || syncingNumeroId || syncingFechaNac) && currentPerson.numeroId) {
     const academicaFields: string[] = [];
     const academicaValues: any[] = [];
     if (syncingEmail) { academicaFields.push(`"email" = $${academicaFields.length + 1}`); academicaValues.push(body.email); }
     if (syncingCelular) { academicaFields.push(`"celular" = $${academicaFields.length + 1}`); academicaValues.push(body.celular); }
+    if (syncingNumeroId) { academicaFields.push(`"numeroId" = $${academicaFields.length + 1}`); academicaValues.push(body.numeroId); }
+    if (syncingFechaNac) { academicaFields.push(`"fechaNacimiento" = $${academicaFields.length + 1}`); academicaValues.push(body.fechaNacimiento || null); }
     academicaValues.push(currentPerson.numeroId);
     await query(
       `UPDATE "ACADEMICA" SET ${academicaFields.join(', ')}, "_updatedDate" = NOW() WHERE "numeroId" = $${academicaValues.length}`,
@@ -358,12 +376,20 @@ export const PATCH = handlerWithAuth(async (
     console.log('🔄 [PostgreSQL People] Synced to ACADEMICA');
   }
 
-  if (syncingEmail && currentPerson.email) {
+  // USUARIOS_ROLES: email (login) y numberid. Un solo UPDATE matcheando por el
+  // email ANTERIOR — si se cambian ambos a la vez, hacerlo en dos pasos fallaría
+  // porque el segundo ya no encontraría la fila por el email viejo.
+  if ((syncingEmail || syncingNumeroId) && currentPerson.email) {
+    const urFields: string[] = [];
+    const urValues: any[] = [];
+    if (syncingEmail) { urFields.push(`"email" = $${urFields.length + 1}`); urValues.push(body.email); }
+    if (syncingNumeroId) { urFields.push(`"numberid" = $${urFields.length + 1}`); urValues.push(body.numeroId); }
+    urValues.push(currentPerson.email);
     await query(
-      `UPDATE "USUARIOS_ROLES" SET "email" = $1 WHERE LOWER("email") = LOWER($2)`,
-      [body.email, currentPerson.email]
+      `UPDATE "USUARIOS_ROLES" SET ${urFields.join(', ')} WHERE LOWER("email") = LOWER($${urValues.length})`,
+      urValues
     );
-    console.log('🔄 [PostgreSQL People] Synced email to USUARIOS_ROLES');
+    console.log('🔄 [PostgreSQL People] Synced to USUARIOS_ROLES');
   }
 
   // If estado changed to Contrato nulo / Devuelto / Rechazado → inactivate titular + beneficiaries
