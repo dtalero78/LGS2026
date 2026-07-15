@@ -335,7 +335,11 @@ function CrearContratoContent() {
   const validateStep = (step: number): boolean => {
     switch (step) {
       case 1:
-        return titular.asesor !== '';
+        // Nombre del asesor + su email (válido). El email es la llave que
+        // resuelve al comercial contra USUARIOS_ROLES.
+        return titular.asesorCreadorContrato.trim() !== '' &&
+               titular.asesor !== '' &&
+               isValidEmail(titular.asesor);
       case 2:
         return titular.primerNombre !== '' &&
                titular.primerApellido !== '' &&
@@ -668,17 +672,41 @@ function CrearContratoContent() {
           {currentStep === 1 && (
             <div className="space-y-4">
               <h2 className="text-xl font-semibold mb-4">Información del Asesor</h2>
+              {/* NOMBRE → PEOPLE.asesorCreadorContrato · EMAIL → PEOPLE.asesor.
+                  Van separados a propósito: `asesor` (email) es la llave con la
+                  que se resuelve el nombre del comercial contra USUARIOS_ROLES
+                  (getAsesorInfo) para el contrato y la pestaña Financiera. */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Asesor creador del contrato *
                 </label>
                 <input
                   type="text"
-                  value={titular.asesor}
-                  onChange={(e) => setTitular({...titular, asesor: e.target.value})}
+                  value={titular.asesorCreadorContrato}
+                  onChange={(e) => setTitular({...titular, asesorCreadorContrato: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   placeholder="Nombre del asesor"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email del asesor comercial *
+                </label>
+                <input
+                  type="email"
+                  value={titular.asesor}
+                  onChange={(e) => setTitular({...titular, asesor: e.target.value.replace(/\s/g, '')})}
+                  className={
+                    `w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 ` +
+                    (titular.asesor !== '' && !isValidEmail(titular.asesor) ? 'border-red-400' : 'border-gray-300')
+                  }
+                  placeholder="correo@dominio.com"
+                />
+                {titular.asesor !== '' && !isValidEmail(titular.asesor) ? (
+                  <p className="text-xs text-red-600 mt-1">El correo no es válido (debe llevar @ y dominio, sin espacios).</p>
+                ) : (
+                  <p className="text-xs text-gray-400 mt-1">Se usa para identificar al comercial en el contrato y en la ficha del titular.</p>
+                )}
               </div>
             </div>
           )}
