@@ -56,11 +56,15 @@ export default function StudentTabs({ student, classes, contratoFinalizado = fal
   // Control de acceso: permiso para inicializar nivel
   const canInicializarNivel = hasPermission(StudentPermission.INICIALIZAR_NIVEL)
 
+  // "Agendar Sesión" — antes se mostraba SIN gatear (el permiso existía en la
+  // matriz pero no se chequeaba). SUPER_ADMIN/ADMIN bypasean vía usePermissions.
+  const canAgendarClase = hasPermission(StudentPermission.AGENDAR_CLASE)
+
   // Filtrar submenu académico basado en permisos
   const academicSubmenu = [
     { id: 'attendance', name: 'Tabla de Asistencia', icon: '📋' },
     ...(canAccessProgress ? [{ id: 'progress', name: '¿Cómo voy?', icon: '📈' }] : []),
-    { id: 'schedule', name: 'Agendar Sesión', icon: '📅' },
+    ...(canAgendarClase ? [{ id: 'schedule', name: 'Agendar Sesión', icon: '📅' }] : []),
     ...(canAccessSteps ? [{ id: 'steps', name: 'Gestión de Steps', icon: '📊' }] : []),
     ...(canChangeStep ? [{ id: 'change-step', name: 'Cambiar Step', icon: '👣' }] : []),
     ...(canInicializarNivel ? [{ id: 'inicializar-nivel', name: 'Reiniciar Nivel', icon: '🔄' }] : []),
