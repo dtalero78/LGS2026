@@ -863,7 +863,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
   const renderScheduleSection = () => (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-medium text-gray-900">📅 Agendar Nueva Clase</h3>
+        <h3 className="text-lg font-medium text-gray-900">📅 Agendar Sesión</h3>
         <button
           onClick={() => setShowScheduleModal(true)}
           className="btn-primary flex items-center space-x-2"
@@ -1310,7 +1310,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
                       </div>
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold text-white">Agendar Nueva Clase</h3>
+                      <h3 className="text-xl font-semibold text-white">Agendar Sesión</h3>
                       <p className="text-primary-100 text-sm">
                         Para {student.primerNombre} {student.primerApellido}
                       </p>

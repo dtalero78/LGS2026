@@ -60,7 +60,7 @@ export default function StudentTabs({ student, classes, contratoFinalizado = fal
   const academicSubmenu = [
     { id: 'attendance', name: 'Tabla de Asistencia', icon: '📋' },
     ...(canAccessProgress ? [{ id: 'progress', name: '¿Cómo voy?', icon: '📈' }] : []),
-    { id: 'schedule', name: 'Agendar Nueva Clase', icon: '📅' },
+    { id: 'schedule', name: 'Agendar Sesión', icon: '📅' },
     ...(canAccessSteps ? [{ id: 'steps', name: 'Gestión de Steps', icon: '📊' }] : []),
     ...(canChangeStep ? [{ id: 'change-step', name: 'Cambiar Step', icon: '👣' }] : []),
     ...(canInicializarNivel ? [{ id: 'inicializar-nivel', name: 'Reiniciar Nivel', icon: '🔄' }] : []),

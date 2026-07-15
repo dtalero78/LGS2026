@@ -260,8 +260,8 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     code: StudentPermission.AGENDAR_CLASE,
     module: Module.STUDENT,
     section: 'Tab Académica',
-    name: 'Botón "Agendar Nueva Clase"',
-    description: 'Wizard para agendar clase: tipo → día → hora',
+    name: 'Botón "Agendar Sesión"',
+    description: 'Wizard para agendar sesión: tipo → día → hora',
   },
   {
     code: StudentPermission.MARCAR_STEP,
