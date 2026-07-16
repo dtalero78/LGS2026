@@ -11,7 +11,7 @@ export const GET = handler(async (_request, { params }) => {
   const titular = await queryOne(
     `SELECT "_id", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
             "numeroId", "celular", "email", "plataforma", "contrato", "domicilio", "ciudad",
-            "fechaNacimiento", "_createdDate", "asesor",
+            "fechaNacimiento", "_createdDate", "asesor", "asesorCreadorContrato",
             "referenciaUno", "parentezcoRefUno", "telefonoRefUno",
             "referenciaDos", "parentezcoRefDos", "telefonoRefDos",
             "observacionesContrato", "consentimientoDeclarativo", "hashConsentimiento",
@@ -64,7 +64,7 @@ export const GET = handler(async (_request, { params }) => {
   }
 
   // Resolve asesor info (used at end of consent block in template).
-  const asesorInfo = await getAsesorInfo((titular as any).asesor);
+  const asesorInfo = await getAsesorInfo((titular as any).asesor, (titular as any).asesorCreadorContrato);
 
   return successResponse({ titular, beneficiarios, financial, template, asesorInfo });
 });

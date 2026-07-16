@@ -71,7 +71,7 @@ export const POST = handlerWithAuth(async (_request, { params }, session) => {
     ? { hasConsent: true, consent: consentObj, hash: titular.hashConsentimiento }
     : { hasConsent: false };
 
-  const asesorInfo = await getAsesorInfo((titular as any).asesor);
+  const asesorInfo = await getAsesorInfo((titular as any).asesor, (titular as any).asesorCreadorContrato);
   const contractText = fillContractTemplate(
     templateRow.template,
     titular,

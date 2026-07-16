@@ -72,10 +72,13 @@ export function fillContractTemplate(
       : '';
     const tipo = c.tipoAprobacion === 'AUTOMATICA' ? ' (Aprobacion Automatica)' : '';
 
+    // La línea del correo solo se imprime si REALMENTE hay un email. En
+    // contratos viejos `asesor` guarda el nombre (no un correo) y antes se
+    // repetía el nombre en ambas líneas.
     const ejecutivoLineas =
       (ejecutivoComercial && (ejecutivoComercial.nombre || ejecutivoComercial.email))
-        ? `Asesor Comercial: ${ejecutivoComercial.nombre || ''}\n` +
-          `Correo del asesor: ${ejecutivoComercial.email || ''}\n`
+        ? `Asesor Comercial: ${ejecutivoComercial.nombre || ejecutivoComercial.email || ''}\n` +
+          (ejecutivoComercial.email ? `Correo del asesor: ${ejecutivoComercial.email}\n` : '')
         : '';
 
     firmaText =
