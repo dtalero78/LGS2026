@@ -4,6 +4,49 @@ import { query } from '@/lib/postgres';
 import { ValidationError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 import { syncFinancieroSaldo } from '@/services/pagos-titulares.service';
+import crypto from 'crypto';
+
+const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
+
+/**
+ * Registra al comercial que creó el contrato en EQUIPO_COMERCIAL.
+ *
+ *   correo     ← titular.asesor (EMAIL — es la llave, índice único ci)
+ *   nombre     ← titular.asesorCreadorContrato
+ *   plataforma ← titular.plataforma
+ *
+ * Se salta si `asesor` no es un email válido (dato legacy: hay contratos viejos
+ * donde ese campo guarda el nombre — ver scripts/fix-asesor-nombre-en-campo-email.js).
+ *
+ * ON CONFLICT: si el comercial YA existe (p.ej. dado de alta en "Crea UserRol"
+ * con clave/filial/usuarioRolId), NO se pisa nada — solo se rellenan `nombre` y
+ * `plataforma` si estaban vacíos. Nunca toca clave/filial/usuarioRolId/activo.
+ *
+ * Best-effort: cualquier error se loguea y se ignora (el contrato ya está creado).
+ */
+async function upsertEquipoComercial(titular: any, contrato: string): Promise<void> {
+  try {
+    const correo = String(titular?.asesor ?? '').trim().toLowerCase();
+    if (!correo || !isEmail(correo)) return;
+
+    // `nombre` es NOT NULL: si no vino el nombre, se usa el correo como respaldo.
+    const nombre = String(titular?.asesorCreadorContrato ?? '').trim() || correo;
+    const plataforma = String(titular?.plataforma ?? '').trim() || null;
+
+    await query(
+      `INSERT INTO "EQUIPO_COMERCIAL"
+         ("_id", "nombre", "correo", "plataforma", "activo", "_createdDate", "_updatedDate")
+       VALUES ($1, $2, $3, $4, true, NOW(), NOW())
+       ON CONFLICT (LOWER(TRIM("correo"))) DO UPDATE
+         SET "nombre"     = COALESCE(NULLIF(TRIM("EQUIPO_COMERCIAL"."nombre"), ''), EXCLUDED."nombre"),
+             "plataforma" = COALESCE(NULLIF(TRIM("EQUIPO_COMERCIAL"."plataforma"), ''), EXCLUDED."plataforma"),
+             "_updatedDate" = NOW()`,
+      [crypto.randomUUID(), nombre, correo, plataforma]
+    );
+  } catch (err: any) {
+    console.warn(`[contracts] EQUIPO_COMERCIAL upsert falló para ${contrato}:`, err?.message || err);
+  }
+}
 
 function parseMoney(v: any): number {
   if (v === null || v === undefined || v === '') return 0;
@@ -257,6 +300,12 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
       console.warn(`[contracts] PAGOS_TITULARES cuota#0 falló para ${contrato}:`, err?.message || err);
     }
   }
+
+  // 7. Propagar el comercial a EQUIPO_COMERCIAL (registro del equipo).
+  //    correo = titular.asesor (EMAIL) · nombre = titular.asesorCreadorContrato
+  //    · plataforma = titular.plataforma.
+  //    Best-effort: si falla, el contrato ya está creado y no se rompe.
+  await upsertEquipoComercial(titular, contrato);
 
   return successResponse({
     message: `Contrato ${contrato} creado exitosamente`,
