@@ -9,6 +9,13 @@ import crypto from 'crypto';
 const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
 
 /**
+ * Respaldo para `EQUIPO_COMERCIAL.nombre` (NOT NULL) cuando el contrato no trae
+ * el nombre del comercial. Se trata como "vacío" en el upsert: si más adelante
+ * llega un contrato con el nombre real, lo reemplaza.
+ */
+const NOMBRE_COMERCIAL_PLACEHOLDER = 'Nombre Comercial';
+
+/**
  * Registra al comercial que creó el contrato en EQUIPO_COMERCIAL.
  *
  *   correo     ← titular.asesor (EMAIL — es la llave, índice único ci)
@@ -29,19 +36,22 @@ async function upsertEquipoComercial(titular: any, contrato: string): Promise<vo
     const correo = String(titular?.asesor ?? '').trim().toLowerCase();
     if (!correo || !isEmail(correo)) return;
 
-    // `nombre` es NOT NULL: si no vino el nombre, se usa el correo como respaldo.
-    const nombre = String(titular?.asesorCreadorContrato ?? '').trim() || correo;
+    // `nombre` es NOT NULL: si no vino el nombre, se guarda un placeholder.
+    const nombre = String(titular?.asesorCreadorContrato ?? '').trim() || NOMBRE_COMERCIAL_PLACEHOLDER;
     const plataforma = String(titular?.plataforma ?? '').trim() || null;
 
+    // El nombre guardado se considera "vacío" si está en blanco O si es el
+    // placeholder → así un contrato posterior con el nombre real lo reemplaza,
+    // en vez de quedar pegado para siempre. Un nombre real nunca se pisa.
     await query(
       `INSERT INTO "EQUIPO_COMERCIAL"
          ("_id", "nombre", "correo", "plataforma", "activo", "_createdDate", "_updatedDate")
        VALUES ($1, $2, $3, $4, true, NOW(), NOW())
        ON CONFLICT (LOWER(TRIM("correo"))) DO UPDATE
-         SET "nombre"     = COALESCE(NULLIF(TRIM("EQUIPO_COMERCIAL"."nombre"), ''), EXCLUDED."nombre"),
+         SET "nombre"     = COALESCE(NULLIF(NULLIF(TRIM("EQUIPO_COMERCIAL"."nombre"), ''), $5), EXCLUDED."nombre"),
              "plataforma" = COALESCE(NULLIF(TRIM("EQUIPO_COMERCIAL"."plataforma"), ''), EXCLUDED."plataforma"),
              "_updatedDate" = NOW()`,
-      [crypto.randomUUID(), nombre, correo, plataforma]
+      [crypto.randomUUID(), nombre, correo, plataforma, NOMBRE_COMERCIAL_PLACEHOLDER]
     );
   } catch (err: any) {
     console.warn(`[contracts] EQUIPO_COMERCIAL upsert falló para ${contrato}:`, err?.message || err);
