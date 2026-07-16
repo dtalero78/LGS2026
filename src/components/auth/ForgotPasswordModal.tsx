@@ -18,6 +18,9 @@ export default function ForgotPasswordModal({ initialEmail = '', onClose }: Forg
   const [lastFourId,    setLastFourId]    = useState('')
   const [lastFourPhone, setLastFourPhone] = useState('')
   const [otp,           setOtp]           = useState('')
+  // Prueba de que el OTP fue verificado (paso 3) — la exige reset-password
+  // (paso 4). No se le muestra al usuario: es plomería interna.
+  const [resetToken,    setResetToken]    = useState('')
   const [password,      setPassword]      = useState('')
   const [confirm,       setConfirm]       = useState('')
   const [showPass,      setShowPass]      = useState(false)
@@ -77,6 +80,7 @@ export default function ForgotPasswordModal({ initialEmail = '', onClose }: Forg
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.error || 'Código inválido')
+      setResetToken(data.resetToken || '')
       setStep('NEW_PASSWORD')
     } catch (e: any) {
       toast.error(e.message)
@@ -93,7 +97,7 @@ export default function ForgotPasswordModal({ initialEmail = '', onClose }: Forg
     try {
       const res  = await fetch('/api/auth/forgot-password/reset-password', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), password, confirmPassword: confirm }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password, confirmPassword: confirm, resetToken }),
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.error || 'Error al actualizar')
