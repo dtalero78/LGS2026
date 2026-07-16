@@ -129,11 +129,14 @@ export const POST = handler(async (_request, { params }) => {
 
   // 8. Send PDF via Whapi using the API2PDF direct URL (clean S3 link, no redirects)
   const phone = titular.celular.toString().replace(/\D/g, '');
-  // Filename: primerNombre + primerApellido + numeroId
+  // Filename: "lgs" + primerNombre + primerApellido + numeroId
+  // El prefijo `lgs` identifica el origen del contrato en el archivo que recibe
+  // el cliente. Cuando se cablee el Drive nuevo, se reusa este mismo nombre
+  // (hoy el nombre en Drive lo pone bsl-utilidades, no esta app).
   const nameParts = [titular.primerNombre, titular.primerApellido, titular.numeroId].filter(Boolean);
   const filename = nameParts.length > 0
-    ? `${nameParts.join(' ')}.pdf`
-    : `Contrato-LGS.pdf`;
+    ? `lgs ${nameParts.join(' ')}.pdf`
+    : `lgs Contrato.pdf`;
 
   const whapiRes = await fetch('https://gate.whapi.cloud/messages/document', {
     method: 'POST',
