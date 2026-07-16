@@ -2,6 +2,7 @@ import 'server-only';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { query } from '@/lib/postgres';
 import { NotFoundError, ValidationError } from '@/lib/errors';
+import { assertPuedeAprobarContrato } from '@/lib/contrato-prueba-guard';
 
 export const GET = handlerWithAuth(async (request, { params }) => {
   const result = await query(
@@ -22,7 +23,7 @@ const APROBACION_TO_ESTADO: Record<string, string> = {
   'Rechazado':      'ANULADO',
 };
 
-export const PUT = handlerWithAuth(async (request, { params }) => {
+export const PUT = handlerWithAuth(async (request, { params }, session) => {
   const { estado } = await request.json();
   if (!estado) throw new ValidationError('estado is required');
 
@@ -40,8 +41,13 @@ export const PUT = handlerWithAuth(async (request, { params }) => {
     throw new ValidationError(`estado must be one of: ${validEstados.join(', ')}`);
   }
 
-  const check = await query(`SELECT "_id" FROM "PEOPLE" WHERE "_id" = $1`, [params.id]);
+  const check = await query(`SELECT "_id", "contrato" FROM "PEOPLE" WHERE "_id" = $1`, [params.id]);
   if (check.rowCount === 0) throw new NotFoundError('Person');
+
+  // Contratos de prueba (PRB-): solo SUPER_ADMIN puede aprobarlos.
+  if (estadoFinal === 'Aprobado') {
+    assertPuedeAprobarContrato(check.rows[0].contrato, (session?.user as any)?.role);
+  }
 
   const estadoOperativo = APROBACION_TO_ESTADO[estadoFinal] ?? null;
 

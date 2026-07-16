@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { query, queryOne, queryMany, parseJsonbFields } from '@/lib/postgres';
 import { handler, handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { NotFoundError, ValidationError } from '@/lib/errors';
+import { assertPuedeAprobarContrato } from '@/lib/contrato-prueba-guard';
 import { buildDynamicUpdate } from '@/lib/query-builder';
 
 /**
@@ -216,7 +217,8 @@ const PEOPLE_UPDATE_FIELDS = [
  */
 export const PATCH = handlerWithAuth(async (
   request: Request,
-  { params }: { params: Record<string, string> }
+  { params }: { params: Record<string, string> },
+  session
 ) => {
   const personId = params.id;
   const body = await request.json();
@@ -230,6 +232,16 @@ export const PATCH = handlerWithAuth(async (
     if (!VALID_PLAN.includes(String(body.plan).trim())) {
       throw new ValidationError(`plan debe ser uno de: ${VALID_PLAN.join(', ')}`);
     }
+  }
+
+  // ── Contratos de prueba (PRB-): solo SUPER_ADMIN puede aprobarlos ──
+  // Defensa en profundidad: la UI enruta "Aprobado" por /people/[id]/approve,
+  // pero por esta vía también se puede setear `aprobacion`.
+  if (String(body.aprobacion ?? '').trim() === 'Aprobado') {
+    const target = await queryOne<{ contrato: string | null }>(
+      `SELECT "contrato" FROM "PEOPLE" WHERE "_id" = $1`, [personId],
+    );
+    assertPuedeAprobarContrato(target?.contrato, (session?.user as any)?.role);
   }
 
   // ── Normalización de numeroId ──
