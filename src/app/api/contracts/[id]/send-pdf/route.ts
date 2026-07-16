@@ -3,6 +3,7 @@ import { handler, successResponse } from '@/lib/api-helpers';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { queryOne, queryMany } from '@/lib/postgres';
 import { fillContractTemplate } from '@/lib/contract-template-filler';
+import { buildContractPdfHtml } from '@/lib/contract-pdf-html';
 import { getAsesorInfo } from '@/lib/asesor';
 
 const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
@@ -72,28 +73,11 @@ export const POST = handler(async (_request, { params }) => {
     asesorInfo,
   );
 
-  // 5. Wrap in HTML for PDF generation
-  const htmlContent = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Contrato ${titular.contrato || ''}</title>
-  <style>
-    @page { margin: 15mm 15mm 15mm 20mm; }
-    body {
-      font-family: Georgia, 'Times New Roman', serif;
-      font-size: 10.5pt;
-      line-height: 1.5;
-      color: #111;
-      margin: 0;
-      padding: 0;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
-  </style>
-</head>
-<body>${contractText}</body>
-</html>`;
+  // 5. Wrap in HTML for PDF generation (diseño compartido — src/lib/contract-pdf-html.ts)
+  const htmlContent = buildContractPdfHtml(contractText, {
+    contrato: titular.contrato,
+    fecha: new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' }),
+  });
 
   // 6. Generate PDF with API2PDF (HTML mode — no URL dependency)
   const pdfRes = await fetch('https://v2018.api2pdf.com/chrome/html', {
