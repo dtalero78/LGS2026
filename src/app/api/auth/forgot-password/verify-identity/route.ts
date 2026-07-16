@@ -2,24 +2,44 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { handler, successResponse } from '@/lib/api-helpers';
 import { ValidationError, NotFoundError } from '@/lib/errors';
+import { rateLimit } from '@/lib/rate-limit';
 import { queryOne } from '@/lib/postgres';
 import { generateOtp, saveOtp } from '@/lib/otp-store';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
 
 /**
  * POST /api/auth/forgot-password/verify-identity
- * Verifies last 4 digits of ID and last 4 digits of phone.
- * If match → sends OTP via WhatsApp.
+ * Verifica los últimos 4 dígitos del numeroId + el celular COMPLETO.
+ * Si coinciden → envía el OTP por WhatsApp.
+ *
+ * Rate-limit: 5 intentos / 15 min por email.
  * If no match → returns 400 (caller shows mismatch modal).
  */
+/**
+ * Mínimo de dígitos del celular. Los números nacionales de la región tienen
+ * 9-10 dígitos (Chile 9, Colombia 10, Ecuador 9, Perú 9), así que 8 es un piso
+ * seguro que acepta cualquier número real y rechaza sufijos cortos.
+ */
+const MIN_PHONE_DIGITS = 8;
+
 export const POST = handler(async (request) => {
   const { email, lastFourId, lastFourPhone } = await request.json();
 
   if (!email?.trim())        throw new ValidationError('Email requerido');
   if (!lastFourId?.trim())   throw new ValidationError('Últimos 4 dígitos del ID requeridos');
-  if (!lastFourPhone?.trim()) throw new ValidationError('Últimos 4 dígitos del celular requeridos');
+  if (!lastFourPhone?.trim()) throw new ValidationError('El celular completo es requerido');
 
   const normalizedEmail = email.trim().toLowerCase();
+
+  // Rate-limit por email: frena la fuerza bruta de los 4 dígitos del numeroId
+  // (10.000 combinaciones) y evita spamear WhatsApp con OTPs.
+  const rl = rateLimit(`fp-identity:${normalizedEmail}`, 5, 15 * 60 * 1000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { success: false, error: `Demasiados intentos. Espera ${Math.ceil(rl.retryAfterSec / 60)} minuto(s) antes de reintentar.` },
+      { status: 429 },
+    );
+  }
   const cleanId    = lastFourId.replace(/[^0-9A-Za-z]/g, '').toUpperCase().slice(-4);
   const cleanPhone = lastFourPhone.replace(/\D/g, '');  // full number, no signs
 
@@ -35,14 +55,23 @@ export const POST = handler(async (request) => {
   const storedId = (academica.numeroId || '').replace(/[^0-9A-Za-z]/g, '').toUpperCase();
   const idMatches = storedId.endsWith(cleanId);
 
-  // Verify phone — flexible: stored may or may not include country code
-  // Accept if stored ends with input OR input ends with stored (handles 57XXXXXXXXXX vs XXXXXXXXXX)
+  // Verify phone — exige el número COMPLETO (mínimo 8 dígitos).
+  //
+  // ANTES: con `endsWith` bastaban los ÚLTIMOS 4 dígitos... que son justo los
+  // que /check-email revelaba con solo el email. O sea, el factor "celular" se
+  // regalaba y el único obstáculo real eran los 4 del numeroId.
+  //
+  // AHORA: el mínimo de 8 dígitos hace que un sufijo corto no pase. Se conserva
+  // la flexibilidad del indicativo (56XXXXXXXXX vs XXXXXXXXX) porque el dato
+  // guardado a veces lo trae y a veces no; ambos lados deben cumplir el mínimo.
   const storedPhone = (academica.celular || '').replace(/\D/g, '');
-  const phoneMatches = storedPhone !== '' && cleanPhone !== '' && (
-    storedPhone === cleanPhone ||
-    storedPhone.endsWith(cleanPhone) ||
-    cleanPhone.endsWith(storedPhone)
-  );
+  const phoneMatches =
+    storedPhone.length >= MIN_PHONE_DIGITS &&
+    cleanPhone.length >= MIN_PHONE_DIGITS && (
+      storedPhone === cleanPhone ||
+      storedPhone.endsWith(cleanPhone) ||
+      cleanPhone.endsWith(storedPhone)
+    );
 
   if (!idMatches || !phoneMatches) {
     // Return mismatch — client will show modal

@@ -29,10 +29,15 @@ export const POST = handler(async (request) => {
   if (!academica) throw new NotFoundError('Registro académico', normalizedEmail);
 
   // Mask phone: show only last 4 digits
+  // Se muestran solo los ÚLTIMOS 3 dígitos (antes eran 4). Es una ayuda de
+  // memoria para el usuario legítimo: cada dígito mostrado es un dígito que se
+  // le regala a un atacante. No dan paso al paso 2, que exige el celular
+  // COMPLETO (mínimo 8 dígitos) — antes bastaba con los últimos 4, justo los
+  // que esta misma respuesta revelaba.
   const celular = academica.celular || '';
-  const maskedPhone = celular.length >= 4
-    ? '********' + celular.slice(-4)
-    : celular ? '********' : 'No registrado';
+  const maskedPhone = celular.length >= 3
+    ? '••••••••' + celular.slice(-3)
+    : celular ? '••••••••' : 'No registrado';
 
   return successResponse({ maskedPhone, hasPhone: !!celular });
 });

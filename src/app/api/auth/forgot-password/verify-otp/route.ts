@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { handler, successResponse } from '@/lib/api-helpers';
 import { ValidationError } from '@/lib/errors';
 import { verifyOtp } from '@/lib/otp-store';
+import { rateLimit, rateLimitReset } from '@/lib/rate-limit';
 import { issueResetToken } from '@/lib/reset-token';
 
 /**
@@ -21,6 +22,17 @@ export const POST = handler(async (request) => {
   if (!code?.trim())  throw new ValidationError('Código requerido');
 
   const normalizedEmail = email.trim().toLowerCase();
+
+  // Rate-limit por email: el OTP es de 6 dígitos (1.000.000 de combinaciones);
+  // sin límite se puede reventar por fuerza bruta.
+  const rl = rateLimit(`fp-otp:${normalizedEmail}`, 5, 10 * 60 * 1000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { success: false, error: `Demasiados intentos. Espera ${Math.ceil(rl.retryAfterSec / 60)} minuto(s) antes de reintentar.` },
+      { status: 429 },
+    );
+  }
+
   const result = verifyOtp(normalizedEmail, code.trim());
 
   if (!result.valid) {
@@ -29,6 +41,10 @@ export const POST = handler(async (request) => {
       { status: 400 }
     );
   }
+
+  // OTP correcto → libera el contador (que un acierto no deje al usuario
+  // bloqueado por los intentos fallidos previos).
+  rateLimitReset(`fp-otp:${normalizedEmail}`);
 
   return successResponse({
     message: 'Código verificado correctamente',
