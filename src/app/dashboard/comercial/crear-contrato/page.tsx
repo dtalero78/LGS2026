@@ -144,6 +144,11 @@ function CrearContratoContent() {
   const [showBenefConfirm, setShowBenefConfirm] = useState(false);
   // Confirmación al CREAR si nadie tomará clases (sin beneficiarios y titular no beneficiario)
   const [showNoBenefConfirm, setShowNoBenefConfirm] = useState(false);
+  // Protección de historial: beneficiarios (o el titular-beneficiario) del contrato
+  // recién creado cuyo numeroId ya tenía ficha académica de un contrato anterior.
+  const [proteccionCasos, setProteccionCasos] = useState<Array<{ numeroId: string; contratoViejo: string | null; bookings: number; nombre: string }>>([]);
+  const [proteccionCtx, setProteccionCtx] = useState<{ titularId: string; contratoNuevo: string } | null>(null);
+  const [protegiendoIdx, setProtegiendoIdx] = useState<number | null>(null);
   // Confirmación al crear cuando SÍ hay beneficiarios o el titular es beneficiario.
   const [showCreateConfirm, setShowCreateConfirm] = useState(false);
   // Aviso de beneficiario(s) en blanco (sin datos) al intentar crear.
@@ -549,6 +554,37 @@ function CrearContratoContent() {
       setSuccess(`Contrato creado exitosamente. Número de contrato: ${data.contractNumber}`);
       localStorage.removeItem(DRAFT_KEY);
 
+      // ¿Alguno de los que tomarán el programa ya tenía ficha académica de un
+      // contrato anterior? (beneficiarios + titular-beneficiario). Si sí, ofrecer
+      // protección de historial ANTES de redirigir.
+      const idsAChequear = new Set<string>();
+      beneficiarios.forEach(b => { const n = (b.numeroId || '').trim(); if (n) idsAChequear.add(n); });
+      if (titularEsBeneficiario) { const n = (titular.numeroId || '').trim(); if (n) idsAChequear.add(n); }
+
+      const casos: Array<{ numeroId: string; contratoViejo: string | null; bookings: number; nombre: string }> = [];
+      if (data._id && idsAChequear.size > 0) {
+        await Promise.all(Array.from(idsAChequear).map(async (numId) => {
+          try {
+            const chk = await fetch(`/api/postgres/proteccion-historial/check?numeroId=${encodeURIComponent(numId)}&contratoNuevo=${encodeURIComponent(data.contractNumber || '')}`);
+            const cd = await chk.json();
+            if (cd?.success && cd.existeHistorial && cd.bookings > 0) {
+              const ben = beneficiarios.find(b => (b.numeroId || '').trim() === numId);
+              const nombre = ben
+                ? `${ben.primerNombre || ''} ${ben.primerApellido || ''}`.trim()
+                : `${titular.primerNombre || ''} ${titular.primerApellido || ''}`.trim();
+              casos.push({ numeroId: numId, contratoViejo: cd.contratoViejo, bookings: cd.bookings, nombre });
+            }
+          } catch { /* si falla el check, no bloquea la creación */ }
+        }));
+      }
+
+      if (casos.length > 0 && data._id) {
+        setProteccionCasos(casos);
+        setProteccionCtx({ titularId: data._id, contratoNuevo: data.contractNumber });
+        setLoading(false);
+        return; // el modal decide cuándo redirigir
+      }
+
       // Redirect to contract detail page
       if (data._id) {
         setTimeout(() => {
@@ -562,6 +598,41 @@ function CrearContratoContent() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const irAlContrato = () => {
+    if (proteccionCtx?.titularId) {
+      window.location.href = `/dashboard/comercial/contrato/${proteccionCtx.titularId}`;
+    }
+  };
+
+  const protegerTodos = async () => {
+    if (!proteccionCtx) return;
+    for (let i = 0; i < proteccionCasos.length; i++) {
+      const caso = proteccionCasos[i];
+      setProtegiendoIdx(i);
+      try {
+        const res = await fetch('/api/postgres/proteccion-historial', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            numeroId: caso.numeroId,
+            titularId: proteccionCtx.titularId,
+            contratoViejo: caso.contratoViejo,
+            contratoNuevo: proteccionCtx.contratoNuevo,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data?.error || `Error ${res.status}`);
+      } catch (e: any) {
+        setProtegiendoIdx(null);
+        alert(`Error al proteger el historial de ${caso.nombre}: ${e?.message || e}`);
+        return; // no redirige; deja que el usuario reintente u omita
+      }
+    }
+    setProtegiendoIdx(null);
+    setProteccionCasos([]);
+    irAlContrato();
   };
 
   return (
@@ -1435,6 +1506,60 @@ function CrearContratoContent() {
                   className="w-full px-2 py-1 text-xs text-gray-400 hover:text-gray-600"
                 >
                   Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: protección de historial (beneficiarios con ficha académica previa) */}
+        {proteccionCasos.length > 0 && proteccionCtx && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-xl">📚</div>
+                <h3 className="text-lg font-bold text-gray-900">Ya tomaron el programa antes</h3>
+              </div>
+              <p className="text-sm text-gray-600">
+                {proteccionCasos.length === 1 ? 'La siguiente persona' : 'Las siguientes personas'} de este
+                contrato ya {proteccionCasos.length === 1 ? 'tiene' : 'tienen'} ficha académica de un contrato anterior:
+              </p>
+              <ul className="border border-gray-200 rounded-lg divide-y divide-gray-100 text-sm">
+                {proteccionCasos.map((c, i) => (
+                  <li key={c.numeroId} className="flex items-center justify-between px-3 py-2">
+                    <span>
+                      <span className="font-medium text-gray-900">{c.nombre || c.numeroId}</span>
+                      <span className="text-gray-400"> · ID {c.numeroId}</span>
+                      {c.contratoViejo && <span className="text-gray-400"> · contrato {c.contratoViejo}</span>}
+                      <span className="text-gray-500"> · {c.bookings} agendamiento(s)</span>
+                    </span>
+                    {protegiendoIdx === i && (
+                      <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-600"></span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-amber-800 text-sm">
+                Al <b>proteger el historial</b> se genera el informe académico (PDF), se
+                <b> adjunta a la documentación del titular</b> de este contrato y se
+                <b> limpia la ficha</b> para empezar la nueva matrícula desde cero. No se puede deshacer.
+              </div>
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => { setProteccionCasos([]); irAlContrato(); }}
+                  disabled={protegiendoIdx !== null}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-800 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+                >
+                  Omitir e ir al contrato
+                </button>
+                <button
+                  type="button"
+                  onClick={protegerTodos}
+                  disabled={protegiendoIdx !== null}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50"
+                >
+                  {protegiendoIdx !== null ? 'Protegiendo…' : `Proteger ${proteccionCasos.length > 1 ? 'todos' : 'historial'}`}
                 </button>
               </div>
             </div>
