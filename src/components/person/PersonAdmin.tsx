@@ -79,10 +79,12 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
   const [pendingChanges, setPendingChanges] = useState<{ label: string; from: string; to: string }[]>([])
   const [isSavingBeneficiary, setIsSavingBeneficiary] = useState(false)
   // Protección de historial: si el beneficiario recién agregado ya tomó el
-  // programa antes (mismo numeroId, otro contrato), se ofrece archivar su
-  // historial como documento del titular y limpiar la ficha.
+  // programa antes (mismo numeroId, otro contrato), se archiva SIEMPRE su
+  // historial como documento del titular y se limpia la ficha. El modal es
+  // informativo (progreso → confirmación); solo ofrece salida si el PDF falla.
   const [proteccionModal, setProteccionModal] = useState<{ numeroId: string; contratoViejo: string | null; bookings: number; nombre: string } | null>(null)
-  const [isProtegiendo, setIsProtegiendo] = useState(false)
+  const [proteccionStatus, setProteccionStatus] = useState<'running' | 'done' | 'error'>('running')
+  const [proteccionMsg, setProteccionMsg] = useState('')
 
   // Modal "Motivo de suspensión administrativa" — usado por el toggle del
   // contrato y por el botón "Inactivar" individual de beneficiario.
@@ -696,14 +698,14 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
           }
           setCurrentBeneficiaries(prev => [...prev, newBen])
 
-          // ¿Este documento ya tomó el programa antes? → ofrecer protección de
-          // historial (archivar informe como documento del titular + limpiar).
+          // ¿Este documento ya tomó el programa antes? → SIEMPRE se archiva el
+          // historial (informe como documento del titular) y se limpia la ficha.
           const numId = created.numeroId
           fetch(`/api/postgres/proteccion-historial/check?numeroId=${encodeURIComponent(numId)}&contratoNuevo=${encodeURIComponent(person.contrato || '')}`)
             .then(r => r.json())
             .then(cd => {
               if (cd?.success && cd.existeHistorial && cd.bookings > 0) {
-                setProteccionModal({ numeroId: numId, contratoViejo: cd.contratoViejo, bookings: cd.bookings, nombre: `${created.primerNombre} ${created.primerApellido}`.trim() })
+                runProteccion({ numeroId: numId, contratoViejo: cd.contratoViejo, bookings: cd.bookings, nombre: `${created.primerNombre} ${created.primerApellido}`.trim() })
               }
             })
             .catch(() => {})
@@ -728,28 +730,28 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     }
   }
 
-  const handleProteger = async () => {
-    if (!proteccionModal) return
-    setIsProtegiendo(true)
+  const runProteccion = async (caso: { numeroId: string; contratoViejo: string | null; bookings: number; nombre: string }) => {
+    setProteccionModal(caso)
+    setProteccionStatus('running')
+    setProteccionMsg('')
     try {
       const res = await fetch('/api/postgres/proteccion-historial', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          numeroId: proteccionModal.numeroId,
+          numeroId: caso.numeroId,
           titularId: person._id,               // titular del contrato nuevo
-          contratoViejo: proteccionModal.contratoViejo,
+          contratoViejo: caso.contratoViejo,
           contratoNuevo: person.contrato || null,
         }),
       })
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data?.error || `Error ${res.status}`)
-      alert(`✅ Historial protegido.\n${data.eliminados?.bookings ?? 0} agendamiento(s) archivado(s) en el informe adjunto a la documentación del titular, y limpiado(s) de la ficha.`)
-      setProteccionModal(null)
+      setProteccionMsg(`${data.eliminados?.bookings ?? 0} agendamiento(s) archivado(s) en el informe adjunto a la documentación del titular, y limpiado(s) de la ficha.`)
+      setProteccionStatus('done')
     } catch (e: any) {
-      alert(`Error al proteger el historial: ${e?.message || e}`)
-    } finally {
-      setIsProtegiendo(false)
+      setProteccionMsg(e?.message || String(e))
+      setProteccionStatus('error')
     }
   }
 
@@ -1508,60 +1510,64 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         </div>
       )}
 
-      {/* Protección de Historial Modal */}
+      {/* Protección de Historial Modal (automático, informativo) */}
       {proteccionModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
             <div className="flex items-center mb-3">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center mr-3">
-                <span className="text-xl">📚</span>
+              <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center mr-3 ${proteccionStatus === 'error' ? 'bg-red-100' : proteccionStatus === 'done' ? 'bg-emerald-100' : 'bg-amber-100'}`}>
+                <span className="text-xl">{proteccionStatus === 'error' ? '⚠️' : proteccionStatus === 'done' ? '✅' : '📚'}</span>
               </div>
               <h3 className="text-lg font-semibold text-gray-900">
-                Este documento ya tomó el programa
+                {proteccionStatus === 'done' ? 'Historial protegido'
+                  : proteccionStatus === 'error' ? 'No se pudo proteger el historial'
+                  : 'Protegiendo historial…'}
               </h3>
             </div>
 
             <div className="mb-4 text-sm text-gray-600 space-y-2">
               <p>
                 <span className="font-medium text-gray-900">{proteccionModal.nombre}</span>{' '}
-                (ID {proteccionModal.numeroId}) ya tiene una ficha académica
+                (ID {proteccionModal.numeroId}) ya tomó el programa
                 {proteccionModal.contratoViejo ? (
-                  <> del contrato <span className="font-medium text-gray-900">{proteccionModal.contratoViejo}</span></>
-                ) : ' de un contrato anterior'}{' '}
-                con <span className="font-medium text-gray-900">{proteccionModal.bookings} agendamiento(s)</span>.
+                  <> en el contrato <span className="font-medium text-gray-900">{proteccionModal.contratoViejo}</span></>
+                ) : ' en un contrato anterior'}{' '}
+                (<span className="font-medium text-gray-900">{proteccionModal.bookings} agendamiento(s)</span>).
               </p>
-              <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-amber-800">
-                Al <b>proteger el historial</b>: se genera el informe académico (PDF)
-                y se <b>adjunta a la documentación del titular</b> de este contrato,
-                luego se <b>limpia la ficha</b> para que la nueva matrícula empiece
-                desde cero. Esta acción no se puede deshacer.
-              </div>
-              <p className="text-xs text-gray-400">
-                Si omites este paso, el nuevo beneficiario compartirá el historial y la ficha del contrato anterior.
-              </p>
+
+              {proteccionStatus === 'running' && (
+                <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-md p-3 text-amber-800">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-600"></div>
+                  Generando el informe (PDF), adjuntándolo a la documentación del titular y limpiando la ficha…
+                </div>
+              )}
+              {proteccionStatus === 'done' && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-md p-3 text-emerald-800">
+                  {proteccionMsg}
+                </div>
+              )}
+              {proteccionStatus === 'error' && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3 text-red-800">
+                  {proteccionMsg}
+                </div>
+              )}
             </div>
 
             <div className="flex items-center space-x-3">
+              {proteccionStatus === 'error' && (
+                <button
+                  onClick={() => runProteccion(proteccionModal)}
+                  className="flex-1 bg-amber-600 border border-transparent rounded-md px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
+                >
+                  Reintentar
+                </button>
+              )}
               <button
                 onClick={() => setProteccionModal(null)}
-                disabled={isProtegiendo}
+                disabled={proteccionStatus === 'running'}
                 className="flex-1 bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
-                Omitir
-              </button>
-              <button
-                onClick={handleProteger}
-                disabled={isProtegiendo}
-                className="flex-1 bg-amber-600 border border-transparent rounded-md px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50 flex items-center justify-center"
-              >
-                {isProtegiendo ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Protegiendo...
-                  </>
-                ) : (
-                  'Proteger historial'
-                )}
+                {proteccionStatus === 'done' ? 'Entendido' : proteccionStatus === 'error' ? 'Cerrar' : 'Espere…'}
               </button>
             </div>
           </div>

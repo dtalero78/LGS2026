@@ -149,6 +149,7 @@ function CrearContratoContent() {
   const [proteccionCasos, setProteccionCasos] = useState<Array<{ numeroId: string; contratoViejo: string | null; bookings: number; nombre: string }>>([]);
   const [proteccionCtx, setProteccionCtx] = useState<{ titularId: string; contratoNuevo: string } | null>(null);
   const [protegiendoIdx, setProtegiendoIdx] = useState<number | null>(null);
+  const [proteccionError, setProteccionError] = useState<string>('');
   // Confirmación al crear cuando SÍ hay beneficiarios o el titular es beneficiario.
   const [showCreateConfirm, setShowCreateConfirm] = useState(false);
   // Aviso de beneficiario(s) en blanco (sin datos) al intentar crear.
@@ -579,9 +580,11 @@ function CrearContratoContent() {
       }
 
       if (casos.length > 0 && data._id) {
+        const ctx = { titularId: data._id, contratoNuevo: data.contractNumber };
         setProteccionCasos(casos);
-        setProteccionCtx({ titularId: data._id, contratoNuevo: data.contractNumber });
+        setProteccionCtx(ctx);
         setLoading(false);
+        protegerTodos(casos, ctx); // SIEMPRE se archiva; el modal muestra el progreso
         return; // el modal decide cuándo redirigir
       }
 
@@ -600,16 +603,20 @@ function CrearContratoContent() {
     }
   };
 
-  const irAlContrato = () => {
-    if (proteccionCtx?.titularId) {
-      window.location.href = `/dashboard/comercial/contrato/${proteccionCtx.titularId}`;
-    }
+  const irAlContrato = (titularId?: string) => {
+    const id = titularId || proteccionCtx?.titularId;
+    if (id) window.location.href = `/dashboard/comercial/contrato/${id}`;
   };
 
-  const protegerTodos = async () => {
-    if (!proteccionCtx) return;
-    for (let i = 0; i < proteccionCasos.length; i++) {
-      const caso = proteccionCasos[i];
+  // Archiva SIEMPRE el historial de cada caso (secuencial). Si un PDF falla,
+  // detiene y muestra error con Reintentar / Continuar sin proteger.
+  const protegerTodos = async (
+    casos: Array<{ numeroId: string; contratoViejo: string | null; bookings: number; nombre: string }>,
+    ctx: { titularId: string; contratoNuevo: string },
+  ) => {
+    setProteccionError('');
+    for (let i = 0; i < casos.length; i++) {
+      const caso = casos[i];
       setProtegiendoIdx(i);
       try {
         const res = await fetch('/api/postgres/proteccion-historial', {
@@ -617,22 +624,24 @@ function CrearContratoContent() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             numeroId: caso.numeroId,
-            titularId: proteccionCtx.titularId,
+            titularId: ctx.titularId,
             contratoViejo: caso.contratoViejo,
-            contratoNuevo: proteccionCtx.contratoNuevo,
+            contratoNuevo: ctx.contratoNuevo,
           }),
         });
         const data = await res.json();
         if (!res.ok || !data.success) throw new Error(data?.error || `Error ${res.status}`);
       } catch (e: any) {
         setProtegiendoIdx(null);
-        alert(`Error al proteger el historial de ${caso.nombre}: ${e?.message || e}`);
-        return; // no redirige; deja que el usuario reintente u omita
+        // Reencola desde el que falló (los ya protegidos no reaparecen).
+        setProteccionCasos(casos.slice(i));
+        setProteccionError(`No se pudo archivar el historial de ${caso.nombre}: ${e?.message || e}`);
+        return;
       }
     }
     setProtegiendoIdx(null);
     setProteccionCasos([]);
-    irAlContrato();
+    irAlContrato(ctx.titularId);
   };
 
   return (
@@ -1522,7 +1531,8 @@ function CrearContratoContent() {
               </div>
               <p className="text-sm text-gray-600">
                 {proteccionCasos.length === 1 ? 'La siguiente persona' : 'Las siguientes personas'} de este
-                contrato ya {proteccionCasos.length === 1 ? 'tiene' : 'tienen'} ficha académica de un contrato anterior:
+                contrato ya {proteccionCasos.length === 1 ? 'tomó' : 'tomaron'} el programa antes.
+                Se archiva su historial académico como documento del titular y se limpia la ficha:
               </p>
               <ul className="border border-gray-200 rounded-lg divide-y divide-gray-100 text-sm">
                 {proteccionCasos.map((c, i) => (
@@ -1539,29 +1549,34 @@ function CrearContratoContent() {
                   </li>
                 ))}
               </ul>
-              <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-amber-800 text-sm">
-                Al <b>proteger el historial</b> se genera el informe académico (PDF), se
-                <b> adjunta a la documentación del titular</b> de este contrato y se
-                <b> limpia la ficha</b> para empezar la nueva matrícula desde cero. No se puede deshacer.
-              </div>
-              <div className="flex items-center gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => { setProteccionCasos([]); irAlContrato(); }}
-                  disabled={protegiendoIdx !== null}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-800 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
-                >
-                  Omitir e ir al contrato
-                </button>
-                <button
-                  type="button"
-                  onClick={protegerTodos}
-                  disabled={protegiendoIdx !== null}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50"
-                >
-                  {protegiendoIdx !== null ? 'Protegiendo…' : `Proteger ${proteccionCasos.length > 1 ? 'todos' : 'historial'}`}
-                </button>
-              </div>
+              {proteccionError ? (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3 text-red-800 text-sm">
+                  ⚠️ {proteccionError}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-md p-3 text-amber-800 text-sm">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-600"></div>
+                  Generando informe(s) (PDF), adjuntando a la documentación del titular y limpiando la(s) ficha(s)…
+                </div>
+              )}
+              {proteccionError && proteccionCtx && (
+                <div className="flex items-center gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => { setProteccionCasos([]); irAlContrato(); }}
+                    className="flex-1 px-4 py-2 text-sm font-medium text-gray-800 bg-gray-100 rounded-lg hover:bg-gray-200"
+                  >
+                    Continuar sin proteger
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => protegerTodos(proteccionCasos, proteccionCtx)}
+                    className="flex-1 px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700"
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
