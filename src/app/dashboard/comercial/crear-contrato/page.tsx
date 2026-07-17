@@ -134,6 +134,8 @@ function CrearContratoContent() {
 
   const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>([]);
   const [titularEsBeneficiario, setTitularEsBeneficiario] = useState(false);
+  // Usuario SENCE (Chile): solo aplica cuando el titular es beneficiario.
+  const [senceUsuario, setSenceUsuario] = useState(false);
   const [contrato, setContrato] = useState('');
   const [loadingContrato, setLoadingContrato] = useState(false);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
@@ -164,13 +166,13 @@ function CrearContratoContent() {
     saveTimer.current = setTimeout(() => {
       try {
         localStorage.setItem(DRAFT_KEY, JSON.stringify({
-          titular, financial, beneficiarios, titularEsBeneficiario, currentStep, contrato, esContratoPrueba,
+          titular, financial, beneficiarios, titularEsBeneficiario, senceUsuario, currentStep, contrato, esContratoPrueba,
           savedAt: Date.now()
         }))
       } catch {}
     }, 500)
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
-  }, [titular, financial, beneficiarios, titularEsBeneficiario, currentStep, contrato, esContratoPrueba])
+  }, [titular, financial, beneficiarios, titularEsBeneficiario, senceUsuario, currentStep, contrato, esContratoPrueba])
 
   // Restore draft on mount
   useEffect(() => {
@@ -202,6 +204,7 @@ function CrearContratoContent() {
       if (draft.financial) setFinancial(draft.financial)
       if (draft.beneficiarios) setBeneficiarios(draft.beneficiarios)
       if (draft.titularEsBeneficiario !== undefined) setTitularEsBeneficiario(draft.titularEsBeneficiario)
+      if (draft.senceUsuario !== undefined) setSenceUsuario(draft.senceUsuario)
       if (draft.currentStep) setCurrentStep(draft.currentStep)
       if (draft.contrato) setContrato(draft.contrato)
       if (draft.esContratoPrueba !== undefined) setEsContratoPrueba(draft.esContratoPrueba)
@@ -540,6 +543,7 @@ function CrearContratoContent() {
             celular: b.celular ? getPhonePrefix() + b.celular : null
           })),
           titularEsBeneficiario,
+          sence: titularEsBeneficiario && senceUsuario, // SENCE solo si el titular es beneficiario
           clientToday,
           esContratoPrueba,
         })
@@ -897,20 +901,47 @@ function CrearContratoContent() {
                   </div>
                 </div>
                 <div className="col-span-2">
-                  <div className="relative group flex items-center">
-                    <input
-                      type="checkbox"
-                      id="titularEsBeneficiario"
-                      checked={titularEsBeneficiario}
-                      onChange={(e) => setTitularEsBeneficiario(e.target.checked)}
-                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="titularEsBeneficiario" className="ml-2 block text-lg font-bold text-gray-900 cursor-pointer">
-                      ¿Este titular será beneficiario? (tomará el programa)
-                    </label>
-                    <span className="invisible group-hover:visible absolute left-0 top-full mt-1 bg-gray-800 text-white text-sm rounded px-3 py-1.5 whitespace-nowrap z-10">
-                      Marque esta opción si el titular también tomará clases de inglés
-                    </span>
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                    <div className="relative group flex items-center">
+                      <input
+                        type="checkbox"
+                        id="titularEsBeneficiario"
+                        checked={titularEsBeneficiario}
+                        onChange={(e) => {
+                          const on = e.target.checked
+                          setTitularEsBeneficiario(on)
+                          if (!on) setSenceUsuario(false) // SENCE solo aplica si el titular es beneficiario
+                        }}
+                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="titularEsBeneficiario" className="ml-2 block text-lg font-bold text-gray-900 cursor-pointer">
+                        ¿Este titular será beneficiario? (tomará el programa)
+                      </label>
+                      <span className="invisible group-hover:visible absolute left-0 top-full mt-1 bg-gray-800 text-white text-sm rounded px-3 py-1.5 whitespace-nowrap z-10">
+                        Marque esta opción si el titular también tomará clases de inglés
+                      </span>
+                    </div>
+                    <div className="relative group flex items-center">
+                      <input
+                        type="checkbox"
+                        id="senceUsuario"
+                        checked={senceUsuario}
+                        disabled={!titularEsBeneficiario}
+                        onChange={(e) => setSenceUsuario(e.target.checked)}
+                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded disabled:opacity-40 disabled:cursor-not-allowed"
+                      />
+                      <label
+                        htmlFor="senceUsuario"
+                        className={`ml-2 block text-lg font-bold cursor-pointer ${titularEsBeneficiario ? 'text-gray-900' : 'text-gray-400 cursor-not-allowed'}`}
+                      >
+                        Usuario SENCE
+                      </label>
+                      <span className="invisible group-hover:visible absolute left-0 top-full mt-1 bg-gray-800 text-white text-sm rounded px-3 py-1.5 whitespace-nowrap z-10">
+                        {titularEsBeneficiario
+                          ? 'Marca al titular-beneficiario como usuario SENCE'
+                          : 'Disponible solo si el titular será beneficiario'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>

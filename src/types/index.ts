@@ -20,6 +20,7 @@ export interface Student {
   step: string           // Step principal
   nivelParalelo?: string // Nivel paralelo opcional (ej: ESS)
   stepParalelo?: string  // Step paralelo opcional
+  sence?: boolean        // Usuario SENCE (Chile)
   asesor?: string
   fechaNacimiento?: string
   celular?: string
@@ -72,6 +73,7 @@ export interface Person {
   step?: string           // Step principal (opcional para titulares)
   nivelParalelo?: string // Nivel paralelo opcional (ej: ESS)
   stepParalelo?: string  // Step paralelo opcional
+  sence?: boolean        // Usuario SENCE (Chile)
   aprobacion?: 'Aprobado' | 'Pendiente' | 'Rechazado' | 'Contrato nulo' | 'Devuelto'
   estadoInactivo?: boolean
   estado?: string
