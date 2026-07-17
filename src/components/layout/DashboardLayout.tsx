@@ -204,6 +204,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
         name: 'Contratos', isSubmenu: true, children: [
           { name: 'Bloqueo Contrato', href: '/admin/bloqueo-contrato', newTab: true },
           { name: 'Contratos Prueba', href: '/admin/contratos-prueba', newTab: true },
+          { name: 'Drive de Contratos', href: '/admin/drive-config', newTab: true },
           { name: 'Edición Contrato', href: '/admin/edicion-contrato', newTab: true },
           { name: 'Generar Contrato', href: '/admin/generar-contrato', newTab: true },
           { name: 'Migrar Contrato',  href: '/admin/migrar-contrato',  newTab: true },
@@ -353,6 +354,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ],
     '/admin/bloqueo-contrato': [
       MantenimientoPermission.BLOQUEAR_CONTRATO,
+    ],
+    '/admin/drive-config': [
+      MantenimientoPermission.DRIVE_CONFIG,
     ],
     '/admin/clear-historic': [
       MantenimientoPermission.CLEAR_HISTORIC,

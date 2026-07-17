@@ -223,6 +223,9 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/admin/bloqueo-contrato': [
     'MANTENIMIENTO.CONTRATOS.BLOQUEAR' as Permission,
   ],
+  '/admin/drive-config': [
+    'MANTENIMIENTO.CONTRATOS.DRIVE_CONFIG' as Permission,
+  ],
   '/admin/clear-historic': [
     'MANTENIMIENTO.USUARIOS.CLEAR_HISTORIC' as Permission,
   ],

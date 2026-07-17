@@ -7,9 +7,9 @@ import { buildContractPdfHtml } from '@/lib/contract-pdf-html';
 import { getAsesorInfo } from '@/lib/asesor';
 import { requirePermission } from '@/lib/api-permissions';
 import { MantenimientoPermission } from '@/types/permissions';
+import { archivarContratoEnDrive, buildContractFilename } from '@/lib/contract-drive';
 
 const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
-const BSL_UPLOAD_URL = 'https://bsl-utilidades-yp78a.ondigitalocean.app/subir-pdf-directo';
 
 /**
  * POST /api/contracts/[id]/regenerate-drive
@@ -109,13 +109,12 @@ export const POST = handlerWithAuth(async (_request, { params }, session) => {
   }
   const tempPdfUrl: string = pdfData.pdf;
 
-  // 2. Subir al Drive vía bsl-utilidades (sobreescribe por documento=titularId)
-  const uploadRes = await fetch(BSL_UPLOAD_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pdfUrl: tempPdfUrl, documento: titularId, empresa: 'LGS' }),
+  // 2. Archivar en Drive (según el interruptor: bsl o LGS; sobrescribe por documento)
+  const driveUpload = await archivarContratoEnDrive({
+    pdfUrl: tempPdfUrl,
+    titularId,
+    filename: buildContractFilename(titular),
   });
-  const driveUpload = await uploadRes.json().catch(() => ({}));
 
   return successResponse({
     pdfUrl: tempPdfUrl,

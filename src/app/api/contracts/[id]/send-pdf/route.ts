@@ -5,10 +5,10 @@ import { queryOne, queryMany } from '@/lib/postgres';
 import { fillContractTemplate } from '@/lib/contract-template-filler';
 import { buildContractPdfHtml } from '@/lib/contract-pdf-html';
 import { getAsesorInfo } from '@/lib/asesor';
+import { archivarContratoEnDrive, buildContractFilename } from '@/lib/contract-drive';
 
 const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
 const WHAPI_TOKEN = 'VSyDX4j7ooAJ7UGOhz8lGplUVDDs2EYj';
-const BSL_UPLOAD_URL = 'https://bsl-utilidades-yp78a.ondigitalocean.app/subir-pdf-directo';
 
 export const POST = handler(async (_request, { params }) => {
   const titularId = params.id;
@@ -104,23 +104,17 @@ export const POST = handler(async (_request, { params }) => {
 
   const tempPdfUrl: string = pdfData.pdf;
 
-  // 7. Upload PDF to Drive via bsl-utilidades in parallel with WhatsApp send
-  const uploadPromise = fetch(BSL_UPLOAD_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pdfUrl: tempPdfUrl, documento: titularId, empresa: 'LGS' }),
-  }).then(r => r.json()).catch(() => ({}));
+  // Filename: "lgs" + primerNombre + primerApellido + numeroId. El prefijo `lgs`
+  // identifica el origen del contrato en el archivo que recibe el cliente y (modo
+  // LGS) también en el nombre en Drive.
+  const filename = buildContractFilename(titular);
+
+  // 7. Archivar el PDF en Drive (según el interruptor: bsl o LGS) en paralelo con
+  //    el envío por WhatsApp.
+  const uploadPromise = archivarContratoEnDrive({ pdfUrl: tempPdfUrl, titularId, filename });
 
   // 8. Send PDF via Whapi using the API2PDF direct URL (clean S3 link, no redirects)
   const phone = titular.celular.toString().replace(/\D/g, '');
-  // Filename: "lgs" + primerNombre + primerApellido + numeroId
-  // El prefijo `lgs` identifica el origen del contrato en el archivo que recibe
-  // el cliente. Cuando se cablee el Drive nuevo, se reusa este mismo nombre
-  // (hoy el nombre en Drive lo pone bsl-utilidades, no esta app).
-  const nameParts = [titular.primerNombre, titular.primerApellido, titular.numeroId].filter(Boolean);
-  const filename = nameParts.length > 0
-    ? `lgs ${nameParts.join(' ')}.pdf`
-    : `lgs Contrato.pdf`;
 
   const whapiRes = await fetch('https://gate.whapi.cloud/messages/document', {
     method: 'POST',

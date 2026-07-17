@@ -908,6 +908,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Acceso a /admin/bloqueo-contrato. Permite bloquear manualmente titular y beneficiarios de un contrato vencido. Respeta extensiones individuales de beneficiarios (no bloquea si tienen finalContrato > hoy)',
   },
   {
+    code: MantenimientoPermission.DRIVE_CONFIG,
+    module: Module.MANTENIMIENTO,
+    section: 'Usuarios',
+    name: 'Página "Drive de Contratos"',
+    description: 'Acceso a /admin/drive-config. Interruptor de dónde se archivan los PDF de contrato: bsl-utilidades (externo) o LGS directo a la Unidad compartida.',
+  },
+  {
     code: MantenimientoPermission.CLEAR_HISTORIC,
     module: Module.MANTENIMIENTO,
     section: 'Usuarios',

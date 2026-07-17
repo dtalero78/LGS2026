@@ -27,8 +27,8 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
       alert('No se puede descargar el contrato: ID no disponible')
       return
     }
-    const downloadUrl = `https://bsl-utilidades-yp78a.ondigitalocean.app/descargar-pdf-drive/${person._id}?empresa=LGS`
-    window.open(downloadUrl, '_blank')
+    // Endpoint unificado: respeta el interruptor bsl/LGS de archivado.
+    window.open(`/api/contracts/${person._id}/download-pdf`, '_blank')
   }
 
   // Ver documentación

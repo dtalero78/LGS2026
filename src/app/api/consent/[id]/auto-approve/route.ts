@@ -6,9 +6,9 @@ import { generateId } from '@/lib/id-generator';
 import { fillContractTemplate } from '@/lib/contract-template-filler';
 import { buildContractPdfHtml } from '@/lib/contract-pdf-html';
 import { getAsesorInfo } from '@/lib/asesor';
+import { archivarContratoEnDrive, buildContractFilename } from '@/lib/contract-drive';
 
 const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
-const BSL_UPLOAD_URL = 'https://bsl-utilidades-yp78a.ondigitalocean.app/subir-pdf-directo';
 
 // One-time migration: ensure auditautoaprov table exists
 let auditTableReady = false;
@@ -138,16 +138,12 @@ export const POST = handlerWithAuth(async (request, { params }, session) => {
           if (pdfData.success && pdfData.pdf) {
             pdfUrl = pdfData.pdf;
 
-            // Upload to Drive — no WhatsApp
-            driveUpload = await fetch(BSL_UPLOAD_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                pdfUrl,
-                documento: params.id,
-                empresa: 'LGS',
-              }),
-            }).then(r => r.json()).catch(() => ({ error: 'Drive upload failed' }));
+            // Archivar en Drive (según el interruptor: bsl o LGS) — sin WhatsApp
+            driveUpload = await archivarContratoEnDrive({
+              pdfUrl: pdfData.pdf,
+              titularId: params.id,
+              filename: buildContractFilename(titular as any),
+            });
           }
         }
       }
