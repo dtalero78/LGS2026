@@ -303,17 +303,31 @@ export async function bookEvent(
   //    JWT puede seguir activa después de inactivar al estudiante).
   //    Bloquea si:
   //      - ACADEMICA.estadoInactivo = true, o
-  //      - algún PEOPLE (beneficiario) con estadoInactivo=true, o su
-  //        estado es 'FINALIZADA' u 'On Hold' (defensa extra por si
-  //        estadoInactivo quedó desincronizado del ciclo de vida).
+  //      - hay al menos un PEOPLE (beneficiario) inactivo con ese numeroId
+  //        Y NINGUNO activo (defensa por si estadoInactivo quedó desincronizado).
+  //
+  //    IMPORTANTE — caso re-matrícula (mismo numeroId, contrato viejo + nuevo):
+  //    antes esto bloqueaba si CUALQUIER beneficiario con ese numeroId estaba
+  //    inactivo, así que el beneficiario del contrato VIEJO (FINALIZADA) bloqueaba
+  //    al del contrato NUEVO (activo). Ahora solo bloquea si NO existe ningún
+  //    beneficiario ACTIVO — si el estudiante tiene un contrato vigente, agenda.
+  //    Un estudiante cuyo único contrato está finalizado sigue bloqueado igual.
   const inactivoCheck = await queryOne<{ inactivo: boolean }>(
     `SELECT (
        COALESCE((SELECT a."estadoInactivo"::boolean FROM "ACADEMICA" a WHERE a."_id" = $1 LIMIT 1), false)
-       OR EXISTS (
-         SELECT 1 FROM "PEOPLE" p
-          WHERE p."numeroId" = $2 AND p."tipoUsuario" = 'BENEFICIARIO'
-            AND ( p."estadoInactivo" = true
-                  OR UPPER(TRIM(COALESCE(p."estado",''))) IN ('FINALIZADA','ON HOLD') )
+       OR (
+         EXISTS (
+           SELECT 1 FROM "PEOPLE" p
+            WHERE p."numeroId" = $2 AND p."tipoUsuario" = 'BENEFICIARIO'
+              AND ( p."estadoInactivo" = true
+                    OR UPPER(TRIM(COALESCE(p."estado",''))) IN ('FINALIZADA','ON HOLD') )
+         )
+         AND NOT EXISTS (
+           SELECT 1 FROM "PEOPLE" p
+            WHERE p."numeroId" = $2 AND p."tipoUsuario" = 'BENEFICIARIO'
+              AND p."estadoInactivo" IS NOT TRUE
+              AND UPPER(TRIM(COALESCE(p."estado",''))) NOT IN ('FINALIZADA','ON HOLD')
+         )
        )
      ) AS inactivo`,
     [studentId, studentData.numeroId || '']
