@@ -543,7 +543,7 @@ function CrearContratoContent() {
             celular: b.celular ? getPhonePrefix() + b.celular : null
           })),
           titularEsBeneficiario,
-          sence: titularEsBeneficiario && senceUsuario, // SENCE solo si el titular es beneficiario
+          sence: titularEsBeneficiario && senceUsuario && titular.plataforma === 'Chile', // SENCE: titular-beneficiario + Chile
           clientToday,
           esContratoPrueba,
         })
@@ -870,7 +870,10 @@ function CrearContratoContent() {
                   </label>
                   <select
                     value={titular.plataforma}
-                    onChange={(e) => setTitular({...titular, plataforma: e.target.value})}
+                    onChange={(e) => {
+                      setTitular({...titular, plataforma: e.target.value})
+                      if (e.target.value !== 'Chile') setSenceUsuario(false) // SENCE es solo Chile
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   >
                     <option value="">Seleccionar...</option>
@@ -921,27 +924,34 @@ function CrearContratoContent() {
                         Marque esta opción si el titular también tomará clases de inglés
                       </span>
                     </div>
+                    {(() => {
+                      const senceHabilitado = titularEsBeneficiario && titular.plataforma === 'Chile'
+                      return (
                     <div className="relative group flex items-center">
                       <input
                         type="checkbox"
                         id="senceUsuario"
                         checked={senceUsuario}
-                        disabled={!titularEsBeneficiario}
+                        disabled={!senceHabilitado}
                         onChange={(e) => setSenceUsuario(e.target.checked)}
                         className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded disabled:opacity-40 disabled:cursor-not-allowed"
                       />
                       <label
                         htmlFor="senceUsuario"
-                        className={`ml-2 block text-lg font-bold cursor-pointer ${titularEsBeneficiario ? 'text-gray-900' : 'text-gray-400 cursor-not-allowed'}`}
+                        className={`ml-2 block text-lg font-bold cursor-pointer ${senceHabilitado ? 'text-gray-900' : 'text-gray-400 cursor-not-allowed'}`}
                       >
                         Usuario SENCE
                       </label>
                       <span className="invisible group-hover:visible absolute left-0 top-full mt-1 bg-gray-800 text-white text-sm rounded px-3 py-1.5 whitespace-nowrap z-10">
-                        {titularEsBeneficiario
+                        {senceHabilitado
                           ? 'Marca al titular-beneficiario como usuario SENCE'
-                          : 'Disponible solo si el titular será beneficiario'}
+                          : !titularEsBeneficiario
+                            ? 'Disponible solo si el titular será beneficiario'
+                            : 'SENCE solo aplica a contratos de Chile'}
                       </span>
                     </div>
+                      )
+                    })()}
                   </div>
                 </div>
               </div>
