@@ -127,9 +127,9 @@ function normalizeTipoPlan(v: any): TipoPlan | null {
 export const POST = handlerWithAuth(async (request, _ctx, session) => {
   const { titular, financial, beneficiarios, titularEsBeneficiario, sence, clientToday, esContratoPrueba } = await request.json();
   const esPrueba = esContratoPrueba === true;
-  // SENCE solo aplica a titular-beneficiario de CHILE (defensa server-side).
-  const senceVal = titularEsBeneficiario === true && sence === true
-    && String(titular?.plataforma || '').trim().toLowerCase() === 'chile';
+  // SENCE solo aplica a contratos de CHILE (defensa server-side).
+  const esChile = String(titular?.plataforma || '').trim().toLowerCase() === 'chile';
+  const senceVal = titularEsBeneficiario === true && sence === true && esChile;
 
   // Plataforma sólo es obligatoria para contratos REALES; en pruebas se permite sin plataforma.
   if (!esPrueba && !titular?.plataforma) throw new ValidationError('plataforma is required');
@@ -212,7 +212,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
       [benefId, b.numeroId, b.primerNombre, b.segundoNombre || null,
        b.primerApellido, b.segundoApellido || null,
        b.email || null, b.celular || null, b.fechaNacimiento || null, titularId,
-       contrato, titular.plataforma || null, financial?.vigencia || null, finalContrato, b.sence === true]
+       contrato, titular.plataforma || null, financial?.vigencia || null, finalContrato, b.sence === true && esChile]
     );
     created.beneficiarios.push(benefResult.rows[0]);
   }

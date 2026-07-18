@@ -69,6 +69,7 @@ interface Beneficiario {
   fechaNacimiento: string;
   email?: string;
   celular?: string;
+  sence?: boolean; // Usuario SENCE (solo contratos de Chile)
 }
 
 export default function CrearContratoPage() {
@@ -317,7 +318,8 @@ function CrearContratoContent() {
       numeroId: '',
       fechaNacimiento: '',
       email: '',
-      celular: ''
+      celular: '',
+      sence: false
     }]);
   };
 
@@ -1466,6 +1468,24 @@ function CrearContratoContent() {
                           />
                         </div>
                       </div>
+                      {titular.plataforma === 'Chile' && (
+                        <div className="mt-4 flex items-center">
+                          <input
+                            type="checkbox"
+                            id={`sence-benef-${index}`}
+                            checked={beneficiario.sence === true}
+                            onChange={(e) => {
+                              const upd = [...beneficiarios]
+                              upd[index] = { ...upd[index], sence: e.target.checked }
+                              setBeneficiarios(upd)
+                            }}
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                          />
+                          <label htmlFor={`sence-benef-${index}`} className="ml-2 block text-sm font-bold text-gray-900 cursor-pointer">
+                            Usuario SENCE
+                          </label>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
