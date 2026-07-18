@@ -9,12 +9,16 @@ import { randomUUID } from 'crypto';
 import { CalendarioRepository, EventFilters } from '@/repositories/calendar.repository';
 import { BookingRepository } from '@/repositories/booking.repository';
 import { AdvisorEventLogRepository } from '@/repositories/advisor-event-log.repository';
+import { AdvisorRepository } from '@/repositories/advisor.repository';
 import { NotFoundError, ValidationError, ConflictError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 import { withTransaction } from '@/lib/postgres';
 import { isEventoCompartible, reasonNotCompartible, MAX_NIVELES_COMPARTIDOS, extractClubPrefix } from '@/lib/evento-compartido';
 
 const MAX_ADVISOR_REASSIGNMENTS = 2;
+
+/** ¿El nivel es WELCOME? (sesión de bienvenida). */
+const isWelcomeNivel = (n?: string | null) => String(n || '').trim().toUpperCase() === 'WELCOME';
 
 /**
  * Get events with filters and advisor details.
@@ -132,6 +136,12 @@ export async function createEvent(data: {
     eventoCompartidoId = randomUUID();
   }
 
+  // WELCOME: el link SIEMPRE es el zoom del advisor ADVISOR WELCOME, sin importar
+  // el advisor asignado (que sí se guarda y cuenta sus horas). Fallback al link
+  // recibido si el advisor WELCOME no tiene zoom.
+  const esWelcome = isWelcomeNivel(data.nivel);
+  const welcomeZoom = esWelcome ? await AdvisorRepository.getWelcomeZoom() : null;
+
   const baseEventData: Record<string, any> = {
     _id: ids.event(),
     dia: data.dia,
@@ -145,7 +155,7 @@ export async function createEvent(data: {
     titulo: data.titulo || data.nombreEvento || '',
     nombreEvento: data.nombreEvento || data.titulo || '',
     tituloONivel: data.tituloONivel || (data.nivel ? `${data.nivel} ${data.step || ''}`.trim() : ''),
-    linkZoom: data.linkZoom || null,
+    linkZoom: esWelcome ? (welcomeZoom || data.linkZoom || null) : (data.linkZoom || null),
     limiteUsuarios: data.limiteUsuarios || 0,
     club: data.club || null,
     observaciones: data.observaciones || null,
@@ -342,6 +352,15 @@ export async function updateEvent(
         `No se puede cambiar el nivel/step de este evento: tiene ${activeCount} estudiante(s) inscrito(s). Cancela las inscripciones primero o crea un evento nuevo.`,
       );
     }
+  }
+
+  // WELCOME: el link SIEMPRE es el zoom del ADVISOR WELCOME. Se fuerza antes del
+  // UPDATE para que ambas ramas y la propagación a bookings usen el link correcto,
+  // aunque el editor haya cambiado el advisor (que sí se guarda y cuenta horas).
+  const nivelEfectivo = data.nivel ?? event.nivel;
+  if (isWelcomeNivel(nivelEfectivo)) {
+    const wz = await AdvisorRepository.getWelcomeZoom();
+    if (wz) data.linkZoom = wz;
   }
 
   const isAdvisorChange = !!data.advisor && data.advisor !== event.advisor;

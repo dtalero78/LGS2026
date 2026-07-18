@@ -791,20 +791,33 @@ export default function EventModal({
 
     // Manejar cambios específicos
     if (field === 'advisor' && value) {
-      // Auto-llenar zoom del advisor
+      // Auto-llenar zoom del advisor — SALVO en WELCOME, donde el link es fijo
+      // (zoom del ADVISOR WELCOME) y no depende del advisor asignado.
+      const nivelIsWelcome = (formData.tituloONivel || '').trim().toUpperCase() === 'WELCOME'
       const selectedAdvisor = advisors.find(advisor => advisor._id === value)
       const advisorZoom = selectedAdvisor?.zoom || ''
-
-      console.log('📹 Advisor seleccionado:', selectedAdvisor?.primerNombre, selectedAdvisor?.primerApellido)
-      console.log('📹 Zoom link encontrado:', advisorZoom)
 
       setFormData(prev => ({
         ...prev,
         advisor: value,
-        linkZoom: advisorZoom
+        linkZoom: nivelIsWelcome ? prev.linkZoom : advisorZoom
       }))
     }
+
+    // Al seleccionar nivel WELCOME, forzar el link al zoom del ADVISOR WELCOME.
+    if (field === 'tituloONivel' && String(value).trim().toUpperCase() === 'WELCOME') {
+      setFormData(prev => ({ ...prev, tituloONivel: value, linkZoom: getWelcomeAdvisorZoom() }))
+    }
   }
+
+  // Zoom del ADVISOR WELCOME desde la lista de advisors (match por nombre; el
+  // backend lo resuelve por email, que es la autoridad).
+  function getWelcomeAdvisorZoom(): string {
+    const w = advisors.find(a => `${a.primerNombre || ''} ${a.primerApellido || ''}`.trim().toUpperCase() === 'ADVISOR WELCOME')
+    return w?.zoom || ''
+  }
+  const isWelcome = (formData.tituloONivel || '').trim().toUpperCase() === 'WELCOME'
+  const welcomeAdvisorZoom = getWelcomeAdvisorZoom()
 
   if (!isOpen) return null
 
@@ -1011,11 +1024,17 @@ export default function EventModal({
               </label>
               <input
                 type="url"
-                value={formData.linkZoom}
+                value={isWelcome ? (welcomeAdvisorZoom || formData.linkZoom) : formData.linkZoom}
                 onChange={(e) => handleInputChange('linkZoom', e.target.value)}
-                className="input w-full"
+                readOnly={isWelcome}
+                className={`input w-full ${isWelcome ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''}`}
                 placeholder="https://zoom.us/..."
               />
+              {isWelcome && (
+                <p className="mt-1 text-xs text-gray-500">
+                  🔒 En sesiones WELCOME el link es fijo (Zoom del ADVISOR WELCOME), sin importar el advisor asignado.
+                </p>
+              )}
             </div>
 
             {/* Evento compartido entre niveles — sólo en CREAR */}

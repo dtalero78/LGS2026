@@ -15,6 +15,10 @@ const ADVISOR_COLUMNS = `
   "esPlanta", "usuarioRolId", "_createdDate", "_updatedDate"
 `;
 
+// Advisor "ADVISOR WELCOME": su zoom es el link fijo de toda sesión WELCOME.
+const WELCOME_ADVISOR_EMAIL = 'advisorbienvenidas@letsgospeak.cl';
+let welcomeZoomCache: { value: string | null; expires: number } | null = null;
+
 class AdvisorRepositoryClass extends BaseRepository {
   constructor() {
     super('ADVISORS');
@@ -58,6 +62,28 @@ class AdvisorRepositoryClass extends BaseRepository {
         WHERE "_id" = $1 OR LOWER(TRIM("email")) = LOWER(TRIM($1)) LIMIT 1`,
       [idOrEmail]
     );
+  }
+
+  /**
+   * Zoom del advisor "ADVISOR WELCOME" (llave: email advisorbienvenidas@letsgospeak.cl,
+   * fallback por nombreCompleto). Es el link que se fuerza en toda sesión WELCOME,
+   * sin importar el advisor asignado. Cache 60s (cambia muy rara vez). Devuelve
+   * null si el advisor no existe o no tiene zoom.
+   */
+  async getWelcomeZoom(): Promise<string | null> {
+    const now = Date.now();
+    if (welcomeZoomCache && welcomeZoomCache.expires > now) return welcomeZoomCache.value;
+    const row = await queryOne<{ zoom: string | null }>(
+      `SELECT "zoom" FROM "ADVISORS"
+        WHERE LOWER(TRIM("email")) = $1
+           OR UPPER(TRIM("nombreCompleto")) = 'ADVISOR WELCOME'
+        ORDER BY (LOWER(TRIM("email")) = $1) DESC
+        LIMIT 1`,
+      [WELCOME_ADVISOR_EMAIL],
+    );
+    const value = row?.zoom?.trim() || null;
+    welcomeZoomCache = { value, expires: now + 60_000 };
+    return value;
   }
 
   /**
