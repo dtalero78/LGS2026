@@ -14,11 +14,15 @@
  * La carpeta VIEJA NO se toca (queda de respaldo).
  *
  * USO:
- *   node scripts/migrate-contratos-bsl-to-drive.js --key <ruta.json> [--apply] [--limit N]
+ *   node scripts/migrate-contratos-bsl-to-drive.js --key <ruta.json> [--apply]
+ *        [--skip-existing] [--include-unresolved] [--report-pending] [--limit N]
  *   (la clave también puede venir de GOOGLE_SERVICE_ACCOUNT_JSON)
+ *   --skip-existing: resume rápido (salta los ya migrados por documento).
+ *   --report-pending: escribe docs/contratos-pendientes-migracion.csv y termina.
  *   Requiere IP whitelisteada en el firewall (usa DATABASE_URL de .env.local).
  */
 const fs = require('fs');
+const path = require('path');
 const crypto = require('crypto');
 const { Client } = require('pg');
 require('dotenv').config({ path: '.env.local' });
@@ -144,6 +148,25 @@ const sanitize = (s) => String(s || '').replace(/[\\/:*?"<>|]/g, ' ').replace(/\
   const resueltos = docs.filter(d => nameMap.has(d)).length;
   const mosCount = docs.filter(d => /^MOS_/i.test(d)).length;
   console.log(`Nombres resueltos en PEOPLE (LGS): ${resueltos} · sin resolver: ${docs.length - resueltos} (de ellos MOSAICO MOS_: ${mosCount})`);
+
+  // --report-pending: escribe un CSV de los que NO se migran (sin resolver +
+  // MOSAICO) y termina, sin subir nada.
+  if (process.argv.includes('--report-pending')) {
+    const pend = docs.filter(d => !nameMap.has(d)).map(d => ({
+      titularId: d,
+      categoria: /^MOS_/i.test(d) ? 'MOSAICO' : 'SIN_RESOLVER',
+      fileIdViejo: byDoc.get(d).id,
+      modifiedTime: byDoc.get(d).modifiedTime || '',
+    }));
+    const csv = 'titularId,categoria,fileIdViejo,modifiedTime\n'
+      + pend.map(p => `${p.titularId},${p.categoria},${p.fileIdViejo},${p.modifiedTime}`).join('\n') + '\n';
+    fs.mkdirSync('docs', { recursive: true });
+    const out = path.join('docs', 'contratos-pendientes-migracion.csv');
+    fs.writeFileSync(out, csv);
+    const mos = pend.filter(p => p.categoria === 'MOSAICO').length;
+    console.log(`\n📄 CSV escrito: ${out} — ${pend.length} pendientes (${mos} MOSAICO · ${pend.length - mos} sin resolver)`);
+    return;
+  }
 
   // Por defecto solo se migran los contratos de titulares LGS resueltos en PEOPLE.
   // --include-unresolved agrega el resto PERO nunca los MOSAICO (MOS_).
