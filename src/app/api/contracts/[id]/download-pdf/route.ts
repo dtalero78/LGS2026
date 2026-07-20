@@ -23,11 +23,13 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
     return NextResponse.redirect(`${BSL_DOWNLOAD_URL}/${id}?empresa=LGS`);
   }
 
-  // modo 'lgs'
+  // modo 'lgs': buscar en la Unidad compartida. Si el contrato NO está ahí
+  // (p.ej. contratos que solo existen en bsl y aún no se subieron/regeneraron),
+  // se cae de vuelta a bsl para no dejar la descarga en 404.
   try {
     const fileId = await findContractFileId(id);
     if (!fileId) {
-      return NextResponse.json({ error: 'No se encontró el contrato en Drive' }, { status: 404 });
+      return NextResponse.redirect(`${BSL_DOWNLOAD_URL}/${id}?empresa=LGS`);
     }
     const bytes = await downloadDrivePdf(fileId);
     return new NextResponse(new Uint8Array(bytes), {
@@ -39,6 +41,7 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
       },
     });
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error al descargar de Drive' }, { status: 502 });
+    // Ante cualquier error del Drive, no dejar sin descarga: fallback a bsl.
+    return NextResponse.redirect(`${BSL_DOWNLOAD_URL}/${id}?empresa=LGS`);
   }
 }
