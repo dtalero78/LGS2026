@@ -95,10 +95,18 @@ async function getAccessToken(): Promise<string> {
   return _token.value;
 }
 
-/** Busca el fileId de un contrato por su documento (titularId). Null si no existe. */
+/**
+ * Busca el fileId de un contrato por su documento (titularId) DENTRO de la carpeta
+ * CONTRATOS LGS. Null si no existe.
+ *
+ * OJO: se restringe a `FOLDER_ID in parents` a propósito. La cuenta de servicio
+ * también tiene acceso a la carpeta VIEJA de bsl (compartida para la migración),
+ * y sin este filtro `corpora='allDrives'` podía resolver el PDF viejo de bsl en
+ * vez del de la unidad compartida.
+ */
 export async function findContractFileId(documento: string): Promise<string | null> {
   const token = await getAccessToken();
-  const q = `appProperties has { key='documento' and value='${documento.replace(/'/g, "\\'")}' } and trashed=false`;
+  const q = `appProperties has { key='documento' and value='${documento.replace(/'/g, "\\'")}' } and trashed=false and '${FOLDER_ID}' in parents`;
   const url = new URL('https://www.googleapis.com/drive/v3/files');
   url.searchParams.set('q', q);
   url.searchParams.set('supportsAllDrives', 'true');
