@@ -125,8 +125,42 @@ export async function findContractFileId(documento: string): Promise<string | nu
   return data.files?.[0]?.id ?? null;
 }
 
+/** Todos los fileIds de un documento en la carpeta CONTRATOS LGS (para reemplazar). */
+async function findAllContractFileIds(documento: string): Promise<string[]> {
+  const token = await getAccessToken();
+  const q = `appProperties has { key='documento' and value='${documento.replace(/'/g, "\\'")}' } and trashed=false and '${FOLDER_ID}' in parents`;
+  const url = new URL('https://www.googleapis.com/drive/v3/files');
+  url.searchParams.set('q', q);
+  url.searchParams.set('supportsAllDrives', 'true');
+  url.searchParams.set('includeItemsFromAllDrives', 'true');
+  url.searchParams.set('corpora', 'allDrives');
+  url.searchParams.set('fields', 'files(id)');
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const data = await res.json();
+  if (!res.ok) throw new Error(`Drive list falló: ${data?.error?.message || res.status}`);
+  return (data.files || []).map((f: any) => f.id);
+}
+
+/** Envía un archivo a la papelera (la cuenta de servicio no puede borrar definitivamente). */
+async function trashFile(fileId: string): Promise<void> {
+  const token = await getAccessToken();
+  await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?supportsAllDrives=true`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ trashed: true }),
+  });
+}
+
 /**
- * Sube (o SOBRESCRIBE por documento) un PDF a la unidad compartida.
+ * Sube un PDF de contrato a la unidad compartida. SIEMPRE crea un archivo NUEVO
+ * (fileId fresco) y manda los anteriores del mismo documento a la papelera.
+ *
+ * Por qué crear-nuevo en vez de sobrescribir (PATCH el mismo fileId): al
+ * sobrescribir, `files.get?alt=media` de Google puede seguir sirviendo el
+ * contenido CACHEADO del fileId por unos minutos → la descarga traía el PDF
+ * viejo justo después de regenerar. Un fileId nuevo nunca tuvo caché.
+ * (El drive compartido vacía la papelera automáticamente a los 30 días.)
+ *
  * Devuelve { fileId, webViewLink }.
  */
 export async function uploadContractPdf(
@@ -134,13 +168,10 @@ export async function uploadContractPdf(
   opts: { name: string; documento: string },
 ): Promise<{ fileId: string; webViewLink: string | null }> {
   const token = await getAccessToken();
-  const existingId = await findContractFileId(opts.documento);
+  const olds = await findAllContractFileIds(opts.documento);
 
   const boundary = `lgs${crypto.randomBytes(8).toString('hex')}`;
-  const metadata: any = existingId
-    ? { name: opts.name }
-    : { name: opts.name, parents: [FOLDER_ID], appProperties: { documento: opts.documento, empresa: 'LGS' } };
-
+  const metadata = { name: opts.name, parents: [FOLDER_ID], appProperties: { documento: opts.documento, empresa: 'LGS' } };
   const pre = Buffer.from(
     `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
     `--${boundary}\r\nContent-Type: application/pdf\r\n\r\n`,
@@ -149,21 +180,18 @@ export async function uploadContractPdf(
   const post = Buffer.from(`\r\n--${boundary}--`, 'utf8');
   const body = Buffer.concat([pre, bytes, post]);
 
-  const base = 'https://www.googleapis.com/upload/drive/v3/files';
-  const url = existingId
-    ? `${base}/${existingId}?uploadType=multipart&supportsAllDrives=true&fields=id,webViewLink`
-    : `${base}?uploadType=multipart&supportsAllDrives=true&fields=id,webViewLink`;
-
-  const res = await fetch(url, {
-    method: existingId ? 'PATCH' : 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': `multipart/related; boundary=${boundary}`,
-    },
-    body,
-  });
+  const res = await fetch(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,webViewLink',
+    { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': `multipart/related; boundary=${boundary}` }, body },
+  );
   const data = await res.json();
   if (!res.ok || !data.id) throw new Error(`Drive upload falló: ${data?.error?.message || res.status}`);
+
+  // Papelera para los anteriores (best-effort) → findContractFileId devuelve solo el nuevo.
+  for (const oldId of olds) {
+    if (oldId !== data.id) { try { await trashFile(oldId); } catch { /* la cuenta de servicio no siempre puede trashear; no rompe */ } }
+  }
+
   return { fileId: data.id, webViewLink: data.webViewLink ?? null };
 }
 
