@@ -21,6 +21,7 @@ export interface Student {
   nivelParalelo?: string // Nivel paralelo opcional (ej: ESS)
   stepParalelo?: string  // Step paralelo opcional
   sence?: boolean        // Usuario SENCE (Chile)
+  senceCode?: string     // Código SENCE (alfanumérico)
   asesor?: string
   fechaNacimiento?: string
   celular?: string
