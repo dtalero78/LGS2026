@@ -113,10 +113,10 @@ async function approveOnePerson(
           "_id", "numeroId", "primerNombre", "segundoNombre",
           "primerApellido", "segundoApellido", "email", "celular",
           "nivel", "step", "plataforma", "estadoInactivo",
-          "contrato", "usuarioId", "sence",
+          "contrato", "usuarioId", "sence", "senceCode",
           "_createdDate", "_updatedDate"
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, false, $12, $13, $14, NOW(), NOW()
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, false, $12, $13, $14, $15, NOW(), NOW()
         )`,
         [
           academicId,
@@ -133,6 +133,7 @@ async function approveOnePerson(
           effectiveContrato || null,
           personId,
           person.sence === true, // propaga la marca SENCE del PEOPLE a la ficha
+          person.senceCode || null, // y su código SENCE
         ]
       );
       academicCreated = true;

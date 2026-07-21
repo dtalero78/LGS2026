@@ -70,6 +70,7 @@ interface Beneficiario {
   email?: string;
   celular?: string;
   sence?: boolean; // Usuario SENCE (solo contratos de Chile)
+  senceCode?: string; // Código SENCE del beneficiario (opcional, si sence)
 }
 
 export default function CrearContratoPage() {
@@ -137,6 +138,8 @@ function CrearContratoContent() {
   const [titularEsBeneficiario, setTitularEsBeneficiario] = useState(false);
   // Usuario SENCE (Chile): solo aplica cuando el titular es beneficiario.
   const [senceUsuario, setSenceUsuario] = useState(false);
+  // Código SENCE del titular-beneficiario (opcional, se habilita si senceUsuario).
+  const [senceCodeUsuario, setSenceCodeUsuario] = useState('');
   const [contrato, setContrato] = useState('');
   const [loadingContrato, setLoadingContrato] = useState(false);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
@@ -167,13 +170,13 @@ function CrearContratoContent() {
     saveTimer.current = setTimeout(() => {
       try {
         localStorage.setItem(DRAFT_KEY, JSON.stringify({
-          titular, financial, beneficiarios, titularEsBeneficiario, senceUsuario, currentStep, contrato, esContratoPrueba,
+          titular, financial, beneficiarios, titularEsBeneficiario, senceUsuario, senceCodeUsuario, currentStep, contrato, esContratoPrueba,
           savedAt: Date.now()
         }))
       } catch {}
     }, 500)
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
-  }, [titular, financial, beneficiarios, titularEsBeneficiario, senceUsuario, currentStep, contrato, esContratoPrueba])
+  }, [titular, financial, beneficiarios, titularEsBeneficiario, senceUsuario, senceCodeUsuario, currentStep, contrato, esContratoPrueba])
 
   // Restore draft on mount
   useEffect(() => {
@@ -206,6 +209,7 @@ function CrearContratoContent() {
       if (draft.beneficiarios) setBeneficiarios(draft.beneficiarios)
       if (draft.titularEsBeneficiario !== undefined) setTitularEsBeneficiario(draft.titularEsBeneficiario)
       if (draft.senceUsuario !== undefined) setSenceUsuario(draft.senceUsuario)
+      if (draft.senceCodeUsuario !== undefined) setSenceCodeUsuario(draft.senceCodeUsuario)
       if (draft.currentStep) setCurrentStep(draft.currentStep)
       if (draft.contrato) setContrato(draft.contrato)
       if (draft.esContratoPrueba !== undefined) setEsContratoPrueba(draft.esContratoPrueba)
@@ -546,6 +550,7 @@ function CrearContratoContent() {
           })),
           titularEsBeneficiario,
           sence: titularEsBeneficiario && senceUsuario && titular.plataforma === 'Chile', // SENCE: titular-beneficiario + Chile
+          senceCode: (titularEsBeneficiario && senceUsuario && titular.plataforma === 'Chile' && senceCodeUsuario.trim()) || null,
           clientToday,
           esContratoPrueba,
         })
@@ -874,7 +879,7 @@ function CrearContratoContent() {
                     value={titular.plataforma}
                     onChange={(e) => {
                       setTitular({...titular, plataforma: e.target.value})
-                      if (e.target.value !== 'Chile') setSenceUsuario(false) // SENCE es solo Chile
+                      if (e.target.value !== 'Chile') { setSenceUsuario(false); setSenceCodeUsuario('') } // SENCE es solo Chile
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   >
@@ -915,7 +920,7 @@ function CrearContratoContent() {
                         onChange={(e) => {
                           const on = e.target.checked
                           setTitularEsBeneficiario(on)
-                          if (!on) setSenceUsuario(false) // SENCE solo aplica si el titular es beneficiario
+                          if (!on) { setSenceUsuario(false); setSenceCodeUsuario('') } // SENCE solo aplica si el titular es beneficiario
                         }}
                         className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                       />
@@ -935,7 +940,7 @@ function CrearContratoContent() {
                         id="senceUsuario"
                         checked={senceUsuario}
                         disabled={!senceHabilitado}
-                        onChange={(e) => setSenceUsuario(e.target.checked)}
+                        onChange={(e) => { setSenceUsuario(e.target.checked); if (!e.target.checked) setSenceCodeUsuario('') }}
                         className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded disabled:opacity-40 disabled:cursor-not-allowed"
                       />
                       <label
@@ -955,6 +960,21 @@ function CrearContratoContent() {
                       )
                     })()}
                   </div>
+                  {senceUsuario && (
+                    <div className="mt-4 max-w-md">
+                      <label htmlFor="senceCodeUsuario" className="block text-sm font-medium text-gray-700 mb-1">
+                        Código SENCE <span className="text-gray-400 font-normal">(opcional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        id="senceCodeUsuario"
+                        value={senceCodeUsuario}
+                        onChange={(e) => setSenceCodeUsuario(e.target.value.replace(/[^A-Za-z0-9-]/g, ''))}
+                        placeholder="Anote el código SENCE del usuario"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 font-mono"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1469,22 +1489,43 @@ function CrearContratoContent() {
                         </div>
                       </div>
                       {titular.plataforma === 'Chile' && (
-                        <div className="mt-4 flex items-center">
-                          <input
-                            type="checkbox"
-                            id={`sence-benef-${index}`}
-                            checked={beneficiario.sence === true}
-                            onChange={(e) => {
-                              const upd = [...beneficiarios]
-                              upd[index] = { ...upd[index], sence: e.target.checked }
-                              setBeneficiarios(upd)
-                            }}
-                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                          />
-                          <label htmlFor={`sence-benef-${index}`} className="ml-2 block text-sm font-bold text-gray-900 cursor-pointer">
-                            Usuario SENCE
-                          </label>
-                        </div>
+                        <>
+                          <div className="mt-4 flex items-center">
+                            <input
+                              type="checkbox"
+                              id={`sence-benef-${index}`}
+                              checked={beneficiario.sence === true}
+                              onChange={(e) => {
+                                const upd = [...beneficiarios]
+                                upd[index] = { ...upd[index], sence: e.target.checked, senceCode: e.target.checked ? upd[index].senceCode : '' }
+                                setBeneficiarios(upd)
+                              }}
+                              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor={`sence-benef-${index}`} className="ml-2 block text-sm font-bold text-gray-900 cursor-pointer">
+                              Usuario SENCE
+                            </label>
+                          </div>
+                          {beneficiario.sence === true && (
+                            <div className="mt-3 max-w-md">
+                              <label htmlFor={`sence-code-benef-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                Código SENCE <span className="text-gray-400 font-normal">(opcional)</span>
+                              </label>
+                              <input
+                                type="text"
+                                id={`sence-code-benef-${index}`}
+                                value={beneficiario.senceCode || ''}
+                                onChange={(e) => {
+                                  const upd = [...beneficiarios]
+                                  upd[index] = { ...upd[index], senceCode: e.target.value.replace(/[^A-Za-z0-9-]/g, '') }
+                                  setBeneficiarios(upd)
+                                }}
+                                placeholder="Anote el código SENCE del usuario"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 font-mono"
+                              />
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   ))}

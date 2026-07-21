@@ -125,11 +125,13 @@ function normalizeTipoPlan(v: any): TipoPlan | null {
 }
 
 export const POST = handlerWithAuth(async (request, _ctx, session) => {
-  const { titular, financial, beneficiarios, titularEsBeneficiario, sence, clientToday, esContratoPrueba } = await request.json();
+  const { titular, financial, beneficiarios, titularEsBeneficiario, sence, senceCode, clientToday, esContratoPrueba } = await request.json();
   const esPrueba = esContratoPrueba === true;
   // SENCE solo aplica a contratos de CHILE (defensa server-side).
   const esChile = String(titular?.plataforma || '').trim().toLowerCase() === 'chile';
   const senceVal = titularEsBeneficiario === true && sence === true && esChile;
+  // Código SENCE (opcional): solo se guarda si la marca SENCE aplica.
+  const senceCodeVal = senceVal ? (String(senceCode || '').trim() || null) : null;
 
   // Plataforma sólo es obligatoria para contratos REALES; en pruebas se permite sin plataforma.
   if (!esPrueba && !titular?.plataforma) throw new ValidationError('plataforma is required');
@@ -165,8 +167,8 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
       "email", "celular", "telefono", "fechaNacimiento", "domicilio", "ciudad",
       "plataforma", "ingresos", "empresa", "cargo", "genero",
       "referenciaUno", "parentezcoRefUno", "telefonoRefUno", "referenciaDos", "parentezcoRefDos", "telefonoRefDos",
-      "asesor", "asesorCreadorContrato", "tipoUsuario", "contrato", "vigencia", "fechaContrato", "finalContrato", "plan", "sence", "origen", "_createdDate", "_updatedDate")
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$29,'TITULAR',$25,$26,NOW(),$27::date,$28,$30,'POSTGRES',NOW(),NOW()) RETURNING *`,
+      "asesor", "asesorCreadorContrato", "tipoUsuario", "contrato", "vigencia", "fechaContrato", "finalContrato", "plan", "sence", "senceCode", "origen", "_createdDate", "_updatedDate")
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$29,'TITULAR',$25,$26,NOW(),$27::date,$28,$30,$31,'POSTGRES',NOW(),NOW()) RETURNING *`,
     [titularId, titular.numeroId, titular.primerNombre, titular.segundoNombre || null,
      titular.primerApellido, titular.segundoApellido || null,
      titular.email || null, titular.celular || null, titular.telefono || null,
@@ -175,7 +177,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
      titular.referenciaUno || null, titular.parentezcoRefUno || null, titular.telRefUno || null,
      titular.referenciaDos || null, titular.parentezcoRefDos || null, titular.telRefDos || null,
      titular.asesor || null, contrato, financial?.vigencia || null, finalContrato, tipoPlan,
-     titular.asesorCreadorContrato || null, senceVal]  // $29 → asesorCreadorContrato, $30 → sence
+     titular.asesorCreadorContrato || null, senceVal, senceCodeVal]  // $29 → asesorCreadorContrato, $30 → sence, $31 → senceCode
   );
   created.titular = titularResult.rows[0];
 
@@ -193,6 +195,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
       email: titular.email,
       celular: titular.celular,
       sence: senceVal, // el titular-beneficiario hereda la marca SENCE
+      senceCode: senceCodeVal, // y su código SENCE
     });
   }
 
@@ -207,12 +210,14 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
       `INSERT INTO "PEOPLE" ("_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
         "email", "celular", "fechaNacimiento", "titularId",
         "tipoUsuario", "contrato", "plataforma", "estadoInactivo",
-        "vigencia", "fechaContrato", "finalContrato", "sence", "origen", "_createdDate", "_updatedDate")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'BENEFICIARIO',$11,$12,false,$13,NOW(),$14::date,$15,'POSTGRES',NOW(),NOW()) RETURNING *`,
+        "vigencia", "fechaContrato", "finalContrato", "sence", "senceCode", "origen", "_createdDate", "_updatedDate")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'BENEFICIARIO',$11,$12,false,$13,NOW(),$14::date,$15,$16,'POSTGRES',NOW(),NOW()) RETURNING *`,
       [benefId, b.numeroId, b.primerNombre, b.segundoNombre || null,
        b.primerApellido, b.segundoApellido || null,
        b.email || null, b.celular || null, b.fechaNacimiento || null, titularId,
-       contrato, titular.plataforma || null, financial?.vigencia || null, finalContrato, b.sence === true && esChile]
+       contrato, titular.plataforma || null, financial?.vigencia || null, finalContrato,
+       b.sence === true && esChile,
+       (b.sence === true && esChile) ? (String(b.senceCode || '').trim() || null) : null]
     );
     created.beneficiarios.push(benefResult.rows[0]);
   }
