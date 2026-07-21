@@ -54,6 +54,11 @@ export function isDriveDirectConfigured(): boolean {
   return serviceAccount() !== null;
 }
 
+/** Diagnóstico: SA en uso + carpeta destino (para depurar la resolución de archivos). */
+export function driveDebugInfo(): { saEmail: string | null; folderId: string } {
+  return { saEmail: serviceAccount()?.client_email ?? null, folderId: FOLDER_ID };
+}
+
 const b64url = (buf: Buffer | string) =>
   (Buffer.isBuffer(buf) ? buf : Buffer.from(buf)).toString('base64')
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');

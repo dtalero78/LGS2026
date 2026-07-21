@@ -1,7 +1,7 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDriveMode } from '@/lib/contract-drive';
-import { findContractFileId, downloadDrivePdf } from '@/lib/google-drive';
+import { findContractFileId, downloadDrivePdf, driveDebugInfo } from '@/lib/google-drive';
 
 const BSL_DOWNLOAD_URL = 'https://bsl-utilidades-yp78a.ondigitalocean.app/descargar-pdf-drive';
 
@@ -18,6 +18,16 @@ const BSL_DOWNLOAD_URL = 'https://bsl-utilidades-yp78a.ondigitalocean.app/descar
 export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
   const id = params.id;
   const mode = await getDriveMode();
+
+  // Diagnóstico temporal: ?debug=<CRON_SECRET> devuelve lo que ve producción
+  // (SA, carpeta, fileId resuelto) en vez del PDF.
+  const debugToken = new URL(_request.url).searchParams.get('debug');
+  if (debugToken && debugToken === process.env.CRON_SECRET) {
+    let fileId: string | null = null;
+    let err: string | null = null;
+    try { fileId = await findContractFileId(id); } catch (e: any) { err = e?.message || String(e); }
+    return NextResponse.json({ id, mode, ...driveDebugInfo(), fileId, err });
+  }
 
   if (mode === 'bsl') {
     return NextResponse.redirect(`${BSL_DOWNLOAD_URL}/${id}?empresa=LGS`);
