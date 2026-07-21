@@ -292,15 +292,12 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
               <label className="block text-sm font-medium text-gray-700">Número de Documento</label>
               <p className="mt-1 text-sm text-gray-900">{student.numeroId}</p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Usuario SENCE</label>
-              <div className="mt-1 flex items-center gap-2">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${sence ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-600'}`}>
-                  {sence ? 'SÍ' : 'NO'}
-                </span>
-                {sence && senceCode && <span className="text-xs text-gray-500">Código: <span className="font-mono text-gray-700">{senceCode}</span></span>}
+            {student.celular && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Celular</label>
+                <p className="mt-1 text-sm text-gray-900">{student.celular}</p>
               </div>
-            </div>
+            )}
             {student.fechaNacimiento && (
               <div>
                 <label className="block text-sm font-medium text-gray-700">Fecha de Nacimiento</label>
@@ -310,10 +307,10 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
           </div>
 
           <div className="space-y-4">
-            {student.celular && (
-              <div>
+            <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-sm font-medium text-gray-700">Celular</label>
+                  <label className="block text-sm font-medium text-gray-700">Usuario SENCE</label>
+                  {student.celular && (
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -376,10 +373,15 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
                       )}
                     </button>
                   </div>
+                  )}
                 </div>
-                <p className="mt-1 text-sm text-gray-900">{student.celular}</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${sence ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-600'}`}>
+                    {sence ? 'SÍ' : 'NO'}
+                  </span>
+                  {sence && senceCode && <span className="text-xs text-gray-500">Código: <span className="font-mono text-gray-700">{senceCode}</span></span>}
+                </div>
               </div>
-            )}
             {/* Botones SENCE — habilitados solo si el usuario es SENCE */}
             <div className="flex flex-wrap items-center gap-2">
               <button
