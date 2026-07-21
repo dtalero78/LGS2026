@@ -34,6 +34,37 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
   // The PEOPLE _id for document API calls
   const peopleId = (student as any).peopleId || student._id
 
+  // ── SENCE ──────────────────────────────────────────────────────
+  const [sence, setSence] = useState<boolean>(!!(student as any).sence)
+  const [senceCode, setSenceCode] = useState<string>((student as any).senceCode || '')
+  const [showDesmarcar, setShowDesmarcar] = useState(false)
+  const [showCodeModal, setShowCodeModal] = useState(false)
+  const [codeInput, setCodeInput] = useState('')
+  const [codeConfirm, setCodeConfirm] = useState(false) // paso 2 del modal de código
+  const [senceProcessing, setSenceProcessing] = useState(false)
+
+  const doDesmarcar = async () => {
+    setSenceProcessing(true)
+    try {
+      await api.post(`/api/postgres/students/${student._id}/sence`, { action: 'desmarcar' })
+      setSence(false); setSenceCode(''); setShowDesmarcar(false)
+      toast.success('SENCE desmarcado')
+    } catch (e) { handleApiError(e) }
+    finally { setSenceProcessing(false) }
+  }
+
+  const doSaveCode = async () => {
+    const code = codeInput.trim()
+    if (!code) return
+    setSenceProcessing(true)
+    try {
+      await api.post(`/api/postgres/students/${student._id}/sence`, { action: 'set-code', code })
+      setSenceCode(code); setShowCodeModal(false); setCodeConfirm(false); setCodeInput('')
+      toast.success('Código SENCE guardado')
+    } catch (e) { handleApiError(e) }
+    finally { setSenceProcessing(false) }
+  }
+
   const [docs, setDocs] = useState(() => {
     const rawDocs: any[] = (student as any).documentacion || []
     return rawDocs.map((entry: any) => {
@@ -261,6 +292,15 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
               <label className="block text-sm font-medium text-gray-700">Número de Documento</label>
               <p className="mt-1 text-sm text-gray-900">{student.numeroId}</p>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Usuario SENCE</label>
+              <div className="mt-1 flex items-center gap-2">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${sence ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-600'}`}>
+                  {sence ? 'SÍ' : 'NO'}
+                </span>
+                {sence && senceCode && <span className="text-xs text-gray-500">Código: <span className="font-mono text-gray-700">{senceCode}</span></span>}
+              </div>
+            </div>
             {student.fechaNacimiento && (
               <div>
                 <label className="block text-sm font-medium text-gray-700">Fecha de Nacimiento</label>
@@ -340,6 +380,25 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
                 <p className="mt-1 text-sm text-gray-900">{student.celular}</p>
               </div>
             )}
+            {/* Botones SENCE — habilitados solo si el usuario es SENCE */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowDesmarcar(true)}
+                disabled={!sence || senceProcessing}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Desmarcar SENCE
+              </button>
+              <button
+                type="button"
+                onClick={() => { setCodeInput(senceCode || ''); setCodeConfirm(false); setShowCodeModal(true) }}
+                disabled={!sence || senceProcessing}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Ingresar código SENCE
+              </button>
+            </div>
             {whatsAppError && (
               <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
@@ -547,6 +606,77 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
                 Confirmar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Desmarcar SENCE */}
+      {showDesmarcar && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Desmarcar SENCE</h3>
+            {senceCode ? (
+              <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                ⚠️ Este usuario tiene un <b>código SENCE</b>: <span className="font-mono">{senceCode}</span>.
+                Al desmarcar SENCE, <b>se borrará el código</b> de la ficha. Esta acción no se puede deshacer.
+              </div>
+            ) : (
+              <p className="mb-4 text-sm text-gray-600">Se pondrá <b>sence = false</b> en PEOPLE y ACADEMICA para este documento.</p>
+            )}
+            <div className="flex items-center gap-3">
+              <button onClick={() => setShowDesmarcar(false)} disabled={senceProcessing}
+                className="flex-1 bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                Cancelar
+              </button>
+              <button onClick={doDesmarcar} disabled={senceProcessing}
+                className="flex-1 bg-orange-600 text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-orange-700 disabled:opacity-50 inline-flex items-center justify-center gap-2">
+                {senceProcessing && <Loader2 className="h-4 w-4 animate-spin" />}
+                {senceCode ? 'Desmarcar y borrar código' : 'Desmarcar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Ingresar código SENCE (2 pasos) */}
+      {showCodeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Ingresar código SENCE</h3>
+            {!codeConfirm ? (
+              <>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Código (alfanumérico)</label>
+                <input
+                  type="text"
+                  value={codeInput}
+                  onChange={(e) => setCodeInput(e.target.value.replace(/[^A-Za-z0-9-]/g, ''))}
+                  placeholder="Ej: ABC123"
+                  autoFocus
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 font-mono"
+                />
+                <div className="mt-4 flex items-center gap-3">
+                  <button onClick={() => setShowCodeModal(false)} className="flex-1 bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancelar</button>
+                  <button onClick={() => setCodeConfirm(true)} disabled={!codeInput.trim()}
+                    className="flex-1 bg-indigo-600 text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">Continuar</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600 mb-2">Vas a guardar el siguiente código SENCE en la ficha:</p>
+                <div className="mb-4 rounded-md border border-indigo-200 bg-indigo-50 p-3 text-center">
+                  <span className="font-mono text-lg text-indigo-800">{codeInput.trim()}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setCodeConfirm(false)} disabled={senceProcessing}
+                    className="flex-1 bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">Volver</button>
+                  <button onClick={doSaveCode} disabled={senceProcessing}
+                    className="flex-1 bg-indigo-600 text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 inline-flex items-center justify-center gap-2">
+                    {senceProcessing && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Confirmar y guardar
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

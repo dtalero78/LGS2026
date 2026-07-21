@@ -108,6 +108,7 @@ class AcademicaRepositoryClass extends BaseRepository {
               p."empresa", p."cargo", p."referenciaUno", p."parentezcoRefUno", p."telefonoRefUno",
               p."referenciaDos", p."parentezcoRefDos", p."telefonoRefDos",
               p."suspenddata", p."suspendcount",
+              COALESCE(p."sence", a."sence") AS "sence", a."senceCode",
               a."_createdDate", a."_updatedDate", p."documentacion"
        FROM "ACADEMICA" a
        LEFT JOIN LATERAL (
