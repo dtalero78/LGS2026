@@ -2,16 +2,21 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDriveMode } from '@/lib/contract-drive';
 import { findContractFileId, downloadDrivePdf } from '@/lib/google-drive';
+import { queryOne } from '@/lib/postgres';
 
 const BSL_DOWNLOAD_URL = 'https://bsl-utilidades-yp78a.ondigitalocean.app/descargar-pdf-drive';
 
 /**
  * GET /api/contracts/[id]/download-pdf
  *
- * Descarga el PDF del contrato respetando el mismo interruptor que la subida:
+ * Descarga el PDF del contrato respetando el interruptor de archivado:
  *   modo 'bsl' → redirige a bsl-utilidades (comportamiento previo).
- *   modo 'lgs' → busca el archivo en la Unidad compartida por documento=id y lo
- *                sirve directo desde LGS.
+ *   modo 'lgs' → sirve el PDF desde la Unidad compartida. Resuelve el fileId así:
+ *       1) PEOPLE.driveFileId (guardado al generar) — DIRECTO por id, consistencia
+ *          fuerte, sin la latencia del índice de búsqueda de Drive.
+ *       2) fallback: findContractFileId (búsqueda por appProperties) para contratos
+ *          que aún no tienen driveFileId guardado.
+ *       3) fallback final: bsl (si no está en la unidad compartida o el Drive falla).
  *
  * Público (se abre con window.open desde el panel), igual que la descarga previa.
  */
@@ -23,12 +28,16 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
     return NextResponse.redirect(`${BSL_DOWNLOAD_URL}/${id}?empresa=LGS`);
   }
 
-  // modo 'lgs': buscar en la Unidad compartida. Si el contrato NO está ahí
-  // (p.ej. contratos que solo existen en bsl y aún no se subieron/regeneraron),
-  // se cae de vuelta a bsl para no dejar la descarga en 404.
+  // modo 'lgs'
   try {
-    const fileId = await findContractFileId(id);
+    // 1) fileId guardado en la BD (fuente de verdad, consistencia fuerte).
+    const row = await queryOne<{ driveFileId: string | null }>(
+      `SELECT "driveFileId" FROM "PEOPLE" WHERE "_id" = $1`, [id],
+    );
+    // 2) fallback: búsqueda por appProperties si no hay fileId guardado.
+    const fileId = row?.driveFileId || (await findContractFileId(id));
     if (!fileId) {
+      // 3) no está en la unidad compartida → bsl.
       return NextResponse.redirect(`${BSL_DOWNLOAD_URL}/${id}?empresa=LGS`);
     }
     const bytes = await downloadDrivePdf(fileId);

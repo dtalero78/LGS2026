@@ -1,6 +1,7 @@
 import 'server-only';
 import { AppConfigRepository } from '@/repositories/config.repository';
 import { isDriveDirectConfigured, uploadContractPdf } from '@/lib/google-drive';
+import { query } from '@/lib/postgres';
 
 /**
  * contract-drive.ts — interruptor de archivado de contratos en Drive.
@@ -64,6 +65,11 @@ export async function archivarContratoEnDrive(args: {
     if (mode === 'lgs') {
       const bytes = Buffer.from(await (await fetch(args.pdfUrl)).arrayBuffer());
       const { fileId, webViewLink } = await uploadContractPdf(bytes, { name: args.filename, documento: args.titularId });
+      // Guardar el fileId en la BD → la descarga lo lee DIRECTO por id (consistencia
+      // fuerte), sin depender de la búsqueda por appProperties (que va con retraso).
+      try {
+        await query(`UPDATE "PEOPLE" SET "driveFileId" = $1 WHERE "_id" = $2`, [fileId, args.titularId]);
+      } catch { /* best-effort: no rompe el archivado si el UPDATE falla */ }
       return { ok: true, mode, fileId, link: webViewLink ?? undefined };
     }
     // modo 'bsl'
