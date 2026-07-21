@@ -298,6 +298,12 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
                 <p className="mt-1 text-sm text-gray-900">{student.celular}</p>
               </div>
             )}
+            {student.email && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Email</label>
+                <p className="mt-1 text-sm text-gray-900">{student.email}</p>
+              </div>
+            )}
             {student.fechaNacimiento && (
               <div>
                 <label className="block text-sm font-medium text-gray-700">Fecha de Nacimiento</label>
@@ -405,12 +411,6 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
               <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-red-700">{whatsAppError}</p>
-              </div>
-            )}
-            {student.email && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Email</label>
-                <p className="mt-1 text-sm text-gray-900">{student.email}</p>
               </div>
             )}
             <div>
