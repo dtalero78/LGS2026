@@ -197,6 +197,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
       {
         name: 'Usuarios', isSubmenu: true, children: [
           { name: 'Clear Historic',   href: '/admin/clear-historic',   newTab: true },
+          { name: 'Consulta UserRol', href: '/admin/roles/consulta',   newTab: true },
           { name: 'Crea UserRol',     href: '/admin/roles/create',     newTab: true },
         ],
       },
@@ -374,6 +375,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       MantenimientoPermission.ENVIO_MENSAJES,
     ],
     '/admin/roles/create': [
+      MantenimientoPermission.CREAR_ROL,
+    ],
+    '/admin/roles/consulta': [
       MantenimientoPermission.CREAR_ROL,
     ],
     '/admin/ticker': [

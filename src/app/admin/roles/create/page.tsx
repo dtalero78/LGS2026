@@ -496,6 +496,9 @@ export default function CrearUserRolPage() {
                 <p className="text-sm text-gray-500 mt-0.5">Crea cuentas de acceso: estudiante, administrativo, advisor o comercial.</p>
               </div>
             </div>
+            <a href="/admin/roles/consulta" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-800">
+              📋 Consultar usuarios por rol (email, clave, exportar CSV)
+            </a>
           </div>
 
           {!mode && <Selector onPick={setMode} />}
