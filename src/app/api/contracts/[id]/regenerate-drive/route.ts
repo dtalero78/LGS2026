@@ -1,22 +1,15 @@
 import 'server-only';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
-import { NotFoundError, ValidationError } from '@/lib/errors';
-import { queryOne, queryMany } from '@/lib/postgres';
-import { fillContractTemplate } from '@/lib/contract-template-filler';
-import { buildContractPdfHtml } from '@/lib/contract-pdf-html';
-import { getAsesorInfo } from '@/lib/asesor';
 import { requirePermission } from '@/lib/api-permissions';
 import { MantenimientoPermission } from '@/types/permissions';
-import { archivarContratoEnDrive, buildContractFilename } from '@/lib/contract-drive';
-
-const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
+import { generarYArchivarContratoPdf } from '@/lib/contract-pdf-generate';
 
 /**
  * POST /api/contracts/[id]/regenerate-drive
  *
  * Regenera el PDF del contrato (mismo flujo que /send-pdf — API2PDF) y lo
- * sube al Drive vía bsl-utilidades, sobreescribiendo el PDF anterior por
- * el mismo `documento: titularId`. NO envía WhatsApp.
+ * archiva en el Drive (interruptor bsl/lgs), guardando PEOPLE.driveFileId.
+ * NO envía WhatsApp.
  *
  * Útil para casos donde se detecta un error en un contrato ya entregado:
  *   - bug que dejó valores financieros vacíos
@@ -29,95 +22,10 @@ const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe48
 export const POST = handlerWithAuth(async (_request, { params }, session) => {
   await requirePermission(session, MantenimientoPermission.GENERAR_CONTRATO);
 
-  const titularId = params.id;
-
-  const titular = await queryOne<any>(
-    `SELECT * FROM "PEOPLE" WHERE "_id" = $1`,
-    [titularId]
-  );
-  if (!titular) throw new NotFoundError('Titular', titularId);
-  if (!titular.plataforma) throw new ValidationError('El titular no tiene plataforma asignada');
-
-  const beneficiarios = await queryMany<any>(
-    `SELECT * FROM "PEOPLE" WHERE "contrato" = $1 AND "_id" != $2 ORDER BY "_createdDate" ASC`,
-    [titular.contrato, titularId]
-  );
-
-  // FINANCIEROS por contrato (NO titularId — la columna está NULL en la migración)
-  const financial = titular.contrato
-    ? await queryOne<any>(
-        `SELECT * FROM "FINANCIEROS" WHERE "contrato" = $1
-         ORDER BY "_createdDate" DESC LIMIT 1`,
-        [titular.contrato]
-      )
-    : null;
-
-  // Template del contrato por plataforma (con fallback case-insensitive)
-  let templateRow = await queryOne<{ template: string }>(
-    `SELECT "template" FROM "ContractTemplates" WHERE "plataforma" = $1`,
-    [titular.plataforma]
-  );
-  if (!templateRow) {
-    templateRow = await queryOne<{ template: string }>(
-      `SELECT "template" FROM "ContractTemplates" WHERE LOWER("plataforma") = LOWER($1)`,
-      [titular.plataforma]
-    );
-  }
-  if (!templateRow?.template) throw new NotFoundError('ContractTemplate', titular.plataforma);
-
-  // Datos de consentimiento (si existen)
-  const consentRaw = titular.consentimientoDeclarativo;
-  const consentObj = typeof consentRaw === 'string' ? JSON.parse(consentRaw) : consentRaw;
-  const consentData = consentObj?.aceptado || consentObj?.declaracionAceptada
-    ? { hasConsent: true, consent: consentObj, hash: titular.hashConsentimiento }
-    : { hasConsent: false };
-
-  const asesorInfo = await getAsesorInfo((titular as any).asesor, (titular as any).asesorCreadorContrato);
-  const contractText = fillContractTemplate(
-    templateRow.template,
-    titular,
-    beneficiarios,
-    financial,
-    consentData,
-    asesorInfo,
-  );
-
-  const htmlContent = buildContractPdfHtml(contractText, {
-    contrato: titular.contrato,
-    fecha: new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' }),
-  });
-
-  // 1. Generar PDF con API2PDF
-  const pdfRes = await fetch('https://v2018.api2pdf.com/chrome/html', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': API2PDF_KEY,
-    },
-    body: JSON.stringify({
-      html: htmlContent,
-      options: { printBackground: true },
-    }),
-  });
-  if (!pdfRes.ok) {
-    const err = await pdfRes.text();
-    throw new Error(`API2PDF error ${pdfRes.status}: ${err}`);
-  }
-  const pdfData = await pdfRes.json();
-  if (!pdfData.success || !pdfData.pdf) {
-    throw new Error(`API2PDF falló: ${pdfData.error || 'Sin URL de PDF'}`);
-  }
-  const tempPdfUrl: string = pdfData.pdf;
-
-  // 2. Archivar en Drive (según el interruptor: bsl o LGS; sobrescribe por documento)
-  const driveUpload = await archivarContratoEnDrive({
-    pdfUrl: tempPdfUrl,
-    titularId,
-    filename: buildContractFilename(titular),
-  });
+  const { pdfUrl, driveUpload, titular } = await generarYArchivarContratoPdf(params.id);
 
   return successResponse({
-    pdfUrl: tempPdfUrl,
+    pdfUrl,
     driveUpload,
     contrato: titular.contrato,
     titular: {

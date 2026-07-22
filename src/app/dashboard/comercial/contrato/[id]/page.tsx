@@ -282,6 +282,19 @@ export default function ContratoDetailPage() {
     loadConsentStatus()
   }, [loadData, loadConsentStatus])
 
+  // Refetch silencioso del titular al abrir la confirmación de cierre — el
+  // indicador "PDF archivado en Drive" lee PEOPLE.driveFileId, que puede haber
+  // cambiado (auto-archivado tras la firma OTP, Enviar PDF, regeneración).
+  useEffect(() => {
+    if (!showCloseConfirm) return
+    ;(async () => {
+      try {
+        const d = await api.get(`/api/postgres/contracts/${titularId}`)
+        if (d?.titular) setTitular(d.titular)
+      } catch { /* silencioso — se muestra el dato en memoria */ }
+    })()
+  }, [showCloseConfirm, titularId])
+
   // Poll consent status — only after sending WhatsApp, stops after 10 min or when signed
   const [pollingActive, setPollingActive] = useState(false)
   const pollingStartRef = useRef<number>(0)
@@ -1023,9 +1036,9 @@ export default function ContratoDetailPage() {
                           : <><span className="text-red-500 font-bold">✗</span> <span className="text-gray-700">Consentimiento <b>sin firmar</b></span></>}
                       </p>
                       <p className="flex items-center gap-2">
-                        {pdfStatus === 'sent'
-                          ? <><span className="text-green-600 font-bold">✓</span> <span className="text-gray-700">PDF enviado en esta sesión</span></>
-                          : <><span className="text-gray-400 font-bold">•</span> <span className="text-gray-500">PDF no enviado en esta sesión</span></>}
+                        {(titular?.driveFileId || pdfStatus === 'sent')
+                          ? <><span className="text-green-600 font-bold">✓</span> <span className="text-gray-700">PDF del contrato archivado en el Drive</span></>
+                          : <><span className="text-red-500 font-bold">✗</span> <span className="text-gray-700">PDF <b>no archivado</b> en el Drive — use &quot;Enviar PDF&quot;</span></>}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
