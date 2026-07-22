@@ -40,6 +40,20 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Botón que abre un modal con la plantilla del contrato completamente llenada (solo lectura, sin opciones de impresión/firma/envío PDF)',
   },
   {
+    code: PersonPermission.RESUMEN_FINANCIERO_VER,
+    module: Module.PERSON,
+    section: 'Financiera',
+    name: 'Sección "Resumen Financiero del Titular"',
+    description: 'Visualizar las tarjetas del resumen financiero (Valor Plan, Inscripción, Saldo a la Firma, Total Cuotas, Saldo a la Fecha) en la pestaña Financiera. Sin este permiso la sección no aparece. Los botones de acción (Asignar Ejecutivo, Cambio Estado Cartera, Opcional) conservan sus permisos propios',
+  },
+  {
+    code: PersonPermission.INFO_PAGOS_VER,
+    module: Module.PERSON,
+    section: 'Financiera',
+    name: 'Sección "Información de Pagos"',
+    description: 'Visualizar el bloque Información de Pagos (Asesor Comercial, Ejecutivo de Recaudos, Método de Pago, Tipo de Plan, Cuotas Pagadas, Total del Plan, Inscripción Pagada, Valor Cuota, Estado Cartera) en la pestaña Financiera. Sin este permiso la sección no aparece',
+  },
+  {
     code: PersonPermission.ASIGNAR_GESTOR_RECAUDO,
     module: Module.PERSON,
     section: 'Financiera',
