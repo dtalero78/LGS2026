@@ -227,6 +227,8 @@ export default function ContratoDetailPage() {
 
   // Contract preview modal
   const [showContractModal, setShowContractModal] = useState(false)
+  // Confirmación al cerrar el modal del contrato: recuerda firmar/enviar/imprimir
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false)
   const [contractHtml, setContractHtml] = useState('')
   const [loadingTemplate, setLoadingTemplate] = useState(false)
 
@@ -887,10 +889,10 @@ export default function ContratoDetailPage() {
           {showContractModal && (
             <div className="fixed inset-0 z-50 overflow-y-auto">
               <div className="flex min-h-full items-start justify-center p-4 pt-10">
-                {/* Backdrop */}
+                {/* Backdrop — también pasa por la confirmación de cierre */}
                 <div
                   className="fixed inset-0 bg-black/50 transition-opacity"
-                  onClick={() => setShowContractModal(false)}
+                  onClick={() => setShowCloseConfirm(true)}
                 />
 
                 {/* Modal panel */}
@@ -908,7 +910,7 @@ export default function ContratoDetailPage() {
                     <button
                       type="button"
                       title="Cerrar"
-                      onClick={() => setShowContractModal(false)}
+                      onClick={() => setShowCloseConfirm(true)}
                       className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
                     >
                       <XMarkIcon className="h-6 w-6" />
@@ -948,32 +950,6 @@ export default function ContratoDetailPage() {
 
                     <div className="flex items-center gap-3">
                       <button
-                        onClick={() => {
-                          if (typeof window !== 'undefined') {
-                            const printWindow = window.open('', '_blank')
-                            if (printWindow) {
-                              printWindow.document.write(`
-                                <html>
-                                  <head>
-                                    <title>Contrato ${titular.contrato}</title>
-                                    <style>
-                                      body { font-family: Georgia, serif; padding: 40px; line-height: 1.6; white-space: pre-wrap; font-size: 14px; color: #1a1a1a; }
-                                      @media print { body { padding: 20px; } }
-                                    </style>
-                                  </head>
-                                  <body>${contractHtml.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</body>
-                                </html>
-                              `)
-                              printWindow.document.close()
-                              printWindow.print()
-                            }
-                          }
-                        }}
-                        className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 text-sm font-medium"
-                      >
-                        Imprimir
-                      </button>
-                      <button
                         onClick={sendContractWhatsApp}
                         disabled={sendingWhatsApp || !titular?.celular}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
@@ -996,8 +972,34 @@ export default function ContratoDetailPage() {
                         {sendingPdf ? 'Generando PDF...' : 'Enviar PDF'}
                       </button>
                       <button
-                        onClick={() => setShowContractModal(false)}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 text-sm font-medium"
+                        onClick={() => {
+                          if (typeof window !== 'undefined') {
+                            const printWindow = window.open('', '_blank')
+                            if (printWindow) {
+                              printWindow.document.write(`
+                                <html>
+                                  <head>
+                                    <title>Contrato ${titular.contrato}</title>
+                                    <style>
+                                      body { font-family: Georgia, serif; padding: 40px; line-height: 1.6; white-space: pre-wrap; font-size: 14px; color: #1a1a1a; }
+                                      @media print { body { padding: 20px; } }
+                                    </style>
+                                  </head>
+                                  <body>${contractHtml.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</body>
+                                </html>
+                              `)
+                              printWindow.document.close()
+                              printWindow.print()
+                            }
+                          }
+                        }}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-400 text-gray-900 rounded-md hover:bg-yellow-500 text-sm font-medium"
+                      >
+                        Imprimir
+                      </button>
+                      <button
+                        onClick={() => setShowCloseConfirm(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm font-medium"
                       >
                         Cerrar
                       </button>
@@ -1005,6 +1007,44 @@ export default function ContratoDetailPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Confirmación al cerrar: recordar firmar / enviar / imprimir */}
+              {showCloseConfirm && (
+                <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4">
+                  <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-2xl">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">¿Cerrar el contrato?</h3>
+                    <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                      ⚠️ Asegúrese de que el contrato esté <b>firmado</b> y <b>enviado al usuario</b>, y si así lo requiere, <b>imprimirlo</b>.
+                    </div>
+                    <div className="mb-4 space-y-1.5 text-sm">
+                      <p className="flex items-center gap-2">
+                        {consentStatus?.hasConsent
+                          ? <><span className="text-green-600 font-bold">✓</span> <span className="text-gray-700">Consentimiento firmado</span></>
+                          : <><span className="text-red-500 font-bold">✗</span> <span className="text-gray-700">Consentimiento <b>sin firmar</b></span></>}
+                      </p>
+                      <p className="flex items-center gap-2">
+                        {pdfStatus === 'sent'
+                          ? <><span className="text-green-600 font-bold">✓</span> <span className="text-gray-700">PDF enviado en esta sesión</span></>
+                          : <><span className="text-gray-400 font-bold">•</span> <span className="text-gray-500">PDF no enviado en esta sesión</span></>}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setShowCloseConfirm(false)}
+                        className="flex-1 bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                      >
+                        Volver
+                      </button>
+                      <button
+                        onClick={() => { setShowCloseConfirm(false); setShowContractModal(false) }}
+                        className="flex-1 bg-purple-600 text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-purple-700"
+                      >
+                        Aceptar y cerrar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
