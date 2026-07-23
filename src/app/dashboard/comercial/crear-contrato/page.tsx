@@ -375,9 +375,13 @@ function CrearContratoContent() {
                isValidEmail(titular.email) &&
                titular.genero !== '';
       case 5:
+        // Ambas referencias son obligatorias (nombre + parentesco + teléfono).
         return titular.referenciaUno !== '' &&
                titular.parentezcoRefUno !== '' &&
-               titular.telRefUno !== '';
+               titular.telRefUno !== '' &&
+               titular.referenciaDos !== '' &&
+               titular.parentezcoRefDos !== '' &&
+               titular.telRefDos !== '';
       case 6:
         return financial.totalPlan > 0 &&
                financial.pagoInscripcion >= 0 &&
@@ -894,25 +898,7 @@ function CrearContratoContent() {
                     <option value="Perú">Perú</option>
                   </select>
                 </div>
-                {/* Tipo de Persona — Persona Natural / Empresa (Franquicia SENCE solo para Empresa) */}
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tipo de Persona *
-                  </label>
-                  <select
-                    value={titular.tipoPersona}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      setTitular({...titular, tipoPersona: val})
-                      if (val !== 'Empresa') setSenceUsuario(false) // Franquicia SENCE solo para Empresa
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="Persona Natural">Persona Natural</option>
-                    <option value="Empresa">Empresa</option>
-                  </select>
-                </div>
-                <div className="col-span-2">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Número de contrato *
                   </label>
@@ -931,6 +917,24 @@ function CrearContratoContent() {
                       </svg>
                     )}
                   </div>
+                </div>
+                {/* Tipo de Persona — al lado de Número de contrato (Franquicia SENCE solo para Empresa) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo de Persona *
+                  </label>
+                  <select
+                    value={titular.tipoPersona}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setTitular({...titular, tipoPersona: val})
+                      if (val !== 'Empresa') setSenceUsuario(false) // Franquicia SENCE solo para Empresa
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="Persona Natural">Persona Natural</option>
+                    <option value="Empresa">Empresa</option>
+                  </select>
                 </div>
                 <div className="col-span-2">
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
@@ -1181,11 +1185,11 @@ function CrearContratoContent() {
                 </div>
 
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-3">Referencia 2</h3>
+                  <h3 className="font-medium text-gray-900 mb-3">Referencia 2 *</h3>
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Nombre completo
+                        Nombre completo *
                       </label>
                       <input
                         type="text"
@@ -1196,7 +1200,7 @@ function CrearContratoContent() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Parentesco
+                        Parentesco *
                       </label>
                       <input
                         type="text"
@@ -1207,7 +1211,7 @@ function CrearContratoContent() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Teléfono
+                        Teléfono *
                       </label>
                       <input
                         type="tel"
