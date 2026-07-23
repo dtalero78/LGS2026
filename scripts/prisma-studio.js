@@ -49,8 +49,15 @@ function cleanup() {
   try { sh(`doctl databases firewalls append ${clusterId} --rule ip_addr:${ip}`); } catch (e) { console.error('append:', e.message); }
   await new Promise(r => setTimeout(r, 9000)); // propagación
 
-  console.log('🚀 Abriendo Prisma Studio (Ctrl+C para cerrar y limpiar el firewall)…');
-  const child = spawn('npx', ['prisma', 'studio'], { stdio: 'inherit', shell: true });
+  // Studio NUEVO (Prisma 7): interfaz con Visualizer / Console / SQL + Tables.
+  // Conecta DIRECTO a la BD por --url (introspección en vivo, no usa schema.prisma).
+  // Se invoca con npx prisma@7 para no tocar la dependencia del proyecto (6.x).
+  const PORT = '5556'; // LGS fijo (MOSAICO = 5555)
+  console.log(`🚀 Abriendo Prisma Studio (nuevo) en http://localhost:${PORT} (Ctrl+C para cerrar y limpiar el firewall)…`);
+  const child = spawn('npx', ['-y', 'prisma@7', 'studio', '--port', PORT, '--url', `"${url}"`], { stdio: 'inherit', shell: true });
+
+  // Abrir el navegador (el studio nuevo no lo abre solo)
+  setTimeout(() => { try { spawn('cmd', ['/c', 'start', '', `http://localhost:${PORT}`], { shell: false }); } catch {} }, 12000);
 
   const shutdown = () => { child.kill('SIGINT'); };
   process.on('SIGINT', shutdown);
