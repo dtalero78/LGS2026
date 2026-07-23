@@ -344,6 +344,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     name: 'Botón "Enviar Recordatorio"',
     description: 'Enviar recordatorio de pago por WhatsApp',
   },
+  {
+    code: StudentPermission.FRANQUICIA_SENCE,
+    module: Module.STUDENT,
+    section: 'Información General',
+    name: 'Botones "Franquicia SENCE" y "Código Franquicia SENCE"',
+    description: 'En la pestaña Información General del estudiante: botón naranja para marcar/desmarcar la Franquicia SENCE (con modal de confirmación en ambos sentidos) y botón para capturar el Código Franquicia SENCE. Sin este permiso ambos botones no aparecen',
+  },
 
   // ========== ACADEMICO MODULE ==========
   // -- Página: Agenda Sesiones (/dashboard/academic/agenda-sesiones) --

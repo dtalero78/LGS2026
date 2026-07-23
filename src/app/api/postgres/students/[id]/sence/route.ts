@@ -7,6 +7,7 @@ import { NotFoundError, ValidationError } from '@/lib/errors';
  * POST /api/postgres/students/[id]/sence
  *
  * Gestión de la marca SENCE del estudiante ([id] = ACADEMICA._id).
+ *   body { action: 'marcar' }           → sence=true en PEOPLE y ACADEMICA.
  *   body { action: 'desmarcar' }        → sence=false en PEOPLE y ACADEMICA
  *                                          (por numeroId) + limpia senceCode.
  *   body { action: 'set-code', code }   → guarda senceCode (alfanumérico) en ACADEMICA.
@@ -21,6 +22,12 @@ export const POST = handlerWithAuth(async (request, { params }, _session) => {
   );
   if (!aca) throw new NotFoundError('Registro académico', id);
   const numeroId = aca.numeroId;
+
+  if (action === 'marcar') {
+    await query(`UPDATE "PEOPLE" SET "sence" = true, "_updatedDate" = NOW() WHERE "numeroId" = $1`, [numeroId]);
+    await query(`UPDATE "ACADEMICA" SET "sence" = true, "_updatedDate" = NOW() WHERE "numeroId" = $1`, [numeroId]);
+    return successResponse({ ok: true, sence: true });
+  }
 
   if (action === 'desmarcar') {
     // sence=false en TODAS las filas del documento (titular + beneficiario) y

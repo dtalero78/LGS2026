@@ -6,7 +6,7 @@ import { formatDate } from '@/lib/utils'
 import { MessageCircle, Loader2, Check, AlertCircle } from 'lucide-react'
 import { ArrowUpTrayIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import { PermissionGuard } from '@/components/permissions'
-import { PersonPermission } from '@/types/permissions'
+import { PersonPermission, StudentPermission } from '@/types/permissions'
 import { api, handleApiError } from '@/hooks/use-api'
 import toast from 'react-hot-toast'
 import SuspendidaBadge from '@/components/common/SuspendidaBadge'
@@ -43,12 +43,20 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
   const [codeConfirm, setCodeConfirm] = useState(false) // paso 2 del modal de código
   const [senceProcessing, setSenceProcessing] = useState(false)
 
-  const doDesmarcar = async () => {
+  // Toggle de Franquicia SENCE: marca si está en NO, desmarca si está en SÍ.
+  const doToggleSence = async () => {
     setSenceProcessing(true)
     try {
-      await api.post(`/api/postgres/students/${student._id}/sence`, { action: 'desmarcar' })
-      setSence(false); setSenceCode(''); setShowDesmarcar(false)
-      toast.success('SENCE desmarcado')
+      if (sence) {
+        await api.post(`/api/postgres/students/${student._id}/sence`, { action: 'desmarcar' })
+        setSence(false); setSenceCode('')
+        toast.success('Franquicia SENCE desmarcada')
+      } else {
+        await api.post(`/api/postgres/students/${student._id}/sence`, { action: 'marcar' })
+        setSence(true)
+        toast.success('Franquicia SENCE marcada')
+      }
+      setShowDesmarcar(false)
     } catch (e) { handleApiError(e) }
     finally { setSenceProcessing(false) }
   }
@@ -388,25 +396,29 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
                   {sence && senceCode && <span className="text-xs text-gray-500">Código: <span className="font-mono text-gray-700">{senceCode}</span></span>}
                 </div>
               </div>
-            {/* Botones SENCE — habilitados solo si el usuario es SENCE */}
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowDesmarcar(true)}
-                disabled={!sence || senceProcessing}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Desmarcar SENCE
-              </button>
-              <button
-                type="button"
-                onClick={() => { setCodeInput(senceCode || ''); setCodeConfirm(false); setShowCodeModal(true) }}
-                disabled={!sence || senceProcessing}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Ingresar código SENCE
-              </button>
-            </div>
+            {/* Botones Franquicia SENCE — gateados por STUDENT.GENERAL.FRANQUICIA_SENCE */}
+            <PermissionGuard permission={StudentPermission.FRANQUICIA_SENCE}>
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Naranja: toggle marcar/desmarcar (siempre activo, con modal de confirmación) */}
+                <button
+                  type="button"
+                  onClick={() => setShowDesmarcar(true)}
+                  disabled={senceProcessing}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Franquicia SENCE
+                </button>
+                {/* Código: solo habilitado cuando la Franquicia está en SÍ */}
+                <button
+                  type="button"
+                  onClick={() => { setCodeInput(senceCode || ''); setCodeConfirm(false); setShowCodeModal(true) }}
+                  disabled={!sence || senceProcessing}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Código Franquicia SENCE
+                </button>
+              </div>
+            </PermissionGuard>
             {whatsAppError && (
               <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
@@ -612,28 +624,34 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
         </div>
       )}
 
-      {/* Modal: Desmarcar SENCE */}
+      {/* Modal: Franquicia SENCE — confirmación del toggle (marcar / desmarcar) */}
       {showDesmarcar && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Desmarcar SENCE</h3>
-            {senceCode ? (
-              <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                ⚠️ Este usuario tiene un <b>código SENCE</b>: <span className="font-mono">{senceCode}</span>.
-                Al desmarcar SENCE, <b>se borrará el código</b> de la ficha. Esta acción no se puede deshacer.
-              </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              {sence ? 'Desmarcar Franquicia SENCE' : 'Marcar Franquicia SENCE'}
+            </h3>
+            {sence ? (
+              senceCode ? (
+                <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  ⚠️ Este usuario tiene un <b>código SENCE</b>: <span className="font-mono">{senceCode}</span>.
+                  Al desmarcar la Franquicia SENCE, <b>se borrará el código</b> de la ficha. Esta acción no se puede deshacer.
+                </div>
+              ) : (
+                <p className="mb-4 text-sm text-gray-600">Se <b>desmarcará</b> la Franquicia SENCE (sence = NO) en PEOPLE y ACADEMICA para este documento.</p>
+              )
             ) : (
-              <p className="mb-4 text-sm text-gray-600">Se pondrá <b>sence = false</b> en PEOPLE y ACADEMICA para este documento.</p>
+              <p className="mb-4 text-sm text-gray-600">Se <b>marcará</b> la Franquicia SENCE (sence = SÍ) en PEOPLE y ACADEMICA para este documento. Luego podrás capturar el código.</p>
             )}
             <div className="flex items-center gap-3">
               <button onClick={() => setShowDesmarcar(false)} disabled={senceProcessing}
                 className="flex-1 bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
                 Cancelar
               </button>
-              <button onClick={doDesmarcar} disabled={senceProcessing}
+              <button onClick={doToggleSence} disabled={senceProcessing}
                 className="flex-1 bg-orange-600 text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-orange-700 disabled:opacity-50 inline-flex items-center justify-center gap-2">
                 {senceProcessing && <Loader2 className="h-4 w-4 animate-spin" />}
-                {senceCode ? 'Desmarcar y borrar código' : 'Desmarcar'}
+                {sence ? (senceCode ? 'Desmarcar y borrar código' : 'Desmarcar') : 'Marcar'}
               </button>
             </div>
           </div>
@@ -644,7 +662,7 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
       {showCodeModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Ingresar código SENCE</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Código Franquicia SENCE</h3>
             {!codeConfirm ? (
               <>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Código (alfanumérico)</label>
