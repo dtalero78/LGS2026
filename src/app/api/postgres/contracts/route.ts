@@ -125,13 +125,15 @@ function normalizeTipoPlan(v: any): TipoPlan | null {
 }
 
 export const POST = handlerWithAuth(async (request, _ctx, session) => {
-  const { titular, financial, beneficiarios, titularEsBeneficiario, sence, senceCode, clientToday, esContratoPrueba } = await request.json();
+  const { titular, financial, beneficiarios, titularEsBeneficiario, sence, clientToday, esContratoPrueba } = await request.json();
   const esPrueba = esContratoPrueba === true;
-  // SENCE solo aplica a contratos de CHILE (defensa server-side).
+  // Tipo de persona del titular (defensa server-side): 'Empresa' | 'Persona Natural'.
+  const tipoPersona = String(titular?.tipoPersona || '').trim() === 'Empresa' ? 'Empresa' : 'Persona Natural';
+  const esEmpresa = tipoPersona === 'Empresa';
+  // Franquicia SENCE: solo Empresa + Chile (defensa server-side). El código NO se
+  // captura a nivel del titular — se captura por beneficiario.
   const esChile = String(titular?.plataforma || '').trim().toLowerCase() === 'chile';
-  const senceVal = titularEsBeneficiario === true && sence === true && esChile;
-  // Código SENCE (opcional): solo se guarda si la marca SENCE aplica.
-  const senceCodeVal = senceVal ? (String(senceCode || '').trim() || null) : null;
+  const senceVal = sence === true && esChile && esEmpresa;
 
   // Plataforma sólo es obligatoria para contratos REALES; en pruebas se permite sin plataforma.
   if (!esPrueba && !titular?.plataforma) throw new ValidationError('plataforma is required');
@@ -167,7 +169,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
       "email", "celular", "telefono", "fechaNacimiento", "domicilio", "ciudad",
       "plataforma", "ingresos", "empresa", "cargo", "genero",
       "referenciaUno", "parentezcoRefUno", "telefonoRefUno", "referenciaDos", "parentezcoRefDos", "telefonoRefDos",
-      "asesor", "asesorCreadorContrato", "tipoUsuario", "contrato", "vigencia", "fechaContrato", "finalContrato", "plan", "sence", "senceCode", "origen", "_createdDate", "_updatedDate")
+      "asesor", "asesorCreadorContrato", "tipoUsuario", "contrato", "vigencia", "fechaContrato", "finalContrato", "plan", "sence", "tipoPersona", "origen", "_createdDate", "_updatedDate")
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$29,'TITULAR',$25,$26,NOW(),$27::date,$28,$30,$31,'POSTGRES',NOW(),NOW()) RETURNING *`,
     [titularId, titular.numeroId, titular.primerNombre, titular.segundoNombre || null,
      titular.primerApellido, titular.segundoApellido || null,
@@ -177,7 +179,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
      titular.referenciaUno || null, titular.parentezcoRefUno || null, titular.telRefUno || null,
      titular.referenciaDos || null, titular.parentezcoRefDos || null, titular.telRefDos || null,
      titular.asesor || null, contrato, financial?.vigencia || null, finalContrato, tipoPlan,
-     titular.asesorCreadorContrato || null, senceVal, senceCodeVal]  // $29 → asesorCreadorContrato, $30 → sence, $31 → senceCode
+     titular.asesorCreadorContrato || null, senceVal, tipoPersona]  // $29 → asesorCreadorContrato, $30 → sence, $31 → tipoPersona
   );
   created.titular = titularResult.rows[0];
 
@@ -194,8 +196,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
       fechaNacimiento: titular.fechaNacimiento,
       email: titular.email,
       celular: titular.celular,
-      sence: senceVal, // el titular-beneficiario hereda la marca SENCE
-      senceCode: senceCodeVal, // y su código SENCE
+      sence: senceVal, // el titular-beneficiario hereda la marca SENCE (código se captura por beneficiario)
     });
   }
 
@@ -216,8 +217,8 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
        b.primerApellido, b.segundoApellido || null,
        b.email || null, b.celular || null, b.fechaNacimiento || null, titularId,
        contrato, titular.plataforma || null, financial?.vigencia || null, finalContrato,
-       b.sence === true && esChile,
-       (b.sence === true && esChile) ? (String(b.senceCode || '').trim() || null) : null]
+       b.sence === true && esChile && esEmpresa,
+       (b.sence === true && esChile && esEmpresa) ? (String(b.senceCode || '').trim() || null) : null]
     );
     created.beneficiarios.push(benefResult.rows[0]);
   }

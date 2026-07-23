@@ -74,7 +74,8 @@ export interface Person {
   step?: string           // Step principal (opcional para titulares)
   nivelParalelo?: string // Nivel paralelo opcional (ej: ESS)
   stepParalelo?: string  // Step paralelo opcional
-  sence?: boolean        // Usuario SENCE (Chile)
+  sence?: boolean        // Franquicia SENCE (Chile, solo Empresa)
+  tipoPersona?: 'Persona Natural' | 'Empresa' // Tipo de persona del titular
   aprobacion?: 'Aprobado' | 'Pendiente' | 'Rechazado' | 'Contrato nulo' | 'Devuelto'
   estadoInactivo?: boolean
   estado?: string

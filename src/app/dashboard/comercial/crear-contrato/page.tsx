@@ -102,6 +102,7 @@ function CrearContratoContent() {
     primerApellido: '',
     segundoApellido: '',
     numeroId: '',
+    tipoPersona: 'Persona Natural', // 'Persona Natural' | 'Empresa'
     plataforma: '',
     fechaNacimiento: '',
     pais: 'Colombia',
@@ -136,10 +137,10 @@ function CrearContratoContent() {
 
   const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>([]);
   const [titularEsBeneficiario, setTitularEsBeneficiario] = useState(false);
-  // Usuario SENCE (Chile): solo aplica cuando el titular es beneficiario.
+  // Franquicia SENCE: marca a nivel del titular (empresa) — solo se activa si es
+  // Empresa y de Chile. El código SENCE NO se captura aquí; se captura por
+  // beneficiario en el paso 7.
   const [senceUsuario, setSenceUsuario] = useState(false);
-  // Código SENCE del titular-beneficiario (opcional, se habilita si senceUsuario).
-  const [senceCodeUsuario, setSenceCodeUsuario] = useState('');
   const [contrato, setContrato] = useState('');
   const [loadingContrato, setLoadingContrato] = useState(false);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
@@ -170,13 +171,13 @@ function CrearContratoContent() {
     saveTimer.current = setTimeout(() => {
       try {
         localStorage.setItem(DRAFT_KEY, JSON.stringify({
-          titular, financial, beneficiarios, titularEsBeneficiario, senceUsuario, senceCodeUsuario, currentStep, contrato, esContratoPrueba,
+          titular, financial, beneficiarios, titularEsBeneficiario, senceUsuario, currentStep, contrato, esContratoPrueba,
           savedAt: Date.now()
         }))
       } catch {}
     }, 500)
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
-  }, [titular, financial, beneficiarios, titularEsBeneficiario, senceUsuario, senceCodeUsuario, currentStep, contrato, esContratoPrueba])
+  }, [titular, financial, beneficiarios, titularEsBeneficiario, senceUsuario, currentStep, contrato, esContratoPrueba])
 
   // Restore draft on mount
   useEffect(() => {
@@ -209,7 +210,6 @@ function CrearContratoContent() {
       if (draft.beneficiarios) setBeneficiarios(draft.beneficiarios)
       if (draft.titularEsBeneficiario !== undefined) setTitularEsBeneficiario(draft.titularEsBeneficiario)
       if (draft.senceUsuario !== undefined) setSenceUsuario(draft.senceUsuario)
-      if (draft.senceCodeUsuario !== undefined) setSenceCodeUsuario(draft.senceCodeUsuario)
       if (draft.currentStep) setCurrentStep(draft.currentStep)
       if (draft.contrato) setContrato(draft.contrato)
       if (draft.esContratoPrueba !== undefined) setEsContratoPrueba(draft.esContratoPrueba)
@@ -314,6 +314,9 @@ function CrearContratoContent() {
 
   // Add beneficiario
   const addBeneficiario = () => {
+    // Propaga la marca Franquicia SENCE del titular (Empresa + Chile + marcada)
+    // → el nuevo beneficiario nace con sence=true (editable por fila).
+    const heredaSence = senceUsuario && titular.tipoPersona === 'Empresa' && titular.plataforma === 'Chile'
     setBeneficiarios([...beneficiarios, {
       primerNombre: '',
       segundoNombre: '',
@@ -323,7 +326,7 @@ function CrearContratoContent() {
       fechaNacimiento: '',
       email: '',
       celular: '',
-      sence: false
+      sence: heredaSence
     }]);
   };
 
@@ -549,8 +552,9 @@ function CrearContratoContent() {
             celular: b.celular ? getPhonePrefix() + b.celular : null
           })),
           titularEsBeneficiario,
-          sence: titularEsBeneficiario && senceUsuario && titular.plataforma === 'Chile', // SENCE: titular-beneficiario + Chile
-          senceCode: (titularEsBeneficiario && senceUsuario && titular.plataforma === 'Chile' && senceCodeUsuario.trim()) || null,
+          // Franquicia SENCE del titular: Empresa + Chile (tipoPersona va dentro de `titular`).
+          // El código NO se captura a nivel del titular — solo por beneficiario.
+          sence: senceUsuario && titular.tipoPersona === 'Empresa' && titular.plataforma === 'Chile',
           clientToday,
           esContratoPrueba,
         })
@@ -879,7 +883,7 @@ function CrearContratoContent() {
                     value={titular.plataforma}
                     onChange={(e) => {
                       setTitular({...titular, plataforma: e.target.value})
-                      if (e.target.value !== 'Chile') { setSenceUsuario(false); setSenceCodeUsuario('') } // SENCE es solo Chile
+                      if (e.target.value !== 'Chile') setSenceUsuario(false) // Franquicia SENCE es solo Chile
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   >
@@ -888,6 +892,24 @@ function CrearContratoContent() {
                     <option value="Colombia">Colombia</option>
                     <option value="Ecuador">Ecuador</option>
                     <option value="Perú">Perú</option>
+                  </select>
+                </div>
+                {/* Tipo de Persona — Persona Natural / Empresa (Franquicia SENCE solo para Empresa) */}
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo de Persona *
+                  </label>
+                  <select
+                    value={titular.tipoPersona}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setTitular({...titular, tipoPersona: val})
+                      if (val !== 'Empresa') setSenceUsuario(false) // Franquicia SENCE solo para Empresa
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="Persona Natural">Persona Natural</option>
+                    <option value="Empresa">Empresa</option>
                   </select>
                 </div>
                 <div className="col-span-2">
@@ -918,9 +940,7 @@ function CrearContratoContent() {
                         id="titularEsBeneficiario"
                         checked={titularEsBeneficiario}
                         onChange={(e) => {
-                          const on = e.target.checked
-                          setTitularEsBeneficiario(on)
-                          if (!on) { setSenceUsuario(false); setSenceCodeUsuario('') } // SENCE solo aplica si el titular es beneficiario
+                          setTitularEsBeneficiario(e.target.checked)
                         }}
                         className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                       />
@@ -932,7 +952,7 @@ function CrearContratoContent() {
                       </span>
                     </div>
                     {(() => {
-                      const senceHabilitado = titularEsBeneficiario && titular.plataforma === 'Chile'
+                      const senceHabilitado = titular.tipoPersona === 'Empresa' && titular.plataforma === 'Chile'
                       return (
                     <div className="relative group flex items-center">
                       <input
@@ -940,7 +960,7 @@ function CrearContratoContent() {
                         id="senceUsuario"
                         checked={senceUsuario}
                         disabled={!senceHabilitado}
-                        onChange={(e) => { setSenceUsuario(e.target.checked); if (!e.target.checked) setSenceCodeUsuario('') }}
+                        onChange={(e) => setSenceUsuario(e.target.checked)}
                         className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded disabled:opacity-40 disabled:cursor-not-allowed"
                       />
                       <label
@@ -951,30 +971,15 @@ function CrearContratoContent() {
                       </label>
                       <span className="invisible group-hover:visible absolute left-0 top-full mt-1 bg-gray-800 text-white text-sm rounded px-3 py-1.5 whitespace-nowrap z-10">
                         {senceHabilitado
-                          ? 'Marca al titular-beneficiario como usuario SENCE'
-                          : !titularEsBeneficiario
-                            ? 'Disponible solo si el titular será beneficiario'
-                            : 'SENCE solo aplica a contratos de Chile'}
+                          ? 'Marca a la empresa como Franquicia SENCE (el código se captura por beneficiario)'
+                          : titular.tipoPersona !== 'Empresa'
+                            ? 'Disponible solo si el titular es Empresa'
+                            : 'Franquicia SENCE solo aplica a contratos de Chile'}
                       </span>
                     </div>
                       )
                     })()}
                   </div>
-                  {senceUsuario && (
-                    <div className="mt-4 max-w-md">
-                      <label htmlFor="senceCodeUsuario" className="block text-sm font-medium text-gray-700 mb-1">
-                        Código SENCE <span className="text-gray-400 font-normal">(opcional)</span>
-                      </label>
-                      <input
-                        type="text"
-                        id="senceCodeUsuario"
-                        value={senceCodeUsuario}
-                        onChange={(e) => setSenceCodeUsuario(e.target.value.replace(/[^A-Za-z0-9-]/g, ''))}
-                        placeholder="Anote el código SENCE del usuario"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 font-mono"
-                      />
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -1488,7 +1493,9 @@ function CrearContratoContent() {
                           />
                         </div>
                       </div>
-                      {titular.plataforma === 'Chile' && (
+                      {/* Franquicia SENCE por beneficiario — solo si el titular es Empresa
+                          de Chile marcada como Franquicia SENCE. Aquí SÍ se captura el código. */}
+                      {titular.plataforma === 'Chile' && titular.tipoPersona === 'Empresa' && senceUsuario && (
                         <>
                           <div className="mt-4 flex items-center">
                             <input
