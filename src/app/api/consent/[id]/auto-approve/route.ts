@@ -1,5 +1,7 @@
 import 'server-only';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
+import { requirePermission } from '@/lib/api-permissions';
+import { ComercialPermission } from '@/types/permissions';
 import { autoApproveConsent } from '@/services/consent.service';
 import { query, queryOne, queryMany } from '@/lib/postgres';
 import { generateId } from '@/lib/id-generator';
@@ -31,6 +33,10 @@ async function ensureAuditTable() {
 }
 
 export const POST = handlerWithAuth(async (request, { params }, session) => {
+  // Gate: solo roles con el permiso "Auto-aprobar Consentimiento"
+  // (SUPER_ADMIN/ADMIN bypasean). Defensa en profundidad del botón del frontend.
+  await requirePermission(session, ComercialPermission.APROBACION_AUTONOMA);
+
   const ip =
     request.headers.get('x-forwarded-for') ||
     request.headers.get('x-real-ip') ||

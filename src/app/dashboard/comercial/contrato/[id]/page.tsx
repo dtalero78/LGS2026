@@ -701,15 +701,17 @@ export default function ContratoDetailPage() {
                 </>
               )}
               {!consentStatus?.hasConsent && (
-                <button
-                  type="button"
-                  onClick={autoApproveConsent}
-                  disabled={approvingConsent}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium disabled:opacity-50"
-                >
-                  <ShieldCheckIcon className="h-4 w-4" />
-                  {approvingConsent ? 'Aprobando...' : 'Auto-Aprobar Consentimiento'}
-                </button>
+                <PermissionGuard permission={ComercialPermission.APROBACION_AUTONOMA}>
+                  <button
+                    type="button"
+                    onClick={autoApproveConsent}
+                    disabled={approvingConsent}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium disabled:opacity-50"
+                  >
+                    <ShieldCheckIcon className="h-4 w-4" />
+                    {approvingConsent ? 'Aprobando...' : 'Auto-Aprobar Consentimiento'}
+                  </button>
+                </PermissionGuard>
               )}
             </div>
           </div>
