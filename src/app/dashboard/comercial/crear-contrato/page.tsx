@@ -947,7 +947,7 @@ function CrearContratoContent() {
                         htmlFor="senceUsuario"
                         className={`ml-2 block text-lg font-bold cursor-pointer ${senceHabilitado ? 'text-gray-900' : 'text-gray-400 cursor-not-allowed'}`}
                       >
-                        Usuario SENCE
+                        Franquicia SENCE
                       </label>
                       <span className="invisible group-hover:visible absolute left-0 top-full mt-1 bg-gray-800 text-white text-sm rounded px-3 py-1.5 whitespace-nowrap z-10">
                         {senceHabilitado
@@ -1503,7 +1503,7 @@ function CrearContratoContent() {
                               className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                             />
                             <label htmlFor={`sence-benef-${index}`} className="ml-2 block text-sm font-bold text-gray-900 cursor-pointer">
-                              Usuario SENCE
+                              Franquicia SENCE
                             </label>
                           </div>
                           {beneficiario.sence === true && (

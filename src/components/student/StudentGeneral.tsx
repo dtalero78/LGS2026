@@ -315,7 +315,7 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
           <div className="space-y-4">
             <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-sm font-medium text-gray-700">Usuario SENCE</label>
+                  <label className="block text-sm font-medium text-gray-700">Franquicia SENCE</label>
                   {student.celular && (
                   <div className="flex items-center gap-2">
                     <button
