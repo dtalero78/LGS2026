@@ -8,6 +8,7 @@ import { UserPlusIcon } from '@heroicons/react/24/outline'
 import { CheckCircleIcon } from '@heroicons/react/24/solid'
 import { PermissionGuard } from '@/components/permissions'
 import { PersonPermission } from '@/types/permissions'
+import { COUNTRY_CODES } from '@/lib/country-codes'
 
 interface PersonAdminProps {
   person: Person
@@ -22,15 +23,8 @@ const PREFIJOS_PAISES = [
   { pais: "Perú", prefijo: "+51" },
 ]
 
-// Indicativos telefónicos disponibles (para selector de celular)
-const PREFIJOS_CELULAR = [
-  { pais: "Australia", codigo: "AU", prefijo: "+61" },
-  { pais: "Chile", codigo: "CL", prefijo: "+56" },
-  { pais: "Colombia", codigo: "CO", prefijo: "+57" },
-  { pais: "Ecuador", codigo: "EC", prefijo: "+593" },
-  { pais: "Estados Unidos", codigo: "US", prefijo: "+1" },
-  { pais: "Perú", codigo: "PE", prefijo: "+51" },
-]
+// Indicativos telefónicos (selector de celular) — catálogo completo compartido.
+const PREFIJOS_CELULAR = COUNTRY_CODES
 
 export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps) {
   console.log('🧪 PersonAdmin render - Props:', {
@@ -1293,11 +1287,12 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                           <select
                             value={beneficiaryData.celularPrefijo}
                             onChange={(e) => handleBeneficiaryDataChange('celularPrefijo', e.target.value)}
-                            className="input-field w-28 flex-shrink-0"
+                            className="input-field w-48 flex-shrink-0"
+                            title="Teclea el nombre del país para buscarlo"
                           >
                             {PREFIJOS_CELULAR.map(item => (
                               <option key={item.codigo} value={item.prefijo}>
-                                {item.prefijo} ({item.codigo})
+                                {item.pais} ({item.prefijo})
                               </option>
                             ))}
                           </select>
