@@ -5,33 +5,14 @@ import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
 import { MantenimientoPermission } from '@/types/permissions'
 import { ArrowLeftIcon, ArrowRightIcon, PlusIcon, TrashIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
+import { COUNTRY_CODES } from '@/lib/country-codes'
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
 
+// País de residencia + prefijo derivado — catálogo completo compartido.
 const COUNTRY_PREFIXES = [
-  { country: 'Argentina',          prefix: '+54'    },
-  { country: 'Australia',          prefix: '+61'    },
-  { country: 'Bolivia',            prefix: '+591'   },
-  { country: 'Chile',              prefix: '+56'    },
-  { country: 'Colombia',           prefix: '+57'    },
-  { country: 'Costa Rica',         prefix: '+506'   },
-  { country: 'Cuba',               prefix: '+53'    },
-  { country: 'Ecuador',            prefix: '+593'   },
-  { country: 'El Salvador',        prefix: '+503'   },
-  { country: 'España',             prefix: '+34'    },
-  { country: 'Estados Unidos',     prefix: '+1'     },
-  { country: 'Guatemala',          prefix: '+502'   },
-  { country: 'Honduras',           prefix: '+504'   },
-  { country: 'México',             prefix: '+52'    },
-  { country: 'Nicaragua',          prefix: '+505'   },
-  { country: 'Panamá',             prefix: '+507'   },
-  { country: 'Paraguay',           prefix: '+595'   },
-  { country: 'Perú',               prefix: '+51'    },
-  { country: 'Puerto Rico',        prefix: '+1 787' },
-  { country: 'República Dominicana', prefix: '+1 809' },
-  { country: 'Uruguay',            prefix: '+598'   },
-  { country: 'Venezuela',          prefix: '+58'    },
-  { country: 'Otro',               prefix: ''       },
+  ...COUNTRY_CODES.map(c => ({ country: c.pais, prefix: c.prefijo })),
+  { country: 'Otro', prefix: '' },
 ]
 
 const PAYMENT_OPTIONS: Record<string, { label: string; value: string }[]> = {
