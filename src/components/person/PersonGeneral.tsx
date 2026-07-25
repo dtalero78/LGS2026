@@ -143,7 +143,7 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
         {/* Left Column - Personal Data */}
         <div>
           <h3 className="text-lg font-medium text-gray-900 mb-4">👤 Datos Personales</h3>
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Primer Nombre</label>
               <p className="mt-1 text-sm text-gray-900">{person.primerNombre || 'No especificado'}</p>
