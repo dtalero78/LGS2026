@@ -488,37 +488,48 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">💰 Información de Pagos</h3>
         <div className="bg-white border border-gray-200 rounded-lg p-6">
-          {/* Asesor Comercial que hizo el contrato (only for TITULAR) */}
-          {isTitular && (
-            <div className="mb-4 pb-4 border-b border-gray-200">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Asesor Comercial</label>
-              {asesorNombre ? (
-                <span className="text-sm font-semibold text-gray-900">{asesorNombre}</span>
-              ) : (
-                <p className="text-sm text-gray-400 italic">—</p>
-              )}
-            </div>
-          )}
+          {/* Asesor Comercial · Ejecutivo de Recaudos · Estado Cartera — una línea, 3 columnas */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4 pb-4 border-b border-gray-200">
+            {/* Asesor Comercial (only for TITULAR) */}
+            {isTitular && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Asesor Comercial</label>
+                {asesorNombre ? (
+                  <span className="text-sm font-semibold text-gray-900">{asesorNombre}</span>
+                ) : (
+                  <p className="text-sm text-gray-400 italic">—</p>
+                )}
+              </div>
+            )}
 
-          {/* Ejecutivo de Recaudos badge (only for TITULAR) */}
-          {isTitular && (
-            <div className="mb-4 pb-4 border-b border-gray-200">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ejecutivo de Recaudos</label>
-              {loadingUsers && !currentGestor ? (
-                <p className="text-sm text-gray-400 italic">Cargando…</p>
-              ) : currentGestor ? (
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
-                    {ROLE_LABEL[currentGestor.rol] || currentGestor.rol}
-                  </span>
-                  <span className="text-sm font-semibold text-gray-900">{currentGestor.nombre}</span>
-                  <span className="text-xs text-gray-500">· {currentGestor.email}</span>
-                </div>
-              ) : (
-                <p className="text-sm text-amber-700 italic">⚠️ Pendiente asignar Ejecutivo de Recaudos</p>
-              )}
+            {/* Ejecutivo de Recaudos (only for TITULAR) */}
+            {isTitular && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ejecutivo de Recaudos</label>
+                {loadingUsers && !currentGestor ? (
+                  <p className="text-sm text-gray-400 italic">Cargando…</p>
+                ) : currentGestor ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
+                      {ROLE_LABEL[currentGestor.rol] || currentGestor.rol}
+                    </span>
+                    <span className="text-sm font-semibold text-gray-900">{currentGestor.nombre}</span>
+                    <span className="text-xs text-gray-500">· {currentGestor.email}</span>
+                  </div>
+                ) : (
+                  <p className="text-sm text-amber-700 italic">⚠️ Pendiente asignar Ejecutivo de Recaudos</p>
+                )}
+              </div>
+            )}
+
+            {/* Estado Cartera */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Estado Cartera</label>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${estadoMeta.cls}`}>
+                {estadoMeta.label}
+              </span>
             </div>
-          )}
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
@@ -560,12 +571,6 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                   ? formatCurrency(financial.tarifa)
                   : 'No disponible'}
               </p>
-            </div>
-            <div className="md:col-span-3 pt-3 border-t border-gray-100">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Estado Cartera</label>
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${estadoMeta.cls}`}>
-                {estadoMeta.label}
-              </span>
             </div>
           </div>
 
