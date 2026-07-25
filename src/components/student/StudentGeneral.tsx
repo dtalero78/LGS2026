@@ -275,7 +275,8 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">Datos Personales</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="space-y-4">
+          {/* Columnas 1-2: datos personales en 2 columnas */}
+          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Primer Nombre</label>
               <p className="mt-1 text-sm text-gray-900">{student.primerNombre || 'No especificado'}</p>
@@ -319,9 +320,6 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
               </div>
             )}
           </div>
-
-          {/* Columna 2: espaciador */}
-          <div className="hidden md:block" />
 
           {/* Columna 3: Franquicia SENCE, Tipo de Usuario, Plataforma */}
           <div className="space-y-4">
