@@ -34,26 +34,22 @@ export default function PersonContact({ person }: PersonContactProps) {
       {/* Primary Contact Information */}
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">📞 Información de Contacto Principal</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            {person.celular && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Celular Principal</label>
-                <p className="mt-1 text-sm text-gray-900">{person.celular}</p>
-              </div>
-            )}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {person.celular && (
             <div>
-              <label className="block text-sm font-medium text-gray-700">Teléfono Fijo</label>
-              <p className="mt-1 text-sm text-gray-900">{contactInfo.telefonoFijo}</p>
+              <label className="block text-sm font-medium text-gray-700">Celular Principal</label>
+              <p className="mt-1 text-sm text-gray-900">{person.celular}</p>
             </div>
-          </div>
-          <div className="space-y-4">
-            {person.email && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Email Principal</label>
-                <p className="mt-1 text-sm text-gray-900">{person.email}</p>
-              </div>
-            )}
+          )}
+          {person.email && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Email Principal</label>
+              <p className="mt-1 text-sm text-gray-900">{person.email}</p>
+            </div>
+          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Teléfono Fijo</label>
+            <p className="mt-1 text-sm text-gray-900">{contactInfo.telefonoFijo}</p>
           </div>
         </div>
       </div>
