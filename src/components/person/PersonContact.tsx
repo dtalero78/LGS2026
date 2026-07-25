@@ -80,7 +80,7 @@ export default function PersonContact({ person }: PersonContactProps) {
           {/* Personal Reference */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h4 className="font-semibold text-blue-800 mb-3">Referencia Personal</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-medium text-blue-700">Nombre Completo</label>
                 <p className="text-sm text-blue-900">{contactInfo.referencias.personal.nombre}</p>
@@ -99,7 +99,7 @@ export default function PersonContact({ person }: PersonContactProps) {
           {/* Family Reference */}
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
             <h4 className="font-semibold text-purple-800 mb-3">Referencia Familiar</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-medium text-purple-700">Nombre Completo</label>
                 <p className="text-sm text-purple-900">{contactInfo.referencias.familiar.nombre}</p>
