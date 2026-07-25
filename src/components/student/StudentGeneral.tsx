@@ -274,7 +274,7 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
       {/* Personal Information */}
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">Datos Personales</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Primer Nombre</label>
@@ -320,75 +320,13 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
             )}
           </div>
 
+          {/* Columna 2: espaciador */}
+          <div className="hidden md:block" />
+
+          {/* Columna 3: Franquicia SENCE, Tipo de Usuario, Plataforma */}
           <div className="space-y-4">
             <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-sm font-medium text-gray-700">Franquicia SENCE</label>
-                  {student.celular && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleSendWhatsApp}
-                      disabled={sendingWhatsApp || whatsAppSent}
-                      className={`
-                        inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md
-                        transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
-                        ${whatsAppSent
-                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                          : 'bg-green-600 text-white hover:bg-green-700 active:bg-green-800'
-                        }
-                      `}
-                    >
-                      {sendingWhatsApp ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Enviando...</span>
-                        </>
-                      ) : whatsAppSent ? (
-                        <>
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Enviado</span>
-                        </>
-                      ) : (
-                        <>
-                          <MessageCircle className="w-3.5 h-3.5" />
-                          <span>Mensaje de Bienvenida</span>
-                        </>
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSendProfileOnly}
-                      disabled={sendingProfileOnly || profileOnlySent}
-                      className={`
-                        inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md
-                        transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
-                        ${profileOnlySent
-                          ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                          : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
-                        }
-                      `}
-                    >
-                      {sendingProfileOnly ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Enviando...</span>
-                        </>
-                      ) : profileOnlySent ? (
-                        <>
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Enviado</span>
-                        </>
-                      ) : (
-                        <>
-                          <MessageCircle className="w-3.5 h-3.5" />
-                          <span>Crear solo perfil</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  )}
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Franquicia SENCE</label>
                 <div className="mt-1 flex items-center gap-2">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${sence ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-600'}`}>
                     {sence ? 'SÍ' : 'NO'}
@@ -440,6 +378,72 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
               </div>
             )}
           </div>
+
+          {/* Columna 4: botones */}
+          {student.celular && (
+            <div className="flex flex-col items-start gap-2">
+              <button
+                type="button"
+                onClick={handleSendWhatsApp}
+                disabled={sendingWhatsApp || whatsAppSent}
+                className={`
+                  inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md
+                  transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+                  ${whatsAppSent
+                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                    : 'bg-green-600 text-white hover:bg-green-700 active:bg-green-800'
+                  }
+                `}
+              >
+                {sendingWhatsApp ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Enviando...</span>
+                  </>
+                ) : whatsAppSent ? (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Enviado</span>
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>Mensaje de Bienvenida</span>
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={handleSendProfileOnly}
+                disabled={sendingProfileOnly || profileOnlySent}
+                className={`
+                  inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md
+                  transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+                  ${profileOnlySent
+                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+                  }
+                `}
+              >
+                {sendingProfileOnly ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Enviando...</span>
+                  </>
+                ) : profileOnlySent ? (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Enviado</span>
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>Crear solo perfil</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
