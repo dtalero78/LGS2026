@@ -4,6 +4,7 @@ import { query } from '@/lib/postgres';
 import { ValidationError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 import { syncFinancieroSaldo } from '@/services/pagos-titulares.service';
+import { checkBeneficiarioUnico, anularBeneficiariosViejos } from '@/lib/beneficiario-unico';
 import crypto from 'crypto';
 
 const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
@@ -145,6 +146,20 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   const tipoPlan = normalizeTipoPlan(financial?.tipoPlan);
   if (financial?.tipoPlan && !tipoPlan) {
     throw new ValidationError(`tipoPlan debe ser uno de: ${VALID_TIPO_PLAN.join(', ')}`);
+  }
+
+  // Invariante: un documento solo puede ser BENEFICIARIO en un contrato vivo.
+  // Los que serán beneficiarios en ESTE contrato: los listados + el titular si
+  // titularEsBeneficiario. Si ya es beneficiario en un contrato APROBADO vivo →
+  // ConflictError (bloquea). Si es un borrador SIN APROBAR vivo → se anula (queda
+  // válido el nuevo). FINALIZADA/anulado/inactivo se ignoran (re-matrícula).
+  // No aplica a contratos de prueba (PRB-).
+  if (!esPrueba) {
+    const benefNumeroIds: (string | null | undefined)[] = [];
+    if (titularEsBeneficiario) benefNumeroIds.push(titular.numeroId);
+    if (Array.isArray(beneficiarios)) benefNumeroIds.push(...beneficiarios.map((b: any) => b?.numeroId));
+    const { anular } = await checkBeneficiarioUnico(benefNumeroIds);
+    if (anular.length) await anularBeneficiariosViejos(anular.map(r => r._id));
   }
 
   // Generate contract number server-side to avoid race conditions.
