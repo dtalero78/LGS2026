@@ -534,11 +534,22 @@ function PanelEstudianteContent() {
               </button>
             </div>
             <div className="p-6 flex flex-col items-center text-center">
+              {/* Animación del personaje (flotar suave). Respeta prefers-reduced-motion. */}
+              <style>{`
+                @keyframes lgs-recursos-float {
+                  0%, 100% { transform: translateY(0) rotate(0deg); }
+                  50%      { transform: translateY(-12px) rotate(-1.5deg); }
+                }
+                .lgs-recursos-float { animation: lgs-recursos-float 3.2s ease-in-out infinite; transform-origin: bottom center; }
+                @media (prefers-reduced-motion: reduce) {
+                  .lgs-recursos-float { animation: none; }
+                }
+              `}</style>
               {/* Personaje LGS */}
               <img
                 src="/recursos-personaje.png"
                 alt="Personaje LGS"
-                className="w-64 sm:w-80 h-auto object-contain drop-shadow-md"
+                className="lgs-recursos-float w-64 sm:w-80 h-auto object-contain drop-shadow-md"
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
               />
               {/* Globo de diálogo */}
