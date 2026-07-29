@@ -15,6 +15,7 @@ interface PagoTitularWizardProps {
   titular: {
     _id: string
     numeroId?: string
+    contrato?: string
     plataforma?: string
     gestorRecaudo?: string | null
     primerNombre?: string
@@ -201,6 +202,7 @@ export default function PagoTitularWizard({
   // (fallback) para no dejar el dropdown vacío.
   const mediosPago = mediosPagoPara(titular.plataforma)
   const [submitting, setSubmitting] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([])
   const [showDraftBanner, setShowDraftBanner] = useState(false)
   const draftRestored = useRef(false)
@@ -373,11 +375,17 @@ export default function PagoTitularWizard({
     setForm(f => ({ ...f, documentosAdjuntos: f.documentosAdjuntos.filter((_, i) => i !== idx) }))
   }
 
-  const handleSubmit = async () => {
+  // Valida y abre el modal de confirmación (no registra todavía).
+  const handleSubmit = () => {
     if (!form.fechaPago) { toast.error('Fecha de pago es requerida'); return }
     if (toNum(form.valorPagado) <= 0) { toast.error('Valor pagado debe ser mayor a 0'); return }
     if (form.numCuota && Number(form.numCuota) < 0) { toast.error('Número de cuota no puede ser negativo'); return }
+    setShowConfirm(true)
+  }
 
+  // Registra el pago (llamado al confirmar "Seguir").
+  const doSubmit = async () => {
+    setShowConfirm(false)
     setSubmitting(true)
     try {
       await api.post('/api/postgres/pagos-titulares', {
@@ -735,6 +743,60 @@ export default function PagoTitularWizard({
           </button>
         </div>
       </div>
+
+      {/* Modal de confirmación de registro */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-bold text-gray-900">Confirmar registro de pago</h3>
+
+            <div className="text-sm text-gray-700 space-y-1.5">
+              <p><span className="text-gray-500">Titular:</span>{' '}
+                <strong>{`${titular.primerNombre || ''} ${titular.primerApellido || ''}`.trim() || '—'}</strong></p>
+              <p><span className="text-gray-500">Contrato:</span>{' '}
+                <strong>{titular.contrato || '—'}</strong></p>
+              <p><span className="text-gray-500">Cuota #:</span>{' '}
+                <strong>{form.numCuota !== '' ? form.numCuota : '—'}</strong>
+                {cuotasTotalNum > 0 && Number(form.numCuota) === cuotasTotalNum && (
+                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                    Última cuota
+                  </span>
+                )}
+              </p>
+              <p><span className="text-gray-500">Valor del pago:</span>{' '}
+                <strong>$ {toNum(form.valorPagado).toLocaleString('es-CO')}</strong></p>
+            </div>
+
+            {cuotasTotalNum > 0 && Number(form.numCuota) === cuotasTotalNum && (
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+                Esta es la <strong>última cuota</strong> del contrato ({cuotasTotalNum} de {cuotasTotalNum}).
+              </div>
+            )}
+
+            {form.cambioCartera === 'penalidad' && (
+              <div className="rounded-lg bg-orange-50 border border-orange-200 p-3 text-sm text-orange-800">
+                El valor de este pago corresponde a una <strong>penalidad</strong> y así será aplicado
+                (se registra en <em>Valor Penalidad</em> y el estado de cartera pasa a <strong>Penalidad</strong>).
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button" onClick={() => setShowConfirm(false)} disabled={submitting}
+                className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button" onClick={doSubmit} disabled={submitting}
+                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50"
+              >
+                {submitting ? 'Guardando…' : 'Seguir'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

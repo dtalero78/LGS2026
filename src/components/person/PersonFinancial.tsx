@@ -774,6 +774,7 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
           titular={{
             _id: person._id,
             numeroId: person.numeroId,
+            contrato: person.contrato,
             plataforma: person.plataforma,
             gestorRecaudo: gestorRecaudoId,
             primerNombre: person.primerNombre,
