@@ -538,7 +538,7 @@ function PanelEstudianteContent() {
               <img
                 src="/recursos-personaje.png"
                 alt="Personaje LGS"
-                className="w-48 sm:w-56 h-auto object-contain drop-shadow-md"
+                className="w-64 sm:w-80 h-auto object-contain drop-shadow-md"
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
               />
               {/* Globo de diálogo */}
