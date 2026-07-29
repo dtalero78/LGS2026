@@ -39,6 +39,11 @@ export interface PagoTitular {
   numCuota: number | null;
   valorCuota: number | null;
   valorPagado: number | null;
+  /** "Valor Penalidad". Cuando `penalidad=true`, el valor de la cuota se guarda
+   *  acá en vez de en `valorCuota`. Nullable (solo aplica a pagos de penalidad). */
+  vlrpenalidad: number | null;
+  /** true = este pago es una penalidad (además cambia el estado de cartera). */
+  penalidad: boolean;
   saldo: number | null;
   descuento: number | null;
   /** "Valor a Aplicar" = max(0, valorPagado − descuento). Lo que reduce el saldo. */
@@ -88,13 +93,15 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
          "pagoTercero", "idTercero", "fechaPago", "fechaVencimiento", "fechaReporte",
          "plan", "vlrTotalProg", "numCuota", "cuotasTotal", "valorCuota", "valorPagado",
          "saldo", "descuento", "valorAplicado", "inscripcion", "medioPago", "numeroReferencia",
-         "numeroFactura", "documentosAdjuntos", "validado", "createdBy"
+         "numeroFactura", "documentosAdjuntos", "validado", "createdBy",
+         "vlrpenalidad", "penalidad"
        ) VALUES (
          $1, $2, $3, $4, $5,
          $6, $7, $8, $9, $10,
          $11, $12, $13, $14, $15, $16,
          $17, $18, $19, $20, $21, $22,
-         $23, $24::jsonb, $25, $26
+         $23, $24::jsonb, $25, $26,
+         $27, $28
        )
        RETURNING *`,
       [
@@ -124,6 +131,8 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
         JSON.stringify(data.documentosAdjuntos ?? []),
         data.validado ?? false,
         data.createdBy ?? null,
+        data.vlrpenalidad ?? null,
+        data.penalidad ?? false,
       ]
     );
     return this.parse(row)!;

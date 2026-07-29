@@ -350,6 +350,13 @@ export const pagosTitularesService = {
     // pero el cliente normalmente la manda explícita igual a su hoy local).
     const fechaReporteDefault = new Date().toISOString().slice(0, 10);
 
+    // Penalidad: si viene marcada, el valor de la cuota NO se guarda en
+    // `valorCuota` sino en `vlrpenalidad`, y se marca `penalidad=true`.
+    // (El cambio de estado de cartera a 'penalidad' lo dispara el wizard aparte
+    //  vía /cambio-cartera — este flujo solo persiste el pago.)
+    const esPenalidad = input.penalidad === true;
+    const valorCuotaIn = input.valorCuota ?? null;
+
     const data: Partial<PagoTitular> = {
       _id: ids.payment(),
       idPeople: input.idPeople,
@@ -364,7 +371,9 @@ export const pagosTitularesService = {
       plan: input.plan ?? null,
       vlrTotalProg: input.vlrTotalProg ?? null,
       numCuota: input.numCuota ?? null,
-      valorCuota: input.valorCuota ?? null,
+      valorCuota: esPenalidad ? null : valorCuotaIn,
+      vlrpenalidad: esPenalidad ? valorCuotaIn : null,
+      penalidad: esPenalidad,
       valorPagado: input.valorPagado ?? null,
       saldo,
       descuento: input.descuento ?? 0,

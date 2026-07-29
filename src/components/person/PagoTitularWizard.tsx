@@ -399,6 +399,8 @@ export default function PagoTitularWizard({
         medioPago: form.medioPago || null,
         numeroReferencia: form.numeroReferencia || null,
         documentosAdjuntos: form.documentosAdjuntos,
+        // Penalidad: el backend guarda el valorCuota en vlrpenalidad y marca penalidad=true.
+        penalidad: form.cambioCartera === 'penalidad',
       })
 
       // Cambio de tipoCartera disparado desde la casilla en el wizard.
