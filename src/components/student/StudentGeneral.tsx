@@ -23,6 +23,8 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
   const [whatsAppError, setWhatsAppError] = useState<string | null>(null)
   const [sendingProfileOnly, setSendingProfileOnly] = useState(false)
   const [profileOnlySent, setProfileOnlySent] = useState(false)
+  const [sendingReagendar, setSendingReagendar] = useState(false)
+  const [reagendarSent, setReagendarSent] = useState(false)
   const [showDocuments, setShowDocuments] = useState(false)
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([])
   const [editingPassword, setEditingPassword] = useState(false)
@@ -153,7 +155,15 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
     }
   }
 
+  // Los 3 botones (Crea Perfil con Welcome / Crear solo perfil / Reagendar Welcome)
+  // están pensados para nivel WELCOME. Si el usuario no lo está, pedir confirmación.
+  const confirmIfNotWelcome = (): boolean => {
+    if (String(student.nivel || '').toUpperCase() === 'WELCOME') return true
+    return window.confirm('El usuario no está en nivel WELCOME. ¿Está seguro de enviar el mensaje?')
+  }
+
   const handleSendWhatsApp = async () => {
+    if (!confirmIfNotWelcome()) return
     if (!student.celular && !student.telefono) {
       setWhatsAppError('Este estudiante no tiene número de teléfono registrado')
       setTimeout(() => setWhatsAppError(null), 5000)
@@ -200,6 +210,7 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
   }
 
   const handleSendProfileOnly = async () => {
+    if (!confirmIfNotWelcome()) return
     if (!student.celular && !student.telefono) {
       setWhatsAppError('Este estudiante no tiene número de teléfono registrado')
       setTimeout(() => setWhatsAppError(null), 5000)
@@ -238,6 +249,48 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
       setTimeout(() => setWhatsAppError(null), 5000)
     } finally {
       setSendingProfileOnly(false)
+    }
+  }
+
+  const handleSendReagendar = async () => {
+    if (!confirmIfNotWelcome()) return
+    if (!student.celular && !student.telefono) {
+      setWhatsAppError('Este estudiante no tiene número de teléfono registrado')
+      setTimeout(() => setWhatsAppError(null), 5000)
+      return
+    }
+
+    setSendingReagendar(true)
+    setWhatsAppError(null)
+
+    try {
+      const phoneNumber = student.celular || student.telefono
+      const fullName = `${student.primerNombre} ${student.segundoNombre || ''} ${student.primerApellido} ${student.segundoApellido || ''}`.trim()
+
+      const response = await fetch('/api/wix/sendReagendarWhatsApp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          celular: phoneNumber,
+          beneficiarioId: student._id,
+          nombre: fullName,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setReagendarSent(true)
+        toast.success('WhatsApp de reagendar Welcome enviado')
+        setTimeout(() => setReagendarSent(false), 3000)
+      } else {
+        throw new Error(data.error || 'Error al enviar WhatsApp')
+      }
+    } catch (error: any) {
+      setWhatsAppError(error.message || 'Error al enviar mensaje de WhatsApp')
+      setTimeout(() => setWhatsAppError(null), 5000)
+    } finally {
+      setSendingReagendar(false)
     }
   }
 
@@ -406,7 +459,7 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
                 ) : (
                   <>
                     <MessageCircle className="w-3.5 h-3.5" />
-                    <span>Mensaje de Bienvenida</span>
+                    <span>Crea Perfil con Welcome</span>
                   </>
                 )}
               </button>
@@ -437,6 +490,36 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
                   <>
                     <MessageCircle className="w-3.5 h-3.5" />
                     <span>Crear solo perfil</span>
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={handleSendReagendar}
+                disabled={sendingReagendar || reagendarSent}
+                className={`
+                  inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md
+                  transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+                  ${reagendarSent
+                    ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                    : 'bg-purple-600 text-white hover:bg-purple-700 active:bg-purple-800'
+                  }
+                `}
+              >
+                {sendingReagendar ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Enviando...</span>
+                  </>
+                ) : reagendarSent ? (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Enviado</span>
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>Reagendar Welcome</span>
                   </>
                 )}
               </button>

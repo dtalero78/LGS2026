@@ -26,6 +26,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/contrato') ||
     pathname.startsWith('/nuevo-usuario') ||
     pathname.startsWith('/nuevo-advisor') ||
+    pathname.startsWith('/reagendar-welcome') ||
     pathname.includes('.')
   ) {
     return NextResponse.next()
