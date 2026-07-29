@@ -34,8 +34,13 @@ export function buildDynamicUpdate(
   const values: any[] = [];
   let paramIndex = 1;
 
+  // Dedup: un allowedFields con duplicados generaría `SET "x"=$1, "x"=$2`
+  // → error de Postgres "multiple assignments to same column x".
+  const seen = new Set<string>();
   for (const field of allowedFields) {
+    if (seen.has(field)) continue;
     if (body[field] !== undefined) {
+      seen.add(field);
       updates.push(`"${field}" = $${paramIndex}`);
       values.push(body[field]);
       paramIndex++;

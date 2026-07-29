@@ -406,7 +406,9 @@ export const pagosTitularesService = {
     const saldo = computeSaldo(next.valorCuota, next.valorPagado, next.descuento);
     const payload = { ...body, saldo };
 
-    const updated = await PagosTitularesRepository.updateFields(id, payload, [...UPDATABLE_FIELDS, 'saldo']);
+    // UPDATABLE_FIELDS ya incluye 'saldo' — NO volver a agregarlo (causaría
+    // "multiple assignments to same column saldo" en el UPDATE).
+    const updated = await PagosTitularesRepository.updateFields(id, payload, UPDATABLE_FIELDS);
     if (!updated) throw new ValidationError('No se pudieron aplicar los cambios');
     return updated;
   },
