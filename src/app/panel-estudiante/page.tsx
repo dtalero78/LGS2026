@@ -8,6 +8,7 @@ import {
   VideoCameraIcon,
   XMarkIcon,
   UserCircleIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline'
 import { useQuery } from 'react-query'
 import {
@@ -48,6 +49,7 @@ function PanelEstudianteContent() {
   const [videoErr, setVideoErr] = useState(false)
   const [showInstructivos, setShowInstructivos] = useState(false)
   const [showPerfil, setShowPerfil] = useState(false)
+  const [showRecursos, setShowRecursos] = useState(false)
 
   // Instructivos from API
   const instructivosQuery = useQuery(
@@ -175,6 +177,13 @@ function PanelEstudianteContent() {
           >
             <BookOpenIcon className="h-4 w-4" />
             Material
+          </button>
+          <button
+            onClick={() => setShowRecursos(true)}
+            className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1.5"
+          >
+            <SparklesIcon className="h-4 w-4" />
+            Recursos
           </button>
           <button
             onClick={() => setShowHistory(true)}
@@ -503,6 +512,58 @@ function PanelEstudianteContent() {
                 data={historyQuery.data}
                 isLoading={historyQuery.isLoading}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recursos Modal */}
+      {showRecursos && (
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between rounded-t-2xl">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <SparklesIcon className="h-5 w-5 text-primary-600" />
+                Recursos
+              </h2>
+              <button
+                onClick={() => setShowRecursos(false)}
+                className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6 flex flex-col items-center text-center">
+              {/* Personaje LGS */}
+              <img
+                src="/recursos-personaje.png"
+                alt="Personaje LGS"
+                className="w-48 sm:w-56 h-auto object-contain drop-shadow-md"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+              />
+              {/* Globo de diálogo */}
+              <div className="relative mt-4 max-w-md">
+                <div className="bg-primary-50 border border-primary-200 rounded-2xl px-5 py-4">
+                  <p className="text-base font-semibold text-primary-800">
+                    ¡Estamos trabajando para ti! 🚀
+                  </p>
+                  <p className="mt-2 text-sm text-gray-700 leading-relaxed">
+                    Estamos preparando más <span className="font-semibold">recursos</span> para
+                    acompañarte en tu proceso de aprendizaje del inglés. ¡Muy pronto tendrás nuevas
+                    herramientas para practicar y avanzar más rápido!
+                  </p>
+                  <p className="mt-2 text-sm font-medium text-primary-700">
+                    Mientras tanto, sigue agendando tus sesiones y clubes. ¡Tú puedes! 💪
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRecursos(false)}
+                className="mt-6 px-5 py-2.5 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-colors"
+              >
+                ¡Entendido!
+              </button>
             </div>
           </div>
         </div>
