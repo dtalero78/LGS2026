@@ -54,6 +54,8 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     genero: ''
   })
   const [currentBeneficiaries, setCurrentBeneficiaries] = useState<Beneficiary[]>(beneficiaries)
+  // Nombre del beneficiario sin ficha académica (para el modal informativo).
+  const [sinAcademico, setSinAcademico] = useState<string | null>(null)
   const [approvingBeneficiaries, setApprovingBeneficiaries] = useState<Set<string>>(new Set())
   const [processStatus, setProcessStatus] = useState<Record<string, string>>({})
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -907,9 +909,20 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3">
-                    <h4 className="font-medium text-gray-900">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (beneficiary.existeEnAcademica && beneficiary.academicaId) {
+                          window.open(`/student/${beneficiary.academicaId}`, '_blank', 'noopener,noreferrer')
+                        } else {
+                          setSinAcademico(`${beneficiary.nombre} ${beneficiary.apellido}`.trim())
+                        }
+                      }}
+                      title="Ver perfil académico del beneficiario"
+                      className="font-medium text-gray-900 hover:text-blue-600 hover:underline text-left"
+                    >
                       {beneficiary.nombre} {beneficiary.apellido}
-                    </h4>
+                    </button>
                     <span className={`badge ${getEstadoBadgeClass(beneficiary.estado)}`}>
                       {beneficiary.estado}
                     </span>
@@ -1713,6 +1726,26 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
           </div>
         )
       })()}
+
+      {/* Modal: beneficiario sin ficha académica */}
+      {sinAcademico && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 text-center space-y-4">
+            <div className="text-4xl">🎓</div>
+            <h3 className="text-lg font-bold text-gray-900">Sin perfil académico</h3>
+            <p className="text-sm text-gray-600">
+              <strong>{sinAcademico}</strong> aún no está con perfil académico.
+            </p>
+            <button
+              type="button"
+              onClick={() => setSinAcademico(null)}
+              className="w-full px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   )

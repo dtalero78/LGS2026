@@ -210,6 +210,10 @@ export interface Beneficiary {
   fechaCreacion: string
   whatsappSent?: boolean
   estadoInactivo?: boolean
+  nivel?: string
+  /** ACADEMICA._id si el beneficiario ya tiene ficha académica (null si no). */
+  academicaId?: string | null
+  existeEnAcademica?: boolean
 }
 
 // Comment types
