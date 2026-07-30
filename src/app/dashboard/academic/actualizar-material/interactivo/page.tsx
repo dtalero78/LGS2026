@@ -265,9 +265,12 @@ function Content() {
       </div>
 
       {/* Fase 2 — generar / regenerar ejercicios por step */}
-      <details className="bg-white border border-amber-200 rounded-xl p-4 mb-6" open>
-        <summary className="cursor-pointer font-semibold text-amber-900 flex items-center gap-2">
-          <PencilSquareIcon className="h-5 w-5 text-amber-600" /> Ejercicios de práctica — generar / regenerar
+      <details className="group bg-white border border-amber-200 rounded-xl p-4 mb-6" open>
+        <summary className="cursor-pointer font-semibold text-amber-900 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
+          <span className="flex items-center gap-2">
+            <PencilSquareIcon className="h-5 w-5 text-amber-600" /> Ejercicios de práctica — generar / regenerar
+          </span>
+          <ChevronDownIcon className="h-4 w-4 text-gray-500 transition-transform group-open:rotate-180" />
         </summary>
         <div className="mt-3">
           <p className="text-xs text-gray-600 mb-3">
@@ -434,9 +437,10 @@ function SeccionStepPaginas() {
   }
 
   return (
-    <details className="bg-white border border-indigo-200 rounded-xl p-4 mb-6">
-      <summary className="cursor-pointer font-semibold text-indigo-900 flex items-center gap-2">
-        📍 Página de inicio por Step (botón &ldquo;Ir a mi Step&rdquo;)
+    <details className="group bg-white border border-indigo-200 rounded-xl p-4 mb-6">
+      <summary className="cursor-pointer font-semibold text-indigo-900 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center gap-2">📍 Página de inicio por Step (botón &ldquo;Ir a mi Step&rdquo;)</span>
+        <ChevronDownIcon className="h-4 w-4 text-gray-500 transition-transform group-open:rotate-180" />
       </summary>
       <div className="mt-3">
         <p className="text-xs text-gray-600 mb-3">
