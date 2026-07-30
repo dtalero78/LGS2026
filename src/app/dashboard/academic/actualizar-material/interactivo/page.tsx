@@ -34,7 +34,6 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
   PencilSquareIcon,
-  GlobeAltIcon,
 } from '@heroicons/react/24/outline'
 
 /** Extrae un título sugerido de un nombre de archivo:
@@ -116,13 +115,11 @@ export default function ActualizarMaterialInteractivoPage() {
 function Content() {
   const [libros, setLibros] = useState<LibroAdmin[]>([])
   const [featureActive, setFeatureActive] = useState(false)
-  const [clasicoActive, setClasicoActive] = useState(true)
   const [ejerciciosActive, setEjerciciosActive] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [expandedCodigo, setExpandedCodigo] = useState<string | null>(null)
   const [savingFlag, setSavingFlag] = useState(false)
-  const [savingClasico, setSavingClasico] = useState(false)
   const [savingEjercicios, setSavingEjercicios] = useState(false)
   const [ejercicioSets, setEjercicioSets] = useState<{ nivel: string; step: string; count: number; updatedAt: string }[]>([])
   const [genNivel, setGenNivel] = useState('')
@@ -136,7 +133,6 @@ function Content() {
       const j = await jsonFetchRetry('/api/admin/libros-interactivos')
       setLibros(j.libros || [])
       setFeatureActive(Boolean(j.featureActive))
-      setClasicoActive(j.clasicoActive !== false)
       setEjerciciosActive(Boolean(j.ejerciciosActive))
       loadEjercicioSets()
     } catch (e: any) {
@@ -164,21 +160,6 @@ function Content() {
     }
   }
 
-  const toggleClasico = async () => {
-    setSavingClasico(true)
-    try {
-      const j = await jsonFetchRetry('/api/admin/libros-interactivos/feature-flag', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ active: !clasicoActive, flag: 'clasico' }),
-      })
-      setClasicoActive(j.active)
-    } catch (e: any) {
-      alert(e?.message || 'Error')
-    } finally {
-      setSavingClasico(false)
-    }
-  }
 
   const loadEjercicioSets = async () => {
     try {
@@ -240,8 +221,8 @@ function Content() {
           <div className="flex-1">
             <p className={`text-sm font-semibold ${featureActive ? 'text-emerald-900' : 'text-amber-900'}`}>
               {featureActive
-                ? 'Feature ACTIVO — los estudiantes ven el botón nuevo (LGS) además del clásico (Wix).'
-                : 'Feature INACTIVO — los estudiantes solo ven el botón clásico (Wix).'}
+                ? 'Feature ACTIVO — los estudiantes ven el Material Interactivo (LGS).'
+                : 'Feature INACTIVO — los estudiantes no ven el Material Interactivo.'}
             </p>
             <p className="text-xs text-gray-700 mt-0.5">
               Recomendación: primero <strong>prueba las direcciones</strong> internas del visor (`/panel-estudiante/material-interactivo/[nivel]`) con tu cuenta, después actívalo para todos.
@@ -253,30 +234,6 @@ function Content() {
             className={`px-4 py-2 rounded-lg text-sm font-semibold shrink-0 ${featureActive ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-emerald-600 hover:bg-emerald-700 text-white'} disabled:opacity-50`}
           >
             {savingFlag ? '...' : featureActive ? 'Desactivar' : 'Activar'}
-          </button>
-        </div>
-      </div>
-
-      {/* Botón clásico (Wix) — apagable de forma independiente */}
-      <div className={`rounded-xl border-l-4 p-4 mb-6 ${clasicoActive ? 'bg-indigo-50 border-indigo-500' : 'bg-gray-50 border-gray-400'}`}>
-        <div className="flex items-start gap-3">
-          <GlobeAltIcon className={`h-6 w-6 flex-shrink-0 ${clasicoActive ? 'text-indigo-600' : 'text-gray-500'}`} />
-          <div className="flex-1">
-            <p className={`text-sm font-semibold ${clasicoActive ? 'text-indigo-900' : 'text-gray-700'}`}>
-              {clasicoActive
-                ? 'Botón clásico (Wix) VISIBLE — los estudiantes lo ven junto al nuevo.'
-                : 'Botón clásico (Wix) OCULTO — los estudiantes solo ven el material interactivo nuevo.'}
-            </p>
-            <p className="text-xs text-gray-700 mt-0.5">
-              Apágalo cuando el material interactivo nuevo esté validado. Red de seguridad: en niveles sin libro nuevo cargado (ej. IELTS/B2FIRST/TOEFL) el botón clásico se sigue mostrando para no dejar al estudiante sin material.
-            </p>
-          </div>
-          <button
-            onClick={toggleClasico}
-            disabled={savingClasico}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold shrink-0 ${clasicoActive ? 'bg-gray-600 hover:bg-gray-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'} disabled:opacity-50`}
-          >
-            {savingClasico ? '...' : clasicoActive ? 'Apagar clásico' : 'Encender clásico'}
           </button>
         </div>
       </div>

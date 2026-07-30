@@ -4,29 +4,12 @@ import { useQuery } from 'react-query'
 import {
   ArrowDownTrayIcon,
   BookOpenIcon,
-  GlobeAltIcon,
   SparklesIcon,
   PencilSquareIcon,
 } from '@heroicons/react/24/outline'
 
-const INTERACTIVE_MATERIAL_URLS: Record<string, string> = {
-  'BN1': 'https://www.lgsplataforma.com/material-bn1',
-  'BN2': 'https://www.lgsplataforma.com/material-bn2',
-  'BN3': 'https://www.lgsplataforma.com/material-bn3',
-  'P1':  'https://www.lgsplataforma.com/material-p1',
-  'P2':  'https://www.lgsplataforma.com/material-p2',
-  'P3':  'https://www.lgsplataforma.com/material-p3',
-  'F1':  'https://www.lgsplataforma.com/material-f1',
-  'F2':  'https://www.lgsplataforma.com/material-f2',
-  'F3':  'https://www.lgsplataforma.com/material-f3',
-}
-
 function normalizeNivelCode(nivel: string): string {
   return (nivel || '').replace(/\s*JUMP\s*/i, '').trim().toUpperCase()
-}
-
-function getInteractiveMaterialUrl(nivel: string): string | null {
-  return INTERACTIVE_MATERIAL_URLS[normalizeNivelCode(nivel)] || null
 }
 
 interface MaterialsListProps {
@@ -58,12 +41,6 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
     }
   )
   const v2Available: boolean = Boolean(libroData?.available)
-  // Botón clásico (Wix): visible por defecto. El admin puede apagarlo
-  // (material_interactivo_clasico_activo). Red de seguridad: si el visor v2 NO
-  // está disponible para el nivel, se muestra igual para no dejar al estudiante
-  // sin material.
-  const clasicoActivo: boolean = libroData?.clasicoActivo !== false
-  const showClassic = clasicoActivo || !v2Available
   // Fase 2 — ejercicios de práctica (flag independiente).
   const ejerciciosActivo: boolean = Boolean(libroData?.ejerciciosActivo)
 
@@ -100,7 +77,6 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
     }
   }
 
-  const classicUrl = getInteractiveMaterialUrl(nivel)
   // Para WELCOME no se muestra material ni ejercicios.
   const shownMaterials = isWelcome ? [] : allMaterials
 
@@ -138,26 +114,6 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-amber-900">Ejercicios de práctica</p>
             <p className="text-xs text-amber-600">Practica tu step actual — sin nota</p>
-          </div>
-        </a>
-      )}
-
-      {/* Wix (clásico) — visible si el flag está ON o si el v2 no está disponible */}
-      {classicUrl && showClassic && !isWelcome && (
-        <a
-          href={classicUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-3 p-3 mb-3 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors group border border-indigo-200"
-        >
-          <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-200">
-            <GlobeAltIcon className="h-5 w-5 text-indigo-600" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-indigo-900">
-              {v2Available ? 'Material Interactivo (clásico)' : 'Material Interactivo'}
-            </p>
-            <p className="text-xs text-indigo-500">{nivel}</p>
           </div>
         </a>
       )}
