@@ -64,8 +64,8 @@ export default function MaterialInteractivoPage() {
 
   const [meta, setMeta] = useState<Metadata | null>(null)
   const [page, setPage] = useState(1)
-  // Step de la sesión de esta semana + su página local (botón "Ir a mi Step").
-  const [weekStep, setWeekStep] = useState<{ paginaLocal: number; step: string } | null>(null)
+  // Step para el botón "Ir a mi Step": sesión de la semana o step actual (source).
+  const [weekStep, setWeekStep] = useState<{ paginaLocal: number; step: string; source: 'semana' | 'actual' } | null>(null)
   const [imageCache, setImageCache] = useState<Record<number, string>>({})
   const [audios, setAudios] = useState<AudioPlayable[]>([])
   const [zoomed, setZoomed] = useState(false)
@@ -176,7 +176,11 @@ export default function MaterialInteractivoPage() {
       .then(j => {
         if (cancelled || !j) return
         if (j.available && j.paginaLocal && j.nivel && String(j.nivel).toUpperCase() === nivel) {
-          setWeekStep({ paginaLocal: Number(j.paginaLocal), step: String(j.step || '') })
+          setWeekStep({
+            paginaLocal: Number(j.paginaLocal),
+            step: String(j.step || ''),
+            source: j.source === 'actual' ? 'actual' : 'semana',
+          })
         } else {
           setWeekStep(null)
         }
@@ -299,10 +303,12 @@ export default function MaterialInteractivoPage() {
             <button
               type="button"
               onClick={() => setPage(Math.min(total, Math.max(1, weekStep.paginaLocal)))}
-              title={`Ir a ${weekStep.step} (tu sesión de esta semana)`}
+              title={weekStep.source === 'semana'
+                ? `Ir a ${weekStep.step} (tu sesión de esta semana)`
+                : `Ir a ${weekStep.step} (tu step actual)`}
               className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
             >
-              📍 Ir a mi Step de esta semana
+              📍 {weekStep.source === 'semana' ? 'Ir a mi Step de esta semana' : 'Ir a mi Step'}
             </button>
           )}
           <div className="text-sm truncate">

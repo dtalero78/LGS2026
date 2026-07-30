@@ -43,14 +43,24 @@ export const GET = handlerWithAuth(async (_req, _ctx, session) => {
     [academicaId, tz]
   );
 
-  if (!row || !row.nivel || !row.step) {
-    return successResponse({ available: false, reason: 'no-session' });
+  // Fuente del step: la sesión de la semana si existe; si no, el step ACTUAL
+  // del estudiante (ACADEMICA.step) para que el botón no se oculte.
+  let nivel = row?.nivel ?? null;
+  let step = row?.step ?? null;
+  let source: 'semana' | 'actual' = 'semana';
+  if (!nivel || !step) {
+    nivel = (student as any).nivel ?? null;
+    step = (student as any).step ?? null;
+    source = 'actual';
+  }
+  if (!nivel || !step) {
+    return successResponse({ available: false, reason: 'no-step' });
   }
 
-  const paginaLocal = await NivelLibroBindingRepository.getStepPagina(row.nivel, row.step);
+  const paginaLocal = await NivelLibroBindingRepository.getStepPagina(nivel, step);
   if (!paginaLocal || paginaLocal < 1) {
-    return successResponse({ available: false, reason: 'no-page', nivel: row.nivel, step: row.step });
+    return successResponse({ available: false, reason: 'no-page', nivel, step });
   }
 
-  return successResponse({ available: true, nivel: row.nivel, step: row.step, paginaLocal });
+  return successResponse({ available: true, nivel, step, paginaLocal, source });
 });
