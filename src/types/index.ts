@@ -214,6 +214,8 @@ export interface Beneficiary {
   /** ACADEMICA._id si el beneficiario ya tiene ficha académica (null si no). */
   academicaId?: string | null
   existeEnAcademica?: boolean
+  /** Nivel real en ACADEMICA. WELCOME = aún no es usuario académico (solo lo es en BN1+). */
+  academicaNivel?: string | null
 }
 
 // Comment types

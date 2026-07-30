@@ -54,8 +54,9 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     genero: ''
   })
   const [currentBeneficiaries, setCurrentBeneficiaries] = useState<Beneficiary[]>(beneficiaries)
-  // Nombre del beneficiario sin ficha académica (para el modal informativo).
-  const [sinAcademico, setSinAcademico] = useState<string | null>(null)
+  // Beneficiario que aún no es usuario académico (para el modal informativo).
+  // enWelcome = tiene ficha pero está en WELCOME (aún no pasa a BN1).
+  const [sinAcademico, setSinAcademico] = useState<{ nombre: string; enWelcome: boolean } | null>(null)
   const [approvingBeneficiaries, setApprovingBeneficiaries] = useState<Set<string>>(new Set())
   const [processStatus, setProcessStatus] = useState<Record<string, string>>({})
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -912,10 +913,16 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                     <button
                       type="button"
                       onClick={() => {
-                        if (beneficiary.existeEnAcademica && beneficiary.academicaId) {
+                        const nivelAcad = String(beneficiary.academicaNivel || '').toUpperCase()
+                        // Es usuario académico solo si tiene ficha Y ya pasó a un nivel real (no WELCOME).
+                        const esAcademico = !!beneficiary.existeEnAcademica && !!beneficiary.academicaId && !!nivelAcad && nivelAcad !== 'WELCOME'
+                        if (esAcademico) {
                           window.open(`/student/${beneficiary.academicaId}`, '_blank', 'noopener,noreferrer')
                         } else {
-                          setSinAcademico(`${beneficiary.nombre} ${beneficiary.apellido}`.trim())
+                          setSinAcademico({
+                            nombre: `${beneficiary.nombre} ${beneficiary.apellido}`.trim(),
+                            enWelcome: nivelAcad === 'WELCOME',
+                          })
                         }
                       }}
                       title="Ver perfil académico del beneficiario"
@@ -1727,14 +1734,18 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         )
       })()}
 
-      {/* Modal: beneficiario sin ficha académica */}
+      {/* Modal: beneficiario que aún no es usuario académico */}
       {sinAcademico && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 text-center space-y-4">
             <div className="text-4xl">🎓</div>
-            <h3 className="text-lg font-bold text-gray-900">Sin perfil académico</h3>
+            <h3 className="text-lg font-bold text-gray-900">Aún no es usuario académico</h3>
             <p className="text-sm text-gray-600">
-              <strong>{sinAcademico}</strong> aún no está con perfil académico.
+              {sinAcademico.enWelcome ? (
+                <><strong>{sinAcademico.nombre}</strong> está en <strong>WELCOME</strong>. Será usuario académico cuando pase a <strong>BN1</strong> (tras asistir a su sesión Welcome).</>
+              ) : (
+                <><strong>{sinAcademico.nombre}</strong> aún no está con perfil académico.</>
+              )}
             </p>
             <button
               type="button"

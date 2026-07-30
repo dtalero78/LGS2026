@@ -95,10 +95,10 @@ export const GET = handler(async (
         [parsedPerson.contrato]
       );
 
-      // Check if each beneficiary exists in ACADEMICA
+      // Check if each beneficiary exists in ACADEMICA (+ su nivel real).
       for (const ben of beneficiaries) {
-        const academicCheck = await queryOne(
-          `SELECT "_id" FROM "ACADEMICA" WHERE "numeroId" = $1 LIMIT 1`,
+        const academicCheck = await queryOne<{ _id: string; nivel: string | null }>(
+          `SELECT "_id", "nivel" FROM "ACADEMICA" WHERE "numeroId" = $1 LIMIT 1`,
           [ben.numeroId]
         );
 
@@ -120,6 +120,8 @@ export const GET = handler(async (
           estadoInactivo: ben.estadoInactivo || false,
           aprobacion: ben.aprobacion,
           nivel: ben.nivel,
+          // Nivel real en ACADEMICA (WELCOME = aún no es usuario académico; BN1+ sí).
+          academicaNivel: academicCheck?.nivel ?? null,
           existeEnAcademica: !!academicCheck,
           _createdDate: ben._createdDate,
         });
