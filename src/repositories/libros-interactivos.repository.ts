@@ -295,6 +295,40 @@ class NivelLibroBindingRepositoryClass {
   }
 
   /**
+   * Steps de un nivel con su `libroPaginaStep` (página LOCAL del nivel donde
+   * empieza ese step en el libro interactivo). Ordenados por número de step.
+   */
+  async getStepsForNivel(code: string): Promise<Array<{ step: string; libroPaginaStep: number | null }>> {
+    return queryMany<{ step: string; libroPaginaStep: number | null }>(
+      `SELECT "step", "libroPaginaStep"
+         FROM "NIVELES"
+        WHERE "code" = $1 AND "step" IS NOT NULL
+        ORDER BY NULLIF(regexp_replace("step", '\\D', '', 'g'), '')::int NULLS LAST, "step" ASC`,
+      [code]
+    );
+  }
+
+  /** Página LOCAL de inicio de un step específico (para el botón "Ir a mi Step"). */
+  async getStepPagina(code: string, step: string): Promise<number | null> {
+    const row = await queryOne<{ libroPaginaStep: number | null }>(
+      `SELECT "libroPaginaStep" FROM "NIVELES" WHERE "code" = $1 AND "step" = $2 LIMIT 1`,
+      [code, step]
+    );
+    return row?.libroPaginaStep ?? null;
+  }
+
+  /** Setea la página LOCAL de inicio de un step. `pagina=null` limpia el valor. */
+  async setStepPagina(code: string, step: string, pagina: number | null): Promise<number> {
+    const r = await query(
+      `UPDATE "NIVELES"
+          SET "libroPaginaStep" = $1, "_updatedDate" = NOW()
+        WHERE "code" = $2 AND "step" = $3`,
+      [pagina, code, step]
+    );
+    return r.rowCount ?? 0;
+  }
+
+  /**
    * Setea/actualiza el binding de un nivel.
    * Afecta TODAS las filas de NIVELES con ese code (un nivel puede tener varias filas, una por step).
    */

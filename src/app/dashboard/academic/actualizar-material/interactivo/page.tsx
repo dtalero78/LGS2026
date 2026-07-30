@@ -362,6 +362,9 @@ function Content() {
         </div>
       </details>
 
+      {/* Páginas de inicio por Step — alimenta el botón "Ir a mi Step de esta semana" del visor */}
+      <SeccionStepPaginas />
+
       {/* Instructivo subida PDF */}
       <details className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-6 text-sm">
         <summary className="cursor-pointer font-semibold text-gray-800">📘 ¿Cómo subir un PDF nuevo?</summary>
@@ -433,6 +436,97 @@ function LibroCard({ libro, expanded, onToggle, onReload }: {
         </div>
       )}
     </div>
+  )
+}
+
+function SeccionStepPaginas() {
+  const [nivel, setNivel] = useState('')
+  const [steps, setSteps] = useState<{ step: string; libroPaginaStep: number | null }[]>([])
+  const [loadedNivel, setLoadedNivel] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const load = async () => {
+    const n = nivel.toUpperCase().trim()
+    if (!n) return
+    setBusy(true)
+    try {
+      const r = await fetch(`/api/admin/libros-interactivos/step-paginas?nivel=${encodeURIComponent(n)}`)
+      const j = await r.json()
+      if (!r.ok || !j.success) throw new Error(j?.error || `Error ${r.status}`)
+      setSteps((j.steps || []).map((s: any) => ({ step: s.step, libroPaginaStep: s.libroPaginaStep ?? null })))
+      setLoadedNivel(n)
+    } catch (e: any) { alert(e?.message || 'Error') } finally { setBusy(false) }
+  }
+
+  const save = async (step: string, pagina: number | null) => {
+    if (!loadedNivel) return
+    setBusy(true)
+    try {
+      const r = await fetch('/api/admin/libros-interactivos/step-paginas', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nivelCode: loadedNivel, step, pagina }),
+      })
+      const j = await r.json()
+      if (!r.ok || !j.success) throw new Error(j?.error || `Error ${r.status}`)
+    } catch (e: any) { alert(e?.message || 'Error') } finally { setBusy(false) }
+  }
+
+  return (
+    <details className="bg-white border border-indigo-200 rounded-xl p-4 mb-6">
+      <summary className="cursor-pointer font-semibold text-indigo-900 flex items-center gap-2">
+        📍 Página de inicio por Step (botón &ldquo;Ir a mi Step&rdquo;)
+      </summary>
+      <div className="mt-3">
+        <p className="text-xs text-gray-600 mb-3">
+          Define en qué <strong>página del visor</strong> (la que ve el estudiante, 1…N del nivel)
+          empieza cada Step. El botón &ldquo;Ir a mi Step de esta semana&rdquo; usa esta página.
+          Deja vacío para no configurar (el botón no aparecerá para ese step).
+        </p>
+        <div className="flex flex-wrap items-end gap-2 mb-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Nivel</label>
+            <input value={nivel} onChange={e => setNivel(e.target.value.toUpperCase())}
+              placeholder="BN1" className="px-3 py-2 border rounded-lg text-sm w-28" />
+          </div>
+          <button type="button" onClick={load} disabled={!nivel.trim() || busy}
+            className="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50">
+            {busy ? '...' : 'Cargar steps'}
+          </button>
+        </div>
+
+        {loadedNivel && (
+          steps.length === 0 ? (
+            <p className="text-xs text-gray-400">El nivel {loadedNivel} no tiene steps.</p>
+          ) : (
+            <div className="border border-gray-100 rounded-lg divide-y">
+              {steps.map((s, idx) => (
+                <div key={s.step} className="flex items-center justify-between px-3 py-2 text-sm gap-3">
+                  <span className="font-medium text-gray-800 w-28">{s.step}</span>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-gray-500">Página</label>
+                    <input
+                      type="number" min={1}
+                      value={s.libroPaginaStep ?? ''}
+                      onChange={e => {
+                        const v = e.target.value === '' ? null : (parseInt(e.target.value, 10) || null)
+                        const next = [...steps]; next[idx] = { ...s, libroPaginaStep: v }; setSteps(next)
+                      }}
+                      className="w-24 border border-gray-300 rounded px-2 py-1 text-right tabular-nums"
+                      placeholder="—"
+                    />
+                    <button type="button" onClick={() => save(s.step, s.libroPaginaStep)} disabled={busy}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50">
+                      Guardar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        )}
+      </div>
+    </details>
   )
 }
 

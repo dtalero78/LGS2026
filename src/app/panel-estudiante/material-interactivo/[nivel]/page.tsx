@@ -64,6 +64,8 @@ export default function MaterialInteractivoPage() {
 
   const [meta, setMeta] = useState<Metadata | null>(null)
   const [page, setPage] = useState(1)
+  // Step de la sesión de esta semana + su página local (botón "Ir a mi Step").
+  const [weekStep, setWeekStep] = useState<{ paginaLocal: number; step: string } | null>(null)
   const [imageCache, setImageCache] = useState<Record<number, string>>({})
   const [audios, setAudios] = useState<AudioPlayable[]>([])
   const [zoomed, setZoomed] = useState(false)
@@ -163,6 +165,25 @@ export default function MaterialInteractivoPage() {
 
   // Cada página nueva arranca en modo "ajustar" (sin zoom).
   useEffect(() => { setZoomed(false) }, [page])
+
+  // Step de la sesión de esta semana → página local (botón "Ir a mi Step").
+  // Solo en modo estudiante (en preview no hay sesión del propio usuario).
+  useEffect(() => {
+    if (isPreview) return
+    let cancelled = false
+    fetch('/api/postgres/panel-estudiante/material-step-semana', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(j => {
+        if (cancelled || !j) return
+        if (j.available && j.paginaLocal && j.nivel && String(j.nivel).toUpperCase() === nivel) {
+          setWeekStep({ paginaLocal: Number(j.paginaLocal), step: String(j.step || '') })
+        } else {
+          setWeekStep(null)
+        }
+      })
+      .catch(() => { if (!cancelled) setWeekStep(null) })
+    return () => { cancelled = true }
+  }, [isPreview, nivel])
 
   // 4) Teclado: ← → para navegar, Esc para volver
   useEffect(() => {
@@ -273,9 +294,21 @@ export default function MaterialInteractivoPage() {
         >
           <ArrowLeftIcon className="h-4 w-4" /> Volver
         </button>
-        <div className="text-sm">
-          <span className="font-semibold text-gray-800">{meta.libroTitulo}</span>
-          <span className="text-gray-500 ml-2">— {nivel}</span>
+        <div className="flex items-center gap-3 min-w-0">
+          {weekStep && (
+            <button
+              type="button"
+              onClick={() => setPage(Math.min(total, Math.max(1, weekStep.paginaLocal)))}
+              title={`Ir a ${weekStep.step} (tu sesión de esta semana)`}
+              className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+            >
+              📍 Ir a mi Step de esta semana
+            </button>
+          )}
+          <div className="text-sm truncate">
+            <span className="font-semibold text-gray-800">{meta.libroTitulo}</span>
+            <span className="text-gray-500 ml-2">— {nivel}</span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button
