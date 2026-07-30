@@ -34,6 +34,7 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
   PencilSquareIcon,
+  ChevronDownIcon,
 } from '@heroicons/react/24/outline'
 
 /** Extrae un título sugerido de un nombre de archivo:
@@ -383,7 +384,10 @@ function LibroCard({ libro, expanded, onToggle, onReload }: {
               : <>{libro.totalPaginas} páginas · {libro.audios.length} audios · {libro.niveles.length} nivel(es) vinculados</>}
           </p>
         </div>
-        <span className="text-xs text-gray-400">{expanded ? 'Cerrar' : 'Abrir'}</span>
+        <span className="flex items-center gap-1 text-xs text-gray-500 flex-shrink-0">
+          {expanded ? 'Cerrar' : 'Abrir'}
+          <ChevronDownIcon className={`h-4 w-4 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        </span>
       </button>
 
       {expanded && (
