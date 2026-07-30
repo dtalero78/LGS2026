@@ -933,11 +933,15 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                     <span className={`badge ${getEstadoBadgeClass(beneficiary.estado)}`}>
                       {beneficiary.estado}
                     </span>
-                    {!(beneficiary as any).existeEnAcademica && (
+                    {!beneficiary.existeEnAcademica ? (
                       <span className="badge bg-red-100 text-red-700">
                         SIN REGISTRO ACADÉMICO
                       </span>
-                    )}
+                    ) : String(beneficiary.academicaNivel || '').toUpperCase() === 'WELCOME' ? (
+                      <span className="badge bg-amber-100 text-amber-700">
+                        EN WELCOME
+                      </span>
+                    ) : null}
                     {beneficiary.estado === 'Aprobado' && whatsappSent && (
                       <div className="flex items-center space-x-1 text-green-600 bg-green-100 px-2 py-1 rounded" title="WhatsApp enviado">
                         <span className="text-sm">📱✅ WhatsApp Enviado</span>
