@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useMemo, Suspense } from 'react'
+import { useState, useMemo, useEffect, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
 import {
   CalendarDaysIcon,
   BookOpenIcon,
@@ -8,6 +10,7 @@ import {
   VideoCameraIcon,
   XMarkIcon,
   UserCircleIcon,
+  LockClosedIcon,
 } from '@heroicons/react/24/outline'
 import { useQuery } from 'react-query'
 import {
@@ -20,6 +23,7 @@ import {
   useStudentHistory,
   useCancelBooking,
 } from '@/hooks/use-panel-estudiante'
+import { getSenceErrorMessage } from '@/lib/sence-errors'
 
 import StudentHeader from '@/components/panel-estudiante/StudentHeader'
 import MyEventsSection from '@/components/panel-estudiante/MyEventsSection'
@@ -48,6 +52,50 @@ function PanelEstudianteContent() {
   const [videoErr, setVideoErr] = useState(false)
   const [showInstructivos, setShowInstructivos] = useState(false)
   const [showPerfil, setShowPerfil] = useState(false)
+  const [sencePending, setSencePending] = useState(false)
+
+  // Retorno desde SENCE (inicio de sesión exitoso/fallido) — ver /api/sence/retorno y /api/sence/error
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  useEffect(() => {
+    const senceLogin = searchParams.get('senceLogin')
+    if (!senceLogin) return
+    if (senceLogin === 'success') {
+      toast.success('Sesión SENCE iniciada correctamente')
+    } else if (senceLogin === 'error') {
+      toast.error(getSenceErrorMessage(searchParams.get('glosaError')))
+    }
+    router.replace('/panel-estudiante')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleSenceLogin = async (bookingId: string) => {
+    setSencePending(true)
+    try {
+      const res = await fetch(`/api/postgres/panel-estudiante/sence-init?bookingId=${encodeURIComponent(bookingId)}`)
+      const json = await res.json()
+      if (!json.success) {
+        toast.error(json.error || 'No se pudo iniciar el proceso SENCE')
+        setSencePending(false)
+        return
+      }
+      const form = document.createElement('form')
+      form.method = 'POST'
+      form.action = json.actionUrl
+      Object.entries(json.fields as Record<string, string | number>).forEach(([name, value]) => {
+        const input = document.createElement('input')
+        input.type = 'hidden'
+        input.name = name
+        input.value = String(value)
+        form.appendChild(input)
+      })
+      document.body.appendChild(form)
+      form.submit()
+    } catch {
+      toast.error('No se pudo conectar con SENCE')
+      setSencePending(false)
+    }
+  }
 
   // Instructivos from API
   const instructivosQuery = useQuery(
@@ -141,6 +189,11 @@ function PanelEstudianteContent() {
       && (now.getTime() - nextEventDate.getTime()) / (1000 * 60) <= 10
     : false
   const zoomLink = nextClass?.eventLinkZoom || nextClass?.linkZoom
+  // Estudiantes SENCE deben iniciar sesión en SENCE (sistemas.sence.cl) antes
+  // de poder entrar a su clase. Se considera "hecho" cuando el booking tiene
+  // idSesionSence guardado (lo escribe /api/sence/retorno al volver de SENCE).
+  const isSenceStudent = !!(profile as any)?.sence
+  const senceDone = !isSenceStudent || !!(nextClass as any)?.idSesionSence
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -276,7 +329,22 @@ function PanelEstudianteContent() {
                 </div>
                 <div>
                   <span className="text-xs text-primary-200 uppercase tracking-wide">Link de Ingreso</span>
-                  {showZoom && zoomLink ? (
+                  {nextClass && isSenceStudent && !senceDone ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleSenceLogin((nextClass as any)._id)}
+                        disabled={sencePending}
+                        className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white text-sm font-medium rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-60"
+                      >
+                        <LockClosedIcon className="h-4 w-4" />
+                        {sencePending ? 'Redirigiendo...' : 'Iniciar sesión SENCE'}
+                      </button>
+                      <p className="text-xs text-primary-200 mt-1">
+                        Debes iniciar sesión en SENCE antes de entrar a tu clase.
+                      </p>
+                    </>
+                  ) : showZoom && zoomLink ? (
                     <a
                       href={zoomLink}
                       target="_blank"
