@@ -559,22 +559,32 @@ function PanelEstudianteContent() {
                     ¡Estamos trabajando para ti! 🚀
                   </p>
                   <p className="mt-2 text-sm text-gray-700 leading-relaxed">
-                    Estamos preparando más <span className="font-semibold">recursos</span> para
-                    acompañarte en tu proceso de aprendizaje del inglés. ¡Muy pronto tendrás nuevas
-                    herramientas para practicar y avanzar más rápido!
+                    Estamos desarrollando más <span className="font-semibold">recursos</span> para
+                    acompañarte en tu proceso de aprendizaje del inglés. ¡Sigue agendando tus
+                    sesiones y clubes y espéralas muy pronto!
                   </p>
                   <p className="mt-2 text-sm font-medium text-primary-700">
-                    Mientras tanto, sigue agendando tus sesiones y clubes. ¡Tú puedes! 💪
+                    Mientras tanto, usa este botón para acceder el sitio Games to Learn English 💪
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowRecursos(false)}
-                className="mt-6 px-5 py-2.5 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-colors"
-              >
-                ¡Entendido!
-              </button>
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <a
+                  href="https://www.gamestolearnenglish.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
+                >
+                  🎮 GAMES
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setShowRecursos(false)}
+                  className="px-5 py-2.5 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-colors"
+                >
+                  ¡Entendido!
+                </button>
+              </div>
             </div>
           </div>
         </div>
