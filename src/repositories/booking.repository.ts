@@ -704,6 +704,45 @@ class BookingRepositoryClass extends BaseRepository {
     );
     return result.rowCount ?? 0;
   }
+
+  /**
+   * Alumnos SENCE (ACADEMICA.sence=true, con senceCode) que tuvieron un avance
+   * de Jump Step (múltiplo de 5, asistencia exitosa, no reprobado) en un
+   * booking cuyo evento cae dentro del día `targetDate` (YYYY-MM-DD) en la
+   * zona horaria `tz`. Usado por el cron de envío nocturno de avance a SENCE
+   * — 1 fila por alumno (DISTINCT ON), con su step/nivel ACTUAL en ACADEMICA
+   * para calcular el % de avance acumulado (no solo el jump aprobado ese día).
+   */
+  async findSenceAvanceCandidates(targetDate: string, tz: string = 'America/Santiago') {
+    return queryMany<{
+      academicaId: string;
+      numeroId: string;
+      senceCode: string;
+      nivel: string;
+      step: string;
+    }>(
+      `SELECT DISTINCT ON (a."_id")
+         a."_id" as "academicaId",
+         a."numeroId",
+         a."senceCode",
+         a."nivel",
+         a."step"
+       FROM "ACADEMICA_BOOKINGS" ab
+       LEFT JOIN "CALENDARIO" c ON (ab."eventoId" = c."_id" OR ab."idEvento" = c."_id")
+       INNER JOIN "ACADEMICA" a ON (ab."studentId" = a."_id" OR ab."idEstudiante" = a."_id")
+       WHERE a."sence" = true
+         AND a."senceCode" IS NOT NULL
+         AND COALESCE(c."dia", ab."fechaEvento") >= ($1::date)::timestamp AT TIME ZONE $2
+         AND COALESCE(c."dia", ab."fechaEvento") < ($1::date + INTERVAL '1 day')::timestamp AT TIME ZONE $2
+         AND (ab."cancelo" IS NULL OR ab."cancelo" = false)
+         AND (ab."asistio" IS TRUE OR ab."asistencia" IS TRUE)
+         AND (ab."noAprobo" IS NULL OR ab."noAprobo" = false)
+         AND NULLIF(REGEXP_REPLACE(COALESCE(c."step", ab."step", ''), '[^0-9]', '', 'g'), '')::int BETWEEN 5 AND 45
+         AND NULLIF(REGEXP_REPLACE(COALESCE(c."step", ab."step", ''), '[^0-9]', '', 'g'), '')::int % 5 = 0
+       ORDER BY a."_id"`,
+      [targetDate, tz]
+    );
+  }
 }
 
 export const BookingRepository = new BookingRepositoryClass();

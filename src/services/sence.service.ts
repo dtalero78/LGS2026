@@ -9,7 +9,18 @@
 
 import 'server-only';
 import { getSenceApiService, SenceApiError } from '@/services/sence-api.service';
-import { tieneErroresDeDatos, type SenceCursoEnvio } from '@/types/sence';
+import {
+  tieneErroresDeDatos,
+  SENCE_ESTADO_ALUMNO,
+  type SenceCursoEnvio,
+  type SenceAlumno,
+  type SenceEstadoAlumno,
+} from '@/types/sence';
+import { SENCE_CONFIG } from '@/lib/sence-config';
+import { splitRutForSence } from '@/lib/rut-format';
+import { extractStepNumber } from '@/lib/evento-compartido';
+import { BookingRepository } from '@/repositories/booking.repository';
+import { PeopleRepository } from '@/repositories/people.repository';
 import type { CronRunResult } from '@/lib/cron-runs';
 
 interface CursoEnvioDetail {
@@ -20,26 +31,106 @@ interface CursoEnvioDetail {
   datosError?: unknown;
 }
 
+/** Zona horaria del programa SENCE — es exclusivo de Chile. */
+const SENCE_TZ = 'America/Santiago';
+
+/** Tramo reportable a SENCE: Step 1 a 45 (BN1..F3). Más allá de esto, el curso está completo. */
+const SENCE_STEP_MAX = 45;
+
+/** Niveles posteriores a F3 — alcanzarlos implica haber completado el tramo 1-45. */
+const NIVELES_APROBADOS = new Set(['MASTER', 'IELS', 'IELTS', 'B2FIRST', 'TOEFL', 'DONE']);
+
+/** Fecha de hoy en la TZ del programa SENCE, formato YYYY-MM-DD. */
+function hoySenceDate(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: SENCE_TZ }).format(new Date());
+}
+
+/** Formatea una fecha (Date, ISO string, o null) a YYYY-MM-DD; null si no hay valor. */
+function toYMD(value: string | Date | null | undefined): string {
+  if (!value) return '';
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toISOString().split('T')[0];
+}
+
 /**
- * TODO (pendiente de definir): resolver qué alumnos/cursos SENCE deben
- * reportarse esta noche y construir el árbol Curso→Alumno→Módulo→Actividad
- * que exige el instructivo.
- *
- * Pista ya existente en el schema (sin usar todavía en este servicio):
- * `PEOPLE.sence` / `ACADEMICA.sence` (booleano, marca "Usuario SENCE") y
- * `ACADEMICA.senceCode` (código SENCE por alumno) — gestionados desde
- * `POST /api/postgres/students/[id]/sence`. Falta decidir cómo se agrupan
- * esos alumnos en `codigoOferta`/`codigoGrupo` (curso/sección) para armar
- * cada `SenceCursoEnvio`, y de dónde salen los datos de módulos/actividades
- * (dedicación, avance, notas) que exige el árbol.
- *
- * Se deja lanzando a propósito hasta que esa fuente de datos esté definida.
+ * % de avance acumulado del alumno sobre el tramo Step 1-45, y estado
+ * (Cursando/Aprobado) resultante. Si el alumno ya está en un nivel posterior
+ * a F3 (completó el tramo), se reporta 100% y Aprobado.
+ */
+function calcularAvance(nivel: string | null, step: string | null): { porcentajeAvance: number; estado: SenceEstadoAlumno } {
+  if (NIVELES_APROBADOS.has((nivel || '').toUpperCase())) {
+    return { porcentajeAvance: 100, estado: SENCE_ESTADO_ALUMNO.APROBADO };
+  }
+  const n = extractStepNumber(step) ?? 0;
+  const porcentajeAvance = Math.round(Math.min(100, (n / SENCE_STEP_MAX) * 100));
+  return { porcentajeAvance, estado: SENCE_ESTADO_ALUMNO.CURSANDO };
+}
+
+/**
+ * Resuelve qué alumnos SENCE tuvieron avance HOY (aprobaron un Jump Step) y
+ * arma el árbol Curso→Alumno→Módulo que exige el instructivo SENCE,
+ * agrupando por `codigoGrupo` (= `ACADEMICA.senceCode`, el mismo código
+ * usado en el flujo de login/logout SENCE). Cada alumno reporta un único
+ * módulo fijo `lgs-course` (sin actividades todavía — placeholder hasta que
+ * se modele el detalle de actividades).
  */
 async function obtenerCursosParaEnviar(): Promise<SenceCursoEnvio[]> {
-  throw new Error(
-    '[sence.service] obtenerCursosParaEnviar() no está implementado todavía: ' +
-      'falta definir de dónde sale el universo de alumnos/cursos SENCE a reportar.',
-  );
+  const fechaHoy = hoySenceDate();
+  const candidatos = await BookingRepository.findSenceAvanceCandidates(fechaHoy, SENCE_TZ);
+
+  if (candidatos.length === 0) return [];
+
+  const codigoEnvio = String(Date.now());
+  const grupos = new Map<string, SenceAlumno[]>();
+
+  for (const candidato of candidatos) {
+    const contrato = await PeopleRepository.findContractDatesByNumeroId(candidato.numeroId);
+    const fechaInicio = toYMD(contrato?.inicioContrato || contrato?.fechaContrato);
+    const fechaFin = toYMD(contrato?.finalContrato);
+    const { rutAlumno, dvAlumno } = splitRutForSence(candidato.numeroId);
+    const { porcentajeAvance, estado } = calcularAvance(candidato.nivel, candidato.step);
+
+    const alumno: SenceAlumno = {
+      rutAlumno,
+      dvAlumno,
+      tiempoConectividad: 0,
+      estado,
+      porcentajeAvance,
+      fechaInicio,
+      fechaFin,
+      fechaEjecucion: fechaHoy,
+      evaluacionFinal: porcentajeAvance,
+      listaModulos: [
+        {
+          codigoModulo: 'lgs-course',
+          tiempoConectividad: 0,
+          estado,
+          porcentajeAvance,
+          fechaInicio,
+          fechaFin,
+          listaActividades: [],
+          notaModulo: porcentajeAvance,
+          cantActividadSincronica: 0,
+          cantActividadAsincronica: 0,
+        },
+      ],
+    };
+
+    const codigoGrupo = candidato.senceCode;
+    const lista = grupos.get(codigoGrupo) ?? [];
+    lista.push(alumno);
+    grupos.set(codigoGrupo, lista);
+  }
+
+  return Array.from(grupos.entries()).map(([codigoGrupo, listaAlumnos]) => ({
+    codigoOferta: SENCE_CONFIG.codSence,
+    codigoGrupo,
+    codigoEnvio,
+    cantActividadSincronica: 0,
+    cantActividadAsincronica: 0,
+    listaAlumnos,
+  }));
 }
 
 /**
