@@ -53,30 +53,42 @@ function PanelEstudianteContent() {
   const [showInstructivos, setShowInstructivos] = useState(false)
   const [showPerfil, setShowPerfil] = useState(false)
   const [sencePending, setSencePending] = useState(false)
+  const [senceClosePending, setSenceClosePending] = useState(false)
 
-  // Retorno desde SENCE (inicio de sesión exitoso/fallido) — ver /api/sence/retorno y /api/sence/error
+  // Retorno desde SENCE (inicio/cierre de sesión exitoso/fallido) — ver
+  // /api/sence/retorno, /api/sence/error, /api/sence/cierre-retorno, /api/sence/cierre-error
   const searchParams = useSearchParams()
   const router = useRouter()
   useEffect(() => {
     const senceLogin = searchParams.get('senceLogin')
-    if (!senceLogin) return
+    const senceClose = searchParams.get('senceClose')
     if (senceLogin === 'success') {
       toast.success('Sesión SENCE iniciada correctamente')
     } else if (senceLogin === 'error') {
       toast.error(getSenceErrorMessage(searchParams.get('glosaError')))
+    } else if (senceClose === 'success') {
+      toast.success('Sesión SENCE cerrada correctamente')
+    } else if (senceClose === 'error') {
+      toast.error(getSenceErrorMessage(searchParams.get('glosaError')))
+    } else {
+      return
     }
     router.replace('/panel-estudiante')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleSenceLogin = async (bookingId: string) => {
-    setSencePending(true)
+  const submitSenceForm = async (
+    endpoint: string,
+    bookingId: string,
+    setPending: (v: boolean) => void
+  ) => {
+    setPending(true)
     try {
-      const res = await fetch(`/api/postgres/panel-estudiante/sence-init?bookingId=${encodeURIComponent(bookingId)}`)
+      const res = await fetch(`${endpoint}?bookingId=${encodeURIComponent(bookingId)}`)
       const json = await res.json()
       if (!json.success) {
-        toast.error(json.error || 'No se pudo iniciar el proceso SENCE')
-        setSencePending(false)
+        toast.error(json.error || 'No se pudo conectar con SENCE')
+        setPending(false)
         return
       }
       const form = document.createElement('form')
@@ -93,9 +105,15 @@ function PanelEstudianteContent() {
       form.submit()
     } catch {
       toast.error('No se pudo conectar con SENCE')
-      setSencePending(false)
+      setPending(false)
     }
   }
+
+  const handleSenceLogin = (bookingId: string) =>
+    submitSenceForm('/api/postgres/panel-estudiante/sence-init', bookingId, setSencePending)
+
+  const handleSenceClose = (bookingId: string) =>
+    submitSenceForm('/api/postgres/panel-estudiante/sence-close-init', bookingId, setSenceClosePending)
 
   // Instructivos from API
   const instructivosQuery = useQuery(
@@ -194,6 +212,11 @@ function PanelEstudianteContent() {
   // idSesionSence guardado (lo escribe /api/sence/retorno al volver de SENCE).
   const isSenceStudent = !!(profile as any)?.sence
   const senceDone = !isSenceStudent || !!(nextClass as any)?.idSesionSence
+  // Sesión SENCE abierta (ya inició) pero aún no cerrada — se ofrece el botón
+  // de cierre independiente de la ventana de 5 min antes / 10 min después del
+  // link de Zoom (el alumno decide cuándo cerrarla).
+  const senceOpenNotClosed =
+    isSenceStudent && !!(nextClass as any)?.idSesionSence && !(nextClass as any)?.senceSessionClosedAt
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -358,6 +381,17 @@ function PanelEstudianteContent() {
                     <p className="text-sm text-white">
                       {zoomLink ? 'Enlace disponible 5 min antes, recuerda refrescar el navegador' : '---'}
                     </p>
+                  )}
+                  {senceOpenNotClosed && (
+                    <button
+                      type="button"
+                      onClick={() => handleSenceClose((nextClass as any)._id)}
+                      disabled={senceClosePending}
+                      className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 text-white text-xs font-medium rounded-lg border border-white/30 hover:bg-white/20 transition-colors disabled:opacity-60"
+                    >
+                      <LockClosedIcon className="h-3.5 w-3.5" />
+                      {senceClosePending ? 'Redirigiendo...' : 'Cerrar sesión SENCE'}
+                    </button>
                   )}
                 </div>
                 <div className="pt-2 border-t border-white/20">

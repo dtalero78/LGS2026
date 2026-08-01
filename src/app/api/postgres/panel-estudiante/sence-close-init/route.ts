@@ -7,11 +7,11 @@ import { SENCE_CONFIG, getSenceActionUrl } from '@/lib/sence-config';
 import { toSenceRutFormat } from '@/lib/rut-format';
 
 /**
- * GET /api/postgres/panel-estudiante/sence-init?bookingId=<ACADEMICA_BOOKINGS._id>
+ * GET /api/postgres/panel-estudiante/sence-close-init?bookingId=<ACADEMICA_BOOKINGS._id>
  *
  * Arma los campos que el navegador debe enviar (vía POST directo, formulario
- * oculto) a sistemas.sence.cl para iniciar sesión SENCE antes de la clase.
- * Solo aplica a estudiantes marcados sence=true.
+ * oculto) a sistemas.sence.cl para CERRAR la sesión SENCE de una clase ya
+ * iniciada. Mismo esqueleto que sence-init/route.ts (login).
  */
 export const GET = handlerWithAuth(async (request, context, session) => {
   const student = await resolveStudentFromSession(session);
@@ -38,10 +38,20 @@ export const GET = handlerWithAuth(async (request, context, session) => {
     throw new ValidationError('Este estudiante SENCE no tiene código de curso (senceCode) configurado');
   }
 
+  // TODO(SENCE-idSesionSence): leer de ACADEMICA_BOOKINGS.idSesionSence cuando
+  // exista la columna (la agrega otro compañero, ver plan). El manual exige
+  // reenviar el MISMO IdSesionSence que devolvió SENCE al iniciar sesión.
+  // const row = await queryOne<{ idSesionSence: string }>(
+  //   `SELECT "idSesionSence" FROM "ACADEMICA_BOOKINGS" WHERE "_id" = $1`,
+  //   [bookingId]
+  // );
+  // const idSesionSence = row?.idSesionSence || '';
+  const idSesionSence = '';
+
   const origin = request.headers.get('origin') || process.env.NEXTAUTH_URL || '';
 
   return successResponse({
-    actionUrl: getSenceActionUrl('IniciarSesion'),
+    actionUrl: getSenceActionUrl('CerrarSesion'),
     fields: {
       RutOtec: SENCE_CONFIG.rutOtec,
       Token: SENCE_CONFIG.token,
@@ -50,8 +60,9 @@ export const GET = handlerWithAuth(async (request, context, session) => {
       LineaCapacitacion: SENCE_CONFIG.lineaCapacitacion,
       RunAlumno: toSenceRutFormat(student.numeroId),
       IdSesionAlumno: bookingId,
-      UrlRetoma: `${origin}/api/sence/retorno`,
-      UrlError: `${origin}/api/sence/error`,
+      IdSesionSence: idSesionSence,
+      UrlRetoma: `${origin}/api/sence/cierre-retorno`,
+      UrlError: `${origin}/api/sence/cierre-error`,
     },
   });
 });

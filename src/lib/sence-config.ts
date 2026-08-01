@@ -17,9 +17,10 @@ export const SENCE_CONFIG = {
   lineaCapacitacion: 3, // 3 = Impulsa Personas
 };
 
-/** URL de inicio de sesión SENCE según el ambiente configurado. */
-export function getSenceActionUrl(): string {
-  return SENCE_CONFIG.ambiente === 'produccion'
-    ? 'https://sistemas.sence.cl/rce/Registro/IniciarSesion'
-    : 'https://sistemas.sence.cl/rcetest/Registro/IniciarSesion';
+/** URL de inicio/cierre de sesión SENCE según el ambiente configurado. */
+export function getSenceActionUrl(accion: 'IniciarSesion' | 'CerrarSesion' = 'IniciarSesion'): string {
+  const base = SENCE_CONFIG.ambiente === 'produccion'
+    ? 'https://sistemas.sence.cl/rce/Registro'
+    : 'https://sistemas.sence.cl/rcetest/Registro';
+  return `${base}/${accion}`;
 }
