@@ -14,6 +14,7 @@ import {
   SENCE_ESTADO_ALUMNO,
   type SenceCursoEnvio,
   type SenceAlumno,
+  type SenceActividad,
   type SenceEstadoAlumno,
 } from '@/types/sence';
 import { SENCE_CONFIG } from '@/lib/sence-config';
@@ -89,6 +90,9 @@ async function obtenerCursosParaEnviar(): Promise<SenceCursoEnvio[]> {
     const fechaFin = toYMD(contrato?.finalContrato);
     const { rutAlumno, dvAlumno } = splitRutForSence(candidato.numeroId);
     const { porcentajeAvance, estado } = calcularAvance(candidato.nivel, candidato.step);
+    const listaActividades: SenceActividad[] = (
+      await BookingRepository.findSenceActivityIds(candidato.academicaId)
+    ).map(codigoActividad => ({ codigoActividad }));
 
     const alumno: SenceAlumno = {
       rutAlumno,
@@ -108,7 +112,7 @@ async function obtenerCursosParaEnviar(): Promise<SenceCursoEnvio[]> {
           porcentajeAvance,
           fechaInicio,
           fechaFin,
-          listaActividades: [],
+          listaActividades,
           notaModulo: porcentajeAvance,
           cantActividadSincronica: 0,
           cantActividadAsincronica: 0,

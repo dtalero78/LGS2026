@@ -743,6 +743,38 @@ class BookingRepositoryClass extends BaseRepository {
       [targetDate, tz]
     );
   }
+
+  /**
+   * IDs de todos los bookings históricos de un alumno (cualquier tipo/fecha)
+   * con asistencia exitosa y sin marca de reprobado — usados como
+   * `codigoActividad` en `listaActividades` del envío de avance a SENCE.
+   * Resuelve candidatos (ACADEMICA._id + PEOPLE._id duplicados por mismo
+   * numeroId) igual que `findByStudentId`, porque los bookings pueden estar
+   * enlazados por `idEstudiante`/`studentId` a cualquiera de esos IDs.
+   */
+  async findSenceActivityIds(academicaId: string): Promise<string[]> {
+    const idsRow = await queryMany<{ id: string }>(
+      `SELECT a."_id" AS id FROM "ACADEMICA" a WHERE a."_id" = $1
+       UNION
+       SELECT p."_id" AS id FROM "PEOPLE" p
+        WHERE p."numeroId" = (
+          SELECT a."numeroId" FROM "ACADEMICA" a WHERE a."_id" = $1 LIMIT 1
+        )`,
+      [academicaId]
+    );
+    const candidateIds = idsRow.map(r => r.id);
+    if (candidateIds.length === 0) candidateIds.push(academicaId);
+
+    const rows = await queryMany<{ _id: string }>(
+      `SELECT "_id" FROM "ACADEMICA_BOOKINGS"
+       WHERE ("idEstudiante" = ANY($1::text[]) OR "studentId" = ANY($1::text[]))
+         AND ("asistio" IS TRUE OR "asistencia" IS TRUE)
+         AND "noAprobo" IS NOT TRUE
+       ORDER BY "fechaEvento" ASC`,
+      [candidateIds]
+    );
+    return rows.map(r => r._id);
+  }
 }
 
 export const BookingRepository = new BookingRepositoryClass();
