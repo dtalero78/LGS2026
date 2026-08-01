@@ -81,7 +81,6 @@ async function obtenerCursosParaEnviar(): Promise<SenceCursoEnvio[]> {
 
   if (candidatos.length === 0) return [];
 
-  const codigoEnvio = String(Date.now());
   const grupos = new Map<string, SenceAlumno[]>();
 
   for (const candidato of candidatos) {
@@ -100,7 +99,7 @@ async function obtenerCursosParaEnviar(): Promise<SenceCursoEnvio[]> {
       fechaInicio,
       fechaFin,
       fechaEjecucion: fechaHoy,
-      evaluacionFinal: porcentajeAvance,
+      evaluacionFinal: 0, // TODO: SET THIS
       listaModulos: [
         {
           codigoModulo: 'lgs-course',
@@ -126,7 +125,6 @@ async function obtenerCursosParaEnviar(): Promise<SenceCursoEnvio[]> {
   return Array.from(grupos.entries()).map(([codigoGrupo, listaAlumnos]) => ({
     codigoOferta: SENCE_CONFIG.codSence,
     codigoGrupo,
-    codigoEnvio,
     cantActividadSincronica: 0,
     cantActividadAsincronica: 0,
     listaAlumnos,
