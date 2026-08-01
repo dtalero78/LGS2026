@@ -113,7 +113,7 @@ async function obtenerCursosParaEnviar(): Promise<SenceCursoEnvio[]> {
           fechaInicio,
           fechaFin,
           listaActividades,
-          notaModulo: porcentajeAvance,
+          notaModulo: 0, // TODO: CHECL THIS
           cantActividadSincronica: 0,
           cantActividadAsincronica: 0,
         },
