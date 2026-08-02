@@ -17,7 +17,7 @@ import {
   type SenceActividad,
   type SenceEstadoAlumno,
 } from '@/types/sence';
-import { SENCE_CONFIG } from '@/lib/sence-config';
+import { getSenceConfig } from '@/lib/sence-config';
 import { splitRutForSence } from '@/lib/rut-format';
 import { extractStepNumber } from '@/lib/evento-compartido';
 import { BookingRepository } from '@/repositories/booking.repository';
@@ -127,7 +127,7 @@ async function obtenerCursosParaEnviar(): Promise<SenceCursoEnvio[]> {
   }
 
   return Array.from(grupos.entries()).map(([codigoGrupo, listaAlumnos]) => ({
-    codigoOferta: SENCE_CONFIG.codSence,
+    codigoOferta: getSenceConfig().codSence,
     codigoGrupo,
     cantActividadSincronica: 0,
     cantActividadAsincronica: 0,

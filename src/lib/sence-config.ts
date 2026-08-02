@@ -1,25 +1,59 @@
+import 'server-only';
+
 /**
  * Configuración de la integración SENCE (Registro de Asistencia).
  *
- * Etapa actual: valores hardcodeados en código (decisión del usuario, aún no
- * definido si pasarán a APP_CONFIG o variables de entorno). Este módulo es el
- * único lugar que hay que tocar para: (a) mover la config a BD/env vars más
- * adelante, (b) pasar de Ambiente Test a Producción.
+ * Credenciales (`rutOtec`, `token`, `codSence`, `ambiente`) vienen de
+ * variables de entorno — mismo patrón que `getSenceApiService()` en
+ * `sence-api.service.ts`. `lineaCapacitacion` NO es secreta (es un valor
+ * fijo del programa "Impulsa Personas"), así que se deja hardcodeada aquí,
+ * igual que `SENCE_ID_SISTEMA` en `sence-api.service.ts`.
  *
  * CodigoCurso NO vive aquí — es por alumno, se lee de ACADEMICA.senceCode.
  */
 
-export const SENCE_CONFIG = {
-  ambiente: 'test' as 'test' | 'produccion', // cambiar aquí cuando se pase a Producción
-  rutOtec: '77320181-1',
-  token: '', // TODO: pendiente — se generará en https://sistemas.sence.cl/rts
-  codSence: '1238074880',
-  lineaCapacitacion: 3, // 3 = Impulsa Personas
-};
+const LINEA_CAPACITACION = 3; // 3 = Impulsa Personas
+
+export interface SenceConfig {
+  ambiente: 'test' | 'produccion';
+  rutOtec: string;
+  token: string;
+  codSence: string;
+  lineaCapacitacion: number;
+}
+
+let cachedConfig: SenceConfig | null = null;
+
+/**
+ * Lee la configuración SENCE desde variables de entorno, cacheada tras la
+ * primera lectura. Lanza error si faltan `SENCE_RUT_OTEC` / `SENCE_COD_SENCE`
+ * (credenciales reales de la integración); `SENCE_TOKEN` queda opcional
+ * (pendiente de generar en https://sistemas.sence.cl/rts).
+ */
+export function getSenceConfig(): SenceConfig {
+  if (cachedConfig) return cachedConfig;
+
+  const rutOtec = process.env.SENCE_RUT_OTEC;
+  const codSence = process.env.SENCE_COD_SENCE;
+  if (!rutOtec || !codSence) {
+    throw new Error(
+      'Faltan las variables de entorno SENCE_RUT_OTEC / SENCE_COD_SENCE para la integración con SENCE.',
+    );
+  }
+
+  cachedConfig = {
+    ambiente: process.env.SENCE_AMBIENTE === 'produccion' ? 'produccion' : 'test',
+    rutOtec,
+    token: process.env.SENCE_TOKEN || '',
+    codSence,
+    lineaCapacitacion: LINEA_CAPACITACION,
+  };
+  return cachedConfig;
+}
 
 /** URL de inicio/cierre de sesión SENCE según el ambiente configurado. */
 export function getSenceActionUrl(accion: 'IniciarSesion' | 'CerrarSesion' = 'IniciarSesion'): string {
-  const base = SENCE_CONFIG.ambiente === 'produccion'
+  const base = getSenceConfig().ambiente === 'produccion'
     ? 'https://sistemas.sence.cl/rce/Registro'
     : 'https://sistemas.sence.cl/rcetest/Registro';
   return `${base}/${accion}`;

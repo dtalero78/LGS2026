@@ -3,7 +3,7 @@ import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { resolveStudentFromSession } from '@/services/panel-estudiante.service';
 import { queryOne } from '@/lib/postgres';
 import { NotFoundError, ForbiddenError, ValidationError } from '@/lib/errors';
-import { SENCE_CONFIG, getSenceActionUrl } from '@/lib/sence-config';
+import { getSenceConfig, getSenceActionUrl } from '@/lib/sence-config';
 import { toSenceRutFormat } from '@/lib/rut-format';
 
 /**
@@ -49,15 +49,16 @@ export const GET = handlerWithAuth(async (request, context, session) => {
   const idSesionSence = '';
 
   const origin = request.headers.get('origin') || process.env.NEXTAUTH_URL || '';
+  const senceConfig = getSenceConfig();
 
   return successResponse({
     actionUrl: getSenceActionUrl('CerrarSesion'),
     fields: {
-      RutOtec: SENCE_CONFIG.rutOtec,
-      Token: SENCE_CONFIG.token,
-      CodSence: SENCE_CONFIG.codSence,
+      RutOtec: senceConfig.rutOtec,
+      Token: senceConfig.token,
+      CodSence: senceConfig.codSence,
       CodigoCurso: senceCode,
-      LineaCapacitacion: SENCE_CONFIG.lineaCapacitacion,
+      LineaCapacitacion: senceConfig.lineaCapacitacion,
       RunAlumno: toSenceRutFormat(student.numeroId),
       IdSesionAlumno: bookingId,
       IdSesionSence: idSesionSence,

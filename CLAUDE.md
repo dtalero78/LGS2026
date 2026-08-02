@@ -498,6 +498,10 @@ API2PDF_KEY=api2pdf_api_key
 WHAPI_TOKEN=whapi_cloud_token
 OPENAI_API_KEY=openai_api_key_for_complementaria
 ANTHROPIC_API_KEY=anthropic_api_key_for_dashboard_charts
+SENCE_RUT_OTEC=rut_del_otec_para_integracion_sence
+SENCE_TOKEN=token_sence_generado_en_sistemas_sence_cl_rts
+SENCE_COD_SENCE=codigo_sence_del_otec
+SENCE_AMBIENTE=test_o_produccion
 ```
 
 ### TypeScript Build Configuration
