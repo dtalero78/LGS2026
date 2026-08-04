@@ -242,14 +242,15 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
 
   const currentGestor = recaudoUsers.find(u => u._id === gestorRecaudoId) || null
 
-  // Asesor Comercial que creó el contrato (PEOPLE.asesor guarda su email).
-  // Se resuelve a nombre vía displayUsers (incluye COMERCIAL); si no se halla,
-  // se muestra el valor crudo (email).
+  // Asesor Comercial que creó el contrato. Prioridad: asesorCreadorContrato
+  // (NOMBRE guardado al crear el contrato) → nombre resuelto desde el email
+  // (PEOPLE.asesor vía displayUsers) → valor crudo (email).
+  const asesorCreador = ((person as any).asesorCreadorContrato || '').toString().trim()
   const asesorRaw = ((person as any).asesor || '').toString().trim()
   const asesorUser = asesorRaw
     ? displayUsers.find(u => (u.email || '').toLowerCase() === asesorRaw.toLowerCase()) || null
     : null
-  const asesorNombre = asesorUser?.nombre || asesorRaw || ''
+  const asesorNombre = asesorCreador || asesorUser?.nombre || asesorRaw || ''
 
   const openAssignModal = () => {
     setSelectedUserId(gestorRecaudoId || '')
