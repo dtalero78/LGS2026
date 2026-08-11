@@ -1,6 +1,6 @@
 # 01 — Auditoría de gates (handlers de escritura)
 
-> Auditoría **read-only** de todos los handlers bajo `src/app/api/` que hacen `INSERT`/`UPDATE`/`DELETE`. Para cada uno: si está envuelto en `handlerWithAuth`/`requirePermission`, qué permiso exige, desde qué pantalla del inventario ([`00-inventario.md`](00-inventario.md)) se invoca, y una **bandera** cuando no tiene gate o cuando su permiso no coincide con el de la pantalla que lo llama.
+> Auditoría **read-only** de todos los handlers bajo `src/app/api/` que hacen `INSERT`/`UPDATE`/`DELETE`. Para cada uno: si está envuelto en `handlerWithAuth`/`requirePermission`, qué permiso exige, desde qué pantalla del inventario ([`00-inventario.md`](../manual/00-inventario.md)) se invoca, y una **bandera** cuando no tiene gate o cuando su permiso no coincide con el de la pantalla que lo llama.
 >
 > **Snapshot:** 2026-08-10. Cobertura: **115 handlers de escritura**. Metodología: 3 barridos read-only del árbol `src/app/api/` (`postgres/` core · financiero+`admin/` · legacy/público/consent/cron), cruzados con `ROUTE_PERMISSIONS` de [`src/middleware.ts`](../../src/middleware.ts) / [`src/lib/middleware-permissions.ts`](../../src/lib/middleware-permissions.ts) y con el snapshot de `ROL_PERMISOS`. **No se modificó código.**
 
