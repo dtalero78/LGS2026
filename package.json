@@ -12,7 +12,8 @@
     "seed:admin": "node scripts/seedAdmin.js",
     "db:backup": "node scripts/backup.js",
     "cron:worker": "node scripts/cron-worker.js",
-    "cron:run-now": "node scripts/cron-worker.js --run-now"
+    "cron:run-now": "node scripts/cron-worker.js --run-now",
+    "docs:permisos": "tsx scripts/docs-permisos.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.996.0",
@@ -72,7 +73,8 @@
     "eslint": "^8.52.0",
     "eslint-config-next": "^14.0.0",
     "ignore-loader": "^0.1.2",
-    "prisma": "^6.19.3"
+    "prisma": "^6.19.3",
+    "tsx": "^4.23.12"
   },
   "engines": {
     "node": ">=18.0.0"
