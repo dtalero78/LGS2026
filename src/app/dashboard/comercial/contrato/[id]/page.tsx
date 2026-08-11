@@ -26,6 +26,7 @@ import {
   PaperClipIcon,
 } from '@heroicons/react/24/outline'
 import { fillContractTemplate, type ConsentDisplay } from '@/lib/contract-template-filler'
+import { isContratoPrueba } from '@/components/common/ContratoPruebaBadge'
 
 // ── Field definitions ──
 
@@ -645,6 +646,11 @@ export default function ContratoDetailPage() {
     <DashboardLayout>
       <PermissionGuard permission={ComercialPermission.MODIFICAR_CONTRATO}>
         <div className="max-w-6xl mx-auto">
+          {isContratoPrueba(titular.contrato) && (
+            <div className="mb-4 rounded-md border border-orange-400 bg-orange-50 px-4 py-3 text-sm text-orange-900">
+              🧪 <strong>Contrato de prueba ({titular.contrato}).</strong> Solo se puede <strong>ver, editar y adjuntar documentación</strong>. No aplican solicitar firma, enviar PDF, imprimir, autoaprobar ni aprobar.
+            </div>
+          )}
           {/* Header */}
           <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -700,7 +706,7 @@ export default function ContratoDetailPage() {
                   </button>
                 </>
               )}
-              {!consentStatus?.hasConsent && (
+              {!consentStatus?.hasConsent && !isContratoPrueba(titular.contrato) && (
                 <PermissionGuard permission={ComercialPermission.APROBACION_AUTONOMA}>
                   <button
                     type="button"
@@ -964,6 +970,7 @@ export default function ContratoDetailPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
+                      {!isContratoPrueba(titular.contrato) && (<>
                       <button
                         onClick={sendContractWhatsApp}
                         disabled={sendingWhatsApp || !titular?.celular}
@@ -1012,6 +1019,7 @@ export default function ContratoDetailPage() {
                       >
                         Imprimir
                       </button>
+                      </>)}
                       <button
                         onClick={() => setShowCloseConfirm(true)}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm font-medium"

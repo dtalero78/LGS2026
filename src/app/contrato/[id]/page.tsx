@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { isContratoPrueba } from '@/components/common/ContratoPruebaBadge'
 import { useParams, useRouter } from 'next/navigation'
 import { fillContractTemplate, type ConsentDisplay } from '@/lib/contract-template-filler'
 
@@ -204,6 +205,12 @@ export default function ContratoPublicoPage() {
         </p>
       </div>
 
+      {isContratoPrueba(titular?.contrato) && (
+        <div className="mb-6 rounded-lg border border-orange-400 bg-orange-50 p-4 text-sm text-orange-900">
+          🧪 <strong>Contrato de prueba.</strong> Este documento es una simulación y <strong>no puede firmarse</strong>. La firma digital no aplica a contratos de prueba.
+        </div>
+      )}
+
       {/* Consent verified badge */}
       {(pageState === 'HAS_CONSENT' || pageState === 'VERIFIED') && consentStatus?.consent && (
         <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -242,7 +249,7 @@ export default function ContratoPublicoPage() {
       </div>
 
       {/* Document entry step */}
-      {pageState === 'DOCUMENT_ENTRY' && (
+      {pageState === 'DOCUMENT_ENTRY' && !isContratoPrueba(titular?.contrato) && (
         <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
           <h3 className="text-base font-semibold text-gray-900 mb-1">Firma Digital</h3>
           <p className="text-sm text-gray-500 mb-4">
@@ -270,7 +277,7 @@ export default function ContratoPublicoPage() {
       )}
 
       {/* OTP entry step */}
-      {pageState === 'OTP_ENTRY' && (
+      {pageState === 'OTP_ENTRY' && !isContratoPrueba(titular?.contrato) && (
         <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
           <h3 className="text-base font-semibold text-gray-900 mb-1">Verificacion OTP</h3>
           <p className="text-sm text-gray-500 mb-4">

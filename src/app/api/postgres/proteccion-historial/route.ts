@@ -41,9 +41,12 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   if (!titularId) throw new ValidationError('titularId (titular del contrato nuevo) requerido');
   if (!API2PDF_KEY) throw new ValidationError('API2PDF_KEY no configurada');
 
-  // Guard: no proteger contratos de prueba.
+  // Guard: no proteger historial sobre contratos de prueba (ni el viejo ni el nuevo).
   if (contratoViejo && /^PRB-/i.test(contratoViejo)) {
     throw new ValidationError('No se protege el historial de contratos de prueba (PRB-).');
+  }
+  if (contratoNuevo && /^PRB-/i.test(contratoNuevo)) {
+    throw new ValidationError('El contrato nuevo es de prueba (PRB-): no aplica protección de historial.');
   }
   // Guard: no archivar "sobre el mismo contrato".
   if (contratoViejo && contratoNuevo && contratoViejo === contratoNuevo) {

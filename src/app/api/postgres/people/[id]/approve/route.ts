@@ -2,7 +2,7 @@ import 'server-only';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { query, queryOne, queryMany } from '@/lib/postgres';
 import { NotFoundError, ConflictError } from '@/lib/errors';
-import { assertPuedeAprobarContrato } from '@/lib/contrato-prueba-guard';
+import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { ids } from '@/lib/id-generator';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
 
@@ -218,9 +218,10 @@ export const POST = handlerWithAuth(async (
   );
   if (!person) throw new NotFoundError('Person', personId);
 
-  // Contratos de prueba (PRB-): solo SUPER_ADMIN. Aprobar dispara efectos
-  // reales (WhatsApp al celular del registro, fechaIngreso, etc.).
-  assertPuedeAprobarContrato(person.contrato, (session?.user as any)?.role);
+  // Contratos de prueba (PRB-): NADIE puede aprobarlos (tampoco SUPER_ADMIN).
+  // Aprobar dispara efectos reales (WhatsApp al celular del registro,
+  // fechaIngreso, creación de ACADEMICA para los beneficiarios, etc.).
+  assertNoEsContratoPrueba(person.contrato, 'aprobar el contrato');
 
   if (person.aprobacion === 'Aprobado') {
     throw new ConflictError('La persona ya está aprobada');

@@ -12,6 +12,7 @@ import { PeopleRepository } from '@/repositories/people.repository';
 import { ValidationError, NotFoundError } from '@/lib/errors';
 import { generateOtp, saveOtp, verifyOtp } from '@/lib/otp-store';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
+import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 
 // ── Types ──
 
@@ -44,6 +45,7 @@ export async function sendConsentOtp(
 ) {
   const person = await PeopleRepository.getConsentData(titularId);
   if (!person) throw new NotFoundError('Titular', titularId);
+  assertNoEsContratoPrueba(person.contrato, 'solicitar la firma');
 
   if (person.hashConsentimiento) {
     throw new ValidationError('Este contrato ya tiene consentimiento declarativo');
@@ -88,6 +90,7 @@ export async function verifyAndSaveConsent(
 ) {
   const person = await PeopleRepository.getConsentData(titularId);
   if (!person) throw new NotFoundError('Titular', titularId);
+  assertNoEsContratoPrueba(person.contrato, 'firmar el consentimiento');
 
   if (person.hashConsentimiento) {
     throw new ValidationError('Este contrato ya tiene consentimiento declarativo');
@@ -135,6 +138,7 @@ export async function autoApproveConsent(
 ) {
   const person = await PeopleRepository.getConsentData(titularId);
   if (!person) throw new NotFoundError('Titular', titularId);
+  assertNoEsContratoPrueba(person.contrato, 'autoaprobar el consentimiento');
 
   if (person.hashConsentimiento) {
     throw new ValidationError('Este contrato ya tiene consentimiento declarativo');

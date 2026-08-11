@@ -9,6 +9,7 @@ import { CheckCircleIcon } from '@heroicons/react/24/solid'
 import { PermissionGuard } from '@/components/permissions'
 import { PersonPermission } from '@/types/permissions'
 import { COUNTRY_CODES } from '@/lib/country-codes'
+import { isContratoPrueba } from '@/components/common/ContratoPruebaBadge'
 
 interface PersonAdminProps {
   person: Person
@@ -33,6 +34,8 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     beneficiaries
   })
   const [selectedEstado, setSelectedEstado] = useState(person.aprobacion || 'Pendiente')
+  // Contrato de prueba (PRB-): solo ver/editar/adjuntar; no aprobar ni agregar beneficiarios.
+  const esContratoDePrueba = isContratoPrueba(person.contrato)
   const [newComment, setNewComment] = useState('')
   const [showBeneficiaryForm, setShowBeneficiaryForm] = useState(false)
   const [newBeneficiaryId, setNewBeneficiaryId] = useState<string | null>(null)
@@ -848,6 +851,12 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
 
       </div>
 
+      {esContratoDePrueba && (
+        <div className="rounded-md border border-orange-400 bg-orange-50 px-4 py-3 text-sm text-orange-900">
+          🧪 <strong>Contrato de prueba ({person.contrato}).</strong> Solo se puede ver, editar y adjuntar documentación. No se puede aprobar, agregar beneficiarios, agendar ni crear fichas en ACADEMICA.
+        </div>
+      )}
+
       {/* Titular Status */}
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">Estado del Titular</h3>
@@ -867,7 +876,9 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                     // Si ya está Aprobado, ocultar opciones pre-aprobación
                     // ('Contrato nulo', 'Devuelto', 'Rechazado').
                     .filter(estado =>
-                      originalEstado !== 'Aprobado' || !PRE_APPROVAL_ONLY.includes(estado)
+                      (originalEstado !== 'Aprobado' || !PRE_APPROVAL_ONLY.includes(estado)) &&
+                      // Contrato de prueba: no se puede aprobar.
+                      !(esContratoDePrueba && estado === 'Aprobado')
                     )
                     .map((estado) => (
                       <option key={estado} value={estado}>
@@ -963,7 +974,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                       Modificar
                     </button>
                   </PermissionGuard>
-                  {((!beneficiary.estado || beneficiary.estado === 'Pendiente') || approvingBeneficiaries.has(beneficiary._id)) && (
+                  {!esContratoDePrueba && ((!beneficiary.estado || beneficiary.estado === 'Pendiente') || approvingBeneficiaries.has(beneficiary._id)) && (
                     <PermissionGuard permission={PersonPermission.APROBAR}>
                       <button
                         onClick={() => handleApproveSpecificBeneficiary(beneficiary._id)}
@@ -1012,7 +1023,8 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             )
           })}
 
-          {/* Add Beneficiary Button - Now at the bottom */}
+          {/* Add Beneficiary Button - Now at the bottom (oculto en contratos de prueba) */}
+          {!esContratoDePrueba && (
           <PermissionGuard permission={PersonPermission.AGREGAR_BENEFICIARIO}>
             <div className="pt-4 flex justify-end">
               <button
@@ -1024,6 +1036,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
               </button>
             </div>
           </PermissionGuard>
+          )}
           </div>
         </div>
       </div>

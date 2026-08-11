@@ -2,7 +2,7 @@ import 'server-only';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { query } from '@/lib/postgres';
 import { NotFoundError, ValidationError } from '@/lib/errors';
-import { assertPuedeAprobarContrato } from '@/lib/contrato-prueba-guard';
+import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 
 export const GET = handlerWithAuth(async (request, { params }) => {
   const result = await query(
@@ -44,9 +44,9 @@ export const PUT = handlerWithAuth(async (request, { params }, session) => {
   const check = await query(`SELECT "_id", "contrato" FROM "PEOPLE" WHERE "_id" = $1`, [params.id]);
   if (check.rowCount === 0) throw new NotFoundError('Person');
 
-  // Contratos de prueba (PRB-): solo SUPER_ADMIN puede aprobarlos.
+  // Contratos de prueba (PRB-): NADIE puede aprobarlos (tampoco SUPER_ADMIN).
   if (estadoFinal === 'Aprobado') {
-    assertPuedeAprobarContrato(check.rows[0].contrato, (session?.user as any)?.role);
+    assertNoEsContratoPrueba(check.rows[0].contrato, 'aprobar el contrato');
   }
 
   const estadoOperativo = APROBACION_TO_ESTADO[estadoFinal] ?? null;

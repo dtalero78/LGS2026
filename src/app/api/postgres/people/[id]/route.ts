@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { query, queryOne, queryMany, parseJsonbFields } from '@/lib/postgres';
 import { handler, handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { NotFoundError, ValidationError } from '@/lib/errors';
-import { assertPuedeAprobarContrato } from '@/lib/contrato-prueba-guard';
+import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { buildDynamicUpdate } from '@/lib/query-builder';
 
 /**
@@ -236,14 +236,14 @@ export const PATCH = handlerWithAuth(async (
     }
   }
 
-  // ── Contratos de prueba (PRB-): solo SUPER_ADMIN puede aprobarlos ──
+  // ── Contratos de prueba (PRB-): NADIE puede aprobarlos (tampoco SUPER_ADMIN) ──
   // Defensa en profundidad: la UI enruta "Aprobado" por /people/[id]/approve,
   // pero por esta vía también se puede setear `aprobacion`.
   if (String(body.aprobacion ?? '').trim() === 'Aprobado') {
     const target = await queryOne<{ contrato: string | null }>(
       `SELECT "contrato" FROM "PEOPLE" WHERE "_id" = $1`, [personId],
     );
-    assertPuedeAprobarContrato(target?.contrato, (session?.user as any)?.role);
+    assertNoEsContratoPrueba(target?.contrato, 'aprobar el contrato');
   }
 
   // ── Normalización de numeroId ──

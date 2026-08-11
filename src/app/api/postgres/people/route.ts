@@ -3,6 +3,7 @@ import { AcademicaRepository } from '@/repositories/academica.repository';
 import { ValidationError, ConflictError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 import { queryOne } from '@/lib/postgres';
+import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 
 /**
  * POST /api/postgres/people
@@ -15,6 +16,18 @@ export const POST = handlerWithAuth(async (request) => {
   if (!body.numeroId || !body.primerNombre || !body.primerApellido || !body.tipoUsuario) {
     throw new ValidationError('numeroId, primerNombre, primerApellido, and tipoUsuario are required');
   }
+
+  // Contratos de prueba (PRB-): no se pueden agregar beneficiarios/titulares
+  // (y por tanto tampoco se crean fichas en ACADEMICA). Resuelve el contrato
+  // del body o, si falta, del titular referenciado.
+  let contratoTarget: string | null | undefined = body.contrato;
+  if (!contratoTarget && body.titularId) {
+    const t = await queryOne<{ contrato: string | null }>(
+      `SELECT "contrato" FROM "PEOPLE" WHERE "_id" = $1`, [body.titularId],
+    );
+    contratoTarget = t?.contrato;
+  }
+  assertNoEsContratoPrueba(contratoTarget, 'agregar un beneficiario/titular');
 
   // El numeroId debe ser único acá. La ÚNICA excepción permitida en el sistema
   // es la creación de contrato (titular que además es su propio beneficiario),

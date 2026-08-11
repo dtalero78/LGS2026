@@ -6,6 +6,7 @@ import { fillContractTemplate } from '@/lib/contract-template-filler';
 import { buildContractPdfHtml } from '@/lib/contract-pdf-html';
 import { getAsesorInfo } from '@/lib/asesor';
 import { archivarContratoEnDrive, buildContractFilename } from '@/lib/contract-drive';
+import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 
 const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
 const WHAPI_TOKEN = 'VSyDX4j7ooAJ7UGOhz8lGplUVDDs2EYj';
@@ -19,6 +20,7 @@ export const POST = handler(async (_request, { params }) => {
     [titularId]
   );
   if (!titular) throw new NotFoundError('Titular', titularId);
+  assertNoEsContratoPrueba(titular.contrato, 'enviar el PDF');
   if (!titular.celular) throw new ValidationError('El titular no tiene celular registrado');
   if (!titular.plataforma) throw new ValidationError('El titular no tiene plataforma asignada');
 
