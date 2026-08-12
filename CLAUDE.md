@@ -447,11 +447,36 @@ Conexión típica en los scripts: `new Client({ connectionString: DATABASE_URL.r
 - Only supports Zod schemas
 
 ### WhatsApp Integration
-- **Provider**: Whapi.cloud API
+- **Provider**: Whapi.cloud API. **Toda la mensajería WhatsApp sale por Whapi** — no hay código Twilio en `src/` (ver "Plantillas Twilio" abajo)
 - **Implementation**: `src/lib/whatsapp.ts`
 - **Functions**: `formatPhoneNumber(raw)` validates/strips to digits, `sendWhatsAppMessage(toNumber, messageBody)` sends via Whapi
-- **Uses**: Envío de contratos PDF, mensajes de bienvenida, OTP para consentimiento, plantillas de mensajes en detalle estudiante
-- **Token**: `WHAPI_TOKEN` env var (hardcoded fallback exists but should use env)
+- **Uses**: Envío de contratos PDF, mensajes de bienvenida, OTP para consentimiento, OTP de recuperar contraseña, envío masivo por plantillas, confirmación Exam. Intern.
+- **⚠️ Token**: `WHAPI_TOKEN` **NO está configurado en producción** — todo corre con los fallbacks hardcodeados del repo, y **hay dos distintos**, así que la plataforma **envía desde dos números**:
+
+| Token (sufijo) | Canal | Número | Lo usan |
+|---|---|---|---|
+| `…Ds2EYj` | SPDRMN-67FL6 | **+56 9 5770 3724** (*Coordinador Servicio al usuario*) | `lib/whatsapp.ts` (OTP consentimiento, OTP contraseña, bienvenida al aprobar, envío masivo, exam-intern), `wix/sendWhatsApp`, `contracts/[id]/send-pdf` |
+| `…LzPgtx` | DEADPL-QSNG2 | **+56 9 4267 9066** (*Lets Go Speak*) | `wix/sendWelcomeWhatsApp`, `wix/sendReagendarWhatsApp` |
+
+  Consecuencia: **el mismo mensaje de bienvenida sale de un número u otro según el botón** (Aprobar vs "Mensaje de Bienvenida"). Configurar `WHAPI_TOKEN` unifica 5 de los 9 puntos, pero **no todos**: [send-pdf/route.ts:12](src/app/api/contracts/[id]/send-pdf/route.ts#L12) y [wix/sendWhatsApp/route.ts:50](src/app/api/wix/sendWhatsApp/route.ts#L50) llevan el token **inline sin `process.env`**. Los tokens están en git (también en `src/backend/FUNCIONES WIX/`) → **pendiente rotarlos**.
+- **Mensajes hardcodeados vs plantillas**: los del flujo de firma y bienvenida están **en código**, no en `MESSAGE_TEMPLATES` — editar plantillas desde `/admin/plantillas/gestion` no los cambia. El de "Solicitar firma" se arma **en el cliente** ([contrato/[id]/page.tsx:378](src/app/dashboard/comercial/contrato/[id]/page.tsx#L378)) y se envía por `POST /api/wix/sendWhatsApp`, que acepta `toNumber` + `messageBody` arbitrarios con solo validar sesión.
+
+### Plantillas Twilio (preparadas, SIN uso todavía)
+Cuenta **`ACee5675…` ("LGS")** — distinta de la de las env vars `TWILIO_*` de producción, que apuntan a `ACbae12b…` con credenciales muertas. Sender ONLINE: **+56 600 914 2331** (perfil *"Lets Go Speak Ec"*).
+
+| Plantilla | ContentSid | Categoría | Estado |
+|---|---|---|---|
+| `lgs_activacion_cuenta_es` | `HXa97297894ae3f964b0d9bd96a8aa5d6d` | UTILITY 🔒 | candidata a migrar |
+| `lgs_solicitud_firma_es` | `HXa031f1b9156a1fb9a4cc702bee853df1` | UTILITY | candidata a migrar |
+| `lgs_codigo_verificacion_es` | `HXdd7c5ec40ac95d2862c7eb942427d040` | AUTHENTICATION | en reserva |
+| `lgs_contrato_pdf_es` | `HX5a90602bbf7dce853f79f42ed2589591` | UTILITY | en reserva |
+| `lgs_bienvenida_registro_es` | `HX7d7886e87f62820565b5a90d273170c7` | MARKETING | sustituida, borrable |
+
+- **Regla de la cuenta**: todo se registra como **UTILITY** con **`allow_category_change: false`**. Twilio lo manda en `true` por defecto y Meta **reclasifica a MARKETING en silencio** (más caro + límites de frecuencia). Con el flag en `false`, Meta rechaza en vez de reclasificar. **Excepción**: los OTP, que Meta obliga a `AUTHENTICATION`.
+- Para que Meta apruebe como UTILITY el texto debe ser **transaccional** — sin emojis ni tono celebratorio.
+- Los Content de Twilio son **inmutables**: cambiar el texto exige borrar y recrear. Borrar una plantilla **aprobada** bloquea ese nombre en Meta ~30 días → usar nombre nuevo.
+- Scripts: [twilio-create-bienvenida-template.js](scripts/twilio-create-bienvenida-template.js), [twilio-create-firma-templates.js](scripts/twilio-create-firma-templates.js) (`--preview` / `--apply` / `--submit`).
+- **DECISIÓN**: el **OTP** y el **envío del PDF** se quedan en Whapi. Son ruta crítica y concentran los dos blockers: (a) Twilio valida el medio **por extensión** y las URLs de API2PDF no la tienen — el arreglo limpio es una ruta alias de [download-pdf](src/app/api/contracts/[id]/download-pdf/route.ts) terminada en `.pdf`, con el token **en la ruta y no en la query**; (b) en plantillas `AUTHENTICATION` **el cuerpo lo genera Meta** y no se puede personalizar (la marca visible ahí es el nombre del perfil del sender).
 
 ### PDF Generation
 - **Provider**: API2PDF (Chrome URL rendering)
@@ -487,6 +512,9 @@ Conexión típica en los scripts: `new Client({ connectionString: DATABASE_URL.r
 ## Deployment Configuration
 
 ### Environment Variables (Digital Ocean)
+
+**App ID real: `46497990-93e8-406d-ab77-ed1835ae4bae`** (el que figura en [.do/app.yaml](.do/app.yaml) está desactualizado y da 404). Consultar con `doctl apps spec get <APP_ID>`.
+
 ```
 NEXTAUTH_URL=https://your-app-url.ondigitalocean.app
 NEXTAUTH_SECRET=your_32_character_secret_key
@@ -494,11 +522,22 @@ ADMIN_EMAIL=your-admin@email.com
 ADMIN_PASSWORD=your-secure-password
 DATABASE_URL=postgresql://user:pass@host:port/dbname
 CRON_SECRET=secret_for_cron_job_auth
-API2PDF_KEY=api2pdf_api_key
-WHAPI_TOKEN=whapi_cloud_token
 OPENAI_API_KEY=openai_api_key_for_complementaria
 ANTHROPIC_API_KEY=anthropic_api_key_for_dashboard_charts
+GOOGLE_SERVICE_ACCOUNT_JSON=service_account_json_para_modo_drive_lgs
+GOOGLE_DRIVE_FOLDER_ID=carpeta_contratos_unidad_compartida
+CRM_BRIDGE_SECRET=hmac_para_sso_con_el_crm
+DO_SPACES_KEY / DO_SPACES_SECRET / DO_SPACES_BUCKET / DO_SPACES_REGION / DO_SPACES_ENDPOINT
 ```
+
+**⚠️ Variables que el código espera pero NO están configuradas en producción** (corren con el fallback hardcodeado del repo):
+
+| Variable | Situación |
+|---|---|
+| `WHAPI_TOKEN` | Sin configurar → dos tokens hardcodeados = **dos números emisores** (ver "WhatsApp Integration") |
+| `API2PDF_KEY` | Sin configurar → usa el fallback de [send-pdf/route.ts:11](src/app/api/contracts/[id]/send-pdf/route.ts#L11) |
+
+**Variables presentes pero sin uso**: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`, `TWILIO_TWIML_APP_SID`, `TWILIO_API_KEY_SID`, `TWILIO_API_KEY_SECRET` — **ninguna se lee** (no hay código Twilio en `src/`), apuntan a la cuenta `ACbae12b…` cuyas credenciales están **muertas** (401 en auth token y en API key), y están guardadas **en texto plano** (no como `SECRET`). Si se retoma Twilio, la cuenta viva es `ACee5675…`.
 
 ### TypeScript Build Configuration
 - Target: `es2017`
@@ -1339,6 +1378,13 @@ interface ConsentData {
 - OTP codes are 6-digit, one-time use, 10-minute TTL
 - Consent hashed with SHA-256 for tamper detection
 - Cron jobs require CRON_SECRET header for authentication
+
+**⚠️ Pendientes abiertos** (detectados ago-2026, sin corregir):
+- 🔴 **`GET /api/contracts/[id]/download-pdf` no tiene autenticación** — con solo un `PEOPLE._id` cualquiera descarga el contrato completo (nombre, documento, domicilio, condiciones financieras). Verificado en producción: responde `307` sin sesión. Es intencional de origen (*"Público (se abre con window.open desde el panel)"*) y el middleware no lo cubre porque su matcher **excluye `/api`**. Al corregirlo, la forma que además habilita el uso con Twilio es un token HMAC **en la ruta, no en la query**: `/api/contracts/{id}/{token}/contrato.pdf` (patrón de [reset-token.ts](src/lib/reset-token.ts)).
+- 🔴 **Tokens de Whapi en git** (dos, en 5 archivos incl. `src/backend/FUNCIONES WIX/`) — pendiente rotarlos y moverlos a `WHAPI_TOKEN`.
+- 🟠 **`POST /api/wix/sendWhatsApp` acepta `toNumber` + `messageBody` arbitrarios** validando solo sesión — cualquier usuario autenticado puede enviar cualquier texto a cualquier número desde el WhatsApp corporativo.
+- 🟠 **Credenciales de Twilio en texto plano** en el spec de DO (no como `SECRET`).
+- 🟡 `POST /api/auth/forgot-password/check-email` permite **enumerar usuarios** (dice si un email existe).
 
 ### Pages and Routes Summary (25 pages)
 | Page | Route | Access |
