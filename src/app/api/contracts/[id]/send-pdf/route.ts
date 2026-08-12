@@ -129,7 +129,7 @@ export const POST = handler(async (_request, { params }) => {
       to: phone,
       media: tempPdfUrl,
       filename,
-      caption: `Hola ${titular.primerNombre || ''}, adjunto encontrarás tu contrato con LetsGoSpeak. 📄`,
+      caption: `Hola ${titular.primerNombre || ''}, adjunto encontrarás tu contrato con Let's Go Speak. 📄`,
     }),
   });
 

@@ -66,8 +66,8 @@ export async function sendConsentOtp(
 
   // Send via WhatsApp
   const mensaje =
-    `Tu codigo de verificacion LetsGoSpeak es: *${code}*\n\n` +
-    `Este codigo expira en 10 minutos. No lo compartas con nadie.`;
+    `Tu código de verificación de Let's Go Speak es: *${code}*\n\n` +
+    `Este código expira en 10 minutos. No lo compartas con nadie.`;
 
   await sendWhatsAppMessage(celular, mensaje);
 

@@ -376,9 +376,9 @@ export default function ContratoDetailPage() {
       const nombre = titular?.primerNombre || ''
 
       const message =
-        `Hola ${nombre}: \n\n` +
-        `*Tu contrato con LetsGoSpeak esta listo!*\n\n` +
-        `Para revisarlo sigue este enlace:\n\n` +
+        `Hola ${nombre}:\n\n` +
+        `*¡Tu contrato con Let's Go Speak ya está listo!*\n\n` +
+        `Para revisarlo y firmarlo sigue este enlace:\n\n` +
         `${contractUrl}\n\n` +
         `Si tienes alguna pregunta, no dudes en contactarnos.`
 
