@@ -528,6 +528,10 @@ GOOGLE_SERVICE_ACCOUNT_JSON=service_account_json_para_modo_drive_lgs
 GOOGLE_DRIVE_FOLDER_ID=carpeta_contratos_unidad_compartida
 CRM_BRIDGE_SECRET=hmac_para_sso_con_el_crm
 DO_SPACES_KEY / DO_SPACES_SECRET / DO_SPACES_BUCKET / DO_SPACES_REGION / DO_SPACES_ENDPOINT
+SENCE_RUT_OTEC=rut_del_otec_para_integracion_sence
+SENCE_TOKEN=token_sence_generado_en_sistemas_sence_cl_rts
+SENCE_COD_SENCE=codigo_sence_del_otec
+SENCE_AMBIENTE=test_o_produccion
 ```
 
 **⚠️ Variables que el código espera pero NO están configuradas en producción** (corren con el fallback hardcodeado del repo):

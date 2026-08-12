@@ -10,6 +10,8 @@
  * - reconcile-pegados: Diariamente a las 9:00 PM Colombia (02:00 UTC)
  * - reactivate-onhold: Diariamente a las 10:00 PM Colombia (03:00 UTC)
  * - expire-contracts: Diariamente a las 11:00 PM Colombia (04:00 UTC)
+ * - sence-envio-avance: Diariamente a las 23:00 hora Chile (America/Santiago),
+ *   dentro de la ventana 22:00-00:00 que exige el instructivo de SENCE
  */
 
 const cron = require('node-cron');
@@ -121,6 +123,35 @@ async function executeExpireContracts() {
   }
 }
 
+/**
+ * Ejecuta el cron de envio nocturno de avance de alumnos SENCE a SIC
+ */
+async function executeSenceEnvioAvance() {
+  const timestamp = getLocalTimestamp();
+  console.log(`\n[${timestamp}] Ejecutando sence-envio-avance...`);
+
+  try {
+    const response = await fetch(`${NEXTAUTH_URL}/api/cron/sence-envio-avance`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${CRON_SECRET}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      console.log(`[${timestamp}] Completado: ${data.message}`);
+      console.log(`   Procesados: ${data.processed}, Exitosos: ${data.successful}, Fallidos: ${data.failed}`);
+    } else {
+      console.error(`[${timestamp}] Error: ${data.error || 'Unknown error'}`);
+    }
+  } catch (error) {
+    console.error(`[${timestamp}] Error de conexion:`, error.message);
+  }
+}
+
 // Programar tareas
 // ================
 
@@ -142,10 +173,19 @@ cron.schedule('0 4 * * *', executeExpireContracts, {
   timezone: 'UTC'
 });
 
+// Envio de avance SENCE: Diariamente a las 23:00 hora Chile (dentro de la
+// ventana 22:00-00:00 que exige el instructivo). Unica tarea con timezone
+// distinta a UTC porque el requisito de SENCE esta expresado en hora Chile.
+cron.schedule('0 23 * * *', executeSenceEnvioAvance, {
+  scheduled: true,
+  timezone: 'America/Santiago'
+});
+
 console.log('Tareas programadas:');
 console.log('   - reconcile-pegados: Diariamente a las 02:00 UTC (9:00 PM Colombia)');
 console.log('   - reactivate-onhold: Diariamente a las 03:00 UTC (10:00 PM Colombia)');
 console.log('   - expire-contracts: Diariamente a las 04:00 UTC (11:00 PM Colombia)');
+console.log('   - sence-envio-avance: Diariamente a las 23:00 hora Chile (America/Santiago)');
 
 // Ejecutar inmediatamente si se pasa el argumento --run-now
 if (process.argv.includes('--run-now')) {
@@ -153,6 +193,7 @@ if (process.argv.includes('--run-now')) {
   executeReconcilePegados();
   executeReactivateOnHold();
   executeExpireContracts();
+  executeSenceEnvioAvance();
 }
 
 // Ejecutar solo reconcile-pegados si se pasa --reconcile-pegados
@@ -171,6 +212,12 @@ if (process.argv.includes('--expire-contracts')) {
 if (process.argv.includes('--reactivate-onhold')) {
   console.log('\nEjecutando reactivate-onhold...');
   executeReactivateOnHold();
+}
+
+// Ejecutar solo sence-envio-avance si se pasa --sence-envio-avance
+if (process.argv.includes('--sence-envio-avance')) {
+  console.log('\nEjecutando sence-envio-avance...');
+  executeSenceEnvioAvance();
 }
 
 // Mantener el proceso vivo

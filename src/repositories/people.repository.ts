@@ -410,6 +410,14 @@ class PeopleRepositoryClass extends BaseRepository {
     );
   }
 
+  /** Fechas de contrato de una persona por numeroId — usado para reportar fechaInicio/fechaFin a SENCE. */
+  async findContractDatesByNumeroId(numeroId: string) {
+    return queryOne<{ inicioContrato: string | null; fechaContrato: string | null; finalContrato: string | null }>(
+      `SELECT "inicioContrato", "fechaContrato", "finalContrato" FROM "PEOPLE" WHERE "numeroId" = $1 LIMIT 1`,
+      [numeroId]
+    );
+  }
+
   // ── Conversión Titular → Beneficiario ──
 
   /** Titular exacto por contrato + numeroId (para validar la coincidencia). */

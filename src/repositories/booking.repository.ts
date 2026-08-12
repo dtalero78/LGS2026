@@ -704,6 +704,77 @@ class BookingRepositoryClass extends BaseRepository {
     );
     return result.rowCount ?? 0;
   }
+
+  /**
+   * Alumnos SENCE (ACADEMICA.sence=true, con senceCode) que tuvieron un avance
+   * de Jump Step (múltiplo de 5, asistencia exitosa, no reprobado) en un
+   * booking cuyo evento cae dentro del día `targetDate` (YYYY-MM-DD) en la
+   * zona horaria `tz`. Usado por el cron de envío nocturno de avance a SENCE
+   * — 1 fila por alumno (DISTINCT ON), con su step/nivel ACTUAL en ACADEMICA
+   * para calcular el % de avance acumulado (no solo el jump aprobado ese día).
+   */
+  async findSenceAvanceCandidates(targetDate: string, tz: string = 'America/Santiago') {
+    return queryMany<{
+      academicaId: string;
+      numeroId: string;
+      senceCode: string;
+      nivel: string;
+      step: string;
+    }>(
+      `SELECT DISTINCT ON (a."_id")
+         a."_id" as "academicaId",
+         a."numeroId",
+         a."senceCode",
+         a."nivel",
+         a."step"
+       FROM "ACADEMICA_BOOKINGS" ab
+       LEFT JOIN "CALENDARIO" c ON (ab."eventoId" = c."_id" OR ab."idEvento" = c."_id")
+       INNER JOIN "ACADEMICA" a ON (ab."studentId" = a."_id" OR ab."idEstudiante" = a."_id")
+       WHERE a."sence" = true
+         AND a."senceCode" IS NOT NULL
+         AND COALESCE(c."dia", ab."fechaEvento") >= ($1::date)::timestamp AT TIME ZONE $2
+         AND COALESCE(c."dia", ab."fechaEvento") < ($1::date + INTERVAL '1 day')::timestamp AT TIME ZONE $2
+         AND (ab."cancelo" IS NULL OR ab."cancelo" = false)
+         AND (ab."asistio" IS TRUE OR ab."asistencia" IS TRUE)
+         AND (ab."noAprobo" IS NULL OR ab."noAprobo" = false)
+         AND NULLIF(REGEXP_REPLACE(COALESCE(c."step", ab."step", ''), '[^0-9]', '', 'g'), '')::int BETWEEN 5 AND 45
+         AND NULLIF(REGEXP_REPLACE(COALESCE(c."step", ab."step", ''), '[^0-9]', '', 'g'), '')::int % 5 = 0
+       ORDER BY a."_id"`,
+      [targetDate, tz]
+    );
+  }
+
+  /**
+   * IDs de todos los bookings históricos de un alumno (cualquier tipo/fecha)
+   * con asistencia exitosa y sin marca de reprobado — usados como
+   * `codigoActividad` en `listaActividades` del envío de avance a SENCE.
+   * Resuelve candidatos (ACADEMICA._id + PEOPLE._id duplicados por mismo
+   * numeroId) igual que `findByStudentId`, porque los bookings pueden estar
+   * enlazados por `idEstudiante`/`studentId` a cualquiera de esos IDs.
+   */
+  async findSenceActivityIds(academicaId: string): Promise<string[]> {
+    const idsRow = await queryMany<{ id: string }>(
+      `SELECT a."_id" AS id FROM "ACADEMICA" a WHERE a."_id" = $1
+       UNION
+       SELECT p."_id" AS id FROM "PEOPLE" p
+        WHERE p."numeroId" = (
+          SELECT a."numeroId" FROM "ACADEMICA" a WHERE a."_id" = $1 LIMIT 1
+        )`,
+      [academicaId]
+    );
+    const candidateIds = idsRow.map(r => r.id);
+    if (candidateIds.length === 0) candidateIds.push(academicaId);
+
+    const rows = await queryMany<{ _id: string }>(
+      `SELECT "_id" FROM "ACADEMICA_BOOKINGS"
+       WHERE ("idEstudiante" = ANY($1::text[]) OR "studentId" = ANY($1::text[]))
+         AND ("asistio" IS TRUE OR "asistencia" IS TRUE)
+         AND "noAprobo" IS NOT TRUE
+       ORDER BY "fechaEvento" ASC`,
+      [candidateIds]
+    );
+    return rows.map(r => r._id);
+  }
 }
 
 export const BookingRepository = new BookingRepositoryClass();

@@ -31,6 +31,7 @@ export const GET = handlerWithAuth(async (_request, _ctx, session) => {
 
   const reactivateLast = await getLastRun('reactivate-onhold')
   const expireLast     = await getLastRun('expire-contracts')
+  const senceLast      = await getLastRun('sence-envio-avance')
 
   const reactivatePending = await queryOne<{ n: number }>(
     `SELECT COUNT(*)::int AS n FROM "PEOPLE"
@@ -42,11 +43,16 @@ export const GET = handlerWithAuth(async (_request, _ctx, session) => {
   // Para expire-contracts no contamos pendientes (la query depende del helper
   // contract-expiry y es más cara); se puede agregar después si se necesita.
 
+  // Para sence-envio-avance tampoco hay conteo de pendientes todavía —
+  // depende de obtenerCursosParaEnviar(), que aún no está implementado
+  // (ver TODO en src/services/sence.service.ts).
+
   return successResponse({
     now: new Date().toISOString(),
     crons: {
       'reactivate-onhold': summarize(reactivateLast, reactivatePending?.n ?? null),
       'expire-contracts':  summarize(expireLast, null),
+      'sence-envio-avance': summarize(senceLast, null),
     },
   })
 })
