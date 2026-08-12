@@ -16,15 +16,13 @@ export async function POST(request: NextRequest) {
       `✅ [SENCE] Cierre de sesión exitoso — IdSesionAlumno=${idSesionAlumno} RunAlumno=${runAlumno}`
     );
 
-    // TODO(SENCE-senceSessionClosedAt): descomentar cuando exista la columna
-    // ACADEMICA_BOOKINGS."senceSessionClosedAt" en BD (la agrega otro compañero).
-    // if (idSesionAlumno) {
-    //   const { query } = await import('@/lib/postgres');
-    //   await query(
-    //     `UPDATE "ACADEMICA_BOOKINGS" SET "senceSessionClosedAt" = NOW() WHERE "_id" = $1`,
-    //     [idSesionAlumno]
-    //   );
-    // }
+    if (idSesionAlumno) {
+      const { query } = await import('@/lib/postgres');
+      await query(
+        `UPDATE "ACADEMICA_BOOKINGS" SET "senceSessionClosedAt" = NOW() WHERE "_id" = $1`,
+        [idSesionAlumno]
+      );
+    }
 
     const redirectUrl = new URL('/panel-estudiante', request.url);
     redirectUrl.searchParams.set('senceClose', 'success');

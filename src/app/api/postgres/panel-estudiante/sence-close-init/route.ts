@@ -38,15 +38,11 @@ export const GET = handlerWithAuth(async (request, context, session) => {
     throw new ValidationError('Este estudiante SENCE no tiene código de curso (senceCode) configurado');
   }
 
-  // TODO(SENCE-idSesionSence): leer de ACADEMICA_BOOKINGS.idSesionSence cuando
-  // exista la columna (la agrega otro compañero, ver plan). El manual exige
-  // reenviar el MISMO IdSesionSence que devolvió SENCE al iniciar sesión.
-  // const row = await queryOne<{ idSesionSence: string }>(
-  //   `SELECT "idSesionSence" FROM "ACADEMICA_BOOKINGS" WHERE "_id" = $1`,
-  //   [bookingId]
-  // );
-  // const idSesionSence = row?.idSesionSence || '';
-  const idSesionSence = '';
+  const row = await queryOne<{ idSesionSence: string }>(
+    `SELECT "idSesionSence" FROM "ACADEMICA_BOOKINGS" WHERE "_id" = $1`,
+    [bookingId]
+  );
+  const idSesionSence = row?.idSesionSence || '';
 
   const origin = request.headers.get('origin') || process.env.NEXTAUTH_URL || '';
   const senceConfig = getSenceConfig();

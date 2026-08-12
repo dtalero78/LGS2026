@@ -21,15 +21,13 @@ export async function POST(request: NextRequest) {
       `✅ [SENCE] Inicio de sesión exitoso — IdSesionAlumno=${idSesionAlumno} IdSesionSence=${idSesionSence} RunAlumno=${runAlumno}`
     );
 
-    // TODO(SENCE-idSesionSence): descomentar cuando exista la columna
-    // ACADEMICA_BOOKINGS."idSesionSence" en BD (la agrega otro compañero).
-    // if (idSesionAlumno) {
-    //   const { query } = await import('@/lib/postgres');
-    //   await query(
-    //     `UPDATE "ACADEMICA_BOOKINGS" SET "idSesionSence" = $1, "_updatedDate" = NOW() WHERE "_id" = $2`,
-    //     [idSesionSence, idSesionAlumno]
-    //   );
-    // }
+    if (idSesionAlumno) {
+      const { query } = await import('@/lib/postgres');
+      await query(
+        `UPDATE "ACADEMICA_BOOKINGS" SET "idSesionSence" = $1, "_updatedDate" = NOW() WHERE "_id" = $2`,
+        [idSesionSence, idSesionAlumno]
+      );
+    }
 
     const redirectUrl = new URL('/panel-estudiante', request.url);
     redirectUrl.searchParams.set('senceLogin', 'success');
