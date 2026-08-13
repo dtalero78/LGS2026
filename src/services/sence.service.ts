@@ -183,5 +183,6 @@ async function enviarAvanceNocturno(): Promise<CronRunResult & { metadata: { det
 }
 
 export const senceService = {
+  obtenerCursosParaEnviar,
   enviarAvanceNocturno,
 };

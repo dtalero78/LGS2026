@@ -360,7 +360,7 @@ function PanelEstudianteContent() {
                   </p>
                 </div>
                 <div>
-                  <span className="text-xs text-primary-200 uppercase tracking-wide">Link de Ingreso</span>
+                  <span className="text-xs text-primary-200 uppercase tracking-wide block">Link de Ingreso</span>
                   {nextClass && isSenceStudent && !senceDone ? (
                     <>
                       <button
