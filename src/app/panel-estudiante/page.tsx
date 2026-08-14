@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, Suspense } from 'react'
+import { useState, useMemo, useEffect, Suspense } from 'react'
 import {
   CalendarDaysIcon,
   BookOpenIcon,
@@ -36,6 +36,14 @@ import WhatsAppContacts from '@/components/panel-estudiante/WhatsAppContacts'
 import AdvisorComments from '@/components/panel-estudiante/AdvisorComments'
 import ClassHistory from '@/components/panel-estudiante/ClassHistory'
 import JumpExamBanner from '@/components/panel-estudiante/JumpExamBanner'
+import ZoomAccessButton from '@/components/panel-estudiante/ZoomAccessButton'
+
+// Ventana de conexión a Zoom de la "Sesión próxima": abre 5 min ANTES del inicio
+// y cierra 10 min DESPUÉS. Fuera de ella el ícono queda bloqueado.
+const ZOOM_ABRE_MIN_ANTES = 5
+const ZOOM_CIERRA_MIN_DESPUES = 10
+// Tope de una espera de setTimeout (desborda pasados ~24 días).
+const ZOOM_MAX_ESPERA_MS = 6 * 60 * 60 * 1000
 
 function PanelEstudianteContent() {
   const [showBookingFlow, setShowBookingFlow] = useState(false)
@@ -50,6 +58,7 @@ function PanelEstudianteContent() {
   const [showInstructivos, setShowInstructivos] = useState(false)
   const [showPerfil, setShowPerfil] = useState(false)
   const [showRecursos, setShowRecursos] = useState(false)
+  const [zoomTick, setZoomTick] = useState(0)
 
   // Instructivos from API
   const instructivosQuery = useQuery(
@@ -136,13 +145,30 @@ function PanelEstudianteContent() {
     setVideoOpen(true)
   }
 
+  // Ventana de conexión a Zoom: abre 5 min ANTES del inicio y cierra 10 min DESPUÉS.
+  // `zoomTick` (efecto de abajo) reevalúa la ventana al llegar la hora, para que el
+  // ícono se active/desactive solo sin recargar. Hora del dispositivo del alumno.
   const nextEventDate = nextClass ? new Date(nextClass.fechaEvento) : null
   const now = new Date()
-  const showZoom = nextClass && nextEventDate
-    ? (nextEventDate.getTime() - now.getTime()) / (1000 * 60) <= 5
-      && (now.getTime() - nextEventDate.getTime()) / (1000 * 60) <= 10
-    : false
+  const minutosAlInicio = nextEventDate ? (nextEventDate.getTime() - now.getTime()) / (1000 * 60) : Infinity
+  const showZoom = !!nextClass && !!nextEventDate
+    && minutosAlInicio <= ZOOM_ABRE_MIN_ANTES
+    && -minutosAlInicio <= ZOOM_CIERRA_MIN_DESPUES
   const zoomLink = nextClass?.eventLinkZoom || nextClass?.linkZoom
+
+  // Programa un re-render en el instante exacto del próximo cambio (apertura / cierre).
+  const inicioMs = nextEventDate ? nextEventDate.getTime() : null
+  useEffect(() => {
+    if (inicioMs == null) return
+    const abre = inicioMs - ZOOM_ABRE_MIN_ANTES * 60_000
+    const cierra = inicioMs + ZOOM_CIERRA_MIN_DESPUES * 60_000
+    const ahora = Date.now()
+    const proximoCambio = ahora < abre ? abre : ahora < cierra ? cierra : null
+    if (proximoCambio == null) return
+    const espera = Math.min(proximoCambio - ahora + 1_000, ZOOM_MAX_ESPERA_MS)
+    const id = setTimeout(() => setZoomTick((t) => t + 1), espera)
+    return () => clearTimeout(id)
+  }, [inicioMs, zoomTick])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -285,20 +311,16 @@ function PanelEstudianteContent() {
                 </div>
                 <div>
                   <span className="text-xs text-primary-200 uppercase tracking-wide">Link de Ingreso</span>
-                  {showZoom && zoomLink ? (
-                    <a
-                      href={zoomLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 text-white text-sm font-medium rounded-lg hover:bg-white/30 transition-colors"
-                    >
-                      <VideoCameraIcon className="h-4 w-4" />
-                      Entrar a Zoom
-                    </a>
+                  {zoomLink ? (
+                    <div className="mt-1 flex items-center gap-3">
+                      <ZoomAccessButton zoomLink={zoomLink} disponible={!!showZoom} />
+                      {/* El aviso se mantiene visible en los dos estados. */}
+                      <p className="text-sm text-white">
+                        Enlace disponible 5 min antes, recuerda refrescar el navegador
+                      </p>
+                    </div>
                   ) : (
-                    <p className="text-sm text-white">
-                      {zoomLink ? 'Enlace disponible 5 min antes, recuerda refrescar el navegador' : '---'}
-                    </p>
+                    <p className="text-sm text-white">---</p>
                   )}
                 </div>
                 <div className="pt-2 border-t border-white/20">
