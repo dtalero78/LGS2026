@@ -486,7 +486,7 @@ export async function updateEvent(
 export async function deleteEvent(
   eventId: string,
   deleteBookings: boolean = true,
-  opts?: { actor?: string; motivo?: string; skipLog?: boolean; deleteGroup?: boolean },
+  opts?: { actor?: string; motivo?: string; skipLog?: boolean; deleteGroup?: boolean; conBooking?: boolean },
 ) {
   const event = await CalendarioRepository.findById(eventId);
   if (!event) throw new NotFoundError('Event', eventId);
@@ -505,40 +505,112 @@ export async function deleteEvent(
 
   return await withTransaction(async (client) => {
     let bookingsDeleted = 0;
+    let bookingsCanceled = 0;
     for (const id of idsToDelete) {
       const ev = id === eventId ? event : await CalendarioRepository.findById(id);
       if (!ev) continue;
 
-      if (ev.advisor && !opts?.skipLog) {
-        await AdvisorEventLogRepository.insert({
-          advisorId:     ev.advisor,
-          eventoId:      id,
-          estado:        'Suspended',
-          fechaEvento:   ev.dia,
-          horaInicio:    ev.hora,
-          tipo:          ev.tipo,
-          nivel:         ev.nivel,
-          step:          ev.step,
-          tituloEvento:  ev.tituloONivel || ev.titulo || ev.nombreEvento,
-          horaFin:       (ev as any).timeout ?? null,
-          observaciones: (ev as any).notasadvisor ?? null,
-          canceladoPor:  opts?.actor || 'system',
-          motivoTransicion: opts?.motivo || null,
-        }, client);
-      }
+      const tituloEvento = ev.tituloONivel || ev.titulo || ev.nombreEvento;
+      const logBase = {
+        advisorId: ev.advisor as string,
+        eventoId: id,
+        fechaEvento: ev.dia,
+        horaInicio: ev.hora,
+        tipo: ev.tipo,
+        nivel: ev.nivel,
+        step: ev.step,
+        tituloEvento,
+        horaFin: (ev as any).timeout ?? null,
+        observaciones: (ev as any).notasadvisor ?? null,
+        canceladoPor: opts?.actor || 'system',
+        motivoTransicion: opts?.motivo || null,
+      };
 
-      if (deleteBookings) {
-        const r = await client.query(
-          `DELETE FROM "ACADEMICA_BOOKINGS" WHERE "eventoId" = $1 OR "idEvento" = $1 RETURNING "_id"`,
+      if (opts?.conBooking) {
+        // Modo "Sesión con booking": la sesión tenía inscritos. Se cancelan sus
+        // bookings (devuelve el cupo semanal — el conteo excluye cancelo=true),
+        // se guarda a los alumnos en CANCELACIONES_SIN_REEMPLAZO para que Servicio
+        // los gestione, se registra 'NoAsistio' en Ctrl Horas y cuenta cancelada+noasistio.
+        const advRow: any = ev.advisor
+          ? await client.query(
+              `SELECT "nombreCompleto" FROM "ADVISORS"
+                WHERE "_id" = $1 OR LOWER(TRIM("email")) = LOWER(TRIM($1)) LIMIT 1`,
+              [ev.advisor],
+            )
+          : null;
+        const advisorNombre: string | null = advRow?.rows?.[0]?.nombreCompleto ?? (ev.advisor || null);
+
+        const alumnos: any = await client.query(
+          `SELECT COALESCE(b."idEstudiante", b."studentId") AS "studentId",
+                  b."numeroId",
+                  NULLIF(TRIM(COALESCE(b."primerNombre",'') || ' ' || COALESCE(b."primerApellido",'')), '') AS nombre,
+                  COALESCE(NULLIF(b."celular", ''), a."celular") AS telefono,
+                  a."email" AS email
+             FROM "ACADEMICA_BOOKINGS" b
+             LEFT JOIN LATERAL (
+               SELECT a2."email", a2."celular"
+                 FROM "ACADEMICA" a2
+                WHERE a2."numeroId" = b."numeroId"
+                ORDER BY (a2."tipoUsuario" = 'BENEFICIARIO') DESC
+                LIMIT 1
+             ) a ON true
+            WHERE (b."eventoId" = $1 OR b."idEvento" = $1) AND b."cancelo" IS NOT TRUE`,
           [id],
         );
-        bookingsDeleted += r.rowCount ?? 0;
+        for (const al of alumnos.rows) {
+          await client.query(
+            `INSERT INTO "CANCELACIONES_SIN_REEMPLAZO"
+               ("_id","loteId","eventoId","fechaEvento","horaEvento","tipo","nivel","step","tituloEvento",
+                "advisorId","advisorNombre","studentId","numeroId","nombre","telefono","email")
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+            [ids.cancelacion(), id, id, ev.dia, ev.hora, ev.tipo, ev.nivel, ev.step, tituloEvento,
+             ev.advisor || null, advisorNombre, al.studentId, al.numeroId, al.nombre, al.telefono, al.email],
+          );
+        }
+
+        const rc: any = await client.query(
+          `UPDATE "ACADEMICA_BOOKINGS" SET "cancelo" = true
+            WHERE ("eventoId" = $1 OR "idEvento" = $1) AND "cancelo" IS NOT TRUE`,
+          [id],
+        );
+        bookingsCanceled += rc.rowCount ?? 0;
+
+        if (ev.advisor) {
+          await AdvisorEventLogRepository.insert({ ...logBase, estado: 'NoAsistio' }, client);
+          await client.query(
+            `UPDATE "ADVISORS"
+                SET "cancelada" = COALESCE("cancelada",0) + 1,
+                    "noasistio" = COALESCE("noasistio",0) + 1,
+                    "_updatedDate" = NOW()
+              WHERE "_id" = $1 OR LOWER(TRIM("email")) = LOWER(TRIM($1))`,
+            [ev.advisor],
+          );
+        }
+      } else {
+        // Suspensión (skipLog=false) o Restructuración (skipLog=true).
+        if (ev.advisor && !opts?.skipLog) {
+          await AdvisorEventLogRepository.insert({ ...logBase, estado: 'Suspended' }, client);
+          // La Suspensión cuenta como "cancelada" para el advisor (Restructuración NO).
+          await client.query(
+            `UPDATE "ADVISORS" SET "cancelada" = COALESCE("cancelada",0) + 1, "_updatedDate" = NOW()
+              WHERE "_id" = $1 OR LOWER(TRIM("email")) = LOWER(TRIM($1))`,
+            [ev.advisor],
+          );
+        }
+
+        if (deleteBookings) {
+          const r = await client.query(
+            `DELETE FROM "ACADEMICA_BOOKINGS" WHERE "eventoId" = $1 OR "idEvento" = $1 RETURNING "_id"`,
+            [id],
+          );
+          bookingsDeleted += r.rowCount ?? 0;
+        }
       }
 
       await client.query(`DELETE FROM "CALENDARIO" WHERE "_id" = $1`, [id]);
     }
 
-    return { bookingsDeleted, eventsDeleted: idsToDelete.length };
+    return { bookingsDeleted, bookingsCanceled, eventsDeleted: idsToDelete.length };
   });
 }
 

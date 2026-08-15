@@ -787,6 +787,15 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Columna CONFIRMADO + botón rojo que extiende 100 días desde fecha base a los marcados y bloquea (DONE Step 50) a los no marcados. Acción irreversible.',
   },
 
+  // -- Página: Cancelación sin reemplazo (/dashboard/servicio/cancelacion-sin-reemplazo) --
+  {
+    code: ServicioPermission.CANCELACION_SIN_REEMPLAZO_VER,
+    module: Module.SERVICIO,
+    section: 'Cancelación sin reemplazo',
+    name: 'Página "Cancelación sin reemplazo"',
+    description: 'Listado de alumnos de sesiones canceladas con booking (No Asistió) y su gestión: estado por alumno, gestionada por Servicio/Académico y botón global "Gestionada"',
+  },
+
   // ========== COMERCIAL MODULE ==========
   // -- Página: Contrato Detalle (/dashboard/comercial/contrato/[id]) --
   {

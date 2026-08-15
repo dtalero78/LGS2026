@@ -89,6 +89,9 @@ export default function AgendaSesionesPage() {
   //   'restructuracion' → borrado limpio, NO deja registro en el log
   //   null              → ninguna casilla marcada (botón Eliminar deshabilitado)
   const [deleteMode, setDeleteMode] = useState<'suspension' | 'restructuracion' | null>(null)
+  // "Sesión con booking": add-on de la Suspensión (excluye Restructuración). Cancela
+  // los bookings (devuelve cupo), los manda a Cancelación sin reemplazo y cuenta No Asistió.
+  const [conBooking, setConBooking] = useState(false)
   const [deleteMotivo, setDeleteMotivo] = useState('')
   const [deletingEvent, setDeletingEvent] = useState(false)
 
@@ -660,6 +663,7 @@ export default function AgendaSesionesPage() {
     if (!ev) return
     setDeleteTarget(ev)
     setDeleteMode(null)
+    setConBooking(false)
     setDeleteMotivo('')
     setDeleteGroupSiblings([])
     setDeleteGroupChecked(false)
@@ -686,6 +690,8 @@ export default function AgendaSesionesPage() {
       // Restructuración: borrado limpio sin registro en ADVISOR_EVENT_LOG.
       // El backend honra skipLog=true para saltar el insert del snapshot.
       if (deleteMode === 'restructuracion') qs.set('skipLog', 'true')
+      // Sesión con booking: cancela bookings (devuelve cupo) + Cancelación sin reemplazo + No Asistió.
+      if (conBooking) qs.set('conBooking', 'true')
       // Si es grupo compartido y el checkbox está marcado, pedimos al backend
       // borrar todos los hermanos en cascada (1 sola transacción).
       const isGroupDelete = deleteGroupSiblings.length > 1 && deleteGroupChecked
@@ -719,6 +725,7 @@ export default function AgendaSesionesPage() {
   const cancelDelete = () => {
     if (deletingEvent) return
     setDeleteTarget(null)
+    setConBooking(false)
     setDeleteMode(null)
     setDeleteMotivo('')
   }
@@ -1067,13 +1074,16 @@ export default function AgendaSesionesPage() {
                   </div>
                 )}
 
-                {/* Opciones mutuamente excluyentes — sólo una puede estar marcada */}
+                {/* Suspensión + "Sesión con booking" se combinan; Restructuración es exclusiva. */}
                 <div className="space-y-2 mb-4">
                   <label className="flex items-start gap-2 cursor-pointer p-2 rounded hover:bg-gray-50">
                     <input
                       type="checkbox"
                       checked={deleteMode === 'suspension'}
-                      onChange={(e) => setDeleteMode(e.target.checked ? 'suspension' : null)}
+                      onChange={(e) => {
+                        setDeleteMode(e.target.checked ? 'suspension' : null)
+                        if (!e.target.checked) setConBooking(false)
+                      }}
                       className="mt-0.5 rounded border-gray-300 text-red-600 focus:ring-red-500"
                     />
                     <span className="text-sm text-gray-800">
@@ -1086,8 +1096,30 @@ export default function AgendaSesionesPage() {
                   <label className="flex items-start gap-2 cursor-pointer p-2 rounded hover:bg-gray-50">
                     <input
                       type="checkbox"
+                      checked={conBooking}
+                      onChange={(e) => {
+                        setConBooking(e.target.checked)
+                        if (e.target.checked) setDeleteMode('suspension')
+                      }}
+                      className="mt-0.5 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                    />
+                    <span className="text-sm text-gray-800">
+                      Sesión con booking
+                      <span className="block text-xs text-gray-500 mt-0.5">
+                        La sesión tenía inscritos: se les cancela la clase y se les <strong>devuelve el cupo semanal</strong>,
+                        pasan a <strong>Cancelación sin reemplazo</strong> (Servicio) y cuenta como <strong>No Asistió</strong> del
+                        advisor. Excluye &quot;Restructuración&quot;.
+                      </span>
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-2 cursor-pointer p-2 rounded hover:bg-gray-50">
+                    <input
+                      type="checkbox"
                       checked={deleteMode === 'restructuracion'}
-                      onChange={(e) => setDeleteMode(e.target.checked ? 'restructuracion' : null)}
+                      onChange={(e) => {
+                        setDeleteMode(e.target.checked ? 'restructuracion' : null)
+                        if (e.target.checked) setConBooking(false)
+                      }}
                       className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                     <span className="text-sm text-gray-800">

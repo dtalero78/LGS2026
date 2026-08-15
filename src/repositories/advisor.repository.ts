@@ -12,7 +12,7 @@ import { buildDynamicUpdate } from '@/lib/query-builder';
 const ADVISOR_COLUMNS = `
   "_id", "email", "primerNombre", "primerApellido", "nombreCompleto",
   "pais", "zoom", "activo", "fotoAdvisor", "domicilioadvisor", "fechaNacimiento",
-  "esPlanta", "usuarioRolId", "_createdDate", "_updatedDate"
+  "esPlanta", "usuarioRolId", "cancelada", "noasistio", "_createdDate", "_updatedDate"
 `;
 
 // Advisor "ADVISOR WELCOME": su zoom es el link fijo de toda sesión WELCOME.

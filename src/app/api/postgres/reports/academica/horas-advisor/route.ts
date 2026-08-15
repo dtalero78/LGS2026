@@ -13,7 +13,8 @@ import { InformesPermission } from '@/types/permissions'
  *   - Conducted  = eventos vigentes en CALENDARIO (desglosados por tipo)
  *   - Cancelled  = ADVISOR_EVENT_LOG estado='Canceled'  (cambio de advisor)
  *   - Suspended  = ADVISOR_EVENT_LOG estado='Suspended' (cancelación del evento)
- *   - Total      = conducted + suspended + cancelled
+ *   - No Asistió = ADVISOR_EVENT_LOG estado='NoAsistio' (cancelación con booking)
+ *   - Total      = conducted + suspended + cancelled + noasistio
  *
  * Filtros: fechas, país (ADVISORS.pais), advisor, tipo de evento.
  * numeroId del advisor se resuelve por la relación ADVISORS.usuarioRolId ->
@@ -42,6 +43,7 @@ interface HorasAdvisorRow {
   conducted: number
   suspended: number
   cancelled: number
+  noasistio: number
   total: number
 }
 
@@ -101,7 +103,8 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     logs AS (
       SELECT a."_id" AS advisor_id,
         COUNT(*) FILTER (WHERE l."estado" = 'Canceled')::int  AS cancelled,
-        COUNT(*) FILTER (WHERE l."estado" = 'Suspended')::int AS suspended
+        COUNT(*) FILTER (WHERE l."estado" = 'Suspended')::int AS suspended,
+        COUNT(*) FILTER (WHERE l."estado" = 'NoAsistio')::int AS noasistio
       FROM "ADVISOR_EVENT_LOG" l
       JOIN "ADVISORS" a ON a."_id" = l."advisorId" OR LOWER(a."email") = LOWER(l."advisorId")
       CROSS JOIN LATERAL (SELECT (${LOG_TIPO}) AS tipo) t
@@ -135,7 +138,8 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
       COALESCE(co.conducted, 0) AS "conducted",
       COALESCE(lo.suspended, 0) AS "suspended",
       COALESCE(lo.cancelled, 0) AS "cancelled",
-      COALESCE(co.conducted, 0) + COALESCE(lo.suspended, 0) + COALESCE(lo.cancelled, 0) AS "total"
+      COALESCE(lo.noasistio, 0) AS "noasistio",
+      COALESCE(co.conducted, 0) + COALESCE(lo.suspended, 0) + COALESCE(lo.cancelled, 0) + COALESCE(lo.noasistio, 0) AS "total"
     FROM combined cb
     JOIN "ADVISORS" a ON a."_id" = cb.advisor_id
     LEFT JOIN conducted co ON co.advisor_id = a."_id"
@@ -175,6 +179,7 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     conducted: rows.reduce((s, r) => s + n(r.conducted), 0),
     suspended: rows.reduce((s, r) => s + n(r.suspended), 0),
     cancelled: rows.reduce((s, r) => s + n(r.cancelled), 0),
+    noasistio: rows.reduce((s, r) => s + n(r.noasistio), 0),
     total:     rows.reduce((s, r) => s + n(r.total), 0),
     // Conteos de advisors
     advisorsActivos,                                                // roster activo (país)
@@ -190,6 +195,7 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     conducted: n(r.conducted),
     suspended: n(r.suspended),
     cancelled: n(r.cancelled),
+    noasistio: n(r.noasistio),
   }))
 
   // Dona por estado (total + %)
@@ -197,6 +203,7 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     { name: 'Conducted', value: totals.conducted },
     { name: 'Suspended', value: totals.suspended },
     { name: 'Cancelled', value: totals.cancelled },
+    { name: 'No Asistió', value: totals.noasistio },
   ].filter(d => d.value > 0)
 
   // Composición de conducted por tipo (gráfica nueva)
