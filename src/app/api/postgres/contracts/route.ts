@@ -237,6 +237,27 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
        b.kids === true]
     );
     created.beneficiarios.push(benefResult.rows[0]);
+
+    // Inscripción Kids (si el beneficiario se marcó como kid en el wizard).
+    // Best-effort: queda lista para enviarse a KIDS2026 (external_ref = contrato)
+    // cuando esa integración esté disponible (enviadoAKids arranca en false).
+    if (b.kids === true) {
+      const kd = b.kidsData || {};
+      try {
+        await query(
+          `INSERT INTO "KIDS_INSCRIPCIONES"
+             ("_id","contrato","beneficiarioId","numeroId","nombre",
+              "campaign","tipoCurso","horario","apoderado","apoderadoTelefono","apoderadoMail")
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+          [ids.kidsInscripcion(), contrato, benefId, b.numeroId,
+           `${b.primerNombre || ''} ${b.primerApellido || ''}`.trim() || null,
+           kd.campaign || null, kd.tipoCurso || null, kd.horario || null,
+           kd.apoderado || null, kd.apoderadoTelefono || null, kd.apoderadoMail || null]
+        );
+      } catch (e) {
+        console.error('[contracts] Error guardando KIDS_INSCRIPCIONES (best-effort):', e);
+      }
+    }
   }
 
   // 4. Create FINANCIERO if financial data present

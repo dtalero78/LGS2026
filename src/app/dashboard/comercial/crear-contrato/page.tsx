@@ -7,6 +7,7 @@ import { PermissionGuard } from '@/components/permissions'
 import { ComercialPermission } from '@/types/permissions'
 import { ArrowLeftIcon, ArrowRightIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { COUNTRY_CODES } from '@/lib/country-codes'
+import KidsBeneficiarioModal, { KidsData } from '@/components/comercial/KidsBeneficiarioModal'
 
 // Country prefixes — catálogo completo compartido (país de residencia + prefijo derivado).
 const COUNTRY_PREFIXES = [
@@ -52,6 +53,7 @@ interface Beneficiario {
   sence?: boolean; // Usuario SENCE (solo contratos de Chile)
   senceCode?: string; // Código SENCE del beneficiario (opcional, si sence)
   kids?: boolean; // Segmento/programa infantil (PEOPLE.kids)
+  kidsData?: KidsData; // Datos de inscripción kids (curso + apoderado) → KIDS_INSCRIPCIONES
 }
 
 // Feature flag del switch "Kids" por beneficiario. OCULTO por ahora; cuando se
@@ -122,6 +124,8 @@ function CrearContratoContent() {
   });
 
   const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>([]);
+  // Índice del beneficiario cuyo modal Kids está abierto (null = cerrado).
+  const [kidsModalIndex, setKidsModalIndex] = useState<number | null>(null);
   const [titularEsBeneficiario, setTitularEsBeneficiario] = useState(false);
   // Franquicia SENCE: marca a nivel del titular (empresa) — solo se activa si es
   // Empresa y de Chile. El código SENCE NO se captura aquí; se captura por
@@ -321,6 +325,24 @@ function CrearContratoContent() {
   const removeBeneficiario = (index: number) => {
     setBeneficiarios(beneficiarios.filter((_, i) => i !== index));
   };
+
+  // Modal Kids: reúne TODOS los datos del beneficiario (regulares + curso + apoderado).
+  const saveKidsModal = (v: any) => {
+    if (kidsModalIndex === null) return
+    const upd = [...beneficiarios]
+    upd[kidsModalIndex] = { ...upd[kidsModalIndex], ...v, kids: true }
+    setBeneficiarios(upd)
+    setKidsModalIndex(null)
+  }
+  const cancelKidsModal = () => {
+    // Si se encendió el switch pero no se guardaron datos, revertir a no-kids.
+    if (kidsModalIndex !== null && !beneficiarios[kidsModalIndex]?.kidsData) {
+      const upd = [...beneficiarios]
+      upd[kidsModalIndex] = { ...upd[kidsModalIndex], kids: false }
+      setBeneficiarios(upd)
+    }
+    setKidsModalIndex(null)
+  }
 
   // Update beneficiario
   const updateBeneficiario = (index: number, field: string, value: string) => {
@@ -1399,6 +1421,28 @@ function CrearContratoContent() {
                           <TrashIcon className="h-5 w-5" />
                         </button>
                       </div>
+                      {KIDS_FEATURE_ENABLED && beneficiario.kids ? (
+                        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="inline-block bg-blue-100 text-blue-700 text-[11px] font-bold px-2 py-0.5 rounded-full">🧒 KIDS</span>
+                              <span className="font-semibold text-gray-900 truncate">
+                                {`${beneficiario.primerNombre || ''} ${beneficiario.primerApellido || ''}`.trim() || 'Sin nombre'}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {beneficiario.numeroId ? `ID ${beneficiario.numeroId}` : 'Sin ID'}
+                              {beneficiario.kidsData?.tipoCurso ? ` · ${beneficiario.kidsData.tipoCurso}` : ''}
+                              {beneficiario.kidsData?.campaign ? ` · ${beneficiario.kidsData.campaign}` : ''}
+                            </p>
+                          </div>
+                          <button type="button" onClick={() => setKidsModalIndex(index)}
+                            className="flex-shrink-0 px-3 py-1.5 text-sm font-medium text-blue-700 bg-white border border-blue-300 rounded-md hover:bg-blue-100">
+                            ✏️ Editar datos (Kids)
+                          </button>
+                        </div>
+                      ) : (
+                        <>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Primer nombre *</label>
@@ -1525,7 +1569,9 @@ function CrearContratoContent() {
                           )}
                         </>
                       )}
-                      {/* Switch "Kids" — oculto tras KIDS_FEATURE_ENABLED hasta que se implemente. */}
+                        </>
+                      )}
+                      {/* Switch "Kids": al activarlo marca kids=true y abre el modal completo del beneficiario. */}
                       {KIDS_FEATURE_ENABLED && (
                         <div className="mt-4 flex items-center gap-3">
                           <button
@@ -1534,9 +1580,16 @@ function CrearContratoContent() {
                             aria-checked={beneficiario.kids === true}
                             aria-label="Kids"
                             onClick={() => {
+                              const encender = !beneficiario.kids
                               const upd = [...beneficiarios]
-                              upd[index] = { ...upd[index], kids: !upd[index].kids }
-                              setBeneficiarios(upd)
+                              if (encender) {
+                                upd[index] = { ...upd[index], kids: true }
+                                setBeneficiarios(upd)
+                                setKidsModalIndex(index)
+                              } else {
+                                upd[index] = { ...upd[index], kids: false, kidsData: undefined }
+                                setBeneficiarios(upd)
+                              }
                             }}
                             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${beneficiario.kids ? 'bg-primary-600' : 'bg-gray-300'}`}
                           >
@@ -1640,6 +1693,17 @@ function CrearContratoContent() {
             </div>
           </div>
         )}
+
+        {/* Modal Kids: reúne todos los datos del beneficiario (regulares + curso + apoderado) */}
+        <KidsBeneficiarioModal
+          open={kidsModalIndex !== null}
+          initial={kidsModalIndex !== null ? beneficiarios[kidsModalIndex] : undefined}
+          titularNombre={`${titular.primerNombre || ''} ${titular.primerApellido || ''}`.trim()}
+          titularCelular={titular.celular}
+          titularEmail={titular.email}
+          onSave={saveKidsModal}
+          onCancel={cancelKidsModal}
+        />
 
         {/* Modal: protección de historial (beneficiarios con ficha académica previa) */}
         {proteccionCasos.length > 0 && proteccionCtx && (

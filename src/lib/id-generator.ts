@@ -36,4 +36,5 @@ export const ids = {
   payment: () => generateId('pag'),
   advisorEventLog: () => generateId('ael'),
   cancelacion: () => generateId('can'),
+  kidsInscripcion: () => generateId('kid'),
 };
