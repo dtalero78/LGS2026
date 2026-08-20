@@ -945,6 +945,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Acceso a /admin/drive-config. Interruptor de dónde se archivan los PDF de contrato: bsl-utilidades (externo) o LGS directo a la Unidad compartida.',
   },
   {
+    code: MantenimientoPermission.KIDS_CONFIG,
+    module: Module.MANTENIMIENTO,
+    section: 'Usuarios',
+    name: 'Página "Proceso Kids"',
+    description: 'Acceso a /admin/kids-config. Interruptor del proceso Kids (switch + modal en Crear Contrato). Con el flag apagado el switch no se muestra.',
+  },
+  {
     code: MantenimientoPermission.CLEAR_HISTORIC,
     module: Module.MANTENIMIENTO,
     section: 'Usuarios',

@@ -56,11 +56,6 @@ interface Beneficiario {
   kidsData?: KidsData; // Datos de inscripción kids (curso + apoderado) → KIDS_INSCRIPCIONES
 }
 
-// Feature flag del switch "Kids" por beneficiario. OCULTO por ahora; cuando se
-// implemente la funcionalidad kids, ponerlo en `true` (y desplegar) para mostrarlo.
-// El valor ya se envía y persiste en PEOPLE.kids (con el flag off queda siempre false).
-const KIDS_FEATURE_ENABLED = false;
-
 export default function CrearContratoPage() {
   return (
     <Suspense fallback={null}>
@@ -126,6 +121,14 @@ function CrearContratoContent() {
   const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>([]);
   // Índice del beneficiario cuyo modal Kids está abierto (null = cerrado).
   const [kidsModalIndex, setKidsModalIndex] = useState<number | null>(null);
+  // Flag del proceso Kids (APP_CONFIG, togglable desde Mantenimiento › Proceso Kids).
+  const [kidsFeatureEnabled, setKidsFeatureEnabled] = useState(false);
+  useEffect(() => {
+    fetch('/api/admin/kids-config')
+      .then(r => r.json())
+      .then(d => setKidsFeatureEnabled(!!d.active))
+      .catch(() => setKidsFeatureEnabled(false));
+  }, []);
   const [titularEsBeneficiario, setTitularEsBeneficiario] = useState(false);
   // Franquicia SENCE: marca a nivel del titular (empresa) — solo se activa si es
   // Empresa y de Chile. El código SENCE NO se captura aquí; se captura por
@@ -1421,7 +1424,7 @@ function CrearContratoContent() {
                           <TrashIcon className="h-5 w-5" />
                         </button>
                       </div>
-                      {KIDS_FEATURE_ENABLED && beneficiario.kids ? (
+                      {kidsFeatureEnabled && beneficiario.kids ? (
                         <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 flex items-center justify-between gap-3">
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -1572,7 +1575,7 @@ function CrearContratoContent() {
                         </>
                       )}
                       {/* Switch "Kids": al activarlo marca kids=true y abre el modal completo del beneficiario. */}
-                      {KIDS_FEATURE_ENABLED && (
+                      {kidsFeatureEnabled && (
                         <div className="mt-4 flex items-center gap-3">
                           <button
                             type="button"
