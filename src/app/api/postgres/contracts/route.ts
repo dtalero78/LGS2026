@@ -5,6 +5,8 @@ import { ValidationError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 import { syncFinancieroSaldo } from '@/services/pagos-titulares.service';
 import { checkBeneficiarioUnico, anularBeneficiariosViejos } from '@/lib/beneficiario-unico';
+import { kidsIntake } from '@/lib/kids-intake';
+import { buildKidsReservation, plataformaToCountryCode, toISODate } from '@/lib/kids-mapping';
 import crypto from 'crypto';
 
 const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
@@ -239,23 +241,55 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
     created.beneficiarios.push(benefResult.rows[0]);
 
     // Inscripción Kids (si el beneficiario se marcó como kid en el wizard).
-    // Best-effort: queda lista para enviarse a KIDS2026 (external_ref = contrato)
-    // cuando esa integración esté disponible (enviadoAKids arranca en false).
     if (b.kids === true) {
       const kd = b.kidsData || {};
+      const kidsInscId = ids.kidsInscripcion();
       try {
         await query(
           `INSERT INTO "KIDS_INSCRIPCIONES"
              ("_id","contrato","beneficiarioId","numeroId","nombre",
-              "campaign","tipoCurso","horario","apoderado","apoderadoTelefono","apoderadoMail")
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
-          [ids.kidsInscripcion(), contrato, benefId, b.numeroId,
+              "campaign","tipoCurso","horario","classroomId","salonNombre",
+              "apoderado","apoderadoApellidos","apoderadoDoc","apoderadoTelefono","apoderadoMail","parentesco")
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+          [kidsInscId, contrato, benefId, b.numeroId,
            `${b.primerNombre || ''} ${b.primerApellido || ''}`.trim() || null,
-           kd.campaign || null, kd.tipoCurso || null, kd.horario || null,
-           kd.apoderado || null, kd.apoderadoTelefono || null, kd.apoderadoMail || null]
+           kd.campaign || null, kd.tipoCurso || null, kd.horario || null, kd.classroomId || null, kd.salonNombre || null,
+           kd.apoderado || null, kd.apoderadoApellidos || null, kd.apoderadoDoc || null,
+           kd.apoderadoTelefono || null, kd.apoderadoMail || null, kd.parentesco || null]
         );
       } catch (e) {
         console.error('[contracts] Error guardando KIDS_INSCRIPCIONES (best-effort):', e);
+      }
+
+      // Enviar la reserva a KIDS2026 (best-effort — NO rompe la creación del contrato).
+      // Requiere integración configurada (KIDS_API_URL/KIDS_INTAKE_API_KEY) y un salón elegido.
+      if (kidsIntake.isConfigured() && kd.classroomId) {
+        try {
+          const input = buildKidsReservation({
+            // externalRef único por niño (un contrato LGS puede tener varios kids).
+            externalRef: `${contrato}#${b.numeroId}`,
+            countryCode: plataformaToCountryCode(titular.plataforma),
+            inicio: toISODate(clientToday) || new Date().toISOString().slice(0, 10),
+            finalContrato: toISODate(finalContrato),
+            titular,
+            beneficiario: b,
+            kidsData: kd,
+          });
+          const r = await kidsIntake.createReservation(input);
+          await query(
+            `UPDATE "KIDS_INSCRIPCIONES"
+               SET "enviadoAKids"=true, "kidsExternalRef"=$2, "kidsContractId"=$3,
+                   "kidsEnrollmentId"=$4, "fechaEnvioKids"=NOW(), "errorKids"=NULL, "_updatedDate"=NOW()
+             WHERE "_id"=$1`,
+            [kidsInscId, r.externalRef, r.contractId, r.enrollmentId]
+          );
+        } catch (e: any) {
+          console.error('[contracts] Error enviando reserva a KIDS (best-effort):', e?.message);
+          try {
+            await query(`UPDATE "KIDS_INSCRIPCIONES" SET "errorKids"=$2, "_updatedDate"=NOW() WHERE "_id"=$1`,
+              [kidsInscId, String(e?.message || 'error').slice(0, 500)]);
+          } catch { /* noop */ }
+        }
       }
     }
   }
