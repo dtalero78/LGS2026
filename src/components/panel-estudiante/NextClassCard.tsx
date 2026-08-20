@@ -145,10 +145,12 @@ export default function NextClassCard({ events, isLoading }: NextClassCardProps)
                 Ver Video
               </button>
             </div>
-            {/* Aviso siempre visible, en los dos estados. */}
+            {/* Aviso siempre visible; el texto cambia según el estado del enlace. */}
             {zoomLink && (
-              <p className="text-xs text-gray-500">
-                Enlace disponible 5 min antes, recuerda refrescar el navegador
+              <p className={`text-sm font-semibold ${showZoom ? 'text-emerald-200' : 'text-amber-200'}`}>
+                {showZoom
+                  ? 'Enlace listo, disponible por 10 minutos después del inicio, da clic en el ícono'
+                  : 'Enlace disponible 5 min antes, recuerda refrescar el navegador'}
               </p>
             )}
           </div>
