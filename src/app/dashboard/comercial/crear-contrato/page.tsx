@@ -51,7 +51,13 @@ interface Beneficiario {
   celular?: string;
   sence?: boolean; // Usuario SENCE (solo contratos de Chile)
   senceCode?: string; // Código SENCE del beneficiario (opcional, si sence)
+  kids?: boolean; // Segmento/programa infantil (PEOPLE.kids)
 }
+
+// Feature flag del switch "Kids" por beneficiario. OCULTO por ahora; cuando se
+// implemente la funcionalidad kids, ponerlo en `true` (y desplegar) para mostrarlo.
+// El valor ya se envía y persiste en PEOPLE.kids (con el flag off queda siempre false).
+const KIDS_FEATURE_ENABLED = false;
 
 export default function CrearContratoPage() {
   return (
@@ -306,7 +312,8 @@ function CrearContratoContent() {
       fechaNacimiento: '',
       email: '',
       celular: '',
-      sence: heredaSence
+      sence: heredaSence,
+      kids: false
     }]);
   };
 
@@ -1517,6 +1524,26 @@ function CrearContratoContent() {
                             </div>
                           )}
                         </>
+                      )}
+                      {/* Switch "Kids" — oculto tras KIDS_FEATURE_ENABLED hasta que se implemente. */}
+                      {KIDS_FEATURE_ENABLED && (
+                        <div className="mt-4 flex items-center gap-3">
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={beneficiario.kids === true}
+                            aria-label="Kids"
+                            onClick={() => {
+                              const upd = [...beneficiarios]
+                              upd[index] = { ...upd[index], kids: !upd[index].kids }
+                              setBeneficiarios(upd)
+                            }}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${beneficiario.kids ? 'bg-primary-600' : 'bg-gray-300'}`}
+                          >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${beneficiario.kids ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </button>
+                          <span className="text-sm font-bold text-gray-900">Kids</span>
+                        </div>
                       )}
                     </div>
                   ))}

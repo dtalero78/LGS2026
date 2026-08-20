@@ -226,14 +226,15 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
       `INSERT INTO "PEOPLE" ("_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
         "email", "celular", "fechaNacimiento", "titularId",
         "tipoUsuario", "contrato", "plataforma", "estadoInactivo",
-        "vigencia", "fechaContrato", "finalContrato", "sence", "senceCode", "origen", "_createdDate", "_updatedDate")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'BENEFICIARIO',$11,$12,false,$13,NOW(),$14::date,$15,$16,'POSTGRES',NOW(),NOW()) RETURNING *`,
+        "vigencia", "fechaContrato", "finalContrato", "sence", "senceCode", "kids", "origen", "_createdDate", "_updatedDate")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'BENEFICIARIO',$11,$12,false,$13,NOW(),$14::date,$15,$16,$17,'POSTGRES',NOW(),NOW()) RETURNING *`,
       [benefId, b.numeroId, b.primerNombre, b.segundoNombre || null,
        b.primerApellido, b.segundoApellido || null,
        b.email || null, b.celular || null, b.fechaNacimiento || null, titularId,
        contrato, titular.plataforma || null, financial?.vigencia || null, finalContrato,
        b.sence === true && esChile && esEmpresa,
-       (b.sence === true && esChile && esEmpresa) ? (String(b.senceCode || '').trim() || null) : null]
+       (b.sence === true && esChile && esEmpresa) ? (String(b.senceCode || '').trim() || null) : null,
+       b.kids === true]
     );
     created.beneficiarios.push(benefResult.rows[0]);
   }
