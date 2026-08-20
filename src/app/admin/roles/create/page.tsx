@@ -409,7 +409,7 @@ function AdvisorForm() {
 // ─────────────────────────── 4) Comercial ───────────────────────────
 
 function ComercialForm() {
-  const [form, setForm] = useState({ nombre: '', correo: '', plataforma: '', filial: '' })
+  const [form, setForm] = useState({ nombre: '', correo: '', numberid: '', plataforma: '', filial: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<{ comercial: any; password: string } | null>(null)
@@ -429,11 +429,11 @@ function ComercialForm() {
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
   // Al cambiar la plataforma se limpia la filial seleccionada (pertenece a otra plataforma).
   const setPlataforma = (v: string) => setForm(f => ({ ...f, plataforma: v, filial: '' }))
-  const valid = form.nombre.trim() && emailRe.test(form.correo.trim())
+  const valid = form.nombre.trim() && emailRe.test(form.correo.trim()) && form.numberid.trim()
 
   const submit = async () => {
     setError(null)
-    if (!valid) { setError('Completa nombre y un correo válido'); return }
+    if (!valid) { setError('Completa nombre, correo válido y número de identificación'); return }
     setSaving(true)
     try {
       const res = await fetch('/api/admin/users/create-comercial', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
@@ -450,10 +450,11 @@ function ComercialForm() {
       <div className="flex items-start gap-3"><CheckCircleIcon className="h-7 w-7 text-emerald-600 flex-shrink-0" /><div><h2 className="text-lg font-bold text-emerald-900">Comercial creado</h2><p className="text-sm text-emerald-800 mt-0.5">Registrado en Equipo Comercial + login (rol COMERCIAL).</p></div></div>
       <CredentialCard email={done.comercial.correo} password={done.password} extra={<>
         <div className="grid grid-cols-3 gap-2"><span className="text-gray-500">Nombre</span><span className="col-span-2 font-medium text-gray-900">{done.comercial.nombre}</span></div>
+        <div className="grid grid-cols-3 gap-2"><span className="text-gray-500">Identificación</span><span className="col-span-2 font-mono text-gray-900">{done.comercial.numberid || '—'}</span></div>
         <div className="grid grid-cols-3 gap-2"><span className="text-gray-500">Plataforma</span><span className="col-span-2 font-medium text-gray-900">{done.comercial.plataforma || '—'}</span></div>
         <div className="grid grid-cols-3 gap-2"><span className="text-gray-500">Filial</span><span className="col-span-2 font-medium text-gray-900">{done.comercial.filial || '—'}</span></div>
       </>} />
-      <button type="button" onClick={() => { setDone(null); setForm({ nombre: '', correo: '', plataforma: '', filial: '' }) }} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50">Crear otro</button>
+      <button type="button" onClick={() => { setDone(null); setForm({ nombre: '', correo: '', numberid: '', plataforma: '', filial: '' }) }} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50">Crear otro</button>
     </div>
   )
 
@@ -463,6 +464,7 @@ function ComercialForm() {
       <div className="grid sm:grid-cols-2 gap-4">
         <Field label="Nombre" required><input value={form.nombre} onChange={e => set('nombre', e.target.value)} className={inputCls} /></Field>
         <Field label="Correo" required><input value={form.correo} onChange={e => set('correo', e.target.value.replace(/\s/g, ''))} className={`${inputCls} font-mono`} placeholder="correo@dominio.com" /></Field>
+        <Field label="Número de identificación" required><input value={form.numberid} onChange={e => set('numberid', e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))} className={`${inputCls} font-mono`} /></Field>
         <Field label="Plataforma"><select value={form.plataforma} onChange={e => setPlataforma(e.target.value)} className={`${inputCls} bg-white`}><option value="">— Ninguna —</option>{PLATAFORMAS.map(p => <option key={p} value={p}>{p}</option>)}</select></Field>
         <Field label="Filial" hint={form.plataforma && filiales.length === 0 ? 'No hay filiales para esta plataforma. Agrégalas en "Gestionar filiales".' : undefined}>
           <select value={form.filial} onChange={e => set('filial', e.target.value)} disabled={!form.plataforma} className={`${inputCls} bg-white disabled:bg-gray-50 disabled:cursor-not-allowed`}>

@@ -6,7 +6,7 @@
  * La clave se auto-genera y se guarda en ambos (texto plano) y se devuelve
  * una vez para que el admin la copie.
  *
- *   POST { nombre, correo, plataforma?, filial? }
+ *   POST { nombre, correo, numberid, plataforma?, filial? }
  *
  * Permiso: MANTENIMIENTO.USUARIOS.CREAR_ROL (SUPER_ADMIN/ADMIN bypass).
  */
@@ -50,10 +50,12 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   const correo = (body?.correo || '').trim().toLowerCase();
   const plataforma = (body?.plataforma || '').trim() || null;
   const filial = (body?.filial || '').trim() || null;
+  const numberid = (body?.numberid || '').trim().toUpperCase();
 
   if (!nombre) throw new ValidationError('El nombre es requerido');
   if (!correo) throw new ValidationError('El correo es requerido');
   if (!emailRe.test(correo)) throw new ValidationError('El correo no es válido');
+  if (!numberid) throw new ValidationError('El número de identificación es requerido');
 
   // Único en USUARIOS_ROLES
   const userDup = await queryOne<{ rol: string; nombre: string | null }>(
@@ -73,21 +75,33 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   );
   if (eqDup) throw new ConflictError('Ya existe un comercial registrado con ese correo');
 
+  // numberid (número de identificación) único en USUARIOS_ROLES
+  const numDup = await queryOne<{ rol: string; nombre: string | null }>(
+    `SELECT "rol","nombre" FROM "USUARIOS_ROLES"
+      WHERE UPPER(TRIM("numberid")) = UPPER(TRIM($1)) LIMIT 1`,
+    [numberid],
+  );
+  if (numDup) {
+    throw new ConflictError(
+      `Ya existe un usuario con ese número de identificación (rol ${numDup.rol}${numDup.nombre ? ' — ' + numDup.nombre : ''})`,
+    );
+  }
+
   const password = generateTempPassword();
 
   // 1) Login en USUARIOS_ROLES (rol COMERCIAL)
   const usuarioRolId = crypto.randomUUID();
   await queryOne(
     `INSERT INTO "USUARIOS_ROLES" (
-       "_id", "email", "nombre", "password", "rol",
+       "_id", "email", "nombre", "numberid", "password", "rol",
        "activo", "plataforma", "origen",
        "fechaCreacion", "fechaActualizacion", "_createdDate", "_updatedDate"
      ) VALUES (
-       $1, $2, $3, $4, 'COMERCIAL',
-       true, $5, 'ADMIN',
+       $1, $2, $3, $4, $5, 'COMERCIAL',
+       true, $6, 'ADMIN',
        NOW(), NOW(), NOW(), NOW()
      )`,
-    [usuarioRolId, correo, nombre, password, plataforma],
+    [usuarioRolId, correo, nombre, numberid, password, plataforma],
   );
 
   // 2) Registro en EQUIPO_COMERCIAL enlazado al login
@@ -104,5 +118,5 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
     [comercialId, nombre, correo, plataforma, filial, password, usuarioRolId],
   );
 
-  return successResponse({ comercial: inserted, usuarioRolId, generatedPassword: password });
+  return successResponse({ comercial: { ...inserted, numberid }, usuarioRolId, generatedPassword: password });
 });
