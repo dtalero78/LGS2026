@@ -14,7 +14,7 @@ import { useState } from 'react'
  * se muestra siempre, en los dos estados.
  */
 
-/** Ícono a color: la sesión está abierta. */
+/** Ícono a color: la sesión está abierta (badge verde con check). */
 function IconoActivo({ size = 52 }: { size?: number }) {
   return (
     <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden="true" focusable="false">
@@ -22,6 +22,10 @@ function IconoActivo({ size = 52 }: { size?: number }) {
         <clipPath id="zoomAccesoActivo">
           <rect x="2" y="2" width="60" height="60" rx="16" />
         </clipPath>
+        <linearGradient id="zoomAccesoCheck" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#86efac" />
+          <stop offset="1" stopColor="#22c55e" />
+        </linearGradient>
       </defs>
       <g clipPath="url(#zoomAccesoActivo)">
         <rect x="2" y="2" width="30" height="30" fill="#1e3a8a" />
@@ -33,8 +37,10 @@ function IconoActivo({ size = 52 }: { size?: number }) {
         <rect x="17" y="24" width="21" height="16" rx="5.5" />
         <path d="M40 30.5l7.5-4.6c.7-.4 1.5.1 1.5.9v10.4c0 .8-.8 1.3-1.5.9L40 33.5z" />
       </g>
-      <circle cx="49" cy="15" r="10" fill="#ffffff" />
-      <circle cx="49" cy="15" r="7.6" fill="#f97316" />
+      {/* Badge verde con check (sesión abierta) */}
+      <circle cx="49" cy="15" r="11.5" fill="#ffffff" />
+      <circle cx="49" cy="15" r="9" fill="url(#zoomAccesoCheck)" />
+      <path d="M45 15.2l2.8 2.8 5.2-5.5" fill="none" stroke="#ffffff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
