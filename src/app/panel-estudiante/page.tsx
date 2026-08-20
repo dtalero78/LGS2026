@@ -314,9 +314,11 @@ function PanelEstudianteContent() {
                   {zoomLink ? (
                     <div className="mt-1 flex items-center gap-3">
                       <ZoomAccessButton zoomLink={zoomLink} disponible={!!showZoom} />
-                      {/* El aviso se mantiene visible en los dos estados. */}
-                      <p className="text-sm text-white">
-                        Enlace disponible 5 min antes, recuerda refrescar el navegador
+                      {/* El aviso se mantiene visible; el texto cambia según el estado del enlace. */}
+                      <p className={`text-sm font-semibold ${showZoom ? 'text-emerald-200' : 'text-amber-200'}`}>
+                        {showZoom
+                          ? 'Enlace listo, disponible por 10 minutos después del inicio, da clic en el ícono'
+                          : 'Enlace disponible 5 min antes, recuerda refrescar el navegador'}
                       </p>
                     </div>
                   ) : (
