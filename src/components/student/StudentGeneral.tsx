@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Student } from '@/types'
 import { formatDate } from '@/lib/utils'
 import { MessageCircle, Loader2, Check, AlertCircle } from 'lucide-react'
@@ -17,6 +17,18 @@ interface StudentGeneralProps {
   isSuspendida?: boolean
 }
 
+/** Badge con el número de veces que se envió un mensaje. */
+function Contador({ n, color }: { n: number; color: string }) {
+  return (
+    <span
+      title={`Enviado ${n} ${n === 1 ? 'vez' : 'veces'}`}
+      className={`inline-flex items-center justify-center min-w-[1.75rem] h-6 px-1.5 rounded-full text-xs font-bold ${color}`}
+    >
+      {n}
+    </span>
+  )
+}
+
 export default function StudentGeneral({ student, isSuspendida }: StudentGeneralProps) {
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false)
   const [whatsAppSent, setWhatsAppSent] = useState(false)
@@ -25,6 +37,7 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
   const [profileOnlySent, setProfileOnlySent] = useState(false)
   const [sendingReagendar, setSendingReagendar] = useState(false)
   const [reagendarSent, setReagendarSent] = useState(false)
+  const [msgCounts, setMsgCounts] = useState<{ welcome: number; soloPerfil: number; reagendar: number }>({ welcome: 0, soloPerfil: 0, reagendar: 0 })
   const [showDocuments, setShowDocuments] = useState(false)
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([])
   const [editingPassword, setEditingPassword] = useState(false)
@@ -35,6 +48,15 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
 
   // The PEOPLE _id for document API calls
   const peopleId = (student as any).peopleId || student._id
+
+  // Contadores de envío de mensajes (guardados en ACADEMICA por student._id).
+  useEffect(() => {
+    if (!student?._id) return
+    fetch(`/api/postgres/students/${student._id}/msg-counts`)
+      .then(r => r.json())
+      .then(d => setMsgCounts({ welcome: Number(d.welcome ?? 0), soloPerfil: Number(d.soloPerfil ?? 0), reagendar: Number(d.reagendar ?? 0) }))
+      .catch(() => { /* deja en 0 */ })
+  }, [student?._id])
 
   // ── SENCE ──────────────────────────────────────────────────────
   const [sence, setSence] = useState<boolean>(!!(student as any).sence)
@@ -193,6 +215,7 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
 
       if (data.success) {
         setWhatsAppSent(true)
+        setMsgCounts(c => ({ ...c, welcome: typeof data.contador === 'number' ? data.contador : c.welcome + 1 }))
         toast.success('WhatsApp de bienvenida enviado exitosamente')
 
         // Reset success state after 3 seconds
@@ -239,6 +262,7 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
 
       if (data.success) {
         setProfileOnlySent(true)
+        setMsgCounts(c => ({ ...c, soloPerfil: typeof data.contador === 'number' ? data.contador : c.soloPerfil + 1 }))
         toast.success('Link de perfil enviado exitosamente')
         setTimeout(() => setProfileOnlySent(false), 3000)
       } else {
@@ -281,6 +305,7 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
 
       if (data.success) {
         setReagendarSent(true)
+        setMsgCounts(c => ({ ...c, reagendar: typeof data.contador === 'number' ? data.contador : c.reagendar + 1 }))
         toast.success('WhatsApp de reagendar Welcome enviado')
         setTimeout(() => setReagendarSent(false), 3000)
       } else {
@@ -433,6 +458,7 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
           {/* Columna 4: botones */}
           {student.celular && (
             <div className="flex flex-col items-start gap-2">
+              <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handleSendWhatsApp}
@@ -463,6 +489,9 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
                   </>
                 )}
               </button>
+              <Contador n={msgCounts.welcome} color="bg-green-100 text-green-700" />
+              </div>
+              <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handleSendProfileOnly}
@@ -493,6 +522,9 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
                   </>
                 )}
               </button>
+              <Contador n={msgCounts.soloPerfil} color="bg-blue-100 text-blue-700" />
+              </div>
+              <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handleSendReagendar}
@@ -523,6 +555,8 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
                   </>
                 )}
               </button>
+              <Contador n={msgCounts.reagendar} color="bg-purple-100 text-purple-700" />
+              </div>
             </div>
           )}
         </div>

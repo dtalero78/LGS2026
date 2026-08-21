@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { query } from '@/lib/postgres'
 
 async function isAuthorized(request: NextRequest): Promise<boolean> {
   const wixSecret = request.headers.get('x-wix-secret');
@@ -99,9 +100,24 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Welcome WhatsApp sent successfully to', nombre || 'beneficiario')
 
+    // Incrementa el contador del mensaje en ACADEMICA (por beneficiarioId = ACADEMICA._id).
+    // 'msgSoloPerfilCount' si noWelcome, 'msgWelcomeCount' si es con bienvenida.
+    const col = noWelcome ? 'msgSoloPerfilCount' : 'msgWelcomeCount'
+    let contador: number | null = null
+    try {
+      const r = await query(
+        `UPDATE "ACADEMICA" SET "${col}" = COALESCE("${col}",0)+1, "_updatedDate"=NOW() WHERE "_id"=$1 RETURNING "${col}" AS n`,
+        [beneficiarioId]
+      )
+      contador = (r.rows[0] as any)?.n ?? null
+    } catch (e) {
+      console.error('⚠️ No se pudo incrementar el contador de mensaje:', e)
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Welcome WhatsApp message sent successfully',
+      contador,
       data: whatsappData
     })
 

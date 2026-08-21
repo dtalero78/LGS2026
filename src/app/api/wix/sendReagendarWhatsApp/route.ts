@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { MessageTemplatesRepository } from '@/repositories/message-templates.repository'
 import { fillTemplate } from '@/lib/message-template-filler'
+import { query } from '@/lib/postgres'
 
 async function isAuthorized(request: NextRequest): Promise<boolean> {
   const wixSecret = request.headers.get('x-wix-secret');
@@ -85,7 +86,19 @@ export async function POST(request: NextRequest) {
     let whatsappData
     try { whatsappData = JSON.parse(responseText) } catch { whatsappData = { response: responseText } }
 
-    return NextResponse.json({ success: true, message: 'Reagendar WhatsApp message sent successfully', data: whatsappData })
+    // Incrementa el contador de "Reagendar Welcome" en ACADEMICA (por beneficiarioId = ACADEMICA._id).
+    let contador: number | null = null
+    try {
+      const r = await query(
+        `UPDATE "ACADEMICA" SET "msgReagendarCount" = COALESCE("msgReagendarCount",0)+1, "_updatedDate"=NOW() WHERE "_id"=$1 RETURNING "msgReagendarCount" AS n`,
+        [beneficiarioId]
+      )
+      contador = (r.rows[0] as any)?.n ?? null
+    } catch (e) {
+      console.error('⚠️ No se pudo incrementar el contador de reagendar:', e)
+    }
+
+    return NextResponse.json({ success: true, message: 'Reagendar WhatsApp message sent successfully', contador, data: whatsappData })
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to send Reagendar WhatsApp message' },
