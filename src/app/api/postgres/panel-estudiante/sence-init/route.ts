@@ -22,9 +22,12 @@ export const GET = handlerWithAuth(async (request, context, session) => {
 
   const studentId = student.academicaId || student._id;
 
-  const booking = await queryOne<{ _id: string }>(
-    `SELECT "_id" FROM "ACADEMICA_BOOKINGS"
-     WHERE "_id" = $1 AND ("idEstudiante" = $2 OR "studentId" = $2)`,
+  const booking = await queryOne<{ _id: string; eventStart: Date }>(
+    `SELECT b."_id",
+            COALESCE(c."dia", b."fechaEvento") AS "eventStart"
+     FROM "ACADEMICA_BOOKINGS" b
+     LEFT JOIN "CALENDARIO" c ON (c."_id" = b."eventoId" OR c."_id" = b."idEvento")
+     WHERE b."_id" = $1 AND (b."idEstudiante" = $2 OR b."studentId" = $2)`,
     [bookingId, studentId]
   );
   if (!booking) throw new NotFoundError('Booking', bookingId);
@@ -36,6 +39,19 @@ export const GET = handlerWithAuth(async (request, context, session) => {
   const senceCode = (student as any).senceCode;
   if (!senceCode) {
     throw new ValidationError('Este estudiante SENCE no tiene código de curso (senceCode) configurado');
+  }
+
+  // Solo se puede iniciar sesión SENCE dentro de la misma ventana en que el
+  // enlace de Zoom está disponible en el panel (-5 min / +10 min respecto al
+  // inicio del evento) — ver `showZoom` en panel-estudiante/page.tsx.
+  const eventStart = new Date(booking.eventStart).getTime();
+  const now = Date.now();
+  const minutesUntil = (eventStart - now) / 60000;
+  const minutesSince = (now - eventStart) / 60000;
+  if (minutesUntil > 5 || minutesSince > 10) {
+    throw new ValidationError(
+      'Aún no puedes iniciar sesión en SENCE. El enlace se habilita 5 minutos antes de tu clase.'
+    );
   }
 
   const origin = request.headers.get('origin') || process.env.NEXTAUTH_URL || '';

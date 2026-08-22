@@ -361,7 +361,7 @@ function PanelEstudianteContent() {
                 </div>
                 <div>
                   <span className="text-xs text-primary-200 uppercase tracking-wide block">Link de Ingreso</span>
-                  {nextClass && isSenceStudent && !senceDone ? (
+                  {nextClass && isSenceStudent && !senceDone && showZoom ? (
                     <>
                       <button
                         type="button"
