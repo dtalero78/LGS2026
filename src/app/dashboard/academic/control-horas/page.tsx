@@ -423,17 +423,29 @@ function ControlHorasContent() {
   const weeklyEffective = (weekKeys: Set<string>): number => {
     if (!data) return 0
     const nowMs = Date.now()
-    const groups = new Map<string, { cerrada: boolean }>()
+    // Por grupo (compartidos deduplicados): si está cerrado suma 1h si tuvo
+    // asistentes, o 0.5h si fue conducido SIN asistentes (no compartido).
+    // Suspendidas y canceladas NO aparecen aquí (salen del calendario vigente) → 0h.
+    const groups = new Map<string, { cerrada: boolean; asistieron: number; compartido: boolean }>()
     for (const v of data.vigentes) {
       if (new Date(v.fechaEvento).getTime() > nowMs) continue
       if (!weekKeys.has(dayKeyOf(v.fechaEvento))) continue
       const key = v.eventoCompartidoId || v.eventoId
+      const asis = Number((v as any).asistieron) || 0
+      const comp = v.eventoCompartidoId != null
       const g = groups.get(key)
-      if (!g) groups.set(key, { cerrada: v.sesionCerrada === true })
-      else if (v.sesionCerrada === true) g.cerrada = true
+      if (!g) groups.set(key, { cerrada: v.sesionCerrada === true, asistieron: asis, compartido: comp })
+      else {
+        if (v.sesionCerrada === true) g.cerrada = true
+        g.asistieron += asis
+        if (comp) g.compartido = true
+      }
     }
     let eff = 0
-    for (const g of groups.values()) if (g.cerrada) eff++
+    for (const g of groups.values()) {
+      if (!g.cerrada) continue
+      eff += (!g.compartido && g.asistieron === 0) ? 0.5 : 1
+    }
     for (const ae of adminEventsList) {
       if (!ae?.registrado || !ae.fechaInicio) continue
       if (new Date(ae.fechaInicio).getTime() > nowMs) continue

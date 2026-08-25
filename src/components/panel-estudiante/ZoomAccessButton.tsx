@@ -78,11 +78,13 @@ interface Props {
   zoomLink: string
   /** true dentro de la ventana de conexión. */
   disponible: boolean
+  /** Deja constancia del acceso antes de abrir Zoom (bitácora ZOOM_ACCESOS). */
+  onAcceso?: () => void
   /** Tamaño del ícono en px (default 52). */
   size?: number
 }
 
-export default function ZoomAccessButton({ zoomLink, disponible, size = 52 }: Props) {
+export default function ZoomAccessButton({ zoomLink, disponible, onAcceso, size = 52 }: Props) {
   const [aviso, setAviso] = useState(false)
 
   if (disponible) {
@@ -91,6 +93,8 @@ export default function ZoomAccessButton({ zoomLink, disponible, size = 52 }: Pr
         href={zoomLink}
         target="_blank"
         rel="noopener noreferrer"
+        // Registra el acceso y sigue al enlace sin esperar la respuesta.
+        onClick={() => onAcceso?.()}
         title="Entrar a la sesión"
         aria-label="Entrar a la sesión de Zoom"
         className="inline-block rounded-2xl transition-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2"

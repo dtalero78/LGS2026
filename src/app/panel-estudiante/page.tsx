@@ -10,7 +10,7 @@ import {
   UserCircleIcon,
   SparklesIcon,
 } from '@heroicons/react/24/outline'
-import { useQuery } from 'react-query'
+import { useQuery, useQueryClient } from 'react-query'
 import {
   useStudentMe,
   useStudentEvents,
@@ -37,12 +37,10 @@ import AdvisorComments from '@/components/panel-estudiante/AdvisorComments'
 import ClassHistory from '@/components/panel-estudiante/ClassHistory'
 import JumpExamBanner from '@/components/panel-estudiante/JumpExamBanner'
 import ZoomAccessButton from '@/components/panel-estudiante/ZoomAccessButton'
+import { estadoZoom, proximoCambioZoom, MENSAJE_ZOOM_LISTO, MENSAJE_ZOOM_ESPERA, MENSAJE_ZOOM_RECONEXION, MENSAJE_ZOOM_VENCIDO, MENSAJE_ZOOM_CERRADO } from '@/lib/zoom-window'
 
-// Ventana de conexión a Zoom de la "Sesión próxima": abre 5 min ANTES del inicio
-// y cierra 10 min DESPUÉS. Fuera de ella el ícono queda bloqueado.
-const ZOOM_ABRE_MIN_ANTES = 5
-const ZOOM_CIERRA_MIN_DESPUES = 10
-// Tope de una espera de setTimeout (desborda pasados ~24 días).
+// Las reglas de la ventana de Zoom (ingreso −5/+10 + reconexión personal) viven
+// en lib/zoom-window. Aquí sólo el tope de una espera de setTimeout.
 const ZOOM_MAX_ESPERA_MS = 6 * 60 * 60 * 1000
 
 function PanelEstudianteContent() {
@@ -92,6 +90,7 @@ function PanelEstudianteContent() {
 
   // Mutations
   const cancelMutation = useCancelBooking()
+  const queryClient = useQueryClient()
 
   const profile = meQuery.data?.profile
   const events = eventsQuery.data?.events || []
@@ -145,30 +144,42 @@ function PanelEstudianteContent() {
     setVideoOpen(true)
   }
 
-  // Ventana de conexión a Zoom: abre 5 min ANTES del inicio y cierra 10 min DESPUÉS.
-  // `zoomTick` (efecto de abajo) reevalúa la ventana al llegar la hora, para que el
-  // ícono se active/desactive solo sin recargar. Hora del dispositivo del alumno.
+  // Estado del ícono de Zoom para ESTE alumno: ventana de ingreso (−5/+10) MÁS
+  // reconexión personal (quien entró conserva el ícono hasta 10 min antes del fin
+  // de la clase). Las reglas viven en lib/zoom-window; `zoomTick` (efecto abajo)
+  // reevalúa al llegar cada hito para que el ícono cambie solo sin recargar.
   const nextEventDate = nextClass ? new Date(nextClass.fechaEvento) : null
-  const now = new Date()
-  const minutosAlInicio = nextEventDate ? (nextEventDate.getTime() - now.getTime()) / (1000 * 60) : Infinity
-  const showZoom = !!nextClass && !!nextEventDate
-    && minutosAlInicio <= ZOOM_ABRE_MIN_ANTES
-    && -minutosAlInicio <= ZOOM_CIERRA_MIN_DESPUES
+  const inicioMs = nextEventDate ? nextEventDate.getTime() : null
+  const zoomTipo = nextClass?.eventTipo || nextClass?.tipo
+  const zoomAccesoEnMs = nextClass?.zoomAccesoEn ? new Date(nextClass.zoomAccesoEn).getTime() : null
+  const zoomEstado = inicioMs != null ? estadoZoom(inicioMs, zoomTipo, zoomAccesoEnMs) : 'espera'
+  const showZoom = zoomEstado === 'disponible'
   const zoomLink = nextClass?.eventLinkZoom || nextClass?.linkZoom
 
-  // Programa un re-render en el instante exacto del próximo cambio (apertura / cierre).
-  const inicioMs = nextEventDate ? nextEventDate.getTime() : null
+  // Deja constancia del acceso (para la reconexión) y refresca la lista para que el
+  // ícono quede activo hasta el fin de la clase. Best-effort: si falla, entra igual.
+  const registrarAccesoZoom = () => {
+    const eventoId = nextClass?.eventoId || nextClass?.idEvento
+    if (!eventoId) return
+    fetch('/api/postgres/panel-estudiante/zoom-acceso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventoId }),
+    })
+      .then(() => queryClient.invalidateQueries(['panel-estudiante', 'events']))
+      .catch(() => {})
+  }
+
+  // Programa un re-render en el instante del próximo cambio de estado.
   useEffect(() => {
     if (inicioMs == null) return
-    const abre = inicioMs - ZOOM_ABRE_MIN_ANTES * 60_000
-    const cierra = inicioMs + ZOOM_CIERRA_MIN_DESPUES * 60_000
-    const ahora = Date.now()
-    const proximoCambio = ahora < abre ? abre : ahora < cierra ? cierra : null
-    if (proximoCambio == null) return
-    const espera = Math.min(proximoCambio - ahora + 1_000, ZOOM_MAX_ESPERA_MS)
+    const proximo = proximoCambioZoom(inicioMs, zoomTipo, zoomAccesoEnMs)
+    if (proximo == null) return
+    const espera = Math.min(proximo - Date.now() + 1_000, ZOOM_MAX_ESPERA_MS)
+    if (espera <= 0) { setZoomTick((t) => t + 1); return }
     const id = setTimeout(() => setZoomTick((t) => t + 1), espera)
     return () => clearTimeout(id)
-  }, [inicioMs, zoomTick])
+  }, [inicioMs, zoomTipo, zoomAccesoEnMs, zoomTick])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -313,12 +324,14 @@ function PanelEstudianteContent() {
                   <span className="text-xs text-primary-200 uppercase tracking-wide">Link de Ingreso</span>
                   {zoomLink ? (
                     <div className="mt-1 flex items-center gap-3">
-                      <ZoomAccessButton zoomLink={zoomLink} disponible={!!showZoom} />
+                      <ZoomAccessButton zoomLink={zoomLink} disponible={!!showZoom} onAcceso={registrarAccesoZoom} />
                       {/* El aviso se mantiene visible; el texto cambia según el estado del enlace. */}
                       <p className={`text-sm font-semibold ${showZoom ? 'text-emerald-200' : 'text-amber-200'}`}>
-                        {showZoom
-                          ? 'Enlace listo, disponible por 10 minutos después del inicio, da clic en el ícono'
-                          : 'Enlace disponible 5 min antes, recuerda refrescar el navegador'}
+                        {zoomEstado === 'disponible'
+                          ? (zoomAccesoEnMs ? MENSAJE_ZOOM_RECONEXION : MENSAJE_ZOOM_LISTO)
+                          : zoomEstado === 'vencido' ? MENSAJE_ZOOM_VENCIDO
+                          : zoomEstado === 'cerrado' ? MENSAJE_ZOOM_CERRADO
+                          : MENSAJE_ZOOM_ESPERA}
                       </p>
                     </div>
                   ) : (
