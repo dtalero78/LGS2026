@@ -86,6 +86,10 @@ function CrearContratoContent() {
     segundoApellido: '',
     numeroId: '',
     tipoPersona: 'Persona Natural', // 'Persona Natural' | 'Empresa'
+    // Representante legal (solo modo Empresa) → PEOPLE.replegal / replegalid / replegalcel
+    replegal: '',
+    replegalid: '',
+    replegalcel: '',
     plataforma: '',
     fechaNacimiento: '',
     pais: 'Colombia',
@@ -111,7 +115,7 @@ function CrearContratoContent() {
     pagoInscripcion: 0,
     saldo: 0,
     numeroCuotas: 0,
-    tipoPlan: '' as '' | 'Contado' | 'Credito' | 'Colaborador',
+    tipoPlan: '' as '' | 'Contado' | 'Credito' | 'Colaborador' | 'Empresa',
     valorCuota: 0,
     fechaPago: '',
     vigencia: '',
@@ -129,6 +133,7 @@ function CrearContratoContent() {
       .then(d => setKidsFeatureEnabled(!!d.active))
       .catch(() => setKidsFeatureEnabled(false));
   }, []);
+  // En modo Empresa el país del titular se toma de la plataforma (no se pregunta).
   const [titularEsBeneficiario, setTitularEsBeneficiario] = useState(false);
   // Franquicia SENCE: marca a nivel del titular (empresa) — solo se activa si es
   // Empresa y de Chile. El código SENCE NO se captura aquí; se captura por
@@ -357,6 +362,20 @@ function CrearContratoContent() {
     setBeneficiarios(updatedBeneficiarios);
   };
 
+  // Modo Empresa: cambia el formato del titular a lo largo del wizard.
+  const esEmpresa = titular.tipoPersona === 'Empresa';
+
+  // Nombre del titular para el encabezado persistente (empresa = razón social).
+  const nombreTitular = [titular.primerNombre, titular.segundoNombre, titular.primerApellido, titular.segundoApellido]
+    .filter(Boolean).join(' ').trim();
+
+  // En modo Empresa, el país del titular = plataforma.
+  useEffect(() => {
+    if (esEmpresa && titular.plataforma && titular.pais !== titular.plataforma) {
+      setTitular(t => ({ ...t, pais: t.plataforma }));
+    }
+  }, [esEmpresa, titular.plataforma, titular.pais]);
+
   // Validate current step
   // Email válido: contiene @ con texto antes/después + dominio con punto, y SIN
   // espacios (el regex rechaza cualquier espacio, incluidos inicio/fin).
@@ -371,12 +390,29 @@ function CrearContratoContent() {
                titular.asesor !== '' &&
                isValidEmail(titular.asesor);
       case 2:
+        if (esEmpresa) {
+          // Empresa: nombre empresa + RUT fiscal + rep. legal (los 3 campos).
+          return titular.primerNombre !== '' &&
+                 titular.numeroId !== '' &&
+                 titular.plataforma !== '' &&
+                 contrato !== '' &&
+                 titular.replegal.trim() !== '' &&
+                 titular.replegalid.trim() !== '' &&
+                 titular.replegalcel.trim() !== '';
+        }
         return titular.primerNombre !== '' &&
                titular.primerApellido !== '' &&
                titular.numeroId !== '' &&
                titular.plataforma !== '' &&
                contrato !== '';
       case 3:
+        if (esEmpresa) {
+          // Empresa: sin fecha de nacimiento, país = plataforma, se pide el correo.
+          return isValidEmail(titular.email) &&
+                 titular.domicilio !== '' &&
+                 titular.ciudad !== '' &&
+                 titular.celular !== '';
+        }
         return titular.fechaNacimiento !== '' &&
                titular.pais !== '' &&
                titular.domicilio !== '' &&
@@ -411,15 +447,20 @@ function CrearContratoContent() {
       calculateBalance();
     }
     if (currentStep < 7) {
-      setCurrentStep(currentStep + 1);
+      // En modo Empresa se omite el paso 4 (Adicional): salta 3 → 5.
+      const next = (esEmpresa && currentStep === 3) ? 5 : currentStep + 1;
+      setCurrentStep(next);
     }
   };
 
   // Handle next button
   const handleNext = () => {
     if (!validateStep(currentStep)) {
-      // Mensaje específico para email inválido en el paso 4.
-      if (currentStep === 4 && titular.email !== '' && !isValidEmail(titular.email)) {
+      // Mensaje específico para email inválido (paso 4 en Natural, paso 3 en Empresa).
+      const emailStepMalo =
+        (currentStep === 4 && !esEmpresa && titular.email !== '' && !isValidEmail(titular.email)) ||
+        (currentStep === 3 && esEmpresa && titular.email !== '' && !isValidEmail(titular.email));
+      if (emailStepMalo) {
         setError('El correo no es válido. Debe contener @ (correo@dominio.com) y no llevar espacios.');
       } else {
         setError('Por favor complete todos los campos requeridos');
@@ -430,8 +471,9 @@ function CrearContratoContent() {
     setError('');
 
     // Guard paso 2: si el titular NO está marcado como beneficiario, confirmar
-    // (error común — olvidar marcar que el titular también toma clases).
-    if (currentStep === 2 && !titularEsBeneficiario) {
+    // (error común — olvidar marcar que el titular también toma clases). No aplica
+    // a Empresa (una empresa nunca toma el programa).
+    if (currentStep === 2 && !titularEsBeneficiario && !esEmpresa) {
       setShowBenefConfirm(true);
       return;
     }
@@ -449,7 +491,9 @@ function CrearContratoContent() {
   const handlePrevious = () => {
     setError('');
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+      // En modo Empresa el paso 4 está omitido: 5 → 3.
+      const prev = (esEmpresa && currentStep === 5) ? 3 : currentStep - 1;
+      setCurrentStep(prev);
     }
   };
 
@@ -560,14 +604,17 @@ function CrearContratoContent() {
           contrato,
           titular: {
             ...titular,
-            celular: getPhonePrefix() + titular.celular
+            celular: getPhonePrefix() + titular.celular,
+            // Empresa: el país se toma de la plataforma (el paso 3 no pregunta país).
+            pais: esEmpresa ? titular.plataforma : titular.pais
           },
           financial,
           beneficiarios: beneficiarios.map(b => ({
             ...b,
             celular: b.celular ? getPhonePrefix() + b.celular : null
           })),
-          titularEsBeneficiario,
+          // Una empresa nunca es beneficiaria (no toma el programa).
+          titularEsBeneficiario: esEmpresa ? false : titularEsBeneficiario,
           // Franquicia SENCE del titular: Empresa + Chile (tipoPersona va dentro de `titular`).
           // El código NO se captura a nivel del titular — solo por beneficiario.
           sence: senceUsuario && titular.tipoPersona === 'Empresa' && titular.plataforma === 'Chile',
@@ -747,35 +794,60 @@ function CrearContratoContent() {
         {/* Progress bar */}
         <div className="mb-8">
           <div className="flex justify-between">
-            {[1, 2, 3, 4, 5, 6, 7].map((step) => (
+            {[1, 2, 3, 4, 5, 6, 7].map((step) => {
+              const skip4 = esEmpresa && step === 4;
+              return (
               <div
                 key={step}
                 className={`flex-1 ${step === 7 ? '' : 'border-b-2'} ${
-                  step <= currentStep ? 'border-primary-600' : 'border-gray-200'
+                  !skip4 && step <= currentStep ? 'border-primary-600' : 'border-gray-200'
                 } pb-4`}
               >
                 <div
                   className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center ${
-                    step <= currentStep
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-200 text-gray-600'
+                    skip4
+                      ? 'bg-gray-100 text-gray-400 line-through'
+                      : step <= currentStep
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-200 text-gray-600'
                   }`}
                 >
                   {step}
                 </div>
-                <p className="text-xs text-center mt-2">
+                <p className={`text-xs text-center mt-2 ${skip4 ? 'line-through text-gray-400' : ''}`}>
                   {step === 1 && 'Asesor'}
                   {step === 2 && 'Datos básicos'}
                   {step === 3 && 'Ubicación'}
-                  {step === 4 && 'Adicional'}
+                  {step === 4 && (skip4 ? 'Adicional (omitido)' : 'Adicional')}
                   {step === 5 && 'Referencias'}
                   {step === 6 && 'Financiero'}
                   {step === 7 && 'Beneficiarios'}
                 </p>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
+
+        {/* Encabezado persistente: titular + número de contrato, visible en todos los pasos */}
+        {(nombreTitular || contrato) && (
+          <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-1 rounded-lg bg-primary-50 border border-primary-100 px-4 py-3">
+            <div className="text-sm text-gray-600">
+              Titular: <span className="font-bold text-gray-900">{nombreTitular || '—'}</span>
+            </div>
+            <div className="text-sm text-gray-600">
+              Contrato: <span className="font-bold text-gray-900">{contrato || '—'}</span>
+            </div>
+            {titular.plataforma && (
+              <div className="text-sm text-gray-600">
+                Plataforma: <span className="font-bold text-gray-900">{titular.plataforma}</span>
+              </div>
+            )}
+            {esEmpresa && (
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">EMPRESA</span>
+            )}
+          </div>
+        )}
 
         {/* Form steps */}
         <div className="bg-white shadow rounded-lg p-6">
@@ -825,19 +897,40 @@ function CrearContratoContent() {
           {/* Step 2: Datos básicos */}
           {currentStep === 2 && (
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold mb-4">Datos Básicos del Titular</h2>
+              <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+                <h2 className="text-xl font-semibold">Datos Básicos del Titular</h2>
+                {/* Switch Persona Natural / Empresa (estilo Kids) */}
+                <div className="inline-flex rounded-full border border-gray-300 bg-gray-100 p-1" role="group" aria-label="Tipo de persona">
+                  <button
+                    type="button"
+                    onClick={() => { setTitular({...titular, tipoPersona: 'Persona Natural'}); setSenceUsuario(false); }}
+                    className={`px-4 py-1.5 text-sm font-semibold rounded-full transition-colors ${!esEmpresa ? 'bg-primary-600 text-white shadow' : 'text-gray-600 hover:text-gray-900'}`}
+                  >
+                    Persona Natural
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setTitular({...titular, tipoPersona: 'Empresa'}); setTitularEsBeneficiario(false); }}
+                    className={`px-4 py-1.5 text-sm font-semibold rounded-full transition-colors ${esEmpresa ? 'bg-purple-600 text-white shadow' : 'text-gray-600 hover:text-gray-900'}`}
+                  >
+                    Empresa
+                  </button>
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className={esEmpresa ? 'col-span-2' : ''}>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Primer nombre *
+                    {esEmpresa ? 'Nombre de la empresa *' : 'Primer nombre *'}
                   </label>
                   <input
                     type="text"
                     value={titular.primerNombre}
                     onChange={(e) => setTitular({...titular, primerNombre: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    placeholder={esEmpresa ? 'Razón social' : ''}
                   />
                 </div>
+                {!esEmpresa && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Segundo nombre
@@ -849,6 +942,8 @@ function CrearContratoContent() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
+                )}
+                {!esEmpresa && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Primer apellido *
@@ -860,6 +955,8 @@ function CrearContratoContent() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
+                )}
+                {!esEmpresa && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Segundo apellido
@@ -871,9 +968,10 @@ function CrearContratoContent() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Número de identificación *
+                    {esEmpresa ? 'Identificación fiscal (RUT) *' : 'Número de identificación *'}
                   </label>
                   <input
                     type="text"
@@ -930,41 +1028,59 @@ function CrearContratoContent() {
                     )}
                   </div>
                 </div>
-                {/* Tipo de Persona — al lado de Número de contrato (Franquicia SENCE solo para Empresa) */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tipo de Persona *
-                  </label>
-                  <select
-                    value={titular.tipoPersona}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      setTitular({...titular, tipoPersona: val})
-                      if (val !== 'Empresa') setSenceUsuario(false) // Franquicia SENCE solo para Empresa
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="Persona Natural">Persona Natural</option>
-                    <option value="Empresa">Empresa</option>
-                  </select>
-                </div>
+                {/* Representante legal — solo modo Empresa (el Tipo de Persona ahora es el switch del encabezado) */}
+                {esEmpresa && (
+                  <div className="col-span-2 border-t border-gray-200 pt-4 mt-1">
+                    <p className="text-sm font-bold text-purple-700 mb-3">Representante legal</p>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo *</label>
+                        <input
+                          type="text"
+                          value={titular.replegal || ''}
+                          onChange={(e) => setTitular({...titular, replegal: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Identificación *</label>
+                        <input
+                          type="text"
+                          value={titular.replegalid || ''}
+                          onChange={(e) => setTitular({...titular, replegalid: e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase()})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Celular *</label>
+                        <input
+                          type="tel"
+                          value={titular.replegalcel || ''}
+                          onChange={(e) => setTitular({...titular, replegalcel: e.target.value.replace(/\D/g, '')})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="col-span-2">
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
                     <div className="relative group flex items-center">
                       <input
                         type="checkbox"
                         id="titularEsBeneficiario"
-                        checked={titularEsBeneficiario}
+                        checked={titularEsBeneficiario && !esEmpresa}
+                        disabled={esEmpresa}
                         onChange={(e) => {
                           setTitularEsBeneficiario(e.target.checked)
                         }}
-                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded disabled:opacity-40 disabled:cursor-not-allowed"
                       />
-                      <label htmlFor="titularEsBeneficiario" className="ml-2 block text-lg font-bold text-gray-900 cursor-pointer">
+                      <label htmlFor="titularEsBeneficiario" className={`ml-2 block text-lg font-bold cursor-pointer ${esEmpresa ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}`}>
                         ¿Este titular será beneficiario? (tomará el programa)
                       </label>
                       <span className="invisible group-hover:visible absolute left-0 top-full mt-1 bg-gray-800 text-white text-sm rounded px-3 py-1.5 whitespace-nowrap z-10">
-                        Marque esta opción si el titular también tomará clases de inglés
+                        {esEmpresa ? 'No aplica: una empresa no toma el programa' : 'Marque esta opción si el titular también tomará clases de inglés'}
                       </span>
                     </div>
                     {(() => {
@@ -1006,32 +1122,60 @@ function CrearContratoContent() {
             <div className="space-y-4">
               <h2 className="text-xl font-semibold mb-4">Ubicación</h2>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Fecha de nacimiento *
-                  </label>
-                  <input
-                    type="date"
-                    value={titular.fechaNacimiento}
-                    onChange={(e) => setTitular({...titular, fechaNacimiento: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  />
-                </div>
+                {esEmpresa ? (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Correo electrónico *
+                    </label>
+                    <input
+                      type="email"
+                      value={titular.email}
+                      onChange={(e) => setTitular({...titular, email: e.target.value.replace(/\s/g, '')})}
+                      placeholder="correo@empresa.com"
+                      className={
+                        `w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 ` +
+                        (titular.email !== '' && !isValidEmail(titular.email) ? 'border-red-400' : 'border-gray-300')
+                      }
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Fecha de nacimiento *
+                    </label>
+                    <input
+                      type="date"
+                      value={titular.fechaNacimiento}
+                      onChange={(e) => setTitular({...titular, fechaNacimiento: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     País *
                   </label>
-                  <select
-                    value={titular.pais}
-                    onChange={(e) => setTitular({...titular, pais: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    {COUNTRY_PREFIXES.map((country) => (
-                      <option key={country.country} value={country.country}>
-                        {country.country}
-                      </option>
-                    ))}
-                  </select>
+                  {esEmpresa ? (
+                    <input
+                      type="text"
+                      value={titular.plataforma || '—'}
+                      readOnly
+                      title="El país se toma de la plataforma"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600"
+                    />
+                  ) : (
+                    <select
+                      value={titular.pais}
+                      onChange={(e) => setTitular({...titular, pais: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      {COUNTRY_PREFIXES.map((country) => (
+                        <option key={country.country} value={country.country}>
+                          {country.country}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1082,8 +1226,8 @@ function CrearContratoContent() {
             </div>
           )}
 
-          {/* Step 4: Información adicional */}
-          {currentStep === 4 && (
+          {/* Step 4: Información adicional (omitido en modo Empresa) */}
+          {currentStep === 4 && !esEmpresa && (
             <div className="space-y-4">
               <h2 className="text-xl font-semibold mb-4">Información Adicional</h2>
               <div className="grid grid-cols-2 gap-4">
@@ -1313,6 +1457,7 @@ function CrearContratoContent() {
                       <option value="Contado">Contado</option>
                       <option value="Credito">Credito</option>
                       <option value="Colaborador">Colaborador</option>
+                      <option value="Empresa">Empresa</option>
                     </select>
                   </div>
                 </div>
@@ -1394,7 +1539,7 @@ function CrearContratoContent() {
           {/* Step 7: Beneficiarios */}
           {currentStep === 7 && (
             <div className="space-y-4">
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex justify-between items-center mb-2">
                 <h2 className="text-xl font-semibold">Beneficiarios</h2>
                 <button
                   type="button"
@@ -1405,206 +1550,265 @@ function CrearContratoContent() {
                   Agregar Beneficiario
                 </button>
               </div>
+              <p className="text-sm text-gray-500">
+                {esEmpresa
+                  ? 'Llena la lista de beneficiarios (una fila por persona). Usa "Agregar Beneficiario" para sumar filas.'
+                  : 'Agrega cada beneficiario en su tarjeta. Usa "Agregar Beneficiario" para sumar más.'}
+              </p>
 
-              {beneficiarios.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">
-                  No hay beneficiarios agregados. Puede agregar beneficiarios o continuar sin ellos.
-                </p>
-              ) : (
-                <div className="space-y-6">
-                  {beneficiarios.map((beneficiario, index) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex justify-between items-center mb-3">
-                        <h3 className="font-medium">Beneficiario {index + 1}</h3>
-                        <button
-                          type="button"
-                          onClick={() => removeBeneficiario(index)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <TrashIcon className="h-5 w-5" />
-                        </button>
-                      </div>
-                      {kidsFeatureEnabled && beneficiario.kids ? (
-                        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="inline-block bg-blue-100 text-blue-700 text-[11px] font-bold px-2 py-0.5 rounded-full">🧒 KIDS</span>
-                              <span className="font-semibold text-gray-900 truncate">
-                                {`${beneficiario.primerNombre || ''} ${beneficiario.primerApellido || ''}`.trim() || 'Sin nombre'}
-                              </span>
-                            </div>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {beneficiario.numeroId ? `ID ${beneficiario.numeroId}` : 'Sin ID'}
-                              {beneficiario.kidsData?.tipoCurso ? ` · ${beneficiario.kidsData.tipoCurso}` : ''}
-                              {beneficiario.kidsData?.campaign ? ` · ${beneficiario.kidsData.campaign}` : ''}
-                            </p>
+              {(() => {
+                const senceCol = titular.plataforma === 'Chile' && esEmpresa && senceUsuario
+                // El titular-beneficiario se agrega automáticamente al crear (backend);
+                // aquí se muestra como fila informativa para que sea visible.
+                const mostrarTitular = titularEsBeneficiario && !esEmpresa
+                if (beneficiarios.length === 0 && !mostrarTitular) {
+                  return (
+                    <p className="text-gray-500 text-center py-8">
+                      No hay beneficiarios agregados. Agrega el primero con &quot;Agregar Beneficiario&quot; o continúa sin ellos.
+                    </p>
+                  )
+                }
+                // Persona Natural → tarjetas (Kids por modal). Empresa → tabla.
+                if (!esEmpresa) {
+                  return (
+                    <div className="space-y-4">
+                      {mostrarTitular && (
+                        <div className="border border-amber-200 bg-amber-50 rounded-lg p-4">
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-800">TITULAR</span>
+                            <h3 className="font-medium text-gray-900">{[titular.primerNombre, titular.primerApellido].filter(Boolean).join(' ') || '—'}</h3>
+                            <span className="text-xs text-gray-500">(toma el programa — se controla con la casilla del paso 2)</span>
                           </div>
-                          <button type="button" onClick={() => setKidsModalIndex(index)}
-                            className="flex-shrink-0 px-3 py-1.5 text-sm font-medium text-blue-700 bg-white border border-blue-300 rounded-md hover:bg-blue-100">
-                            ✏️ Editar datos (Kids)
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Primer nombre *</label>
-                          <input
-                            type="text"
-                            value={beneficiario.primerNombre}
-                            onChange={(e) => updateBeneficiario(index, 'primerNombre', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Segundo nombre</label>
-                          <input
-                            type="text"
-                            value={beneficiario.segundoNombre}
-                            onChange={(e) => updateBeneficiario(index, 'segundoNombre', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Primer apellido *</label>
-                          <input
-                            type="text"
-                            value={beneficiario.primerApellido}
-                            onChange={(e) => updateBeneficiario(index, 'primerApellido', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Segundo apellido</label>
-                          <input
-                            type="text"
-                            value={beneficiario.segundoApellido}
-                            onChange={(e) => updateBeneficiario(index, 'segundoApellido', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Número ID *</label>
-                          <input
-                            type="text"
-                            value={beneficiario.numeroId}
-                            onKeyDown={(e) => {
-                              if (!/^[a-zA-Z0-9]$/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) {
-                                e.preventDefault()
-                              }
-                            }}
-                            onChange={(e) => {
-                              const clean = e.target.value.replace(/[^A-Z0-9]/g, '').toUpperCase()
-                              updateBeneficiario(index, 'numeroId', clean)
-                            }}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                            placeholder="Solo letras mayúsculas y números"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de nacimiento</label>
-                          <input
-                            type="date"
-                            value={beneficiario.fechaNacimiento}
-                            onChange={(e) => updateBeneficiario(index, 'fechaNacimiento', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                          <input
-                            type="email"
-                            value={beneficiario.email}
-                            onChange={(e) => updateBeneficiario(index, 'email', e.target.value.replace(/\s/g, ''))}
-                            placeholder="correo@dominio.com"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Celular * ({getPhonePrefix()})</label>
-                          <input
-                            type="tel"
-                            value={beneficiario.celular}
-                            onChange={(e) => updateBeneficiario(index, 'celular', e.target.value.replace(/\D/g, ''))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                            placeholder="Número sin prefijo"
-                          />
-                        </div>
-                      </div>
-                      {/* Franquicia SENCE por beneficiario — solo si el titular es Empresa
-                          de Chile marcada como Franquicia SENCE. Aquí SÍ se captura el código. */}
-                      {titular.plataforma === 'Chile' && titular.tipoPersona === 'Empresa' && senceUsuario && (
-                        <>
-                          <div className="mt-4 flex items-center">
-                            <input
-                              type="checkbox"
-                              id={`sence-benef-${index}`}
-                              checked={beneficiario.sence === true}
-                              onChange={(e) => {
-                                const upd = [...beneficiarios]
-                                upd[index] = { ...upd[index], sence: e.target.checked, senceCode: e.target.checked ? upd[index].senceCode : '' }
-                                setBeneficiarios(upd)
-                              }}
-                              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                            />
-                            <label htmlFor={`sence-benef-${index}`} className="ml-2 block text-sm font-bold text-gray-900 cursor-pointer">
-                              Franquicia SENCE
-                            </label>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-gray-600">
+                            <div>Documento: <span className="font-medium text-gray-800">{titular.numeroId || '—'}</span></div>
+                            <div>Fecha nac.: <span className="font-medium text-gray-800">{titular.fechaNacimiento || '—'}</span></div>
+                            <div>Email: <span className="font-medium text-gray-800">{titular.email || '—'}</span></div>
+                            <div>Celular: <span className="font-medium text-gray-800">{titular.celular || '—'}</span></div>
                           </div>
-                          {beneficiario.sence === true && (
-                            <div className="mt-3 max-w-md">
-                              <label htmlFor={`sence-code-benef-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
-                                Código SENCE <span className="text-gray-400 font-normal">(opcional)</span>
-                              </label>
-                              <input
-                                type="text"
-                                id={`sence-code-benef-${index}`}
-                                value={beneficiario.senceCode || ''}
-                                onChange={(e) => {
-                                  const upd = [...beneficiarios]
-                                  upd[index] = { ...upd[index], senceCode: e.target.value.replace(/[^A-Za-z0-9-]/g, '') }
-                                  setBeneficiarios(upd)
-                                }}
-                                placeholder="Anote el código SENCE del usuario"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 font-mono"
-                              />
-                            </div>
-                          )}
-                        </>
-                      )}
-                        </>
-                      )}
-                      {/* Switch "Kids": al activarlo marca kids=true y abre el modal completo del beneficiario. */}
-                      {kidsFeatureEnabled && (
-                        <div className="mt-4 flex items-center gap-3">
-                          <button
-                            type="button"
-                            role="switch"
-                            aria-checked={beneficiario.kids === true}
-                            aria-label="Kids"
-                            onClick={() => {
-                              const encender = !beneficiario.kids
-                              const upd = [...beneficiarios]
-                              if (encender) {
-                                upd[index] = { ...upd[index], kids: true }
-                                setBeneficiarios(upd)
-                                setKidsModalIndex(index)
-                              } else {
-                                upd[index] = { ...upd[index], kids: false, kidsData: undefined }
-                                setBeneficiarios(upd)
-                              }
-                            }}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${beneficiario.kids ? 'bg-primary-600' : 'bg-gray-300'}`}
-                          >
-                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${beneficiario.kids ? 'translate-x-6' : 'translate-x-1'}`} />
-                          </button>
-                          <span className="text-sm font-bold text-gray-900">Kids</span>
                         </div>
                       )}
+                      {beneficiarios.map((beneficiario, index) => (
+                        <div key={index} className={`border rounded-lg p-4 ${beneficiario.kids ? 'border-blue-300 bg-blue-50/40' : 'border-gray-200'}`}>
+                          <div className="flex justify-between items-center mb-3">
+                            <div className="flex flex-wrap items-center gap-3">
+                              <h3 className="font-medium text-gray-900">Beneficiario {index + 1}</h3>
+                              {kidsFeatureEnabled && (
+                                <div className="flex items-center gap-2">
+                                  <button type="button" role="switch" aria-checked={beneficiario.kids === true} aria-label="Kids"
+                                    onClick={() => {
+                                      const encender = !beneficiario.kids
+                                      const upd = [...beneficiarios]
+                                      if (encender) { upd[index] = { ...upd[index], kids: true }; setBeneficiarios(upd); setKidsModalIndex(index) }
+                                      else { upd[index] = { ...upd[index], kids: false, kidsData: undefined }; setBeneficiarios(upd) }
+                                    }}
+                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${beneficiario.kids ? 'bg-primary-600' : 'bg-gray-300'}`}>
+                                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${beneficiario.kids ? 'translate-x-5' : 'translate-x-1'}`} />
+                                  </button>
+                                  <span className="text-xs font-semibold text-purple-700">🧒 Kids</span>
+                                  {beneficiario.kids && (
+                                    <button type="button" onClick={() => setKidsModalIndex(index)} className="text-xs text-blue-700 underline">editar datos</button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            <button type="button" onClick={() => removeBeneficiario(index)} className="text-red-500 hover:text-red-700">
+                              <TrashIcon className="h-5 w-5" />
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Primer nombre *</label>
+                              <input value={beneficiario.primerNombre}
+                                onChange={(e) => updateBeneficiario(index, 'primerNombre', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500" />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Segundo nombre</label>
+                              <input value={beneficiario.segundoNombre || ''}
+                                onChange={(e) => updateBeneficiario(index, 'segundoNombre', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500" />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Primer apellido *</label>
+                              <input value={beneficiario.primerApellido}
+                                onChange={(e) => updateBeneficiario(index, 'primerApellido', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500" />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Segundo apellido</label>
+                              <input value={beneficiario.segundoApellido || ''}
+                                onChange={(e) => updateBeneficiario(index, 'segundoApellido', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500" />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Número ID *</label>
+                              <input value={beneficiario.numeroId}
+                                onKeyDown={(e) => { if (!/^[a-zA-Z0-9]$/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) e.preventDefault() }}
+                                onChange={(e) => updateBeneficiario(index, 'numeroId', e.target.value.replace(/[^A-Z0-9]/g, '').toUpperCase())}
+                                placeholder="Solo letras mayúsculas y números"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500" />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de nacimiento</label>
+                              <input type="date" value={beneficiario.fechaNacimiento || ''}
+                                onChange={(e) => updateBeneficiario(index, 'fechaNacimiento', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500" />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                              <input type="email" value={beneficiario.email || ''}
+                                onChange={(e) => updateBeneficiario(index, 'email', e.target.value.replace(/\s/g, ''))}
+                                placeholder="correo@dominio.com"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500" />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Celular * ({getPhonePrefix()})</label>
+                              <input type="tel" value={beneficiario.celular || ''}
+                                onChange={(e) => updateBeneficiario(index, 'celular', e.target.value.replace(/\D/g, ''))}
+                                placeholder="Número sin prefijo"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500" />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
+                  )
+                }
+                return (
+                  <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                    <table className="min-w-full text-sm">
+                      <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+                        <tr>
+                          <th className="px-2 py-2 text-left">#</th>
+                          {kidsFeatureEnabled && <th className="px-2 py-2 text-left">Kids</th>}
+                          <th className="px-2 py-2 text-left">Primer nombre *</th>
+                          <th className="px-2 py-2 text-left">Segundo nombre</th>
+                          <th className="px-2 py-2 text-left">Primer apellido *</th>
+                          <th className="px-2 py-2 text-left">Segundo apellido</th>
+                          <th className="px-2 py-2 text-left">N° ID *</th>
+                          <th className="px-2 py-2 text-left">Fecha nac.</th>
+                          <th className="px-2 py-2 text-left">Email *</th>
+                          <th className="px-2 py-2 text-left">Celular * ({getPhonePrefix()})</th>
+                          {senceCol && <th className="px-2 py-2 text-left">SENCE</th>}
+                          {senceCol && <th className="px-2 py-2 text-left">Cód. SENCE</th>}
+                          <th className="px-2 py-2"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {mostrarTitular && (
+                          <tr className="border-t border-gray-100 bg-amber-50">
+                            <td className="px-2 py-1 align-middle">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-800 whitespace-nowrap">TITULAR</span>
+                            </td>
+                            {kidsFeatureEnabled && <td className="px-2 py-1 text-center text-gray-400">—</td>}
+                            <td className="px-2 py-1 text-gray-700">{titular.primerNombre || '—'}</td>
+                            <td className="px-2 py-1 text-gray-700">{titular.segundoNombre || ''}</td>
+                            <td className="px-2 py-1 text-gray-700">{titular.primerApellido || '—'}</td>
+                            <td className="px-2 py-1 text-gray-700">{titular.segundoApellido || ''}</td>
+                            <td className="px-2 py-1 text-gray-700 font-mono">{titular.numeroId || '—'}</td>
+                            <td className="px-2 py-1 text-gray-700">{titular.fechaNacimiento || '—'}</td>
+                            <td className="px-2 py-1 text-gray-700">{titular.email || '—'}</td>
+                            <td className="px-2 py-1 text-gray-700">{titular.celular || '—'}</td>
+                            {senceCol && <td className="px-2 py-1 text-center text-gray-400">—</td>}
+                            {senceCol && <td className="px-2 py-1 text-center text-gray-400">—</td>}
+                            <td className="px-2 py-1 text-center">
+                              <span className="text-[10px] text-gray-400" title="El titular toma el programa; se controla con la casilla del paso 2">auto</span>
+                            </td>
+                          </tr>
+                        )}
+                        {beneficiarios.map((beneficiario, index) => (
+                          <tr key={index} className={`border-t border-gray-100 ${beneficiario.kids ? 'bg-blue-50/60' : ''}`}>
+                            <td className="px-2 py-1 text-gray-400 font-medium align-middle">{index + 1}</td>
+                            {kidsFeatureEnabled && (
+                              <td className="px-2 py-1 whitespace-nowrap align-middle">
+                                <div className="flex items-center gap-2">
+                                  <button type="button" role="switch" aria-checked={beneficiario.kids === true} aria-label="Kids"
+                                    onClick={() => {
+                                      const encender = !beneficiario.kids
+                                      const upd = [...beneficiarios]
+                                      if (encender) { upd[index] = { ...upd[index], kids: true }; setBeneficiarios(upd); setKidsModalIndex(index) }
+                                      else { upd[index] = { ...upd[index], kids: false, kidsData: undefined }; setBeneficiarios(upd) }
+                                    }}
+                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${beneficiario.kids ? 'bg-primary-600' : 'bg-gray-300'}`}>
+                                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${beneficiario.kids ? 'translate-x-5' : 'translate-x-1'}`} />
+                                  </button>
+                                  {beneficiario.kids && (
+                                    <button type="button" onClick={() => setKidsModalIndex(index)} className="text-xs text-blue-700 underline">editar</button>
+                                  )}
+                                </div>
+                              </td>
+                            )}
+                            <td className="px-1 py-1">
+                              <input value={beneficiario.primerNombre}
+                                onChange={(e) => updateBeneficiario(index, 'primerNombre', e.target.value)}
+                                className="w-full min-w-[120px] px-2 py-1 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-400" />
+                            </td>
+                            <td className="px-1 py-1">
+                              <input value={beneficiario.segundoNombre || ''}
+                                onChange={(e) => updateBeneficiario(index, 'segundoNombre', e.target.value)}
+                                className="w-full min-w-[110px] px-2 py-1 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-400" />
+                            </td>
+                            <td className="px-1 py-1">
+                              <input value={beneficiario.primerApellido}
+                                onChange={(e) => updateBeneficiario(index, 'primerApellido', e.target.value)}
+                                className="w-full min-w-[120px] px-2 py-1 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-400" />
+                            </td>
+                            <td className="px-1 py-1">
+                              <input value={beneficiario.segundoApellido || ''}
+                                onChange={(e) => updateBeneficiario(index, 'segundoApellido', e.target.value)}
+                                className="w-full min-w-[110px] px-2 py-1 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-400" />
+                            </td>
+                            <td className="px-1 py-1">
+                              <input value={beneficiario.numeroId}
+                                onKeyDown={(e) => { if (!/^[a-zA-Z0-9]$/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) e.preventDefault() }}
+                                onChange={(e) => updateBeneficiario(index, 'numeroId', e.target.value.replace(/[^A-Z0-9]/g, '').toUpperCase())}
+                                placeholder="MAYÚS/números"
+                                className="w-full min-w-[110px] px-2 py-1 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-400" />
+                            </td>
+                            <td className="px-1 py-1">
+                              <input type="date" value={beneficiario.fechaNacimiento || ''}
+                                onChange={(e) => updateBeneficiario(index, 'fechaNacimiento', e.target.value)}
+                                className="w-full min-w-[140px] px-2 py-1 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-400" />
+                            </td>
+                            <td className="px-1 py-1">
+                              <input type="email" value={beneficiario.email || ''}
+                                onChange={(e) => updateBeneficiario(index, 'email', e.target.value.replace(/\s/g, ''))}
+                                placeholder="correo@dominio.com"
+                                className="w-full min-w-[170px] px-2 py-1 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-400" />
+                            </td>
+                            <td className="px-1 py-1">
+                              <input type="tel" value={beneficiario.celular || ''}
+                                onChange={(e) => updateBeneficiario(index, 'celular', e.target.value.replace(/\D/g, ''))}
+                                placeholder="sin prefijo"
+                                className="w-full min-w-[120px] px-2 py-1 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-400" />
+                            </td>
+                            {senceCol && (
+                              <td className="px-2 py-1 text-center align-middle">
+                                <input type="checkbox" checked={beneficiario.sence === true}
+                                  onChange={(e) => { const upd = [...beneficiarios]; upd[index] = { ...upd[index], sence: e.target.checked, senceCode: e.target.checked ? upd[index].senceCode : '' }; setBeneficiarios(upd) }}
+                                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded" />
+                              </td>
+                            )}
+                            {senceCol && (
+                              <td className="px-1 py-1">
+                                <input value={beneficiario.senceCode || ''} disabled={beneficiario.sence !== true}
+                                  onChange={(e) => { const upd = [...beneficiarios]; upd[index] = { ...upd[index], senceCode: e.target.value.replace(/[^A-Za-z0-9-]/g, '') }; setBeneficiarios(upd) }}
+                                  placeholder="código"
+                                  className="w-full min-w-[100px] px-2 py-1 border border-gray-200 rounded font-mono disabled:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-primary-400" />
+                              </td>
+                            )}
+                            <td className="px-2 py-1 align-middle">
+                              <button type="button" onClick={() => removeBeneficiario(index)} className="text-red-500 hover:text-red-700">
+                                <TrashIcon className="h-4 w-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              })()}
             </div>
           )}
 

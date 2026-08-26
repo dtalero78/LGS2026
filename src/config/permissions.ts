@@ -952,6 +952,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Acceso a /admin/kids-config. Interruptor del proceso Kids (switch + modal en Crear Contrato). Con el flag apagado el switch no se muestra.',
   },
   {
+    code: MantenimientoPermission.CARGAR_BENEFICIARIOS,
+    module: Module.MANTENIMIENTO,
+    section: 'Usuarios',
+    name: 'Página "Cargar Beneficiarios"',
+    description: 'Acceso a /admin/cargar-beneficiarios. Carga masiva de beneficiarios a un contrato existente (pega/CSV, pide el número de contrato). Hereda los datos del titular y omite los documentos que ya existen.',
+  },
+  {
     code: MantenimientoPermission.CLEAR_HISTORIC,
     module: Module.MANTENIMIENTO,
     section: 'Usuarios',

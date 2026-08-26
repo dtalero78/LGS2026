@@ -210,6 +210,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
           { name: 'Proceso Kids', href: '/admin/kids-config', newTab: true },
           { name: 'Edición Contrato', href: '/admin/edicion-contrato', newTab: true },
           { name: 'Generar Contrato', href: '/admin/generar-contrato', newTab: true },
+          { name: 'Cargar Beneficiarios', href: '/admin/cargar-beneficiarios', newTab: true },
           { name: 'Migrar Contrato',  href: '/admin/migrar-contrato',  newTab: true },
         ],
       },
@@ -375,6 +376,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ],
     '/admin/generar-contrato': [
       MantenimientoPermission.GENERAR_CONTRATO,
+    ],
+    '/admin/cargar-beneficiarios': [
+      MantenimientoPermission.CARGAR_BENEFICIARIOS,
     ],
     '/admin/contratos-prueba': [
       MantenimientoPermission.CONTRATOS_PRUEBA,
