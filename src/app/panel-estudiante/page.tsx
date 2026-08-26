@@ -40,8 +40,11 @@ import ZoomAccessButton from '@/components/panel-estudiante/ZoomAccessButton'
 import { estadoZoom, proximoCambioZoom, MENSAJE_ZOOM_LISTO, MENSAJE_ZOOM_ESPERA, MENSAJE_ZOOM_RECONEXION, MENSAJE_ZOOM_VENCIDO, MENSAJE_ZOOM_CERRADO } from '@/lib/zoom-window'
 
 // Las reglas de la ventana de Zoom (ingreso −5/+10 + reconexión personal) viven
-// en lib/zoom-window. Aquí sólo el tope de una espera de setTimeout.
-const ZOOM_MAX_ESPERA_MS = 6 * 60 * 60 * 1000
+// en lib/zoom-window. Aquí sólo cada cuánto reevaluar el estado del ícono.
+// NO dormimos hasta el hito exacto: los navegadores CONGELAN los timers largos
+// cuando la pestaña está en segundo plano o el móvil bloqueado, y el ícono no
+// cambiaría hasta que el alumno recargue. Reevaluar cada ≤20 s lo cambia solo.
+const ZOOM_REEVAL_MS = 20 * 1000
 
 function PanelEstudianteContent() {
   const [showBookingFlow, setShowBookingFlow] = useState(false)
@@ -170,16 +173,36 @@ function PanelEstudianteContent() {
       .catch(() => {})
   }
 
-  // Programa un re-render en el instante del próximo cambio de estado.
+  // Reevalúa el estado del ícono sin que el alumno recargue. La espera se capa a
+  // ZOOM_REEVAL_MS: aunque falten 55 min para el hito, el timer despierta cada
+  // ≤20 s y recalcula con el reloj actual (los timers largos se congelan en
+  // segundo plano). Se re-arma solo por `zoomTick` en las deps y se DETIENE solo
+  // cuando ya no queda ningún cambio pendiente (proximoCambioZoom == null).
   useEffect(() => {
     if (inicioMs == null) return
     const proximo = proximoCambioZoom(inicioMs, zoomTipo, zoomAccesoEnMs)
     if (proximo == null) return
-    const espera = Math.min(proximo - Date.now() + 1_000, ZOOM_MAX_ESPERA_MS)
-    if (espera <= 0) { setZoomTick((t) => t + 1); return }
+    const espera = Math.max(1_000, Math.min(proximo - Date.now() + 1_000, ZOOM_REEVAL_MS))
     const id = setTimeout(() => setZoomTick((t) => t + 1), espera)
     return () => clearTimeout(id)
   }, [inicioMs, zoomTipo, zoomAccesoEnMs, zoomTick])
+
+  // Al volver la pestaña a primer plano (móvil que se desbloquea, cambio de app o
+  // de pestaña), recalcula el ícono YA y refresca la data, sin esperar al timer
+  // —que pudo quedar congelado mientras estaba en segundo plano—.
+  useEffect(() => {
+    const despertar = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+      setZoomTick((t) => t + 1)
+      queryClient.invalidateQueries(['panel-estudiante', 'events'])
+    }
+    document.addEventListener('visibilitychange', despertar)
+    window.addEventListener('focus', despertar)
+    return () => {
+      document.removeEventListener('visibilitychange', despertar)
+      window.removeEventListener('focus', despertar)
+    }
+  }, [queryClient])
 
   return (
     <div className="min-h-screen bg-gray-50">

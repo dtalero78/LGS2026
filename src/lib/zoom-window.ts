@@ -110,7 +110,7 @@ export const MENSAJE_ZOOM_LISTO =
   `Enlace listo, disponible por ${ZOOM_CIERRA_MIN_DESPUES} minutos después del inicio, da clic en el ícono`;
 
 export const MENSAJE_ZOOM_ESPERA =
-  `Enlace disponible ${ZOOM_ABRE_MIN_ANTES} min antes, recuerda refrescar el navegador`;
+  `El enlace se habilita ${ZOOM_ABRE_MIN_ANTES} min antes del inicio; el ícono se activa solo`;
 
 export const MENSAJE_ZOOM_RECONEXION =
   'Ya ingresaste. Si se te cae la conexión, puedes volver a entrar desde aquí';
