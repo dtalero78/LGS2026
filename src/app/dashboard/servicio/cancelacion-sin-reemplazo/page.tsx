@@ -94,13 +94,13 @@ function Content() {
 
   const gestionarTodas = async () => {
     if (!allGestionadas || gestionando) return
-    if (!confirm(`Marcar como gestionadas ${rows.length} registro(s) y pasarlos al histórico?`)) return
+    if (!confirm(`Marcar como gestionadas ${rows.length} registro(s), pasarlos al histórico y borrar sus clases canceladas del historial de los alumnos? (no afecta el cupo semanal)`)) return
     setGestionando(true)
     try {
       const res = await fetch(`/api/postgres/cancelaciones-sin-reemplazo/gestionar`, { method: 'POST' })
       const j = await res.json().catch(() => ({}))
       if (!res.ok) { toast.error(j.error || 'Error'); return }
-      toast.success(`${j.gestionadas ?? 0} registro(s) marcados como gestionados`)
+      toast.success(`${j.gestionadas ?? 0} registro(s) gestionados · ${j.bookingsBorrados ?? 0} clase(s) borrada(s) del historial`)
       load()
     } catch {
       toast.error('Error')

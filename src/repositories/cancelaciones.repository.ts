@@ -7,7 +7,7 @@
  */
 
 import 'server-only';
-import { queryMany, queryOne, query } from '@/lib/postgres';
+import { queryMany, queryOne, withTransaction } from '@/lib/postgres';
 
 const COLS = `
   "_id", "loteId", "eventoId", "fechaEvento", "horaEvento", "tipo", "nivel", "step",
@@ -57,14 +57,39 @@ class CancelacionesRepositoryClass {
     );
   }
 
-  /** Botón global "Gestionada": pasa todos los actuales a histórico. */
-  async marcarActualesGestionadas(): Promise<number> {
-    const r: any = await query(
-      `UPDATE "CANCELACIONES_SIN_REEMPLAZO"
-          SET "loteGestionado" = true, "_updatedDate" = NOW()
-        WHERE "loteGestionado" = false`,
-    );
-    return r.rowCount ?? 0;
+  /**
+   * Botón global "Gestionada": pasa todos los actuales a histórico Y BORRA los
+   * bookings cancelados (cancelo=true) de esos alumnos — una vez que Servicio los
+   * gestionó, la clase cancelada sin reemplazo desaparece de su historial. El
+   * registro para auditoría queda en CANCELACIONES_SIN_REEMPLAZO (histórico) y en
+   * ADVISOR_EVENT_LOG ('NoAsistio').
+   *
+   * NO afecta el cupo semanal: el conteo ya excluye cancelo=true (el cupo se
+   * liberó al cancelar el evento) y el evento ya no está en CALENDARIO, así que
+   * no hay inscritos que ajustar. Transaccional: el DELETE corre ANTES del UPDATE,
+   * mientras las filas siguen en loteGestionado=false.
+   */
+  async marcarActualesGestionadas(): Promise<{ gestionadas: number; bookingsBorrados: number }> {
+    return withTransaction(async (client) => {
+      // 1. Borrar los bookings cancelados de los alumnos que se van a histórico.
+      //    Match por evento del lote (loteId = eventoId) + alumno del snapshot,
+      //    y solo si el booking sigue cancelo=true (nunca toca uno activo).
+      const del: any = await client.query(
+        `DELETE FROM "ACADEMICA_BOOKINGS" b
+           USING "CANCELACIONES_SIN_REEMPLAZO" c
+          WHERE c."loteGestionado" = false
+            AND (b."eventoId" = c."loteId" OR b."idEvento" = c."loteId")
+            AND (b."idEstudiante" = c."studentId" OR b."studentId" = c."studentId")
+            AND b."cancelo" = true`,
+      );
+      // 2. Pasar los actuales a histórico.
+      const upd: any = await client.query(
+        `UPDATE "CANCELACIONES_SIN_REEMPLAZO"
+            SET "loteGestionado" = true, "_updatedDate" = NOW()
+          WHERE "loteGestionado" = false`,
+      );
+      return { gestionadas: upd.rowCount ?? 0, bookingsBorrados: del.rowCount ?? 0 };
+    });
   }
 }
 

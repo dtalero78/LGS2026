@@ -42,7 +42,6 @@ export const cancelacionesService = {
     if (pendientes > 0) {
       throw new ValidationError(`Quedan ${pendientes} registro(s) sin gestionar`);
     }
-    const gestionadas = await CancelacionesRepository.marcarActualesGestionadas();
-    return { gestionadas };
+    return CancelacionesRepository.marcarActualesGestionadas();
   },
 };
