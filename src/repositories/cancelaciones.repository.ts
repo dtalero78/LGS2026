@@ -46,10 +46,14 @@ class CancelacionesRepositoryClass {
 
   async updateGestion(id: string, gestion: string, gestionadaPor: string | null) {
     return queryOne(
+      // $2 va casteado a ::text en AMBOS usos (asignación + CASE) porque, sin el
+      // cast, Postgres deduce tipos distintos para el mismo parámetro
+      // ("inconsistent types deduced for parameter $2") y el UPDATE falla siempre
+      // por el protocolo extendido/parametrizado.
       `UPDATE "CANCELACIONES_SIN_REEMPLAZO"
-          SET "gestion" = $2,
+          SET "gestion" = $2::text,
               "gestionadaPor" = $3,
-              "fechaGestion" = CASE WHEN $2 = 'SIN_GESTION' THEN NULL ELSE NOW() END,
+              "fechaGestion" = CASE WHEN $2::text = 'SIN_GESTION' THEN NULL ELSE NOW() END,
               "_updatedDate" = NOW()
         WHERE "_id" = $1
       RETURNING ${COLS}`,
