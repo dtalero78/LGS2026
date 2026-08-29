@@ -50,6 +50,46 @@ function sesionLabel(r: Row): string {
   return [fecha, r.tipo, nivelStep].filter(Boolean).join(' · ')
 }
 
+/**
+ * Fetch tolerante a blips de conexión de la BD: reintenta (backoff simple) ante
+ * errores retriables (500 / connection slots / database saturada). Devuelve el
+ * JSON parseado o lanza Error con el mensaje del backend.
+ */
+async function jsonFetchRetry(input: RequestInfo, init?: RequestInit, retries = 2): Promise<any> {
+  let lastErr: any
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const r = await fetch(input, init)
+      const txt = await r.text()
+      let j: any = null
+      try { j = txt ? JSON.parse(txt) : null } catch {}
+      if (!r.ok || j?.success === false) {
+        throw new Error(j?.error || `HTTP ${r.status}${txt ? ': ' + txt.slice(0, 160) : ''}`)
+      }
+      return j
+    } catch (e: any) {
+      lastErr = e
+      const msg = (e?.message || '').toLowerCase()
+      const retriable = msg.includes('500') || msg.includes('database') ||
+                        msg.includes('connection') || msg.includes('reserved') ||
+                        msg.includes('failed to fetch')
+      if (!retriable || i === retries) throw e
+      await new Promise(res => setTimeout(res, 1500 * (i + 1)))
+    }
+  }
+  throw lastErr
+}
+
+/** Un blip de BD se muestra como "ocupada, reintenta"; el resto tal cual. */
+function msgError(e: any, fallback: string): string {
+  const m = (e?.message || '').toLowerCase()
+  if (m.includes('database') || m.includes('connection') || m.includes('reserved') ||
+      m.includes('500') || m.includes('failed to fetch')) {
+    return 'La base de datos está ocupada. Espera unos segundos y reintenta.'
+  }
+  return e?.message || fallback
+}
+
 function Content() {
   const [vista, setVista] = useState<'actual' | 'historico'>('actual')
   const [rows, setRows] = useState<Row[]>([])
@@ -60,11 +100,10 @@ function Content() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/postgres/cancelaciones-sin-reemplazo?vista=${vista}`)
-      const data = await res.json()
+      const data = await jsonFetchRetry(`/api/postgres/cancelaciones-sin-reemplazo?vista=${vista}`)
       setRows(Array.isArray(data.rows) ? data.rows : [])
-    } catch {
-      toast.error('Error cargando cancelaciones')
+    } catch (e) {
+      toast.error(msgError(e, 'Error cargando cancelaciones'))
     } finally {
       setLoading(false)
     }
@@ -75,16 +114,14 @@ function Content() {
   const updateRow = async (id: string, patch: { gestion: string; gestionadaPor: string | null }) => {
     setSavingId(id)
     try {
-      const res = await fetch(`/api/postgres/cancelaciones-sin-reemplazo/${id}`, {
+      const j = await jsonFetchRetry(`/api/postgres/cancelaciones-sin-reemplazo/${id}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(patch),
       })
-      const j = await res.json().catch(() => ({}))
-      if (!res.ok) { toast.error(j.error || 'Error al guardar'); return }
       setRows(prev => prev.map(r => (r._id === id ? { ...r, ...j.row } : r)))
-    } catch {
-      toast.error('Error al guardar')
+    } catch (e) {
+      toast.error(msgError(e, 'Error al guardar'))
     } finally {
       setSavingId(null)
     }
@@ -97,13 +134,11 @@ function Content() {
     if (!confirm(`Marcar como gestionadas ${rows.length} registro(s), pasarlos al histórico y borrar sus clases canceladas del historial de los alumnos? (no afecta el cupo semanal)`)) return
     setGestionando(true)
     try {
-      const res = await fetch(`/api/postgres/cancelaciones-sin-reemplazo/gestionar`, { method: 'POST' })
-      const j = await res.json().catch(() => ({}))
-      if (!res.ok) { toast.error(j.error || 'Error'); return }
+      const j = await jsonFetchRetry(`/api/postgres/cancelaciones-sin-reemplazo/gestionar`, { method: 'POST' })
       toast.success(`${j.gestionadas ?? 0} registro(s) gestionados · ${j.bookingsBorrados ?? 0} clase(s) borrada(s) del historial`)
       load()
-    } catch {
-      toast.error('Error')
+    } catch (e) {
+      toast.error(msgError(e, 'Error al gestionar'))
     } finally {
       setGestionando(false)
     }
