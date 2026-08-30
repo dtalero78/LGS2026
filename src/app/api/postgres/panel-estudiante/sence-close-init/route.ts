@@ -46,20 +46,25 @@ export const GET = handlerWithAuth(async (request, context, session) => {
 
   const origin = request.headers.get('origin') || process.env.NEXTAUTH_URL || '';
   const senceConfig = getSenceConfig();
+  const actionUrl = getSenceActionUrl('CerrarSesion');
+  const fields = {
+    RutOtec: senceConfig.rutOtec,
+    Token: senceConfig.token,
+    CodSence: senceConfig.codSence,
+    CodigoCurso: senceCode,
+    LineaCapacitacion: senceConfig.lineaCapacitacion,
+    RunAlumno: toSenceRutFormat(student.numeroId),
+    IdSesionAlumno: bookingId,
+    IdSesionSence: idSesionSence,
+    UrlRetoma: `${origin}/api/sence/cierre-retorno`,
+    UrlError: `${origin}/api/sence/cierre-error`,
+  };
 
-  return successResponse({
-    actionUrl: getSenceActionUrl('CerrarSesion'),
-    fields: {
-      RutOtec: senceConfig.rutOtec,
-      Token: senceConfig.token,
-      CodSence: senceConfig.codSence,
-      CodigoCurso: senceCode,
-      LineaCapacitacion: senceConfig.lineaCapacitacion,
-      RunAlumno: toSenceRutFormat(student.numeroId),
-      IdSesionAlumno: bookingId,
-      IdSesionSence: idSesionSence,
-      UrlRetoma: `${origin}/api/sence/cierre-retorno`,
-      UrlError: `${origin}/api/sence/cierre-error`,
-    },
+  console.log('📤 [SENCE] CerrarSesion — actionUrl:', actionUrl);
+  console.log('📤 [SENCE] CerrarSesion — fields:', {
+    ...fields,
+    Token: fields.Token ? `${fields.Token.slice(0, 4)}***` : '(vacío)',
   });
+
+  return successResponse({ actionUrl, fields });
 });

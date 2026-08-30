@@ -56,19 +56,24 @@ export const GET = handlerWithAuth(async (request, context, session) => {
 
   const origin = request.headers.get('origin') || process.env.NEXTAUTH_URL || '';
   const senceConfig = getSenceConfig();
+  const actionUrl = getSenceActionUrl('IniciarSesion');
+  const fields = {
+    RutOtec: senceConfig.rutOtec,
+    Token: senceConfig.token,
+    CodSence: senceConfig.codSence,
+    CodigoCurso: senceCode,
+    LineaCapacitacion: senceConfig.lineaCapacitacion,
+    RunAlumno: toSenceRutFormat(student.numeroId),
+    IdSesionAlumno: bookingId,
+    UrlRetoma: `${origin}/api/sence/retorno`,
+    UrlError: `${origin}/api/sence/error`,
+  };
 
-  return successResponse({
-    actionUrl: getSenceActionUrl('IniciarSesion'),
-    fields: {
-      RutOtec: senceConfig.rutOtec,
-      Token: senceConfig.token,
-      CodSence: senceConfig.codSence,
-      CodigoCurso: senceCode,
-      LineaCapacitacion: senceConfig.lineaCapacitacion,
-      RunAlumno: toSenceRutFormat(student.numeroId),
-      IdSesionAlumno: bookingId,
-      UrlRetoma: `${origin}/api/sence/retorno`,
-      UrlError: `${origin}/api/sence/error`,
-    },
+  console.log('📤 [SENCE] IniciarSesion — actionUrl:', actionUrl);
+  console.log('📤 [SENCE] IniciarSesion — fields:', {
+    ...fields,
+    Token: fields.Token ? `${fields.Token.slice(0, 4)}***` : '(vacío)',
   });
+
+  return successResponse({ actionUrl, fields });
 });

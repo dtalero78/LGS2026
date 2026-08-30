@@ -13,6 +13,10 @@ export async function POST(request: NextRequest) {
     const glosaError = String(formData.get('GlosaError') || '');
 
     console.warn(
+      '📥 [SENCE] Retorno CerrarSesion (error) — form completo recibido:',
+      Object.fromEntries(formData.entries())
+    );
+    console.warn(
       `⚠️ [SENCE] Cierre de sesión fallido — IdSesionAlumno=${idSesionAlumno} GlosaError=${glosaError}`
     );
 

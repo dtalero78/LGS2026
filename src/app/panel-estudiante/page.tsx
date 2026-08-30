@@ -103,6 +103,11 @@ function PanelEstudianteContent() {
         setPending(false)
         return
       }
+      console.log(`📤 [SENCE] Enviando formulario a ${json.actionUrl}`, {
+        ...json.fields,
+        Token: json.fields?.Token ? `${String(json.fields.Token).slice(0, 4)}***` : '(vacío)',
+      })
+
       const form = document.createElement('form')
       form.method = 'POST'
       form.action = json.actionUrl

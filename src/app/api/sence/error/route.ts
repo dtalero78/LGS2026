@@ -15,6 +15,10 @@ export async function POST(request: NextRequest) {
     const glosaError = String(formData.get('GlosaError') || '');
 
     console.warn(
+      '📥 [SENCE] Retorno IniciarSesion (error) — form completo recibido:',
+      Object.fromEntries(formData.entries())
+    );
+    console.warn(
       `⚠️ [SENCE] Inicio de sesión fallido — IdSesionAlumno=${idSesionAlumno} GlosaError=${glosaError}`
     );
 

@@ -13,6 +13,10 @@ export async function POST(request: NextRequest) {
     const runAlumno = String(formData.get('RunAlumno') || '');
 
     console.log(
+      '📥 [SENCE] Retorno CerrarSesion (éxito) — form completo recibido:',
+      Object.fromEntries(formData.entries())
+    );
+    console.log(
       `✅ [SENCE] Cierre de sesión exitoso — IdSesionAlumno=${idSesionAlumno} RunAlumno=${runAlumno}`
     );
 
