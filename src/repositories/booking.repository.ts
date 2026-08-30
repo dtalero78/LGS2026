@@ -480,7 +480,12 @@ class BookingRepositoryClass extends BaseRepository {
               COALESCE(c."step", ab."step") AS "step",
               COALESCE(c."nombreEvento", ab."nombreEvento") AS "nombreEvento",
               a."nombreCompleto" as "advisorNombre",
-              c."linkZoom" as "eventLinkZoom"
+              c."linkZoom" as "eventLinkZoom",
+              c."tipo" as "eventTipo",
+              (SELECT MIN(z."_createdDate") FROM "ZOOM_ACCESOS" z
+                WHERE z."academicaId" = $1
+                  AND (z."eventoId" = COALESCE(ab."eventoId", ab."idEvento") OR z."fechaEvento" = ab."fechaEvento")
+              ) AS "zoomAccesoEn"
        FROM "ACADEMICA_BOOKINGS" ab
        LEFT JOIN "ADVISORS" a ON ab."advisor" = a."_id"
        LEFT JOIN "CALENDARIO" c ON (ab."eventoId" = c."_id" OR ab."idEvento" = c."_id")

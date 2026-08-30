@@ -13,7 +13,7 @@ import { PoolClient } from 'pg';
 import { queryMany, queryOne } from '@/lib/postgres';
 import { ids } from '@/lib/id-generator';
 
-export type AdvisorEventLogEstado = 'Canceled' | 'Suspended';
+export type AdvisorEventLogEstado = 'Canceled' | 'Suspended' | 'NoAsistio';
 
 export interface AdvisorEventLogRow {
   _id: string;

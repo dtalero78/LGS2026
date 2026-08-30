@@ -1,8 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import {
-  VideoCameraIcon,
   ClockIcon,
   UserIcon,
   XMarkIcon,
@@ -10,6 +9,13 @@ import {
 } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import ZoomAccessButton from '@/components/panel-estudiante/ZoomAccessButton'
+
+// Ventana de conexión a Zoom: abre 5 min ANTES del inicio y cierra 10 min DESPUÉS.
+const ZOOM_ABRE_MIN_ANTES = 5
+const ZOOM_CIERRA_MIN_DESPUES = 10
+// Tope de una espera de setTimeout (desborda pasados ~24 días).
+const ZOOM_MAX_ESPERA_MS = 6 * 60 * 60 * 1000
 
 interface NextClassCardProps {
   events: any[]
@@ -20,11 +26,27 @@ export default function NextClassCard({ events, isLoading }: NextClassCardProps)
   const [videoOpen, setVideoOpen] = useState(false)
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
   const [videoLoading, setVideoLoading] = useState(false)
+  const [zoomTick, setZoomTick] = useState(0)
 
   const nextClass = useMemo(() => {
     if (!events || events.length === 0) return null
     return events[0]
   }, [events])
+
+  // Reevalúa la ventana de Zoom en el instante exacto del próximo cambio (apertura /
+  // cierre), para que el ícono se active/desactive solo sin recargar. Hora del dispositivo.
+  const inicioMs = nextClass?.fechaEvento ? new Date(nextClass.fechaEvento).getTime() : null
+  useEffect(() => {
+    if (inicioMs == null) return
+    const abre = inicioMs - ZOOM_ABRE_MIN_ANTES * 60_000
+    const cierra = inicioMs + ZOOM_CIERRA_MIN_DESPUES * 60_000
+    const ahora = Date.now()
+    const proximoCambio = ahora < abre ? abre : ahora < cierra ? cierra : null
+    if (proximoCambio == null) return
+    const espera = Math.min(proximoCambio - ahora + 1_000, ZOOM_MAX_ESPERA_MS)
+    const id = setTimeout(() => setZoomTick((t) => t + 1), espera)
+    return () => clearTimeout(id)
+  }, [inicioMs, zoomTick])
 
   async function handleOpenVideo() {
     if (!nextClass) return
@@ -74,7 +96,7 @@ export default function NextClassCard({ events, isLoading }: NextClassCardProps)
   const minutesUntil = (eventDate.getTime() - now.getTime()) / (1000 * 60)
   const minutesSince = -minutesUntil
 
-  const showZoom = minutesUntil <= 5 && minutesSince <= 10
+  const showZoom = minutesUntil <= ZOOM_ABRE_MIN_ANTES && minutesSince <= ZOOM_CIERRA_MIN_DESPUES
   const zoomLink = nextClass.eventLinkZoom || nextClass.linkZoom
 
   const tipoColor = nextClass.tipo === 'SESSION'
@@ -110,31 +132,27 @@ export default function NextClassCard({ events, isLoading }: NextClassCardProps)
               <span>{nextClass.advisorNombre}</span>
             </div>
           )}
-          <div className="flex items-center gap-2 pt-1">
-            {showZoom && zoomLink ? (
-              <a
-                href={zoomLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                title="Entrar a Zoom"
+          <div className="pt-1 space-y-1.5">
+            <div className="flex items-center gap-2">
+              {zoomLink && (
+                <ZoomAccessButton zoomLink={zoomLink} disponible={showZoom} size={44} />
+              )}
+              <button
+                onClick={handleOpenVideo}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200"
               >
-                <VideoCameraIcon className="h-5 w-5" />
-                Entrar a Zoom
-              </a>
-            ) : zoomLink ? (
-              <span className="inline-flex items-center gap-2 text-sm text-white font-medium">
-                <VideoCameraIcon className="h-4 w-4 text-white" />
-                Enlace disponible 5 min antes, recuerda refrescar el navegador
-              </span>
-            ) : null}
-            <button
-              onClick={handleOpenVideo}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200"
-            >
-              <PlayCircleIcon className="h-4 w-4" />
-              Ver Video
-            </button>
+                <PlayCircleIcon className="h-4 w-4" />
+                Ver Video
+              </button>
+            </div>
+            {/* Aviso siempre visible; el texto cambia según el estado del enlace. */}
+            {zoomLink && (
+              <p className={`text-sm font-semibold ${showZoom ? 'text-emerald-200' : 'text-amber-200'}`}>
+                {showZoom
+                  ? 'Enlace listo, disponible por 10 minutos después del inicio, da clic en el ícono'
+                  : 'Enlace disponible 5 min antes, recuerda refrescar el navegador'}
+              </p>
+            )}
           </div>
         </div>
       </div>

@@ -5,6 +5,8 @@ import { ValidationError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 import { syncFinancieroSaldo } from '@/services/pagos-titulares.service';
 import { checkBeneficiarioUnico, anularBeneficiariosViejos } from '@/lib/beneficiario-unico';
+import { kidsIntake } from '@/lib/kids-intake';
+import { buildKidsReservation, plataformaToCountryCode, toISODate } from '@/lib/kids-mapping';
 import crypto from 'crypto';
 
 const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
@@ -117,7 +119,7 @@ async function generateContractNumber(plataforma: string, esPrueba: boolean): Pr
   return `${codigoPais}-${siguiente}-${anoActual}`;
 }
 
-const VALID_TIPO_PLAN = ['Contado', 'Credito', 'Colaborador'] as const;
+const VALID_TIPO_PLAN = ['Contado', 'Credito', 'Colaborador', 'Empresa'] as const;
 type TipoPlan = typeof VALID_TIPO_PLAN[number];
 function normalizeTipoPlan(v: any): TipoPlan | null {
   if (!v) return null;
@@ -135,11 +137,14 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   // captura a nivel del titular — se captura por beneficiario.
   const esChile = String(titular?.plataforma || '').trim().toLowerCase() === 'chile';
   const senceVal = sence === true && esChile && esEmpresa;
+  // Una empresa nunca es beneficiaria (no toma el programa) — defensa server-side.
+  const titularBenef = esEmpresa ? false : (titularEsBeneficiario === true);
 
   // Plataforma sólo es obligatoria para contratos REALES; en pruebas se permite sin plataforma.
   if (!esPrueba && !titular?.plataforma) throw new ValidationError('plataforma is required');
-  if (!titular?.numeroId || !titular?.primerNombre || !titular?.primerApellido) {
-    throw new ValidationError('titular with numeroId, primerNombre, and primerApellido is required');
+  // En modo Empresa el titular no tiene apellido (la razón social va en primerNombre).
+  if (!titular?.numeroId || !titular?.primerNombre || (!esEmpresa && !titular?.primerApellido)) {
+    throw new ValidationError('titular with numeroId and primerNombre is required');
   }
 
   // tipoPlan (Contado / Credito / Colaborador) — se valida y propaga a 3 tablas
@@ -156,7 +161,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   // No aplica a contratos de prueba (PRB-).
   if (!esPrueba) {
     const benefNumeroIds: (string | null | undefined)[] = [];
-    if (titularEsBeneficiario) benefNumeroIds.push(titular.numeroId);
+    if (titularBenef) benefNumeroIds.push(titular.numeroId);
     if (Array.isArray(beneficiarios)) benefNumeroIds.push(...beneficiarios.map((b: any) => b?.numeroId));
     const { anular } = await checkBeneficiarioUnico(benefNumeroIds);
     if (anular.length) await anularBeneficiariosViejos(anular.map(r => r._id));
@@ -184,8 +189,8 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
       "email", "celular", "telefono", "fechaNacimiento", "domicilio", "ciudad",
       "plataforma", "ingresos", "empresa", "cargo", "genero",
       "referenciaUno", "parentezcoRefUno", "telefonoRefUno", "referenciaDos", "parentezcoRefDos", "telefonoRefDos",
-      "asesor", "asesorCreadorContrato", "tipoUsuario", "contrato", "vigencia", "fechaContrato", "finalContrato", "plan", "sence", "tipoPersona", "origen", "_createdDate", "_updatedDate")
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$29,'TITULAR',$25,$26,NOW(),$27::date,$28,$30,$31,'POSTGRES',NOW(),NOW()) RETURNING *`,
+      "asesor", "asesorCreadorContrato", "tipoUsuario", "contrato", "vigencia", "fechaContrato", "finalContrato", "plan", "sence", "tipoPersona", "replegal", "replegalid", "replegalcel", "origen", "_createdDate", "_updatedDate")
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$29,'TITULAR',$25,$26,NOW(),$27::date,$28,$30,$31,$32,$33,$34,'POSTGRES',NOW(),NOW()) RETURNING *`,
     [titularId, titular.numeroId, titular.primerNombre, titular.segundoNombre || null,
      titular.primerApellido, titular.segundoApellido || null,
      titular.email || null, titular.celular || null, titular.telefono || null,
@@ -194,14 +199,15 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
      titular.referenciaUno || null, titular.parentezcoRefUno || null, titular.telRefUno || null,
      titular.referenciaDos || null, titular.parentezcoRefDos || null, titular.telRefDos || null,
      titular.asesor || null, contrato, financial?.vigencia || null, finalContrato, tipoPlan,
-     titular.asesorCreadorContrato || null, senceVal, tipoPersona]  // $29 → asesorCreadorContrato, $30 → sence, $31 → tipoPersona
+     titular.asesorCreadorContrato || null, senceVal, tipoPersona,
+     titular.replegal || null, titular.replegalid || null, titular.replegalcel || null]  // $29 asesorCreadorContrato, $30 sence, $31 tipoPersona, $32-34 rep. legal
   );
   created.titular = titularResult.rows[0];
 
   // 2. Build beneficiarios list (include titular if titularEsBeneficiario)
   const allBeneficiarios: any[] = [];
 
-  if (titularEsBeneficiario) {
+  if (titularBenef) {
     allBeneficiarios.push({
       primerNombre: titular.primerNombre,
       segundoNombre: titular.segundoNombre,
@@ -226,16 +232,70 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
       `INSERT INTO "PEOPLE" ("_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
         "email", "celular", "fechaNacimiento", "titularId",
         "tipoUsuario", "contrato", "plataforma", "estadoInactivo",
-        "vigencia", "fechaContrato", "finalContrato", "sence", "senceCode", "origen", "_createdDate", "_updatedDate")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'BENEFICIARIO',$11,$12,false,$13,NOW(),$14::date,$15,$16,'POSTGRES',NOW(),NOW()) RETURNING *`,
+        "vigencia", "fechaContrato", "finalContrato", "sence", "senceCode", "kids", "origen", "_createdDate", "_updatedDate")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'BENEFICIARIO',$11,$12,false,$13,NOW(),$14::date,$15,$16,$17,'POSTGRES',NOW(),NOW()) RETURNING *`,
       [benefId, b.numeroId, b.primerNombre, b.segundoNombre || null,
        b.primerApellido, b.segundoApellido || null,
        b.email || null, b.celular || null, b.fechaNacimiento || null, titularId,
        contrato, titular.plataforma || null, financial?.vigencia || null, finalContrato,
        b.sence === true && esChile && esEmpresa,
-       (b.sence === true && esChile && esEmpresa) ? (String(b.senceCode || '').trim() || null) : null]
+       (b.sence === true && esChile && esEmpresa) ? (String(b.senceCode || '').trim() || null) : null,
+       b.kids === true]
     );
     created.beneficiarios.push(benefResult.rows[0]);
+
+    // Inscripción Kids (si el beneficiario se marcó como kid en el wizard).
+    if (b.kids === true) {
+      const kd = b.kidsData || {};
+      const kidsInscId = ids.kidsInscripcion();
+      try {
+        await query(
+          `INSERT INTO "KIDS_INSCRIPCIONES"
+             ("_id","contrato","beneficiarioId","numeroId","nombre","plataforma",
+              "campaign","tipoCurso","horario","classroomId","salonNombre",
+              "apoderado","apoderadoApellidos","apoderadoDoc","apoderadoTelefono","apoderadoMail","parentesco")
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+          [kidsInscId, contrato, benefId, b.numeroId,
+           `${b.primerNombre || ''} ${b.primerApellido || ''}`.trim() || null, titular.plataforma || null,
+           kd.campaign || null, kd.tipoCurso || null, kd.horario || null, kd.classroomId || null, kd.salonNombre || null,
+           kd.apoderado || null, kd.apoderadoApellidos || null, kd.apoderadoDoc || null,
+           kd.apoderadoTelefono || null, kd.apoderadoMail || null, kd.parentesco || null]
+        );
+      } catch (e) {
+        console.error('[contracts] Error guardando KIDS_INSCRIPCIONES (best-effort):', e);
+      }
+
+      // Enviar la reserva a KIDS2026 (best-effort — NO rompe la creación del contrato).
+      // Requiere integración configurada (KIDS_API_URL/KIDS_INTAKE_API_KEY) y un salón elegido.
+      if (kidsIntake.isConfigured() && kd.classroomId) {
+        try {
+          const input = buildKidsReservation({
+            // externalRef único por niño (un contrato LGS puede tener varios kids).
+            externalRef: `${contrato}#${b.numeroId}`,
+            countryCode: plataformaToCountryCode(titular.plataforma),
+            inicio: toISODate(clientToday) || new Date().toISOString().slice(0, 10),
+            finalContrato: toISODate(finalContrato),
+            titular,
+            beneficiario: b,
+            kidsData: kd,
+          });
+          const r = await kidsIntake.createReservation(input);
+          await query(
+            `UPDATE "KIDS_INSCRIPCIONES"
+               SET "enviadoAKids"=true, "kidsExternalRef"=$2, "kidsContractId"=$3,
+                   "kidsEnrollmentId"=$4, "fechaEnvioKids"=NOW(), "errorKids"=NULL, "_updatedDate"=NOW()
+             WHERE "_id"=$1`,
+            [kidsInscId, r.externalRef, r.contractId, r.enrollmentId]
+          );
+        } catch (e: any) {
+          console.error('[contracts] Error enviando reserva a KIDS (best-effort):', e?.message);
+          try {
+            await query(`UPDATE "KIDS_INSCRIPCIONES" SET "errorKids"=$2, "_updatedDate"=NOW() WHERE "_id"=$1`,
+              [kidsInscId, String(e?.message || 'error').slice(0, 500)]);
+          } catch { /* noop */ }
+        }
+      }
+    }
   }
 
   // 4. Create FINANCIERO if financial data present

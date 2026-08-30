@@ -89,8 +89,14 @@ export default function AgendaSesionesPage() {
   //   'restructuracion' → borrado limpio, NO deja registro en el log
   //   null              → ninguna casilla marcada (botón Eliminar deshabilitado)
   const [deleteMode, setDeleteMode] = useState<'suspension' | 'restructuracion' | null>(null)
+  // "Sesión con booking": add-on de la Suspensión (excluye Restructuración). Cancela
+  // los bookings (devuelve cupo), los manda a Cancelación sin reemplazo y cuenta No Asistió.
+  const [conBooking, setConBooking] = useState(false)
   const [deleteMotivo, setDeleteMotivo] = useState('')
   const [deletingEvent, setDeletingEvent] = useState(false)
+  // Error del borrado — se muestra DENTRO del modal, sin volcar toda la página
+  // al estado de error de nivel superior (que tapaba el calendario completo).
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   // Estados para el modal de detalles
   const [showDetailModal, setShowDetailModal] = useState(false)
@@ -660,7 +666,9 @@ export default function AgendaSesionesPage() {
     if (!ev) return
     setDeleteTarget(ev)
     setDeleteMode(null)
+    setConBooking(false)
     setDeleteMotivo('')
+    setDeleteError(null)
     setDeleteGroupSiblings([])
     setDeleteGroupChecked(false)
     // Fire-and-forget — si falla, simplemente no se muestra la sección de grupo.
@@ -680,37 +688,56 @@ export default function AgendaSesionesPage() {
   const confirmDelete = async () => {
     if (!deleteTarget || !deleteMode) return
     setDeletingEvent(true)
+    setDeleteError(null)
+    // Si es grupo compartido y el checkbox está marcado, pedimos al backend
+    // borrar todos los hermanos en cascada (1 sola transacción).
+    const isGroupDelete = deleteGroupSiblings.length > 1 && deleteGroupChecked
+    // Quita el/los evento(s) de la vista + caché y cierra el modal. Se usa tanto
+    // en el borrado exitoso como cuando el evento YA no existe (404): borrar algo
+    // ya borrado es idempotente, no un error que deba asustar al usuario.
+    const removeFromView = () => {
+      const deletedIds = isGroupDelete
+        ? new Set(deleteGroupSiblings.map((s: any) => s._id))
+        : new Set([deleteTarget._id])
+      const deletedEvent = events.find(e => e._id === deleteTarget._id)
+      setEvents(prev => prev.filter(e => !deletedIds.has(e._id)))
+      if (deletedEvent) clearCacheForMonth(deletedEvent.dia)
+      setDeleteTarget(null)
+      setDeleteGroupSiblings([])
+      setDeleteGroupChecked(false)
+      setDeleteMode(null)
+      setConBooking(false)
+      setDeleteMotivo('')
+    }
     try {
       const qs = new URLSearchParams()
       if (deleteMotivo.trim()) qs.set('motivo', deleteMotivo.trim())
       // Restructuración: borrado limpio sin registro en ADVISOR_EVENT_LOG.
       // El backend honra skipLog=true para saltar el insert del snapshot.
       if (deleteMode === 'restructuracion') qs.set('skipLog', 'true')
-      // Si es grupo compartido y el checkbox está marcado, pedimos al backend
-      // borrar todos los hermanos en cascada (1 sola transacción).
-      const isGroupDelete = deleteGroupSiblings.length > 1 && deleteGroupChecked
+      // Sesión con booking: cancela bookings (devuelve cupo) + Cancelación sin reemplazo + No Asistió.
+      if (conBooking) qs.set('conBooking', 'true')
       if (isGroupDelete) qs.set('deleteGroup', 'true')
       const response = await fetch(`/api/postgres/events/${deleteTarget._id}?${qs.toString()}`, {
         method: 'DELETE'
       })
 
       if (response.ok) {
-        const deletedIds = isGroupDelete
-          ? new Set(deleteGroupSiblings.map((s: any) => s._id))
-          : new Set([deleteTarget._id])
-        const deletedEvent = events.find(e => e._id === deleteTarget._id)
-        setEvents(prev => prev.filter(e => !deletedIds.has(e._id)))
-        if (deletedEvent) clearCacheForMonth(deletedEvent.dia)
-        setDeleteTarget(null)
-        setDeleteGroupSiblings([])
-        setDeleteGroupChecked(false)
-      } else {
-        const json = await response.json().catch(() => ({}))
-        setError(json.error || 'Error al eliminar el evento')
+        removeFromView()
+        return
       }
+      const json = await response.json().catch(() => ({}))
+      const msg = String(json.error || '')
+      // El evento ya no existe (borrado en otra pestaña o desde un caché viejo):
+      // trátalo como borrado OK — quítalo de la vista en vez de romper la página.
+      if (response.status === 404 || /not found|no encontrado/i.test(msg)) {
+        removeFromView()
+        return
+      }
+      setDeleteError(msg || 'No se pudo eliminar el evento. Inténtalo de nuevo.')
     } catch (error) {
       console.error('Error deleting event:', error)
-      setError('Error al eliminar el evento')
+      setDeleteError('Error de red al eliminar el evento. Revisa tu conexión e inténtalo de nuevo.')
     } finally {
       setDeletingEvent(false)
     }
@@ -719,8 +746,10 @@ export default function AgendaSesionesPage() {
   const cancelDelete = () => {
     if (deletingEvent) return
     setDeleteTarget(null)
+    setConBooking(false)
     setDeleteMode(null)
     setDeleteMotivo('')
+    setDeleteError(null)
   }
 
   const handleEventSave = async (eventData: any) => {
@@ -1067,13 +1096,16 @@ export default function AgendaSesionesPage() {
                   </div>
                 )}
 
-                {/* Opciones mutuamente excluyentes — sólo una puede estar marcada */}
+                {/* Suspensión + "Sesión con booking" se combinan; Restructuración es exclusiva. */}
                 <div className="space-y-2 mb-4">
                   <label className="flex items-start gap-2 cursor-pointer p-2 rounded hover:bg-gray-50">
                     <input
                       type="checkbox"
                       checked={deleteMode === 'suspension'}
-                      onChange={(e) => setDeleteMode(e.target.checked ? 'suspension' : null)}
+                      onChange={(e) => {
+                        setDeleteMode(e.target.checked ? 'suspension' : null)
+                        if (!e.target.checked) setConBooking(false)
+                      }}
                       className="mt-0.5 rounded border-gray-300 text-red-600 focus:ring-red-500"
                     />
                     <span className="text-sm text-gray-800">
@@ -1086,8 +1118,30 @@ export default function AgendaSesionesPage() {
                   <label className="flex items-start gap-2 cursor-pointer p-2 rounded hover:bg-gray-50">
                     <input
                       type="checkbox"
+                      checked={conBooking}
+                      onChange={(e) => {
+                        setConBooking(e.target.checked)
+                        if (e.target.checked) setDeleteMode('suspension')
+                      }}
+                      className="mt-0.5 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                    />
+                    <span className="text-sm text-gray-800">
+                      Sesión con booking
+                      <span className="block text-xs text-gray-500 mt-0.5">
+                        La sesión tenía inscritos: se les cancela la clase y se les <strong>devuelve el cupo semanal</strong>,
+                        pasan a <strong>Cancelación sin reemplazo</strong> (Servicio) y cuenta como <strong>No Asistió</strong> del
+                        advisor. Excluye &quot;Restructuración&quot;.
+                      </span>
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-2 cursor-pointer p-2 rounded hover:bg-gray-50">
+                    <input
+                      type="checkbox"
                       checked={deleteMode === 'restructuracion'}
-                      onChange={(e) => setDeleteMode(e.target.checked ? 'restructuracion' : null)}
+                      onChange={(e) => {
+                        setDeleteMode(e.target.checked ? 'restructuracion' : null)
+                        if (e.target.checked) setConBooking(false)
+                      }}
                       className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                     <span className="text-sm text-gray-800">
@@ -1113,6 +1167,11 @@ export default function AgendaSesionesPage() {
                     placeholder="Ej: día festivo no laborable"
                   />
                 </div>
+                {deleteError && (
+                  <div className="mb-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {deleteError}
+                  </div>
+                )}
                 <div className="flex justify-end gap-2">
                   <button
                     type="button"

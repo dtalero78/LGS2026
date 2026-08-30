@@ -787,6 +787,15 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Columna CONFIRMADO + botón rojo que extiende 100 días desde fecha base a los marcados y bloquea (DONE Step 50) a los no marcados. Acción irreversible.',
   },
 
+  // -- Página: Cancelación sin reemplazo (/dashboard/servicio/cancelacion-sin-reemplazo) --
+  {
+    code: ServicioPermission.CANCELACION_SIN_REEMPLAZO_VER,
+    module: Module.SERVICIO,
+    section: 'Cancelación sin reemplazo',
+    name: 'Página "Cancelación sin reemplazo"',
+    description: 'Listado de alumnos de sesiones canceladas con booking (No Asistió) y su gestión: estado por alumno, gestionada por Servicio/Académico y botón global "Gestionada"',
+  },
+
   // ========== COMERCIAL MODULE ==========
   // -- Página: Contrato Detalle (/dashboard/comercial/contrato/[id]) --
   {
@@ -934,6 +943,20 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     section: 'Usuarios',
     name: 'Página "Drive de Contratos"',
     description: 'Acceso a /admin/drive-config. Interruptor de dónde se archivan los PDF de contrato: bsl-utilidades (externo) o LGS directo a la Unidad compartida.',
+  },
+  {
+    code: MantenimientoPermission.KIDS_CONFIG,
+    module: Module.MANTENIMIENTO,
+    section: 'Usuarios',
+    name: 'Página "Proceso Kids"',
+    description: 'Acceso a /admin/kids-config. Interruptor del proceso Kids (switch + modal en Crear Contrato). Con el flag apagado el switch no se muestra.',
+  },
+  {
+    code: MantenimientoPermission.CARGAR_BENEFICIARIOS,
+    module: Module.MANTENIMIENTO,
+    section: 'Usuarios',
+    name: 'Página "Cargar Beneficiarios"',
+    description: 'Acceso a /admin/cargar-beneficiarios. Carga masiva de beneficiarios a un contrato existente (pega/CSV, pide el número de contrato). Hereda los datos del titular y omite los documentos que ya existen.',
   },
   {
     code: MantenimientoPermission.CLEAR_HISTORIC,

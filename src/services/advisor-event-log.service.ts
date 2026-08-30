@@ -74,7 +74,7 @@ export interface HistoricoRow {
   tituloEvento: string | null;
   timeout: string | null;
   notasadvisor: string | null;
-  estado: 'Canceled' | 'Suspended';
+  estado: 'Canceled' | 'Suspended' | 'NoAsistio';
   canceladoPor: string;
   fechaTransicion: string;
   motivoTransicion: string | null;

@@ -5,7 +5,9 @@ import { NotFoundError, ConflictError } from '@/lib/errors';
 import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { ids } from '@/lib/id-generator';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
+import { kidsIntake } from '@/lib/kids-intake';
 
+interface KidsCredenciales { numeroId: string; nombre: string; username: string | null; password: string | null }
 interface ApproveResult {
   personId: string;
   nombre: string;
@@ -13,6 +15,7 @@ interface ApproveResult {
   academicCreated: boolean;
   whatsappSent: boolean;
   whatsappError: string | null;
+  kidsCredenciales?: KidsCredenciales[];
 }
 
 /**
@@ -177,6 +180,44 @@ async function approveOnePerson(
     }
   }
 
+  // Aprobar la(s) reserva(s) Kids en KIDS2026 (best-effort). Al aprobar el
+  // beneficiario en LGS activa su matrícula allá (RESERVADA→ACTIVA) y guarda las
+  // credenciales del alumno (para mostrarlas/entregarlas al apoderado).
+  const kidsCredenciales: KidsCredenciales[] = [];
+  if (person.tipoUsuario === 'BENEFICIARIO' && kidsIntake.isConfigured()) {
+    try {
+      const inscs = await queryMany<any>(
+        `SELECT "_id","numeroId","nombre","kidsExternalRef" FROM "KIDS_INSCRIPCIONES"
+          WHERE "beneficiarioId" = $1 AND "enviadoAKids" = true
+            AND "aprobadoEnKids" IS NOT TRUE AND "kidsExternalRef" IS NOT NULL`,
+        [personId]
+      );
+      for (const insc of inscs) {
+        try {
+          const r = await kidsIntake.approveReservation(insc.kidsExternalRef);
+          const cred = r.credenciales;
+          await query(
+            `UPDATE "KIDS_INSCRIPCIONES"
+               SET "aprobadoEnKids"=true, "fechaAprobacionKids"=NOW(),
+                   "kidsUserId"=$2, "kidsUsername"=$3, "kidsPassword"=$4,
+                   "kidsEnrollmentId"=COALESCE($5,"kidsEnrollmentId"), "errorKids"=NULL, "_updatedDate"=NOW()
+             WHERE "_id"=$1`,
+            [insc._id, cred?.userId || null, cred?.username || null, cred?.passwordInicial || null, r.enrollmentId || null]
+          );
+          kidsCredenciales.push({
+            numeroId: insc.numeroId, nombre: insc.nombre,
+            username: cred?.username || null, password: cred?.passwordInicial || null,
+          });
+        } catch (e: any) {
+          console.error('[approve] Error aprobando reserva Kids (best-effort):', e?.message);
+          try { await query(`UPDATE "KIDS_INSCRIPCIONES" SET "errorKids"=$2, "_updatedDate"=NOW() WHERE "_id"=$1`, [insc._id, String(e?.message || 'error').slice(0, 500)]); } catch { /* noop */ }
+        }
+      }
+    } catch (e: any) {
+      console.error('[approve] Error consultando KIDS_INSCRIPCIONES (best-effort):', e?.message);
+    }
+  }
+
   return {
     personId,
     nombre: `${person.primerNombre} ${person.primerApellido}`,
@@ -184,6 +225,7 @@ async function approveOnePerson(
     academicCreated,
     whatsappSent,
     whatsappError,
+    kidsCredenciales: kidsCredenciales.length ? kidsCredenciales : undefined,
   };
 }
 

@@ -158,6 +158,11 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
     'SERVICIO.USUARIOS.EXPORTAR_CSV' as Permission,
   ],
 
+  // Servicio - Cancelación sin reemplazo
+  '/dashboard/servicio/cancelacion-sin-reemplazo': [
+    'SERVICIO.CANCELACION_SIN_REEMPLAZO.VER' as Permission,
+  ],
+
   // Servicio - Exam. Intern. > IELTS / B2 First / TOEFL
   '/dashboard/servicio/exam-intern/ielts': [
     'SERVICIO.EXAM_INTERN.IELTS_VER' as Permission,
@@ -226,6 +231,9 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/admin/drive-config': [
     'MANTENIMIENTO.CONTRATOS.DRIVE_CONFIG' as Permission,
   ],
+  '/admin/kids-config': [
+    'MANTENIMIENTO.CONTRATOS.KIDS_CONFIG' as Permission,
+  ],
   '/admin/clear-historic': [
     'MANTENIMIENTO.USUARIOS.CLEAR_HISTORIC' as Permission,
   ],
@@ -234,6 +242,9 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   ],
   '/admin/generar-contrato': [
     'MANTENIMIENTO.USUARIOS.GENERAR_CONTRATO' as Permission,
+  ],
+  '/admin/cargar-beneficiarios': [
+    'MANTENIMIENTO.CONTRATOS.CARGAR_BENEFICIARIOS' as Permission,
   ],
   '/admin/contratos-prueba': [
     'MANTENIMIENTO.USUARIOS.CONTRATOS_PRUEBA' as Permission,
@@ -349,6 +360,7 @@ export const GENERIC_ROUTE_ACCESS: Record<string, Permission[]> = {
     'SERVICIO.EXAM_INTERN.IELTS_VER' as Permission,
     'SERVICIO.EXAM_INTERN.B2F_VER' as Permission,
     'SERVICIO.EXAM_INTERN.TOEFL_VER' as Permission,
+    'SERVICIO.CANCELACION_SIN_REEMPLAZO.VER' as Permission,
   ],
 
   '/dashboard/comercial': [

@@ -45,7 +45,7 @@ interface HistoricoRow {
   tituloEvento: string | null
   timeout: string | null
   notasadvisor: string | null
-  estado: 'Canceled' | 'Suspended'
+  estado: 'Canceled' | 'Suspended' | 'NoAsistio'
   canceladoPor: string
   fechaTransicion: string
   motivoTransicion: string | null
@@ -314,7 +314,7 @@ function ControlHorasContent() {
   const totales = useMemo(() => {
     const t = {
       sessions: 0, clubs: 0, welcome: 0,
-      conducted: 0, sinAsistentes: 0, canceled: 0, suspended: 0,
+      conducted: 0, sinAsistentes: 0, canceled: 0, suspended: 0, noAsistio: 0,
       effective: 0, sinRegistrar: 0,
       administrative: 0, totalHours: 0,
     }
@@ -366,6 +366,7 @@ function ControlHorasContent() {
       countByTipo(h.tipo)
       if (h.estado === 'Canceled')  t.canceled++
       if (h.estado === 'Suspended') t.suspended++
+      if (h.estado === 'NoAsistio') t.noAsistio++
     })
     // Admin events:
     //   - Effective suma las registradas (horas ya "marcadas tarjeta").
@@ -422,17 +423,29 @@ function ControlHorasContent() {
   const weeklyEffective = (weekKeys: Set<string>): number => {
     if (!data) return 0
     const nowMs = Date.now()
-    const groups = new Map<string, { cerrada: boolean }>()
+    // Por grupo (compartidos deduplicados): si está cerrado suma 1h si tuvo
+    // asistentes, o 0.5h si fue conducido SIN asistentes (no compartido).
+    // Suspendidas y canceladas NO aparecen aquí (salen del calendario vigente) → 0h.
+    const groups = new Map<string, { cerrada: boolean; asistieron: number; compartido: boolean }>()
     for (const v of data.vigentes) {
       if (new Date(v.fechaEvento).getTime() > nowMs) continue
       if (!weekKeys.has(dayKeyOf(v.fechaEvento))) continue
       const key = v.eventoCompartidoId || v.eventoId
+      const asis = Number((v as any).asistieron) || 0
+      const comp = v.eventoCompartidoId != null
       const g = groups.get(key)
-      if (!g) groups.set(key, { cerrada: v.sesionCerrada === true })
-      else if (v.sesionCerrada === true) g.cerrada = true
+      if (!g) groups.set(key, { cerrada: v.sesionCerrada === true, asistieron: asis, compartido: comp })
+      else {
+        if (v.sesionCerrada === true) g.cerrada = true
+        g.asistieron += asis
+        if (comp) g.compartido = true
+      }
     }
     let eff = 0
-    for (const g of groups.values()) if (g.cerrada) eff++
+    for (const g of groups.values()) {
+      if (!g.cerrada) continue
+      eff += (!g.compartido && g.asistieron === 0) ? 0.5 : 1
+    }
     for (const ae of adminEventsList) {
       if (!ae?.registrado || !ae.fechaInicio) continue
       if (new Date(ae.fechaInicio).getTime() > nowMs) continue
@@ -522,6 +535,7 @@ function ControlHorasContent() {
           <LegendDot color="bg-violet-600" label="Administrativo" />
           <LegendDot color="bg-yellow-500" label="Suspended" />
           <LegendDot color="bg-red-500"    label="Canceled" />
+          <LegendDot color="bg-fuchsia-600" label="No Asistió" />
         </div>
 
         {/* Advisor Planta: si se marca, Total Hours NO descuenta la media hora por
@@ -553,7 +567,7 @@ function ControlHorasContent() {
 
       {/* Tarjetas de totales del mes */}
       {data && !loading && !error && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-2 mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-8 gap-2 mb-4">
           <TotalCard label="Sessions"  value={totales.sessions}  color="bg-blue-50  border-blue-300  text-blue-700" />
           <TotalCard label="Clubs"     value={totales.clubs}     color="bg-green-50 border-green-300 text-green-700" />
           <TotalCard label="Welcome"   value={totales.welcome}   color="bg-purple-50 border-purple-300 text-purple-700" />
@@ -561,6 +575,7 @@ function ControlHorasContent() {
           <TotalCard label="Without Assistants" value={totales.sinAsistentes} color="bg-orange-50 border-orange-300 text-orange-700" />
           <TotalCard label="Canceled"  value={totales.canceled}  color="bg-red-50   border-red-300   text-red-700" />
           <TotalCard label="Suspended" value={totales.suspended} color="bg-yellow-50 border-yellow-300 text-yellow-800" />
+          <TotalCard label="No Asistió" value={totales.noAsistio} color="bg-fuchsia-50 border-fuchsia-300 text-fuchsia-700" />
         </div>
       )}
 
@@ -726,6 +741,7 @@ function colorClass(c: EventCard): string {
   if (c.kind === 'historico') {
     if (c.estado === 'Canceled') return 'bg-red-500 text-white'
     if (c.estado === 'Suspended') return 'bg-yellow-500 text-yellow-900'
+    if (c.estado === 'NoAsistio') return 'bg-fuchsia-600 text-white'
   }
   const tipo = (c.tipo || '').toUpperCase()
   // Sesión o Club ya ocurrido SIN asistentes y NO compartido → naranja.
@@ -744,7 +760,7 @@ function colorClass(c: EventCard): string {
 }
 
 function stateLabel(c: EventCard): string {
-  if (c.kind === 'historico') return c.estado
+  if (c.kind === 'historico') return c.estado === 'NoAsistio' ? 'No Asistió' : c.estado
   return c.sesionCerrada ? 'Cerrada' : 'Conducted'
 }
 
@@ -799,6 +815,7 @@ function EventDetailModal({
     if (isHistorical) {
       if (card.estado === 'Canceled') return 'bg-red-500 text-white'
       if (card.estado === 'Suspended') return 'bg-yellow-500 text-yellow-900'
+      if (card.estado === 'NoAsistio') return 'bg-fuchsia-600 text-white'
     }
     const tipo = (card.tipo || '').toUpperCase()
     if (card.kind === 'vigente' && (tipo === 'SESSION' || tipo === 'CLUB')

@@ -13,7 +13,7 @@ import {
   SparklesIcon,
   LockClosedIcon,
 } from '@heroicons/react/24/outline'
-import { useQuery } from 'react-query'
+import { useQuery, useQueryClient } from 'react-query'
 import {
   useStudentMe,
   useStudentEvents,
@@ -40,6 +40,15 @@ import WhatsAppContacts from '@/components/panel-estudiante/WhatsAppContacts'
 import AdvisorComments from '@/components/panel-estudiante/AdvisorComments'
 import ClassHistory from '@/components/panel-estudiante/ClassHistory'
 import JumpExamBanner from '@/components/panel-estudiante/JumpExamBanner'
+import ZoomAccessButton from '@/components/panel-estudiante/ZoomAccessButton'
+import { estadoZoom, proximoCambioZoom, MENSAJE_ZOOM_LISTO, MENSAJE_ZOOM_ESPERA, MENSAJE_ZOOM_RECONEXION, MENSAJE_ZOOM_VENCIDO, MENSAJE_ZOOM_CERRADO } from '@/lib/zoom-window'
+
+// Las reglas de la ventana de Zoom (ingreso −5/+10 + reconexión personal) viven
+// en lib/zoom-window. Aquí sólo cada cuánto reevaluar el estado del ícono.
+// NO dormimos hasta el hito exacto: los navegadores CONGELAN los timers largos
+// cuando la pestaña está en segundo plano o el móvil bloqueado, y el ícono no
+// cambiaría hasta que el alumno recargue. Reevaluar cada ≤20 s lo cambia solo.
+const ZOOM_REEVAL_MS = 20 * 1000
 
 function PanelEstudianteContent() {
   const [showBookingFlow, setShowBookingFlow] = useState(false)
@@ -54,6 +63,7 @@ function PanelEstudianteContent() {
   const [showInstructivos, setShowInstructivos] = useState(false)
   const [showPerfil, setShowPerfil] = useState(false)
   const [showRecursos, setShowRecursos] = useState(false)
+  const [zoomTick, setZoomTick] = useState(0)
   const [sencePending, setSencePending] = useState(false)
   const [senceClosePending, setSenceClosePending] = useState(false)
 
@@ -149,6 +159,7 @@ function PanelEstudianteContent() {
 
   // Mutations
   const cancelMutation = useCancelBooking()
+  const queryClient = useQueryClient()
 
   const profile = meQuery.data?.profile
   const events = eventsQuery.data?.events || []
@@ -202,12 +213,16 @@ function PanelEstudianteContent() {
     setVideoOpen(true)
   }
 
+  // Estado del ícono de Zoom para ESTE alumno: ventana de ingreso (−5/+10) MÁS
+  // reconexión personal (quien entró conserva el ícono hasta 10 min antes del fin
+  // de la clase). Las reglas viven en lib/zoom-window; `zoomTick` (efecto abajo)
+  // reevalúa al llegar cada hito para que el ícono cambie solo sin recargar.
   const nextEventDate = nextClass ? new Date(nextClass.fechaEvento) : null
-  const now = new Date()
-  const showZoom = nextClass && nextEventDate
-    ? (nextEventDate.getTime() - now.getTime()) / (1000 * 60) <= 5
-      && (now.getTime() - nextEventDate.getTime()) / (1000 * 60) <= 10
-    : false
+  const inicioMs = nextEventDate ? nextEventDate.getTime() : null
+  const zoomTipo = nextClass?.eventTipo || nextClass?.tipo
+  const zoomAccesoEnMs = nextClass?.zoomAccesoEn ? new Date(nextClass.zoomAccesoEn).getTime() : null
+  const zoomEstado = inicioMs != null ? estadoZoom(inicioMs, zoomTipo, zoomAccesoEnMs) : 'espera'
+  const showZoom = zoomEstado === 'disponible'
   const zoomLink = nextClass?.eventLinkZoom || nextClass?.linkZoom
   // Estudiantes SENCE deben iniciar sesión en SENCE (sistemas.sence.cl) antes
   // de poder entrar a su clase. Se considera "hecho" cuando el booking tiene
@@ -219,6 +234,51 @@ function PanelEstudianteContent() {
   // link de Zoom (el alumno decide cuándo cerrarla).
   const senceOpenNotClosed =
     isSenceStudent && !!(nextClass as any)?.idSesionSence && !(nextClass as any)?.senceSessionClosedAt
+
+  // Deja constancia del acceso (para la reconexión) y refresca la lista para que el
+  // ícono quede activo hasta el fin de la clase. Best-effort: si falla, entra igual.
+  const registrarAccesoZoom = () => {
+    const eventoId = nextClass?.eventoId || nextClass?.idEvento
+    if (!eventoId) return
+    fetch('/api/postgres/panel-estudiante/zoom-acceso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventoId }),
+    })
+      .then(() => queryClient.invalidateQueries(['panel-estudiante', 'events']))
+      .catch(() => {})
+  }
+
+  // Reevalúa el estado del ícono sin que el alumno recargue. La espera se capa a
+  // ZOOM_REEVAL_MS: aunque falten 55 min para el hito, el timer despierta cada
+  // ≤20 s y recalcula con el reloj actual (los timers largos se congelan en
+  // segundo plano). Se re-arma solo por `zoomTick` en las deps y se DETIENE solo
+  // cuando ya no queda ningún cambio pendiente (proximoCambioZoom == null).
+  useEffect(() => {
+    if (inicioMs == null) return
+    const proximo = proximoCambioZoom(inicioMs, zoomTipo, zoomAccesoEnMs)
+    if (proximo == null) return
+    const espera = Math.max(1_000, Math.min(proximo - Date.now() + 1_000, ZOOM_REEVAL_MS))
+    const id = setTimeout(() => setZoomTick((t) => t + 1), espera)
+    return () => clearTimeout(id)
+  }, [inicioMs, zoomTipo, zoomAccesoEnMs, zoomTick])
+
+  // Al volver la pestaña a primer plano (móvil que se desbloquea, cambio de app o
+  // de pestaña), recalcula el ícono YA y refresca la data, sin esperar al timer
+  // —que pudo quedar congelado mientras estaba en segundo plano—.
+  useEffect(() => {
+    const despertar = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+      setZoomTick((t) => t + 1)
+      queryClient.invalidateQueries(['panel-estudiante', 'events'])
+    }
+    document.addEventListener('visibilitychange', despertar)
+    window.addEventListener('focus', despertar)
+    return () => {
+      document.removeEventListener('visibilitychange', despertar)
+      window.removeEventListener('focus', despertar)
+    }
+  }, [queryClient])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -376,20 +436,20 @@ function PanelEstudianteContent() {
                         Debes iniciar sesión en SENCE antes de entrar a tu clase.
                       </p>
                     </>
-                  ) : showZoom && zoomLink ? (
-                    <a
-                      href={zoomLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 text-white text-sm font-medium rounded-lg hover:bg-white/30 transition-colors"
-                    >
-                      <VideoCameraIcon className="h-4 w-4" />
-                      Entrar a Zoom
-                    </a>
+                  ) : zoomLink ? (
+                    <div className="mt-1 flex items-center gap-3">
+                      <ZoomAccessButton zoomLink={zoomLink} disponible={!!showZoom} onAcceso={registrarAccesoZoom} />
+                      {/* El aviso se mantiene visible; el texto cambia según el estado del enlace. */}
+                      <p className={`text-sm font-semibold ${showZoom ? 'text-emerald-200' : 'text-amber-200'}`}>
+                        {zoomEstado === 'disponible'
+                          ? (zoomAccesoEnMs ? MENSAJE_ZOOM_RECONEXION : MENSAJE_ZOOM_LISTO)
+                          : zoomEstado === 'vencido' ? MENSAJE_ZOOM_VENCIDO
+                          : zoomEstado === 'cerrado' ? MENSAJE_ZOOM_CERRADO
+                          : MENSAJE_ZOOM_ESPERA}
+                      </p>
+                    </div>
                   ) : (
-                    <p className="text-sm text-white">
-                      {zoomLink ? 'Enlace disponible 5 min antes, recuerda refrescar el navegador' : '---'}
-                    </p>
+                    <p className="text-sm text-white">---</p>
                   )}
                   {senceOpenNotClosed && (
                     <button

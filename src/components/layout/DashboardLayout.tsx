@@ -65,6 +65,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
       { name: 'Welcome Session', href: '/dashboard/servicio/welcome-session' },
       { name: 'Asistencia Sesiones', href: '/dashboard/servicio/lista-sesiones' },
       { name: 'Usuarios sin perfil creado', href: '/dashboard/servicio/sin-registro' },
+      { name: 'Cancelación sin reemplazo', href: '/dashboard/servicio/cancelacion-sin-reemplazo' },
       {
         name: 'Exam. Intern.', isSubmenu: true, children: [
           { name: 'IELTS',    href: '/dashboard/servicio/exam-intern/ielts',    newTab: true },
@@ -206,8 +207,10 @@ const getNavigation = (userEmail: string, userRole: string) => [
           { name: 'Bloqueo Contrato', href: '/admin/bloqueo-contrato', newTab: true },
           { name: 'Contratos Prueba', href: '/admin/contratos-prueba', newTab: true },
           { name: 'Drive de Contratos', href: '/admin/drive-config', newTab: true },
+          { name: 'Proceso Kids', href: '/admin/kids-config', newTab: true },
           { name: 'Edición Contrato', href: '/admin/edicion-contrato', newTab: true },
           { name: 'Generar Contrato', href: '/admin/generar-contrato', newTab: true },
+          { name: 'Cargar Beneficiarios', href: '/admin/cargar-beneficiarios', newTab: true },
           { name: 'Migrar Contrato',  href: '/admin/migrar-contrato',  newTab: true },
         ],
       },
@@ -333,6 +336,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       ServicioPermission.USUARIOS_ACTUALIZAR,
       ServicioPermission.USUARIOS_EXPORTAR_CSV,
     ],
+    '/dashboard/servicio/cancelacion-sin-reemplazo': [
+      ServicioPermission.CANCELACION_SIN_REEMPLAZO_VER,
+    ],
     '/dashboard/servicio/exam-intern/ielts':   [ServicioPermission.EXAM_INTERN_IELTS_VER],
     '/dashboard/servicio/exam-intern/b2first': [ServicioPermission.EXAM_INTERN_B2F_VER],
     '/dashboard/servicio/exam-intern/toefl':   [ServicioPermission.EXAM_INTERN_TOEFL_VER],
@@ -359,6 +365,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/admin/drive-config': [
       MantenimientoPermission.DRIVE_CONFIG,
     ],
+    '/admin/kids-config': [
+      MantenimientoPermission.KIDS_CONFIG,
+    ],
     '/admin/clear-historic': [
       MantenimientoPermission.CLEAR_HISTORIC,
     ],
@@ -367,6 +376,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ],
     '/admin/generar-contrato': [
       MantenimientoPermission.GENERAR_CONTRATO,
+    ],
+    '/admin/cargar-beneficiarios': [
+      MantenimientoPermission.CARGAR_BENEFICIARIOS,
     ],
     '/admin/contratos-prueba': [
       MantenimientoPermission.CONTRATOS_PRUEBA,
@@ -481,6 +493,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       // SERVICIO.USUARIOS.*
       ServicioPermission.USUARIOS_ACTUALIZAR,
       ServicioPermission.USUARIOS_EXPORTAR_CSV,
+      // SERVICIO.CANCELACION_SIN_REEMPLAZO.*
+      ServicioPermission.CANCELACION_SIN_REEMPLAZO_VER,
     ],
     'Comercial': [
       // COMERCIAL.CONTRATO.*

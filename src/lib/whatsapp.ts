@@ -8,7 +8,11 @@
 import 'server-only';
 
 const WHAPI_URL = 'https://gate.whapi.cloud/messages/text';
-const WHAPI_TOKEN = process.env.WHAPI_TOKEN || 'VSyDX4j7ooAJ7UGOhz8lGplUVDDs2EYj';
+// ⚠️ CONTINGENCIA 2026-08-29: el canal A (+56 9 5770 3724, token ...Ds2EYj) está
+// caído (sesión WhatsApp en estado "QR" = deslogueado). Se enruta TODO por el
+// canal B sano (+56 9 4267 9066, token ...LzPgtx) hasta reconectar el A.
+// REVERTIR el fallback a 'VSyDX4j7ooAJ7UGOhz8lGplUVDDs2EYj' cuando el A vuelva a AUTH.
+const WHAPI_TOKEN = process.env.WHAPI_TOKEN || 'I1s8u9FihgMttIDRvRDoMpOJB1LzPgtx';
 
 /**
  * Format a phone number for WhatsApp: strip non-digits and validate length.
