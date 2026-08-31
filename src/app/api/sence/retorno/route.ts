@@ -9,8 +9,14 @@ import { NextRequest, NextResponse } from 'next/server';
  * que no puede pasar por handlerWithAuth. La identidad del alumno ya quedó
  * verificada por SENCE (Clave Única); acá solo asociamos el resultado al
  * booking correspondiente vía IdSesionAlumno (= nuestro bookingId).
+ *
+ * IMPORTANTE: la base de la redirección se arma con NEXTAUTH_URL, no con
+ * request.url — en producción (Digital Ocean, detrás de Cloudflare) request.url
+ * resuelve al host interno del contenedor (0.0.0.0:PORT) para este POST
+ * cross-site de SENCE, no al dominio público.
  */
 export async function POST(request: NextRequest) {
+  const base = process.env.NEXTAUTH_URL || request.url;
   try {
     const formData = await request.formData();
     const idSesionAlumno = String(formData.get('IdSesionAlumno') || '');
@@ -33,12 +39,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const redirectUrl = new URL('/panel-estudiante', request.url);
+    const redirectUrl = new URL('/panel-estudiante', base);
     redirectUrl.searchParams.set('senceLogin', 'success');
     return NextResponse.redirect(redirectUrl, 302);
   } catch (error) {
     console.error('❌ [SENCE] Error procesando retorno exitoso:', error);
-    const redirectUrl = new URL('/panel-estudiante', request.url);
+    const redirectUrl = new URL('/panel-estudiante', base);
     redirectUrl.searchParams.set('senceLogin', 'error');
     return NextResponse.redirect(redirectUrl, 302);
   }
