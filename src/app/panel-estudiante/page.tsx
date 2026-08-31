@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useMemo, useEffect, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
 import {
   CalendarDaysIcon,
   BookOpenIcon,
@@ -9,6 +11,7 @@ import {
   XMarkIcon,
   UserCircleIcon,
   SparklesIcon,
+  LockClosedIcon,
 } from '@heroicons/react/24/outline'
 import { useQuery, useQueryClient } from 'react-query'
 import {
@@ -21,6 +24,7 @@ import {
   useStudentHistory,
   useCancelBooking,
 } from '@/hooks/use-panel-estudiante'
+import { getSenceErrorMessage } from '@/lib/sence-errors'
 
 import StudentHeader from '@/components/panel-estudiante/StudentHeader'
 import MyEventsSection from '@/components/panel-estudiante/MyEventsSection'
@@ -60,6 +64,73 @@ function PanelEstudianteContent() {
   const [showPerfil, setShowPerfil] = useState(false)
   const [showRecursos, setShowRecursos] = useState(false)
   const [zoomTick, setZoomTick] = useState(0)
+  const [sencePending, setSencePending] = useState(false)
+  const [senceClosePending, setSenceClosePending] = useState(false)
+
+  // Retorno desde SENCE (inicio/cierre de sesión exitoso/fallido) — ver
+  // /api/sence/retorno, /api/sence/error, /api/sence/cierre-retorno, /api/sence/cierre-error
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  useEffect(() => {
+    const senceLogin = searchParams.get('senceLogin')
+    const senceClose = searchParams.get('senceClose')
+    if (senceLogin === 'success') {
+      toast.success('Sesión SENCE iniciada correctamente')
+    } else if (senceLogin === 'error') {
+      toast.error(getSenceErrorMessage(searchParams.get('glosaError')))
+    } else if (senceClose === 'success') {
+      toast.success('Sesión SENCE cerrada correctamente')
+    } else if (senceClose === 'error') {
+      toast.error(getSenceErrorMessage(searchParams.get('glosaError')))
+    } else {
+      return
+    }
+    router.replace('/panel-estudiante')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const submitSenceForm = async (
+    endpoint: string,
+    bookingId: string,
+    setPending: (v: boolean) => void
+  ) => {
+    setPending(true)
+    try {
+      const res = await fetch(`${endpoint}?bookingId=${encodeURIComponent(bookingId)}`)
+      const json = await res.json()
+      if (!json.success) {
+        toast.error(json.error || 'No se pudo conectar con SENCE')
+        setPending(false)
+        return
+      }
+      console.log(`📤 [SENCE] Enviando formulario a ${json.actionUrl}`, {
+        ...json.fields,
+        Token: json.fields?.Token ? `${String(json.fields.Token).slice(0, 4)}***` : '(vacío)',
+      })
+
+      const form = document.createElement('form')
+      form.method = 'POST'
+      form.action = json.actionUrl
+      Object.entries(json.fields as Record<string, string | number>).forEach(([name, value]) => {
+        const input = document.createElement('input')
+        input.type = 'hidden'
+        input.name = name
+        input.value = String(value)
+        form.appendChild(input)
+      })
+      document.body.appendChild(form)
+      form.submit()
+    } catch {
+      toast.error('No se pudo conectar con SENCE')
+      setPending(false)
+    }
+  }
+
+  const handleSenceLogin = (bookingId: string) =>
+    submitSenceForm('/api/postgres/panel-estudiante/sence-init', bookingId, setSencePending)
+
+  const handleSenceClose = (bookingId: string) =>
+    submitSenceForm('/api/postgres/panel-estudiante/sence-close-init', bookingId, setSenceClosePending)
 
   // Instructivos from API
   const instructivosQuery = useQuery(
@@ -158,6 +229,16 @@ function PanelEstudianteContent() {
   const zoomEstado = inicioMs != null ? estadoZoom(inicioMs, zoomTipo, zoomAccesoEnMs) : 'espera'
   const showZoom = zoomEstado === 'disponible'
   const zoomLink = nextClass?.eventLinkZoom || nextClass?.linkZoom
+  // Estudiantes SENCE deben iniciar sesión en SENCE (sistemas.sence.cl) antes
+  // de poder entrar a su clase. Se considera "hecho" cuando el booking tiene
+  // idSesionSence guardado (lo escribe /api/sence/retorno al volver de SENCE).
+  const isSenceStudent = !!(profile as any)?.sence
+  const senceDone = !isSenceStudent || !!(nextClass as any)?.idSesionSence
+  // Sesión SENCE abierta (ya inició) pero aún no cerrada — se ofrece el botón
+  // de cierre independiente de la ventana de 5 min antes / 10 min después del
+  // link de Zoom (el alumno decide cuándo cerrarla).
+  const senceOpenNotClosed =
+    isSenceStudent && !!(nextClass as any)?.idSesionSence && !(nextClass as any)?.senceSessionClosedAt
 
   // Deja constancia del acceso (para la reconexión) y refresca la lista para que el
   // ícono quede activo hasta el fin de la clase. Best-effort: si falla, entra igual.
@@ -344,8 +425,23 @@ function PanelEstudianteContent() {
                   </p>
                 </div>
                 <div>
-                  <span className="text-xs text-primary-200 uppercase tracking-wide">Link de Ingreso</span>
-                  {zoomLink ? (
+                  <span className="text-xs text-primary-200 uppercase tracking-wide block">Link de Ingreso</span>
+                  {nextClass && isSenceStudent && !senceDone && showZoom ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleSenceLogin((nextClass as any)._id)}
+                        disabled={sencePending}
+                        className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white text-sm font-medium rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-60"
+                      >
+                        <LockClosedIcon className="h-4 w-4" />
+                        {sencePending ? 'Redirigiendo...' : 'Iniciar sesión SENCE'}
+                      </button>
+                      <p className="text-xs text-primary-200 mt-1">
+                        Debes iniciar sesión en SENCE antes de entrar a tu clase.
+                      </p>
+                    </>
+                  ) : zoomLink ? (
                     <div className="mt-1 flex items-center gap-3">
                       <ZoomAccessButton zoomLink={zoomLink} disponible={!!showZoom} onAcceso={registrarAccesoZoom} />
                       {/* El aviso se mantiene visible; el texto cambia según el estado del enlace. */}
@@ -359,6 +455,17 @@ function PanelEstudianteContent() {
                     </div>
                   ) : (
                     <p className="text-sm text-white">---</p>
+                  )}
+                  {senceOpenNotClosed && (
+                    <button
+                      type="button"
+                      onClick={() => handleSenceClose((nextClass as any)._id)}
+                      disabled={senceClosePending}
+                      className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 text-white text-xs font-medium rounded-lg border border-white/30 hover:bg-white/20 transition-colors disabled:opacity-60"
+                    >
+                      <LockClosedIcon className="h-3.5 w-3.5" />
+                      {senceClosePending ? 'Redirigiendo...' : 'Cerrar sesión SENCE'}
+                    </button>
                   )}
                 </div>
                 <div className="pt-2 border-t border-white/20">

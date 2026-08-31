@@ -531,6 +531,10 @@ CRM_BRIDGE_SECRET=hmac_para_sso_con_el_crm
 KIDS_API_URL=base_url_de_kids2026 (integración proceso Kids; sin configurar = integración inactiva)
 KIDS_INTAKE_API_KEY=clave_de_servicio_x-api-key (= LGS_INTAKE_API_KEY del lado de KIDS2026)
 DO_SPACES_KEY / DO_SPACES_SECRET / DO_SPACES_BUCKET / DO_SPACES_REGION / DO_SPACES_ENDPOINT
+SENCE_RUT_OTEC=rut_del_otec_para_integracion_sence
+SENCE_TOKEN=token_sence_generado_en_sistemas_sence_cl_rts
+SENCE_COD_SENCE=codigo_sence_del_otec
+SENCE_AMBIENTE=test_o_produccion
 ```
 
 **⚠️ Variables que el código espera pero NO están configuradas en producción** (corren con el fallback hardcodeado del repo):
