@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { whatsappConfigService } from '@/services/whatsapp-config.service'
 
 async function isAuthorized(request: NextRequest): Promise<boolean> {
   const wixSecret = request.headers.get('x-wix-secret');
@@ -42,13 +43,15 @@ export async function POST(request: NextRequest) {
 
     console.log('📤 Sending WhatsApp to:', formattedNumber, `(original: ${toNumber})`)
 
+    // Canal de WhatsApp según el switch de contingencia (Mantenimiento › Contingencia).
+    const token = await whatsappConfigService.getActiveToken()
+
     // Send WhatsApp message using the same API as Wix
     const whatsappResponse = await fetch('https://gate.whapi.cloud/messages/text', {
       method: 'POST',
       headers: {
         'accept': 'application/json',
-        // ⚠️ CONTINGENCIA 2026-08-29: canal A caído → canal B (+56 9 4267 9066, ...LzPgtx). Revertir a '...Ds2EYj'.
-        'authorization': `Bearer ${process.env.WHAPI_TOKEN || 'I1s8u9FihgMttIDRvRDoMpOJB1LzPgtx'}`,
+        'authorization': `Bearer ${token}`,
         'content-type': 'application/json'
       },
       body: JSON.stringify({

@@ -6,13 +6,9 @@
  */
 
 import 'server-only';
+import { whatsappConfigService } from '@/services/whatsapp-config.service';
 
 const WHAPI_URL = 'https://gate.whapi.cloud/messages/text';
-// ⚠️ CONTINGENCIA 2026-08-29: el canal A (+56 9 5770 3724, token ...Ds2EYj) está
-// caído (sesión WhatsApp en estado "QR" = deslogueado). Se enruta TODO por el
-// canal B sano (+56 9 4267 9066, token ...LzPgtx) hasta reconectar el A.
-// REVERTIR el fallback a 'VSyDX4j7ooAJ7UGOhz8lGplUVDDs2EYj' cuando el A vuelva a AUTH.
-const WHAPI_TOKEN = process.env.WHAPI_TOKEN || 'I1s8u9FihgMttIDRvRDoMpOJB1LzPgtx';
 
 /**
  * Format a phone number for WhatsApp: strip non-digits and validate length.
@@ -32,12 +28,13 @@ export function formatPhoneNumber(raw: string): string {
  */
 export async function sendWhatsAppMessage(toNumber: string, messageBody: string): Promise<any> {
   const formattedNumber = formatPhoneNumber(toNumber);
+  const token = await whatsappConfigService.getActiveToken();
 
   const response = await fetch(WHAPI_URL, {
     method: 'POST',
     headers: {
       'accept': 'application/json',
-      'authorization': `Bearer ${WHAPI_TOKEN}`,
+      'authorization': `Bearer ${token}`,
       'content-type': 'application/json',
     },
     body: JSON.stringify({

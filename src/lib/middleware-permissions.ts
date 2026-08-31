@@ -246,6 +246,9 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/admin/cargar-beneficiarios': [
     'MANTENIMIENTO.CONTRATOS.CARGAR_BENEFICIARIOS' as Permission,
   ],
+  '/admin/contingencia/whatsapp': [
+    'MANTENIMIENTO.CONTINGENCIA.WHATSAPP' as Permission,
+  ],
   '/admin/contratos-prueba': [
     'MANTENIMIENTO.USUARIOS.CONTRATOS_PRUEBA' as Permission,
   ],

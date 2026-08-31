@@ -959,6 +959,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Acceso a /admin/cargar-beneficiarios. Carga masiva de beneficiarios a un contrato existente (pega/CSV, pide el número de contrato). Hereda los datos del titular y omite los documentos que ya existen.',
   },
   {
+    code: MantenimientoPermission.CONTINGENCIA_WHATSAPP,
+    module: Module.MANTENIMIENTO,
+    section: 'Contingencia',
+    name: 'Página "Canales WhatsApp"',
+    description: 'Acceso a /admin/contingencia/whatsapp. Elige por cuál número (canal Whapi) sale TODO el WhatsApp; útil si un teléfono se cae. Muestra el estado en vivo de ambos canales.',
+  },
+  {
     code: MantenimientoPermission.CLEAR_HISTORIC,
     module: Module.MANTENIMIENTO,
     section: 'Usuarios',

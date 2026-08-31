@@ -8,11 +8,9 @@ import { getAsesorInfo } from '@/lib/asesor';
 import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
 import { archivarContratoEnDrive, buildContractFilename } from '@/lib/contract-drive';
 import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
+import { whatsappConfigService } from '@/services/whatsapp-config.service';
 
 const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
-// ⚠️ CONTINGENCIA 2026-08-29: canal A caído → se usa el canal B (+56 9 4267 9066,
-// ...LzPgtx). REVERTIR a 'VSyDX4j7ooAJ7UGOhz8lGplUVDDs2EYj' cuando el A vuelva a AUTH.
-const WHAPI_TOKEN = process.env.WHAPI_TOKEN || 'I1s8u9FihgMttIDRvRDoMpOJB1LzPgtx';
 
 export const POST = handler(async (_request, { params }) => {
   const titularId = params.id;
@@ -122,6 +120,7 @@ export const POST = handler(async (_request, { params }) => {
 
   // 8. Send PDF via Whapi using the API2PDF direct URL (clean S3 link, no redirects)
   const phone = titular.celular.toString().replace(/\D/g, '');
+  const WHAPI_TOKEN = await whatsappConfigService.getActiveToken();
 
   const whapiRes = await fetch('https://gate.whapi.cloud/messages/document', {
     method: 'POST',

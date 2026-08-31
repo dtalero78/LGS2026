@@ -220,6 +220,11 @@ const getNavigation = (userEmail: string, userRole: string) => [
           { name: 'Consulta', href: '/admin/scripts/consulta', newTab: true },
         ],
       },
+      {
+        name: 'Contingencia', isSubmenu: true, children: [
+          { name: 'Canales WhatsApp', href: '/admin/contingencia/whatsapp', newTab: true },
+        ],
+      },
       { name: 'Diagnóstico', href: '/admin/diagnostico', newTab: true },
       { name: 'Lgs-Buckets', href: '/admin/lgs-buckets', newTab: true },
     ],
@@ -379,6 +384,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ],
     '/admin/cargar-beneficiarios': [
       MantenimientoPermission.CARGAR_BENEFICIARIOS,
+    ],
+    '/admin/contingencia/whatsapp': [
+      MantenimientoPermission.CONTINGENCIA_WHATSAPP,
     ],
     '/admin/contratos-prueba': [
       MantenimientoPermission.CONTRATOS_PRUEBA,

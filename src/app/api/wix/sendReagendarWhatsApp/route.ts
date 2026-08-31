@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { MessageTemplatesRepository } from '@/repositories/message-templates.repository'
 import { fillTemplate } from '@/lib/message-template-filler'
 import { query } from '@/lib/postgres'
+import { whatsappConfigService } from '@/services/whatsapp-config.service'
 
 async function isAuthorized(request: NextRequest): Promise<boolean> {
   const wixSecret = request.headers.get('x-wix-secret');
@@ -58,12 +59,13 @@ export async function POST(request: NextRequest) {
     }
 
     const message = `${base}\n\n${reagendarUrl}`
+    const token = await whatsappConfigService.getActiveToken()
 
     const whatsappResponse = await fetch('https://gate.whapi.cloud/messages/text', {
       method: 'POST',
       headers: {
         'accept': 'application/json',
-        'authorization': `Bearer ${process.env.WHAPI_TOKEN || 'I1s8u9FihgMttIDRvRDoMpOJB1LzPgtx'}`,
+        'authorization': `Bearer ${token}`,
         'content-type': 'application/json'
       },
       body: JSON.stringify({ typing_time: 0, to: formattedNumber, body: message })
