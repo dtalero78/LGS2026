@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     const message = `${base}\n\n${reagendarUrl}`
-    const token = await whatsappConfigService.getActiveToken()
+    const token = await whatsappConfigService.getActiveToken('reagendar')
 
     const whatsappResponse = await fetch('https://gate.whapi.cloud/messages/text', {
       method: 'POST',

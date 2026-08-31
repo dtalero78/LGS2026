@@ -89,7 +89,7 @@ export const POST = handler(async (request) => {
   const maskedPhone = celular.length >= 4 ? '********' + celular.slice(-4) : celular;
   const message = `Tu código de verificación de Let's Go Speak para restablecer tu contraseña es: *${code}*\n\nEste código expira en 10 minutos. No lo compartas con nadie.`;
 
-  await sendWhatsAppMessage(celular, message);
+  await sendWhatsAppMessage(celular, message, 'password');
 
   return successResponse({ maskedPhone, message: 'Código enviado por WhatsApp' });
 });

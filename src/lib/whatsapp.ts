@@ -6,7 +6,7 @@
  */
 
 import 'server-only';
-import { whatsappConfigService } from '@/services/whatsapp-config.service';
+import { whatsappConfigService, type MessageTipo } from '@/services/whatsapp-config.service';
 
 const WHAPI_URL = 'https://gate.whapi.cloud/messages/text';
 
@@ -26,9 +26,9 @@ export function formatPhoneNumber(raw: string): string {
  * Send a text message via WhatsApp (Whapi.cloud gateway).
  * Throws on failure.
  */
-export async function sendWhatsAppMessage(toNumber: string, messageBody: string): Promise<any> {
+export async function sendWhatsAppMessage(toNumber: string, messageBody: string, tipo?: MessageTipo): Promise<any> {
   const formattedNumber = formatPhoneNumber(toNumber);
-  const token = await whatsappConfigService.getActiveToken();
+  const token = await whatsappConfigService.getActiveToken(tipo);
 
   const response = await fetch(WHAPI_URL, {
     method: 'POST',

@@ -283,7 +283,7 @@ export async function aplicarConfirmacion(
       if (student.celular) {
         try {
           const phone = formatPhoneNumber(student.celular);
-          await sendWhatsAppMessage(phone, whatsappMessageFor(student.primerNombre));
+          await sendWhatsAppMessage(phone, whatsappMessageFor(student.primerNombre), 'exam_intern');
           whatsappOk = true;
           result.whatsappEnviados += 1;
         } catch (err: any) {

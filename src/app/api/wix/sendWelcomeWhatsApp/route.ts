@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     const message = `Hola ${nombre || ''} 👋:\n\n*¡Eres parte de Let's Go Speak!* 🎉 \n\nPara terminar tu registro y crear tu usuario sigue este enlace:\n\n${registroUrl}\n\nSi tienes alguna pregunta, no dudes en contactarnos.\n\n¡Bienvenido a la familia LGS! 🚀`
 
     console.log('📤 Sending Welcome WhatsApp to:', formattedNumber)
-    const token = await whatsappConfigService.getActiveToken()
+    const token = await whatsappConfigService.getActiveToken('bienvenida')
 
     // Send WhatsApp message using Whapi.cloud
     const whatsappResponse = await fetch('https://gate.whapi.cloud/messages/text', {

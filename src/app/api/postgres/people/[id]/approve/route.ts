@@ -56,6 +56,13 @@ async function approveOnePerson(
   // Use provided contrato or person's own
   const effectiveContrato = contrato || person.contrato;
 
+  // Beneficiario Kids: su programa es KIDS2026, NO el de adultos de LGS. Por eso
+  // NO se le crea ficha ACADEMICA ni se le envía el WhatsApp de auto-registro de
+  // LGS (ese mensaje lo maneja el flujo KIDS2026). Sí queda aprobado en PEOPLE
+  // (aprobacion/estado/fechaIngreso) y sigue el paso de aprobación de la reserva
+  // Kids más abajo.
+  const esKids = person.kids === true;
+
   // Update PEOPLE.aprobacion = 'Aprobado' + estado = 'ACTIVA'.
   // El mapeo aprobacion→estado está documentado en /api/postgres/approvals/[id]
   // (APROBACION_TO_ESTADO); aquí lo aplicamos para que ambos endpoints dejen el
@@ -101,7 +108,7 @@ async function approveOnePerson(
   let academicId: string | null = null;
   let academicCreated = false;
 
-  if (person.tipoUsuario === 'BENEFICIARIO') {
+  if (person.tipoUsuario === 'BENEFICIARIO' && !esKids) {
     const existingAcademic = await queryOne(
       `SELECT "_id" FROM "ACADEMICA" WHERE "numeroId" = $1 LIMIT 1`,
       [person.numeroId]
@@ -144,6 +151,8 @@ async function approveOnePerson(
     } else {
       console.log(`ℹ️ [Approve] Registro ACADEMICA ya existía: ${academicId}`);
     }
+  } else if (esKids) {
+    console.log(`ℹ️ [Approve] Beneficiario KIDS — se omite ACADEMICA (su programa es KIDS2026, no el de adultos)`);
   } else {
     console.log(`ℹ️ [Approve] ${person.tipoUsuario} — se omite creación de ACADEMICA (sólo beneficiarios necesitan registro académico)`);
   }
@@ -158,6 +167,9 @@ async function approveOnePerson(
   if (person.tipoUsuario !== 'BENEFICIARIO') {
     whatsappError = 'Omitido — los titulares no reciben mensaje de auto-registro';
     console.log(`ℹ️ [Approve] ${person.tipoUsuario} — se omite WhatsApp de bienvenida`);
+  } else if (esKids) {
+    whatsappError = 'Omitido — beneficiario KIDS (el WhatsApp lo maneja el flujo KIDS2026)';
+    console.log(`ℹ️ [Approve] Beneficiario KIDS — se omite WhatsApp de LGS`);
   } else {
     const celular = person.celular;
     console.log(`📱 [Approve] Celular: "${celular}" (${celular ? celular.length + ' chars' : 'null/undefined'})`);
@@ -167,7 +179,7 @@ async function approveOnePerson(
         const nombre = person.primerNombre || '';
         const message = `Hola ${nombre} 👋:\n\n*¡Eres parte de Let's Go Speak!* 🎉 \n\nPara terminar tu registro y crear tu usuario sigue este enlace:\n\nhttps://lgs-plataforma.com/nuevo-usuario/${academicId}\n\nSi tienes alguna pregunta, no dudes en contactarnos.\n\n¡Bienvenido a la familia LGS! 🚀`;
         console.log(`📤 [Approve] Enviando WhatsApp a: ${celular}`);
-        const whatsappResult = await sendWhatsAppMessage(celular, message);
+        const whatsappResult = await sendWhatsAppMessage(celular, message, 'bienvenida_aprobar');
         whatsappSent = true;
         console.log(`✅ [Approve] WhatsApp enviado a ${celular}`, whatsappResult);
       } catch (err: any) {
@@ -184,7 +196,25 @@ async function approveOnePerson(
   // beneficiario en LGS activa su matrícula allá (RESERVADA→ACTIVA) y guarda las
   // credenciales del alumno (para mostrarlas/entregarlas al apoderado).
   const kidsCredenciales: KidsCredenciales[] = [];
-  if (person.tipoUsuario === 'BENEFICIARIO' && kidsIntake.isConfigured()) {
+  // Beneficiario Kids: marca su(s) inscripción(es) en KIDS_INSCRIPCIONES como
+  // APROBADA(S) en LGS — siempre, haya o no integración con KIDS2026. Es la
+  // constancia local de que el kid quedó aprobado; el flujo KIDS2026 la usará
+  // (y enviará su propio WhatsApp).
+  if (person.tipoUsuario === 'BENEFICIARIO' && esKids) {
+    try {
+      await query(
+        `UPDATE "KIDS_INSCRIPCIONES" SET "aprobado"=true, "fechaAprobado"=NOW(), "_updatedDate"=NOW()
+           WHERE "beneficiarioId"=$1`,
+        [personId]
+      );
+      console.log(`✅ [Approve] KIDS_INSCRIPCIONES marcada como aprobada para ${personId}`);
+    } catch (e: any) {
+      console.error('[approve] Error marcando KIDS_INSCRIPCIONES.aprobado (best-effort):', e?.message);
+    }
+  }
+  // Si la integración KIDS2026 está activa, además aprueba la reserva allá
+  // (RESERVADA→ACTIVA) y guarda las credenciales del alumno.
+  if (person.tipoUsuario === 'BENEFICIARIO' && esKids && kidsIntake.isConfigured()) {
     try {
       const inscs = await queryMany<any>(
         `SELECT "_id","numeroId","nombre","kidsExternalRef" FROM "KIDS_INSCRIPCIONES"

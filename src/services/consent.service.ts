@@ -69,7 +69,7 @@ export async function sendConsentOtp(
     `Tu código de verificación de Let's Go Speak es: *${code}*\n\n` +
     `Este código expira en 10 minutos. No lo compartas con nadie.`;
 
-  await sendWhatsAppMessage(celular, mensaje);
+  await sendWhatsAppMessage(celular, mensaje, 'firma');
 
   // Return masked phone for UI
   const masked = celular.length > 6

@@ -120,7 +120,7 @@ export const POST = handler(async (_request, { params }) => {
 
   // 8. Send PDF via Whapi using the API2PDF direct URL (clean S3 link, no redirects)
   const phone = titular.celular.toString().replace(/\D/g, '');
-  const WHAPI_TOKEN = await whatsappConfigService.getActiveToken();
+  const WHAPI_TOKEN = await whatsappConfigService.getActiveToken('contrato_pdf');
 
   const whapiRes = await fetch('https://gate.whapi.cloud/messages/document', {
     method: 'POST',

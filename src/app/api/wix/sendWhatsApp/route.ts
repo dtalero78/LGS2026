@@ -43,8 +43,8 @@ export async function POST(request: NextRequest) {
 
     console.log('📤 Sending WhatsApp to:', formattedNumber, `(original: ${toNumber})`)
 
-    // Canal de WhatsApp según el switch de contingencia (Mantenimiento › Contingencia).
-    const token = await whatsappConfigService.getActiveToken()
+    // Canal de WhatsApp según la config por tipo (Mantenimiento › Contingencia).
+    const token = await whatsappConfigService.getActiveToken('solicitar_firma')
 
     // Send WhatsApp message using the same API as Wix
     const whatsappResponse = await fetch('https://gate.whapi.cloud/messages/text', {
