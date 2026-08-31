@@ -4,6 +4,7 @@ import { NotFoundError, ValidationError } from '@/lib/errors';
 import { fillContractTemplate } from '@/lib/contract-template-filler';
 import { buildContractPdfHtml } from '@/lib/contract-pdf-html';
 import { getAsesorInfo } from '@/lib/asesor';
+import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
 import { archivarContratoEnDrive, buildContractFilename } from '@/lib/contract-drive';
 
 const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
@@ -29,6 +30,8 @@ export async function generarYArchivarContratoPdf(titularId: string) {
     `SELECT * FROM "PEOPLE" WHERE "contrato" = $1 AND "_id" != $2 ORDER BY "_createdDate" ASC`,
     [titular.contrato, titularId]
   );
+  // Adjunta el detalle de KIDS_INSCRIPCIONES a los beneficiarios kids (para la plantilla).
+  await attachKidsInscripciones(titular.contrato, beneficiarios);
 
   // FINANCIEROS por contrato (NO titularId — la columna está NULL en la migración)
   const financial = titular.contrato

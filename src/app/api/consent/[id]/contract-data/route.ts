@@ -3,6 +3,7 @@ import { handler, successResponse } from '@/lib/api-helpers';
 import { NotFoundError } from '@/lib/errors';
 import { queryOne, queryMany } from '@/lib/postgres';
 import { getAsesorInfo } from '@/lib/asesor';
+import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
 
 export const GET = handler(async (_request, { params }) => {
   const titularId = params.id;
@@ -27,12 +28,14 @@ export const GET = handler(async (_request, { params }) => {
     beneficiarios = await queryMany(
       `SELECT "_id", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
               "numeroId", "celular", "email", "plataforma", "contrato", "domicilio", "ciudad",
-              "fechaNacimiento"
+              "fechaNacimiento", "kids"
        FROM "PEOPLE"
        WHERE "contrato" = $1 AND "tipoUsuario" = 'BENEFICIARIO'
        ORDER BY "primerNombre" ASC`,
       [titular.contrato]
     );
+    // Adjunta el detalle de KIDS_INSCRIPCIONES a los beneficiarios kids (para la plantilla).
+    await attachKidsInscripciones(titular.contrato, beneficiarios);
   }
 
   // Load financial data
