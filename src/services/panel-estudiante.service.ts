@@ -362,6 +362,7 @@ export async function resolveStudentFromSession(session: Session) {
     nivelParalelo,
     stepParalelo,
     foto: academica?.foto ?? (base as any).foto ?? null, // photo from ACADEMICA
+    senceCode: (base as any).senceCode ?? academica?.senceCode ?? null,
   };
 }
 
