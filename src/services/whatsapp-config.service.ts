@@ -36,9 +36,9 @@ export const MESSAGE_TIPOS: { key: MessageTipo; label: string; descripcion: stri
   { key: 'contrato_pdf',       label: 'PDF del contrato',          descripcion: 'Envío del contrato en PDF',            default: 'A' },
   { key: 'solicitar_firma',    label: 'Solicitar firma',           descripcion: 'Aviso "tu contrato ya está listo"',    default: 'A' },
   { key: 'password',           label: 'OTP recuperar contraseña',  descripcion: 'Código para restablecer la clave',     default: 'A' },
-  { key: 'bienvenida_aprobar', label: 'Bienvenida al aprobar',     descripcion: 'Link de registro al aprobar beneficiario', default: 'A' },
-  { key: 'masivo',             label: 'Envío masivo',              descripcion: 'Mensajería masiva por plantilla',      default: 'A' },
-  { key: 'exam_intern',        label: 'Exam. Internacional',       descripcion: 'Confirmación de examen internacional', default: 'A' },
+  { key: 'bienvenida_aprobar', label: 'Bienvenida al aprobar',     descripcion: 'Link de registro al aprobar beneficiario', default: 'B' },
+  { key: 'masivo',             label: 'Envío masivo',              descripcion: 'Mensajería masiva por plantilla',      default: 'B' },
+  { key: 'exam_intern',        label: 'Exam. Internacional',       descripcion: 'Confirmación de examen internacional', default: 'B' },
   { key: 'bienvenida',         label: 'Mensaje de Bienvenida',     descripcion: 'Bienvenida / crear solo perfil',       default: 'B' },
   { key: 'reagendar',          label: 'Reagendar',                 descripcion: 'Reagendar clase',                      default: 'B' },
 ];
