@@ -2,7 +2,7 @@ import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { AcademicaRepository } from '@/repositories/academica.repository';
 import { ValidationError, ConflictError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
-import { queryOne } from '@/lib/postgres';
+import { queryOne, query } from '@/lib/postgres';
 import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 
 /**
@@ -63,6 +63,8 @@ export const POST = handlerWithAuth(async (request) => {
     // se arma por `contrato`, pero el vínculo formal se rompe).
     titularId: body.titularId,
     inicioContrato: body.inicioContrato, fechaContrato: body.fechaContrato,
+    // Segmento infantil (mismo switch que Crear Contrato)
+    kids: body.kids,
   };
 
   for (const [field, value] of Object.entries(optionalFields)) {
@@ -94,6 +96,29 @@ export const POST = handlerWithAuth(async (request) => {
       nivel: body.nivel, step: body.step,
       advisor: null, plataforma: body.plataforma || null,
     });
+  }
+
+  // Kids: si el beneficiario se marcó como kid, guarda su inscripción (curso +
+  // apoderado) en KIDS_INSCRIPCIONES. Best-effort (no rompe la creación).
+  if (body.kids === true && body.kidsData) {
+    const kd = body.kidsData;
+    try {
+      await query(
+        `INSERT INTO "KIDS_INSCRIPCIONES"
+           ("_id","contrato","beneficiarioId","numeroId","nombre","plataforma",
+            "campaign","tipoCurso","horario","classroomId","salonNombre",
+            "apoderado","apoderadoApellidos","apoderadoDoc","apoderadoTelefono","apoderadoMail","parentesco")
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+        [ids.kidsInscripcion(), (person as any)?.contrato || contratoTarget || null, personId, body.numeroId,
+         `${body.primerNombre || ''} ${body.primerApellido || ''}`.trim() || null,
+         body.plataforma || (person as any)?.plataforma || null,
+         kd.campaign || null, kd.tipoCurso || null, kd.horario || null, kd.classroomId || null, kd.salonNombre || null,
+         kd.apoderado || null, kd.apoderadoApellidos || null, kd.apoderadoDoc || null,
+         kd.apoderadoTelefono || null, kd.apoderadoMail || null, kd.parentesco || null]
+      );
+    } catch (e) {
+      console.error('[people POST] Error guardando KIDS_INSCRIPCIONES (best-effort):', e);
+    }
   }
 
   return successResponse({ message: `${body.tipoUsuario} created successfully`, person });

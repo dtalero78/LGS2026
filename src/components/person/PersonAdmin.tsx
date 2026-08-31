@@ -10,6 +10,7 @@ import { PermissionGuard } from '@/components/permissions'
 import { PersonPermission } from '@/types/permissions'
 import { COUNTRY_CODES } from '@/lib/country-codes'
 import { isContratoPrueba } from '@/components/common/ContratoPruebaBadge'
+import KidsBeneficiarioModal, { KidsData } from '@/components/comercial/KidsBeneficiarioModal'
 
 interface PersonAdminProps {
   person: Person
@@ -56,6 +57,14 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     email: '',
     genero: ''
   })
+  // Kids: switch en el alta de beneficiario (misma opción que Crear Contrato).
+  const [kidsFeatureEnabled, setKidsFeatureEnabled] = useState(false)
+  const [beneficiaryKids, setBeneficiaryKids] = useState(false)
+  const [beneficiaryKidsData, setBeneficiaryKidsData] = useState<KidsData | null>(null)
+  const [showKidsModal, setShowKidsModal] = useState(false)
+  useEffect(() => {
+    fetch('/api/admin/kids-config').then(r => r.json()).then(d => setKidsFeatureEnabled(!!d.active)).catch(() => setKidsFeatureEnabled(false))
+  }, [])
   const [currentBeneficiaries, setCurrentBeneficiaries] = useState<Beneficiary[]>(beneficiaries)
   // Beneficiario que aún no es usuario académico (para el modal informativo).
   // enWelcome = tiene ficha pero está en WELCOME (aún no pasa a BN1).
@@ -533,6 +542,8 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
       genero: ''
     })
     setNewBeneficiaryId('__new__')
+    setBeneficiaryKids(false)
+    setBeneficiaryKidsData(null)
     setShowBeneficiaryForm(true)
     setCurrentFormStep(1)
   }
@@ -669,6 +680,9 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             finalContrato: person.finalContrato || undefined,
             vigencia: person.vigencia || undefined,
             fechaIngreso: new Date().toISOString(),
+            // Kids: marca + datos de curso/apoderado (se guardan en KIDS_INSCRIPCIONES)
+            kids: beneficiaryKids || undefined,
+            kidsData: beneficiaryKids ? beneficiaryKidsData : undefined,
           })
         })
       }
@@ -1180,6 +1194,20 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                 {currentFormStep === 1 && (
                   <div className="space-y-4">
                     <h4 className="font-medium text-gray-900 mb-4">Información Básica</h4>
+                    {kidsFeatureEnabled && (
+                      <div className="flex items-center justify-between rounded-lg border border-purple-200 bg-purple-50 px-4 py-2">
+                        <span className="text-sm font-semibold text-purple-800">🧒 ¿Es beneficiario Kids?</span>
+                        {beneficiaryKids ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-purple-700 bg-purple-100 rounded-full px-2 py-0.5">Kids ✓</span>
+                            <button type="button" onClick={() => setShowKidsModal(true)} className="px-2 py-1 text-xs rounded border border-purple-300 bg-white text-purple-700">Editar datos</button>
+                            <button type="button" onClick={() => { setBeneficiaryKids(false); setBeneficiaryKidsData(null) }} className="px-2 py-1 text-xs rounded border border-gray-300 bg-white text-gray-600">Quitar</button>
+                          </div>
+                        ) : (
+                          <button type="button" onClick={() => setShowKidsModal(true)} className="px-3 py-1.5 text-sm font-semibold rounded-full bg-purple-600 text-white">Activar Kids</button>
+                        )}
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1424,6 +1452,46 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
           </div>
         </div>
       )}
+
+      {/* Modal Kids: captura curso + apoderado (mismo del wizard de Crear Contrato) */}
+      <KidsBeneficiarioModal
+        open={showKidsModal}
+        initial={{
+          primerNombre: beneficiaryData.primerNombre,
+          segundoNombre: beneficiaryData.segundoNombre,
+          primerApellido: beneficiaryData.primerApellido,
+          segundoApellido: beneficiaryData.segundoApellido,
+          numeroId: beneficiaryData.numeroId,
+          fechaNacimiento: beneficiaryData.fechaNacimiento,
+          email: beneficiaryData.email,
+          celular: beneficiaryData.celular,
+          kidsData: beneficiaryKidsData || undefined,
+        }}
+        titularNombre={`${person.primerNombre} ${person.primerApellido}`}
+        titularCelular={person.celular}
+        titularEmail={person.email}
+        onSave={(v) => {
+          // Sincroniza al form los datos del beneficiario capturados en el modal.
+          setBeneficiaryData(prev => ({
+            ...prev,
+            primerNombre: v.primerNombre ?? prev.primerNombre,
+            segundoNombre: v.segundoNombre ?? prev.segundoNombre,
+            primerApellido: v.primerApellido ?? prev.primerApellido,
+            segundoApellido: v.segundoApellido ?? prev.segundoApellido,
+            numeroId: v.numeroId ?? prev.numeroId,
+            fechaNacimiento: v.fechaNacimiento ?? prev.fechaNacimiento,
+            email: v.email ?? prev.email,
+            celular: v.celular ?? prev.celular,
+          }))
+          setBeneficiaryKidsData(v.kidsData || null)
+          setBeneficiaryKids(true)
+          setShowKidsModal(false)
+        }}
+        onCancel={() => {
+          setShowKidsModal(false)
+          if (!beneficiaryKidsData) setBeneficiaryKids(false)
+        }}
+      />
 
       {/* Confirmación de cambios del beneficiario */}
       {showConfirmChangesModal && (

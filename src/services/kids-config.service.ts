@@ -13,6 +13,10 @@ let cache: { value: boolean; expires: number } | null = null;
 export const kidsConfigService = {
   /** ¿Está activo el proceso Kids? (cache 60s). Default false. */
   async isActive(): Promise<boolean> {
+    // Override SOLO local (via .env.local, que NO se despliega): permite probar el
+    // proceso Kids sin activar el flag en la BD de producción (compartida). En prod
+    // la variable no existe → se lee el valor real de APP_CONFIG.
+    if (process.env.KIDS_FEATURE_LOCAL === 'true') return true;
     const now = Date.now();
     if (cache && cache.expires > now) return cache.value;
     const row = await AppConfigRepository.get(KEY);

@@ -8,6 +8,7 @@ import { generateId } from '@/lib/id-generator';
 import { fillContractTemplate } from '@/lib/contract-template-filler';
 import { buildContractPdfHtml } from '@/lib/contract-pdf-html';
 import { getAsesorInfo } from '@/lib/asesor';
+import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
 import { archivarContratoEnDrive, buildContractFilename } from '@/lib/contract-drive';
 
 const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
@@ -85,6 +86,8 @@ export const POST = handlerWithAuth(async (request, { params }, session) => {
         `SELECT * FROM "PEOPLE" WHERE "contrato" = $1 AND "_id" != $2 ORDER BY "_createdDate" ASC`,
         [titular.contrato, params.id]
       );
+      // Adjunta el detalle de KIDS_INSCRIPCIONES a los beneficiarios kids (para la plantilla).
+      await attachKidsInscripciones(titular.contrato, beneficiarios);
 
       // FINANCIEROS se busca por "contrato" (mismo bug que send-pdf — la tabla no
       // tiene titularId / esa columna legacy quedó NULL en la migración).

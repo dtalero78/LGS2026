@@ -50,18 +50,43 @@ export function fillContractTemplate(
   // Build beneficiarios text block
   const beneficiariosText = beneficiarios.length === 0
     ? ''
-    : beneficiarios.map((b: any, i: number) =>
-        `Beneficiario ${i + 1}:\n` +
-        `- Numero de Contrato: ${b.contrato || 'Sin asignar'}\n` +
-        `- Nombre Completo: ${[b.primerNombre, b.segundoNombre, b.primerApellido, b.segundoApellido].filter(Boolean).join(' ')}\n` +
-        `- Documento: ${b.numeroId || ''}\n` +
-        `- Fecha de nacimiento: ${fmtDate(b.fechaNacimiento)}\n` +
-        `- Telefono: ${b.celular || ''}\n` +
-        `- Pais: ${b.plataforma || ''}\n` +
-        `- Ciudad: ${b.ciudad || ''}\n` +
-        `- Domicilio: ${b.domicilio || ''}\n` +
-        `- Email: ${b.email || ''}`
-      ).join('\n\n');
+    : beneficiarios.map((b: any, i: number) => {
+        const base =
+          `Beneficiario ${i + 1}:\n` +
+          `- Numero de Contrato: ${b.contrato || 'Sin asignar'}\n` +
+          `- Nombre Completo: ${[b.primerNombre, b.segundoNombre, b.primerApellido, b.segundoApellido].filter(Boolean).join(' ')}\n` +
+          `- Documento: ${b.numeroId || ''}\n` +
+          `- Fecha de nacimiento: ${fmtDate(b.fechaNacimiento)}\n` +
+          `- Telefono: ${b.celular || ''}\n` +
+          `- Pais: ${b.plataforma || ''}\n` +
+          `- Ciudad: ${b.ciudad || ''}\n` +
+          `- Domicilio: ${b.domicilio || ''}\n` +
+          `- Email: ${b.email || ''}`;
+
+        // Solo si el beneficiario es de Kids: agregar debajo el detalle de la
+        // inscripción (curso + apoderado). Los datos vienen de KIDS_INSCRIPCIONES
+        // (adjuntados como b.kidsInscripcion) o del wizard en memoria (b.kidsData).
+        // Se muestran únicamente las líneas con dato — nunca aparece para adultos.
+        const ki = b.kidsInscripcion || b.kidsData || null;
+        if (b.kids === true && ki) {
+          const filas = ([
+            ['Campaña', ki.campaign],
+            ['Tipo de curso', ki.tipoCurso],
+            ['Horario', ki.horario],
+            ['Salón', ki.salonNombre],
+            ['Apoderado', [ki.apoderado, ki.apoderadoApellidos].filter(Boolean).join(' ').trim()],
+            ['Documento del apoderado', ki.apoderadoDoc],
+            ['Parentesco', ki.parentesco],
+            ['Teléfono del apoderado', ki.apoderadoTelefono],
+            ['Correo del apoderado', ki.apoderadoMail],
+          ] as Array<[string, any]>).filter(([, v]) => v != null && String(v).trim() !== '');
+          if (filas.length) {
+            return base + `\n  Programa KIDS:\n` +
+              filas.map(([l, v]) => `  - ${l}: ${String(v).trim()}`).join('\n');
+          }
+        }
+        return base;
+      }).join('\n\n');
 
   // Build firma (consent) text
   let firmaText = '';

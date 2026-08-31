@@ -6,6 +6,7 @@ import { query, queryOne } from '@/lib/postgres';
 import { fillContractTemplate } from '@/lib/contract-template-filler';
 import { buildContractPdfHtml } from '@/lib/contract-pdf-html';
 import { getAsesorInfo } from '@/lib/asesor';
+import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
 
 const API2PDF_KEY = process.env.API2PDF_KEY || '';
 
@@ -38,6 +39,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     `SELECT * FROM "PEOPLE" WHERE "contrato" = $1 AND "_id" != $2 ORDER BY "_createdDate" ASC`,
     [titular.contrato, titularId],
   );
+  // Adjunta el detalle de KIDS_INSCRIPCIONES a los beneficiarios kids (para la plantilla).
+  await attachKidsInscripciones(titular.contrato, benRes.rows);
 
   // 3. Financiero
   const financial = titular.contrato

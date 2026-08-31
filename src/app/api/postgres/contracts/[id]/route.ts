@@ -5,6 +5,7 @@ import { NotFoundError, ValidationError } from '@/lib/errors';
 import { PeopleRepository } from '@/repositories/people.repository';
 import { FinancialRepository } from '@/repositories/financial.repository';
 import { getAsesorInfo } from '@/lib/asesor';
+import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
 
 // Fields editable on PEOPLE records (titular & beneficiarios)
 const PEOPLE_EDIT_FIELDS = [
@@ -82,6 +83,8 @@ export const GET = handler(async (
        ORDER BY "primerNombre" ASC`,
       [parsedTitular.contrato]
     );
+    // Adjunta el detalle de KIDS_INSCRIPCIONES a los beneficiarios kids (para la plantilla).
+    await attachKidsInscripciones(parsedTitular.contrato, beneficiarios);
   }
 
   // 3. Load financial data
