@@ -15,11 +15,14 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  Eye
+  Eye,
+  Trash2
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { debounce } from 'lodash'
 import { exportToExcel } from '@/lib/export-excel'
+import { usePermissions } from '@/hooks/usePermissions'
+import toast from 'react-hot-toast'
 
 // Tipos
 interface Contrato {
@@ -88,9 +91,20 @@ export default function AprobacionPage() {
   // Estado de búsqueda (filtrado local)
   const [searchApellido, setSearchApellido] = useState('')
 
+  // Selección + borrado de contratos (gateado por APROBACION.CENTRO.BORRAR;
+  // usePermissions ya bypasea SUPER_ADMIN/ADMIN).
+  const { hasPermission } = usePermissions()
+  const canBorrar = hasPermission(AprobacionPermission.CENTRO_BORRAR)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteMotivo, setDeleteMotivo] = useState('')
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
   // Cargar contratos pendientes de aprobación (sin estado)
   const loadContratos = async () => {
     setLoading(true)
+    setSelectedIds(new Set())
     try {
       console.log('🔍 Cargando registros pendientes de aprobación (sin estado)')
       const response = await fetch('/api/postgres/approvals/pending', {
@@ -286,6 +300,60 @@ export default function AprobacionPage() {
     }
   }
 
+  // --- Selección + borrado de contratos ---
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+  const allVisibleSelected = contratos.length > 0 && contratos.every(c => selectedIds.has(c._id))
+  const toggleSelectAllVisible = () => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (allVisibleSelected) contratos.forEach(c => next.delete(c._id))
+      else contratos.forEach(c => next.add(c._id))
+      return next
+    })
+  }
+  const selectedContratos = allContratos.filter(c => selectedIds.has(c._id))
+
+  const doDelete = async () => {
+    if (!deleteConfirm || deleting) return
+    const contratosNums = Array.from(new Set(selectedContratos.map(c => c.contrato).filter(Boolean)))
+    if (!contratosNums.length) return
+    setDeleting(true)
+    try {
+      const res = await fetch('/api/postgres/approvals/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contratos: contratosNums, motivo: deleteMotivo.trim() }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) { toast.error(j.error || 'Error al borrar'); return }
+      const borradosOk = new Set(
+        (j.results || []).filter((r: any) => r.status === 'ok').map((r: any) => r.contrato)
+      )
+      const restantes = allContratos.filter(c => !borradosOk.has(c.contrato))
+      setAllContratos(restantes)
+      updatePagination(getFilteredData(restantes))
+      setSelectedIds(new Set())
+      setShowDeleteModal(false)
+      setDeleteMotivo('')
+      setDeleteConfirm(false)
+      toast.success(j.message || 'Contratos borrados')
+      const omitidos = (j.results || []).filter((r: any) => r.status !== 'ok')
+      if (omitidos.length) {
+        toast.error(`${omitidos.length} no se borraron (aprobados/errores)`, { duration: 6000 })
+      }
+    } catch {
+      toast.error('Error al borrar')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   // useEffects
   useEffect(() => {
     loadContratos()
@@ -306,6 +374,15 @@ export default function AprobacionPage() {
           </div>
 
           <div className="flex gap-3">
+            {canBorrar && selectedIds.size > 0 && (
+              <button
+                onClick={() => { setDeleteMotivo(''); setDeleteConfirm(false); setShowDeleteModal(true) }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Borrar ({selectedIds.size})
+              </button>
+            )}
             <button
               onClick={() => exportToExcel(getFilteredData(), [
                 { header: 'Nombre', accessor: (c) => `${c.primerNombre} ${c.primerApellido}`.trim() },
@@ -490,6 +567,17 @@ export default function AprobacionPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
+                    {canBorrar && (
+                      <th className="px-4 py-3 w-10">
+                        <input
+                          type="checkbox"
+                          aria-label="Seleccionar todos los visibles"
+                          checked={allVisibleSelected}
+                          onChange={toggleSelectAllVisible}
+                          className="h-4 w-4 rounded border-gray-300 cursor-pointer"
+                        />
+                      </th>
+                    )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Titular
                     </th>
@@ -516,6 +604,17 @@ export default function AprobacionPage() {
                         className="hover:bg-gray-50 cursor-pointer"
                         onClick={() => window.open(`/person/${contrato._id}`, '_blank')}
                       >
+                        {canBorrar && (
+                          <td className="px-4 py-4 w-10" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              aria-label={`Seleccionar contrato ${contrato.contrato}`}
+                              checked={selectedIds.has(contrato._id)}
+                              onChange={() => toggleSelect(contrato._id)}
+                              className="h-4 w-4 rounded border-gray-300 cursor-pointer"
+                            />
+                          </td>
+                        )}
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="flex-shrink-0">
@@ -610,6 +709,69 @@ export default function AprobacionPage() {
                 {uploadingDocs && (
                   <p className="text-sm text-blue-600 mt-2">Subiendo documentos...</p>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de confirmación de BORRADO */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[85vh] overflow-auto">
+              <div className="flex items-center gap-2 mb-3 text-red-700">
+                <Trash2 className="w-5 h-5" />
+                <h3 className="text-lg font-semibold">Borrar contrato(s) — acción irreversible</h3>
+              </div>
+              <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800 mb-4">
+                Se borrarán <b>{selectedContratos.length}</b> contrato(s) con <b>todos sus registros</b>{' '}
+                (titular + beneficiarios, financieros, pagos, académica, bookings, inscripciones Kids y
+                usuarios de login). Queda un respaldo en <b>PURGE_LOG</b> por si hay que recuperarlo.
+                Los contratos ya <b>aprobados</b> se omiten automáticamente.
+              </div>
+              <div className="max-h-40 overflow-auto border rounded-md mb-4 divide-y divide-gray-100">
+                {selectedContratos.map(c => (
+                  <div key={c._id} className="px-3 py-2 text-sm flex justify-between gap-3">
+                    <span className="font-medium text-gray-900 truncate">{c.primerNombre} {c.primerApellido}</span>
+                    <span className="text-gray-500 whitespace-nowrap">{c.contrato}</span>
+                  </div>
+                ))}
+              </div>
+              <label htmlFor="deleteMotivo" className="block text-sm font-medium text-gray-700 mb-1">
+                Motivo (queda en el registro de auditoría)
+              </label>
+              <textarea
+                id="deleteMotivo"
+                value={deleteMotivo}
+                onChange={(e) => setDeleteMotivo(e.target.value)}
+                rows={2}
+                placeholder="Ej: contrato de prueba / duplicado / solicitado por comercial…"
+                className="w-full px-3 py-2 border rounded-lg text-sm mb-3 focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              />
+              <label className="flex items-center gap-2 text-sm text-gray-700 mb-4 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={deleteConfirm}
+                  onChange={(e) => setDeleteConfirm(e.target.checked)}
+                  className="h-4 w-4"
+                />
+                Confirmo que quiero borrar estos contratos y sus registros.
+              </label>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => { setShowDeleteModal(false); setDeleteConfirm(false) }}
+                  disabled={deleting}
+                  className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={doDelete}
+                  disabled={!deleteConfirm || deleting}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {deleting ? 'Borrando…' : `Borrar ${selectedContratos.length} contrato(s)`}
+                </button>
               </div>
             </div>
           </div>

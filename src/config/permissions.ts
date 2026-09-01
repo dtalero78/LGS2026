@@ -880,6 +880,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Ver el ítem y la página de Contratos Aprobados (Aprobados/Inactivos/Finalizados)',
   },
   {
+    code: AprobacionPermission.CENTRO_BORRAR,
+    module: Module.APROBACION,
+    section: 'Menú Aprobación',
+    name: 'Borrar contrato en el Centro de Aprobaciones',
+    description: 'Muestra la casilla de selección + botón "Borrar" en el Centro de Aprobaciones y permite borrar un contrato NO aprobado con todos sus registros (cascade + snapshot en PURGE_LOG). Rechaza contratos ya aprobados. SUPER_ADMIN/ADMIN siempre pueden.',
+  },
+  {
     code: AprobacionPermission.ACTUALIZAR,
     module: Module.APROBACION,
     section: 'Lista de Aprobaciones',
