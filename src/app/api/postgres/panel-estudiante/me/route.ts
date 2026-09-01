@@ -1,6 +1,7 @@
 import 'server-only';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { resolveStudentFromSession } from '@/services/panel-estudiante.service';
+import { senceFeatureService } from '@/services/sence-feature.service';
 import { queryOne } from '@/lib/postgres';
 
 export const GET = handlerWithAuth(async (request, context, session) => {
@@ -15,10 +16,16 @@ export const GET = handlerWithAuth(async (request, context, session) => {
       ).catch(() => null)
     : null;
 
+  // Flag global del proceso SENCE (togglable en Mantenimiento › Contingencia).
+  // Si está apagado, el panel oculta el botón "Iniciar sesión SENCE" aunque el
+  // alumno esté marcado sence=true (entra directo por Zoom).
+  const senceFeatureActive = await senceFeatureService.isActive().catch(() => false);
+
   return successResponse({
     profile: {
       ...student,
       perfilActualizado: urRow?.perfilActualizado ?? null,
+      senceFeatureActive,
     },
   });
 });

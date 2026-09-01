@@ -223,6 +223,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
       {
         name: 'Contingencia', isSubmenu: true, children: [
           { name: 'Canales WhatsApp', href: '/admin/contingencia/whatsapp', newTab: true },
+          { name: 'Proceso SENCE', href: '/admin/sence-config', newTab: true },
         ],
       },
       { name: 'Diagnóstico', href: '/admin/diagnostico', newTab: true },
@@ -387,6 +388,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ],
     '/admin/contingencia/whatsapp': [
       MantenimientoPermission.CONTINGENCIA_WHATSAPP,
+    ],
+    '/admin/sence-config': [
+      MantenimientoPermission.SENCE_CONFIG,
     ],
     '/admin/contratos-prueba': [
       MantenimientoPermission.CONTRATOS_PRUEBA,

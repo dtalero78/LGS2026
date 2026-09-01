@@ -973,6 +973,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Acceso a /admin/contingencia/whatsapp. Elige por cuál número (canal Whapi) sale TODO el WhatsApp; útil si un teléfono se cae. Muestra el estado en vivo de ambos canales.',
   },
   {
+    code: MantenimientoPermission.SENCE_CONFIG,
+    module: Module.MANTENIMIENTO,
+    section: 'Contingencia',
+    name: 'Página "Proceso SENCE"',
+    description: 'Acceso a /admin/sence-config. Interruptor del proceso SENCE (registro de asistencia por Clave Única en el panel del estudiante). Con el flag apagado, los alumnos SENCE NO ven el botón "Iniciar sesión SENCE" y entran directo por Zoom.',
+  },
+  {
     code: MantenimientoPermission.CLEAR_HISTORIC,
     module: Module.MANTENIMIENTO,
     section: 'Usuarios',

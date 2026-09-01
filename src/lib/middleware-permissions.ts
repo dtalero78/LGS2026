@@ -249,6 +249,9 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/admin/contingencia/whatsapp': [
     'MANTENIMIENTO.CONTINGENCIA.WHATSAPP' as Permission,
   ],
+  '/admin/sence-config': [
+    'MANTENIMIENTO.CONTINGENCIA.SENCE_CONFIG' as Permission,
+  ],
   '/admin/contratos-prueba': [
     'MANTENIMIENTO.USUARIOS.CONTRATOS_PRUEBA' as Permission,
   ],
