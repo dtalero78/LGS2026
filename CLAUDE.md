@@ -1674,6 +1674,13 @@ export interface Person {
 - Ahora: eventos entre -60 min y +30 min se muestran deshabilitados con badge "Próximamente" (los estudiantes pueden ver que existe el evento aunque no puedan reservar)
 - Eventos >60 min en el pasado se ocultan definitivamente
 
+## Recent Changes (September 2026)
+
+| Commit | Description |
+|---|---|
+| `local` | feat(panel-advisor): **eventos administrativos en VIOLETA** (el naranja queda exclusivo de "sin asistentes"). Complemento del cambio anterior: como el naranja pasó a significar "sesión sin asistentes", los **eventos administrativos** del calendario del Panel Advisor ([panel-advisor/page.tsx](src/app/panel-advisor/page.tsx)) pasan de naranja (`bg-orange-400/600`) a **violeta**, exactamente como en Control de Horas: registrado `bg-violet-600 text-white`, sin registrar `bg-violet-300 text-violet-900` (más el label "+N admin" a `text-violet-600`). Se quitó el `text-white` fijo del root para que el violeta claro use texto oscuro. Así el **naranja queda 100% exclusivo de "sin asistentes"** en las dos pantallas y no hay ambigüedad de color. Solo frontend, `tsc` limpio. |
+| `29ba621` | feat(panel-advisor): **sesiones sin asistentes en NARANJA (misma regla que Control de Horas)**. En el calendario del Panel Advisor ([panel-advisor/page.tsx](src/app/panel-advisor/page.tsx) `getEventColor`) una **SESSION o CLUB ya ocurrida, con `asistieron=0` y que NO sea evento compartido** ahora se pinta **naranja** (`bg-orange-500`) = "sin asistentes" — misma regla exacta que Control de Horas (`!eventoCompartidoId && fechaEvento<=now && asistieron===0`). El resto sigue por tipo (SESSION azul, CLUB verde, WELCOME morado). Las **futuras** (su 0 es natural) y las **compartidas** NO se pintan naranja. El dato ya se cargaba (`asistenciasCounts` del batch-counts) pero no se exponía por evento; ahora se agrega `asistieron` al objeto de cada evento y `getEventColor` recibe el evento completo en vez de solo el tipo. Cubre los dos casos: inscrito que no asistió y sesión sin inscritos. **Verificado**: los eventos compartidos (p.ej. las 19:00 de un advisor con F1·Step 35 + F3·Step 45 bajo el mismo `eventoCompartidoId`) quedan **azules** (no naranja) en ambas pantallas y no cuentan en "Without Assistants" — un evento compartido acumula asistencia entre niveles y el advisor igual dictó 1 h real, por eso el "sin asistentes" (y la penalización de 0.5 h) deliberadamente NO aplica a compartidos. `tsc` limpio. |
+
 ## Recent Changes (August 2026)
 
 | Commit | Description |

@@ -507,13 +507,14 @@ function PanelAdvisorContent() {
                             +{dayEvents.length - 3} más
                           </div>
                         )}
-                        {/* Admin events del día — color naranja (Welcome ya es morado).
+                        {/* Admin events del día — color VIOLETA (igual que Control de
+                            Horas; el naranja queda exclusivo de "sin asistentes").
                             Click abre modal de registro. */}
                         {getAdminEventsForDay(date).slice(0, 2).map(ae => (
                           <div
                             key={ae._id}
-                            className={`text-xs px-1 py-0.5 rounded text-white truncate cursor-pointer hover:opacity-80 ${
-                              ae.registrado ? 'bg-orange-400' : 'bg-orange-600'
+                            className={`text-xs px-1 py-0.5 rounded truncate cursor-pointer hover:opacity-80 ${
+                              ae.registrado ? 'bg-violet-600 text-white' : 'bg-violet-300 text-violet-900'
                             }`}
                             title={`[ADMIN ${ae.tipo}] ${ae.titulo || ''} · ${ae.horas}h${ae.registrado ? ' (registrado)' : ''}`}
                             onClick={(e) => { e.stopPropagation(); setSelectedAdminEvent(ae) }}
@@ -522,7 +523,7 @@ function PanelAdvisorContent() {
                           </div>
                         ))}
                         {getAdminEventsForDay(date).length > 2 && (
-                          <div className="text-xs text-orange-600">
+                          <div className="text-xs text-violet-600">
                             +{getAdminEventsForDay(date).length - 2} admin
                           </div>
                         )}
@@ -580,7 +581,8 @@ function PanelAdvisorContent() {
                   </div>
                 </div>
               ))}
-              {/* Admin events del día — color naranja, click abre modal de registro */}
+              {/* Admin events del día — color VIOLETA (igual que Control de Horas),
+                  click abre modal de registro */}
               {getAdminEventsForDay(dayEventsModalDate).map(ae => (
                 <div
                   key={ae._id}
@@ -589,8 +591,8 @@ function PanelAdvisorContent() {
                     setDayEventsModalDate(null)
                     setSelectedAdminEvent(ae)
                   }}
-                  className={`p-3 rounded-lg cursor-pointer hover:opacity-80 transition-opacity text-white ${
-                    ae.registrado ? 'bg-orange-400' : 'bg-orange-600'
+                  className={`p-3 rounded-lg cursor-pointer hover:opacity-80 transition-opacity ${
+                    ae.registrado ? 'bg-violet-600 text-white' : 'bg-violet-300 text-violet-900'
                   }`}
                 >
                   <div className="flex items-center justify-between">
