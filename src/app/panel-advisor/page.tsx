@@ -241,7 +241,9 @@ function PanelAdvisorContent() {
           return {
             ...event,
             estudiantesInscritosCount: inscritos,
-            estudiantesNoCalificados: noCalificados > 0 ? noCalificados : 0
+            estudiantesNoCalificados: noCalificados > 0 ? noCalificados : 0,
+            inscritos,
+            asistieron,
           }
         })
 
@@ -314,16 +316,22 @@ function PanelAdvisorContent() {
     return adminEvents.filter(ae => isSameDay(new Date(ae.fechaInicio), date))
   }
 
-  const getEventColor = (tipo: string) => {
+  // Color del bloque del evento. Misma regla que Control de Horas: una SESSION
+  // o CLUB ya ocurrida, SIN asistentes (asistieron=0) y que NO sea evento
+  // compartido se pinta NARANJA ("sin asistentes"). El resto, por tipo.
+  const getEventColor = (event: CalendarioEvent) => {
+    const tipo = (event.evento || event.tipo || '').toUpperCase()
+    const isShared = !!(event as any).eventoCompartidoId
+    const yaOcurrio = new Date(event.dia).getTime() <= Date.now()
+    const asistieron = event.asistieron || 0
+    if ((tipo === 'SESSION' || tipo === 'CLUB') && !isShared && yaOcurrio && asistieron === 0) {
+      return 'bg-orange-500'
+    }
     switch (tipo) {
-      case 'SESSION':
-        return 'bg-blue-500'
-      case 'CLUB':
-        return 'bg-green-500'
-      case 'WELCOME':
-        return 'bg-purple-500'
-      default:
-        return 'bg-gray-500'
+      case 'SESSION': return 'bg-blue-500'
+      case 'CLUB':    return 'bg-green-500'
+      case 'WELCOME': return 'bg-purple-500'
+      default:        return 'bg-gray-500'
     }
   }
 
@@ -482,7 +490,7 @@ function PanelAdvisorContent() {
                           return (
                           <div
                             key={event._id}
-                            className={`text-xs px-1 py-0.5 rounded text-white truncate ${getEventColor(event.evento || event.tipo || '')} cursor-pointer hover:opacity-80`}
+                            className={`text-xs px-1 py-0.5 rounded text-white truncate ${getEventColor(event)} cursor-pointer hover:opacity-80`}
                             title={`${event.evento || event.tipo || ''} - ${event.tituloONivel} ${event.nombreEvento || ''}${isShared ? ' (compartido entre niveles)' : ''}`}
                             onClick={(e) => {
                               e.stopPropagation()
@@ -558,7 +566,7 @@ function PanelAdvisorContent() {
                     setDayEventsModalDate(null)
                     handleEventClick(event)
                   }}
-                  className={`p-3 rounded-lg cursor-pointer hover:opacity-80 transition-opacity ${getEventColor(event.evento || event.tipo || '')} text-white`}
+                  className={`p-3 rounded-lg cursor-pointer hover:opacity-80 transition-opacity ${getEventColor(event)} text-white`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
