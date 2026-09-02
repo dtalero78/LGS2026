@@ -98,3 +98,54 @@ export async function registrarAccesoZoom(
     reconexionHasta: new Date(cierraReconexion).toISOString(),
   };
 }
+
+/**
+ * Registra el acceso a Zoom a partir del `bookingId`, para alumnos SENCE: el
+ * **inicio de sesión en SENCE cuenta como la validación de ingreso** (equivale a
+ * pulsar el ícono de Zoom). Lo llama el callback público `/api/sence/retorno`
+ * cuando SENCE confirma el login por Clave Única.
+ *
+ * A diferencia de `registrarAccesoZoom`, NO revalida la ventana de ingreso: el
+ * plazo ya lo verificó `sence-init` al ARRANCAR el flujo SENCE; si el ida-y-vuelta
+ * de Clave Única deja al alumno pasado del +10 min, igual conserva el acceso (y
+ * con él la reconexión hasta el fin de la clase). Best-effort e idempotente-safe
+ * (la bitácora admite varias filas; `zoomAccesoEn` = MIN).
+ */
+export async function registrarAccesoZoomPorBooking(
+  bookingId: string,
+  input: { ip?: string | null; userAgent?: string | null } = {},
+): Promise<void> {
+  const id = String(bookingId || '').trim();
+  if (!id) return;
+
+  const bk = (await query<any>(
+    `SELECT b."_id" AS "bookingId",
+            COALESCE(b."studentId", b."idEstudiante") AS "academicaId",
+            COALESCE(b."eventoId", b."idEvento") AS "eventoId",
+            b."fechaEvento",
+            c."tipo", c."nivel", c."step",
+            a."numeroId",
+            TRIM(CONCAT_WS(' ', a."primerNombre", a."primerApellido")) AS nombre
+       FROM "ACADEMICA_BOOKINGS" b
+       LEFT JOIN "CALENDARIO" c ON (c."_id" = b."eventoId" OR c."_id" = b."idEvento")
+       LEFT JOIN "ACADEMICA" a ON a."_id" = COALESCE(b."studentId", b."idEstudiante")
+      WHERE b."_id" = $1
+      LIMIT 1`,
+    [id],
+  )).rows[0];
+  if (!bk || !bk.academicaId || !bk.eventoId) return; // best-effort
+
+  const inicioMs = new Date(bk.fechaEvento).getTime();
+  const ahora = Date.now();
+
+  await query(
+    `INSERT INTO "ZOOM_ACCESOS"
+       ("_id","academicaId","numeroId","nombre","bookingId","eventoId","fechaEvento",
+        "nivel","step","tipo","minutosDesdeInicio","ip","userAgent")
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+    [ids.audit(), bk.academicaId, bk.numeroId || null, bk.nombre || null,
+     bk.bookingId, bk.eventoId, bk.fechaEvento, bk.nivel || null, bk.step || null, bk.tipo || null,
+     Math.round((ahora - inicioMs) / 60_000),
+     (input.ip || '').slice(0, 45) || null, (input.userAgent || '').slice(0, 300) || null],
+  );
+}

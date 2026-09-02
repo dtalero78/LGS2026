@@ -37,6 +37,22 @@ export async function POST(request: NextRequest) {
         `UPDATE "ACADEMICA_BOOKINGS" SET "idSesionSence" = $1, "_updatedDate" = NOW() WHERE "_id" = $2`,
         [idSesionSence, idSesionAlumno]
       );
+
+      // El inicio de sesión SENCE cuenta como el acceso/validación de ingreso a
+      // Zoom (equivale a pulsar el ícono): registra ZOOM_ACCESOS para que el
+      // alumno conserve el enlace y su derecho a reconexión hasta el fin de la
+      // clase, aunque el ida-y-vuelta de Clave Única lo haya pasado del +10 min.
+      // Best-effort: no debe romper la redirección de retorno si falla.
+      try {
+        const { registrarAccesoZoomPorBooking } = await import('@/services/zoom-acceso.service');
+        const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '';
+        await registrarAccesoZoomPorBooking(idSesionAlumno, {
+          ip,
+          userAgent: request.headers.get('user-agent') || '',
+        });
+      } catch (e) {
+        console.warn('⚠️ [SENCE] No se pudo registrar el acceso a Zoom tras el login SENCE:', e);
+      }
     }
 
     const redirectUrl = new URL('/panel-estudiante', base);
