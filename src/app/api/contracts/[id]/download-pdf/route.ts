@@ -2,7 +2,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDriveMode } from '@/lib/contract-drive';
 import { findContractFileId, downloadDrivePdf } from '@/lib/google-drive';
-import { queryOne } from '@/lib/postgres';
+import { queryOne, query } from '@/lib/postgres';
 
 const BSL_DOWNLOAD_URL = 'https://bsl-utilidades-yp78a.ondigitalocean.app/descargar-pdf-drive';
 
@@ -28,29 +28,44 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
     return NextResponse.redirect(`${BSL_DOWNLOAD_URL}/${id}?empresa=LGS`);
   }
 
-  // modo 'lgs'
+  // modo 'lgs' — resiliente: intenta el fileId guardado; si falla (id STALE:
+  // archivo borrado/movido) o no hay, BUSCA por appProperties antes de rendirse
+  // a bsl, y auto-sana el driveFileId guardado. Loguea cada fallo (antes el
+  // catch tragaba el error y todo terminaba como "PDF no encontrado" en bsl).
+  const row = await queryOne<{ driveFileId: string | null }>(
+    `SELECT "driveFileId" FROM "PEOPLE" WHERE "_id" = $1`, [id],
+  ).catch(() => null);
+
+  const candidatos: string[] = [];
+  if (row?.driveFileId) candidatos.push(row.driveFileId);
   try {
-    // 1) fileId guardado en la BD (fuente de verdad, consistencia fuerte).
-    const row = await queryOne<{ driveFileId: string | null }>(
-      `SELECT "driveFileId" FROM "PEOPLE" WHERE "_id" = $1`, [id],
-    );
-    // 2) fallback: búsqueda por appProperties si no hay fileId guardado.
-    const fileId = row?.driveFileId || (await findContractFileId(id));
-    if (!fileId) {
-      // 3) no está en la unidad compartida → bsl.
-      return NextResponse.redirect(`${BSL_DOWNLOAD_URL}/${id}?empresa=LGS`);
-    }
-    const bytes = await downloadDrivePdf(fileId);
-    return new NextResponse(new Uint8Array(bytes), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="contrato-${id}.pdf"`,
-        'Cache-Control': 'no-store',
-      },
-    });
+    const found = await findContractFileId(id);          // busca por appProperties (no-trashed)
+    if (found && !candidatos.includes(found)) candidatos.push(found);
   } catch (e: any) {
-    // Ante cualquier error del Drive, no dejar sin descarga: fallback a bsl.
-    return NextResponse.redirect(`${BSL_DOWNLOAD_URL}/${id}?empresa=LGS`);
+    console.error(`[download-pdf] findContractFileId falló para ${id}:`, e?.message || e);
   }
+
+  for (const fileId of candidatos) {
+    try {
+      const bytes = await downloadDrivePdf(fileId);
+      // Auto-sana: si el que sirvió no es el guardado, actualiza PEOPLE.driveFileId.
+      if (fileId !== row?.driveFileId) {
+        query(`UPDATE "PEOPLE" SET "driveFileId" = $1 WHERE "_id" = $2`, [fileId, id]).catch(() => null);
+      }
+      return new NextResponse(new Uint8Array(bytes), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `inline; filename="contrato-${id}.pdf"`,
+          'Cache-Control': 'no-store',
+        },
+      });
+    } catch (e: any) {
+      console.error(`[download-pdf] downloadDrivePdf falló para ${id} (fileId=${fileId}):`, e?.message || e);
+    }
+  }
+
+  // No descargable desde LGS Drive (ni el guardado ni por búsqueda) → bsl.
+  console.error(`[download-pdf] sin PDF válido en LGS Drive para ${id} (driveFileId guardado=${row?.driveFileId ?? 'null'}) → fallback bsl`);
+  return NextResponse.redirect(`${BSL_DOWNLOAD_URL}/${id}?empresa=LGS`);
 }
