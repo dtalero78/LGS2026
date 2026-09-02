@@ -2,7 +2,7 @@ import 'server-only';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { ForbiddenError, ValidationError } from '@/lib/errors';
 import { getDriveMode, setDriveMode, DriveMode } from '@/lib/contract-drive';
-import { isDriveDirectConfigured } from '@/lib/google-drive';
+import { isDriveDirectConfigured, driveDebugInfo } from '@/lib/google-drive';
 
 /**
  * GET/PATCH /api/admin/drive-mode — interruptor de archivado de contratos en Drive.
@@ -20,7 +20,11 @@ function assertAdmin(session: any) {
 
 export const GET = handlerWithAuth(async (_req, _ctx, session) => {
   assertAdmin(session);
-  return successResponse({ mode: await getDriveMode(), configured: isDriveDirectConfigured() });
+  // saEmail/folderId (ambos NO secretos): sirven para diagnosticar acceso a Drive.
+  // Si la subida falla con "File not found: <folderId>", hay que COMPARTIR esa
+  // carpeta con saEmail (rol Administrador de contenido en la unidad compartida).
+  const { saEmail, folderId } = driveDebugInfo();
+  return successResponse({ mode: await getDriveMode(), configured: isDriveDirectConfigured(), saEmail, folderId });
 });
 
 export const PATCH = handlerWithAuth(async (req, _ctx, session) => {

@@ -8,6 +8,8 @@ type Mode = 'bsl' | 'lgs';
 export default function DriveConfigPage() {
   const [mode, setMode] = useState<Mode | null>(null);
   const [configured, setConfigured] = useState(false);
+  const [saEmail, setSaEmail] = useState<string | null>(null);
+  const [folderId, setFolderId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -22,6 +24,8 @@ export default function DriveConfigPage() {
       if (!res.ok) throw new Error(data?.error || `Error ${res.status}`);
       setMode(data.mode);
       setConfigured(!!data.configured);
+      setSaEmail(data.saEmail ?? null);
+      setFolderId(data.folderId ?? null);
     } catch (e: any) {
       setError(e?.message || 'No se pudo cargar el estado');
     } finally {
@@ -106,6 +110,20 @@ export default function DriveConfigPage() {
               <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
                 ⚠️ La cuenta de servicio no está configurada (falta <code>GOOGLE_SERVICE_ACCOUNT_JSON</code> en el entorno).
                 El modo <b>LGS directo</b> no se puede activar hasta configurarla en Digital Ocean.
+              </div>
+            )}
+
+            {configured && (saEmail || folderId) && (
+              <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700 space-y-1">
+                <div className="font-semibold text-gray-800">Acceso a Google Drive (modo LGS)</div>
+                {saEmail && <div>Cuenta de servicio: <code className="break-all">{saEmail}</code></div>}
+                {folderId && <div>Carpeta destino (CONTRATOS LGS): <code className="break-all">{folderId}</code></div>}
+                <p className="text-xs text-gray-500 pt-1">
+                  Si al generar un contrato aparece <b>“Drive upload falló: File not found: {folderId || '<carpeta>'}”</b>,
+                  la cuenta de servicio perdió acceso a esa carpeta. Solución: en la Unidad compartida, <b>comparte esa carpeta</b> con
+                  la cuenta de servicio de arriba con rol <b>“Administrador de contenido”</b>. Si la carpeta se borró/recreó, actualiza
+                  <code> GOOGLE_DRIVE_FOLDER_ID</code> al nuevo id.
+                </p>
               </div>
             )}
             {error && (
