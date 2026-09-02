@@ -235,7 +235,13 @@ function PanelEstudianteContent() {
   // Gateado por el flag global del proceso SENCE (Mantenimiento › Contingencia
   // › "Proceso SENCE"): si está apagado, el alumno SENCE NO ve el botón
   // "Iniciar sesión SENCE" y entra directo por Zoom, aunque tenga sence=true.
-  const isSenceStudent = !!(profile as any)?.sence && !!(profile as any)?.senceFeatureActive
+  // También exige `senceCode`: el CodigoCurso a veces no llega de inmediato al
+  // marcar al alumno como SENCE, y sin él /sence-init y /sence-close-init
+  // rechazan la solicitud (ValidationError) dejando al alumno sin poder
+  // entrar a su booking. Mientras no tenga senceCode, se ignora todo el
+  // proceso SENCE (login y logout) y el alumno entra directo por Zoom.
+  const isSenceStudent =
+    !!(profile as any)?.sence && !!(profile as any)?.senceFeatureActive && !!(profile as any)?.senceCode
   const senceDone = !isSenceStudent || !!(nextClass as any)?.idSesionSence
   // Sesión SENCE abierta (ya inició) pero aún no cerrada — se ofrece el botón
   // de cierre independiente de la ventana de 5 min antes / 10 min después del

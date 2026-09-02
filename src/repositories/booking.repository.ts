@@ -736,7 +736,7 @@ class BookingRepositoryClass extends BaseRepository {
        LEFT JOIN "CALENDARIO" c ON (ab."eventoId" = c."_id" OR ab."idEvento" = c."_id")
        INNER JOIN "ACADEMICA" a ON (ab."studentId" = a."_id" OR ab."idEstudiante" = a."_id")
        WHERE a."sence" = true
-         AND a."senceCode" IS NOT NULL
+         AND NULLIF(TRIM(a."senceCode"), '') IS NOT NULL
          AND COALESCE(c."dia", ab."fechaEvento") >= ($1::date)::timestamp AT TIME ZONE $2
          AND COALESCE(c."dia", ab."fechaEvento") < ($1::date + INTERVAL '1 day')::timestamp AT TIME ZONE $2
          AND (ab."cancelo" IS NULL OR ab."cancelo" = false)
