@@ -151,6 +151,51 @@ class EvaluationsRepositoryClass extends BaseRepository {
       params
     );
   }
+
+  /**
+   * Búsqueda de comentarios de UN advisor con promedio <= tope (de X estrellas
+   * hacia abajo), resolviendo la IDENTIDAD del alumno que escribió el comentario
+   * (nombre + numeroId) vía `studentId` → ACADEMICA (fallback PEOPLE). Solo filas
+   * con comentario no vacío. Usado por la pestaña "Búsqueda por comentario"
+   * (des-anonimizada, gateada por permiso dedicado).
+   */
+  async searchComentarios(opts: {
+    advisorId: string;
+    startDate?: string | null;
+    endDate?: string | null;
+    tipo?: string | null;
+    tope: number;
+  }) {
+    const conds: string[] = [
+      `e."advisorId" = $1`,
+      `e."comentario" IS NOT NULL AND TRIM(e."comentario") <> ''`,
+      `e."promedio" <= $2`,
+    ];
+    const params: any[] = [opts.advisorId, opts.tope];
+    let i = 3;
+    if (opts.startDate) { conds.push(`e."fechaEvento" >= $${i}::date`); params.push(opts.startDate); i++; }
+    if (opts.endDate)   { conds.push(`e."fechaEvento" <= $${i}::date`); params.push(opts.endDate);   i++; }
+    if (opts.tipo)      { conds.push(`e."tipo" = $${i}`);               params.push(opts.tipo);      i++; }
+
+    return queryMany<any>(
+      `SELECT e."comentario", e."promedio", e."fechaEvento",
+              e."tipo", e."subtipo", e."nivel", e."step", e."aiSentimiento",
+              COALESCE(
+                a."nombreCompleto",
+                NULLIF(TRIM(COALESCE(a."primerNombre",'') || ' ' || COALESCE(a."primerApellido",'')), ''),
+                NULLIF(TRIM(COALESCE(p."primerNombre",'') || ' ' || COALESCE(p."primerApellido",'')), ''),
+                ''
+              ) AS "studentNombre",
+              COALESCE(a."numeroId", p."numeroId") AS "studentNumeroId"
+         FROM "ACADEMICA_BOOKING_EVALUATIONS" e
+         LEFT JOIN "ACADEMICA" a ON a."_id" = e."studentId"
+         LEFT JOIN "PEOPLE"    p ON p."_id" = e."studentId"
+        WHERE ${conds.join(' AND ')}
+        ORDER BY e."promedio" ASC, e."fechaEvento" DESC
+        LIMIT 2000`,
+      params
+    );
+  }
 }
 
 export const EvaluationsRepository = new EvaluationsRepositoryClass();

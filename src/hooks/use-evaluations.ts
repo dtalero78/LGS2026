@@ -57,6 +57,22 @@ export function usePerformanceDashboard(filters: {
   )
 }
 
+/** Búsqueda de comentarios de un advisor (con identidad del alumno) — pestaña "Búsqueda por comentario". */
+export function useComentariosBusqueda(filters: {
+  advisorId?: string | null; startDate?: string | null; endDate?: string | null;
+  tipo?: string | null; tope?: number | null;
+}) {
+  const qs = new URLSearchParams()
+  Object.entries(filters).forEach(([k, v]) => {
+    if (v !== null && v !== undefined && v !== '') qs.set(k, String(v))
+  })
+  return useQuery(
+    ['evaluations', 'comentarios-busqueda', filters],
+    () => api.get(`${ADMIN_BASE}/comentarios-busqueda?${qs.toString()}`),
+    { staleTime: 60 * 1000, enabled: !!filters.advisorId }
+  )
+}
+
 /** Lista de advisors con evaluaciones, para el dropdown de la pestaña "Por Advisor". */
 export function useAdvisorsWithEvaluations() {
   return useQuery(

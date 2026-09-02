@@ -566,6 +566,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Acceso a la pestaña "Lista" dentro del dashboard Performance Evaluation: lista de advisors con casilla de selección y filtro por plataforma (país del advisor). La selección define el "Alcance" (todos / una plataforma / los advisors marcados) que aplican Vista General y Por Advisor. Requiere también PERFORMANCE_EVAL.VER.',
   },
   {
+    code: AcademicoPermission.PERFORMANCE_EVAL_BUSQUEDA_COMENTARIO,
+    module: Module.ACADEMICO,
+    section: 'Advisors',
+    name: '↳ Pestaña Búsqueda por comentario (Performance Evaluation)',
+    description: 'Acceso a la pestaña "Búsqueda por comentario": muestra los comentarios de un advisor con promedio ≤ tope de estrellas, INCLUYENDO el nombre y número de identificación del ALUMNO que lo escribió (des-anonimiza; el resto del dashboard es anónimo). Por defecto solo SUPER_ADMIN/ADMIN. Requiere también PERFORMANCE_EVAL.VER.',
+  },
+  {
     code: AcademicoPermission.SESIONES_SIN_GESTION_VER,
     module: Module.ACADEMICO,
     section: 'Advisors',

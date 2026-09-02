@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowDownTrayIcon, ArrowPathIcon, StarIcon, UserGroupIcon, UserCircleIcon, PrinterIcon, ListBulletIcon } from '@heroicons/react/24/solid'
+import { ArrowDownTrayIcon, ArrowPathIcon, StarIcon, UserGroupIcon, UserCircleIcon, PrinterIcon, ListBulletIcon, ChatBubbleLeftEllipsisIcon } from '@heroicons/react/24/solid'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { exportToExcel } from '@/lib/export-excel'
 import { PermissionGuard } from '@/components/permissions/PermissionGuard'
 import { AcademicoPermission, Role } from '@/types/permissions'
-import { usePerformanceDashboard, useAdvisorsWithEvaluations } from '@/hooks/use-evaluations'
+import { usePerformanceDashboard, useAdvisorsWithEvaluations, useComentariosBusqueda } from '@/hooks/use-evaluations'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useSession } from 'next-auth/react'
 
@@ -71,9 +71,10 @@ export default function PerformanceEvaluationPage() {
   const isAdmin = role === Role.SUPER_ADMIN || role === Role.ADMIN
   const canSeeByAdvisor = hasPermission(AcademicoPermission.PERFORMANCE_EVAL_POR_ADVISOR) || isAdmin
   const canSeeLista = hasPermission(AcademicoPermission.PERFORMANCE_EVAL_LISTA) || isAdmin
+  const canSeeBusqueda = hasPermission(AcademicoPermission.PERFORMANCE_EVAL_BUSQUEDA_COMENTARIO) || isAdmin
 
-  // Tab activo: vista general, por advisor o lista.
-  const [view, setView] = useState<'general' | 'porAdvisor' | 'lista'>('general')
+  // Tab activo: vista general, por advisor, lista o búsqueda por comentario.
+  const [view, setView] = useState<'general' | 'porAdvisor' | 'lista' | 'busqueda'>('general')
 
   const [filters, setFilters] = useState({
     startDate: oneMonthBackStr(),
@@ -162,7 +163,9 @@ export default function PerformanceEvaluationPage() {
                   ? 'Vista global de evaluaciones — Top 5 / 5 Promedios Más Bajos.'
                   : view === 'porAdvisor'
                   ? 'Vista por advisor — métricas individuales comparadas contra el promedio general.'
-                  : 'Lista de advisors — marca los que definen el Alcance (plataforma o selección).'}
+                  : view === 'lista'
+                  ? 'Lista de advisors — marca los que definen el Alcance (plataforma o selección).'
+                  : 'Búsqueda por comentario — comentarios de un advisor ≤ tope de estrellas, con el alumno que los escribió.'}
               </p>
             </div>
           </div>
@@ -207,6 +210,19 @@ export default function PerformanceEvaluationPage() {
                 {usingLista && <span className="ml-1 text-[10px] bg-indigo-600 text-white rounded-full px-1.5 py-0.5">{scopeAdvisorIds.length}</span>}
               </button>
             )}
+            {canSeeBusqueda && (
+              <button
+                type="button"
+                onClick={() => setView('busqueda')}
+                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition ${
+                  view === 'busqueda'
+                    ? 'border-indigo-600 text-indigo-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+                }`}
+              >
+                <ChatBubbleLeftEllipsisIcon className="h-4 w-4" /> Búsqueda por comentario
+              </button>
+            )}
           </div>
 
           {/* ─────────────────────────────────────────────────────────────
@@ -239,6 +255,21 @@ export default function PerformanceEvaluationPage() {
                 setScopePlataforma={setScopePlataforma}
                 scopeAdvisorIds={scopeAdvisorIds}
                 setScopeAdvisorIds={setScopeAdvisorIds}
+              />
+            </PermissionGuard>
+          )}
+
+          {/* ─────────────────────────────────────────────────────────────
+              BÚSQUEDA POR COMENTARIO — comentarios ≤ tope con identidad del alumno
+            ───────────────────────────────────────────────────────────── */}
+          {view === 'busqueda' && (
+            <PermissionGuard permission={AcademicoPermission.PERFORMANCE_EVAL_BUSQUEDA_COMENTARIO}>
+              <BusquedaComentarioView
+                advisorsRaw={advisorsRaw}
+                scopePlataforma={scopePlataforma}
+                setScopePlataforma={setScopePlataforma}
+                scopeAdvisorIds={scopeAdvisorIds}
+                usingLista={usingLista}
               />
             </PermissionGuard>
           )}
@@ -646,6 +677,196 @@ function ListaView({
           </table>
         )}
       </div>
+    </div>
+  )
+}
+
+/** Pestaña BÚSQUEDA POR COMENTARIO — comentarios de un advisor ≤ tope de
+ *  estrellas, con nombre + numeroId del ALUMNO que los escribió (des-anonimizada). */
+function BusquedaComentarioView({
+  advisorsRaw, scopePlataforma, setScopePlataforma, scopeAdvisorIds, usingLista,
+}: {
+  advisorsRaw: any[];
+  scopePlataforma: string;
+  setScopePlataforma: (v: string) => void;
+  scopeAdvisorIds: string[];
+  usingLista: boolean;
+}) {
+  const [startDate, setStartDate] = useState(oneMonthBackStr())
+  const [endDate, setEndDate]     = useState(todayStr())
+  const [tipo, setTipo]           = useState('')
+  const [advisorFilter, setAdvisorFilter] = useState<'activos' | 'inactivos' | 'todos'>('activos')
+  const [advisorId, setAdvisorId] = useState('')
+  const [tope, setTope]           = useState(3)
+
+  // Dropdown de advisor limitado al Alcance (lista o plataforma) + estado.
+  const advisorsList = useMemo(() => {
+    let list = advisorsRaw
+    if (usingLista) {
+      const set = new Set(scopeAdvisorIds)
+      list = list.filter(a => set.has(a._id))
+    } else if (scopePlataforma) {
+      list = list.filter(a => (a.pais || '').toLowerCase() === scopePlataforma.toLowerCase())
+    }
+    if (advisorFilter === 'activos')   return list.filter(a => a.activo === true)
+    if (advisorFilter === 'inactivos') return list.filter(a => a.activo !== true)
+    return list
+  }, [advisorsRaw, advisorFilter, usingLista, scopeAdvisorIds, scopePlataforma])
+
+  useEffect(() => {
+    if (advisorId && !advisorsList.some(a => a._id === advisorId)) setAdvisorId('')
+  }, [advisorId, advisorsList])
+
+  const q = useComentariosBusqueda({
+    advisorId: advisorId || null,
+    startDate: startDate || null,
+    endDate:   endDate || null,
+    tipo:      tipo || null,
+    tope,
+  })
+  const rows: any[] = q.data?.comentarios ?? []
+  const advisorSelected = advisorsList.find(a => a._id === advisorId)
+
+  const handleCSV = () => {
+    if (!rows.length) return
+    exportToExcel(rows, [
+      { header: 'Promedio',   accessor: (r: any) => r.promedio },
+      { header: 'Fecha',      accessor: (r: any) => r.fechaEvento ? new Date(r.fechaEvento).toLocaleDateString('es-ES') : '' },
+      { header: 'Tipo',       accessor: (r: any) => r.tipo + (r.subtipo ? ` (${r.subtipo})` : '') },
+      { header: 'Nivel',      accessor: (r: any) => r.nivel || '' },
+      { header: 'Step',       accessor: (r: any) => r.step || '' },
+      { header: 'Alumno',     accessor: (r: any) => r.studentNombre || '' },
+      { header: 'ID Alumno',  accessor: (r: any) => r.studentNumeroId || '' },
+      { header: 'Comentario', accessor: (r: any) => r.comentario || '' },
+      { header: 'IA Sentimiento', accessor: (r: any) => r.aiSentimiento || '' },
+    ], `perf-eval-comentarios_${(advisorSelected?.nombre || advisorId).replace(/\s+/g, '_')}_tope${tope}_${startDate}_${endDate}`)
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
+        ⚠️ Esta vista muestra el <b>nombre y número de identificación del alumno</b> que escribió cada comentario (el resto del dashboard es anónimo). Úsala con criterio.
+      </div>
+
+      {/* Filtros (iguales a Por Advisor) + Tope */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-end gap-2 flex-wrap">
+        <div>
+          <label htmlFor="bc-start" className="block text-xs text-gray-500 mb-1">Desde</label>
+          <input id="bc-start" type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label htmlFor="bc-end" className="block text-xs text-gray-500 mb-1">Hasta</label>
+          <input id="bc-end" type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label htmlFor="bc-tipo" className="block text-xs text-gray-500 mb-1">Tipo</label>
+          <select id="bc-tipo" value={tipo} onChange={e => setTipo(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="">Todos</option>
+            <option value="SESSION">Session</option>
+            <option value="CLUB">Club</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="bc-plat" className="block text-xs text-gray-500 mb-1">Plataforma</label>
+          <select id="bc-plat" value={scopePlataforma} disabled={usingLista}
+            onChange={e => setScopePlataforma(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-400">
+            <option value="">Todas</option>
+            {PLATAFORMAS.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="bc-status" className="block text-xs text-gray-500 mb-1">Estado advisor</label>
+          <select id="bc-status" value={advisorFilter}
+            onChange={e => setAdvisorFilter(e.target.value as 'activos' | 'inactivos' | 'todos')}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="activos">Activos</option>
+            <option value="inactivos">Inactivos</option>
+            <option value="todos">Todos</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="bc-tope" className="block text-xs text-gray-500 mb-1">Tope (★ hacia abajo)</label>
+          <select id="bc-tope" value={tope} onChange={e => setTope(Number(e.target.value))}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>≤ {n} ★</option>)}
+          </select>
+        </div>
+        <div className="flex-1 min-w-[240px]">
+          <label htmlFor="bc-advisor" className="block text-xs text-gray-500 mb-1">
+            Advisor <span className="text-gray-400">({advisorsList.length} disponibles)</span>
+          </label>
+          <select id="bc-advisor" value={advisorId} onChange={e => setAdvisorId(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="">— Selecciona un advisor —</option>
+            {advisorsList.map(a => (
+              <option key={a._id} value={a._id}>
+                {a.nombre} ({a.evaluaciones} evals){a.activo === false ? ' · Inactivo' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+        <PermissionGuard permission={AcademicoPermission.PERFORMANCE_EVAL_EXPORTAR}>
+          <button type="button" onClick={handleCSV} disabled={!rows.length}
+            className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
+            <ArrowDownTrayIcon className="h-4 w-4" />CSV
+          </button>
+        </PermissionGuard>
+      </div>
+
+      {!advisorId ? (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center">
+          <ChatBubbleLeftEllipsisIcon className="h-12 w-12 text-indigo-400 mx-auto mb-2" />
+          <p className="text-sm text-indigo-900 font-medium">Selecciona un advisor para ver sus comentarios</p>
+          <p className="text-xs text-indigo-700 mt-1">Se muestran los comentarios con promedio ≤ {tope} ★, de peor a mejor.</p>
+        </div>
+      ) : q.isLoading ? (
+        <div className="text-center text-sm text-gray-500 py-10">Cargando comentarios…</div>
+      ) : rows.length === 0 ? (
+        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-sm text-gray-400">
+          {advisorSelected?.nombre} no tiene comentarios con promedio ≤ {tope} ★ en este período.
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-800">
+              {advisorSelected?.nombre} — {rows.length} comentario{rows.length === 1 ? '' : 's'} ≤ {tope} ★
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-gray-500 border-b border-gray-100 bg-gray-50">
+                  <th className="text-left font-medium py-2 px-3 w-20">Promedio</th>
+                  <th className="text-left font-medium py-2 px-3 w-28">Fecha</th>
+                  <th className="text-left font-medium py-2 px-3">Tipo · Nivel · Step</th>
+                  <th className="text-left font-medium py-2 px-3">Alumno</th>
+                  <th className="text-left font-medium py-2 px-3">Comentario</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r, idx) => (
+                  <tr key={idx} className="border-b border-gray-50 last:border-0 align-top">
+                    <td className="py-2.5 px-3 font-bold text-amber-600 whitespace-nowrap">{Number(r.promedio).toFixed(2)} ★</td>
+                    <td className="py-2.5 px-3 text-gray-600 whitespace-nowrap">{r.fechaEvento ? new Date(r.fechaEvento).toLocaleDateString('es-ES') : '—'}</td>
+                    <td className="py-2.5 px-3 text-gray-600 text-xs">
+                      {r.tipo}{r.subtipo ? ` (${r.subtipo})` : ''}{r.nivel ? ` · ${r.nivel}` : ''}{r.step ? ` · ${r.step}` : ''}
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <div className="font-medium text-gray-800">{r.studentNombre || '(sin nombre)'}</div>
+                      <div className="text-xs text-gray-500">ID: {r.studentNumeroId || '—'}</div>
+                    </td>
+                    <td className="py-2.5 px-3 text-gray-700">{r.comentario}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
