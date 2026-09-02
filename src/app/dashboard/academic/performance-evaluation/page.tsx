@@ -825,6 +825,10 @@ function BusquedaComentarioView({
         </div>
       ) : q.isLoading ? (
         <div className="text-center text-sm text-gray-500 py-10">Cargando comentarios…</div>
+      ) : q.isError ? (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
+          Error al cargar los comentarios: {(q.error as any)?.message || 'intenta de nuevo'}
+        </div>
       ) : rows.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-sm text-gray-400">
           {advisorSelected?.nombre} no tiene comentarios con promedio ≤ {tope} ★ en este período.

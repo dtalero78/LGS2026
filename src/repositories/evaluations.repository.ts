@@ -181,7 +181,6 @@ class EvaluationsRepositoryClass extends BaseRepository {
       `SELECT e."comentario", e."promedio", e."fechaEvento",
               e."tipo", e."subtipo", e."nivel", e."step", e."aiSentimiento",
               COALESCE(
-                a."nombreCompleto",
                 NULLIF(TRIM(COALESCE(a."primerNombre",'') || ' ' || COALESCE(a."primerApellido",'')), ''),
                 NULLIF(TRIM(COALESCE(p."primerNombre",'') || ' ' || COALESCE(p."primerApellido",'')), ''),
                 ''
