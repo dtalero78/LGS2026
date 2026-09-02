@@ -15,10 +15,15 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
   await requirePermission(session, AcademicoPermission.PERFORMANCE_EVAL_VER);
 
   const { searchParams } = new URL(req.url);
+  const advisorIdsRaw = searchParams.get('advisorIds');
+  const advisorIds = advisorIdsRaw
+    ? advisorIdsRaw.split(',').map(s => s.trim()).filter(Boolean)
+    : null;
   const stats = await getDashboardStats({
     startDate: searchParams.get('startDate'),
     endDate:   searchParams.get('endDate'),
     advisorId: searchParams.get('advisorId'),
+    advisorIds,
     nivel:     searchParams.get('nivel'),
     tipo:      searchParams.get('tipo'),
     plataforma: searchParams.get('plataforma'),

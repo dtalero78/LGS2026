@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowDownTrayIcon, ArrowPathIcon, StarIcon, UserGroupIcon, UserCircleIcon, PrinterIcon } from '@heroicons/react/24/solid'
+import { ArrowDownTrayIcon, ArrowPathIcon, StarIcon, UserGroupIcon, UserCircleIcon, PrinterIcon, ListBulletIcon } from '@heroicons/react/24/solid'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { exportToExcel } from '@/lib/export-excel'
 import { PermissionGuard } from '@/components/permissions/PermissionGuard'
@@ -31,26 +31,70 @@ const oneMonthBackStr = () => {
 /** Chips sugeridos sobre comentarios — clic filtra el buscador. */
 const COMMENT_KEYWORDS = ['tarde', 'rápido', 'no entendí', 'excelente', 'aburrido', 'práctica', 'audio']
 
+/** Plataformas (país del advisor) para el filtro de Alcance. */
+const PLATAFORMAS = ['Chile', 'Colombia', 'Ecuador', 'Perú']
+
+/** CSS de impresión / PDF compartido (Vista General y Por Advisor). */
+const PRINT_CSS = `
+  @media print {
+    .no-print, nav, footer { display: none !important; }
+    .print-header { display: flex !important; }
+    .print-expand { max-height: none !important; overflow: visible !important; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; }
+    .print-page { page-break-inside: avoid; }
+    @page { size: letter portrait; margin: 12mm 15mm 12mm 15mm; }
+    .watermark::after {
+      content: ''; position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%) rotate(-25deg);
+      width: 380px; height: 380px;
+      background: url('/logo.png') center / contain no-repeat;
+      opacity: 0.04; z-index: 9999; pointer-events: none;
+    }
+    table { page-break-inside: auto; }
+    tr { page-break-inside: avoid; }
+    thead { display: table-header-group; }
+  }
+  @media screen { .print-header { display: none !important; } }
+`
+
+/** Etiqueta legible del alcance actual (para cabeceras y PDF). */
+function alcanceLabel(usingLista: boolean, n: number, plataforma: string): string {
+  if (usingLista) return `Lista (${n} advisor${n === 1 ? '' : 's'})`
+  return plataforma ? `Plataforma: ${plataforma}` : 'Todos los advisors'
+}
+
 export default function PerformanceEvaluationPage() {
   const { data: session } = useSession()
   const role = (session?.user as any)?.role
   const canSeeRawComments = role === Role.SUPER_ADMIN || role === Role.ADMIN
   const { hasPermission } = usePermissions()
-  const canSeeByAdvisor = hasPermission(AcademicoPermission.PERFORMANCE_EVAL_POR_ADVISOR)
-                        || role === Role.SUPER_ADMIN || role === Role.ADMIN
+  const isAdmin = role === Role.SUPER_ADMIN || role === Role.ADMIN
+  const canSeeByAdvisor = hasPermission(AcademicoPermission.PERFORMANCE_EVAL_POR_ADVISOR) || isAdmin
+  const canSeeLista = hasPermission(AcademicoPermission.PERFORMANCE_EVAL_LISTA) || isAdmin
 
-  // Tab activo: vista general o vista por advisor.
-  const [view, setView] = useState<'general' | 'porAdvisor'>('general')
+  // Tab activo: vista general, por advisor o lista.
+  const [view, setView] = useState<'general' | 'porAdvisor' | 'lista'>('general')
 
   const [filters, setFilters] = useState({
     startDate: oneMonthBackStr(),
     endDate:   todayStr(),
-    advisorId: '',
-    nivel:     '',
     tipo:      '',
-    plataforma: '',
     comentarioSearch: '',
   })
+
+  // ── Alcance compartido por las 3 pestañas (modos EXCLUYENTES) ──────────
+  // Si hay advisors marcados en la pestaña Lista → manda la LISTA; si no,
+  // manda la PLATAFORMA (país del advisor); vacío = TODOS.
+  const [scopePlataforma, setScopePlataforma] = useState<string>('')   // '' = Todas
+  const [scopeAdvisorIds, setScopeAdvisorIds] = useState<string[]>([])
+  const usingLista = scopeAdvisorIds.length > 0
+  const scopeParams = usingLista
+    ? { advisorIds: scopeAdvisorIds.join(','), plataforma: null as string | null }
+    : { advisorIds: null as string | null, plataforma: scopePlataforma || null }
+
+  // Lista de advisors (con país) — se carga una vez y se comparte entre pestañas.
+  const advisorsQ = useAdvisorsWithEvaluations()
+  const advisorsRaw: any[] = advisorsQ.data?.advisors ?? []
 
   // Modal de radar por advisor (cuando se hace click en una fila del ranking).
   const [radarAdvisor, setRadarAdvisor] = useState<any | null>(null)
@@ -58,12 +102,12 @@ export default function PerformanceEvaluationPage() {
   const dashQ = usePerformanceDashboard({
     startDate: filters.startDate || null,
     endDate:   filters.endDate || null,
-    advisorId: filters.advisorId || null,
-    nivel:     filters.nivel || null,
     tipo:      filters.tipo || null,
-    plataforma: filters.plataforma || null,
+    ...scopeParams,
     comentarioSearch: filters.comentarioSearch || null,
   })
+
+  const handlePrint = () => window.print()
 
   const data: any = dashQ.data
   const kpis  = data?.kpis ?? null
@@ -116,7 +160,9 @@ export default function PerformanceEvaluationPage() {
               <p className="text-sm text-gray-500">
                 {view === 'general'
                   ? 'Vista global de evaluaciones — Top 5 / 5 Promedios Más Bajos.'
-                  : 'Vista por advisor — métricas individuales comparadas contra el promedio general.'}
+                  : view === 'porAdvisor'
+                  ? 'Vista por advisor — métricas individuales comparadas contra el promedio general.'
+                  : 'Lista de advisors — marca los que definen el Alcance (plataforma o selección).'}
               </p>
             </div>
           </div>
@@ -147,6 +193,20 @@ export default function PerformanceEvaluationPage() {
                 <UserCircleIcon className="h-4 w-4" /> Por Advisor
               </button>
             )}
+            {canSeeLista && (
+              <button
+                type="button"
+                onClick={() => setView('lista')}
+                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition ${
+                  view === 'lista'
+                    ? 'border-indigo-600 text-indigo-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+                }`}
+              >
+                <ListBulletIcon className="h-4 w-4" /> Lista
+                {usingLista && <span className="ml-1 text-[10px] bg-indigo-600 text-white rounded-full px-1.5 py-0.5">{scopeAdvisorIds.length}</span>}
+              </button>
+            )}
           </div>
 
           {/* ─────────────────────────────────────────────────────────────
@@ -158,6 +218,27 @@ export default function PerformanceEvaluationPage() {
                 filterDates={{ startDate: filters.startDate, endDate: filters.endDate, tipo: filters.tipo }}
                 onFilterDatesChange={(patch) => setFilters(f => ({ ...f, ...patch }))}
                 canExport={true}
+                advisorsRaw={advisorsRaw}
+                scopePlataforma={scopePlataforma}
+                setScopePlataforma={setScopePlataforma}
+                scopeAdvisorIds={scopeAdvisorIds}
+                usingLista={usingLista}
+              />
+            </PermissionGuard>
+          )}
+
+          {/* ─────────────────────────────────────────────────────────────
+              LISTA — selección de advisors que define el Alcance
+            ───────────────────────────────────────────────────────────── */}
+          {view === 'lista' && (
+            <PermissionGuard permission={AcademicoPermission.PERFORMANCE_EVAL_LISTA}>
+              <ListaView
+                advisorsRaw={advisorsRaw}
+                isLoading={advisorsQ.isLoading}
+                scopePlataforma={scopePlataforma}
+                setScopePlataforma={setScopePlataforma}
+                scopeAdvisorIds={scopeAdvisorIds}
+                setScopeAdvisorIds={setScopeAdvisorIds}
               />
             </PermissionGuard>
           )}
@@ -165,9 +246,44 @@ export default function PerformanceEvaluationPage() {
           {/* ─────────────────────────────────────────────────────────────
               VISTA GENERAL (la original — sin cambios funcionales)
             ───────────────────────────────────────────────────────────── */}
-          {view === 'general' && (<>
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex-1" />
+          {view === 'general' && (<div className="space-y-5 watermark">
+          <style>{PRINT_CSS}</style>
+          {/* Cabecera SOLO para impresión (logo + alcance + período) */}
+          <div className="print-header items-start justify-between mb-6 pb-4 border-b-2 border-indigo-600">
+            <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="Let's Go Speak" className="h-14 w-auto" />
+              <div>
+                <div className="text-lg font-bold text-gray-900">Performance Evaluation</div>
+                <div className="text-xs text-gray-500">
+                  {alcanceLabel(usingLista, scopeAdvisorIds.length, scopePlataforma)} · {filters.startDate} → {filters.endDate}
+                  {filters.tipo ? ` · ${filters.tipo}` : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between flex-wrap gap-3 no-print">
+            {/* Alcance: plataforma (país del advisor) o lista */}
+            <div className="flex items-end gap-2 flex-wrap">
+              <div>
+                <label htmlFor="pe-plat" className="block text-xs text-gray-500 mb-1">Plataforma</label>
+                <select id="pe-plat" value={scopePlataforma} disabled={usingLista}
+                  onChange={e => setScopePlataforma(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-400">
+                  <option value="">Todas</option>
+                  {PLATAFORMAS.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              {usingLista && (
+                <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 text-sm text-indigo-800">
+                  <ListBulletIcon className="h-4 w-4" />
+                  Lista: {scopeAdvisorIds.length} advisor{scopeAdvisorIds.length === 1 ? '' : 's'}
+                  <button type="button" onClick={() => setView('lista')} className="underline hover:no-underline text-xs">editar</button>
+                  <button type="button" onClick={() => setScopeAdvisorIds([])} className="underline hover:no-underline text-xs text-red-600">limpiar</button>
+                </div>
+              )}
+            </div>
             <div className="flex items-end gap-2 flex-wrap">
               <div>
                 <label htmlFor="pe-start" className="block text-xs text-gray-500 mb-1">Desde</label>
@@ -195,6 +311,13 @@ export default function PerformanceEvaluationPage() {
                 className="inline-flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50">
                 <ArrowPathIcon className="h-4 w-4" />Recargar
               </button>
+              <PermissionGuard permission={AcademicoPermission.PERFORMANCE_EVAL_EXPORTAR}>
+                <button type="button" onClick={handlePrint}
+                  className="inline-flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                  title="Imprimir / PDF. Recomendado: desactiva 'Encabezados y pies de página' en el diálogo de impresión.">
+                  <PrinterIcon className="h-4 w-4" />Imprimir / PDF
+                </button>
+              </PermissionGuard>
               <PermissionGuard permission={AcademicoPermission.PERFORMANCE_EVAL_EXPORTAR}>
                 <button type="button" onClick={handleCSV} disabled={dashQ.isLoading || !full.length}
                   className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
@@ -386,7 +509,7 @@ export default function PerformanceEvaluationPage() {
               </ul>
             )}
           </div>
-          </>)}
+          </div>)}
           {/* fin view === 'general' */}
         </div>
 
@@ -396,6 +519,134 @@ export default function PerformanceEvaluationPage() {
         )}
       </PermissionGuard>
     </DashboardLayout>
+  )
+}
+
+/** Pestaña LISTA — selección de advisors (con casilla) que define el Alcance. */
+function ListaView({
+  advisorsRaw, isLoading, scopePlataforma, setScopePlataforma, scopeAdvisorIds, setScopeAdvisorIds,
+}: {
+  advisorsRaw: any[];
+  isLoading: boolean;
+  scopePlataforma: string;
+  setScopePlataforma: (v: string) => void;
+  scopeAdvisorIds: string[];
+  setScopeAdvisorIds: (v: string[]) => void;
+}) {
+  const [estado, setEstado] = useState<'activos' | 'inactivos' | 'todos'>('todos')
+  const [busca, setBusca] = useState('')
+
+  const visibles = useMemo(() => {
+    let list = advisorsRaw
+    if (scopePlataforma) list = list.filter(a => (a.pais || '').toLowerCase() === scopePlataforma.toLowerCase())
+    if (estado === 'activos') list = list.filter(a => a.activo === true)
+    else if (estado === 'inactivos') list = list.filter(a => a.activo !== true)
+    if (busca.trim()) {
+      const q = busca.trim().toLowerCase()
+      list = list.filter(a => (a.nombre || '').toLowerCase().includes(q))
+    }
+    return list
+  }, [advisorsRaw, scopePlataforma, estado, busca])
+
+  const selectedSet = new Set(scopeAdvisorIds)
+  const visIds = visibles.map(a => a._id)
+  const allVisSelected = visIds.length > 0 && visIds.every(id => selectedSet.has(id))
+
+  const toggle = (id: string) => {
+    const s = new Set(scopeAdvisorIds)
+    if (s.has(id)) s.delete(id); else s.add(id)
+    setScopeAdvisorIds(Array.from(s))
+  }
+  const toggleAllVisibles = () => {
+    const s = new Set(scopeAdvisorIds)
+    if (allVisSelected) visIds.forEach(id => s.delete(id))
+    else visIds.forEach(id => s.add(id))
+    setScopeAdvisorIds(Array.from(s))
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-sm text-indigo-800">
+        Marca advisors para definir el <b>Alcance</b> de Vista General y Por Advisor. Si marcas ≥1, la consulta usa <b>solo esos</b> (ignora la plataforma). Sin marcados, se usa la <b>plataforma</b> elegida (o todos).
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-end gap-2 flex-wrap">
+        <div>
+          <label htmlFor="lst-plat" className="block text-xs text-gray-500 mb-1">Plataforma</label>
+          <select id="lst-plat" value={scopePlataforma} onChange={e => setScopePlataforma(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="">Todas</option>
+            {PLATAFORMAS.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="lst-estado" className="block text-xs text-gray-500 mb-1">Estado</label>
+          <select id="lst-estado" value={estado} onChange={e => setEstado(e.target.value as any)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="todos">Todos</option>
+            <option value="activos">Activos</option>
+            <option value="inactivos">Inactivos</option>
+          </select>
+        </div>
+        <div className="flex-1 min-w-[200px]">
+          <label htmlFor="lst-busca" className="block text-xs text-gray-500 mb-1">Buscar</label>
+          <input id="lst-busca" value={busca} onChange={e => setBusca(e.target.value)}
+            placeholder="Nombre del advisor"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <button type="button" onClick={toggleAllVisibles}
+          className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50">
+          {allVisSelected ? 'Desmarcar visibles' : 'Seleccionar visibles'}
+        </button>
+        <button type="button" onClick={() => setScopeAdvisorIds([])} disabled={!scopeAdvisorIds.length}
+          className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50">
+          Limpiar todo
+        </button>
+      </div>
+
+      <div className="text-sm text-gray-600">
+        {scopeAdvisorIds.length > 0
+          ? <><b className="text-indigo-700">{scopeAdvisorIds.length}</b> advisor(s) seleccionado(s) — el informe usará esta lista.</>
+          : <>Ningún advisor seleccionado — el informe usa {scopePlataforma ? <b>plataforma {scopePlataforma}</b> : <b>todos los advisors</b>}.</>}
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        {isLoading ? <div className="p-6 text-center text-sm text-gray-500">Cargando advisors…</div>
+         : visibles.length === 0 ? <div className="p-6 text-center text-sm text-gray-400">No hay advisors para este filtro.</div>
+         : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-gray-500 border-b border-gray-100 bg-gray-50">
+                <th className="w-10 py-2">
+                  <input type="checkbox" checked={allVisSelected} onChange={toggleAllVisibles} aria-label="Seleccionar visibles" />
+                </th>
+                <th className="text-left font-medium py-2 px-2">Advisor</th>
+                <th className="text-left font-medium py-2 px-2">Plataforma</th>
+                <th className="text-left font-medium py-2 px-2">Estado</th>
+                <th className="text-right font-medium py-2 px-2"># Evals</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibles.map(a => (
+                <tr key={a._id} className={`border-b border-gray-50 last:border-0 hover:bg-gray-50 ${selectedSet.has(a._id) ? 'bg-indigo-50/50' : ''}`}>
+                  <td className="text-center py-2">
+                    <input type="checkbox" checked={selectedSet.has(a._id)} onChange={() => toggle(a._id)} aria-label={`Seleccionar ${a.nombre}`} />
+                  </td>
+                  <td className="py-2 px-2 font-medium text-gray-800">{a.nombre}</td>
+                  <td className="py-2 px-2 text-gray-600">{a.pais || '—'}</td>
+                  <td className="py-2 px-2">
+                    {a.activo === true
+                      ? <span className="text-xs text-emerald-700 bg-emerald-50 rounded px-1.5 py-0.5">Activo</span>
+                      : <span className="text-xs text-gray-500 bg-gray-100 rounded px-1.5 py-0.5">Inactivo</span>}
+                  </td>
+                  <td className="py-2 px-2 text-right text-gray-700">{a.evaluaciones}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -556,40 +807,56 @@ function RadarAdvisorModal({ advisor, onClose }: { advisor: any; onClose: () => 
    ═══════════════════════════════════════════════════════════════════════ */
 function ByAdvisorView({
   filterDates, onFilterDatesChange, canExport,
+  advisorsRaw, scopePlataforma, setScopePlataforma, scopeAdvisorIds, usingLista,
 }: {
   filterDates: { startDate: string; endDate: string; tipo: string };
   onFilterDatesChange: (patch: Partial<{ startDate: string; endDate: string; tipo: string }>) => void;
   canExport: boolean;
+  advisorsRaw: any[];
+  scopePlataforma: string;
+  setScopePlataforma: (v: string) => void;
+  scopeAdvisorIds: string[];
+  usingLista: boolean;
 }) {
   const [advisorFilter, setAdvisorFilter] = useState<'activos' | 'inactivos' | 'todos'>('activos')
   const [advisorId, setAdvisorId] = useState<string>('')
 
-  const advisorsQ = useAdvisorsWithEvaluations()
-  const advisorsRaw: any[] = advisorsQ.data?.advisors ?? []
+  // Alcance para las consultas (modos excluyentes): lista o plataforma.
+  const scopeParams = usingLista
+    ? { advisorIds: scopeAdvisorIds.join(','), plataforma: null as string | null }
+    : { advisorIds: null as string | null, plataforma: scopePlataforma || null }
 
+  // El dropdown de advisor se LIMITA al alcance (lista o plataforma) + estado.
   const advisorsList = useMemo(() => {
-    if (advisorFilter === 'activos')   return advisorsRaw.filter(a => a.activo === true)
-    if (advisorFilter === 'inactivos') return advisorsRaw.filter(a => a.activo !== true)
-    return advisorsRaw
-  }, [advisorsRaw, advisorFilter])
+    let list = advisorsRaw
+    if (usingLista) {
+      const set = new Set(scopeAdvisorIds)
+      list = list.filter(a => set.has(a._id))
+    } else if (scopePlataforma) {
+      list = list.filter(a => (a.pais || '').toLowerCase() === scopePlataforma.toLowerCase())
+    }
+    if (advisorFilter === 'activos')   return list.filter(a => a.activo === true)
+    if (advisorFilter === 'inactivos') return list.filter(a => a.activo !== true)
+    return list
+  }, [advisorsRaw, advisorFilter, usingLista, scopeAdvisorIds, scopePlataforma])
 
-  // Si el advisor seleccionado se sale del set por cambio de filtro, lo limpio.
+  // Si el advisor seleccionado se sale del set por cambio de filtro/alcance, lo limpio.
   useEffect(() => {
     if (advisorId && !advisorsList.some(a => a._id === advisorId)) {
       setAdvisorId('')
     }
   }, [advisorId, advisorsList])
 
-  // Stats del advisor + stats del promedio general (sin filtro de advisor)
-  // mismas fechas + mismo tipo para que la comparación sea justa.
+  // Stats del advisor + stats del promedio general DENTRO del alcance
+  // (mismas fechas + tipo + alcance) para que la comparación sea justa.
   const baseFilters = {
     startDate: filterDates.startDate || null,
     endDate:   filterDates.endDate || null,
     tipo:      filterDates.tipo || null,
-    nivel: null, plataforma: null, comentarioSearch: null,
+    nivel: null as string | null, comentarioSearch: null as string | null,
   }
-  const advisorStatsQ = usePerformanceDashboard({ ...baseFilters, advisorId: advisorId || null })
-  const generalStatsQ = usePerformanceDashboard({ ...baseFilters, advisorId: null })
+  const advisorStatsQ = usePerformanceDashboard({ ...baseFilters, plataforma: null, advisorIds: null, advisorId: advisorId || null })
+  const generalStatsQ = usePerformanceDashboard({ ...baseFilters, ...scopeParams, advisorId: null })
 
   const advData: any = advisorStatsQ.data
   const genData: any = generalStatsQ.data
@@ -707,6 +974,16 @@ function ByAdvisorView({
           </select>
         </div>
         <div>
+          <label htmlFor="bya-plat" className="block text-xs text-gray-500 mb-1">Plataforma</label>
+          <select id="bya-plat" value={scopePlataforma} disabled={usingLista}
+            onChange={e => setScopePlataforma(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-400"
+            title={usingLista ? 'Hay una lista activa: se ignora la plataforma. Límpiala en la pestaña Lista.' : ''}>
+            <option value="">Todas</option>
+            {PLATAFORMAS.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+        <div>
           <label htmlFor="bya-status" className="block text-xs text-gray-500 mb-1">Estado advisor</label>
           <select id="bya-status" value={advisorFilter}
             onChange={e => setAdvisorFilter(e.target.value as 'activos' | 'inactivos' | 'todos')}
@@ -716,6 +993,13 @@ function ByAdvisorView({
             <option value="todos">Todos</option>
           </select>
         </div>
+        {usingLista && (
+          <div className="flex items-end">
+            <div className="flex items-center gap-1 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 text-xs text-indigo-800">
+              <ListBulletIcon className="h-4 w-4" /> Lista: {scopeAdvisorIds.length}
+            </div>
+          </div>
+        )}
         <div className="flex-1 min-w-[260px]">
           <label htmlFor="bya-advisor" className="block text-xs text-gray-500 mb-1">
             Advisor <span className="text-gray-400">({advisorsList.length} disponibles)</span>

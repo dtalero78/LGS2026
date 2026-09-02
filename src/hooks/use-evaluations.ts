@@ -44,7 +44,7 @@ export function useEvaluarMutation() {
 /** Dashboard admin de Performance Evaluation. */
 export function usePerformanceDashboard(filters: {
   startDate?: string | null; endDate?: string | null;
-  advisorId?: string | null; nivel?: string | null;
+  advisorId?: string | null; advisorIds?: string | null; nivel?: string | null;
   tipo?: string | null; plataforma?: string | null;
   comentarioSearch?: string | null;
 }) {

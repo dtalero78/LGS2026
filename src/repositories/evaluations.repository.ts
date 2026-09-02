@@ -116,6 +116,7 @@ class EvaluationsRepositoryClass extends BaseRepository {
     startDate?: string | null;
     endDate?: string | null;
     advisorId?: string | null;
+    advisorIds?: string[] | null;
     nivel?: string | null;
     tipo?: string | null;
     plataforma?: string | null;
@@ -127,9 +128,15 @@ class EvaluationsRepositoryClass extends BaseRepository {
     if (opts.startDate) { conds.push(`"fechaEvento" >= $${i}::date`);    params.push(opts.startDate); i++; }
     if (opts.endDate)   { conds.push(`"fechaEvento" <= $${i}::date`);    params.push(opts.endDate);   i++; }
     if (opts.advisorId) { conds.push(`"advisorId" = $${i}`);             params.push(opts.advisorId); i++; }
+    // Lista de advisors seleccionados (pestaña "Lista"): filtra por ese conjunto.
+    if (opts.advisorIds && opts.advisorIds.length) {
+      conds.push(`"advisorId" = ANY($${i}::text[])`); params.push(opts.advisorIds); i++;
+    }
     if (opts.nivel)     { conds.push(`"nivel" = $${i}`);                  params.push(opts.nivel);     i++; }
     if (opts.tipo)      { conds.push(`"tipo" = $${i}`);                   params.push(opts.tipo);      i++; }
-    if (opts.plataforma){ conds.push(`"plataforma" = $${i}`);             params.push(opts.plataforma); i++; }
+    // "plataforma" = país del ADVISOR (advisor.pais), no la del alumno: coherente
+    // con la pestaña Lista, que filtra advisors por su país.
+    if (opts.plataforma){ conds.push(`"advisorId" IN (SELECT "_id" FROM "ADVISORS" WHERE LOWER("pais") = LOWER($${i}))`); params.push(opts.plataforma); i++; }
     if (opts.comentarioSearch && opts.comentarioSearch.trim()) {
       conds.push(`"comentario" ILIKE $${i}`);
       params.push(`%${opts.comentarioSearch.trim()}%`);

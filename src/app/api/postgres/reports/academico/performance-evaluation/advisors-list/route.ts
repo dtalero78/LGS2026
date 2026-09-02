@@ -19,11 +19,14 @@ import { AcademicoPermission } from '@/types/permissions';
 import { queryMany } from '@/lib/postgres';
 
 export const GET = handlerWithAuth(async (_req, _ctx, session) => {
-  await requirePermission(session, AcademicoPermission.PERFORMANCE_EVAL_POR_ADVISOR);
+  // Base VER: lo consumen la pestaña "Por Advisor" y la pestaña "Lista".
+  // Devuelve solo nombres/país/conteo (los nombres ya se ven en los rankings).
+  await requirePermission(session, AcademicoPermission.PERFORMANCE_EVAL_VER);
 
   const rows = await queryMany<{
     _id: string;
     nombre: string | null;
+    pais: string | null;
     activo: boolean | null;
     evaluaciones: number;
   }>(`
@@ -32,11 +35,12 @@ export const GET = handlerWithAuth(async (_req, _ctx, session) => {
       COALESCE(a."nombreCompleto",
                NULLIF(TRIM(COALESCE(a."primerNombre",'') || ' ' || COALESCE(a."primerApellido",'')), ''),
                a."email") AS "nombre",
+      a."pais",
       a."activo",
       COUNT(e.*)::int AS "evaluaciones"
     FROM "ADVISORS" a
     INNER JOIN "ACADEMICA_BOOKING_EVALUATIONS" e ON e."advisorId" = a."_id"
-    GROUP BY a."_id", a."nombreCompleto", a."primerNombre", a."primerApellido", a."email", a."activo"
+    GROUP BY a."_id", a."nombreCompleto", a."primerNombre", a."primerApellido", a."email", a."pais", a."activo"
     ORDER BY "nombre" ASC NULLS LAST
   `);
 

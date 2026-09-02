@@ -225,6 +225,7 @@ export async function getDashboardStats(opts: {
   startDate?: string | null;
   endDate?: string | null;
   advisorId?: string | null;
+  advisorIds?: string[] | null;
   nivel?: string | null;
   tipo?: string | null;
   plataforma?: string | null;
