@@ -19,6 +19,13 @@ const cron = require('node-cron');
 const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'https://lgs-plataforma.com';
 const CRON_SECRET = process.env.CRON_SECRET;
 
+// Interruptor solo para la corrida automatica de sence-envio-avance (23:00 Chile).
+// Default 'true' (comportamiento actual, sin cambios). Poner SENCE_CRON_ENABLED=false
+// como env var del worker "cron-worker" en Digital Ocean para que el cron programado
+// NO dispare el POST/GET real esta noche, sin tocar el endpoint HTTP (se sigue pudiendo
+// invocar a mano para pruebas manuales).
+const SENCE_CRON_ENABLED = process.env.SENCE_CRON_ENABLED !== 'false';
+
 /**
  * Obtiene timestamp en zona horaria local del sistema
  */
@@ -176,7 +183,13 @@ cron.schedule('0 4 * * *', executeExpireContracts, {
 // Envio de avance SENCE: Diariamente a las 23:00 hora Chile (dentro de la
 // ventana 22:00-00:00 que exige el instructivo). Unica tarea con timezone
 // distinta a UTC porque el requisito de SENCE esta expresado en hora Chile.
-cron.schedule('0 23 * * *', executeSenceEnvioAvance, {
+cron.schedule('0 23 * * *', () => {
+  if (!SENCE_CRON_ENABLED) {
+    console.log(`\n[${getLocalTimestamp()}] sence-envio-avance OMITIDO (SENCE_CRON_ENABLED=false)`);
+    return;
+  }
+  executeSenceEnvioAvance();
+}, {
   scheduled: true,
   timezone: 'America/Santiago'
 });
@@ -185,7 +198,7 @@ console.log('Tareas programadas:');
 console.log('   - reconcile-pegados: Diariamente a las 02:00 UTC (9:00 PM Colombia)');
 console.log('   - reactivate-onhold: Diariamente a las 03:00 UTC (10:00 PM Colombia)');
 console.log('   - expire-contracts: Diariamente a las 04:00 UTC (11:00 PM Colombia)');
-console.log('   - sence-envio-avance: Diariamente a las 23:00 hora Chile (America/Santiago)');
+console.log(`   - sence-envio-avance: Diariamente a las 23:00 hora Chile (America/Santiago) [${SENCE_CRON_ENABLED ? 'ACTIVO' : 'SILENCIADO via SENCE_CRON_ENABLED=false'}]`);
 
 // Ejecutar inmediatamente si se pasa el argumento --run-now
 if (process.argv.includes('--run-now')) {
