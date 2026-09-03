@@ -109,7 +109,7 @@ async function obtenerCursosParaEnviar(): Promise<SenceCursoEnvio[]> {
           codigoModulo: 'lgs-course',
           tiempoConectividad: 0,
           estado,
-          porcentajeAvance,
+          porcentajeAvance: 100,
           fechaInicio,
           fechaFin,
           listaActividades,

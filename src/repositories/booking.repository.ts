@@ -739,6 +739,7 @@ class BookingRepositoryClass extends BaseRepository {
       createdDate: string;
       asistio: boolean | null;
       asistencia: boolean | null;
+      participacion: boolean | null;
       noAprobo: boolean | null;
     }>(
       `SELECT
@@ -752,6 +753,7 @@ class BookingRepositoryClass extends BaseRepository {
          ab."_createdDate" as "createdDate",
          ab."asistio",
          ab."asistencia",
+         ab."participacion",
          ab."noAprobo"
        FROM "ACADEMICA_BOOKINGS" ab
        LEFT JOIN "CALENDARIO" c ON (ab."eventoId" = c."_id" OR ab."idEvento" = c."_id")
@@ -787,7 +789,10 @@ class BookingRepositoryClass extends BaseRepository {
       { academicaId: string; numeroId: string; senceCode: string; nivel: string; step: string }
     >();
     for (const row of ultimoPorAlumnoStep.values()) {
-      const aprobado = (row.asistio === true || row.asistencia === true) && row.noAprobo !== true;
+      const aprobado =
+        (row.asistio === true || row.asistencia === true) &&
+        row.participacion === true &&
+        row.noAprobo !== true;
       if (!aprobado) continue;
       candidatosPorAlumno.set(row.academicaId, {
         academicaId: row.academicaId,
