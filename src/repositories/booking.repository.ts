@@ -712,26 +712,47 @@ class BookingRepositoryClass extends BaseRepository {
 
   /**
    * Alumnos SENCE (ACADEMICA.sence=true, con senceCode) que tuvieron un avance
-   * de Jump Step (múltiplo de 5, asistencia exitosa, no reprobado) en un
-   * booking cuyo evento cae dentro del día `targetDate` (YYYY-MM-DD) en la
-   * zona horaria `tz`. Usado por el cron de envío nocturno de avance a SENCE
-   * — 1 fila por alumno (DISTINCT ON), con su step/nivel ACTUAL en ACADEMICA
-   * para calcular el % de avance acumulado (no solo el jump aprobado ese día).
+   * de Jump Step (múltiplo de 5) en un booking cuyo evento cae dentro del
+   * día `targetDate` (YYYY-MM-DD) en la zona horaria `tz`. Usado por el
+   * cron de envío nocturno de avance a SENCE — 1 fila por alumno, con su
+   * step/nivel ACTUAL en ACADEMICA para calcular el % de avance acumulado
+   * (no solo el jump aprobado ese día).
+   *
+   * Un alumno puede tener varios bookings del MISMO jump step el mismo día
+   * (reagendó tras faltar, reprobó y lo repitió, etc.), así que la query
+   * NO filtra por asistencia/aprobación a nivel de fila: trae todos los
+   * bookings no cancelados del día por (alumno, step) y el filtrado de
+   * "¿el ÚLTIMO intento fue aprobado?" se resuelve en código, quedándose
+   * con el booking más reciente de cada (academicaId, step) — así un
+   * intento fallido/sin asistir anterior el mismo día no puede "tapar" un
+   * intento posterior aprobado, ni viceversa.
    */
   async findSenceAvanceCandidates(targetDate: string, tz: string = 'America/Santiago') {
-    return queryMany<{
+    const rows = await queryMany<{
       academicaId: string;
       numeroId: string;
       senceCode: string;
       nivel: string;
       step: string;
+      stepNumber: number;
+      eventDia: string;
+      createdDate: string;
+      asistio: boolean | null;
+      asistencia: boolean | null;
+      noAprobo: boolean | null;
     }>(
-      `SELECT DISTINCT ON (a."_id")
+      `SELECT
          a."_id" as "academicaId",
          a."numeroId",
          a."senceCode",
          a."nivel",
-         a."step"
+         a."step",
+         NULLIF(REGEXP_REPLACE(COALESCE(c."step", ab."step", ''), '[^0-9]', '', 'g'), '')::int as "stepNumber",
+         COALESCE(c."dia", ab."fechaEvento") as "eventDia",
+         ab."_createdDate" as "createdDate",
+         ab."asistio",
+         ab."asistencia",
+         ab."noAprobo"
        FROM "ACADEMICA_BOOKINGS" ab
        LEFT JOIN "CALENDARIO" c ON (ab."eventoId" = c."_id" OR ab."idEvento" = c."_id")
        INNER JOIN "ACADEMICA" a ON (ab."studentId" = a."_id" OR ab."idEstudiante" = a."_id")
@@ -740,13 +761,44 @@ class BookingRepositoryClass extends BaseRepository {
          AND COALESCE(c."dia", ab."fechaEvento") >= ($1::date)::timestamp AT TIME ZONE $2
          AND COALESCE(c."dia", ab."fechaEvento") < ($1::date + INTERVAL '1 day')::timestamp AT TIME ZONE $2
          AND (ab."cancelo" IS NULL OR ab."cancelo" = false)
-         AND (ab."asistio" IS TRUE OR ab."asistencia" IS TRUE)
-         AND (ab."noAprobo" IS NULL OR ab."noAprobo" = false)
          AND NULLIF(REGEXP_REPLACE(COALESCE(c."step", ab."step", ''), '[^0-9]', '', 'g'), '')::int BETWEEN 5 AND 45
-         AND NULLIF(REGEXP_REPLACE(COALESCE(c."step", ab."step", ''), '[^0-9]', '', 'g'), '')::int % 5 = 0
-       ORDER BY a."_id"`,
+         AND NULLIF(REGEXP_REPLACE(COALESCE(c."step", ab."step", ''), '[^0-9]', '', 'g'), '')::int % 5 = 0`,
       [targetDate, tz]
     );
+
+    // Último booking (por fecha de evento, desempatado por _createdDate) de
+    // cada (alumno, step) del día — solo ese intento decide si hubo avance.
+    const ultimoPorAlumnoStep = new Map<string, (typeof rows)[number]>();
+    for (const row of rows) {
+      const key = `${row.academicaId}::${row.stepNumber}`;
+      const previo = ultimoPorAlumnoStep.get(key);
+      if (
+        !previo ||
+        new Date(row.eventDia).getTime() > new Date(previo.eventDia).getTime() ||
+        (new Date(row.eventDia).getTime() === new Date(previo.eventDia).getTime() &&
+          new Date(row.createdDate).getTime() > new Date(previo.createdDate).getTime())
+      ) {
+        ultimoPorAlumnoStep.set(key, row);
+      }
+    }
+
+    const candidatosPorAlumno = new Map<
+      string,
+      { academicaId: string; numeroId: string; senceCode: string; nivel: string; step: string }
+    >();
+    for (const row of ultimoPorAlumnoStep.values()) {
+      const aprobado = (row.asistio === true || row.asistencia === true) && row.noAprobo !== true;
+      if (!aprobado) continue;
+      candidatosPorAlumno.set(row.academicaId, {
+        academicaId: row.academicaId,
+        numeroId: row.numeroId,
+        senceCode: row.senceCode,
+        nivel: row.nivel,
+        step: row.step,
+      });
+    }
+
+    return Array.from(candidatosPorAlumno.values());
   }
 
   /**
