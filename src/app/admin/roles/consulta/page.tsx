@@ -8,6 +8,7 @@ import { exportToExcel } from '@/lib/export-excel'
 import { ArrowDownTrayIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
 interface UserRow {
+  _id: string
   email: string
   nombre: string | null
   apellido: string | null
@@ -28,6 +29,7 @@ function ConsultaUserRol() {
   const [loading, setLoading] = useState(false)
   const [showClaves, setShowClaves] = useState(false)
   const [error, setError] = useState('')
+  const [savingId, setSavingId] = useState<string | null>(null)
 
   // Cargar roles (para el dropdown) al montar.
   useEffect(() => {
@@ -59,6 +61,36 @@ function ConsultaUserRol() {
   }, [rol, debouncedSearch])
 
   const nombreCompleto = (u: UserRow) => [u.nombre, u.apellido].filter(Boolean).join(' ').trim()
+
+  // Activar / desactivar la cuenta de acceso (USUARIOS_ROLES.activo). Desactivar
+  // BLOQUEA el login de esa cuenta. Pide confirmación y actualiza la fila en vivo.
+  const toggleActivo = async (u: UserRow) => {
+    const isActive = u.activo !== false
+    const next = !isActive
+    const msg = next
+      ? `¿ACTIVAR la cuenta ${u.email}?`
+      : `¿DESACTIVAR la cuenta ${u.email}?\n\nEsto BLOQUEA su login Y le cambia la clave por una nueva.`
+    if (!confirm(msg)) return
+    setSavingId(u._id)
+    try {
+      const res = await fetch('/api/postgres/users/consulta', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: u._id, activo: next }),
+      })
+      const d = await res.json()
+      if (!res.ok || !d?.success) throw new Error(d?.error || `Error ${res.status}`)
+      setUsers(prev => prev.map(x => (x._id === u._id ? { ...x, activo: d.activo, password: d.password ?? x.password } : x)))
+      if (!next && d.password) {
+        setShowClaves(true)
+        alert(`Cuenta desactivada. Nueva clave: ${d.password}`)
+      }
+    } catch (e: any) {
+      alert(e?.message || 'No se pudo cambiar el estado')
+    } finally {
+      setSavingId(null)
+    }
+  }
 
   const exportar = () => {
     exportToExcel<UserRow>(
@@ -167,7 +199,21 @@ function ConsultaUserRol() {
                     <td className="px-4 py-2 font-mono text-xs">{showClaves ? (u.password || '—') : '••••••••'}</td>
                     <td className="px-4 py-2"><span className="inline-block px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-xs">{u.rol}</span></td>
                     <td className="px-4 py-2">{u.plataforma || '—'}</td>
-                    <td className="px-4 py-2">{u.activo === false ? <span className="text-red-600">No</span> : <span className="text-green-600">Sí</span>}</td>
+                    <td className="px-4 py-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleActivo(u)}
+                        disabled={savingId === u._id}
+                        title={u.activo === false ? 'Clic para ACTIVAR la cuenta' : 'Clic para DESACTIVAR (bloquea login y cambia la clave)'}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border transition disabled:opacity-50 ${
+                          u.activo === false
+                            ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                            : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                        }`}
+                      >
+                        {savingId === u._id ? '…' : (u.activo === false ? 'No' : 'Sí')}
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {users.length === 0 && (

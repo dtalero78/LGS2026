@@ -2,7 +2,9 @@ import { NextRequest } from 'next/server';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { requirePermission } from '@/lib/api-permissions';
 import { MantenimientoPermission } from '@/types/permissions';
-import { queryMany } from '@/lib/postgres';
+import { ValidationError, NotFoundError } from '@/lib/errors';
+import { queryMany, query } from '@/lib/postgres';
+import { generateTempPassword } from '@/lib/gen-password';
 
 /**
  * GET /api/postgres/users/consulta?rol=&search=
@@ -45,7 +47,7 @@ export const GET = handlerWithAuth(async (request: NextRequest, _ctx, session) =
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
   const users = await queryMany(
-    `SELECT "email", "nombre", "apellido", "celular", "numberid", "password", "rol", "plataforma", "activo"
+    `SELECT "_id", "email", "nombre", "apellido", "celular", "numberid", "password", "rol", "plataforma", "activo"
        FROM "USUARIOS_ROLES"
        ${where}
       ORDER BY "nombre" NULLS LAST, "apellido" NULLS LAST
@@ -54,4 +56,37 @@ export const GET = handlerWithAuth(async (request: NextRequest, _ctx, session) =
   );
 
   return successResponse({ users });
+});
+
+/**
+ * PATCH /api/postgres/users/consulta — activa/desactiva la cuenta de acceso.
+ *   body { id: USUARIOS_ROLES._id, activo: boolean }
+ * `activo=false` BLOQUEA el login de esa cuenta y ADEMÁS le cambia la clave por
+ * una nueva (invalida la anterior). `activo=true` solo reactiva (no toca la clave).
+ * La nueva clave se devuelve para mostrarla en la consulta. Gateado por CREAR_ROL.
+ */
+export const PATCH = handlerWithAuth(async (request: NextRequest, _ctx, session) => {
+  await requirePermission(session, MantenimientoPermission.CREAR_ROL);
+
+  const body = await request.json().catch(() => ({}));
+  const id = typeof body?.id === 'string' ? body.id.trim() : '';
+  if (!id) throw new ValidationError('id requerido');
+  if (typeof body?.activo !== 'boolean') throw new ValidationError('activo debe ser booleano');
+
+  // Al DESACTIVAR: además de activo=false, se genera una clave nueva (la anterior
+  // deja de servir). Al ACTIVAR: solo se reactiva, la clave no se toca.
+  const res = body.activo === false
+    ? await query<{ email: string; activo: boolean; password: string }>(
+        `UPDATE "USUARIOS_ROLES" SET "activo" = false, "password" = $1 WHERE "_id" = $2
+         RETURNING "email", "activo", "password"`,
+        [generateTempPassword(), id],
+      )
+    : await query<{ email: string; activo: boolean; password: string }>(
+        `UPDATE "USUARIOS_ROLES" SET "activo" = true WHERE "_id" = $1
+         RETURNING "email", "activo", "password"`,
+        [id],
+      );
+  if (!res.rowCount) throw new NotFoundError('Usuario', id);
+
+  return successResponse({ email: res.rows[0].email, activo: res.rows[0].activo, password: res.rows[0].password });
 });
