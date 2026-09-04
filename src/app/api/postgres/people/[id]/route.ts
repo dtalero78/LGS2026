@@ -264,11 +264,52 @@ export const PATCH = handlerWithAuth(async (
     aprobacion: string | null;
     estado: string | null;
     contrato: string | null;
+    inicioContrato: string | null;
+    fechaContrato: string | null;
   }>(
-    `SELECT "email", "numeroId", "tipoUsuario", "aprobacion", "estado", "contrato" FROM "PEOPLE" WHERE "_id" = $1`,
+    `SELECT "email", "numeroId", "tipoUsuario", "aprobacion", "estado", "contrato", "inicioContrato", "fechaContrato" FROM "PEOPLE" WHERE "_id" = $1`,
     [personId]
   );
   if (!currentPerson) throw new NotFoundError('Person', personId);
+
+  // ── Aprobado → Pendiente: solo si el contrato está FRESCO ──
+  // Regla (bloqueo con OR): solo se permite revertir a "Pendiente" si el contrato
+  // sigue DENTRO del mes desde el inicio del contrato Y TODOS los beneficiarios
+  // están en WELCOME o sin nivel. Basta que UNA condición falle (mes cumplido O
+  // algún beneficiario avanzó de WELCOME) para BLOQUEAR el cambio.
+  // Base de la ventana: `inicioContrato` (firma) con fallback a `fechaContrato`
+  // (contratos POSTGRES aprobados por admin sin firma OTP no tienen inicioContrato).
+  if (body.aprobacion === 'Pendiente' && currentPerson.aprobacion === 'Aprobado' && currentPerson.tipoUsuario === 'TITULAR') {
+    const baseFecha = currentPerson.inicioContrato || currentPerson.fechaContrato;
+    const inicio = baseFecha ? new Date(baseFecha) : null;
+    let dentroDelMes = false;
+    if (inicio && !Number.isNaN(inicio.getTime())) {
+      const limite = new Date(inicio.getTime());
+      limite.setMonth(limite.getMonth() + 1);
+      dentroDelMes = Date.now() < limite.getTime();
+    }
+    let benefProgreso = 0;
+    if (currentPerson.contrato) {
+      const row = await queryOne<{ count: string }>(
+        `SELECT COUNT(*)::text AS count
+           FROM "ACADEMICA" a
+           JOIN "PEOPLE" p ON p."numeroId" = a."numeroId" AND p."tipoUsuario" = 'BENEFICIARIO'
+          WHERE p."contrato" = $1
+            AND a."nivel" IS NOT NULL AND TRIM(a."nivel") <> '' AND UPPER(TRIM(a."nivel")) <> 'WELCOME'`,
+        [currentPerson.contrato]
+      );
+      benefProgreso = parseInt(row?.count ?? '0', 10) || 0;
+    }
+    if (!dentroDelMes || benefProgreso > 0) {
+      const motivos: string[] = [];
+      if (!dentroDelMes) motivos.push('ya pasó un mes desde el inicio del contrato');
+      if (benefProgreso > 0) motivos.push(`${benefProgreso} beneficiario(s) ya avanzaron de WELCOME`);
+      throw new ValidationError(
+        `No se puede pasar a "Pendiente": ${motivos.join(' y ')}. ` +
+        `Solo se puede revertir mientras el contrato esté dentro del mes de inicio y los beneficiarios sigan en WELCOME o sin nivel.`
+      );
+    }
+  }
 
   // ── Validación de cambio de aprobación ──
   // Una vez aprobado un contrato:
@@ -431,6 +472,21 @@ export const PATCH = handlerWithAuth(async (
     beneficiariesInactivated = inactiveResult.rowCount || 0;
 
     console.log(`🔴 [PostgreSQL People] Estado "${body.aprobacion}" → ANULADO: titular + ${beneficiariesInactivated} beneficiarios`);
+  }
+
+  // Aprobado → Pendiente: BLOQUEA SOLO el login de los beneficiarios (activo=false
+  // en USUARIOS_ROLES). El titular NO se toca y NADIE se inactiva en PEOPLE/ACADEMICA.
+  // Es reversible: al re-aprobar (/approve) se reactiva el login de los beneficiarios.
+  if (body.aprobacion === 'Pendiente' && currentPerson.aprobacion === 'Aprobado' && parsedPerson.contrato) {
+    const r = await query(
+      `UPDATE "USUARIOS_ROLES" SET "activo" = false
+        WHERE LOWER("email") IN (
+          SELECT LOWER("email") FROM "PEOPLE"
+           WHERE "contrato" = $1 AND "tipoUsuario" = 'BENEFICIARIO' AND "email" IS NOT NULL
+        )`,
+      [parsedPerson.contrato]
+    );
+    console.log(`🔒 [PostgreSQL People] Aprobado→Pendiente: login bloqueado de ${r.rowCount || 0} beneficiario(s)`);
   }
 
   console.log('✅ [PostgreSQL People] Person updated successfully');

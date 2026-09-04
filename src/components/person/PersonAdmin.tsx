@@ -147,6 +147,32 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
   // Estados post-aprobación que requieren confirmación simple (sin bloqueo)
   const SIMPLE_CONFIRM_POST_APPROVAL = ['Pendiente', 'Retractado']
 
+  // ── Regla "Aprobado → Pendiente" (revertir la aprobación) ──
+  // Solo se permite mientras el contrato esté FRESCO. Bloqueo con OR: si ya pasó
+  // un mes desde el inicio del contrato O algún beneficiario ya avanzó de WELCOME,
+  // el cambio a "Pendiente" queda deshabilitado. El backend valida lo mismo.
+  const baseFechaContrato = person.inicioContrato || person.fechaContrato || null
+  const dentroDelMesContrato = (() => {
+    if (!baseFechaContrato) return false
+    const inicio = new Date(baseFechaContrato)
+    if (Number.isNaN(inicio.getTime())) return false
+    const limite = new Date(inicio.getTime())
+    limite.setMonth(limite.getMonth() + 1)
+    return Date.now() < limite.getTime()
+  })()
+  // ¿Algún beneficiario avanzó de WELCOME? (nivel real en ACADEMICA ≠ WELCOME y no vacío)
+  const algunBeneficiarioAvanzo = currentBeneficiaries.some(b => {
+    const nivel = (b.academicaNivel ?? b.nivel ?? '').toString().trim().toUpperCase()
+    return nivel !== '' && nivel !== 'WELCOME'
+  })
+  const puedePendiente = dentroDelMesContrato && !algunBeneficiarioAvanzo
+  const motivoBloqueoPendiente = (() => {
+    const motivos: string[] = []
+    if (!dentroDelMesContrato) motivos.push('ya pasó un mes desde el inicio del contrato')
+    if (algunBeneficiarioAvanzo) motivos.push('algún beneficiario ya avanzó de WELCOME')
+    return motivos.join(' y ')
+  })()
+
   const handleApproveSpecificBeneficiary = async (beneficiaryId: string) => {
     if (!beneficiaryId) return
 
@@ -226,6 +252,18 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         `Usa "Retractado" si necesitas anular el contrato post-aprobación.`
       )
       // Volver a sincronizar el dropdown con el estado real
+      setSelectedEstado(originalEstado as any)
+      return
+    }
+
+    // Bloqueo client-side: revertir Aprobado → Pendiente solo con contrato FRESCO
+    // (dentro del mes de inicio Y todos los beneficiarios aún en WELCOME/sin nivel).
+    if (originalEstado === 'Aprobado' && newEstado === 'Pendiente' && !puedePendiente) {
+      alert(
+        `No se puede pasar a "Pendiente": ${motivoBloqueoPendiente}.\n\n` +
+        `Revertir la aprobación solo es posible mientras el contrato esté dentro del mes ` +
+        `de inicio y los beneficiarios sigan en WELCOME o sin nivel.`
+      )
       setSelectedEstado(originalEstado as any)
       return
     }
@@ -894,17 +932,23 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                       // Contrato de prueba: no se puede aprobar.
                       !(esContratoDePrueba && estado === 'Aprobado')
                     )
-                    .map((estado) => (
-                      <option key={estado} value={estado}>
-                        {estado === 'Aprobado' && '✅ '}
-                        {estado === 'Contrato nulo' && '⚪ '}
-                        {estado === 'Devuelto' && '🔄 '}
-                        {estado === 'Pendiente' && '⏳ '}
-                        {estado === 'Rechazado' && '❌ '}
-                        {estado === 'Retractado' && '↩️ '}
-                        {estado}
-                      </option>
-                    ))}
+                    .map((estado) => {
+                      // Revertir Aprobado → Pendiente solo con contrato fresco.
+                      const pendienteBloqueado =
+                        originalEstado === 'Aprobado' && estado === 'Pendiente' && !puedePendiente
+                      return (
+                        <option key={estado} value={estado} disabled={pendienteBloqueado}>
+                          {estado === 'Aprobado' && '✅ '}
+                          {estado === 'Contrato nulo' && '⚪ '}
+                          {estado === 'Devuelto' && '🔄 '}
+                          {estado === 'Pendiente' && '⏳ '}
+                          {estado === 'Rechazado' && '❌ '}
+                          {estado === 'Retractado' && '↩️ '}
+                          {estado}
+                          {pendienteBloqueado && ' (bloqueado)'}
+                        </option>
+                      )
+                    })}
                 </select>
               </div>
               <div className="flex items-center">
@@ -1703,6 +1747,15 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                 </span>
                 ?
               </p>
+              {originalEstado === 'Aprobado' && pendingEstado === 'Pendiente' && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-xs text-red-800">
+                  <strong>🔒 Se bloqueará el login de los beneficiarios.</strong> Pasar a{' '}
+                  <strong>Pendiente</strong> deja a{' '}
+                  <strong>{currentBeneficiaries.length}</strong> beneficiario(s) sin acceso a la
+                  plataforma (el titular no se ve afectado). Es reversible: al volver a{' '}
+                  <strong>Aprobado</strong> se reactiva su acceso.
+                </div>
+              )}
               {originalEstado === 'Aprobado' && SIMPLE_CONFIRM_POST_APPROVAL.includes(pendingEstado) && (
                 <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
                   <strong>⚠ Atención:</strong> el contrato ya está <strong>Aprobado</strong>.
