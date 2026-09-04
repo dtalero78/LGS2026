@@ -714,16 +714,17 @@ function BusquedaComentarioView({
   }, [advisorsRaw, advisorFilter, usingLista, scopeAdvisorIds, scopePlataforma])
 
   useEffect(() => {
-    if (advisorId && !advisorsList.some(a => a._id === advisorId)) setAdvisorId('')
+    if (advisorId && advisorId !== '__ALL__' && !advisorsList.some(a => a._id === advisorId)) setAdvisorId('')
   }, [advisorId, advisorsList])
 
-  const q = useComentariosBusqueda({
-    advisorId: advisorId || null,
-    startDate: startDate || null,
-    endDate:   endDate || null,
-    tipo:      tipo || null,
-    tope,
-  })
+  // "__ALL__" = Todos los advisors del alcance actual (plataforma/lista/estado).
+  const isAll = advisorId === '__ALL__'
+  const q = useComentariosBusqueda(
+    isAll
+      ? { advisorIds: advisorsList.map(a => a._id).join(','), startDate: startDate || null, endDate: endDate || null, tipo: tipo || null, tope }
+      : { advisorId: advisorId || null, startDate: startDate || null, endDate: endDate || null, tipo: tipo || null, tope },
+    isAll ? advisorsList.length > 0 : !!advisorId,
+  )
   const rows: any[] = q.data?.comentarios ?? []
   const advisorSelected = advisorsList.find(a => a._id === advisorId)
 
@@ -732,6 +733,7 @@ function BusquedaComentarioView({
     exportToExcel(rows, [
       { header: 'Promedio',   accessor: (r: any) => r.promedio },
       { header: 'Fecha',      accessor: (r: any) => r.fechaEvento ? new Date(r.fechaEvento).toLocaleDateString('es-ES') : '' },
+      { header: 'Advisor',    accessor: (r: any) => r.advisorNombre || '' },
       { header: 'Tipo',       accessor: (r: any) => r.tipo + (r.subtipo ? ` (${r.subtipo})` : '') },
       { header: 'Nivel',      accessor: (r: any) => r.nivel || '' },
       { header: 'Step',       accessor: (r: any) => r.step || '' },
@@ -739,7 +741,7 @@ function BusquedaComentarioView({
       { header: 'ID Alumno',  accessor: (r: any) => r.studentNumeroId || '' },
       { header: 'Comentario', accessor: (r: any) => r.comentario || '' },
       { header: 'IA Sentimiento', accessor: (r: any) => r.aiSentimiento || '' },
-    ], `perf-eval-comentarios_${(advisorSelected?.nombre || advisorId).replace(/\s+/g, '_')}_tope${tope}_${startDate}_${endDate}`)
+    ], `perf-eval-comentarios_${(isAll ? 'TODOS' : (advisorSelected?.nombre || advisorId)).replace(/\s+/g, '_')}_tope${tope}_${startDate}_${endDate}`)
   }
 
   return (
@@ -802,6 +804,7 @@ function BusquedaComentarioView({
           <select id="bc-advisor" value={advisorId} onChange={e => setAdvisorId(e.target.value)}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
             <option value="">— Selecciona un advisor —</option>
+            <option value="__ALL__">— Todos los advisors ({advisorsList.length}) —</option>
             {advisorsList.map(a => (
               <option key={a._id} value={a._id}>
                 {a.nombre} ({a.evaluaciones} evals){a.activo === false ? ' · Inactivo' : ''}
@@ -820,7 +823,7 @@ function BusquedaComentarioView({
       {!advisorId ? (
         <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center">
           <ChatBubbleLeftEllipsisIcon className="h-12 w-12 text-indigo-400 mx-auto mb-2" />
-          <p className="text-sm text-indigo-900 font-medium">Selecciona un advisor para ver sus comentarios</p>
+          <p className="text-sm text-indigo-900 font-medium">Selecciona un advisor —o “Todos”— para ver los comentarios</p>
           <p className="text-xs text-indigo-700 mt-1">Se muestran los comentarios con promedio ≤ {tope} ★, de peor a mejor.</p>
         </div>
       ) : q.isLoading ? (
@@ -831,13 +834,13 @@ function BusquedaComentarioView({
         </div>
       ) : rows.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-sm text-gray-400">
-          {advisorSelected?.nombre} no tiene comentarios con promedio ≤ {tope} ★ en este período.
+          {isAll ? 'Ningún advisor tiene' : `${advisorSelected?.nombre} no tiene`} comentarios con promedio ≤ {tope} ★ en este período.
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-800">
-              {advisorSelected?.nombre} — {rows.length} comentario{rows.length === 1 ? '' : 's'} ≤ {tope} ★
+              {isAll ? 'Todos los advisors' : advisorSelected?.nombre} — {rows.length} comentario{rows.length === 1 ? '' : 's'} ≤ {tope} ★
             </h3>
           </div>
           <div className="overflow-x-auto">
@@ -846,6 +849,7 @@ function BusquedaComentarioView({
                 <tr className="text-xs text-gray-500 border-b border-gray-100 bg-gray-50">
                   <th className="text-left font-medium py-2 px-3 w-20">Promedio</th>
                   <th className="text-left font-medium py-2 px-3 w-28">Fecha</th>
+                  {isAll && <th className="text-left font-medium py-2 px-3">Advisor</th>}
                   <th className="text-left font-medium py-2 px-3">Tipo · Nivel · Step</th>
                   <th className="text-left font-medium py-2 px-3">Alumno</th>
                   <th className="text-left font-medium py-2 px-3">Comentario</th>
@@ -856,6 +860,7 @@ function BusquedaComentarioView({
                   <tr key={idx} className="border-b border-gray-50 last:border-0 align-top">
                     <td className="py-2.5 px-3 font-bold text-amber-600 whitespace-nowrap">{Number(r.promedio).toFixed(2)} ★</td>
                     <td className="py-2.5 px-3 text-gray-600 whitespace-nowrap">{r.fechaEvento ? new Date(r.fechaEvento).toLocaleDateString('es-ES') : '—'}</td>
+                    {isAll && <td className="py-2.5 px-3 text-gray-700 text-xs whitespace-nowrap">{r.advisorNombre || '—'}</td>}
                     <td className="py-2.5 px-3 text-gray-600 text-xs">
                       {r.tipo}{r.subtipo ? ` (${r.subtipo})` : ''}{r.nivel ? ` · ${r.nivel}` : ''}{r.step ? ` · ${r.step}` : ''}
                     </td>

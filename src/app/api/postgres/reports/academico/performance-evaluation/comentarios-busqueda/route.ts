@@ -20,13 +20,22 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
 
   const { searchParams } = new URL(req.url);
   const advisorId = searchParams.get('advisorId');
-  if (!advisorId) return successResponse({ comentarios: [] });
+  const advisorIdsRaw = searchParams.get('advisorIds');
+  const advisorIds = advisorIdsRaw
+    ? advisorIdsRaw.split(',').map(s => s.trim()).filter(Boolean)
+    : null;
+
+  // Debe venir un advisor puntual O la lista "Todos" (advisorIds); si no, nada.
+  if (!advisorId && !(advisorIds && advisorIds.length)) {
+    return successResponse({ comentarios: [] });
+  }
 
   const topeRaw = Number(searchParams.get('tope'));
   const tope = Number.isFinite(topeRaw) && topeRaw >= 1 && topeRaw <= 5 ? topeRaw : 3;
 
   const comentarios = await EvaluationsRepository.searchComentarios({
     advisorId,
+    advisorIds,
     startDate: searchParams.get('startDate'),
     endDate:   searchParams.get('endDate'),
     tipo:      searchParams.get('tipo'),
