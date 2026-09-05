@@ -5,7 +5,9 @@ import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions/PermissionGuard'
 import { MantenimientoPermission } from '@/types/permissions'
 import { exportToExcel } from '@/lib/export-excel'
-import { ArrowDownTrayIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
+import { ArrowDownTrayIcon, EyeIcon, EyeSlashIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline'
+
+const PLATAFORMAS = ['Chile', 'Colombia', 'Ecuador', 'Perú', 'Internacional']
 
 interface UserRow {
   _id: string
@@ -30,6 +32,18 @@ function ConsultaUserRol() {
   const [showClaves, setShowClaves] = useState(false)
   const [error, setError] = useState('')
   const [savingId, setSavingId] = useState<string | null>(null)
+
+  // Modal Editar
+  const [editUser, setEditUser] = useState<UserRow | null>(null)
+  const [editForm, setEditForm] = useState({ nombre: '', apellido: '', celular: '', numberid: '', plataforma: '' })
+  const [editMotivo, setEditMotivo] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+
+  // Modal Eliminar
+  const [deleteUser, setDeleteUser] = useState<UserRow | null>(null)
+  const [deleteMotivo, setDeleteMotivo] = useState('')
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Cargar roles (para el dropdown) al montar.
   useEffect(() => {
@@ -89,6 +103,68 @@ function ConsultaUserRol() {
       alert(e?.message || 'No se pudo cambiar el estado')
     } finally {
       setSavingId(null)
+    }
+  }
+
+  // ── Editar campos (rellenar vacíos / modificar) ──
+  const openEdit = (u: UserRow) => {
+    setEditUser(u)
+    setEditForm({
+      nombre: u.nombre || '',
+      apellido: u.apellido || '',
+      celular: u.celular || '',
+      numberid: u.numberid || '',
+      plataforma: u.plataforma || '',
+    })
+    setEditMotivo('')
+  }
+  const saveEdit = async () => {
+    if (!editUser) return
+    setIsSaving(true)
+    try {
+      const res = await fetch('/api/postgres/users/consulta', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editUser._id,
+          nombre: editForm.nombre,
+          apellido: editForm.apellido,
+          celular: editForm.celular,
+          numberid: editForm.numberid,
+          plataforma: editForm.plataforma,
+          motivo: editMotivo,
+        }),
+      })
+      const d = await res.json()
+      if (!res.ok || !d?.success) throw new Error(d?.error || `Error ${res.status}`)
+      if (d.user) setUsers(prev => prev.map(x => (x._id === editUser._id ? { ...x, ...d.user } : x)))
+      setEditUser(null)
+    } catch (e: any) {
+      alert(e?.message || 'No se pudo guardar')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // ── Eliminar cuenta (con motivo obligatorio + auditoría) ──
+  const confirmDelete = async () => {
+    if (!deleteUser) return
+    if (!deleteMotivo.trim()) { alert('El motivo es obligatorio.'); return }
+    setIsDeleting(true)
+    try {
+      const res = await fetch('/api/postgres/users/consulta', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: deleteUser._id, motivo: deleteMotivo.trim() }),
+      })
+      const d = await res.json()
+      if (!res.ok || !d?.success) throw new Error(d?.error || `Error ${res.status}`)
+      setUsers(prev => prev.filter(x => x._id !== deleteUser._id))
+      setDeleteUser(null); setDeleteMotivo(''); setDeleteConfirm(false)
+    } catch (e: any) {
+      alert(e?.message || 'No se pudo eliminar')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -187,6 +263,7 @@ function ConsultaUserRol() {
                   <th className="px-4 py-2">Rol</th>
                   <th className="px-4 py-2">Plataforma</th>
                   <th className="px-4 py-2">Activo</th>
+                  <th className="px-4 py-2">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -214,13 +291,146 @@ function ConsultaUserRol() {
                         {savingId === u._id ? '…' : (u.activo === false ? 'No' : 'Sí')}
                       </button>
                     </td>
+                    <td className="px-4 py-2">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => openEdit(u)}
+                          title="Editar campos"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                        >
+                          <PencilSquareIcon className="h-3.5 w-3.5" /> Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setDeleteUser(u); setDeleteMotivo(''); setDeleteConfirm(false) }}
+                          title="Eliminar cuenta"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                        >
+                          <TrashIcon className="h-3.5 w-3.5" /> Eliminar
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
                 {users.length === 0 && (
-                  <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Sin usuarios para este filtro.</td></tr>
+                  <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Sin usuarios para este filtro.</td></tr>
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Editar ── */}
+      {editUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden">
+            <div className="bg-blue-600 px-6 py-4">
+              <h2 className="text-lg font-bold text-white">Editar cuenta de acceso</h2>
+              <p className="text-blue-100 text-xs mt-0.5 break-all">{editUser.email} · {editUser.rol}</p>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+                ⚠️ Este cambio solo afecta la <b>cuenta de acceso</b> (USUARIOS_ROLES) y queda registrado en la auditoría.
+                Completar <b>Teléfono</b> y <b>Usuario</b> habilita el reset de contraseña por WhatsApp.
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                  <input type="text" value={editForm.nombre}
+                    onChange={e => setEditForm(f => ({ ...f, nombre: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Apellido</label>
+                  <input type="text" value={editForm.apellido}
+                    onChange={e => setEditForm(f => ({ ...f, apellido: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono <span className="text-xs text-gray-400">(solo números, con indicativo)</span></label>
+                  <input type="tel" value={editForm.celular}
+                    onChange={e => setEditForm(f => ({ ...f, celular: e.target.value.replace(/\D/g, '') }))}
+                    placeholder="Ej: 56912345678"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Usuario <span className="text-xs text-gray-400">(N° identificación)</span></label>
+                  <input type="text" value={editForm.numberid}
+                    onChange={e => setEditForm(f => ({ ...f, numberid: e.target.value.toUpperCase().replace(/[.\s]/g, '') }))}
+                    placeholder="Ej: 12345678K"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Plataforma</label>
+                  <select value={editForm.plataforma}
+                    onChange={e => setEditForm(f => ({ ...f, plataforma: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">— Sin plataforma —</option>
+                    {PLATAFORMAS.map(p => <option key={p} value={p}>{p}</option>)}
+                    {editForm.plataforma && !PLATAFORMAS.includes(editForm.plataforma) && (
+                      <option value={editForm.plataforma}>{editForm.plataforma}</option>
+                    )}
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Motivo <span className="text-xs text-gray-400">(opcional, queda en la auditoría)</span></label>
+                  <input type="text" value={editMotivo}
+                    onChange={e => setEditMotivo(e.target.value)}
+                    placeholder="Ej: completar datos de contacto"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 border-t flex justify-end gap-2">
+              <button type="button" onClick={() => setEditUser(null)} disabled={isSaving}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50">
+                Cancelar
+              </button>
+              <button type="button" onClick={saveEdit} disabled={isSaving}
+                className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50">
+                {isSaving ? 'Guardando…' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Eliminar ── */}
+      {deleteUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-red-600 px-6 py-4">
+              <h2 className="text-lg font-bold text-white">Eliminar cuenta de acceso</h2>
+            </div>
+            <div className="px-6 py-5 space-y-3">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
+                <b>🔴 Acción irreversible.</b> Se eliminará la cuenta de acceso de{' '}
+                <b className="break-all">{deleteUser.email}</b> ({deleteUser.rol}). El usuario no podrá volver a iniciar sesión.
+                Queda un respaldo en la auditoría (recuperable manualmente).
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Motivo <span className="text-red-500">*</span></label>
+                <textarea value={deleteMotivo} onChange={e => setDeleteMotivo(e.target.value)} rows={2}
+                  placeholder="Explica por qué se elimina esta cuenta"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
+              </div>
+              <label className="flex items-start gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={deleteConfirm} onChange={e => setDeleteConfirm(e.target.checked)} className="mt-0.5" />
+                Confirmo que quiero eliminar esta cuenta de acceso.
+              </label>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 border-t flex justify-end gap-2">
+              <button type="button" onClick={() => setDeleteUser(null)} disabled={isDeleting}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50">
+                Cancelar
+              </button>
+              <button type="button" onClick={confirmDelete} disabled={isDeleting || !deleteConfirm || !deleteMotivo.trim()}
+                className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                {isDeleting ? 'Eliminando…' : 'Eliminar cuenta'}
+              </button>
+            </div>
           </div>
         </div>
       )}
