@@ -260,7 +260,8 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
          p."segundoApellido" AS "titular_segundoApellido",
          p."numeroId"        AS "titular_numeroId",
          p."contrato"        AS "titular_contrato",
-         p."plataforma"      AS "titular_plataforma"
+         p."plataforma"      AS "titular_plataforma",
+         p."asesorCreadorContrato" AS "titular_asesorNombre"
        FROM "PAGOS_TITULARES" pt
        JOIN "PEOPLE" p ON p."_id" = pt."idPeople"
        ${whereClause}

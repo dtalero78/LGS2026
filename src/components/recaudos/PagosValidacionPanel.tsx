@@ -53,6 +53,7 @@ interface PagoRow {
   titular_numeroId: string
   titular_contrato: string | null
   titular_plataforma: string | null
+  titular_asesorNombre: string | null
   documentosAdjuntos: DocAdjunto[] | null
 }
 
@@ -314,8 +315,10 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
   }
 
   const gestorNombre = (p: PagoRow) => {
-    const g = displayUsers.find(u => u._id === p.gestorRecaudo) || displayUsers.find(u => u.email === p.gestorRecaudo)
-    return g?.nombre || p.gestorRecaudo || ''
+    const gr = (p.gestorRecaudo || '').toLowerCase()
+    const g = displayUsers.find(u => u._id === p.gestorRecaudo) || displayUsers.find(u => (u.email || '').toLowerCase() === gr)
+    // Fallback: en inscripciones el gestor es el asesor (email) → nombre del creador del contrato.
+    return g?.nombre || (p.titular_asesorNombre && p.titular_asesorNombre.trim()) || p.gestorRecaudo || ''
   }
 
   const handleExport = () => {
@@ -495,7 +498,8 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
               <tbody className="divide-y divide-gray-100">
                 {pagos.map(p => {
                   const titularNombre = `${p.titular_primerNombre} ${p.titular_primerApellido}`.trim()
-                  const g = displayUsers.find(u => u._id === p.gestorRecaudo) || displayUsers.find(u => u.email === p.gestorRecaudo)
+                  const gr = (p.gestorRecaudo || '').toLowerCase()
+                  const g = displayUsers.find(u => u._id === p.gestorRecaudo) || displayUsers.find(u => (u.email || '').toLowerCase() === gr)
                   return (
                     <tr key={p._id} className={`hover:bg-gray-50 ${selected.has(p._id) ? 'bg-emerald-50/40' : ''}`}>
                       {showBulk && (
@@ -535,6 +539,13 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                             <div className="flex items-start gap-1">
                               <span className="inline-flex px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-800 shrink-0">{ROLE_LABEL[g.rol] || g.rol}</span>
                               <span className="text-xs max-w-[110px] truncate" title={g.nombre}>{g.nombre}</span>
+                            </div>
+                          ) : p.titular_asesorNombre && p.titular_asesorNombre.trim() ? (
+                            // Inscripciones: el gestor guardado es el asesor (email) que creó
+                            // el contrato → mostramos su NOMBRE (PEOPLE.asesorCreadorContrato).
+                            <div className="flex items-start gap-1">
+                              <span className="inline-flex px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-sky-100 text-sky-800 shrink-0">Comercial</span>
+                              <span className="text-xs max-w-[110px] truncate" title={`${p.titular_asesorNombre}${p.gestorRecaudo ? ` · ${p.gestorRecaudo}` : ''}`}>{p.titular_asesorNombre}</span>
                             </div>
                           ) : <span className="text-xs text-gray-400 italic">{p.gestorRecaudo || '—'}</span>
                         ) : (
