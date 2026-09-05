@@ -501,7 +501,11 @@ export const pagosTitularesService = {
    * No toca el saldo (el saldo ya se recalculó al validar). El pago sale de la
    * cola de Facturación al quedar con número de factura.
    */
-  async facturar(id: string, numeroFactura: string): Promise<PagoTitular> {
+  async facturar(
+    id: string,
+    numeroFactura: string,
+    documento?: { url?: string; nombre?: string; tipo?: string } | null,
+  ): Promise<PagoTitular> {
     const factura = (numeroFactura || '').trim();
     if (!factura) throw new ValidationError('El número de factura es obligatorio');
 
@@ -511,6 +515,17 @@ export const pagosTitularesService = {
 
     const updated = await PagosTitularesRepository.facturar(id, factura);
     if (!updated) throw new ValidationError('No se pudo registrar la factura');
+
+    // Adjunta el archivo de la factura (opcional, ya subido a Spaces por el cliente).
+    if (documento && typeof documento.url === 'string' && documento.url.trim()) {
+      const withDoc = await PagosTitularesRepository.appendDocumentos(id, [{
+        url: documento.url.trim(),
+        nombre: documento.nombre ? String(documento.nombre) : `Factura ${factura}`,
+        tipo: documento.tipo ? String(documento.tipo) : null,
+        fechaSubida: new Date().toISOString(),
+      }]);
+      if (withDoc) return withDoc;
+    }
     return updated;
   },
 

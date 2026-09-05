@@ -118,8 +118,10 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
   const [docsModal, setDocsModal] = useState<{ titular: string; numCuota: number | null; docs: DocAdjunto[] } | null>(null)
 
   // Modal Facturar (pestaña Facturación)
-  const [facturarModal, setFacturarModal] = useState<{ id: string; numCuota: number | null; titular: string } | null>(null)
+  const [facturarModal, setFacturarModal] = useState<{ id: string; idPeople: string; numCuota: number | null; titular: string } | null>(null)
   const [facturaInput, setFacturaInput] = useState('')
+  const [facturaFile, setFacturaFile] = useState<DocAdjunto | null>(null)
+  const [subiendoFactura, setSubiendoFactura] = useState(false)
   const [facturando, setFacturando] = useState(false)
 
   // Edición de pago pendiente
@@ -207,10 +209,44 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
     }
   }
 
-  // ── Facturar (pestaña Facturación): registra el # de factura ──
+  // ── Facturar (pestaña Facturación): registra el # de factura + adjunta el archivo ──
   const openFacturar = (p: PagoRow) => {
-    setFacturaInput('')
-    setFacturarModal({ id: p._id, numCuota: p.numCuota, titular: `${p.titular_primerNombre} ${p.titular_primerApellido}`.trim() })
+    setFacturaInput(''); setFacturaFile(null)
+    setFacturarModal({ id: p._id, idPeople: p.idPeople, numCuota: p.numCuota, titular: `${p.titular_primerNombre} ${p.titular_primerApellido}`.trim() })
+  }
+  // Sube el archivo de la factura a Spaces (mismo flujo que los documentos del pago).
+  const subirFacturaArchivo = async (file: File) => {
+    if (!facturarModal) return
+    setSubiendoFactura(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch(`/api/contracts/${facturarModal.idPeople}/upload-url`, { method: 'POST', body: fd })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({} as any))
+        throw new Error(err.details || err.error || `Error ${res.status}`)
+      }
+      const { publicUrl } = await res.json()
+      setFacturaFile({ url: publicUrl, nombre: file.name, tipo: file.type, fechaSubida: new Date().toISOString() })
+      toast.success('Archivo de factura adjuntado')
+    } catch (e: any) {
+      toast.error(`Error subiendo el archivo: ${e?.message || ''}`)
+    } finally {
+      setSubiendoFactura(false)
+    }
+  }
+  const pickFacturaArchivo = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/jpeg,image/jpg,image/png,image/webp,image/heic,application/pdf'
+    input.style.display = 'none'
+    document.body.appendChild(input)
+    input.addEventListener('change', () => {
+      const f = input.files?.[0]
+      if (f) subirFacturaArchivo(f)
+      document.body.removeChild(input)
+    })
+    input.click()
   }
   const handleFacturar = async () => {
     if (!facturarModal) return
@@ -218,9 +254,12 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
     if (!factura) { toast.error('El número de factura es obligatorio'); return }
     setFacturando(true)
     try {
-      await api.post(`/api/postgres/pagos-titulares/${facturarModal.id}/facturar`, { numeroFactura: factura })
-      toast.success(`Factura ${factura} registrada`)
-      setFacturarModal(null); setFacturaInput('')
+      await api.post(`/api/postgres/pagos-titulares/${facturarModal.id}/facturar`, {
+        numeroFactura: factura,
+        documento: facturaFile ? { url: facturaFile.url, nombre: `Factura ${factura} — ${facturaFile.nombre || ''}`.trim(), tipo: facturaFile.tipo } : null,
+      })
+      toast.success(`Factura ${factura} registrada${facturaFile ? ' con archivo adjunto' : ''}`)
+      setFacturarModal(null); setFacturaInput(''); setFacturaFile(null)
       fetchPagos()
     } catch (err) {
       handleApiError(err, 'Error al registrar la factura')
@@ -633,7 +672,7 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-gray-900">🧾 Facturar {facturarModal.numCuota === 0 ? 'Inscripción' : 'Pago'}</h3>
-              <button type="button" onClick={() => { setFacturarModal(null); setFacturaInput('') }} title="Cerrar" className="text-gray-400 hover:text-gray-600"><XMarkIcon className="h-5 w-5" /></button>
+              <button type="button" onClick={() => { setFacturarModal(null); setFacturaInput(''); setFacturaFile(null) }} title="Cerrar" className="text-gray-400 hover:text-gray-600"><XMarkIcon className="h-5 w-5" /></button>
             </div>
             <p className="text-sm text-gray-600">
               Registre el <strong>número de factura</strong> del pago{facturarModal.numCuota != null ? (facturarModal.numCuota === 0 ? ' (inscripción)' : ` (cuota ${facturarModal.numCuota})`) : ''}
@@ -643,9 +682,26 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
               <label htmlFor="facturar-input" className="block text-sm font-medium text-gray-700 mb-1"># Factura <span className="text-red-500">*</span></label>
               <input id="facturar-input" type="text" value={facturaInput} onChange={e => setFacturaInput(e.target.value.replace(/[^A-Za-z0-9\-]/g, ''))} autoFocus placeholder="Alfanumérico" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500" />
             </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-700">Archivo de la factura <span className="text-gray-400 font-normal">(opcional)</span></label>
+                <button type="button" onClick={pickFacturaArchivo} disabled={subiendoFactura || facturando}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700 disabled:opacity-50">
+                  <PaperClipIcon className="h-4 w-4" /> {subiendoFactura ? 'Subiendo…' : 'Adjuntar'}
+                </button>
+              </div>
+              {facturaFile ? (
+                <div className="flex items-center justify-between gap-2 border border-gray-200 rounded-md px-2 py-1.5 bg-gray-50">
+                  <span className="text-xs text-gray-700 truncate" title={facturaFile.nombre || ''}>📎 {facturaFile.nombre || 'archivo'}</span>
+                  <button type="button" onClick={() => setFacturaFile(null)} disabled={facturando} title="Quitar archivo" className="text-gray-400 hover:text-red-600"><XMarkIcon className="h-4 w-4" /></button>
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400 italic">Sin archivo adjunto (JPG, PNG, WEBP, HEIC o PDF · máx 20MB).</p>
+              )}
+            </div>
             <div className="flex items-center justify-end gap-3 pt-2">
-              <button type="button" onClick={() => { setFacturarModal(null); setFacturaInput('') }} disabled={facturando} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
-              <button type="button" onClick={handleFacturar} disabled={facturando || !facturaInput.trim()} className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed">{facturando ? 'Registrando…' : 'Registrar Factura'}</button>
+              <button type="button" onClick={() => { setFacturarModal(null); setFacturaInput(''); setFacturaFile(null) }} disabled={facturando} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
+              <button type="button" onClick={handleFacturar} disabled={facturando || subiendoFactura || !facturaInput.trim()} className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed">{facturando ? 'Registrando…' : 'Registrar Factura'}</button>
             </div>
           </div>
         </div>
