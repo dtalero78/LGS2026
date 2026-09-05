@@ -263,6 +263,7 @@ export const pagosTitularesService = {
     opts: {
       estado?: 'validado' | 'pendiente';
       cuotaTipo?: 'regular' | 'inscripcion';
+      vista?: 'verificacion' | 'facturacion';
       fechaDesde?: string | null;
       fechaHasta?: string | null;
       search?: string | null;
@@ -288,6 +289,7 @@ export const pagosTitularesService = {
     const { rows, total } = await PagosTitularesRepository.findAllWithTitular({
       estado: opts.estado,
       cuotaTipo: opts.cuotaTipo ?? 'regular',
+      vista: opts.vista ?? 'verificacion',
       fechaDesde: opts.fechaDesde ?? null,
       fechaHasta: opts.fechaHasta ?? null,
       search: opts.search ?? null,
@@ -491,6 +493,24 @@ export const pagosTitularesService = {
     // Opción 2: el pago acaba de pasar a validado=true → recalcular saldo
     await syncFinancieroSaldo(existing.idPeople);
 
+    return updated;
+  },
+
+  /**
+   * Paso Facturación: registra el número de factura de un pago YA validado.
+   * No toca el saldo (el saldo ya se recalculó al validar). El pago sale de la
+   * cola de Facturación al quedar con número de factura.
+   */
+  async facturar(id: string, numeroFactura: string): Promise<PagoTitular> {
+    const factura = (numeroFactura || '').trim();
+    if (!factura) throw new ValidationError('El número de factura es obligatorio');
+
+    const existing = await PagosTitularesRepository.findById(id);
+    if (!existing) throw new NotFoundError('PAGOS_TITULARES', id);
+    if (!existing.validado) throw new ValidationError('Solo se puede facturar un pago ya verificado');
+
+    const updated = await PagosTitularesRepository.facturar(id, factura);
+    if (!updated) throw new ValidationError('No se pudo registrar la factura');
     return updated;
   },
 

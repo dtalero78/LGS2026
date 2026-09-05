@@ -151,6 +151,12 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
     estado?: 'validado' | 'pendiente';
     /** 'regular' (cuotas numCuota>0, default) | 'inscripcion' (cuota #0). */
     cuotaTipo?: 'regular' | 'inscripcion';
+    /**
+     * 'verificacion' (default) = cola de verificación (usa cuotaTipo + estado).
+     * 'facturacion' = cola de facturación: validado=true SIN número de factura,
+     * combinando pagos e inscripciones (ignora cuotaTipo y estado).
+     */
+    vista?: 'verificacion' | 'facturacion';
     fechaDesde?: string | null;
     fechaHasta?: string | null;
     search?: string | null;
@@ -164,20 +170,27 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
     limit: number;
     offset: number;
   }): Promise<{ rows: any[]; total: number }> {
-    // cuota #0 = inscripción (pestaña "Inscripciones pendientes"); resto = cuotas regulares.
-    const cuotaCond = opts.cuotaTipo === 'inscripcion'
-      ? `COALESCE(pt."numCuota", 0) = 0`
-      : `COALESCE(pt."numCuota", 0) > 0`;
+    const esFacturacion = opts.vista === 'facturacion';
     const conds: string[] = [
-      cuotaCond,
       // Excluye contratos de prueba (PRB-) — viven solo en /admin/contratos-prueba.
       `COALESCE(p."contrato",'') NOT LIKE 'PRB-%'`,
     ];
     const params: any[] = [];
     let i = 1;
 
-    if (opts.estado === 'validado') conds.push(`pt."validado" = true`);
-    else if (opts.estado === 'pendiente') conds.push(`pt."validado" = false`);
+    if (esFacturacion) {
+      // Cola de facturación: verificados (validado=true) que AÚN no tienen
+      // número de factura. Combina pagos e inscripciones (no filtra por cuota).
+      conds.push(`pt."validado" = true`);
+      conds.push(`(pt."numeroFactura" IS NULL OR TRIM(pt."numeroFactura") = '')`);
+    } else {
+      // cuota #0 = inscripción (pestaña "Verificación Inscripción"); resto = pagos.
+      conds.push(opts.cuotaTipo === 'inscripcion'
+        ? `COALESCE(pt."numCuota", 0) = 0`
+        : `COALESCE(pt."numCuota", 0) > 0`);
+      if (opts.estado === 'validado') conds.push(`pt."validado" = true`);
+      else if (opts.estado === 'pendiente') conds.push(`pt."validado" = false`);
+    }
 
     if (opts.fechaDesde) { conds.push(`pt."fechaPago" >= $${i}::date`); params.push(opts.fechaDesde); i++; }
     if (opts.fechaHasta) { conds.push(`pt."fechaPago" <= $${i}::date`); params.push(opts.fechaHasta); i++; }
@@ -590,6 +603,22 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
        WHERE "_id" = $1
        RETURNING *`,
       [id, validadoPor, numeroFactura, fechaValidacion]
+    );
+    return this.parse(row);
+  }
+
+  /**
+   * Registra el número de factura de un pago YA validado (paso Facturación).
+   * Solo actúa sobre pagos con validado=true. No toca el saldo.
+   */
+  async facturar(id: string, numeroFactura: string): Promise<PagoTitular | null> {
+    const row = await queryOne<PagoTitular>(
+      `UPDATE "PAGOS_TITULARES"
+       SET "numeroFactura" = $2,
+           "_updatedDate" = NOW()
+       WHERE "_id" = $1 AND "validado" = true
+       RETURNING *`,
+      [id, numeroFactura]
     );
     return this.parse(row);
   }
