@@ -165,7 +165,7 @@ export default function PerformanceEvaluationPage() {
                   ? 'Vista por advisor — métricas individuales comparadas contra el promedio general.'
                   : view === 'lista'
                   ? 'Lista de advisors — marca los que definen el Alcance (plataforma o selección).'
-                  : 'Búsqueda por comentario — comentarios de un advisor ≤ tope de estrellas, con el alumno que los escribió.'}
+                  : 'Búsqueda por comentario — comentarios filtrados por banda de promedio, con el alumno que los escribió.'}
               </p>
             </div>
           </div>
@@ -260,7 +260,7 @@ export default function PerformanceEvaluationPage() {
           )}
 
           {/* ─────────────────────────────────────────────────────────────
-              BÚSQUEDA POR COMENTARIO — comentarios ≤ tope con identidad del alumno
+              BÚSQUEDA POR COMENTARIO — comentarios por banda de promedio con identidad del alumno
             ───────────────────────────────────────────────────────────── */}
           {view === 'busqueda' && (
             <PermissionGuard permission={AcademicoPermission.PERFORMANCE_EVAL_BUSQUEDA_COMENTARIO}>
@@ -681,8 +681,9 @@ function ListaView({
   )
 }
 
-/** Pestaña BÚSQUEDA POR COMENTARIO — comentarios de un advisor ≤ tope de
- *  estrellas, con nombre + numeroId del ALUMNO que los escribió (des-anonimizada). */
+/** Pestaña BÚSQUEDA POR COMENTARIO — comentarios de un advisor (o "Todos")
+ *  filtrados por BANDA de promedio (1→<2, 2→[2,3), 3→[3,4), 4→[4,5), 5→=5;
+ *  "Sin tope"→todos), con nombre + numeroId del ALUMNO (des-anonimizada). */
 function BusquedaComentarioView({
   advisorsRaw, scopePlataforma, setScopePlataforma, scopeAdvisorIds, usingLista,
 }: {
@@ -697,7 +698,8 @@ function BusquedaComentarioView({
   const [tipo, setTipo]           = useState('')
   const [advisorFilter, setAdvisorFilter] = useState<'activos' | 'inactivos' | 'todos'>('activos')
   const [advisorId, setAdvisorId] = useState('')
-  const [tope, setTope]           = useState(3)
+  // Banda de promedio (rango por entero). null = sin tope (todos).
+  const [banda, setBanda]         = useState<number | null>(null)
 
   // Dropdown de advisor limitado al Alcance (lista o plataforma) + estado.
   const advisorsList = useMemo(() => {
@@ -717,12 +719,19 @@ function BusquedaComentarioView({
     if (advisorId && advisorId !== '__ALL__' && !advisorsList.some(a => a._id === advisorId)) setAdvisorId('')
   }, [advisorId, advisorsList])
 
+  // Etiqueta legible de la banda seleccionada.
+  const bandaLabel = (b: number | null) =>
+    b === null ? 'todas las bandas'
+    : b === 1 ? '0–1,99'
+    : b === 5 ? 'solo 5'
+    : `${b}–${b},99`
+
   // "__ALL__" = Todos los advisors del alcance actual (plataforma/lista/estado).
   const isAll = advisorId === '__ALL__'
   const q = useComentariosBusqueda(
     isAll
-      ? { advisorIds: advisorsList.map(a => a._id).join(','), startDate: startDate || null, endDate: endDate || null, tipo: tipo || null, tope }
-      : { advisorId: advisorId || null, startDate: startDate || null, endDate: endDate || null, tipo: tipo || null, tope },
+      ? { advisorIds: advisorsList.map(a => a._id).join(','), startDate: startDate || null, endDate: endDate || null, tipo: tipo || null, banda }
+      : { advisorId: advisorId || null, startDate: startDate || null, endDate: endDate || null, tipo: tipo || null, banda },
     isAll ? advisorsList.length > 0 : !!advisorId,
   )
   const rows: any[] = q.data?.comentarios ?? []
@@ -741,7 +750,7 @@ function BusquedaComentarioView({
       { header: 'ID Alumno',  accessor: (r: any) => r.studentNumeroId || '' },
       { header: 'Comentario', accessor: (r: any) => r.comentario || '' },
       { header: 'IA Sentimiento', accessor: (r: any) => r.aiSentimiento || '' },
-    ], `perf-eval-comentarios_${(isAll ? 'TODOS' : (advisorSelected?.nombre || advisorId)).replace(/\s+/g, '_')}_tope${tope}_${startDate}_${endDate}`)
+    ], `perf-eval-comentarios_${(isAll ? 'TODOS' : (advisorSelected?.nombre || advisorId)).replace(/\s+/g, '_')}_banda${banda ?? 'todos'}_${startDate}_${endDate}`)
   }
 
   return (
@@ -791,10 +800,15 @@ function BusquedaComentarioView({
           </select>
         </div>
         <div>
-          <label htmlFor="bc-tope" className="block text-xs text-gray-500 mb-1">Tope (★ hacia abajo)</label>
-          <select id="bc-tope" value={tope} onChange={e => setTope(Number(e.target.value))}
+          <label htmlFor="bc-banda" className="block text-xs text-gray-500 mb-1">Banda (promedio ★)</label>
+          <select id="bc-banda" value={banda ?? ''} onChange={e => setBanda(e.target.value === '' ? null : Number(e.target.value))}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
-            {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>≤ {n} ★</option>)}
+            <option value="">Sin tope (todos)</option>
+            <option value={1}>1 (0–1,99)</option>
+            <option value={2}>2 (2–2,99)</option>
+            <option value={3}>3 (3–3,99)</option>
+            <option value={4}>4 (4–4,99)</option>
+            <option value={5}>5 (solo 5)</option>
           </select>
         </div>
         <div className="flex-1 min-w-[240px]">
@@ -824,7 +838,11 @@ function BusquedaComentarioView({
         <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center">
           <ChatBubbleLeftEllipsisIcon className="h-12 w-12 text-indigo-400 mx-auto mb-2" />
           <p className="text-sm text-indigo-900 font-medium">Selecciona un advisor —o “Todos”— para ver los comentarios</p>
-          <p className="text-xs text-indigo-700 mt-1">Se muestran los comentarios con promedio ≤ {tope} ★, de peor a mejor.</p>
+          <p className="text-xs text-indigo-700 mt-1">
+            {banda === null
+              ? 'Se muestran todos los comentarios, de peor a mejor.'
+              : `Se muestran los comentarios de la banda ${bandaLabel(banda)} ★, de peor a mejor.`}
+          </p>
         </div>
       ) : q.isLoading ? (
         <div className="text-center text-sm text-gray-500 py-10">Cargando comentarios…</div>
@@ -834,13 +852,13 @@ function BusquedaComentarioView({
         </div>
       ) : rows.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-sm text-gray-400">
-          {isAll ? 'Ningún advisor tiene' : `${advisorSelected?.nombre} no tiene`} comentarios con promedio ≤ {tope} ★ en este período.
+          {isAll ? 'Ningún advisor tiene' : `${advisorSelected?.nombre} no tiene`} comentarios {banda === null ? '' : `en la banda ${bandaLabel(banda)} ★ `}en este período.
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-800">
-              {isAll ? 'Todos los advisors' : advisorSelected?.nombre} — {rows.length} comentario{rows.length === 1 ? '' : 's'} ≤ {tope} ★
+              {isAll ? 'Todos los advisors' : advisorSelected?.nombre} — {rows.length} comentario{rows.length === 1 ? '' : 's'}{banda === null ? '' : ` · banda ${bandaLabel(banda)} ★`}
             </h3>
           </div>
           <div className="overflow-x-auto">

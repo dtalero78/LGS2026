@@ -1,9 +1,10 @@
 /**
  * GET /api/postgres/reports/academico/performance-evaluation/comentarios-busqueda
- *   ?advisorId&startDate&endDate&tipo&tope
+ *   ?advisorId | advisorIds & startDate & endDate & tipo & banda
  *
- * Comentarios de UN advisor con promedio <= tope (de X estrellas hacia abajo),
- * incluyendo la IDENTIDAD del alumno (nombre + numeroId) que escribió cada uno.
+ * Comentarios de un advisor (o "Todos") filtrados por BANDA de promedio
+ * (1→<2, 2→[2,3), 3→[3,4), 4→[4,5), 5→=5; ausente → sin tope), incluyendo la
+ * IDENTIDAD del alumno (nombre + numeroId) que escribió cada uno.
  *
  * ⚠️ Des-anonimiza al alumno (el resto del dashboard NO lo hace) → gateado por un
  * permiso DEDICADO: ACADEMICO.PERFORMANCE_EVAL.BUSQUEDA_COMENTARIO
@@ -30,8 +31,9 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     return successResponse({ comentarios: [] });
   }
 
-  const topeRaw = Number(searchParams.get('tope'));
-  const tope = Number.isFinite(topeRaw) && topeRaw >= 1 && topeRaw <= 5 ? topeRaw : 3;
+  // `banda` = rango de promedio por entero (1..5). Ausente/'all'/0 → sin tope (todos).
+  const bandaRaw = Number(searchParams.get('banda'));
+  const banda = Number.isInteger(bandaRaw) && bandaRaw >= 1 && bandaRaw <= 5 ? bandaRaw : null;
 
   const comentarios = await EvaluationsRepository.searchComentarios({
     advisorId,
@@ -39,7 +41,7 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     startDate: searchParams.get('startDate'),
     endDate:   searchParams.get('endDate'),
     tipo:      searchParams.get('tipo'),
-    tope,
+    banda,
   });
 
   return successResponse({ comentarios });

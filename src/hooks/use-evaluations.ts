@@ -61,7 +61,7 @@ export function usePerformanceDashboard(filters: {
 export function useComentariosBusqueda(filters: {
   advisorId?: string | null; advisorIds?: string | null;
   startDate?: string | null; endDate?: string | null;
-  tipo?: string | null; tope?: number | null;
+  tipo?: string | null; banda?: number | null;
 }, enabled: boolean = true) {
   const qs = new URLSearchParams()
   Object.entries(filters).forEach(([k, v]) => {

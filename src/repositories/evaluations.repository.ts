@@ -153,11 +153,17 @@ class EvaluationsRepositoryClass extends BaseRepository {
   }
 
   /**
-   * Búsqueda de comentarios de UN advisor con promedio <= tope (de X estrellas
-   * hacia abajo), resolviendo la IDENTIDAD del alumno que escribió el comentario
+   * Búsqueda de comentarios de un advisor (o "Todos") por BANDA de promedio,
+   * resolviendo la IDENTIDAD del alumno que escribió el comentario
    * (nombre + numeroId) vía `studentId` → ACADEMICA (fallback PEOPLE). Solo filas
    * con comentario no vacío. Usado por la pestaña "Búsqueda por comentario"
    * (des-anonimizada, gateada por permiso dedicado).
+   *
+   * `banda` (rango por entero, NO acumulativo):
+   *   1 → promedio < 2 (de 0 a 1,99)
+   *   2 → [2, 3)   ·   3 → [3, 4)   ·   4 → [4, 5)
+   *   5 → promedio >= 5 (solo los de 5)
+   *   null/undefined → sin tope (todos)
    */
   async searchComentarios(opts: {
     advisorId?: string | null;
@@ -165,14 +171,23 @@ class EvaluationsRepositoryClass extends BaseRepository {
     startDate?: string | null;
     endDate?: string | null;
     tipo?: string | null;
-    tope: number;
+    banda?: number | null;
   }) {
     const conds: string[] = [
       `e."comentario" IS NOT NULL AND TRIM(e."comentario") <> ''`,
-      `e."promedio" <= $1`,
     ];
-    const params: any[] = [opts.tope];
-    let i = 2;
+    const params: any[] = [];
+    let i = 1;
+    // Filtro por banda (rango de promedio). Sin banda → todos.
+    const banda = opts.banda;
+    if (banda === 5) {
+      conds.push(`e."promedio" >= $${i}`); params.push(5); i++;
+    } else if (banda === 1) {
+      conds.push(`e."promedio" < $${i}`); params.push(2); i++;
+    } else if (banda && banda >= 2 && banda <= 4) {
+      conds.push(`e."promedio" >= $${i} AND e."promedio" < $${i + 1}`);
+      params.push(banda, banda + 1); i += 2;
+    }
     // Un advisor puntual, o el conjunto "Todos" (lista de advisors del alcance).
     if (opts.advisorId) {
       conds.push(`e."advisorId" = $${i}`); params.push(opts.advisorId); i++;
