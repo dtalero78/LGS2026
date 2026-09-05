@@ -473,23 +473,23 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
+                <tr className="whitespace-nowrap text-xs uppercase tracking-wide">
                   {showBulk && (
-                    <th className="px-3 py-2 w-8 text-center">
+                    <th className="px-2 py-2 w-8 text-center">
                       <input type="checkbox" aria-label="Seleccionar todos los pendientes"
                         title="Seleccionar todos los pendientes de esta página"
                         checked={allPendingSelected} disabled={pendientes.length === 0}
                         onChange={toggleAllPending} />
                     </th>
                   )}
-                  <th className="px-3 py-2 text-left font-medium text-gray-700">Titular</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-700">Contrato</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-700">Fecha Pago</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-700">Valor Pagado</th>
-                  <th className="px-3 py-2 text-center font-medium text-gray-700">Cuota #</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-700"># Referencia</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-700">{lateralLabel}</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-700">Acciones</th>
+                  <th className="px-2 py-2 text-left font-medium text-gray-600">Titular</th>
+                  <th className="px-2 py-2 text-left font-medium text-gray-600">Contrato</th>
+                  <th className="px-2 py-2 text-left font-medium text-gray-600">Fecha</th>
+                  <th className="px-2 py-2 text-right font-medium text-gray-600">Valor</th>
+                  <th className="px-2 py-2 text-center font-medium text-gray-600">Cuota</th>
+                  <th className="px-2 py-2 text-left font-medium text-gray-600"># Ref.</th>
+                  <th className="px-2 py-2 text-left font-medium text-gray-600">{lateralLabel}</th>
+                  <th className="px-2 py-2 text-right font-medium text-gray-600">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -499,7 +499,7 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                   return (
                     <tr key={p._id} className={`hover:bg-gray-50 ${selected.has(p._id) ? 'bg-emerald-50/40' : ''}`}>
                       {showBulk && (
-                        <td className="px-3 py-2 text-center">
+                        <td className="px-2 py-2 text-center align-top">
                           {!p.validado ? (
                             <input type="checkbox" aria-label={`Seleccionar pago de ${p.titular_primerNombre}`}
                               checked={selected.has(p._id)} onChange={() => toggleOne(p._id)} />
@@ -508,13 +508,13 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                           )}
                         </td>
                       )}
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-2 align-top">
                         <Link href={`/person/${p.idPeople}?tab=financiera`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">
                           {titularNombre || '—'}
                         </Link>
                         <div className="text-[11px] text-gray-500">ID {p.titular_numeroId}</div>
                       </td>
-                      <td className="px-3 py-2 text-gray-700">
+                      <td className="px-2 py-2 text-gray-700 align-top whitespace-nowrap">
                         <div>{p.titular_contrato || '—'}</div>
                         {p.pagoTercero && p.pagoTercero.trim() && (
                           <span title={`Pago realizado por: ${p.pagoTercero}${p.idTercero ? ` (ID ${p.idTercero})` : ''}`}
@@ -523,49 +523,51 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-gray-900">{fmtDate(p.fechaPago)}</td>
-                      <td className="px-3 py-2 text-right text-gray-900 font-medium">{p.valorPagado ? formatCurrency(p.valorPagado) : '—'}</td>
-                      <td className="px-3 py-2 text-center text-gray-900 font-medium">{p.numCuota === 0 ? 'Inscripción' : (p.numCuota ?? '—')}</td>
-                      <td className="px-3 py-2 text-gray-700 text-xs">{p.numeroReferencia || '—'}</td>
-                      <td className="px-3 py-2 text-gray-700">
+                      <td className="px-2 py-2 text-gray-900 align-top whitespace-nowrap">{fmtDate(p.fechaPago)}</td>
+                      <td className="px-2 py-2 text-right text-gray-900 font-medium align-top whitespace-nowrap">{p.valorPagado ? formatCurrency(p.valorPagado) : '—'}</td>
+                      <td className="px-2 py-2 text-center text-gray-900 font-medium align-top whitespace-nowrap">{p.numCuota === 0 ? 'Insc.' : (p.numCuota ?? '—')}</td>
+                      <td className="px-2 py-2 text-gray-700 text-xs align-top">
+                        <span className="block max-w-[90px] truncate" title={p.numeroReferencia || ''}>{p.numeroReferencia || '—'}</span>
+                      </td>
+                      <td className="px-2 py-2 text-gray-700 align-top">
                         {isGestor ? (
                           g ? (
-                            <div className="flex items-center gap-1.5">
-                              <span className="inline-flex px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-800">{ROLE_LABEL[g.rol] || g.rol}</span>
-                              <span className="text-xs">{g.nombre}</span>
+                            <div className="flex items-start gap-1">
+                              <span className="inline-flex px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-800 shrink-0">{ROLE_LABEL[g.rol] || g.rol}</span>
+                              <span className="text-xs max-w-[110px] truncate" title={g.nombre}>{g.nombre}</span>
                             </div>
                           ) : <span className="text-xs text-gray-400 italic">{p.gestorRecaudo || '—'}</span>
                         ) : (
                           <span className="text-xs">{p.medioPago || '—'}</span>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                      <td className="px-2 py-2 text-right align-top">
+                        <div className="flex items-center justify-end gap-1 whitespace-nowrap">
                           {canVerDocs && Array.isArray(p.documentosAdjuntos) && p.documentosAdjuntos.length > 0 && (
                             <button type="button" onClick={() => setDocsModal({ titular: titularNombre, numCuota: p.numCuota, docs: p.documentosAdjuntos as DocAdjunto[] })}
-                              title="Ver documentos del pago" className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200">
-                              <PaperClipIcon className="h-3.5 w-3.5" /> Docs ({p.documentosAdjuntos.length})
+                              title={`Ver ${p.documentosAdjuntos.length} documento(s) del pago`} className="inline-flex items-center gap-0.5 px-1.5 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200">
+                              <PaperClipIcon className="h-3.5 w-3.5" /> {p.documentosAdjuntos.length}
                             </button>
                           )}
                           {/* Verificación: Editar + Validar (pendientes) */}
                           {!isFacturacion && !p.validado && canEditar && (
-                            <button type="button" onClick={() => openEditar(p)} title="Editar pago" className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-amber-500 rounded hover:bg-amber-600">
+                            <button type="button" onClick={() => openEditar(p)} title="Editar pago" className="inline-flex items-center gap-0.5 px-1.5 py-1 text-xs font-medium text-white bg-amber-500 rounded hover:bg-amber-600">
                               <PencilSquareIcon className="h-3.5 w-3.5" /> Editar
                             </button>
                           )}
                           {!isFacturacion && !p.validado && canValidar && (
-                            <button type="button" onClick={() => openValidar(p)} title="Verificar pago (pasa a Facturación)" className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700">
+                            <button type="button" onClick={() => openValidar(p)} title="Verificar pago (pasa a Facturación)" className="inline-flex items-center gap-0.5 px-1.5 py-1 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700">
                               <CheckBadgeIcon className="h-3.5 w-3.5" /> Validar
                             </button>
                           )}
                           {/* Facturación: Facturar (registra # factura) */}
                           {isFacturacion && canFacturar && (
-                            <button type="button" onClick={() => openFacturar(p)} title="Registrar número de factura" className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-purple-600 rounded hover:bg-purple-700">
+                            <button type="button" onClick={() => openFacturar(p)} title="Registrar número de factura" className="inline-flex items-center gap-0.5 px-1.5 py-1 text-xs font-medium text-white bg-purple-600 rounded hover:bg-purple-700">
                               <DocumentTextIcon className="h-3.5 w-3.5" /> Facturar
                             </button>
                           )}
                           {p.validado && canRecibo && (
-                            <button type="button" onClick={() => handleGenerarRecibo(p._id)} title={p.numeroRecibo ? `Descargar recibo ${p.numeroRecibo}` : 'Generar recibo de pago'} className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700">
+                            <button type="button" onClick={() => handleGenerarRecibo(p._id)} title={p.numeroRecibo ? `Descargar recibo ${p.numeroRecibo}` : 'Generar recibo de pago'} className="inline-flex items-center gap-0.5 px-1.5 py-1 text-xs font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700">
                               <DocumentTextIcon className="h-3.5 w-3.5" /> Recibo
                             </button>
                           )}
