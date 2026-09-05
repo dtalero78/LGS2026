@@ -494,12 +494,12 @@ export default function CrearUserRolPage() {
             <div className="flex items-start gap-3">
               <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-100 rounded-full flex-shrink-0"><UserPlusIcon className="h-7 w-7 text-indigo-600" /></div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Crea UserRol</h1>
-                <p className="text-sm text-gray-500 mt-0.5">Crea cuentas de acceso: estudiante, administrativo, advisor o comercial.</p>
+                <h1 className="text-2xl font-bold text-gray-900">Gestión Usuarios</h1>
+                <p className="text-sm text-gray-500 mt-0.5">Crea, consulta, edita y elimina cuentas de acceso: estudiante, administrativo, advisor o comercial.</p>
               </div>
             </div>
             <a href="/admin/roles/consulta" target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-800">
-              📋 Consultar usuarios por rol (email, clave, exportar CSV)
+              📋 Consultar / editar / eliminar usuarios por rol (email, clave, exportar CSV)
             </a>
           </div>
 

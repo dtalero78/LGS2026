@@ -190,8 +190,11 @@ function ConsultaUserRol() {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Consulta de Usuarios por Rol</h1>
-        <p className="mt-1 text-gray-600">Email, nombre, teléfono, usuario y clave de las cuentas de acceso (USUARIOS_ROLES).</p>
+        <h1 className="text-2xl font-bold text-gray-900">Gestión Usuarios — Consulta por Rol</h1>
+        <p className="mt-1 text-gray-600">Email, nombre, teléfono, usuario y clave de las cuentas de acceso (USUARIOS_ROLES). Edita o elimina cada cuenta desde la columna Acciones.</p>
+        <a href="/admin/roles/create" className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-800">
+          ➕ Crear una cuenta de acceso (estudiante, administrativo, advisor o comercial)
+        </a>
       </div>
 
       {/* Filtros */}
