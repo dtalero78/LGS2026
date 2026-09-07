@@ -12,13 +12,15 @@ import { InformesPermission } from '@/types/permissions'
  *
  * Filtros:
  *   - nivel: código exacto (BN1, BN2, …, DONE) o vacío/'todos' = todos.
- *   - startDate/endDate (opcionales): rango por fecha de contrato
- *     (COALESCE fechaContrato, _createdDate). Vacíos = sin filtro de fecha.
+ *   - startDate/endDate (opcionales): rango por fecha de creación del registro
+ *     académico (_createdDate en hora Colombia). Vacíos = sin filtro de fecha.
+ *     Nota: ACADEMICA ya no guarda fechaContrato (vive en PEOPLE); se usa
+ *     _createdDate como fecha del registro.
  *
  * Gateado por INFORMES.ACADEMICA.X_NIVELES (SUPER_ADMIN/ADMIN bypass).
  */
 
-const CDATE = `COALESCE("fechaContrato", ("_createdDate" AT TIME ZONE 'America/Bogota')::date)`
+const CDATE = `("_createdDate" AT TIME ZONE 'America/Bogota')::date`
 const MAX_ROWS = 8000
 
 // Orden pedagógico para el dropdown/chips de nivel (los no listados —ESS,
