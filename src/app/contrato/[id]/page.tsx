@@ -21,6 +21,7 @@ export default function ContratoPublicoPage() {
   const [financial, setFinancial] = useState<any>(null)
   const [contractText, setContractText] = useState('')
   const [consentStatus, setConsentStatus] = useState<ConsentDisplay | null>(null)
+  const [bienvenidaToken, setBienvenidaToken] = useState('')
 
   // OTP flow
   const [numeroDocumento, setNumeroDocumento] = useState('')
@@ -99,13 +100,26 @@ export default function ContratoPublicoPage() {
       }
     }
 
+    // Si la pagina de bienvenida esta activa (flag en Mantenimiento > Contratos),
+    // el cliente aterriza en /bienvenida/[id] en vez de salir al sitio publico.
+    const decideDestino = async (): Promise<string> => {
+      try {
+        const r = await fetch('/api/public/bienvenida-activa', { cache: 'no-store' })
+        const j = await r.json()
+        if (j?.active && bienvenidaToken) {
+          return '/bienvenida/' + titularId + '?t=' + encodeURIComponent(bienvenidaToken)
+        }
+      } catch { /* si falla el flag, seguimos con el destino externo */ }
+      return decideTarget()
+    }
+
     const minDelay = new Promise<void>(resolve => setTimeout(resolve, 2000))
-    Promise.all([decideTarget(), minDelay]).then(([target]) => {
+    Promise.all([decideDestino(), minDelay]).then(([target]) => {
       if (!cancelled) router.replace(target)
     })
 
     return () => { cancelled = true }
-  }, [pageState, router])
+  }, [pageState, router, titularId, bienvenidaToken])
 
   // Resend cooldown timer
   useEffect(() => {
@@ -169,6 +183,7 @@ export default function ContratoPublicoPage() {
         setOtpError(data.error || 'Codigo incorrecto o expirado')
         return
       }
+      setBienvenidaToken(data.bienvenidaToken || '')
       setConsentStatus({
         hasConsent: true,
         consent: {

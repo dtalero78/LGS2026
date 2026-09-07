@@ -3,6 +3,7 @@ import { handler, successResponse } from '@/lib/api-helpers';
 import { verifyAndSaveConsent } from '@/services/consent.service';
 import { ValidationError } from '@/lib/errors';
 import { generarYArchivarContratoPdf } from '@/lib/contract-pdf-generate';
+import { issueBienvenidaToken } from '@/lib/bienvenida-token';
 
 export const POST = handler(async (request, { params }) => {
   const body = await request.json();
@@ -32,5 +33,7 @@ export const POST = handler(async (request, { params }) => {
   return successResponse({
     message: 'Consentimiento declarativo registrado exitosamente',
     hash: result.hash,
+    // Llave temporal para abrir /bienvenida/[id]. Solo se emite al firmar.
+    bienvenidaToken: issueBienvenidaToken(params.id),
   });
 });

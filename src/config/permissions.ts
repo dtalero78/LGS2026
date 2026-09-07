@@ -980,6 +980,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Acceso a /admin/kids-config. Interruptor del proceso Kids (switch + modal en Crear Contrato). Con el flag apagado el switch no se muestra.',
   },
   {
+    code: MantenimientoPermission.BIENVENIDA_CONFIG,
+    module: Module.MANTENIMIENTO,
+    section: 'Usuarios',
+    name: 'Página "Bienvenida post-firma"',
+    description: 'Acceso a /admin/bienvenida-config. Interruptor de la página de bienvenida que ve el cliente al terminar de firmar el contrato. Apagado, se mantiene la redirección a letsgospeak.cl.',
+  },
+  {
     code: MantenimientoPermission.CARGAR_BENEFICIARIOS,
     module: Module.MANTENIMIENTO,
     section: 'Usuarios',

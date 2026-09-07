@@ -207,6 +207,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
           { name: 'Contratos Prueba', href: '/admin/contratos-prueba', newTab: true },
           { name: 'Drive de Contratos', href: '/admin/drive-config', newTab: true },
           { name: 'Proceso Kids', href: '/admin/kids-config', newTab: true },
+          { name: 'Página de Bienvenida', href: '/admin/bienvenida-config', newTab: true },
           { name: 'Edición Contrato', href: '/admin/edicion-contrato', newTab: true },
           { name: 'Generar Contrato', href: '/admin/generar-contrato', newTab: true },
           { name: 'Cargar Beneficiarios', href: '/admin/cargar-beneficiarios', newTab: true },
