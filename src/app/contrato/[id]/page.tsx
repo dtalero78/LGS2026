@@ -75,13 +75,36 @@ export default function ContratoPublicoPage() {
     loadData()
   }, [loadData])
 
-  // Redirect to LGS website after successful verification
+  // Redirect al sitio de LGS tras firmar. Preferimos letsgospeak.cl, pero si NO
+  // responde (DNS/timeout) caemos a letsgospeak.com.co para no dejar al cliente
+  // en una página de error justo al terminar de firmar. El chequeo corre en
+  // paralelo con la pantalla de éxito (mín. 2s); es dinámico: cuando .cl vuelva
+  // a responder, se vuelve a preferir solo.
   useEffect(() => {
     if (pageState !== 'VERIFIED') return
-    const timer = setTimeout(() => {
-      router.replace('https://letsgospeak.cl/')
-    }, 2000)
-    return () => clearTimeout(timer)
+    let cancelled = false
+    const PRIMARY = 'https://letsgospeak.cl/'
+    const FALLBACK = 'https://letsgospeak.com.co/'
+
+    const decideTarget = async (): Promise<string> => {
+      try {
+        const ctrl = new AbortController()
+        const to = setTimeout(() => ctrl.abort(), 3000)
+        // no-cors: solo nos interesa si el dominio responde, no leer la respuesta.
+        await fetch(PRIMARY, { mode: 'no-cors', cache: 'no-store', signal: ctrl.signal })
+        clearTimeout(to)
+        return PRIMARY
+      } catch {
+        return FALLBACK // NXDOMAIN, conexión rechazada o timeout → fallback
+      }
+    }
+
+    const minDelay = new Promise<void>(resolve => setTimeout(resolve, 2000))
+    Promise.all([decideTarget(), minDelay]).then(([target]) => {
+      if (!cancelled) router.replace(target)
+    })
+
+    return () => { cancelled = true }
   }, [pageState, router])
 
   // Resend cooldown timer
