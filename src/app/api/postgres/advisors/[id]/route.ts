@@ -87,7 +87,7 @@ export const PATCH = handlerWithAuth(async (req, ctx, session) => {
   if (!EMAIL_REGEX.test(email)) throw new ValidationError('El correo no es válido. Debe contener @ y un dominio, sin espacios');
 
   const adv = await queryOne<any>(
-    `SELECT "_id","email","usuarioRolId" FROM "ADVISORS" WHERE "_id" = $1 LIMIT 1`,
+    `SELECT "_id","email","zoom","usuarioRolId" FROM "ADVISORS" WHERE "_id" = $1 LIMIT 1`,
     [id]
   );
   if (!adv) throw new NotFoundError('Advisor', id);
@@ -195,5 +195,45 @@ export const PATCH = handlerWithAuth(async (req, ctx, session) => {
     }
   }
 
-  return successResponse({ message: 'Advisor actualizado', nombre: nombreCompleto, email });
+  // ── Propagación del Link de Zoom a los eventos FUTUROS del advisor ──
+  // El linkZoom se copia a cada evento/booking al crearlos; si el advisor cambia
+  // su Zoom, sus clases futuras quedaban con el link viejo. Propagamos el nuevo
+  // Zoom a los eventos futuros no cerrados de este advisor (por _id o por su email
+  // anterior, para tolerar datos legacy) y a los bookings de esos eventos.
+  // Se EXCLUYE WELCOME: esos eventos usan siempre el Zoom del "ADVISOR WELCOME"
+  // (regla dinámica en calendar.service), no el del advisor asignado.
+  let eventosActualizados = 0;
+  let bookingsActualizados = 0;
+  const oldZoom = (adv.zoom || '').trim();
+  if (zoomNorm && zoomNorm !== oldZoom) {
+    // Filtro (alias c) de los eventos futuros del advisor a propagar.
+    const filtroC = `(c."advisor" = $2 OR LOWER(TRIM(c."advisor")) = LOWER(TRIM($3)))
+        AND c."dia" >= NOW()
+        AND (c."sesionCerrada" IS NOT TRUE)
+        AND UPPER(COALESCE(c."nivel",'')) <> 'WELCOME'`;
+
+    const evUpd = await query(
+      `UPDATE "CALENDARIO" c
+          SET "linkZoom" = $1, "_updatedDate" = NOW()
+        WHERE ${filtroC}`,
+      [zoomNorm, id, adv.email || '']
+    );
+    eventosActualizados = evUpd.rowCount || 0;
+
+    if (eventosActualizados > 0) {
+      const bkUpd = await query(
+        `UPDATE "ACADEMICA_BOOKINGS" b
+            SET "linkZoom" = $1
+          WHERE b."eventoId" IN (SELECT c."_id" FROM "CALENDARIO" c WHERE ${filtroC})
+             OR b."idEvento" IN (SELECT c."_id" FROM "CALENDARIO" c WHERE ${filtroC})`,
+        [zoomNorm, id, adv.email || '']
+      );
+      bookingsActualizados = bkUpd.rowCount || 0;
+    }
+  }
+
+  return successResponse({
+    message: 'Advisor actualizado', nombre: nombreCompleto, email,
+    eventosActualizados, bookingsActualizados,
+  });
 });

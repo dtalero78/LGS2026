@@ -251,7 +251,10 @@ function AdvisorEditModal({ advisorId, advisorNombre, onClose, onSaved }: {
       })
       const json = await res.json()
       if (!res.ok || !json?.success) throw new Error(json?.details || json?.error || `Error ${res.status}`)
-      toast.success('Datos del advisor actualizados')
+      const evN = json.eventosActualizados || 0
+      toast.success(evN > 0
+        ? `Advisor actualizado · Zoom propagado a ${evN} clase(s) futura(s)`
+        : 'Datos del advisor actualizados')
       onSaved(advisorId, json.nombre || `${form.primerNombre} ${form.primerApellido}`.trim(), json.email || email)
     } catch (err: any) {
       setError(err?.message || 'No se pudo guardar')
@@ -296,6 +299,7 @@ function AdvisorEditModal({ advisorId, advisorNombre, onClose, onSaved }: {
               <Field label="Fecha de nacimiento" value={form.fechaNacimiento} onChange={v => set('fechaNacimiento', v)} type="date" />
             </div>
             <Field label="Link de Zoom" value={form.zoom} onChange={v => set('zoom', v)} />
+            <p className="text-[11px] text-gray-400 -mt-1">Al cambiar el Zoom se actualiza automáticamente en las clases futuras del advisor (eventos y bookings). No aplica a WELCOME.</p>
             <Field label="Domicilio" value={form.domicilio} onChange={v => set('domicilio', v)} />
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
