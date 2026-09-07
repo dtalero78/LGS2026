@@ -11,19 +11,16 @@ import { PeopleRepository } from '@/repositories/people.repository';
 import { BookingRepository } from '@/repositories/booking.repository';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { query, queryOne, queryMany } from '@/lib/postgres';
+import { ensureOnce } from '@/lib/ensure-once';
 
 // Ensure ACADEMICA.fechaPromocionEspecial column exists (idempotent, once per server start).
 // Written when student is promoted from F3 Step 45 to MASTER/IELS/B2FIRST/TOEFL;
 // IELS/B2FIRST/TOEFL use it to compute the 100-day auto-promotion to DONE.
-let fechaPromoEnsured = false;
-async function ensureFechaPromocionEspecial() {
-  if (fechaPromoEnsured) return;
-  try {
-    await query(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "fechaPromocionEspecial" TIMESTAMPTZ`, []);
-    fechaPromoEnsured = true;
-  } catch (err: any) {
-    console.warn('[student.service] ensureFechaPromocionEspecial:', err.message);
-  }
+// El esquema se garantiza de verdad con scripts/add-columnas-legacy-ensure.js.
+function ensureFechaPromocionEspecial() {
+  return ensureOnce('ACADEMICA.fechaPromocionEspecial', () =>
+    query(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "fechaPromocionEspecial" TIMESTAMPTZ`, [])
+  );
 }
 
 /**

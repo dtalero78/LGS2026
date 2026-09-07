@@ -8,19 +8,16 @@ import 'server-only';
 import { query, queryOne, queryMany } from '@/lib/postgres';
 import { BaseRepository } from './base.repository';
 import { buildDynamicUpdate } from '@/lib/query-builder';
+import { ensureOnce } from '@/lib/ensure-once';
 
 // Ensure ACADEMICA.pruebainter column exists (idempotent, runs once per server start).
 // Required so SELECT a."pruebainter" in findByEventIdWithStudentDetails does not fail
 // before the first Step 45 evaluation is saved (which is what creates the column elsewhere).
-let pruebainterEnsured = false;
-async function ensurePruebaInterColumn() {
-  if (pruebainterEnsured) return;
-  try {
-    await query(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "pruebainter" VARCHAR(10)`, []);
-    pruebainterEnsured = true;
-  } catch (err: any) {
-    console.warn('[booking.repository] ensurePruebaInterColumn:', err.message);
-  }
+// El esquema se garantiza de verdad con scripts/add-columnas-legacy-ensure.js.
+function ensurePruebaInterColumn() {
+  return ensureOnce('ACADEMICA.pruebainter', () =>
+    query(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "pruebainter" VARCHAR(10)`, [])
+  );
 }
 
 class BookingRepositoryClass extends BaseRepository {
