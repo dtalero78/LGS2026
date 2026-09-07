@@ -26,6 +26,14 @@ const getDatabaseConfig = () => {
       max: 8,
       idleTimeoutMillis: 10000,
       connectionTimeoutMillis: 10000,
+      // Ninguna consulta puede quedarse corriendo indefinidamente: en un cluster
+      // de 1 vCPU una sola query mal planeada clava el CPU al 100% y agota el
+      // pool para todos los demas. 30s es holgado para el trafico normal; los
+      // informes pesados deben ejecutarse fuera del request path.
+      statement_timeout: 30000,
+      // Corta conexiones que quedan con una transaccion abierta sin actividad
+      // (mantienen locks y ocupan uno de los ~22 slots del cluster).
+      idle_in_transaction_session_timeout: 60000,
       ssl: {
         rejectUnauthorized: false,
       },
@@ -39,6 +47,8 @@ const poolConfig = getDatabaseConfig() || {
   max: 8,
   idleTimeoutMillis: 10000,
   connectionTimeoutMillis: 10000,
+  statement_timeout: 30000,
+  idle_in_transaction_session_timeout: 60000,
   ssl: { rejectUnauthorized: false },
 };
 

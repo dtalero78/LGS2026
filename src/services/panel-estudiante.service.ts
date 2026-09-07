@@ -23,17 +23,34 @@ import { generateReport } from '@/services/progress.service';
 import { getEffectiveStepNumber } from '@/services/student-booking.service';
 import { isContractExpired } from '@/lib/contract-expiry';
 
-// One-time migration: ensure fechaInicioESS column exists in ACADEMICA and PEOPLE
-let essMigrationDone = false;
+// One-time migration: ensure fechaInicioESS column exists in ACADEMICA and PEOPLE.
+//
+// Corre UNA sola vez por proceso, pase lo que pase. Antes se reintentaba en cada
+// request cuando fallaba (el flag solo se marcaba en el camino feliz), y como
+// ALTER TABLE toma un lock ACCESS EXCLUSIVE sobre ACADEMICA/PEOPLE, un hipo
+// transitorio de la BD se convertia en una tormenta de DDL que la dejaba clavada
+// al 100% de CPU indefinidamente. La promesa cacheada ademas evita que N requests
+// concurrentes disparen N ALTER simultaneos durante el arranque.
+//
+// Si el ALTER falla, NO se reintenta: la columna existe en produccion desde abril
+// y el esquema real se garantiza con scripts/add-ess-columns.js, no desde el
+// request path.
+let essMigrationPromise: Promise<void> | null = null;
 async function ensureESSColumns() {
-  if (essMigrationDone) return;
-  try {
-    await query(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "fechaInicioESS" TIMESTAMPTZ`, []);
-    await query(`ALTER TABLE "PEOPLE" ADD COLUMN IF NOT EXISTS "fechaInicioESS" TIMESTAMPTZ`, []);
-    essMigrationDone = true;
-  } catch (err: any) {
-    console.error('⚠️ [ESS] Error ensuring fechaInicioESS columns:', err.message);
+  if (!essMigrationPromise) {
+    essMigrationPromise = (async () => {
+      try {
+        await query(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "fechaInicioESS" TIMESTAMPTZ`, []);
+        await query(`ALTER TABLE "PEOPLE" ADD COLUMN IF NOT EXISTS "fechaInicioESS" TIMESTAMPTZ`, []);
+      } catch (err: any) {
+        console.error(
+          '⚠️ [ESS] No se pudo asegurar fechaInicioESS (se continua sin reintentar):',
+          err.message
+        );
+      }
+    })();
   }
+  await essMigrationPromise;
 }
 
 /** Days a student stays in ESS (Essential) before auto-promoting to BN1 Step 1 */
