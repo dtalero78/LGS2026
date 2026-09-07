@@ -131,7 +131,7 @@ function Content() {
 
   const gestionarTodas = async () => {
     if (!allGestionadas || gestionando) return
-    if (!confirm(`Marcar como gestionadas ${rows.length} registro(s), pasarlos al histórico y borrar sus clases canceladas del historial de los alumnos? (no afecta el cupo semanal)`)) return
+    if (!confirm(`Marcar como gestionadas ${rows.length} registro(s), pasarlos al histórico y borrar sus clases canceladas del historial de los usuarios? (no afecta el cupo semanal)`)) return
     setGestionando(true)
     try {
       const j = await jsonFetchRetry(`/api/postgres/cancelaciones-sin-reemplazo/gestionar`, { method: 'POST' })

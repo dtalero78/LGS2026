@@ -165,7 +165,7 @@ export default function PerformanceEvaluationPage() {
                   ? 'Vista por advisor — métricas individuales comparadas contra el promedio general.'
                   : view === 'lista'
                   ? 'Lista de advisors — marca los que definen el Alcance (plataforma o selección).'
-                  : 'Búsqueda por comentario — comentarios filtrados por banda de promedio, con el alumno que los escribió.'}
+                  : 'Búsqueda por comentario — comentarios filtrados por banda de promedio, con el usuario que los escribió.'}
               </p>
             </div>
           </div>
@@ -746,8 +746,8 @@ function BusquedaComentarioView({
       { header: 'Tipo',       accessor: (r: any) => r.tipo + (r.subtipo ? ` (${r.subtipo})` : '') },
       { header: 'Nivel',      accessor: (r: any) => r.nivel || '' },
       { header: 'Step',       accessor: (r: any) => r.step || '' },
-      { header: 'Alumno',     accessor: (r: any) => r.studentNombre || '' },
-      { header: 'ID Alumno',  accessor: (r: any) => r.studentNumeroId || '' },
+      { header: 'Usuario',    accessor: (r: any) => r.studentNombre || '' },
+      { header: 'ID Usuario', accessor: (r: any) => r.studentNumeroId || '' },
       { header: 'Comentario', accessor: (r: any) => r.comentario || '' },
       { header: 'IA Sentimiento', accessor: (r: any) => r.aiSentimiento || '' },
     ], `perf-eval-comentarios_${(isAll ? 'TODOS' : (advisorSelected?.nombre || advisorId)).replace(/\s+/g, '_')}_banda${banda ?? 'todos'}_${startDate}_${endDate}`)
@@ -756,7 +756,7 @@ function BusquedaComentarioView({
   return (
     <div className="space-y-4">
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
-        ⚠️ Esta vista muestra el <b>nombre y número de identificación del alumno</b> que escribió cada comentario (el resto del dashboard es anónimo). Úsala con criterio.
+        ⚠️ Esta vista muestra el <b>nombre y número de identificación del usuario</b> que escribió cada comentario (el resto del dashboard es anónimo). Úsala con criterio.
       </div>
 
       {/* Filtros (iguales a Por Advisor) + Tope */}
@@ -869,7 +869,7 @@ function BusquedaComentarioView({
                   <th className="text-left font-medium py-2 px-3 w-28">Fecha</th>
                   {isAll && <th className="text-left font-medium py-2 px-3">Advisor</th>}
                   <th className="text-left font-medium py-2 px-3">Tipo · Nivel · Step</th>
-                  <th className="text-left font-medium py-2 px-3">Alumno</th>
+                  <th className="text-left font-medium py-2 px-3">Usuario</th>
                   <th className="text-left font-medium py-2 px-3">Comentario</th>
                 </tr>
               </thead>

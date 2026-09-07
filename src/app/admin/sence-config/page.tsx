@@ -53,9 +53,9 @@ function Content() {
       <h1 className="text-2xl font-bold text-gray-900">Proceso SENCE</h1>
       <p className="mt-1 text-gray-600">
         Interruptor del proceso SENCE (registro de asistencia por Clave Única en el panel del
-        estudiante). Con el flag <b>apagado</b>, los alumnos marcados SENCE <b>NO</b> ven el botón
+        estudiante). Con el flag <b>apagado</b>, los usuarios marcados SENCE <b>NO</b> ven el botón
         “Iniciar sesión SENCE” y entran directo por Zoom, como cualquier estudiante. Actívalo solo
-        cuando todos los alumnos SENCE tengan su <code>senceCode</code> configurado. El cambio aplica
+        cuando todos los usuarios SENCE tengan su <code>senceCode</code> configurado. El cambio aplica
         en ≤1 minuto.
       </p>
 
@@ -70,8 +70,8 @@ function Content() {
               </div>
               <p className="mt-1 text-sm text-gray-600">
                 {active
-                  ? 'Los alumnos SENCE ven el botón “Iniciar sesión SENCE” en su ventana de clase (deben registrar antes de entrar a Zoom).'
-                  : 'El botón “Iniciar sesión SENCE” está oculto. Los alumnos SENCE entran directo por Zoom.'}
+                  ? 'Los usuarios SENCE ven el botón “Iniciar sesión SENCE” en su ventana de clase (deben registrar antes de entrar a Zoom).'
+                  : 'El botón “Iniciar sesión SENCE” está oculto. Los usuarios SENCE entran directo por Zoom.'}
               </p>
             </div>
             <button
@@ -88,8 +88,8 @@ function Content() {
           </div>
 
           <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-            ⚠️ Antes de activar: cada alumno marcado SENCE debe tener su <code>senceCode</code>
-            (código de curso). Si un alumno SENCE sin código ve el botón, al hacer clic recibe error
+            ⚠️ Antes de activar: cada usuario marcado SENCE debe tener su <code>senceCode</code>
+            (código de curso). Si un usuario SENCE sin código ve el botón, al hacer clic recibe error
             y <b>no puede entrar a su clase</b> (el botón de Zoom solo aparece tras iniciar SENCE).
           </div>
 

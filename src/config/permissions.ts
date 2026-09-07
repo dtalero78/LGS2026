@@ -814,7 +814,7 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     module: Module.SERVICIO,
     section: 'Cancelación sin reemplazo',
     name: 'Página "Cancelación sin reemplazo"',
-    description: 'Listado de alumnos de sesiones canceladas con booking (No Asistió) y su gestión: estado por alumno, gestionada por Servicio/Académico y botón global "Gestionada"',
+    description: 'Listado de usuarios de sesiones canceladas con booking (No Asistió) y su gestión: estado por usuario, gestionada por Servicio/Académico y botón global "Gestionada"',
   },
 
   // ========== COMERCIAL MODULE ==========
@@ -998,7 +998,7 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     module: Module.MANTENIMIENTO,
     section: 'Contingencia',
     name: 'Página "Proceso SENCE"',
-    description: 'Acceso a /admin/sence-config. Interruptor del proceso SENCE (registro de asistencia por Clave Única en el panel del estudiante). Con el flag apagado, los alumnos SENCE NO ven el botón "Iniciar sesión SENCE" y entran directo por Zoom.',
+    description: 'Acceso a /admin/sence-config. Interruptor del proceso SENCE (registro de asistencia por Clave Única en el panel del estudiante). Con el flag apagado, los usuarios SENCE NO ven el botón "Iniciar sesión SENCE" y entran directo por Zoom.',
   },
   {
     code: MantenimientoPermission.CLEAR_HISTORIC,

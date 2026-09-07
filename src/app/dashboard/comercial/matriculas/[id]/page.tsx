@@ -165,7 +165,7 @@ export default function MatriculaDetallePage() {
                                 </div>
                                 <a href={`/student/${b.academicaId}`} target="_blank" rel="noopener noreferrer"
                                   className="inline-flex items-center gap-1 mt-2 text-xs text-blue-600 hover:text-blue-800">
-                                  <ExternalLink className="h-3.5 w-3.5" /> Ver alumno
+                                  <ExternalLink className="h-3.5 w-3.5" /> Ver usuario
                                 </a>
                               </div>
                             ) : (
