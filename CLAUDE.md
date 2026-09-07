@@ -654,6 +654,10 @@ La plataforma opera 100% sobre PostgreSQL. Los datos migrados de Wix (marzo 2026
 - **PostgreSQL** (Digital Ocean Managed Database) as sole data store
 - Connection: `src/lib/postgres.ts` with connection pool (`max: 10`, `idleTimeoutMillis: 15000`) and SSL (`ssl: { rejectUnauthorized: false }`)
 - Pool cached in `globalThis` to prevent connection exhaustion during Next.js hot reloads in development
+- **`statement_timeout = 30s` e `idle_in_transaction_session_timeout = 60s` están fijados a nivel de BASE DE DATOS** (`ALTER DATABASE defaultdb SET ...`, aplicado 2026-09-07 tras el incidente de saturación). Aplican a toda conexión nueva, incluidos los scripts de `scripts/`. Un backfill que legítimamente tarde más debe empezar con `SET statement_timeout = 0` (funciona en conexión directa al 25060, no vía pooler).
+  - **NUNCA** poner `statement_timeout` en el config del Pool de `pg`: en producción `DATABASE_URL` apunta al pooler PgBouncer (modo `transaction`), que rechaza los startup parameters y tumba TODAS las queries con `unsupported startup parameter`
+  - El cluster es `db-s-1vcpu-1gb` (25 conexiones máx.) y está **compartido con otra app** (tablas `tenants`/`messages`/`conversations` del bot de WhatsApp), así que el presupuesto de conexiones y CPU es ajustado
+- **No ejecutar DDL en el request path.** Un `ALTER TABLE ... IF NOT EXISTS` toma ACCESS EXCLUSIVE sobre la tabla y, si se encola detrás de una query lenta, bloquea todo el tráfico de esa tabla. Las migraciones van en `scripts/` (idempotentes, dry-run por defecto). Ver `ensureESSColumns` en [src/services/panel-estudiante.service.ts](src/services/panel-estudiante.service.ts) como referencia del patrón corregido (promesa cacheada, sin reintento)
 - All SQL is parameterized ($1, $2, ...) to prevent injection
 - JSONB fields for flexible data: `onHoldHistory`, `extensionHistory`, `evaluacion`, `steps`, `consentimientoDeclarativo`, etc.
 - Key tables:
