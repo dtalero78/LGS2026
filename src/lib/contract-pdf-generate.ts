@@ -3,6 +3,7 @@ import { queryOne, queryMany } from '@/lib/postgres';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { fillContractTemplate } from '@/lib/contract-template-filler';
 import { buildContractPdfHtml } from '@/lib/contract-pdf-html';
+import { esContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { getAsesorInfo } from '@/lib/asesor';
 import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
 import { archivarContratoEnDrive, buildContractFilename } from '@/lib/contract-drive';
@@ -73,6 +74,7 @@ export async function generarYArchivarContratoPdf(titularId: string) {
   );
 
   const htmlContent = buildContractPdfHtml(contractText, {
+    esPrueba: esContratoPrueba(titular?.contrato),
     contrato: titular.contrato,
     fecha: new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' }),
   });

@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth-postgres';
 import { query, queryOne } from '@/lib/postgres';
 import { fillContractTemplate } from '@/lib/contract-template-filler';
 import { buildContractPdfHtml } from '@/lib/contract-pdf-html';
+import { esContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { getAsesorInfo } from '@/lib/asesor';
 import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
 
@@ -88,6 +89,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   );
 
   const html = buildContractPdfHtml(contractText, {
+    esPrueba: esContratoPrueba(titular?.contrato),
     contrato: titular.contrato,
     fecha: new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' }),
   });
