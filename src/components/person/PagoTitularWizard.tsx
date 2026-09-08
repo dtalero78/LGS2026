@@ -203,6 +203,9 @@ export default function PagoTitularWizard({
   const mediosPago = mediosPagoPara(titular.plataforma)
   const [submitting, setSubmitting] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  // Marcado explícito cuando el pago tiene una anomalía (fecha o cuota fuera de
+  // secuencia). Obliga a una verificación consciente antes de registrar.
+  const [confirmAnomalia, setConfirmAnomalia] = useState(false)
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([])
   const [showDraftBanner, setShowDraftBanner] = useState(false)
   const draftRestored = useRef(false)
@@ -325,6 +328,34 @@ export default function PagoTitularWizard({
   const valorAplicar = Math.max(0, toNum(form.valorPagado) - toNum(form.descuento)) // "Valor Pagado Descuento"
   const saldoDespues = Math.max(0, saldoFechaNum - toNum(form.valorPagado))          // − Valor a Pagar
 
+  // ---- Controles de captura -------------------------------------------------
+  // Se comparan contra los pagos YA registrados (cuota #0 = inscripción queda
+  // fuera: no forma parte de la secuencia de cuotas).
+  const pagosReales: any[] = (Array.isArray(existingPagos) ? existingPagos : [])
+    .filter((x: any) => Number(x.numCuota) > 0)
+  const ultimoPago: any = pagosReales.length
+    ? [...pagosReales].sort((a: any, b: any) =>
+        String(b.fechaPago || '').slice(0, 10).localeCompare(String(a.fechaPago || '').slice(0, 10)))[0]
+    : null
+  const ultimaFechaPago = ultimoPago ? String(ultimoPago.fechaPago || '').slice(0, 10) : ''
+  const maxCuotaRegistrada = pagosReales.reduce((m: number, x: any) => {
+    const n = Number(x.numCuota)
+    return Number.isFinite(n) && n > m ? n : m
+  }, 0)
+  const numCuotaNum = form.numCuota !== '' ? Number(form.numCuota) : NaN
+  /** La fecha de pago es anterior a la del último pago registrado. */
+  const alertaFecha = !!(ultimaFechaPago && form.fechaPago && form.fechaPago < ultimaFechaPago)
+  /** El número de cuota no avanza respecto al último registrado. */
+  const alertaCuota = Number.isFinite(numCuotaNum) && maxCuotaRegistrada > 0 && numCuotaNum <= maxCuotaRegistrada
+  /** Además, ya hay un pago con ese mismo número de cuota. */
+  const cuotaYaExiste = Number.isFinite(numCuotaNum) && pagosReales.some((x: any) => Number(x.numCuota) === numCuotaNum)
+  const hayAlertas = alertaFecha || alertaCuota
+  const fmtFecha = (f: string) => {
+    if (!f) return '—'
+    const [y, m, d] = f.slice(0, 10).split('-')
+    return d && m && y ? `${d}/${m}/${y}` : f
+  }
+
   // Upload de documentos (mismo flujo que UploadDocButton)
   const uploadFiles = async (files: File[]) => {
     if (!files.length) return
@@ -380,6 +411,7 @@ export default function PagoTitularWizard({
     if (!form.fechaPago) { toast.error('Fecha de pago es requerida'); return }
     if (toNum(form.valorPagado) <= 0) { toast.error('Valor pagado debe ser mayor a 0'); return }
     if (form.numCuota && Number(form.numCuota) < 0) { toast.error('Número de cuota no puede ser negativo'); return }
+    setConfirmAnomalia(false)
     setShowConfirm(true)
   }
 
@@ -765,7 +797,73 @@ export default function PagoTitularWizard({
               </p>
               <p><span className="text-gray-500">Valor del pago:</span>{' '}
                 <strong>$ {toNum(form.valorPagado).toLocaleString('es-CO')}</strong></p>
+              <p><span className="text-gray-500">Fecha de pago:</span>{' '}
+                <strong>{fmtFecha(form.fechaPago)}</strong></p>
             </div>
+
+            {/* Cómo se aplicará el pago: de dónde parte el saldo y en qué queda. */}
+            <div className="rounded-lg border border-gray-200 overflow-hidden">
+              <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-bold uppercase tracking-wide text-gray-600">
+                Así se aplicará el pago
+              </div>
+              <dl className="divide-y divide-gray-100 text-sm">
+                <div className="flex justify-between px-3 py-2">
+                  <dt className="text-gray-600">Saldo a la fecha</dt>
+                  <dd className="font-medium tabular-nums">$ {saldoFechaNum.toLocaleString('es-CO')}</dd>
+                </div>
+                <div className="flex justify-between px-3 py-2">
+                  <dt className="text-gray-600">Valor a pagar</dt>
+                  <dd className="font-medium tabular-nums text-purple-700">− $ {toNum(form.valorPagado).toLocaleString('es-CO')}</dd>
+                </div>
+                {toNum(form.descuento) > 0 && (
+                  <div className="flex justify-between px-3 py-2">
+                    <dt className="text-gray-600">Descuento <span className="text-gray-400">(no reduce el saldo)</span></dt>
+                    <dd className="font-medium tabular-nums">$ {toNum(form.descuento).toLocaleString('es-CO')}</dd>
+                  </div>
+                )}
+                <div className="flex justify-between px-3 py-2">
+                  <dt className="text-gray-600">Valor a aplicar</dt>
+                  <dd className="font-medium tabular-nums text-amber-700">$ {valorAplicar.toLocaleString('es-CO')}</dd>
+                </div>
+                <div className="flex justify-between px-3 py-2 bg-emerald-50">
+                  <dt className="font-semibold text-emerald-900">Saldo después del pago</dt>
+                  <dd className="font-bold tabular-nums text-emerald-700">$ {saldoDespues.toLocaleString('es-CO')}</dd>
+                </div>
+              </dl>
+            </div>
+
+            {/* Anomalías de secuencia: exigen verificación explícita. */}
+            {hayAlertas && (
+              <div className="rounded-lg bg-red-50 border border-red-300 p-3 space-y-2">
+                <p className="text-sm font-bold text-red-800">⚠️ Verifica antes de continuar</p>
+                <ul className="text-sm text-red-800 space-y-1.5 list-disc pl-5">
+                  {alertaFecha && (
+                    <li>
+                      La <strong>fecha de pago</strong> ({fmtFecha(form.fechaPago)}) es <strong>anterior</strong> a la del
+                      último pago registrado ({fmtFecha(ultimaFechaPago)}).
+                    </li>
+                  )}
+                  {alertaCuota && (
+                    <li>
+                      {cuotaYaExiste
+                        ? <>Ya existe un pago registrado con la <strong>cuota #{form.numCuota}</strong>.</>
+                        : <>La <strong>cuota #{form.numCuota}</strong> no avanza: la última registrada es la #{maxCuotaRegistrada}.</>}
+                    </li>
+                  )}
+                </ul>
+                <label className="flex items-start gap-2 pt-1 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={confirmAnomalia}
+                    onChange={(e) => setConfirmAnomalia(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-red-400 text-red-600 focus:ring-red-500"
+                  />
+                  <span className="text-sm text-red-900">
+                    Revisé los datos y confirmo que el pago se debe registrar así.
+                  </span>
+                </label>
+              </div>
+            )}
 
             {cuotasTotalNum > 0 && Number(form.numCuota) === cuotasTotalNum && (
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
@@ -788,8 +886,9 @@ export default function PagoTitularWizard({
                 Cancelar
               </button>
               <button
-                type="button" onClick={doSubmit} disabled={submitting}
-                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50"
+                type="button" onClick={doSubmit} disabled={submitting || (hayAlertas && !confirmAnomalia)}
+                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={hayAlertas && !confirmAnomalia ? 'Marca la casilla de verificación para continuar' : undefined}
               >
                 {submitting ? 'Guardando…' : 'Seguir'}
               </button>
