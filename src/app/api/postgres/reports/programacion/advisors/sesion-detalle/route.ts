@@ -1,9 +1,10 @@
 import 'server-only'
-import { handlerWithAuth, successResponse } from '@/lib/api-helpers'
+import { successResponse } from '@/lib/api-helpers'
+import { handlerReport } from '@/lib/report-guard'
 import { queryMany, queryOne } from '@/lib/postgres'
 import { ValidationError, NotFoundError } from '@/lib/errors'
 
-export const GET = handlerWithAuth(async (req, _ctx, _session) => {
+export const GET = handlerReport(async (req, _ctx, _session) => {
   const { searchParams } = new URL(req.url)
   const eventId = searchParams.get('eventId')?.trim()
 

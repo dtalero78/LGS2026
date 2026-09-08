@@ -1,5 +1,6 @@
 import 'server-only'
-import { handlerWithAuth, successResponse } from '@/lib/api-helpers'
+import { successResponse } from '@/lib/api-helpers'
+import { handlerReport } from '@/lib/report-guard'
 import { requirePermission } from '@/lib/api-permissions'
 import { query } from '@/lib/postgres'
 import { getLastRun, isStale } from '@/lib/cron-runs'
@@ -24,7 +25,7 @@ import { InformesPermission } from '@/types/permissions'
 
 interface CronDetail { studentId: string; nombre: string; success: boolean; error?: string; diasExtendidos?: number; finalContrato?: string }
 
-export const GET = handlerWithAuth(async (req, _ctx, session) => {
+export const GET = handlerReport(async (req, _ctx, session) => {
   await requirePermission(session, InformesPermission.ACAD_HOLD_VIGENCIAS)
 
   const { searchParams } = new URL(req.url)

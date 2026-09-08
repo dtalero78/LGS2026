@@ -1,5 +1,6 @@
 import 'server-only'
-import { handlerWithAuth, successResponse } from '@/lib/api-helpers'
+import { successResponse } from '@/lib/api-helpers'
+import { handlerReport } from '@/lib/report-guard'
 import { requirePermission } from '@/lib/api-permissions'
 import { query } from '@/lib/postgres'
 import { InformesPermission } from '@/types/permissions'
@@ -46,7 +47,7 @@ function canonicalSteps(nivel: string): string[] {
   return SPECIAL_STEPS[nivel] ?? []
 }
 
-export const GET = handlerWithAuth(async (req, _ctx, session) => {
+export const GET = handlerReport(async (req, _ctx, session) => {
   await requirePermission(session, InformesPermission.ACAD_X_NIVELES)
 
   const { searchParams } = new URL(req.url)

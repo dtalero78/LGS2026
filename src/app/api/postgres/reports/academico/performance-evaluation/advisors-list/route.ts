@@ -13,12 +13,13 @@
  * Gateado por ACADEMICO.PERFORMANCE_EVAL.POR_ADVISOR (SUPER_ADMIN/ADMIN bypass).
  */
 import 'server-only';
-import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
+import { successResponse } from '@/lib/api-helpers';
+import { handlerReport } from '@/lib/report-guard';
 import { requirePermission } from '@/lib/api-permissions';
 import { AcademicoPermission } from '@/types/permissions';
 import { queryMany } from '@/lib/postgres';
 
-export const GET = handlerWithAuth(async (_req, _ctx, session) => {
+export const GET = handlerReport(async (_req, _ctx, session) => {
   // Base VER: lo consumen la pestaña "Por Advisor" y la pestaña "Lista".
   // Devuelve solo nombres/país/conteo (los nombres ya se ven en los rankings).
   await requirePermission(session, AcademicoPermission.PERFORMANCE_EVAL_VER);

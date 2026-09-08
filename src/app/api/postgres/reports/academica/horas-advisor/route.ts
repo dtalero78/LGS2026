@@ -1,5 +1,6 @@
 import 'server-only'
-import { handlerWithAuth, successResponse } from '@/lib/api-helpers'
+import { successResponse } from '@/lib/api-helpers'
+import { handlerReport } from '@/lib/report-guard'
 import { requirePermission } from '@/lib/api-permissions'
 import { queryMany } from '@/lib/postgres'
 import { InformesPermission } from '@/types/permissions'
@@ -69,7 +70,7 @@ function tipoExpr(cols: { nivel: string; tipo: string; titulos: string[]; step: 
 const CAL_TIPO = tipoExpr({ nivel: 'c."nivel"', tipo: 'c."tipo"', titulos: ['c."nombreEvento"', 'c."tituloONivel"'], step: 'c."step"' })
 const LOG_TIPO = tipoExpr({ nivel: 'l."nivel"', tipo: 'l."tipo"', titulos: ['l."tituloEvento"'], step: 'l."step"' })
 
-export const GET = handlerWithAuth(async (req, _ctx, session) => {
+export const GET = handlerReport(async (req, _ctx, session) => {
   await requirePermission(session, InformesPermission.ACAD_HORAS_ADVISOR)
 
   const { searchParams } = new URL(req.url)

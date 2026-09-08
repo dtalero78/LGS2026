@@ -3,11 +3,12 @@
  * Obtiene todos los beneficiarios en un rango de fechas con su total de sesiones
  */
 
-import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
+import { successResponse } from '@/lib/api-helpers';
+import { handlerReport } from '@/lib/report-guard';
 import { ValidationError } from '@/lib/errors';
 import { query } from '@/lib/postgres';
 
-export const POST = handlerWithAuth(async (req) => {
+export const POST = handlerReport(async (req) => {
   const body = await req.json();
   const { fechaInicio, fechaFin } = body;
 
