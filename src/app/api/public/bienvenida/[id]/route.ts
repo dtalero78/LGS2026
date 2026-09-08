@@ -2,6 +2,7 @@ import 'server-only';
 import { handler, successResponse } from '@/lib/api-helpers';
 import { ForbiddenError } from '@/lib/errors';
 import { verifyBienvenidaToken } from '@/lib/bienvenida-token';
+import { normalizeNumeroId } from '@/lib/numeroid-normalize';
 import { query } from '@/lib/postgres';
 
 /**
@@ -40,7 +41,9 @@ export const GET = handler(async (request, { params }) => {
   return successResponse({
     nombre: [p.primerNombre, p.segundoNombre].filter(Boolean).join(' ').trim(),
     contrato: p.contrato || '',
-    documento: consent?.numeroDocumento || '',
+    // El cliente puede digitarlo con puntos/guiones ('18.201.897-K');
+    // se muestra en la forma canónica del proyecto ('18201897K').
+    documento: normalizeNumeroId(consent?.numeroDocumento),
     fechaFirma: consent?.timestampAcceptacion || '',
     tipoAprobacion: consent?.tipoAprobacion || '',
     hashMasked: maskHash(p.hashConsentimiento),
