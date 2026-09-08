@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import {
   BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -83,8 +83,9 @@ export default function MatriculasPage() {
   const [endDate, setEndDate]     = useState(today)
   const [pais, setPais]           = useState('')
   const [data, setData]           = useState<MatriculasData | null>(null)
-  const [loading, setLoading]     = useState(true)
+  const [loading, setLoading]     = useState(false)
   const [error, setError]         = useState<string | null>(null)
+  const [consultado, setConsultado] = useState(false)
 
   const fetchData = useCallback(async (sd: string, ed: string, p: string) => {
     setLoading(true); setError(null)
@@ -99,10 +100,18 @@ export default function MatriculasPage() {
     finally { setLoading(false) }
   }, [])
 
-  useEffect(() => { fetchData(firstOfYear, today, '') }, [fetchData])
-
-  const handleApply = () => fetchData(startDate, endDate, pais)
-  const handleClear = () => { setStartDate(firstOfYear); setEndDate(today); setPais(''); fetchData(firstOfYear, today, '') }
+  const handleApply = () => {
+    if (!startDate || !endDate) {
+      alert('Selecciona el rango de fechas (Desde y Hasta) antes de consultar.')
+      return
+    }
+    setConsultado(true)
+    fetchData(startDate, endDate, pais)
+  }
+  const handleClear = () => {
+    setStartDate(firstOfYear); setEndDate(today); setPais('')
+    setData(null); setError(null); setConsultado(false)
+  }
   const handlePrint = () => window.print()
 
   const c = data?.cards
@@ -222,7 +231,7 @@ export default function MatriculasPage() {
               </div>
               <div className="flex gap-2 ml-auto flex-wrap">
                 <button type="button" onClick={handleApply} disabled={loading}
-                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium">Aplicar filtros</button>
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium">Consultar</button>
                 <button type="button" onClick={handleClear} disabled={loading}
                   className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">Limpiar filtros</button>
                 <PermissionGuard permission={InformesPermission.CONTRATOS_MATRICULAS_EXP}>
@@ -249,6 +258,14 @@ export default function MatriculasPage() {
           </div>
         )}
 
+        {!consultado && !loading && !error && (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center text-sm text-indigo-900 no-print">
+            Configura los filtros y pulsa <b>Consultar</b> para ver el informe.
+          </div>
+        )}
+
+        {consultado && (
+        <>
         {/* Tarjetas — Contratos (afectadas por país + rango de fechas) */}
         <div>
           <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Contratos ({startDate} → {endDate})</p>
@@ -367,6 +384,8 @@ export default function MatriculasPage() {
               )}
           </div>
         </div>
+        </>
+        )}
       </div>
     </DashboardLayout>
   )

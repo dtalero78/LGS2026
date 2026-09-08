@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { exportToExcel } from '@/lib/export-excel'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
@@ -107,7 +107,8 @@ export default function NivelesPage() {
   const [endDate,     setEndDate]     = useState(today)
   const [nivelFiltro, setNivelFiltro] = useState('')
   const [data,        setData]        = useState<NivelesResponse | null>(null)
-  const [loading,     setLoading]     = useState(true)
+  const [loading,     setLoading]     = useState(false)
+  const [consultado,  setConsultado]  = useState(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -121,7 +122,14 @@ export default function NivelesPage() {
     finally { setLoading(false) }
   }, [startDate, endDate, nivelFiltro])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  const handleApply = () => {
+    if (!startDate || !endDate) {
+      alert('Selecciona el rango de fechas (Desde y Hasta) antes de consultar.')
+      return
+    }
+    setConsultado(true)
+    fetchData()
+  }
 
   // ── Derived ────────────────────────────────────────────────────────────
   const sesiones    = sortNiveles(data?.sesionesPorNivel ?? [])
@@ -219,8 +227,13 @@ export default function NivelesPage() {
               </select>
             </div>
             <div className="flex gap-2 ml-auto">
+              <button type="button" onClick={handleApply} disabled={loading}
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors"
+              >
+                Consultar
+              </button>
               <button type="button"
-                onClick={() => { setStartDate(firstOfYear); setEndDate(today); setNivelFiltro('') }}
+                onClick={() => { setStartDate(firstOfYear); setEndDate(today); setNivelFiltro(''); setData(null); setConsultado(false) }}
                 className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
               >
                 Limpiar filtros
@@ -238,6 +251,16 @@ export default function NivelesPage() {
             </div>
           </div>
         </div>
+
+        {/* ── Estado vacío ── */}
+        {!consultado && !loading && (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center text-sm text-indigo-900">
+            Configura los filtros y pulsa <b>Consultar</b> para ver el informe.
+          </div>
+        )}
+
+        {consultado && (
+        <>
 
         {/* ── KPI Cards ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -458,6 +481,9 @@ export default function NivelesPage() {
           Nivel y step tomados del evento en <code className="bg-blue-100 px-1 rounded">CALENDARIO</code> via JOIN.
           La sección "Esta Semana" muestra siempre la semana actual (lunes–domingo) independientemente del filtro.
         </div>
+
+        </>
+        )}
 
       </div>
     </DashboardLayout>

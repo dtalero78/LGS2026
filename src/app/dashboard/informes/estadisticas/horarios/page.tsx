@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { exportToExcel } from '@/lib/export-excel'
 import {
@@ -87,7 +87,8 @@ export default function HorariosPage() {
   const [startDate, setStartDate] = useState(firstOfYear)
   const [endDate, setEndDate]     = useState(today)
   const [data, setData]           = useState<HorariosResponse | null>(null)
-  const [loading, setLoading]     = useState(true)
+  const [loading, setLoading]     = useState(false)
+  const [consultado, setConsultado] = useState(false)
   // Detecta la zona horaria local del navegador del usuario (IANA, ej: "America/Santiago")
   const [clientTz] = useState<string>(() => Intl.DateTimeFormat().resolvedOptions().timeZone)
 
@@ -102,7 +103,14 @@ export default function HorariosPage() {
     finally     { setLoading(false) }
   }, [startDate, endDate, clientTz])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  const handleApply = () => {
+    if (!startDate || !endDate) {
+      alert('Selecciona el rango de fechas (Desde y Hasta) antes de consultar.')
+      return
+    }
+    setConsultado(true)
+    fetchData()
+  }
 
   // ── Derived data ──────────────────────────────────────────────────────
   const horaChart = Array.from({ length: 17 }, (_, i) => {
@@ -188,9 +196,14 @@ export default function HorariosPage() {
               />
             </div>
             <div className="flex gap-2 ml-auto">
+              <button type="button" onClick={handleApply} disabled={loading}
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors"
+              >
+                Consultar
+              </button>
               <button
                 type="button"
-                onClick={() => { setStartDate(firstOfYear); setEndDate(today) }}
+                onClick={() => { setStartDate(firstOfYear); setEndDate(today); setData(null); setConsultado(false) }}
                 className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
               >
                 Limpiar filtros
@@ -209,6 +222,16 @@ export default function HorariosPage() {
             </div>
           </div>
         </div>
+
+        {/* ── Estado vacío ── */}
+        {!consultado && !loading && (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center text-sm text-indigo-900">
+            Configura los filtros y pulsa <b>Consultar</b> para ver el informe.
+          </div>
+        )}
+
+        {consultado && (
+        <>
 
         {/* ── KPI Cards ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -478,6 +501,9 @@ export default function HorariosPage() {
           Todos los horarios se muestran en la zona horaria de su navegador:{' '}
           <code className="bg-blue-100 px-1 rounded font-semibold">{clientTz}</code>.
         </div>
+
+        </>
+        )}
 
       </div>
     </DashboardLayout>

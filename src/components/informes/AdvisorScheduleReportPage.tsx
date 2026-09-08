@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import AdvisorScheduleFilters, { AdvisorFilterState } from './AdvisorScheduleFilters'
 import AdvisorScheduleKpis    from './AdvisorScheduleKpis'
@@ -43,8 +43,9 @@ export default function AdvisorScheduleReportPage({ reportType }: Props) {
 
   const [filters,    setFilters]    = useState<AdvisorFilterState>(DEFAULT_FILTERS)
   const [data,       setData]       = useState<ReportData | null>(null)
-  const [loading,    setLoading]    = useState(true)
+  const [loading,    setLoading]    = useState(false)
   const [error,      setError]      = useState<string | null>(null)
+  const [consultado, setConsultado] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const fetchData = useCallback(async (f: AdvisorFilterState) => {
@@ -71,10 +72,19 @@ export default function AdvisorScheduleReportPage({ reportType }: Props) {
     }
   }, [reportType])
 
-  useEffect(() => { fetchData(DEFAULT_FILTERS) }, [fetchData])
-
-  const handleApply = () => fetchData(filters)
-  const handleClear = () => { setFilters(DEFAULT_FILTERS); fetchData(DEFAULT_FILTERS) }
+  const handleApply = () => {
+    if (!filters.fechaInicio || !filters.fechaFin) {
+      alert('Selecciona el rango de fechas (Desde y Hasta) antes de consultar.')
+      return
+    }
+    setConsultado(true)
+    fetchData(filters)
+  }
+  const handleClear = () => {
+    setFilters(DEFAULT_FILTERS)
+    setData(null)
+    setConsultado(false)
+  }
 
   const modoAdvisor = !!filters.advisorId
   const rankingTipo = modoAdvisor ? 'nivel' : 'advisor'
@@ -139,38 +149,49 @@ export default function AdvisorScheduleReportPage({ reportType }: Props) {
           </div>
         )}
 
-        {/* KPIs */}
-        <AdvisorScheduleKpis
-          kpis={data?.kpis ?? emptyKpis}
-          loading={loading}
-          kpiLabel={config.kpiLabel}
-        />
+        {/* Estado vacío */}
+        {!consultado && !loading && !error && (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center text-sm text-indigo-900">
+            Configura los filtros y pulsa <b>Consultar</b> para ver el informe.
+          </div>
+        )}
 
-        {/* Ranking */}
-        <AdvisorScheduleRanking
-          data={data?.ranking ?? []}
-          tipo={rankingTipo}
-          labelTitle={rankingLabelTitle}
-          labelCol={rankingLabelCol}
-          loading={loading}
-        />
+        {consultado && (
+          <>
+            {/* KPIs */}
+            <AdvisorScheduleKpis
+              kpis={data?.kpis ?? emptyKpis}
+              loading={loading}
+              kpiLabel={config.kpiLabel}
+            />
 
-        {/* Charts */}
-        <AdvisorScheduleCharts
-          charts={data?.charts ?? emptyCharts}
-          advisorId={filters.advisorId}
-          loading={loading}
-          chartLabelSec={config.chartLabelSec}
-        />
+            {/* Ranking */}
+            <AdvisorScheduleRanking
+              data={data?.ranking ?? []}
+              tipo={rankingTipo}
+              labelTitle={rankingLabelTitle}
+              labelCol={rankingLabelCol}
+              loading={loading}
+            />
 
-        {/* Table */}
-        <AdvisorScheduleTable
-          data={data?.table ?? []}
-          loading={loading}
-          onRowClick={row => setSelectedId(row._id)}
-          filters={{ fechaInicio: filters.fechaInicio, fechaFin: filters.fechaFin }}
-          exportPermission={config.exportPermission}
-        />
+            {/* Charts */}
+            <AdvisorScheduleCharts
+              charts={data?.charts ?? emptyCharts}
+              advisorId={filters.advisorId}
+              loading={loading}
+              chartLabelSec={config.chartLabelSec}
+            />
+
+            {/* Table */}
+            <AdvisorScheduleTable
+              data={data?.table ?? []}
+              loading={loading}
+              onRowClick={row => setSelectedId(row._id)}
+              filters={{ fechaInicio: filters.fechaInicio, fechaFin: filters.fechaFin }}
+              exportPermission={config.exportPermission}
+            />
+          </>
+        )}
 
       </div>
 
