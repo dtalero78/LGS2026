@@ -148,13 +148,15 @@ export function fillContractTemplate(
     ? [
         `Razón social: ${titular?.primerNombre || ''}`,
         `NIT / RUT: ${titular?.numeroId || ''}`,
+        `Rubro: ${titular?.rubro || ''}`,
         `Domicilio: ${titular?.domicilio || ''}`,
         `Ciudad: ${titular?.ciudad || ''}`,
         `Teléfono: ${titular?.celular || titular?.telefono || ''}`,
         `Correo: ${titular?.email || ''}`,
         '',
-        'REPRESENTANTE LEGAL:',
+        'REPRESENTANTE DE LA EMPRESA:',
         `Nombre: ${titular?.replegal || ''}`,
+        `Cargo: ${titular?.replegalcargo || ''}`,
         `Documento: ${titular?.replegalid || ''}`,
         `Celular: ${titular?.replegalcel || ''}`,
       ].join('\n')
@@ -190,7 +192,7 @@ export function fillContractTemplate(
     ? [
         `Razón social: ${titular?.primerNombre || ''}`,
         `NIT / RUT: ${titular?.numeroId || ''}`,
-        `Representante legal: ${titular?.replegal || ''}`,
+        `Representante de la empresa: ${titular?.replegal || ''}`,
         `Número de Identificación: ${titular?.replegalid || ''}`,
       ].join('\n')
     : [
@@ -238,7 +240,9 @@ export function fillContractTemplate(
     firma: firmaText,
     // Empresa / persona jurídica (wizard: tipoPersona = 'Empresa')
     tipoPersona: titular?.tipoPersona || '',
+    rubro: titular?.rubro || '',
     replegal: titular?.replegal || '',
+    replegalcargo: titular?.replegalcargo || '',
     replegalid: titular?.replegalid || '',
     replegalcel: titular?.replegalcel || '',
     telefono: titular?.telefono || '',

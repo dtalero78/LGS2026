@@ -87,7 +87,10 @@ function CrearContratoContent() {
     numeroId: '',
     tipoPersona: 'Persona Natural', // 'Persona Natural' | 'Empresa'
     // Representante legal (solo modo Empresa) → PEOPLE.replegal / replegalid / replegalcel
+    // Rubro / giro — SOLO modo Empresa. Va en el contrato entre NIT/RUT y Domicilio.
+    rubro: '',
     replegal: '',
+    replegalcargo: '',
     replegalid: '',
     replegalcel: '',
     plataforma: '',
@@ -397,6 +400,7 @@ function CrearContratoContent() {
                  titular.plataforma !== '' &&
                  contrato !== '' &&
                  titular.replegal.trim() !== '' &&
+                 titular.replegalcargo.trim() !== '' &&
                  titular.replegalid.trim() !== '' &&
                  titular.replegalcel.trim() !== '';
         }
@@ -989,6 +993,23 @@ function CrearContratoContent() {
                     placeholder="Solo letras mayúsculas y números"
                   />
                 </div>
+                {/* Rubro — solo modo Empresa. En el contrato va entre NIT/RUT y Domicilio. */}
+                {esEmpresa && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="rubro-empresa">
+                      Rubro
+                    </label>
+                    <input
+                      id="rubro-empresa"
+                      type="text"
+                      maxLength={150}
+                      value={titular.rubro || ''}
+                      onChange={(e) => setTitular({...titular, rubro: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="Giro o actividad económica"
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Plataforma *
@@ -1031,8 +1052,8 @@ function CrearContratoContent() {
                 {/* Representante legal — solo modo Empresa (el Tipo de Persona ahora es el switch del encabezado) */}
                 {esEmpresa && (
                   <div className="col-span-2 border-t border-gray-200 pt-4 mt-1">
-                    <p className="text-sm font-bold text-purple-700 mb-3">Representante legal</p>
-                    <div className="grid grid-cols-3 gap-4">
+                    <p className="text-sm font-bold text-purple-700 mb-3">Representante de la empresa</p>
+                    <div className="grid grid-cols-4 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo *</label>
                         <input
@@ -1040,6 +1061,18 @@ function CrearContratoContent() {
                           value={titular.replegal || ''}
                           onChange={(e) => setTitular({...titular, replegal: e.target.value})}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1" htmlFor="replegal-cargo">Cargo *</label>
+                        <input
+                          id="replegal-cargo"
+                          type="text"
+                          maxLength={120}
+                          value={titular.replegalcargo || ''}
+                          onChange={(e) => setTitular({...titular, replegalcargo: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                          placeholder="Ej: Gerente General"
                         />
                       </div>
                       <div>
