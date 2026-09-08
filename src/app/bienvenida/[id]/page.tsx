@@ -30,6 +30,13 @@ function BienvenidaContent() {
   const [tipoAprobacion, setTipoAprobacion] = useState('')
   const [loading, setLoading] = useState(true)
   const [denegado, setDenegado] = useState(false)
+  // Reapertura por documento cuando el enlace ya venció.
+  const [tokenActivo, setTokenActivo] = useState('')
+  const [docInput, setDocInput] = useState('')
+  const [verificando, setVerificando] = useState(false)
+  const [errorDoc, setErrorDoc] = useState('')
+
+  useEffect(() => { setTokenActivo(token) }, [token])
 
   useEffect(() => {
     let cancelled = false
@@ -37,10 +44,11 @@ function BienvenidaContent() {
       try {
         // El endpoint exige el token: sin él (o vencido) responde 403 y no
         // devuelve ningún dato del titular.
-        const res = await fetch(`/api/public/bienvenida/${titularId}?t=${encodeURIComponent(token)}`, { cache: 'no-store' })
+        const res = await fetch(`/api/public/bienvenida/${titularId}?t=${encodeURIComponent(tokenActivo)}`, { cache: 'no-store' })
         const d = await res.json()
         if (cancelled) return
         if (!res.ok) { setDenegado(true); return }
+        setDenegado(false)
         setNombre(d.nombre || '')
         setContrato(d.contrato || '')
         setDocumento(d.documento || '')
@@ -58,30 +66,69 @@ function BienvenidaContent() {
         if (!cancelled) setLoading(false)
       }
     }
-    if (!token) { setDenegado(true); setLoading(false); return }
+    if (!tokenActivo) { setDenegado(true); setLoading(false); return }
+    setLoading(true)
     load()
     return () => { cancelled = true }
-  }, [titularId, token])
+  }, [titularId, tokenActivo])
 
-  // Enlace vencido o sin llave: no mostramos datos, mandamos al sitio público.
-  useEffect(() => {
-    if (!denegado) return
-    const t = setTimeout(() => { window.location.href = 'https://letsgospeak.cl/' }, 4000)
-    return () => clearTimeout(t)
-  }, [denegado])
+  // Enlace vencido: en vez de expulsar al cliente, le pedimos su documento
+  // para reabrir la constancia por otros 60 minutos.
+  const verificarDocumento = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!docInput.trim() || verificando) return
+    setVerificando(true)
+    setErrorDoc('')
+    try {
+      const res = await fetch(`/api/public/bienvenida/${titularId}/verificar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documento: docInput }),
+      })
+      const d = await res.json()
+      if (!res.ok || !d.token) {
+        setErrorDoc(d?.error || 'El número de documento no coincide.')
+        return
+      }
+      setTokenActivo(d.token) // dispara la recarga de datos
+    } catch {
+      setErrorDoc('No se pudo verificar. Intenta de nuevo.')
+    } finally {
+      setVerificando(false)
+    }
+  }
 
   if (denegado) {
     return (
       <>
         <style dangerouslySetInnerHTML={{ __html: CSS }} />
-        <div className="bv-root" style={{ display: 'grid', placeItems: 'center', padding: '48px 24px' }}>
-          <div style={{ maxWidth: '46ch', textAlign: 'center' }}>
-            <h2 style={{ fontSize: 22 }}>Este enlace ya no está disponible</h2>
-            <p style={{ color: 'var(--bv-tinta-suave)', marginTop: 10 }}>
-              Por seguridad, la página de bienvenida solo puede abrirse durante un tiempo
-              limitado después de firmar. Te llevamos a nuestro sitio…
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Epilogue:wght@500;600;700;800&family=Roboto:wght@400;500;700&display=swap" />
+        <div className="bv-root bv-verify-root">
+          <form className="bv-verify" onSubmit={verificarDocumento}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="bv-verify-logo" src="/logo-lgs-blanco.png" alt="Let's Go Speak" />
+            <h2>Confirma tu identidad</h2>
+            <p className="bv-verify-txt">
+              Por seguridad, tu constancia de firma se abre solo por un tiempo limitado.
+              Ingresa tu número de documento para volver a verla.
             </p>
-          </div>
+            <label className="bv-verify-label" htmlFor="bv-doc">Número de documento</label>
+            <input
+              id="bv-doc"
+              className="bv-verify-input"
+              value={docInput}
+              onChange={(e) => { setDocInput(e.target.value); setErrorDoc('') }}
+              placeholder="Ej: 18201897K"
+              autoComplete="off"
+              inputMode="text"
+              disabled={verificando}
+            />
+            {errorDoc && <p className="bv-verify-err">{errorDoc}</p>}
+            <button className="bv-verify-btn" type="submit" disabled={verificando || !docInput.trim()}>
+              {verificando ? 'Verificando…' : 'Ver mi constancia'}
+            </button>
+            <a className="bv-verify-alt" href="https://letsgospeak.cl/">Ir a letsgospeak.cl</a>
+          </form>
         </div>
       </>
     )
@@ -303,6 +350,28 @@ const CSS = `
 .bv-btn:focus-visible{outline:3px solid var(--bv-cyan);outline-offset:2px}
 .bv-footer{margin:44px 0 0;border-top:1px solid var(--bv-linea);padding:22px 0 44px;
   color:var(--bv-tenue);font-size:13.5px;display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:space-between}
+.bv-verify-root{display:grid;place-items:center;min-height:100vh;padding:32px 20px;
+  background:linear-gradient(148deg,var(--bv-azul-profundo) 0%,#1d4fa0 52%,var(--bv-azul) 100%)}
+.bv-verify{width:100%;max-width:420px;background:var(--bv-ground);border-radius:14px;
+  box-shadow:0 18px 50px -18px rgba(0,0,0,.5);padding:30px 26px;display:flex;flex-direction:column}
+.bv-verify-logo{height:40px;width:auto;align-self:center;margin-bottom:20px;
+  filter:brightness(0) saturate(100%) invert(13%) sepia(64%) saturate(3200%) hue-rotate(232deg)}
+.bv-verify h2{font-size:21px;font-weight:700;text-align:center}
+.bv-verify-txt{margin:10px 0 0;color:var(--bv-tinta-suave);font-size:15px;text-align:center;line-height:1.55}
+.bv-verify-label{margin:22px 0 6px;font-size:11px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--bv-tenue)}
+.bv-verify-input{border:1.5px solid var(--bv-linea);border-radius:8px;padding:11px 13px;font-size:16px;
+  font-family:inherit;color:var(--bv-tinta);background:var(--bv-ground);letter-spacing:.02em}
+.bv-verify-input:focus{outline:none;border-color:var(--bv-azul);box-shadow:0 0 0 3px rgba(1,112,185,.15)}
+.bv-verify-input:disabled{opacity:.6}
+.bv-verify-err{margin:9px 0 0;color:#c02626;font-size:14px}
+.bv-verify-btn{margin:18px 0 0;background:var(--bv-azul);color:#fff;border:none;border-radius:8px;
+  padding:12px 18px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;transition:opacity .15s}
+.bv-verify-btn:disabled{opacity:.55;cursor:not-allowed}
+.bv-verify-btn:hover:not(:disabled){opacity:.92}
+.bv-verify-btn:focus-visible{outline:3px solid var(--bv-cyan);outline-offset:2px}
+.bv-verify-alt{margin:14px 0 0;text-align:center;font-size:14px;color:var(--bv-tinta-suave);text-decoration:none}
+.bv-verify-alt:hover{text-decoration:underline}
 @media (prefers-reduced-motion:reduce){.bv-root *{transition:none!important}}
 @media (max-width:560px){
   .bv-fila{grid-template-columns:1fr;gap:3px}
