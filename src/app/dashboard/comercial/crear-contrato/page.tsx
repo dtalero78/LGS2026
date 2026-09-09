@@ -138,7 +138,7 @@ function CrearContratoContent() {
   }, []);
   // En modo Empresa el país del titular se toma de la plataforma (no se pregunta).
   const [titularEsBeneficiario, setTitularEsBeneficiario] = useState(false);
-  // Franquicia SENCE: marca a nivel del titular (empresa) — solo se activa si es
+  // SENCE: marca a nivel del titular (empresa) — solo se activa si es
   // Empresa y de Chile. El código SENCE NO se captura aquí; se captura por
   // beneficiario en el paso 7.
   const [senceUsuario, setSenceUsuario] = useState(false);
@@ -160,6 +160,9 @@ function CrearContratoContent() {
   const [proteccionError, setProteccionError] = useState<string>('');
   // Confirmación al crear cuando SÍ hay beneficiarios o el titular es beneficiario.
   const [showCreateConfirm, setShowCreateConfirm] = useState(false);
+  // Confirmación al ACTIVAR SENCE: el comercial debe declarar que el usuario
+  // está (o estará) inscrito en SENCE antes de marcar el contrato.
+  const [showSenceConfirm, setShowSenceConfirm] = useState(false);
   // Aviso de beneficiario(s) en blanco (sin datos) al intentar crear.
   const [showBlankBenefWarning, setShowBlankBenefWarning] = useState(false);
   const draftRestored = useRef(false);
@@ -315,7 +318,7 @@ function CrearContratoContent() {
 
   // Add beneficiario
   const addBeneficiario = () => {
-    // Propaga la marca Franquicia SENCE del titular (Empresa + Chile + marcada)
+    // Propaga la marca SENCE del titular (Empresa + Chile + marcada)
     // → el nuevo beneficiario nace con sence=true (editable por fila).
     const heredaSence = senceUsuario && titular.tipoPersona === 'Empresa' && titular.plataforma === 'Chile'
     setBeneficiarios([...beneficiarios, {
@@ -619,7 +622,7 @@ function CrearContratoContent() {
           })),
           // Una empresa nunca es beneficiaria (no toma el programa).
           titularEsBeneficiario: esEmpresa ? false : titularEsBeneficiario,
-          // Franquicia SENCE del titular: Empresa + Chile (tipoPersona va dentro de `titular`).
+          // SENCE del titular: Empresa + Chile (tipoPersona va dentro de `titular`).
           // El código NO se captura a nivel del titular — solo por beneficiario.
           sence: senceUsuario && titular.tipoPersona === 'Empresa' && titular.plataforma === 'Chile',
           clientToday,
@@ -858,6 +861,42 @@ function CrearContratoContent() {
           {/* Step 1: Asesor */}
           {currentStep === 1 && (
             <div className="space-y-4">
+              {/* Instrucciones del proceso: las 4 opciones que definen cómo queda
+                  el contrato y que NO todas se pueden corregir después de crearlo. */}
+              <div className="rounded-lg border-l-4 border-amber-500 bg-amber-50 p-4">
+                <h3 className="text-base font-bold text-amber-900 flex items-center gap-2">
+                  ⚠️ Antes de empezar — verifique estas 4 opciones
+                </h3>
+                <p className="mt-1 text-sm text-amber-800">
+                  Definen cómo queda el contrato y <strong>no todas se pueden corregir después</strong>. Revíselas en el paso indicado:
+                </p>
+                <ol className="mt-3 space-y-2.5 text-sm text-amber-900">
+                  <li>
+                    <span className="font-bold">1. 🧪 Contrato de prueba</span>
+                    <span className="text-amber-700"> — arriba a la derecha, en esta misma pantalla.</span>
+                    <br />
+                    Márquelo <strong>solo si está realizando algún tipo de prueba o con fines de aprendizaje</strong>. Aunque el proceso es completo, no genera datos en producción. Si el contrato es real, déjelo <strong>sin marcar</strong>.
+                  </li>
+                  <li>
+                    <span className="font-bold">2. Tipo de contrato: Persona Natural o Empresa</span>
+                    <span className="text-amber-700"> — paso 2, botón arriba a la derecha.</span>
+                    <br />
+                    Cambia los campos que se capturan y el texto del contrato. <strong>Empresa</strong> pide razón social, NIT/RUT, rubro y los datos del <em>representante de la empresa</em>; <strong>Persona Natural</strong> captura los datos personales del titular.
+                  </li>
+                  <li>
+                    <span className="font-bold">3. ¿Este titular será beneficiario?</span>
+                    <span className="text-amber-700"> — paso 2.</span>
+                    <br />
+                    Márquelo si el titular <strong>también tomará el programa</strong>. Si no lo marca, queda solo como responsable financiero y no se le crea ficha académica. No aplica cuando el titular es Empresa.
+                  </li>
+                  <li>
+                    <span className="font-bold">4. SENCE (Servicio Nacional de Capacitación y Empleo)</span>
+                    <span className="text-amber-700"> — paso 2.</span>
+                    <br />
+                    <strong>SENCE</strong> es el organismo del Estado de Chile que financia la capacitación de los trabajadores mediante la <em>franquicia tributaria</em>. Active el botón <strong>solo si el contrato es para un usuario que se inscribió o se inscribirá en SENCE</strong>. Está disponible únicamente para titular <strong>Empresa</strong> de <strong>Chile</strong>; al activarlo se pide una confirmación y luego se habilita el <em>código SENCE por beneficiario</em> en el paso de Beneficiarios.
+                  </li>
+                </ol>
+              </div>
               <h2 className="text-xl font-semibold mb-4">Información del Asesor</h2>
               {/* NOMBRE → PEOPLE.asesorCreadorContrato · EMAIL → PEOPLE.asesor.
                   Van separados a propósito: `asesor` (email) es la llave con la
@@ -1018,7 +1057,7 @@ function CrearContratoContent() {
                     value={titular.plataforma}
                     onChange={(e) => {
                       setTitular({...titular, plataforma: e.target.value})
-                      if (e.target.value !== 'Chile') setSenceUsuario(false) // Franquicia SENCE es solo Chile
+                      if (e.target.value !== 'Chile') setSenceUsuario(false) // SENCE es solo Chile
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   >
@@ -1118,33 +1157,47 @@ function CrearContratoContent() {
                     </div>
                     {(() => {
                       const senceHabilitado = titular.tipoPersona === 'Empresa' && titular.plataforma === 'Chile'
+                      const senceHint = senceHabilitado
+                        ? 'Actívelo SOLO si el usuario se inscribió o se inscribirá en SENCE. El código SENCE se captura por beneficiario.'
+                        : titular.tipoPersona !== 'Empresa'
+                          ? 'Disponible solo si el titular es Empresa'
+                          : 'SENCE solo aplica a contratos de Chile'
                       return (
                     <div className="relative group flex items-center">
-                      <input
-                        type="checkbox"
+                      {/* Botón (switch) SENCE. Al ENCENDER pide confirmación explícita
+                          — ver modal showSenceConfirm; al apagar no pregunta. */}
+                      <button
+                        type="button"
                         id="senceUsuario"
-                        checked={senceUsuario}
+                        role="switch"
+                        aria-checked={senceUsuario}
                         disabled={!senceHabilitado}
-                        onChange={(e) => setSenceUsuario(e.target.checked)}
-                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded disabled:opacity-40 disabled:cursor-not-allowed"
-                      />
-                      <label
-                        htmlFor="senceUsuario"
-                        className={`ml-2 block text-lg font-bold cursor-pointer ${senceHabilitado ? 'text-gray-900' : 'text-gray-400 cursor-not-allowed'}`}
+                        onClick={() => { if (senceUsuario) { setSenceUsuario(false) } else { setShowSenceConfirm(true) } }}
+                        className={'inline-flex items-center gap-2 px-4 py-2 rounded-full border-2 text-base font-bold transition-colors ' + (
+                          !senceHabilitado
+                            ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                            : senceUsuario
+                              ? 'bg-sky-600 border-sky-700 text-white shadow'
+                              : 'bg-white border-sky-300 text-sky-700 hover:bg-sky-50'
+                        )}
                       >
-                        Franquicia SENCE
-                      </label>
-                      <span className="invisible group-hover:visible absolute left-0 top-full mt-1 bg-gray-800 text-white text-sm rounded px-3 py-1.5 whitespace-nowrap z-10">
-                        {senceHabilitado
-                          ? 'Marca a la empresa como Franquicia SENCE (el código se captura por beneficiario)'
-                          : titular.tipoPersona !== 'Empresa'
-                            ? 'Disponible solo si el titular es Empresa'
-                            : 'Franquicia SENCE solo aplica a contratos de Chile'}
+                        <span className={'inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ' + (senceUsuario ? 'bg-white/40' : 'bg-gray-200')}>
+                          <span className={'h-4 w-4 rounded-full bg-white shadow transform transition-transform ' + (senceUsuario ? 'translate-x-4' : 'translate-x-0.5')} />
+                        </span>
+                        SENCE (Servicio Nacional de Capacitación y Empleo)
+                      </button>
+                      <span className="invisible group-hover:visible absolute left-0 top-full mt-1 bg-gray-800 text-white text-sm rounded px-3 py-1.5 max-w-md z-10">
+                        {senceHint}
                       </span>
                     </div>
                       )
                     })()}
                   </div>
+                  {senceUsuario && (
+                    <div className="mt-3 rounded-lg border-l-4 border-sky-500 bg-sky-50 px-3 py-2 text-sm text-sky-900">
+                      <strong>Contrato SENCE activo.</strong> Este contrato se está creando para un usuario que se inscribió o se inscribirá en <strong>SENCE (Servicio Nacional de Capacitación y Empleo)</strong>. En el paso de <em>Beneficiarios</em> podrá marcar cuáles van por SENCE y cargar su código. Si no corresponde, desactive el botón.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1934,6 +1987,39 @@ function CrearContratoContent() {
           </div>
         )}
 
+        {/* Modal: confirmar que el contrato es para un usuario SENCE (guard del botón) */}
+        {showSenceConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
+              <h3 className="text-lg font-bold text-gray-900">Confirmar contrato SENCE</h3>
+              <div className="rounded-lg bg-sky-50 border border-sky-200 px-3 py-3 text-sm text-sky-900">
+                Este contrato <strong>se realizará para un usuario que se inscribió o se inscribirá en SENCE</strong> (Servicio Nacional de Capacitación y Empleo).
+                <br /><br />
+                Si es así, continúe. De lo contrario, <strong>desactive el botón</strong>.
+              </div>
+              <p className="text-xs text-gray-500">
+                SENCE es el organismo del Estado de Chile que financia la capacitación de trabajadores mediante la franquicia tributaria. Al activarlo, en el paso de Beneficiarios podrá marcar cuáles van por SENCE y cargar su código.
+              </p>
+              <div className="flex flex-col gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => { setSenceUsuario(true); setShowSenceConfirm(false); }}
+                  className="w-full px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700"
+                >
+                  Sí, es un contrato SENCE — continuar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setSenceUsuario(false); setShowSenceConfirm(false); }}
+                  className="w-full px-4 py-2 text-sm font-medium text-gray-800 bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  No — dejar el botón desactivado
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Modal Kids: reúne todos los datos del beneficiario (regulares + curso + apoderado) */}
         <KidsBeneficiarioModal
           open={kidsModalIndex !== null}
@@ -2047,6 +2133,36 @@ function CrearContratoContent() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
               <h3 className="text-lg font-bold text-gray-900">Confirmar creación del contrato</h3>
+
+              {/* Chips de las opciones estructurales del contrato */}
+              <div className="flex flex-wrap gap-2">
+                <span className={'px-2.5 py-1 rounded-full text-xs font-bold ' + (esEmpresa ? 'bg-purple-100 text-purple-800' : 'bg-primary-100 text-primary-800')}>
+                  {esEmpresa ? 'Empresa' : 'Persona Natural'}
+                </span>
+                <span className={'px-2.5 py-1 rounded-full text-xs font-bold ' + (esContratoPrueba ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-700')}>
+                  {esContratoPrueba ? '🧪 Contrato de PRUEBA' : 'Contrato real'}
+                </span>
+                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700">
+                  {titular.plataforma || 'Sin plataforma'}
+                </span>
+              </div>
+
+              {/* SENCE — se enfatiza porque define cómo se financia el contrato */}
+              {senceUsuario ? (
+                <div className="rounded-lg bg-sky-50 border-2 border-sky-400 px-3 py-3 text-sm text-sky-900">
+                  <p className="font-bold text-sky-900">CONTRATO SENCE</p>
+                  <p className="mt-1">
+                    Este contrato queda marcado como <strong>SENCE (Servicio Nacional de Capacitación y Empleo)</strong>: se realizará para un usuario que <strong>se inscribió o se inscribirá en SENCE</strong>.
+                  </p>
+                  <p className="mt-1 font-semibold">
+                    Verifique que sea correcto. Si no lo es, cancele y desactive el botón SENCE en el paso 2.
+                  </p>
+                </div>
+              ) : (esEmpresa && titular.plataforma === 'Chile') ? (
+                <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2 text-sm text-gray-600">
+                  Este contrato <strong>NO</strong> está marcado como SENCE. Si el usuario se inscribió o se inscribirá en SENCE, cancele y active el botón en el paso 2.
+                </div>
+              ) : null}
 
               {/* Estado del titular como beneficiario — en la parte superior */}
               {titularEsBeneficiario ? (

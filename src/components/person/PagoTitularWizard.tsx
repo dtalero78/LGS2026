@@ -87,6 +87,12 @@ interface DraftState {
    * Recaudos después). Independiente de las casillas de cartera.
    */
   cambioContado: boolean
+  /**
+   * Pago doble — el operador captura UN valor y el servidor lo parte en DOS
+   * registros con la misma fecha: la cuota #N y la #N+1 (adelanto). El
+   * descuento, si lo hay, se aplica a la segunda.
+   */
+  pagoDoble: boolean
 }
 
 const DRAFT_TTL_MS = 72 * 60 * 60 * 1000 // 72 horas
@@ -120,6 +126,7 @@ const empty = (): DraftState => ({
   documentosAdjuntos: [],
   cambioCartera: '',
   cambioContado: false,
+  pagoDoble: false,
 })
 
 function toNum(v: string): number {
@@ -363,7 +370,21 @@ export default function PagoTitularWizard({
   const alertaCuota = Number.isFinite(numCuotaNum) && maxCuotaRegistrada > 0 && numCuotaNum <= maxCuotaRegistrada
   /** Además, ya hay un pago con ese mismo número de cuota. */
   const cuotaYaExiste = Number.isFinite(numCuotaNum) && pagosReales.some((x: any) => Number(x.numCuota) === numCuotaNum)
-  const hayAlertas = alertaFecha || alertaCuota
+  // ── Pago doble ────────────────────────────────────────────────────────
+  // Mismo reparto que aplica el servidor: si el valor es impar, el peso
+  // sobrante queda en la primera cuota, así las dos mitades suman el total.
+  const totalAPagar   = toNum(form.valorPagado)
+  const mitadPrimera  = Math.ceil(totalAPagar / 2)
+  const mitadSegunda  = totalAPagar - mitadPrimera
+  const cuotaSiguiente = Number.isFinite(numCuotaNum) ? numCuotaNum + 1 : NaN
+  /** El pago doble necesita un # de cuota para saber cuál es la siguiente. */
+  const pagoDobleListo = form.pagoDoble && Number.isFinite(numCuotaNum) && numCuotaNum >= 1
+  /** La segunda cuota se sale del total pactado del contrato. */
+  const alertaCuotaSiguienteExcede = !!(
+    form.pagoDoble && cuotasTotalNum > 0 && Number.isFinite(cuotaSiguiente) && cuotaSiguiente > cuotasTotalNum
+  )
+
+  const hayAlertas = alertaFecha || alertaCuota || alertaCuotaSiguienteExcede
   const fmtFecha = (f: string) => {
     if (!f) return '—'
     const [y, m, d] = f.slice(0, 10).split('-')
@@ -431,6 +452,9 @@ export default function PagoTitularWizard({
     if (!form.fechaPago) { toast.error('Fecha de pago es requerida'); return }
     if (toNum(form.valorPagado) <= 0) { toast.error('Valor pagado debe ser mayor a 0'); return }
     if (form.numCuota && Number(form.numCuota) < 0) { toast.error('Número de cuota no puede ser negativo'); return }
+    if (form.pagoDoble && !pagoDobleListo) {
+      toast.error('Para un pago doble indica el # de cuota (1 o mayor)'); return
+    }
     setConfirmAnomalia(false)
     setShowConfirm(true)
   }
@@ -464,6 +488,8 @@ export default function PagoTitularWizard({
         // Cambio Contado: el backend deriva `realizadopor` de la fecha del pago
         // vs la aprobación del contrato — acá solo se envía la marca.
         cambioContado: form.cambioContado,
+        // Pago doble: el backend parte el valor y crea las DOS filas (#N y #N+1).
+        pagoDoble: form.pagoDoble,
       })
 
       // Cambio de tipoCartera disparado desde la casilla en el wizard.
@@ -483,7 +509,7 @@ export default function PagoTitularWizard({
         }
       }
 
-      toast.success('Pago registrado')
+      toast.success(form.pagoDoble ? 'Pago doble registrado (2 cuotas)' : 'Pago registrado')
       localStorage.removeItem(draftKey)
       onCreated()
       onClose()
@@ -601,7 +627,23 @@ export default function PagoTitularWizard({
               </div>
             </div>
             <div>
-              <label htmlFor="numCuota" className="block text-sm font-medium text-gray-700"># Cuota</label>
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor="numCuota" className="block text-sm font-medium text-gray-700"># Cuota</label>
+                {/* Pago doble: parte el valor capturado en la cuota #N y la #N+1. */}
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, pagoDoble: !f.pagoDoble }))}
+                  aria-pressed={form.pagoDoble}
+                  title="Cobra esta cuota y adelanta la siguiente en un solo pago"
+                  className={'px-2.5 py-1 rounded-full text-xs font-bold border transition-colors ' + (
+                    form.pagoDoble
+                      ? 'bg-indigo-600 border-indigo-600 text-white'
+                      : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                  )}
+                >
+                  Pago doble
+                </button>
+              </div>
               <input
                 id="numCuota" type="number" min={0}
                 value={form.numCuota}
@@ -609,6 +651,13 @@ export default function PagoTitularWizard({
                 className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-center font-semibold"
                 placeholder="0"
               />
+              {form.pagoDoble && (
+                <p className={'mt-1 text-sm font-semibold ' + (pagoDobleListo ? 'text-indigo-700' : 'text-amber-700')}>
+                  {pagoDobleListo
+                    ? 'Junto con la cuota #' + cuotaSiguiente
+                    : 'Indica el # de cuota para saber cuál se adelanta'}
+                </p>
+              )}
             </div>
           </div>
 
@@ -632,6 +681,44 @@ export default function PagoTitularWizard({
               value={form.valorPagado}
               onChange={v => setForm(f => ({ ...f, valorPagado: v }))} required highlight />
           </div>
+
+          {/* Fila 4 — Reparto del pago doble. El valor capturado arriba se
+              divide entre la cuota actual y la siguiente; si es impar, el peso
+              sobrante queda en la primera. El descuento se aplica a la segunda
+              (misma regla que corre en el servidor al guardar). */}
+          {pagoDobleListo && (
+            <div className="grid grid-cols-2 gap-4 rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+              <div>
+                <label className="block text-base font-bold text-indigo-900">
+                  Cuota #{numCuotaNum}
+                </label>
+                <div className="mt-1 px-3 py-2.5 bg-white border border-indigo-300 rounded-md text-xl font-bold text-gray-900">
+                  $ {new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(mitadPrimera)}
+                </div>
+              </div>
+              <div>
+                <label className="block text-base font-bold text-indigo-900">
+                  Cuota #{cuotaSiguiente}
+                </label>
+                <div className="mt-1 px-3 py-2.5 bg-white border border-indigo-300 rounded-md text-xl font-bold text-gray-900">
+                  $ {new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(mitadSegunda)}
+                </div>
+                {toNum(form.descuento) > 0 && (
+                  <p className="mt-1 text-sm font-medium text-indigo-700">
+                    Con el descuento de $ {new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(toNum(form.descuento))}
+                  </p>
+                )}
+              </div>
+              <p className="col-span-2 text-sm text-indigo-800">
+                Se guardarán <strong>dos registros</strong> con la misma fecha de pago, uno por cuota.
+                {alertaCuotaSiguienteExcede && (
+                  <span className="block mt-1 text-sm font-bold text-red-700">
+                    Ojo: el contrato tiene {cuotasTotalNum} cuotas y la #{cuotaSiguiente} se sale de ese total.
+                  </span>
+                )}
+              </p>
+            </div>
+          )}
 
           {/* Fila 5 — Descuento + computados (mismos cálculos actuales) */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -738,8 +825,8 @@ export default function PagoTitularWizard({
                 className="mt-0.5 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
               />
               <span>
-                <span className="text-sm font-medium text-teal-900">Cambio Contado</span>
-                <span className="block text-xs text-teal-800">
+                <span className="text-base font-bold text-teal-900">Cambio Contado</span>
+                <span className="block text-sm text-teal-800">
                   Marca que este pago corresponde al cambio del plan a contado.
                   Se registra automáticamente quién lo gestionó.
                 </span>
@@ -747,12 +834,15 @@ export default function PagoTitularWizard({
             </label>
 
             {form.cambioContado && (
-              <div className="mt-3 pt-3 border-t border-teal-200 text-xs text-teal-900">
+              <div className="mt-3 pt-3 border-t border-teal-200 text-sm text-teal-900">
                 {realizadoPorPreview ? (
                   <>
-                    Quedará registrado como <strong>{realizadoPorPreview}</strong>
+                    Quedará registrado como{' '}
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-base font-bold bg-teal-600 text-white align-middle">
+                      {realizadoPorPreview}
+                    </span>
                     {diasPreview !== null && (
-                      <span className="text-teal-700">
+                      <span className="block mt-1 text-teal-700">
                         {diasPreview < 0
                           ? ' — el pago es anterior a la aprobación del contrato'
                           : ' — el pago es del día ' + diasPreview + ' desde la aprobación del contrato'}
@@ -858,6 +948,14 @@ export default function PagoTitularWizard({
                 <strong>{titular.contrato || '—'}</strong></p>
               <p><span className="text-gray-500">Cuota #:</span>{' '}
                 <strong>{form.numCuota !== '' ? form.numCuota : '—'}</strong>
+                {pagoDobleListo && (
+                  <>
+                    {' y '}<strong>#{cuotaSiguiente}</strong>
+                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">
+                      Pago doble
+                    </span>
+                  </>
+                )}
                 {cuotasTotalNum > 0 && Number(form.numCuota) === cuotasTotalNum && (
                   <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
                     Última cuota
@@ -884,6 +982,23 @@ export default function PagoTitularWizard({
                   <dt className="text-gray-600">Valor a pagar</dt>
                   <dd className="font-medium tabular-nums text-purple-700">− $ {toNum(form.valorPagado).toLocaleString('es-CO')}</dd>
                 </div>
+                {pagoDobleListo && (
+                  <>
+                    <div className="flex justify-between px-3 py-2 bg-indigo-50">
+                      <dt className="text-indigo-900 pl-3">↳ Cuota #{numCuotaNum}</dt>
+                      <dd className="font-medium tabular-nums text-indigo-900">$ {mitadPrimera.toLocaleString('es-CO')}</dd>
+                    </div>
+                    <div className="flex justify-between px-3 py-2 bg-indigo-50">
+                      <dt className="text-indigo-900 pl-3">
+                        ↳ Cuota #{cuotaSiguiente}
+                        {toNum(form.descuento) > 0 && (
+                          <span className="text-indigo-600"> (lleva el descuento)</span>
+                        )}
+                      </dt>
+                      <dd className="font-medium tabular-nums text-indigo-900">$ {mitadSegunda.toLocaleString('es-CO')}</dd>
+                    </div>
+                  </>
+                )}
                 {toNum(form.descuento) > 0 && (
                   <div className="flex justify-between px-3 py-2">
                     <dt className="text-gray-600">Descuento <span className="text-gray-400">(no reduce el saldo)</span></dt>
@@ -902,6 +1017,13 @@ export default function PagoTitularWizard({
             </div>
 
             {/* Anomalías de secuencia: exigen verificación explícita. */}
+            {alertaCuotaSiguienteExcede && (
+              <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-900">
+                La cuota <strong>#{cuotaSiguiente}</strong> supera las {cuotasTotalNum} cuotas
+                pactadas en el contrato.
+              </div>
+            )}
+
             {hayAlertas && (
               <div className="rounded-lg bg-red-50 border border-red-300 p-3 space-y-2">
                 <p className="text-sm font-bold text-red-800">⚠️ Verifica antes de continuar</p>
@@ -937,6 +1059,14 @@ export default function PagoTitularWizard({
             {cuotasTotalNum > 0 && Number(form.numCuota) === cuotasTotalNum && (
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
                 Esta es la <strong>última cuota</strong> del contrato ({cuotasTotalNum} de {cuotasTotalNum}).
+              </div>
+            )}
+
+            {pagoDobleListo && (
+              <div className="rounded-lg bg-indigo-50 border border-indigo-200 p-3 text-sm text-indigo-900">
+                Se crearán <strong>dos registros</strong> con fecha {fmtFecha(form.fechaPago)}:
+                cuota <strong>#{numCuotaNum}</strong> y cuota <strong>#{cuotaSiguiente}</strong>.
+                Ambos quedan marcados como <strong>Adelanto cuota</strong>.
               </div>
             )}
 
