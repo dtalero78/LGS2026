@@ -664,6 +664,13 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                           <tr key={p._id} className="hover:bg-gray-50">
                             <td className="px-3 py-2 text-center text-gray-900 font-medium">
                               {p.numCuota ?? '—'}
+                              {/* Las dos filas de un Pago doble (cuota #N y #N+1)
+                                  se marcan como adelanto para que se lean juntas. */}
+                              {p.pagoDoble && (
+                                <span className="block mt-0.5 mx-auto w-fit px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-100 text-indigo-800 whitespace-nowrap">
+                                  Adelanto cuota
+                                </span>
+                              )}
                               {p.cambioContado && (
                                 <span className="block mt-0.5 mx-auto w-fit px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-teal-100 text-teal-800">
                                   Contado

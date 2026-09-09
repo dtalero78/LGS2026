@@ -314,7 +314,17 @@ export const pagosTitularesService = {
     return row;
   },
 
-  async create(input: Partial<PagoTitular>, createdBy: string): Promise<PagoTitular> {
+  /**
+   * Crea UN pago. `opts.saldoBase` permite encadenar: el pago doble pasa acá el
+   * saldo que dejó la primera cuota, para que la segunda no vuelva a partir del
+   * saldo de FINANCIEROS (que no cambia hasta validar y daría el mismo número
+   * en las dos filas).
+   */
+  async create(
+    input: Partial<PagoTitular>,
+    createdBy: string,
+    opts?: { saldoBase?: number },
+  ): Promise<PagoTitular> {
     if (!input.idPeople) throw new ValidationError('idPeople es requerido');
 
     const titular = await PeopleRepository.findById(input.idPeople);
@@ -342,13 +352,17 @@ export const pagosTitularesService = {
     const valorPagadoNum = toNum(input.valorPagado);
 
     let saldoAFecha = 0;
-    const titularContrato = (titular as any).contrato as string | undefined;
-    if (titularContrato) {
-      const finRow = await queryOne<{ saldo: string | null }>(
-        `SELECT "saldo" FROM "FINANCIEROS" WHERE "contrato" = $1 LIMIT 1`,
-        [titularContrato]
-      );
-      saldoAFecha = toNum(finRow?.saldo);
+    if (opts?.saldoBase !== undefined) {
+      saldoAFecha = opts.saldoBase;
+    } else {
+      const titularContrato = (titular as any).contrato as string | undefined;
+      if (titularContrato) {
+        const finRow = await queryOne<{ saldo: string | null }>(
+          `SELECT "saldo" FROM "FINANCIEROS" WHERE "contrato" = $1 LIMIT 1`,
+          [titularContrato]
+        );
+        saldoAFecha = toNum(finRow?.saldo);
+      }
     }
     const saldo = Math.max(0, saldoAFecha - valorPagadoNum);
 
@@ -393,6 +407,7 @@ export const pagosTitularesService = {
       penalidad: esPenalidad,
       cambioContado: esCambioContado,
       realizadopor,
+      pagoDoble: input.pagoDoble === true,
       valorPagado: input.valorPagado ?? null,
       saldo,
       descuento: input.descuento ?? 0,
@@ -407,6 +422,70 @@ export const pagosTitularesService = {
     };
 
     return PagosTitularesRepository.create(data);
+  },
+
+  /**
+   * PAGO DOBLE — el operador captura UN valor y acá se parte en DOS registros
+   * con la MISMA fecha de pago: la cuota #N y la #N+1 (adelanto de la siguiente).
+   *
+   * Reglas:
+   *  - El valor se divide en dos; si es impar, el peso sobrante va a la PRIMERA
+   *    cuota, de modo que las dos mitades siempre suman el valor capturado.
+   *  - El DESCUENTO se aplica solo a la SEGUNDA cuota (así lo pidió negocio).
+   *  - El saldo se encadena: la segunda fila parte del saldo que dejó la primera.
+   *  - Ambas filas quedan con `pagoDoble=true` → la tabla las muestra como
+   *    "Adelanto cuota".
+   *
+   * No es una transacción SQL: `create` es un INSERT por fila. Si la segunda
+   * fallara, la primera queda registrada — se ve en la tabla como una cuota
+   * suelta sin su par y el error se devuelve al operador.
+   */
+  async createPagoDoble(
+    input: Partial<PagoTitular>,
+    createdBy: string,
+  ): Promise<PagoTitular[]> {
+    if (!input.idPeople) throw new ValidationError('idPeople es requerido');
+
+    const numCuota = Number(input.numCuota);
+    if (!Number.isFinite(numCuota) || numCuota < 1) {
+      throw new ValidationError('Pago doble requiere un # de cuota válido (1 o mayor)');
+    }
+
+    const total = toNum(input.valorPagado);
+    if (total <= 0) throw new ValidationError('Pago doble requiere un valor a pagar mayor a 0');
+
+    // Impar → el peso extra queda en la primera cuota; mitad1 + mitad2 === total.
+    const mitad1 = Math.ceil(total / 2);
+    const mitad2 = total - mitad1;
+
+    const titular = await PeopleRepository.findById(input.idPeople);
+    if (!titular) throw new NotFoundError('PEOPLE', input.idPeople);
+
+    let saldoAFecha = 0;
+    const contrato = (titular as any).contrato as string | undefined;
+    if (contrato) {
+      const finRow = await queryOne<{ saldo: string | null }>(
+        `SELECT "saldo" FROM "FINANCIEROS" WHERE "contrato" = $1 LIMIT 1`,
+        [contrato]
+      );
+      saldoAFecha = toNum(finRow?.saldo);
+    }
+
+    // Cuota #N — sin descuento.
+    const primero = await this.create(
+      { ...input, numCuota, valorPagado: mitad1, descuento: 0, pagoDoble: true },
+      createdBy,
+      { saldoBase: saldoAFecha },
+    );
+
+    // Cuota #N+1 — recibe el descuento y arranca del saldo que dejó la primera.
+    const segundo = await this.create(
+      { ...input, numCuota: numCuota + 1, valorPagado: mitad2, descuento: input.descuento ?? 0, pagoDoble: true },
+      createdBy,
+      { saldoBase: Math.max(0, saldoAFecha - mitad1) },
+    );
+
+    return [primero, segundo];
   },
 
   async update(id: string, body: Record<string, any>): Promise<PagoTitular> {

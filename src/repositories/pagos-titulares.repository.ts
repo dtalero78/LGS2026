@@ -46,6 +46,10 @@ export interface PagoTitular {
   penalidad: boolean;
   /** true = este pago corresponde a un CAMBIO A CONTADO del plan del titular. */
   cambioContado: boolean;
+  /** true = fila nacida de un "Pago doble": un solo valor capturado que el
+   *  servidor partió en DOS registros (cuota #N y #N+1, misma fecha de pago).
+   *  Ambas filas quedan marcadas; la tabla las muestra como "Adelanto cuota". */
+  pagoDoble: boolean;
   /** Quién gestionó el cambio a contado: 'Comercial' | 'Recaudos' | null.
    *  Solo se llena cuando `cambioContado=true`; lo calcula el servidor según los
    *  días transcurridos entre la aprobación del contrato y el pago
@@ -101,14 +105,14 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
          "plan", "vlrTotalProg", "numCuota", "cuotasTotal", "valorCuota", "valorPagado",
          "saldo", "descuento", "valorAplicado", "inscripcion", "medioPago", "numeroReferencia",
          "numeroFactura", "documentosAdjuntos", "validado", "createdBy",
-         "vlrpenalidad", "penalidad", "cambioContado", "realizadopor"
+         "vlrpenalidad", "penalidad", "cambioContado", "realizadopor", "pagoDoble"
        ) VALUES (
          $1, $2, $3, $4, $5,
          $6, $7, $8, $9, $10,
          $11, $12, $13, $14, $15, $16,
          $17, $18, $19, $20, $21, $22,
          $23, $24::jsonb, $25, $26,
-         $27, $28, $29, $30
+         $27, $28, $29, $30, $31
        )
        RETURNING *`,
       [
@@ -142,6 +146,7 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
         data.penalidad ?? false,
         data.cambioContado ?? false,
         data.realizadopor ?? null,
+        data.pagoDoble ?? false,
       ]
     );
     return this.parse(row)!;
