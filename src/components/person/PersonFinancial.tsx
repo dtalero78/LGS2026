@@ -10,6 +10,7 @@ import { PersonPermission } from '@/types/permissions'
 import { usePermissions } from '@/hooks/usePermissions'
 import { api, handleApiError } from '@/hooks/use-api'
 import PagoTitularWizard from './PagoTitularWizard'
+import { fechaBaseContrato as calcFechaBaseContrato } from '@/lib/cambio-contado'
 
 interface PersonFinancialProps {
   person: Person
@@ -609,6 +610,7 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                         <th className="px-3 py-2 text-center font-medium text-gray-700"># Cuota</th>
                         <th className="px-3 py-2 text-left font-medium text-gray-700">Fecha</th>
                         <th className="px-3 py-2 text-left font-medium text-gray-700">Gestor</th>
+                        <th className="px-3 py-2 text-left font-medium text-gray-700">Realizado por</th>
                         <th className="px-3 py-2 text-right font-medium text-gray-700">Valor Pagado</th>
                         <th className="px-3 py-2 text-right font-medium text-gray-700">Descuento</th>
                         <th className="px-3 py-2 text-right font-medium text-gray-700">Saldo</th>
@@ -660,7 +662,14 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                           : (p.saldo != null ? Number(p.saldo) : null)
                         return (
                           <tr key={p._id} className="hover:bg-gray-50">
-                            <td className="px-3 py-2 text-center text-gray-900 font-medium">{p.numCuota ?? '—'}</td>
+                            <td className="px-3 py-2 text-center text-gray-900 font-medium">
+                              {p.numCuota ?? '—'}
+                              {p.cambioContado && (
+                                <span className="block mt-0.5 mx-auto w-fit px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-teal-100 text-teal-800">
+                                  Contado
+                                </span>
+                              )}
+                            </td>
                             <td className="px-3 py-2 text-gray-900">{fechaPago}</td>
                             <td className="px-3 py-2 text-gray-700">
                               {gestor ? (
@@ -672,6 +681,15 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                                 </div>
                               ) : (
                                 <span className="text-xs text-gray-400 italic">{gestorLabel}</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-gray-700">
+                              {p.realizadopor ? (
+                                <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-100 text-teal-800">
+                                  {p.realizadopor}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-gray-400">—</span>
                               )}
                             </td>
                             <td className="px-3 py-2 text-right text-gray-900 font-medium">{p.valorPagado ? formatCurrency(p.valorPagado) : '—'}</td>
@@ -782,6 +800,7 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
             primerApellido: person.primerApellido,
             plan: (person as any).plan ?? null,
           }}
+          fechaBaseContrato={calcFechaBaseContrato(person as any)}
           gestorLabel={currentGestor ? `${currentGestor.nombre} · ${ROLE_LABEL[currentGestor.rol] || currentGestor.rol}` : null}
           existingPagos={pagos}
           // "Saldo a la Fecha" del wizard = FINANCIEROS.saldo dinámico

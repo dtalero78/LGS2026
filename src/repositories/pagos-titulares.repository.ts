@@ -44,6 +44,13 @@ export interface PagoTitular {
   vlrpenalidad: number | null;
   /** true = este pago es una penalidad (además cambia el estado de cartera). */
   penalidad: boolean;
+  /** true = este pago corresponde a un CAMBIO A CONTADO del plan del titular. */
+  cambioContado: boolean;
+  /** Quién gestionó el cambio a contado: 'Comercial' | 'Recaudos' | null.
+   *  Solo se llena cuando `cambioContado=true`; lo calcula el servidor según los
+   *  días transcurridos entre la aprobación del contrato y el pago
+   *  (ver src/lib/cambio-contado.ts). El cliente nunca lo envía. */
+  realizadopor: string | null;
   saldo: number | null;
   descuento: number | null;
   /** "Valor a Aplicar" = max(0, valorPagado − descuento). Lo que reduce el saldo. */
@@ -94,14 +101,14 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
          "plan", "vlrTotalProg", "numCuota", "cuotasTotal", "valorCuota", "valorPagado",
          "saldo", "descuento", "valorAplicado", "inscripcion", "medioPago", "numeroReferencia",
          "numeroFactura", "documentosAdjuntos", "validado", "createdBy",
-         "vlrpenalidad", "penalidad"
+         "vlrpenalidad", "penalidad", "cambioContado", "realizadopor"
        ) VALUES (
          $1, $2, $3, $4, $5,
          $6, $7, $8, $9, $10,
          $11, $12, $13, $14, $15, $16,
          $17, $18, $19, $20, $21, $22,
          $23, $24::jsonb, $25, $26,
-         $27, $28
+         $27, $28, $29, $30
        )
        RETURNING *`,
       [
@@ -133,6 +140,8 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
         data.createdBy ?? null,
         data.vlrpenalidad ?? null,
         data.penalidad ?? false,
+        data.cambioContado ?? false,
+        data.realizadopor ?? null,
       ]
     );
     return this.parse(row)!;

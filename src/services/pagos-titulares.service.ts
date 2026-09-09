@@ -18,6 +18,7 @@ import { query, queryOne } from '@/lib/postgres';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { computePlataformaScope, getSessionPlataforma, buildPlataformaWhereSql, type PlataformaScope } from '@/lib/recaudos-scope';
 import { spacesClient, SPACES_BUCKET, SPACES_CDN } from '@/lib/spaces';
+import { fechaBaseContrato, resolveRealizadoPor } from '@/lib/cambio-contado';
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
@@ -44,6 +45,10 @@ const UPDATABLE_FIELDS = [
   'numeroFactura',
   'documentosAdjuntos',
   'tipoCartera',
+  'cambioContado',
+  // 'realizadopor' NO es editable a mano: es derivado. Se recalcula en update()
+  // cuando cambia la fecha del pago (ver más abajo).
+  'realizadopor',
 ];
 
 // Valores canónicos del tipo de cartera (mayo 2026).
@@ -359,6 +364,16 @@ export const pagosTitularesService = {
     const esPenalidad = input.penalidad === true;
     const valorCuotaIn = input.valorCuota ?? null;
 
+    // Cambio Contado: marca el pago como el cambio de plan a contado y registra
+    // QUIÉN lo gestionó. La atribución la decide el SERVIDOR comparando la fecha
+    // del pago con la de aprobación del contrato (30 días → Comercial, después →
+    // Recaudos). Lo que mande el cliente en `realizadopor` se ignora.
+    const esCambioContado = input.cambioContado === true;
+    const fechaPagoFinal = input.fechaPago ?? new Date().toISOString().slice(0, 10);
+    const realizadopor = esCambioContado
+      ? resolveRealizadoPor(fechaBaseContrato(titular as any), fechaPagoFinal)
+      : null;
+
     const data: Partial<PagoTitular> = {
       _id: ids.payment(),
       idPeople: input.idPeople,
@@ -367,7 +382,7 @@ export const pagosTitularesService = {
       plataforma: input.plataforma ?? (titular as any).plataforma ?? null,
       pagoTercero: input.pagoTercero ?? null,
       idTercero: input.idTercero ?? null,
-      fechaPago: input.fechaPago ?? new Date().toISOString().slice(0, 10),
+      fechaPago: fechaPagoFinal,
       fechaVencimiento: input.fechaVencimiento ?? null,
       fechaReporte: input.fechaReporte ?? fechaReporteDefault,
       plan: input.plan ?? null,
@@ -376,6 +391,8 @@ export const pagosTitularesService = {
       valorCuota: esPenalidad ? null : valorCuotaIn,
       vlrpenalidad: esPenalidad ? valorCuotaIn : null,
       penalidad: esPenalidad,
+      cambioContado: esCambioContado,
+      realizadopor,
       valorPagado: input.valorPagado ?? null,
       saldo,
       descuento: input.descuento ?? 0,
@@ -415,7 +432,21 @@ export const pagosTitularesService = {
 
     const next = { ...existing, ...body };
     const saldo = computeSaldo(next.valorCuota, next.valorPagado, next.descuento);
-    const payload = { ...body, saldo };
+    const payload: Record<string, any> = { ...body, saldo };
+
+    // `realizadopor` es derivado de la fecha del pago, así que se recalcula
+    // (nunca se toma del body) cuando el pago queda marcado como Cambio Contado.
+    // Si se desmarca, el campo se limpia para no dejar una atribución huérfana.
+    if (next.cambioContado === true) {
+      const titularDelPago = await PeopleRepository.findById(existing.idPeople);
+      payload.realizadopor = titularDelPago
+        ? resolveRealizadoPor(fechaBaseContrato(titularDelPago as any), next.fechaPago)
+        : null;
+    } else if (body.cambioContado === false) {
+      payload.realizadopor = null;
+    } else {
+      delete payload.realizadopor;
+    }
 
     // UPDATABLE_FIELDS ya incluye 'saldo' — NO volver a agregarlo (causaría
     // "multiple assignments to same column saldo" en el UPDATE).

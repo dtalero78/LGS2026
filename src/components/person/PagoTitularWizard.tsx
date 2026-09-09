@@ -7,6 +7,7 @@ import { api, handleApiError } from '@/hooks/use-api'
 import { PermissionGuard } from '@/components/permissions'
 import { PersonPermission } from '@/types/permissions'
 import { mediosPagoPara } from '@/lib/medios-pago'
+import { resolveRealizadoPor, diasDesdeAprobacion, VENTANA_COMERCIAL_DIAS } from '@/lib/cambio-contado'
 
 interface PagoTitularWizardProps {
   isOpen: boolean
@@ -23,6 +24,10 @@ interface PagoTitularWizardProps {
     /** Tipo Plan del titular (PEOPLE.plan) — se muestra read-only y se guarda en el pago. */
     plan?: string | null
   }
+  /** Fecha de aprobación del contrato (con respaldo), solo para PREVISUALIZAR a
+   *  quién se atribuirá el Cambio Contado. El valor que se guarda lo calcula el
+   *  servidor con la misma regla — esto es únicamente ayuda visual. */
+  fechaBaseContrato?: string | null
   /** Display label of gestor recaudo to show in read-only field. */
   gestorLabel?: string | null
   /** Lista de pagos existentes del titular — usado para auto-populate:
@@ -75,6 +80,13 @@ interface DraftState {
    * Mutuamente exclusivo (sólo uno marcado a la vez).
    */
   cambioCartera: '' | 'ultimopago' | 'penalidad'
+  /**
+   * Cambio Contado — marca que este pago corresponde al cambio de plan a
+   * contado. Al guardarlo, el servidor registra en `realizadopor` quién lo
+   * gestionó (Comercial dentro de los 30 días de aprobado el contrato,
+   * Recaudos después). Independiente de las casillas de cartera.
+   */
+  cambioContado: boolean
 }
 
 const DRAFT_TTL_MS = 72 * 60 * 60 * 1000 // 72 horas
@@ -107,6 +119,7 @@ const empty = (): DraftState => ({
   plataforma: '',
   documentosAdjuntos: [],
   cambioCartera: '',
+  cambioContado: false,
 })
 
 function toNum(v: string): number {
@@ -193,6 +206,7 @@ function MoneyInput({
 
 export default function PagoTitularWizard({
   isOpen, onClose, titular, gestorLabel, existingPagos, saldoActual, onCreated,
+  fechaBaseContrato,
 }: PagoTitularWizardProps) {
   const draftKey = `pago-titular-draft-${titular._id}`
   const [form, setForm] = useState<DraftState>(empty())
@@ -406,6 +420,12 @@ export default function PagoTitularWizard({
     setForm(f => ({ ...f, documentosAdjuntos: f.documentosAdjuntos.filter((_, i) => i !== idx) }))
   }
 
+  // Cambio Contado — vista previa de a quién se atribuirá. El valor REAL lo
+  // calcula el servidor con el mismo helper al guardar; esto solo evita que el
+  // usuario marque la casilla sin saber qué va a quedar registrado.
+  const diasPreview = diasDesdeAprobacion(fechaBaseContrato, form.fechaPago)
+  const realizadoPorPreview = resolveRealizadoPor(fechaBaseContrato, form.fechaPago)
+
   // Valida y abre el modal de confirmación (no registra todavía).
   const handleSubmit = () => {
     if (!form.fechaPago) { toast.error('Fecha de pago es requerida'); return }
@@ -441,6 +461,9 @@ export default function PagoTitularWizard({
         documentosAdjuntos: form.documentosAdjuntos,
         // Penalidad: el backend guarda el valorCuota en vlrpenalidad y marca penalidad=true.
         penalidad: form.cambioCartera === 'penalidad',
+        // Cambio Contado: el backend deriva `realizadopor` de la fecha del pago
+        // vs la aprobación del contrato — acá solo se envía la marca.
+        cambioContado: form.cambioContado,
       })
 
       // Cambio de tipoCartera disparado desde la casilla en el wizard.
@@ -701,6 +724,52 @@ export default function PagoTitularWizard({
             </div>
           </PermissionGuard>
 
+          {/* Cambio Contado — dato del pago, NO un estado de cartera: por eso va
+              fuera del PermissionGuard de arriba y no compite con las otras dos
+              casillas. Al marcarlo, el servidor registra en `realizadopor` si el
+              cambio lo gestionó Comercial (dentro de los 30 días de aprobado el
+              contrato) o Recaudos (después). */}
+          <div className="bg-teal-50 border border-teal-200 rounded-lg p-3">
+            <label className="inline-flex items-start gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.cambioContado}
+                onChange={e => setForm(f => ({ ...f, cambioContado: e.target.checked }))}
+                className="mt-0.5 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+              />
+              <span>
+                <span className="text-sm font-medium text-teal-900">Cambio Contado</span>
+                <span className="block text-xs text-teal-800">
+                  Marca que este pago corresponde al cambio del plan a contado.
+                  Se registra automáticamente quién lo gestionó.
+                </span>
+              </span>
+            </label>
+
+            {form.cambioContado && (
+              <div className="mt-3 pt-3 border-t border-teal-200 text-xs text-teal-900">
+                {realizadoPorPreview ? (
+                  <>
+                    Quedará registrado como <strong>{realizadoPorPreview}</strong>
+                    {diasPreview !== null && (
+                      <span className="text-teal-700">
+                        {diasPreview < 0
+                          ? ' — el pago es anterior a la aprobación del contrato'
+                          : ' — el pago es del día ' + diasPreview + ' desde la aprobación del contrato'}
+                        {' '}(hasta {VENTANA_COMERCIAL_DIAS} días es Comercial; después, Recaudos).
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-amber-800">
+                    El contrato no tiene fecha de aprobación registrada, así que el campo
+                    <em> Realizado por</em> quedará vacío. El pago se guarda igual.
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Pago Tercero */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-xs text-blue-800 mb-3">
@@ -868,6 +937,13 @@ export default function PagoTitularWizard({
             {cuotasTotalNum > 0 && Number(form.numCuota) === cuotasTotalNum && (
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
                 Esta es la <strong>última cuota</strong> del contrato ({cuotasTotalNum} de {cuotasTotalNum}).
+              </div>
+            )}
+
+            {form.cambioContado && (
+              <div className="rounded-lg bg-teal-50 border border-teal-200 p-3 text-sm text-teal-900">
+                Este pago se marca como <strong>Cambio Contado</strong>
+                {realizadoPorPreview && <> y se atribuirá a <strong>{realizadoPorPreview}</strong></>}.
               </div>
             )}
 
