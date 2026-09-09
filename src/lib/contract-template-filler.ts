@@ -6,6 +6,8 @@
  * No 'server-only' import — safe for client-side use.
  */
 
+import { normalizeNumeroId } from '@/lib/numeroid-normalize';
+
 export interface ConsentDisplay {
   hasConsent: boolean;
   consent?: {
@@ -55,7 +57,7 @@ export function fillContractTemplate(
           `Beneficiario ${i + 1}:\n` +
           `- Numero de Contrato: ${b.contrato || 'Sin asignar'}\n` +
           `- Nombre Completo: ${[b.primerNombre, b.segundoNombre, b.primerApellido, b.segundoApellido].filter(Boolean).join(' ')}\n` +
-          `- Documento: ${b.numeroId || ''}\n` +
+          `- Documento: ${normalizeNumeroId(b.numeroId)}\n` +
           `- Fecha de nacimiento: ${fmtDate(b.fechaNacimiento)}\n` +
           `- Telefono: ${b.celular || ''}\n` +
           `- Pais: ${b.plataforma || ''}\n` +
@@ -108,7 +110,7 @@ export function fillContractTemplate(
 
     firmaText =
       `\n--- CONSENTIMIENTO DECLARATIVO VERIFICADO${tipo} ---\n` +
-      `Documento: ${c.numeroDocumento || ''}\n` +
+      `Documento: ${normalizeNumeroId(c.numeroDocumento)}\n` +
       `Fecha: ${fecha}\n` +
       `Celular Verificado: ${c.celularValidado || ''}\n` +
       `Hash: ${consentData.hash?.substring(0, 16) || ''}...\n` +
@@ -157,7 +159,7 @@ export function fillContractTemplate(
         'REPRESENTANTE DE LA EMPRESA:',
         `Nombre: ${titular?.replegal || ''}`,
         `Cargo: ${titular?.replegalcargo || ''}`,
-        `Documento: ${titular?.replegalid || ''}`,
+        `Documento: ${normalizeNumeroId(titular?.replegalid)}`,
         `Celular: ${titular?.replegalcel || ''}`,
       ].join('\n')
     : [

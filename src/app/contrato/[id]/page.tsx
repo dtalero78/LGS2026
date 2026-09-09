@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { normalizeNumeroId } from '@/lib/numeroid-normalize';
 import { isContratoPrueba } from '@/components/common/ContratoPruebaBadge'
 import { useParams, useRouter } from 'next/navigation'
 import { fillContractTemplate, type ConsentDisplay } from '@/lib/contract-template-filler'
@@ -262,7 +263,7 @@ export default function ContratoPublicoPage() {
               </h3>
               <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-blue-700">
                 {consentStatus.consent.numeroDocumento && (
-                  <div><span className="font-medium">Documento:</span> {consentStatus.consent.numeroDocumento}</div>
+                  <div><span className="font-medium">Documento:</span> {normalizeNumeroId(consentStatus.consent.numeroDocumento)}</div>
                 )}
                 {consentStatus.consent.timestampAcceptacion && (
                   <div><span className="font-medium">Fecha:</span> {new Date(consentStatus.consent.timestampAcceptacion).toLocaleString('es-CO')}</div>
