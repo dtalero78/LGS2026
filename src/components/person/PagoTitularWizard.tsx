@@ -87,6 +87,9 @@ interface DraftState {
    * Recaudos después). Independiente de las casillas de cartera.
    */
   cambioContado: boolean
+  /** Nota del pago. Obligatoria si se marca "Penalidad o Recuperación" o
+   *  "Cambio Contado" — el servidor la exige igual (defensa en profundidad). */
+  nota: string
   /**
    * Pago doble — el operador captura UN valor y el servidor lo parte en DOS
    * registros con la misma fecha: la cuota #N y la #N+1 (adelanto). El
@@ -127,6 +130,7 @@ const empty = (): DraftState => ({
   cambioCartera: '',
   cambioContado: false,
   pagoDoble: false,
+  nota: '',
 })
 
 function toNum(v: string): number {
@@ -447,6 +451,10 @@ export default function PagoTitularWizard({
   const diasPreview = diasDesdeAprobacion(fechaBaseContrato, form.fechaPago)
   const realizadoPorPreview = resolveRealizadoPor(fechaBaseContrato, form.fechaPago)
 
+  // La nota es obligatoria en los dos casos donde el pago no es una cuota
+  // normal: penalidad/recuperación y cambio a contado.
+  const requiereNota = form.cambioCartera === 'penalidad' || form.cambioContado
+
   // Valida y abre el modal de confirmación (no registra todavía).
   const handleSubmit = () => {
     if (!form.fechaPago) { toast.error('Fecha de pago es requerida'); return }
@@ -454,6 +462,14 @@ export default function PagoTitularWizard({
     if (form.numCuota && Number(form.numCuota) < 0) { toast.error('Número de cuota no puede ser negativo'); return }
     if (form.pagoDoble && !pagoDobleListo) {
       toast.error('Para un pago doble indica el # de cuota (1 o mayor)'); return
+    }
+    if (requiereNota && !form.nota.trim()) {
+      toast.error(
+        form.cambioCartera === 'penalidad'
+          ? 'Escribe la nota: es obligatoria para una Penalidad o Recuperación'
+          : 'Escribe la nota: es obligatoria para un Cambio Contado',
+      )
+      return
     }
     setConfirmAnomalia(false)
     setShowConfirm(true)
@@ -490,6 +506,8 @@ export default function PagoTitularWizard({
         cambioContado: form.cambioContado,
         // Pago doble: el backend parte el valor y crea las DOS filas (#N y #N+1).
         pagoDoble: form.pagoDoble,
+        // Nota del pago (obligatoria si penalidad/recuperación o cambio contado).
+        nota: form.nota.trim() || null,
       })
 
       // Cambio de tipoCartera disparado desde la casilla en el wizard.
@@ -805,7 +823,7 @@ export default function PagoTitularWizard({
                     }))}
                     className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                   />
-                  <span className="text-sm font-medium text-orange-800">Penalidad</span>
+                  <span className="text-sm font-medium text-orange-800">Penalidad o Recuperación</span>
                 </label>
               </div>
             </div>
@@ -859,6 +877,37 @@ export default function PagoTitularWizard({
               </div>
             )}
           </div>
+
+          {/* Nota del pago — obligatoria cuando el valor no corresponde a una
+              cuota normal (penalidad/recuperación o cambio a contado). */}
+          {requiereNota && (
+            <div className="bg-rose-50 border-2 border-rose-300 rounded-lg p-3">
+              <label className="block">
+                <span className="text-base font-bold text-rose-900">
+                  Nota <span className="text-rose-600">*</span>
+                </span>
+                <span className="block text-sm text-rose-800 mt-0.5 mb-2">
+                  {form.cambioCartera === 'penalidad'
+                    ? 'Obligatoria: explica el motivo de la penalidad o recuperación.'
+                    : 'Obligatoria: explica el motivo del cambio del plan a contado.'}
+                </span>
+                <textarea
+                  value={form.nota}
+                  onChange={e => setForm(f => ({ ...f, nota: e.target.value }))}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Motivo de este registro…"
+                  className="w-full px-3 py-2 border border-rose-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-rose-400 focus:border-rose-400"
+                />
+              </label>
+              <div className="flex justify-between mt-1">
+                <span className="text-xs text-rose-700">
+                  {form.nota.trim() ? '' : 'Sin la nota no se puede registrar el pago.'}
+                </span>
+                <span className="text-xs text-rose-600 tabular-nums">{form.nota.length}/500</span>
+              </div>
+            </div>
+          )}
 
           {/* Pago Tercero */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
@@ -1079,8 +1128,15 @@ export default function PagoTitularWizard({
 
             {form.cambioCartera === 'penalidad' && (
               <div className="rounded-lg bg-orange-50 border border-orange-200 p-3 text-sm text-orange-800">
-                El valor de este pago corresponde a una <strong>penalidad</strong> y así será aplicado
+                El valor de este pago corresponde a una <strong>penalidad o recuperación</strong> y así será aplicado
                 (se registra en <em>Valor Penalidad</em> y el estado de cartera pasa a <strong>Penalidad</strong>).
+              </div>
+            )}
+
+            {requiereNota && form.nota.trim() && (
+              <div className="rounded-lg bg-rose-50 border border-rose-200 p-3 text-sm text-rose-900">
+                <span className="font-semibold">Nota que quedará registrada:</span>
+                <span className="block mt-1 whitespace-pre-wrap break-words">{form.nota.trim()}</span>
               </div>
             )}
 
