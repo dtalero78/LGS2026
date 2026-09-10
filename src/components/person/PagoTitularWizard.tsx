@@ -28,6 +28,15 @@ interface PagoTitularWizardProps {
    *  quién se atribuirá el Cambio Contado. El valor que se guarda lo calcula el
    *  servidor con la misma regla — esto es únicamente ayuda visual. */
   fechaBaseContrato?: string | null
+  /** Fechas del contrato para MOSTRAR el desglose de la atribución en el modal
+   *  de confirmación. Sin esto el operador ve "Comercial" sin saber desde qué
+   *  fecha se contaron los días. Solo display — el cálculo real es del servidor. */
+  fechasContrato?: {
+    /** PEOPLE.fechaIngreso — fecha de aprobación del contrato. */
+    aprobacion?: string | null
+    /** COALESCE(inicioContrato, fechaContrato) — fecha de inicio del contrato. */
+    contrato?: string | null
+  }
   /** Display label of gestor recaudo to show in read-only field. */
   gestorLabel?: string | null
   /** Lista de pagos existentes del titular — usado para auto-populate:
@@ -217,7 +226,7 @@ function MoneyInput({
 
 export default function PagoTitularWizard({
   isOpen, onClose, titular, gestorLabel, existingPagos, saldoActual, onCreated,
-  fechaBaseContrato,
+  fechaBaseContrato, fechasContrato,
 }: PagoTitularWizardProps) {
   const draftKey = `pago-titular-draft-${titular._id}`
   const [form, setForm] = useState<DraftState>(empty())
@@ -454,6 +463,16 @@ export default function PagoTitularWizard({
   // La nota es obligatoria en los dos casos donde el pago no es una cuota
   // normal: penalidad/recuperación y cambio a contado.
   const requiereNota = form.cambioCartera === 'penalidad' || form.cambioContado
+
+  // ¿Desde cuál fecha se contaron los días? fechaBaseContrato sale de una
+  // cascada (aprobación -> inicio -> contrato -> creación); comparándola con la
+  // de aprobación sabemos si esa fue la que ganó, para decirlo en el modal.
+  const soloFecha = (v?: string | null) => (v ? String(v).slice(0, 10) : '')
+  const baseEsAprobacion =
+    !!fechaBaseContrato &&
+    !!fechasContrato?.aprobacion &&
+    soloFecha(fechasContrato.aprobacion) === soloFecha(fechaBaseContrato)
+  const etiquetaBase = baseEsAprobacion ? 'aprobación' : 'fecha del contrato'
 
   // Valida y abre el modal de confirmación (no registra todavía).
   const handleSubmit = () => {
@@ -1121,8 +1140,48 @@ export default function PagoTitularWizard({
 
             {form.cambioContado && (
               <div className="rounded-lg bg-teal-50 border border-teal-200 p-3 text-sm text-teal-900">
-                Este pago se marca como <strong>Cambio Contado</strong>
-                {realizadoPorPreview && <> y se atribuirá a <strong>{realizadoPorPreview}</strong></>}.
+                <div>
+                  Este pago se marca como <strong>Cambio Contado</strong>
+                  {realizadoPorPreview && <> y se atribuirá a <strong>{realizadoPorPreview}</strong></>}.
+                </div>
+
+                {/* Desglose de las fechas que producen la atribución. Sin esto el
+                    operador ve el resultado sin saber desde cuándo se contó, y
+                    asume que se mide desde el inicio del contrato cuando en
+                    realidad manda la fecha de aprobación. */}
+                <dl className="mt-2 pt-2 border-t border-teal-200 space-y-1">
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-teal-700">Fecha del contrato</dt>
+                    <dd className="tabular-nums font-medium">{fmtFecha(soloFecha(fechasContrato?.contrato))}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-teal-700">
+                      Fecha de aprobación
+                      {baseEsAprobacion && (
+                        <span className="ml-1 text-xs font-semibold text-teal-900">(base del cálculo)</span>
+                      )}
+                    </dt>
+                    <dd className="tabular-nums font-medium">{fmtFecha(soloFecha(fechasContrato?.aprobacion))}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-teal-700">Fecha del cambio (pago)</dt>
+                    <dd className="tabular-nums font-medium">{fmtFecha(form.fechaPago)}</dd>
+                  </div>
+                </dl>
+
+                {diasPreview !== null ? (
+                  <div className="mt-2 pt-2 border-t border-teal-200">
+                    {diasPreview < 0
+                      ? 'El pago es anterior a la ' + etiquetaBase + '.'
+                      : diasPreview + (diasPreview === 1 ? ' día' : ' días') + ' desde la ' + etiquetaBase + '.'}
+                    {' '}Hasta {VENTANA_COMERCIAL_DIAS} días queda en <strong>Comercial</strong>; después, <strong>Recaudos</strong>.
+                  </div>
+                ) : (
+                  <div className="mt-2 pt-2 border-t border-teal-200 text-amber-800">
+                    El contrato no tiene fecha de aprobación ni de contrato registrada, así que
+                    <em> Realizado por</em> quedará vacío. El pago se guarda igual.
+                  </div>
+                )}
               </div>
             )}
 
