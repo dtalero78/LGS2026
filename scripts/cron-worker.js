@@ -7,6 +7,7 @@
  * Se despliega como un Worker separado en Digital Ocean.
  *
  * Tareas programadas:
+ * - revertir-marca-opcional: Diariamente a las 8:00 PM Colombia (01:00 UTC)
  * - reconcile-pegados: Diariamente a las 9:00 PM Colombia (02:00 UTC)
  * - reactivate-onhold: Diariamente a las 10:00 PM Colombia (03:00 UTC)
  * - expire-contracts: Diariamente a las 11:00 PM Colombia (04:00 UTC)
@@ -40,6 +41,36 @@ if (!CRON_SECRET) {
 
 console.log('Cron Worker iniciado');
 console.log(`URL base: ${NEXTAUTH_URL}`);
+
+/**
+ * Revierte las marcas "Opcional" TEMPORALES que ya vencieron.
+ * La vista de asignacion ya ignora las vencidas al consultarlas; este cron es
+ * el que deja limpio el dato en la base.
+ */
+async function executeRevertirMarcaOpcional() {
+  const timestamp = getLocalTimestamp();
+  console.log(`\n[${timestamp}] Ejecutando revertir-marca-opcional...`);
+
+  try {
+    const response = await fetch(`${NEXTAUTH_URL}/api/cron/revertir-marca-opcional`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${CRON_SECRET}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      console.log(`[${timestamp}] Completado: ${data.revertidas} marca(s) revertida(s)`);
+    } else {
+      console.error(`[${timestamp}] Error: ${data.error || 'Unknown error'}`);
+    }
+  } catch (error) {
+    console.error(`[${timestamp}] Error de conexion:`, error.message);
+  }
+}
 
 /**
  * Ejecuta el cron de reconciliacion nocturna de usuarios pegados.
@@ -161,6 +192,12 @@ async function executeSenceEnvioAvance() {
 
 // Programar tareas
 // ================
+
+// Revertir marcas Opcional vencidas: Diariamente a las 01:00 UTC (8:00 PM Colombia)
+cron.schedule('0 1 * * *', executeRevertirMarcaOpcional, {
+  scheduled: true,
+  timezone: 'UTC'
+});
 
 // Reconciliar pegados (casos limpios): Diariamente a las 02:00 UTC (9:00 PM Colombia)
 cron.schedule('0 2 * * *', executeReconcilePegados, {

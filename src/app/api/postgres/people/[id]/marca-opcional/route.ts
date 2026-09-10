@@ -1,6 +1,6 @@
 import 'server-only';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
-import { NotFoundError } from '@/lib/errors';
+import { NotFoundError, ValidationError } from '@/lib/errors';
 import { queryOne } from '@/lib/postgres';
 import { requirePermission } from '@/lib/api-permissions';
 import { PersonPermission } from '@/types/permissions';
@@ -8,16 +8,22 @@ import { PersonPermission } from '@/types/permissions';
 /**
  * POST /api/postgres/people/[id]/marca-opcional
  *
- * Toggle simple de PEOPLE.marcaOpcional entre 'OPC' y NULL. Alimentación
- * manual del área de recaudos para destacar titulares en la columna
- * "Opcional" de /dashboard/recaudos/asignacion.
+ * Marca "Opcional" del titular (columna "Opcional" de
+ * /dashboard/recaudos/asignacion). Puede ser DEFINITIVA o TEMPORAL.
  *
- * Body (opcional): `{ valor: 'OPC' | null }` — si se omite se hace toggle:
- *   - si actual = NULL → pasa a 'OPC'
- *   - si actual = 'OPC' → pasa a NULL
+ * Body:
+ *   { valor: 'OPC' | null, hasta?: 'YYYY-MM-DD' }
+ *     - `hasta` ausente/null → marca DEFINITIVA (se queda hasta que la quiten).
+ *     - `hasta` con fecha    → marca TEMPORAL: al día siguiente de esa fecha
+ *       vuelve sola al valor que tenía antes (guardado en marcaOpcionalAnterior).
+ *   Sin `valor` hace toggle (compatibilidad con el flujo anterior).
+ *
+ * La reversión de las temporales ocurre por DOS vías, igual que OnHold:
+ *   1. cron diario  → /api/cron/revertir-marca-opcional limpia las vencidas.
+ *   2. al consultar → la vista de asignación ya ignora las vencidas, así que la
+ *      pantalla es correcta aunque el cron todavía no haya corrido.
  *
  * Gate: `PERSON.FINANCIERA.MARCAR_OPCIONAL` (SUPER_ADMIN / ADMIN bypass).
- * Sin motivo ni auditoría — es una marca operativa, no decisión auditable.
  */
 export const POST = handlerWithAuth(async (request, { params }, session) => {
   await requirePermission(session, PersonPermission.MARCAR_OPCIONAL);
@@ -29,8 +35,7 @@ export const POST = handlerWithAuth(async (request, { params }, session) => {
   );
   if (!existing) throw new NotFoundError('PEOPLE', params.id);
 
-  // Si el cliente manda `valor` explícito lo respetamos (normalizando), si no
-  // hacemos toggle entre 'OPC' y null.
+  // Valor destino: explícito si viene, si no toggle (comportamiento anterior).
   let nuevoValor: string | null;
   if (body && Object.prototype.hasOwnProperty.call(body, 'valor')) {
     const v = typeof body.valor === 'string' ? body.valor.trim().toUpperCase() : null;
@@ -39,10 +44,41 @@ export const POST = handlerWithAuth(async (request, { params }, session) => {
     nuevoValor = existing.marcaOpcional === 'OPC' ? null : 'OPC';
   }
 
+  // ── Vigencia ──
+  // Solo tiene sentido poner fecha al MARCAR: al quitar la marca se limpia todo.
+  let hasta: string | null = null;
+  if (nuevoValor === 'OPC' && body?.hasta) {
+    const raw = String(body.hasta).trim().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      throw new ValidationError('La fecha debe tener formato AAAA-MM-DD');
+    }
+    // Comparación por día calendario en UTC: la zona del navegador no debe
+    // correr el resultado (mismo criterio que el resto de fechas del sistema).
+    const hoy = new Date().toISOString().slice(0, 10);
+    if (raw < hoy) {
+      throw new ValidationError('La fecha de vencimiento no puede estar en el pasado');
+    }
+    hasta = raw;
+  }
+
+  // `marcaOpcionalAnterior` guarda a qué estado volver. Solo se registra en las
+  // temporales; en las definitivas queda NULL junto con la fecha.
+  const anterior = hasta ? (existing.marcaOpcional ?? null) : null;
+
   await queryOne(
-    `UPDATE "PEOPLE" SET "marcaOpcional" = $1, "_updatedDate" = NOW() WHERE "_id" = $2 RETURNING "_id"`,
-    [nuevoValor, params.id],
+    `UPDATE "PEOPLE"
+        SET "marcaOpcional" = $1,
+            "marcaOpcionalHasta" = $2,
+            "marcaOpcionalAnterior" = $3,
+            "_updatedDate" = NOW()
+      WHERE "_id" = $4
+      RETURNING "_id"`,
+    [nuevoValor, hasta, anterior, params.id],
   );
 
-  return successResponse({ marcaOpcional: nuevoValor });
+  return successResponse({
+    marcaOpcional: nuevoValor,
+    marcaOpcionalHasta: hasta,
+    temporal: !!hasta,
+  });
 });

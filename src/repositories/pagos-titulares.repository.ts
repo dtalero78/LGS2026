@@ -526,7 +526,16 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
          p."gestorRecaudo"                       AS "gestorRecaudo",
          p."estadoInactivo"                      AS "estadoInactivo",
          p."aprobacion"                          AS "aprobacion",
-         p."marcaOpcional"                       AS "marcaOpcional",
+         -- Una marca TEMPORAL vencida ya no aplica: se muestra el valor al
+         -- que va a volver. El cron nocturno hace el mismo cambio en la base;
+         -- esto evita el hueco entre el vencimiento y la corrida del cron.
+         CASE WHEN p."marcaOpcionalHasta" IS NOT NULL AND p."marcaOpcionalHasta" < CURRENT_DATE
+              THEN p."marcaOpcionalAnterior"
+              ELSE p."marcaOpcional"
+         END                                     AS "marcaOpcional",
+         CASE WHEN p."marcaOpcionalHasta" IS NOT NULL AND p."marcaOpcionalHasta" >= CURRENT_DATE
+              THEN p."marcaOpcionalHasta"
+         END                                     AS "marcaOpcionalHasta",
          f."saldo"                               AS "saldoActual",
          COALESCE(c0."tipoCartera", 'normal')    AS "tipoCartera",
          agg."ultimaFechaPago"                   AS "ultimaFechaPago",
