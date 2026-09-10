@@ -7,6 +7,7 @@ import { formatDate } from '@/lib/utils'
 import { UserPlusIcon } from '@heroicons/react/24/outline'
 import { CheckCircleIcon } from '@heroicons/react/24/solid'
 import { PermissionGuard } from '@/components/permissions'
+import { usePermissions } from '@/hooks/usePermissions'
 import { PersonPermission } from '@/types/permissions'
 import { COUNTRY_CODES } from '@/lib/country-codes'
 import { isContratoPrueba } from '@/components/common/ContratoPruebaBadge'
@@ -41,6 +42,12 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
   const [showBeneficiaryForm, setShowBeneficiaryForm] = useState(false)
   const [newBeneficiaryId, setNewBeneficiaryId] = useState<string | null>(null)
   const [currentFormStep, setCurrentFormStep] = useState(1)
+  // Nombre y numeroId son datos de IDENTIDAD: se propagan a varias tablas, por
+  // eso cada uno tiene su permiso propio (aparte del genérico MODIFICAR).
+  const { hasPermission } = usePermissions()
+  const canEditarNombre = hasPermission(PersonPermission.EDITAR_NOMBRE)
+  const canEditarNumeroId = hasPermission(PersonPermission.EDITAR_NUMERO_ID)
+
   const [beneficiaryData, setBeneficiaryData] = useState({
     primerNombre: '',
     segundoNombre: '',
@@ -524,6 +531,10 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
 
           // Snapshot para el diff del modal de confirmación
           setOriginalBeneficiary({
+            primerNombre: ben.primerNombre || '',
+            segundoNombre: ben.segundoNombre || '',
+            primerApellido: ben.primerApellido || '',
+            segundoApellido: ben.segundoApellido || '',
             numeroId: ben.numeroId || '',
             fechaNacimiento: fechaNac,
             celular: ben.celular || '',
@@ -637,6 +648,10 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     if (isEditMode && editingBeneficiaryId) {
       const normCel = (beneficiaryData.celular || '').replace(/\D/g, '')
       const campos: { key: string; label: string; now: string }[] = [
+        { key: 'primerNombre',    label: 'Primer Nombre',            now: beneficiaryData.primerNombre || '' },
+        { key: 'segundoNombre',   label: 'Segundo Nombre',           now: beneficiaryData.segundoNombre || '' },
+        { key: 'primerApellido',  label: 'Primer Apellido',          now: beneficiaryData.primerApellido || '' },
+        { key: 'segundoApellido', label: 'Segundo Apellido',         now: beneficiaryData.segundoApellido || '' },
         { key: 'numeroId',        label: 'Número de Identificación', now: (beneficiaryData.numeroId || '').toUpperCase().replace(/[.\s_]/g, '').trim() },
         { key: 'fechaNacimiento', label: 'Fecha de Nacimiento',      now: beneficiaryData.fechaNacimiento || '' },
         { key: 'celular',         label: 'Celular',                  now: normCel },
@@ -681,7 +696,15 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            numeroId: beneficiaryData.numeroId,
+            // Los campos de identidad se mandan SOLO con permiso: el backend
+            // los exige igual, esto evita un 403 por enviarlos sin querer.
+            ...(canEditarNombre ? {
+              primerNombre: beneficiaryData.primerNombre,
+              segundoNombre: beneficiaryData.segundoNombre || null,
+              primerApellido: beneficiaryData.primerApellido,
+              segundoApellido: beneficiaryData.segundoApellido || null,
+            } : {}),
+            ...(canEditarNumeroId ? { numeroId: beneficiaryData.numeroId } : {}),
             fechaNacimiento: beneficiaryData.fechaNacimiento || null,
             celular: normalizedCelular || undefined,
             domicilio: beneficiaryData.domicilio,
@@ -1162,7 +1185,38 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             {/* Edit Mode: Only 3 fields */}
             {isEditMode ? (
               <div className="space-y-4">
-                <h4 className="font-medium text-gray-900 mb-4">Identificación</h4>
+                <h4 className="font-medium text-gray-900 mb-4">Nombres</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {([
+                    ['primerNombre',    'Primer Nombre *'],
+                    ['segundoNombre',   'Segundo Nombre'],
+                    ['primerApellido',  'Primer Apellido *'],
+                    ['segundoApellido', 'Segundo Apellido'],
+                  ] as const).map(([campo, label]) => (
+                    <div key={campo}>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+                      <input
+                        type="text"
+                        value={beneficiaryData[campo]}
+                        onChange={(e) => handleBeneficiaryDataChange(campo, e.target.value)}
+                        readOnly={!canEditarNombre}
+                        disabled={!canEditarNombre}
+                        className={'input-field' + (!canEditarNombre ? ' bg-gray-100 cursor-not-allowed text-gray-500' : '')}
+                      />
+                    </div>
+                  ))}
+                </div>
+                {canEditarNombre ? (
+                  <p className="text-xs text-amber-600 -mt-2">
+                    ⚠️ El nombre se propaga a su <strong>registro académico</strong>, a sus <strong>listas de asistencia</strong> y a su <strong>usuario de acceso</strong>.
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-500 -mt-2">
+                    🔒 No tenés permiso para editar los nombres (<span className="font-mono">PERSON.INFO.EDITAR_NOMBRE</span>).
+                  </p>
+                )}
+
+                <h4 className="font-medium text-gray-900 mb-4 pt-2">Identificación</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1172,12 +1226,20 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                       type="text"
                       value={beneficiaryData.numeroId}
                       onChange={(e) => handleBeneficiaryDataChange('numeroId', e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))}
-                      className="input-field font-mono"
+                      readOnly={!canEditarNumeroId}
+                      disabled={!canEditarNumeroId}
+                      className={'input-field font-mono' + (!canEditarNumeroId ? ' bg-gray-100 cursor-not-allowed text-gray-500' : '')}
                       placeholder="Ej: 18201897-K"
                     />
-                    <p className="text-xs text-amber-600 mt-1">
-                      ⚠️ Es la llave que une al beneficiario con su registro académico. Al cambiarlo se actualiza también en ACADEMICA y en su usuario de acceso.
-                    </p>
+                    {canEditarNumeroId ? (
+                      <p className="text-xs text-amber-600 mt-1">
+                        ⚠️ Es la llave que une al beneficiario con su registro académico. Al cambiarlo se actualiza también en ACADEMICA y en su usuario de acceso.
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-500 mt-1">
+                        🔒 No tenés permiso para editar el número de identificación (<span className="font-mono">PERSON.INFO.EDITAR_NUMERO_ID</span>).
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1563,6 +1625,22 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
                 <p className="text-xs text-amber-800">
                   ⚠️ Estás cambiando el <strong>número de identificación</strong>. Se actualizará también en <strong>ACADEMICA</strong> y en su <strong>usuario de acceso</strong> para no romper el vínculo.
+                </p>
+              </div>
+            )}
+            {pendingChanges.some(c => c.label.includes('Nombre') || c.label.includes('Apellido')) && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
+                <p className="text-xs text-amber-800 font-semibold mb-1">
+                  ⚠️ Estás cambiando el <strong>nombre</strong>. Se actualizará en todos estos lugares:
+                </p>
+                <ul className="text-xs text-amber-800 list-disc list-inside space-y-0.5">
+                  <li>Su <strong>ficha académica</strong> (ACADEMICA)</li>
+                  <li>Sus <strong>listas de asistencia</strong> — el nombre está copiado en cada clase agendada</li>
+                  <li>Su <strong>usuario de acceso</strong> (con el que inicia sesión)</li>
+                  <li>El <strong>registro financiero</strong> del contrato, si es el titular</li>
+                </ul>
+                <p className="text-xs text-amber-700 mt-1">
+                  Se aplica todo junto: si algo falla, no se guarda ningún cambio.
                 </p>
               </div>
             )}

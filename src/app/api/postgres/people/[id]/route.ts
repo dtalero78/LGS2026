@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
-import { query, queryOne, queryMany, parseJsonbFields } from '@/lib/postgres';
+import { query, queryOne, queryMany, parseJsonbFields, withTransaction } from '@/lib/postgres';
 import { handler, handlerWithAuth, successResponse } from '@/lib/api-helpers';
+import { requirePermission } from '@/lib/api-permissions';
+import { PersonPermission } from '@/types/permissions';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { buildDynamicUpdate } from '@/lib/query-builder';
@@ -184,6 +186,12 @@ export const GET = handler(async (
   });
 });
 
+/**
+ * Campos de NOMBRE. Se tratan aparte del resto porque viven replicados en
+ * varias tablas y su edición va detrás de un permiso propio.
+ */
+const CAMPOS_NOMBRE = ['primerNombre', 'segundoNombre', 'primerApellido', 'segundoApellido'] as const;
+
 // Allowed fields for PATCH updates
 const PEOPLE_UPDATE_FIELDS = [
   'primerNombre',
@@ -256,6 +264,15 @@ export const PATCH = handlerWithAuth(async (
     body.numeroId = norm;
   }
 
+  // ── Permiso para editar NOMBRES ──
+  // Cambiar el nombre reescribe ~220k filas de ACADEMICA_BOOKINGS y el nombre
+  // del login, así que va detrás de su propio permiso (no del genérico
+  // MODIFICAR, que cubre el contacto). SUPER_ADMIN/ADMIN bypasean dentro de
+  // requirePermission.
+  if (CAMPOS_NOMBRE.some((c) => body[c] !== undefined)) {
+    await requirePermission(session, PersonPermission.EDITAR_NOMBRE);
+  }
+
   // Fetch current person before update (needed for old email to update USUARIOS_ROLES)
   const currentPerson = await queryOne<{
     email: string | null;
@@ -271,6 +288,13 @@ export const PATCH = handlerWithAuth(async (
     [personId]
   );
   if (!currentPerson) throw new NotFoundError('Person', personId);
+
+  // ── Permiso para editar el NÚMERO DE IDENTIFICACIÓN ──
+  // Solo se exige si el valor REALMENTE cambia: otros flujos mandan el numeroId
+  // sin tocarlo (viene del formulario completo) y no deberían quedar bloqueados.
+  if (body.numeroId !== undefined && body.numeroId !== currentPerson.numeroId) {
+    await requirePermission(session, PersonPermission.EDITAR_NUMERO_ID);
+  }
 
   // ── Aprobado → Pendiente: solo si el contrato está FRESCO ──
   // Regla (bloqueo con OR): solo se permite revertir a "Pendiente" si el contrato
@@ -398,54 +422,171 @@ export const PATCH = handlerWithAuth(async (
   // Add person ID as last parameter
   built.values.push(personId);
 
-  const result = await queryOne(built.query, built.values);
-  if (!result) throw new NotFoundError('Person', personId);
+  // ── PEOPLE + propagación de identidad, TODO en UNA transacción ──
+  // El `numeroId` y los nombres viven REPLICADOS en varias tablas. Si PEOPLE se
+  // actualizara y la propagación fallara a mitad de camino, el vínculo
+  // PEOPLE ↔ ACADEMICA ↔ login quedaría roto y las listas de asistencia
+  // seguirían mostrando el dato viejo. O pasan todos los UPDATE, o no pasa
+  // ninguno.
+  //
+  // El WHERE usa siempre el valor ANTERIOR (currentPerson): es el único con el
+  // que todavía se pueden encontrar las filas a actualizar.
+  const syncingEmail = body.email && body.email !== currentPerson.email;
+  const syncingCelular = body.celular !== undefined;
+  const syncingNumeroId = body.numeroId !== undefined && body.numeroId !== currentPerson.numeroId;
+  const syncingFechaNac = body.fechaNacimiento !== undefined;
+  const syncingNombre = CAMPOS_NOMBRE.some((c) => body[c] !== undefined);
+
+  const tablasSincronizadas: string[] = [];
+
+  const result = await withTransaction(async (client) => {
+    const updated = (await client.query(built.query, built.values)).rows[0];
+    if (!updated) throw new NotFoundError('Person', personId);
+
+    // Los `_id` de ACADEMICA se resuelven ANTES de tocar nada: si el numeroId
+    // cambia, después ya no habría forma de encontrarlos por el valor anterior.
+    const academicaIds: string[] = currentPerson.numeroId
+      ? (await client.query(
+          'SELECT "_id" FROM "ACADEMICA" WHERE "numeroId" = $1',
+          [currentPerson.numeroId],
+        )).rows.map((r: { _id: string }) => r._id)
+      : [];
+
+    // Helper: arma "col" = $n acumulando valores en orden.
+    const setter = () => {
+      const f: string[] = [];
+      const v: unknown[] = [];
+      return {
+        f, v,
+        add(col: string, val: unknown) { f.push('"' + col + '" = $' + (f.length + 1)); v.push(val); },
+      };
+    };
+
+    // ── PEOPLE.nombreCompleto ──
+    // Campo derivado. Solo se recalcula donde YA existía (9.261 filas lo usan);
+    // no se inventa en registros que nunca lo tuvieron.
+    if (syncingNombre) {
+      await client.query(
+        `UPDATE "PEOPLE"
+            SET "nombreCompleto" = NULLIF(TRIM(CONCAT_WS(' ', "primerNombre", "segundoNombre", "primerApellido", "segundoApellido")), ''),
+                "_updatedDate" = NOW()
+          WHERE "_id" = $1 AND COALESCE("nombreCompleto", '') <> ''`,
+        [personId],
+      );
+    }
+
+    // ── ACADEMICA — ficha académica (match por el numeroId ANTERIOR) ──
+    if ((syncingEmail || syncingCelular || syncingNumeroId || syncingFechaNac || syncingNombre) && currentPerson.numeroId) {
+      const s = setter();
+      if (syncingEmail) s.add('email', body.email);
+      if (syncingCelular) s.add('celular', body.celular);
+      if (syncingNumeroId) s.add('numeroId', body.numeroId);
+      if (syncingFechaNac) s.add('fechaNacimiento', body.fechaNacimiento || null);
+      // Se toman los valores YA GUARDADOS en PEOPLE (no los del body): si solo
+      // llegó primerNombre, el resto conserva su valor real en vez de borrarse.
+      if (syncingNombre) for (const c of CAMPOS_NOMBRE) s.add(c, updated[c] || null);
+      s.v.push(currentPerson.numeroId);
+      const r = await client.query(
+        'UPDATE "ACADEMICA" SET ' + s.f.join(', ') + ', "_updatedDate" = NOW() WHERE "numeroId" = $' + s.v.length,
+        s.v,
+      );
+      if (r.rowCount) tablasSincronizadas.push('ACADEMICA (' + r.rowCount + ')');
+    }
+
+    // ── USUARIOS_ROLES — cuenta de login ──
+    // Un solo UPDATE matcheando por el email ANTERIOR: en dos pasos, el segundo
+    // ya no encontraría la fila. Guarda el nombre en 2 columnas planas, no en 4.
+    if ((syncingEmail || syncingNumeroId || syncingNombre) && currentPerson.email) {
+      const s = setter();
+      if (syncingEmail) s.add('email', body.email);
+      if (syncingNumeroId) s.add('numberid', body.numeroId);
+      if (syncingNombre) {
+        s.add('nombre', [updated.primerNombre, updated.segundoNombre].filter(Boolean).join(' ').trim() || null);
+        s.add('apellido', [updated.primerApellido, updated.segundoApellido].filter(Boolean).join(' ').trim() || null);
+      }
+      s.v.push(currentPerson.email);
+      const r = await client.query(
+        'UPDATE "USUARIOS_ROLES" SET ' + s.f.join(', ') + ' WHERE LOWER("email") = LOWER($' + s.v.length + ')',
+        s.v,
+      );
+      if (r.rowCount) tablasSincronizadas.push('USUARIOS_ROLES (' + r.rowCount + ')');
+    }
+
+    // ── ACADEMICA_BOOKINGS — el nombre está DESNORMALIZADO en ~220k filas ──
+    // Las consultas de asistencia lo leen con PRIORIDAD sobre ACADEMICA/PEOPLE
+    // (COALESCE(ab."primerNombre", a."primerNombre", p."primerNombre")), así que
+    // sin esto las listas seguirían mostrando el nombre viejo. Además varios
+    // informes agrupan POR NOMBRE: dejarlo a medias parte al alumno en dos filas.
+    // Match ancho porque la cobertura de llaves es despareja: idEstudiante 99,9%,
+    // numeroId 98%, studentId 49%.
+    if ((syncingNombre || syncingNumeroId) && (currentPerson.numeroId || academicaIds.length)) {
+      const s = setter();
+      if (syncingNombre) {
+        s.add('primerNombre', updated.primerNombre || null);
+        s.add('primerApellido', updated.primerApellido || null);
+      }
+      if (syncingNumeroId) s.add('numeroId', body.numeroId);
+      s.v.push(currentPerson.numeroId);
+      const pNum = '$' + s.v.length;
+      s.v.push(academicaIds);
+      const pIds = '$' + s.v.length;
+      const r = await client.query(
+        'UPDATE "ACADEMICA_BOOKINGS" SET ' + s.f.join(', ') +
+        ' WHERE "numeroId" = ' + pNum +
+        '    OR "idEstudiante" = ANY(' + pIds + '::text[])' +
+        '    OR "studentId" = ANY(' + pIds + '::text[])',
+        s.v,
+      );
+      if (r.rowCount) tablasSincronizadas.push('ACADEMICA_BOOKINGS (' + r.rowCount + ')');
+    }
+
+    // ── FINANCIEROS — nombre del titular en el registro del contrato ──
+    // Solo toca la fila si el numeroId coincide (o sea, si esta persona ES el
+    // titular). No se lee para mostrar el nombre, pero se mantiene coherente.
+    if ((syncingNombre || syncingNumeroId) && currentPerson.numeroId) {
+      const s = setter();
+      if (syncingNombre) {
+        s.add('primerNombre', updated.primerNombre || null);
+        s.add('primerApellido', updated.primerApellido || null);
+      }
+      if (syncingNumeroId) s.add('numeroId', body.numeroId);
+      s.v.push(currentPerson.numeroId);
+      const r = await client.query(
+        'UPDATE "FINANCIEROS" SET ' + s.f.join(', ') + ' WHERE "numeroId" = $' + s.v.length,
+        s.v,
+      );
+      if (r.rowCount) tablasSincronizadas.push('FINANCIEROS (' + r.rowCount + ')');
+    }
+
+    // ── STEP_OVERRIDES — overrides manuales de step ──
+    // OJO: esta tabla NO tiene columna numeroId (solo los nombres y las llaves
+    // studentId/academicaId). Intentar setearla rompe TODO el PATCH.
+    if (syncingNombre && academicaIds.length) {
+      const s = setter();
+      s.add('primerNombre', updated.primerNombre || null);
+      s.add('primerApellido', updated.primerApellido || null);
+      s.v.push(academicaIds);
+      const r = await client.query(
+        'UPDATE "STEP_OVERRIDES" SET ' + s.f.join(', ') +
+        ' WHERE "studentId" = ANY($' + s.v.length + '::text[])' +
+        '    OR "academicaId" = ANY($' + s.v.length + '::text[])',
+        s.v,
+      );
+      if (r.rowCount) tablasSincronizadas.push('STEP_OVERRIDES (' + r.rowCount + ')');
+    }
+
+    return updated;
+  });
+
+  if (tablasSincronizadas.length) {
+    console.log('🔄 [PostgreSQL People] Identidad propagada a: ' + tablasSincronizadas.join(', '));
+  }
 
   // Parse JSONB fields
   const parsedPerson = parseJsonbFields(result, [
     'onHoldHistory',
     'extensionHistory',
   ]);
-
-  // ── Sync a ACADEMICA / USUARIOS_ROLES ──
-  // `numeroId` es la LLAVE que une PEOPLE ↔ ACADEMICA (y USUARIOS_ROLES.numberid).
-  // Si cambia, hay que propagarlo o el vínculo se rompe. El WHERE usa siempre el
-  // valor ANTERIOR (currentPerson) para poder encontrar las filas a actualizar.
-  const syncingEmail = body.email && body.email !== currentPerson.email;
-  const syncingCelular = body.celular !== undefined;
-  const syncingNumeroId = body.numeroId !== undefined && body.numeroId !== currentPerson.numeroId;
-  const syncingFechaNac = body.fechaNacimiento !== undefined;
-
-  if ((syncingEmail || syncingCelular || syncingNumeroId || syncingFechaNac) && currentPerson.numeroId) {
-    const academicaFields: string[] = [];
-    const academicaValues: any[] = [];
-    if (syncingEmail) { academicaFields.push(`"email" = $${academicaFields.length + 1}`); academicaValues.push(body.email); }
-    if (syncingCelular) { academicaFields.push(`"celular" = $${academicaFields.length + 1}`); academicaValues.push(body.celular); }
-    if (syncingNumeroId) { academicaFields.push(`"numeroId" = $${academicaFields.length + 1}`); academicaValues.push(body.numeroId); }
-    if (syncingFechaNac) { academicaFields.push(`"fechaNacimiento" = $${academicaFields.length + 1}`); academicaValues.push(body.fechaNacimiento || null); }
-    academicaValues.push(currentPerson.numeroId);
-    await query(
-      `UPDATE "ACADEMICA" SET ${academicaFields.join(', ')}, "_updatedDate" = NOW() WHERE "numeroId" = $${academicaValues.length}`,
-      academicaValues
-    );
-    console.log('🔄 [PostgreSQL People] Synced to ACADEMICA');
-  }
-
-  // USUARIOS_ROLES: email (login) y numberid. Un solo UPDATE matcheando por el
-  // email ANTERIOR — si se cambian ambos a la vez, hacerlo en dos pasos fallaría
-  // porque el segundo ya no encontraría la fila por el email viejo.
-  if ((syncingEmail || syncingNumeroId) && currentPerson.email) {
-    const urFields: string[] = [];
-    const urValues: any[] = [];
-    if (syncingEmail) { urFields.push(`"email" = $${urFields.length + 1}`); urValues.push(body.email); }
-    if (syncingNumeroId) { urFields.push(`"numberid" = $${urFields.length + 1}`); urValues.push(body.numeroId); }
-    urValues.push(currentPerson.email);
-    await query(
-      `UPDATE "USUARIOS_ROLES" SET ${urFields.join(', ')} WHERE LOWER("email") = LOWER($${urValues.length})`,
-      urValues
-    );
-    console.log('🔄 [PostgreSQL People] Synced to USUARIOS_ROLES');
-  }
 
   // If estado changed to Contrato nulo / Devuelto / Rechazado → inactivate titular + beneficiaries
   const INACTIVE_STATES = ['Contrato nulo', 'Devuelto', 'Rechazado'];
