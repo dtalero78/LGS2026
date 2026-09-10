@@ -124,6 +124,20 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Registra el número de factura de un pago ya validado desde la pestaña Facturación del Centro de Validación. El pago aparece en Facturación tras verificarlo (validado=true sin factura) y sale de la cola al facturarlo. Sin este permiso el botón no aparece (usuarios de solo consulta)',
   },
   {
+    code: PersonPermission.EDITAR_NOMBRE,
+    module: Module.PERSON,
+    section: 'Información General',
+    name: 'Editar nombres del beneficiario',
+    description: 'Habilita los campos de nombres y apellidos en el modal "Modificar Beneficiario". El cambio se propaga a ACADEMICA, ACADEMICA_BOOKINGS (listas de asistencia), USUARIOS_ROLES, FINANCIEROS y STEP_OVERRIDES. Sin este permiso los campos se ven pero no se pueden editar',
+  },
+  {
+    code: PersonPermission.EDITAR_NUMERO_ID,
+    module: Module.PERSON,
+    section: 'Información General',
+    name: 'Editar # de identificación',
+    description: 'Habilita el campo Número de Identificación en el modal "Modificar Beneficiario". Es la LLAVE que une PEOPLE con ACADEMICA y con el usuario de acceso: al cambiarlo se actualiza en todas esas tablas. Sin este permiso el campo queda de solo lectura',
+  },
+  {
     code: PersonPermission.VER_DOCUMENTACION,
     module: Module.PERSON,
     section: 'Información General',

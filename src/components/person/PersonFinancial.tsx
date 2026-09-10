@@ -808,6 +808,12 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
             plan: (person as any).plan ?? null,
           }}
           fechaBaseContrato={calcFechaBaseContrato(person as any)}
+          // Las fechas sueltas son SOLO para el desglose del modal (mostrar de
+          // dónde salen los días); la base del cálculo sigue siendo la cascada.
+          fechasContrato={{
+            aprobacion: (person as any).fechaIngreso ?? null,
+            contrato: (person as any).inicioContrato ?? (person as any).fechaContrato ?? null,
+          }}
           gestorLabel={currentGestor ? `${currentGestor.nombre} · ${ROLE_LABEL[currentGestor.rol] || currentGestor.rol}` : null}
           existingPagos={pagos}
           // "Saldo a la Fecha" del wizard = FINANCIEROS.saldo dinámico
