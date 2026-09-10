@@ -252,12 +252,20 @@ function EstudianteForm() {
 
 // ─────────────────────────── 2) Administrativo ───────────────────────────
 
+// Roles del equipo de recaudos: además del login llevan ficha en FINANCIEROS_EQUIP
+// (monto mensual + vigencia). Debe coincidir con ROLES_RECAUDOS del endpoint.
+const ROLES_RECAUDOS = new Set(['RECAUDOS_JEFE', 'RECAUDO_ASIST'])
+const EMPTY_ADMIN_FORM = {
+  rol: '', nombre: '', apellido: '', email: '', celular: '', numberid: '', plataforma: '',
+  montomensual: '', vigenstart: '', vigenfinal: '', fechaopcional: '',
+}
+
 function AdministrativoForm() {
   const [roles, setRoles] = useState<{ rol: string; descripcion: string }[]>([])
-  const [form, setForm] = useState({ rol: '', nombre: '', apellido: '', email: '', celular: '', numberid: '', plataforma: '' })
+  const [form, setForm] = useState({ ...EMPTY_ADMIN_FORM })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [done, setDone] = useState<{ user: any; password: string } | null>(null)
+  const [done, setDone] = useState<{ user: any; password: string; equipo: any } | null>(null)
 
   useEffect(() => {
     fetch('/api/postgres/roles?activo=true').then(r => r.json()).then(d => {
@@ -269,7 +277,9 @@ function AdministrativoForm() {
   }, [])
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
-  const valid = form.rol && form.nombre.trim() && emailRe.test(form.email.trim())
+  const esRecaudos = ROLES_RECAUDOS.has(form.rol.toUpperCase())
+  const vigenciaInvertida = !!(form.vigenstart && form.vigenfinal && form.vigenfinal < form.vigenstart)
+  const valid = form.rol && form.nombre.trim() && emailRe.test(form.email.trim()) && !vigenciaInvertida
 
   const submit = async () => {
     setError(null)
@@ -280,7 +290,7 @@ function AdministrativoForm() {
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data?.error || `Error ${res.status}`)
       toast.success('Cuenta administrativa creada')
-      setDone({ user: data.user, password: data.generatedPassword })
+      setDone({ user: data.user, password: data.generatedPassword, equipo: data.equipoRecaudos || null })
     } catch (e: any) { setError(e?.message || 'Error al crear') }
     finally { setSaving(false) }
   }
@@ -291,8 +301,13 @@ function AdministrativoForm() {
       <CredentialCard email={done.user.email} password={done.password} extra={<>
         <div className="grid grid-cols-3 gap-2"><span className="text-gray-500">Nombre</span><span className="col-span-2 font-medium text-gray-900">{done.user.nombre}{done.user.apellido ? ` ${done.user.apellido}` : ''}</span></div>
         <div className="grid grid-cols-3 gap-2"><span className="text-gray-500">Rol</span><span className="col-span-2 font-medium text-gray-900">{done.user.rol}</span></div>
+        {done.equipo && (
+          <div className="grid grid-cols-3 gap-2"><span className="text-gray-500">Equipo recaudos</span><span className="col-span-2 font-medium text-gray-900">
+            Ficha creada en FINANCIEROS_EQUIP{done.equipo.montomensual != null ? ` · monto mensual ${Number(done.equipo.montomensual).toLocaleString('es-CO')}` : ' · sin monto mensual'}
+          </span></div>
+        )}
       </>} />
-      <button type="button" onClick={() => { setDone(null); setForm({ rol: '', nombre: '', apellido: '', email: '', celular: '', numberid: '', plataforma: '' }) }} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50">Crear otra</button>
+      <button type="button" onClick={() => { setDone(null); setForm({ ...EMPTY_ADMIN_FORM }) }} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50">Crear otra</button>
     </div>
   )
 
@@ -313,6 +328,39 @@ function AdministrativoForm() {
         <Field label="Celular"><input value={form.celular} onChange={e => set('celular', e.target.value.replace(/\D/g, ''))} className={inputCls} /></Field>
         <Field label="Número de identificación"><input value={form.numberid} onChange={e => set('numberid', e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))} className={`${inputCls} font-mono`} /></Field>
       </div>
+
+      {/* Datos del equipo de recaudos — solo para RECAUDOS_JEFE / RECAUDO_ASIST.
+          Se guardan en FINANCIEROS_EQUIP junto con la cuenta de login. */}
+      {esRecaudos && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-3">
+          <div>
+            <h3 className="text-sm font-bold text-emerald-900">Equipo de recaudos</h3>
+            <p className="text-xs text-emerald-800 mt-0.5">
+              El rol <strong>{form.rol}</strong> crea además la ficha del ejecutivo en <em>FINANCIEROS_EQUIP</em>, enlazada a esta cuenta. Todos estos campos son opcionales y se pueden completar después.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Field label="Monto mensual">
+              <input inputMode="decimal" value={form.montomensual}
+                onChange={e => set('montomensual', e.target.value.replace(/[^0-9.]/g, ''))}
+                className={`${inputCls} font-mono`} placeholder="0" />
+            </Field>
+            <Field label="Fecha opcional">
+              <input type="date" value={form.fechaopcional} onChange={e => set('fechaopcional', e.target.value)} className={inputCls} />
+            </Field>
+            <Field label="Vigencia — inicio">
+              <input type="date" value={form.vigenstart} onChange={e => set('vigenstart', e.target.value)} className={inputCls} />
+            </Field>
+            <Field label="Vigencia — final">
+              <input type="date" value={form.vigenfinal} onChange={e => set('vigenfinal', e.target.value)} className={inputCls} />
+            </Field>
+          </div>
+          {vigenciaInvertida && (
+            <p className="text-xs font-semibold text-red-700">La fecha final de vigencia no puede ser anterior a la de inicio.</p>
+          )}
+        </div>
+      )}
+
       <p className="text-xs text-gray-400">La clave se genera automáticamente y se muestra al crear.</p>
       <div className="flex justify-end"><button type="button" onClick={submit} disabled={!valid || saving} className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">{saving ? 'Creando…' : '✓ Crear administrativo'}</button></div>
     </div>

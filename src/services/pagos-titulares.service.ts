@@ -46,6 +46,7 @@ const UPDATABLE_FIELDS = [
   'documentosAdjuntos',
   'tipoCartera',
   'cambioContado',
+  'nota',
   // 'realizadopor' NO es editable a mano: es derivado. Se recalcula en update()
   // cuando cambia la fecha del pago (ver más abajo).
   'realizadopor',
@@ -383,6 +384,19 @@ export const pagosTitularesService = {
     // del pago con la de aprobación del contrato (30 días → Comercial, después →
     // Recaudos). Lo que mande el cliente en `realizadopor` se ignora.
     const esCambioContado = input.cambioContado === true;
+
+    // Nota OBLIGATORIA en los dos casos donde el pago no es una cuota normal:
+    // penalidad/recuperación y cambio a contado. Se exige acá (servidor) además
+    // de en el wizard, para que ningún cliente pueda saltarse el motivo.
+    const nota = typeof input.nota === 'string' ? input.nota.trim() : '';
+    if ((esPenalidad || esCambioContado) && !nota) {
+      throw new ValidationError(
+        esPenalidad
+          ? 'La nota es obligatoria cuando el pago se marca como Penalidad o Recuperación'
+          : 'La nota es obligatoria cuando el pago se marca como Cambio Contado',
+      );
+    }
+
     const fechaPagoFinal = input.fechaPago ?? new Date().toISOString().slice(0, 10);
     const realizadopor = esCambioContado
       ? resolveRealizadoPor(fechaBaseContrato(titular as any), fechaPagoFinal)
@@ -408,6 +422,7 @@ export const pagosTitularesService = {
       cambioContado: esCambioContado,
       realizadopor,
       pagoDoble: input.pagoDoble === true,
+      nota: nota || null,
       valorPagado: input.valorPagado ?? null,
       saldo,
       descuento: input.descuento ?? 0,
