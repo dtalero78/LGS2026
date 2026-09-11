@@ -197,9 +197,8 @@ const getNavigation = (userEmail: string, userRole: string) => [
       },
       {
         name: 'Usuarios', isSubmenu: true, children: [
-          { name: 'Clear Historic',   href: '/admin/clear-historic',   newTab: true },
-          { name: 'Consulta UserRol', href: '/admin/roles/consulta',   newTab: true },
-          { name: 'Crea UserRol',     href: '/admin/roles/create',     newTab: true },
+          { name: 'Clear Historic',    href: '/admin/clear-historic',   newTab: true },
+          { name: 'Gestión Usuarios',  href: '/admin/roles/create',     newTab: true },
         ],
       },
       {
@@ -208,6 +207,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
           { name: 'Contratos Prueba', href: '/admin/contratos-prueba', newTab: true },
           { name: 'Drive de Contratos', href: '/admin/drive-config', newTab: true },
           { name: 'Proceso Kids', href: '/admin/kids-config', newTab: true },
+          { name: 'Página de Bienvenida', href: '/admin/bienvenida-config', newTab: true },
           { name: 'Edición Contrato', href: '/admin/edicion-contrato', newTab: true },
           { name: 'Generar Contrato', href: '/admin/generar-contrato', newTab: true },
           { name: 'Cargar Beneficiarios', href: '/admin/cargar-beneficiarios', newTab: true },
@@ -223,7 +223,6 @@ const getNavigation = (userEmail: string, userRole: string) => [
       {
         name: 'Contingencia', isSubmenu: true, children: [
           { name: 'Canales WhatsApp', href: '/admin/contingencia/whatsapp', newTab: true },
-          { name: 'Proceso SENCE', href: '/admin/sence-config', newTab: true },
         ],
       },
       { name: 'Diagnóstico', href: '/admin/diagnostico', newTab: true },
@@ -388,9 +387,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ],
     '/admin/contingencia/whatsapp': [
       MantenimientoPermission.CONTINGENCIA_WHATSAPP,
-    ],
-    '/admin/sence-config': [
-      MantenimientoPermission.SENCE_CONFIG,
     ],
     '/admin/contratos-prueba': [
       MantenimientoPermission.CONTRATOS_PRUEBA,

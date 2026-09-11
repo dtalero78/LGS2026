@@ -9,16 +9,22 @@ export function esContratoPrueba(contrato: string | null | undefined): boolean {
 }
 
 /**
- * Guard: los contratos de prueba (prefijo PRB-) SOLO se pueden ver, editar,
- * y adjuntarles documentación. Cualquier utilidad que dispare efectos reales
- * o de producción está bloqueada para **TODOS los roles, sin excepción**
- * (tampoco SUPER_ADMIN) — el contrato es de prueba y no debe:
- *   - solicitar firma / verificar OTP  (consent.service)
- *   - enviar el PDF por WhatsApp        (contracts/[id]/send-pdf)
- *   - autoaprobar consentimiento        (consent/[id]/auto-approve)
+ * Guard: los contratos de prueba (prefijo PRB-) no pueden disparar los efectos
+ * que crean datos reales. Bloqueado para **TODOS los roles, sin excepción**
+ * (tampoco SUPER_ADMIN):
  *   - aprobar el contrato               (people/approve, approvals/[id], people PATCH)
- *   - crear beneficiarios / fichas en ACADEMICA (approve queda bloqueado → no se crea ACADEMICA)
+ *   - crear beneficiarios / fichas en ACADEMICA (approve bloqueado → no se crea ACADEMICA)
  *   - agregar titular/beneficiario      (people POST, proteccion-historial)
+ *
+ * DESDE 2026-09-08 un PRB- **SÍ puede firmarse de punta a punta** (solicitar
+ * firma, OTP, autoaprobar consentimiento y "Enviar PDF"), para poder ensayar el
+ * proceso completo incluida la página de bienvenida. Las contenciones son otras:
+ *   - el PDF sale con marca de agua "CONTRATO DE PRUEBA / SIN VALIDEZ LEGAL"
+ *     (opción `esPrueba` de contract-pdf-html, punto único de los 4 generadores)
+ *   - no se archiva en Drive: ni el contrato ni el anexo ANEX-
+ *   - la APROBACIÓN sigue bloqueada, así que nunca nace ACADEMICA ni el login
+ *
+ * ⚠️ Firmar un PRB- envía WhatsApp REAL (OTP y PDF) al celular registrado.
  *
  * `accion` se interpola en el mensaje 403 para que la UI/usuario sepa qué se bloqueó.
  *

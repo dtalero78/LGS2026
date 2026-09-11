@@ -7,7 +7,7 @@ import { buildContractPdfHtml } from '@/lib/contract-pdf-html';
 import { getAsesorInfo } from '@/lib/asesor';
 import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
 import { archivarContratoEnDrive, buildContractFilename } from '@/lib/contract-drive';
-import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
+import { esContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { whatsappConfigService } from '@/services/whatsapp-config.service';
 
 const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
@@ -21,7 +21,9 @@ export const POST = handler(async (_request, { params }) => {
     [titularId]
   );
   if (!titular) throw new NotFoundError('Titular', titularId);
-  assertNoEsContratoPrueba(titular.contrato, 'enviar el PDF');
+  // Los contratos de prueba SÍ generan y envían PDF (para poder ensayar el
+  // flujo completo), pero salen con marca de agua y NO se archivan en Drive.
+  const esPrueba = esContratoPrueba(titular.contrato);
   if (!titular.celular) throw new ValidationError('El titular no tiene celular registrado');
   if (!titular.plataforma) throw new ValidationError('El titular no tiene plataforma asignada');
 
@@ -80,6 +82,7 @@ export const POST = handler(async (_request, { params }) => {
 
   // 5. Wrap in HTML for PDF generation (diseño compartido — src/lib/contract-pdf-html.ts)
   const htmlContent = buildContractPdfHtml(contractText, {
+    esPrueba,
     contrato: titular.contrato,
     fecha: new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' }),
   });
@@ -116,7 +119,10 @@ export const POST = handler(async (_request, { params }) => {
 
   // 7. Archivar el PDF en Drive (según el interruptor: bsl o LGS) en paralelo con
   //    el envío por WhatsApp.
-  const uploadPromise = archivarContratoEnDrive({ pdfUrl: tempPdfUrl, titularId, filename });
+  // Un contrato de prueba nunca entra al Drive de contratos reales.
+  const uploadPromise = esPrueba
+    ? Promise.resolve({ ok: false as const, error: 'contrato de prueba: no se archiva' })
+    : archivarContratoEnDrive({ pdfUrl: tempPdfUrl, titularId, filename });
 
   // 8. Send PDF via Whapi using the API2PDF direct URL (clean S3 link, no redirects)
   const phone = titular.celular.toString().replace(/\D/g, '');

@@ -44,6 +44,21 @@ export interface PagoTitular {
   vlrpenalidad: number | null;
   /** true = este pago es una penalidad (además cambia el estado de cartera). */
   penalidad: boolean;
+  /** true = este pago corresponde a un CAMBIO A CONTADO del plan del titular. */
+  cambioContado: boolean;
+  /** true = fila nacida de un "Pago doble": un solo valor capturado que el
+   *  servidor partió en DOS registros (cuota #N y #N+1, misma fecha de pago).
+   *  Ambas filas quedan marcadas; la tabla las muestra como "Adelanto cuota". */
+  pagoDoble: boolean;
+  /** Nota del pago. OBLIGATORIA cuando `penalidad` o `cambioContado` son true
+   *  (el valor no corresponde a una cuota normal y hay que dejar el motivo por
+   *  escrito). En el resto de los pagos queda null. */
+  nota: string | null;
+  /** Quién gestionó el cambio a contado: 'Comercial' | 'Recaudos' | null.
+   *  Solo se llena cuando `cambioContado=true`; lo calcula el servidor según los
+   *  días transcurridos entre la aprobación del contrato y el pago
+   *  (ver src/lib/cambio-contado.ts). El cliente nunca lo envía. */
+  realizadopor: string | null;
   saldo: number | null;
   descuento: number | null;
   /** "Valor a Aplicar" = max(0, valorPagado − descuento). Lo que reduce el saldo. */
@@ -94,14 +109,16 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
          "plan", "vlrTotalProg", "numCuota", "cuotasTotal", "valorCuota", "valorPagado",
          "saldo", "descuento", "valorAplicado", "inscripcion", "medioPago", "numeroReferencia",
          "numeroFactura", "documentosAdjuntos", "validado", "createdBy",
-         "vlrpenalidad", "penalidad"
+         "vlrpenalidad", "penalidad", "cambioContado", "realizadopor", "pagoDoble",
+         "nota"
        ) VALUES (
          $1, $2, $3, $4, $5,
          $6, $7, $8, $9, $10,
          $11, $12, $13, $14, $15, $16,
          $17, $18, $19, $20, $21, $22,
          $23, $24::jsonb, $25, $26,
-         $27, $28
+         $27, $28, $29, $30, $31,
+         $32
        )
        RETURNING *`,
       [
@@ -133,6 +150,10 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
         data.createdBy ?? null,
         data.vlrpenalidad ?? null,
         data.penalidad ?? false,
+        data.cambioContado ?? false,
+        data.realizadopor ?? null,
+        data.pagoDoble ?? false,
+        data.nota ?? null,
       ]
     );
     return this.parse(row)!;
@@ -151,6 +172,12 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
     estado?: 'validado' | 'pendiente';
     /** 'regular' (cuotas numCuota>0, default) | 'inscripcion' (cuota #0). */
     cuotaTipo?: 'regular' | 'inscripcion';
+    /**
+     * 'verificacion' (default) = cola de verificación (usa cuotaTipo + estado).
+     * 'facturacion' = cola de facturación: validado=true SIN número de factura,
+     * combinando pagos e inscripciones (ignora cuotaTipo y estado).
+     */
+    vista?: 'verificacion' | 'facturacion';
     fechaDesde?: string | null;
     fechaHasta?: string | null;
     search?: string | null;
@@ -164,20 +191,27 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
     limit: number;
     offset: number;
   }): Promise<{ rows: any[]; total: number }> {
-    // cuota #0 = inscripción (pestaña "Inscripciones pendientes"); resto = cuotas regulares.
-    const cuotaCond = opts.cuotaTipo === 'inscripcion'
-      ? `COALESCE(pt."numCuota", 0) = 0`
-      : `COALESCE(pt."numCuota", 0) > 0`;
+    const esFacturacion = opts.vista === 'facturacion';
     const conds: string[] = [
-      cuotaCond,
       // Excluye contratos de prueba (PRB-) — viven solo en /admin/contratos-prueba.
       `COALESCE(p."contrato",'') NOT LIKE 'PRB-%'`,
     ];
     const params: any[] = [];
     let i = 1;
 
-    if (opts.estado === 'validado') conds.push(`pt."validado" = true`);
-    else if (opts.estado === 'pendiente') conds.push(`pt."validado" = false`);
+    if (esFacturacion) {
+      // Cola de facturación: verificados (validado=true) que AÚN no tienen
+      // número de factura. Combina pagos e inscripciones (no filtra por cuota).
+      conds.push(`pt."validado" = true`);
+      conds.push(`(pt."numeroFactura" IS NULL OR TRIM(pt."numeroFactura") = '')`);
+    } else {
+      // cuota #0 = inscripción (pestaña "Verificación Inscripción"); resto = pagos.
+      conds.push(opts.cuotaTipo === 'inscripcion'
+        ? `COALESCE(pt."numCuota", 0) = 0`
+        : `COALESCE(pt."numCuota", 0) > 0`);
+      if (opts.estado === 'validado') conds.push(`pt."validado" = true`);
+      else if (opts.estado === 'pendiente') conds.push(`pt."validado" = false`);
+    }
 
     if (opts.fechaDesde) { conds.push(`pt."fechaPago" >= $${i}::date`); params.push(opts.fechaDesde); i++; }
     if (opts.fechaHasta) { conds.push(`pt."fechaPago" <= $${i}::date`); params.push(opts.fechaHasta); i++; }
@@ -247,7 +281,8 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
          p."segundoApellido" AS "titular_segundoApellido",
          p."numeroId"        AS "titular_numeroId",
          p."contrato"        AS "titular_contrato",
-         p."plataforma"      AS "titular_plataforma"
+         p."plataforma"      AS "titular_plataforma",
+         p."asesorCreadorContrato" AS "titular_asesorNombre"
        FROM "PAGOS_TITULARES" pt
        JOIN "PEOPLE" p ON p."_id" = pt."idPeople"
        ${whereClause}
@@ -491,7 +526,16 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
          p."gestorRecaudo"                       AS "gestorRecaudo",
          p."estadoInactivo"                      AS "estadoInactivo",
          p."aprobacion"                          AS "aprobacion",
-         p."marcaOpcional"                       AS "marcaOpcional",
+         -- Una marca TEMPORAL vencida ya no aplica: se muestra el valor al
+         -- que va a volver. El cron nocturno hace el mismo cambio en la base;
+         -- esto evita el hueco entre el vencimiento y la corrida del cron.
+         CASE WHEN p."marcaOpcionalHasta" IS NOT NULL AND p."marcaOpcionalHasta" < CURRENT_DATE
+              THEN p."marcaOpcionalAnterior"
+              ELSE p."marcaOpcional"
+         END                                     AS "marcaOpcional",
+         CASE WHEN p."marcaOpcionalHasta" IS NOT NULL AND p."marcaOpcionalHasta" >= CURRENT_DATE
+              THEN p."marcaOpcionalHasta"
+         END                                     AS "marcaOpcionalHasta",
          f."saldo"                               AS "saldoActual",
          COALESCE(c0."tipoCartera", 'normal')    AS "tipoCartera",
          agg."ultimaFechaPago"                   AS "ultimaFechaPago",
@@ -590,6 +634,22 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
        WHERE "_id" = $1
        RETURNING *`,
       [id, validadoPor, numeroFactura, fechaValidacion]
+    );
+    return this.parse(row);
+  }
+
+  /**
+   * Registra el número de factura de un pago YA validado (paso Facturación).
+   * Solo actúa sobre pagos con validado=true. No toca el saldo.
+   */
+  async facturar(id: string, numeroFactura: string): Promise<PagoTitular | null> {
+    const row = await queryOne<PagoTitular>(
+      `UPDATE "PAGOS_TITULARES"
+       SET "numeroFactura" = $2,
+           "_updatedDate" = NOW()
+       WHERE "_id" = $1 AND "validado" = true
+       RETURNING *`,
+      [id, numeroFactura]
     );
     return this.parse(row);
   }

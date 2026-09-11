@@ -1,5 +1,6 @@
 import 'server-only'
-import { handlerWithAuth, successResponse } from '@/lib/api-helpers'
+import { successResponse } from '@/lib/api-helpers'
+import { handlerReport } from '@/lib/report-guard'
 import { requirePermission } from '@/lib/api-permissions'
 import { query } from '@/lib/postgres'
 import { InformesPermission } from '@/types/permissions'
@@ -39,7 +40,7 @@ import { InformesPermission } from '@/types/permissions'
 
 const MAX_ROWS = 2000
 
-export const GET = handlerWithAuth(async (req, _ctx, session) => {
+export const GET = handlerReport(async (req, _ctx, session) => {
   await requirePermission(session, InformesPermission.ACAD_POR_VENCER)
 
   const { searchParams } = new URL(req.url)

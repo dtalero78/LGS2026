@@ -189,8 +189,8 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
       "email", "celular", "telefono", "fechaNacimiento", "domicilio", "ciudad",
       "plataforma", "ingresos", "empresa", "cargo", "genero",
       "referenciaUno", "parentezcoRefUno", "telefonoRefUno", "referenciaDos", "parentezcoRefDos", "telefonoRefDos",
-      "asesor", "asesorCreadorContrato", "tipoUsuario", "contrato", "vigencia", "fechaContrato", "finalContrato", "plan", "sence", "tipoPersona", "replegal", "replegalid", "replegalcel", "origen", "_createdDate", "_updatedDate")
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$29,'TITULAR',$25,$26,NOW(),$27::date,$28,$30,$31,$32,$33,$34,'POSTGRES',NOW(),NOW()) RETURNING *`,
+      "asesor", "asesorCreadorContrato", "tipoUsuario", "contrato", "vigencia", "fechaContrato", "finalContrato", "plan", "sence", "tipoPersona", "rubro", "replegal", "replegalcargo", "replegalid", "replegalcel", "origen", "_createdDate", "_updatedDate")
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$29,'TITULAR',$25,$26,NOW(),$27::date,$28,$30,$31,$35,$32,$36,$33,$34,'POSTGRES',NOW(),NOW()) RETURNING *`,
     [titularId, titular.numeroId, titular.primerNombre, titular.segundoNombre || null,
      titular.primerApellido, titular.segundoApellido || null,
      titular.email || null, titular.celular || null, titular.telefono || null,
@@ -200,7 +200,8 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
      titular.referenciaDos || null, titular.parentezcoRefDos || null, titular.telRefDos || null,
      titular.asesor || null, contrato, financial?.vigencia || null, finalContrato, tipoPlan,
      titular.asesorCreadorContrato || null, senceVal, tipoPersona,
-     titular.replegal || null, titular.replegalid || null, titular.replegalcel || null]  // $29 asesorCreadorContrato, $30 sence, $31 tipoPersona, $32-34 rep. legal
+     titular.replegal || null, titular.replegalid || null, titular.replegalcel || null,
+     titular.rubro || null, titular.replegalcargo || null]  // $29 asesorCreadorContrato, $30 sence, $31 tipoPersona, $32-34 rep. legal, $35 rubro, $36 cargo del representante
   );
   created.titular = titularResult.rows[0];
 

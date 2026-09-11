@@ -43,16 +43,45 @@ export const POST = handler(async (request) => {
   const cleanId    = lastFourId.replace(/[^0-9A-Za-z]/g, '').toUpperCase().slice(-4);
   const cleanPhone = lastFourPhone.replace(/\D/g, '');  // full number, no signs
 
-  // Get ACADEMICA record — also check PEOPLE for celular fallback
-  const academica = await queryOne<{ _id: string; celular: string | null; numeroId: string | null }>(
-    `SELECT a."_id", a."celular", a."numeroId"
-     FROM "ACADEMICA" a WHERE LOWER(a."email") = $1 LIMIT 1`,
+  // Resolvemos numeroId + celular para TODO tipo de usuario:
+  //   numeroId → ACADEMICA (estudiantes) → USUARIOS_ROLES.numberid (resto)
+  //   celular  → ACADEMICA → USUARIOS_ROLES.celular → ADVISORS.telefono
+  // Antes solo miraba ACADEMICA → el flujo estaba roto para advisor/comercial/
+  // administrativos (no tienen ficha académica).
+  const user = await queryOne<{ _id: string; celular: string | null; numeroId: string | null }>(
+    `SELECT ur."_id",
+            COALESCE(
+              NULLIF(TRIM((SELECT a."numeroId" FROM "ACADEMICA" a
+                            WHERE LOWER(a."email") = LOWER(ur."email")
+                              AND TRIM(COALESCE(a."numeroId",'')) <> '' LIMIT 1)), ''),
+              NULLIF(TRIM(ur."numberid"), '')
+            ) AS "numeroId",
+            COALESCE(
+              NULLIF(TRIM((SELECT a."celular" FROM "ACADEMICA" a
+                            WHERE LOWER(a."email") = LOWER(ur."email")
+                              AND TRIM(COALESCE(a."celular",'')) <> '' LIMIT 1)), ''),
+              NULLIF(TRIM(ur."celular"), ''),
+              NULLIF(TRIM((SELECT ad."telefono" FROM "ADVISORS" ad
+                            WHERE LOWER(ad."email") = LOWER(ur."email")
+                              AND TRIM(COALESCE(ad."telefono",'')) <> '' LIMIT 1)), '')
+            ) AS "celular"
+       FROM "USUARIOS_ROLES" ur
+      WHERE LOWER(ur."email") = $1
+      LIMIT 1`,
     [normalizedEmail]
   );
-  if (!academica) throw new NotFoundError('Registro académico', normalizedEmail);
+  if (!user) throw new NotFoundError('Usuario', normalizedEmail);
+
+  // Sin celular registrado no se puede enviar OTP → no es "datos no coinciden",
+  // es una cuenta sin celular. Mensaje claro para que contacte a soporte.
+  if (!user.celular || user.celular.replace(/\D/g, '').length < MIN_PHONE_DIGITS) {
+    throw new ValidationError(
+      'Esta cuenta no tiene un celular registrado válido. Contacta a Let\'s Go Speak para restablecer tu contraseña.'
+    );
+  }
 
   // Verify last 4 of ID
-  const storedId = (academica.numeroId || '').replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+  const storedId = (user.numeroId || '').replace(/[^0-9A-Za-z]/g, '').toUpperCase();
   const idMatches = storedId.endsWith(cleanId);
 
   // Verify phone — exige el número COMPLETO (mínimo 8 dígitos).
@@ -64,7 +93,7 @@ export const POST = handler(async (request) => {
   // AHORA: el mínimo de 8 dígitos hace que un sufijo corto no pase. Se conserva
   // la flexibilidad del indicativo (56XXXXXXXXX vs XXXXXXXXX) porque el dato
   // guardado a veces lo trae y a veces no; ambos lados deben cumplir el mínimo.
-  const storedPhone = (academica.celular || '').replace(/\D/g, '');
+  const storedPhone = (user.celular || '').replace(/\D/g, '');
   const phoneMatches =
     storedPhone.length >= MIN_PHONE_DIGITS &&
     cleanPhone.length >= MIN_PHONE_DIGITS && (
@@ -82,7 +111,7 @@ export const POST = handler(async (request) => {
   }
 
   // Generate and send OTP
-  const celular = academica.celular!;
+  const celular = user.celular!;
   const code = generateOtp();
   saveOtp(normalizedEmail, code, celular);
 

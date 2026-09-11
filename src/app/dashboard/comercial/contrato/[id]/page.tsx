@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { normalizeNumeroId } from '@/lib/numeroid-normalize';
 import { useParams, useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
@@ -740,7 +741,7 @@ export default function ContratoDetailPage() {
                     {consentStatus.consent.numeroDocumento && (
                       <div>
                         <span className="font-medium">Documento:</span>{' '}
-                        {consentStatus.consent.numeroDocumento}
+                        {normalizeNumeroId(consentStatus.consent.numeroDocumento)}
                       </div>
                     )}
                     {consentStatus.consent.timestampAcceptacion && (

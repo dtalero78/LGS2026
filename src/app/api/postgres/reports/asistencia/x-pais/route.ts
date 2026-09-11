@@ -1,5 +1,6 @@
 import 'server-only'
-import { handler, successResponse } from '@/lib/api-helpers'
+import { successResponse } from '@/lib/api-helpers'
+import { handlerReportPublic } from '@/lib/report-guard'
 import { queryMany } from '@/lib/postgres'
 
 async function safeQuery<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
@@ -33,7 +34,7 @@ function agg(rows: any[]) {
   )
 }
 
-export const GET = handler(async (request: Request) => {
+export const GET = handlerReportPublic(async (request: Request) => {
   const { searchParams } = new URL(request.url)
   const startDate = searchParams.get('startDate') || '2020-01-01'
   const endDate   = searchParams.get('endDate')   || '2030-12-31'

@@ -1,5 +1,6 @@
 import 'server-only';
-import { handler, successResponse } from '@/lib/api-helpers';
+import { successResponse } from '@/lib/api-helpers'
+import { handlerReportPublic } from '@/lib/report-guard';
 import { queryMany, queryOne } from '@/lib/postgres';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 
@@ -10,7 +11,7 @@ import { NotFoundError, ValidationError } from '@/lib/errors';
  * attendance table. Columns: fecha, tipo, advisor, nivel, step, asistio.
  * No zoom column.
  */
-export const GET = handler(async (req) => {
+export const GET = handlerReportPublic(async (req) => {
   const { searchParams } = new URL(req.url);
   const numeroId  = searchParams.get('numeroId')?.trim();
   const startDate = searchParams.get('startDate');

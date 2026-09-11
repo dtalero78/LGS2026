@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import {
   BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -139,7 +139,8 @@ export default function HorasAdvisorPage() {
   const [advisorId,   setAdvisorId]   = useState('')
   const [tipo,        setTipo]        = useState('all')
   const [data,    setData]    = useState<ReportData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [consultado, setConsultado] = useState(false)
   const [error,   setError]   = useState<string | null>(null)
   // advisorId efectivamente consultado (de la última carga), para el mensaje
   // "sin agendamiento" cuando se filtra por un advisor sin actividad.
@@ -160,12 +161,17 @@ export default function HorasAdvisorPage() {
     finally { setLoading(false) }
   }, [])
 
-  useEffect(() => { fetchData(firstOfYear, today, '', '', 'all') }, [fetchData])
-
-  const handleApply = () => fetchData(fechaInicio, fechaFin, plataforma, advisorId, tipo)
+  const handleApply = () => {
+    if (!fechaInicio || !fechaFin) {
+      alert('Selecciona el rango de fechas (Desde y Hasta) antes de consultar.')
+      return
+    }
+    setConsultado(true)
+    fetchData(fechaInicio, fechaFin, plataforma, advisorId, tipo)
+  }
   const handleClear = () => {
     setFechaInicio(firstOfYear); setFechaFin(today); setPlataforma(''); setAdvisorId(''); setTipo('all')
-    fetchData(firstOfYear, today, '', '', 'all')
+    setData(null); setConsultado(false); setError(null); setQueriedAdvisorId('')
   }
 
   const handleExport = () => {
@@ -256,7 +262,7 @@ export default function HorasAdvisorPage() {
             <div className="flex gap-2 ml-auto flex-wrap">
               <button type="button" onClick={handleApply} disabled={loading}
                 className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium">
-                Aplicar filtros
+                Consultar
               </button>
               <button type="button" onClick={handleClear} disabled={loading}
                 className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
@@ -279,6 +285,16 @@ export default function HorasAdvisorPage() {
             <button type="button" onClick={handleApply} className="ml-4 text-xs underline">Reintentar</button>
           </div>
         )}
+
+        {/* Estado vacío */}
+        {!consultado && !loading && !error && (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center text-sm text-indigo-900">
+            Configura los filtros y pulsa <b>Consultar</b> para ver el informe.
+          </div>
+        )}
+
+        {consultado && (
+        <>
 
         {/* KPIs */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -443,6 +459,9 @@ export default function HorasAdvisorPage() {
             </div>
           )}
         </div>
+
+        </>
+        )}
 
       </div>
     </DashboardLayout>

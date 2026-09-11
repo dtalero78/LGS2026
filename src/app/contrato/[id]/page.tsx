@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { normalizeNumeroId } from '@/lib/numeroid-normalize';
 import { isContratoPrueba } from '@/components/common/ContratoPruebaBadge'
 import { useParams, useRouter } from 'next/navigation'
 import { fillContractTemplate, type ConsentDisplay } from '@/lib/contract-template-filler'
@@ -21,6 +22,7 @@ export default function ContratoPublicoPage() {
   const [financial, setFinancial] = useState<any>(null)
   const [contractText, setContractText] = useState('')
   const [consentStatus, setConsentStatus] = useState<ConsentDisplay | null>(null)
+  const [bienvenidaToken, setBienvenidaToken] = useState('')
 
   // OTP flow
   const [numeroDocumento, setNumeroDocumento] = useState('')
@@ -75,14 +77,50 @@ export default function ContratoPublicoPage() {
     loadData()
   }, [loadData])
 
-  // Redirect to LGS website after successful verification
+  // Redirect al sitio de LGS tras firmar. Preferimos letsgospeak.cl, pero si NO
+  // responde (DNS/timeout) caemos a letsgospeak.com.co para no dejar al cliente
+  // en una página de error justo al terminar de firmar. El chequeo corre en
+  // paralelo con la pantalla de éxito (mín. 2s); es dinámico: cuando .cl vuelva
+  // a responder, se vuelve a preferir solo.
   useEffect(() => {
     if (pageState !== 'VERIFIED') return
-    const timer = setTimeout(() => {
-      router.replace('https://letsgospeak.cl/')
-    }, 2000)
-    return () => clearTimeout(timer)
-  }, [pageState, router])
+    let cancelled = false
+    const PRIMARY = 'https://letsgospeak.cl/'
+    const FALLBACK = 'https://letsgospeak.com.co/'
+
+    const decideTarget = async (): Promise<string> => {
+      try {
+        const ctrl = new AbortController()
+        const to = setTimeout(() => ctrl.abort(), 3000)
+        // no-cors: solo nos interesa si el dominio responde, no leer la respuesta.
+        await fetch(PRIMARY, { mode: 'no-cors', cache: 'no-store', signal: ctrl.signal })
+        clearTimeout(to)
+        return PRIMARY
+      } catch {
+        return FALLBACK // NXDOMAIN, conexión rechazada o timeout → fallback
+      }
+    }
+
+    // Si la pagina de bienvenida esta activa (flag en Mantenimiento > Contratos),
+    // el cliente aterriza en /bienvenida/[id] en vez de salir al sitio publico.
+    const decideDestino = async (): Promise<string> => {
+      try {
+        const r = await fetch('/api/public/bienvenida-activa', { cache: 'no-store' })
+        const j = await r.json()
+        if (j?.active && bienvenidaToken) {
+          return '/bienvenida/' + titularId + '?t=' + encodeURIComponent(bienvenidaToken)
+        }
+      } catch { /* si falla el flag, seguimos con el destino externo */ }
+      return decideTarget()
+    }
+
+    const minDelay = new Promise<void>(resolve => setTimeout(resolve, 2000))
+    Promise.all([decideDestino(), minDelay]).then(([target]) => {
+      if (!cancelled) router.replace(target)
+    })
+
+    return () => { cancelled = true }
+  }, [pageState, router, titularId, bienvenidaToken])
 
   // Resend cooldown timer
   useEffect(() => {
@@ -146,6 +184,7 @@ export default function ContratoPublicoPage() {
         setOtpError(data.error || 'Codigo incorrecto o expirado')
         return
       }
+      setBienvenidaToken(data.bienvenidaToken || '')
       setConsentStatus({
         hasConsent: true,
         consent: {
@@ -224,7 +263,7 @@ export default function ContratoPublicoPage() {
               </h3>
               <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-blue-700">
                 {consentStatus.consent.numeroDocumento && (
-                  <div><span className="font-medium">Documento:</span> {consentStatus.consent.numeroDocumento}</div>
+                  <div><span className="font-medium">Documento:</span> {normalizeNumeroId(consentStatus.consent.numeroDocumento)}</div>
                 )}
                 {consentStatus.consent.timestampAcceptacion && (
                   <div><span className="font-medium">Fecha:</span> {new Date(consentStatus.consent.timestampAcceptacion).toLocaleString('es-CO')}</div>

@@ -117,6 +117,27 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Genera y descarga el PDF del recibo de un pago validado (formato LGS-#### con numeración consecutiva automática). Solo aparece cuando el pago ya está validado',
   },
   {
+    code: PersonPermission.PAGOS_FACTURAR,
+    module: Module.PERSON,
+    section: 'Financiera',
+    name: 'Botón "Facturar"',
+    description: 'Registra el número de factura de un pago ya validado desde la pestaña Facturación del Centro de Validación. El pago aparece en Facturación tras verificarlo (validado=true sin factura) y sale de la cola al facturarlo. Sin este permiso el botón no aparece (usuarios de solo consulta)',
+  },
+  {
+    code: PersonPermission.EDITAR_NOMBRE,
+    module: Module.PERSON,
+    section: 'Información General',
+    name: 'Editar nombres del beneficiario',
+    description: 'Habilita los campos de nombres y apellidos en el modal "Modificar Beneficiario". El cambio se propaga a ACADEMICA, ACADEMICA_BOOKINGS (listas de asistencia), USUARIOS_ROLES, FINANCIEROS y STEP_OVERRIDES. Sin este permiso los campos se ven pero no se pueden editar',
+  },
+  {
+    code: PersonPermission.EDITAR_NUMERO_ID,
+    module: Module.PERSON,
+    section: 'Información General',
+    name: 'Editar # de identificación',
+    description: 'Habilita el campo Número de Identificación en el modal "Modificar Beneficiario". Es la LLAVE que une PEOPLE con ACADEMICA y con el usuario de acceso: al cambiarlo se actualiza en todas esas tablas. Sin este permiso el campo queda de solo lectura',
+  },
+  {
     code: PersonPermission.VER_DOCUMENTACION,
     module: Module.PERSON,
     section: 'Información General',
@@ -807,7 +828,7 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     module: Module.SERVICIO,
     section: 'Cancelación sin reemplazo',
     name: 'Página "Cancelación sin reemplazo"',
-    description: 'Listado de alumnos de sesiones canceladas con booking (No Asistió) y su gestión: estado por alumno, gestionada por Servicio/Académico y botón global "Gestionada"',
+    description: 'Listado de usuarios de sesiones canceladas con booking (No Asistió) y su gestión: estado por usuario, gestionada por Servicio/Académico y botón global "Gestionada"',
   },
 
   // ========== COMERCIAL MODULE ==========
@@ -973,6 +994,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Acceso a /admin/kids-config. Interruptor del proceso Kids (switch + modal en Crear Contrato). Con el flag apagado el switch no se muestra.',
   },
   {
+    code: MantenimientoPermission.BIENVENIDA_CONFIG,
+    module: Module.MANTENIMIENTO,
+    section: 'Usuarios',
+    name: 'Página "Bienvenida post-firma"',
+    description: 'Acceso a /admin/bienvenida-config. Interruptor de la página de bienvenida que ve el cliente al terminar de firmar el contrato. Apagado, se mantiene la redirección a letsgospeak.cl.',
+  },
+  {
     code: MantenimientoPermission.CARGAR_BENEFICIARIOS,
     module: Module.MANTENIMIENTO,
     section: 'Usuarios',
@@ -985,13 +1013,6 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     section: 'Contingencia',
     name: 'Página "Canales WhatsApp"',
     description: 'Acceso a /admin/contingencia/whatsapp. Elige por cuál número (canal Whapi) sale TODO el WhatsApp; útil si un teléfono se cae. Muestra el estado en vivo de ambos canales.',
-  },
-  {
-    code: MantenimientoPermission.SENCE_CONFIG,
-    module: Module.MANTENIMIENTO,
-    section: 'Contingencia',
-    name: 'Página "Proceso SENCE"',
-    description: 'Acceso a /admin/sence-config. Interruptor del proceso SENCE (registro de asistencia por Clave Única en el panel del estudiante). Con el flag apagado, los alumnos SENCE NO ven el botón "Iniciar sesión SENCE" y entran directo por Zoom.',
   },
   {
     code: MantenimientoPermission.CLEAR_HISTORIC,
@@ -1127,6 +1148,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     section: 'Asignación',
     name: 'Botón "Exportar Excel" en Asignación',
     description: 'Permite descargar a Excel la tabla de titulares asignados. SUPER_ADMIN y ADMIN siempre pueden; otros roles requieren este permiso explícito',
+  },
+  {
+    code: RecaudosPermission.ASIGNACION_MIGRAR,
+    module: Module.RECAUDOS,
+    section: 'Asignación',
+    name: 'Botón "Migrar Cuentas" en Asignación',
+    description: 'Reasigna DE UNA VEZ todos los titulares de un gestor de recaudo a otro — pensado para cuando el gestor anterior se retira. Opcionalmente arrastra también sus pagos PENDIENTES (los ya validados nunca se tocan: son el registro de quién los validó). Acción masiva e irreversible desde la UI, por eso va separada de la asignación individual',
   },
   {
     code: RecaudosPermission.APROBACIONES_VER,

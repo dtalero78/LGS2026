@@ -153,26 +153,47 @@ class EvaluationsRepositoryClass extends BaseRepository {
   }
 
   /**
-   * Búsqueda de comentarios de UN advisor con promedio <= tope (de X estrellas
-   * hacia abajo), resolviendo la IDENTIDAD del alumno que escribió el comentario
+   * Búsqueda de comentarios de un advisor (o "Todos") por BANDA de promedio,
+   * resolviendo la IDENTIDAD del alumno que escribió el comentario
    * (nombre + numeroId) vía `studentId` → ACADEMICA (fallback PEOPLE). Solo filas
    * con comentario no vacío. Usado por la pestaña "Búsqueda por comentario"
    * (des-anonimizada, gateada por permiso dedicado).
+   *
+   * `banda` (rango por entero, NO acumulativo):
+   *   1 → promedio < 2 (de 0 a 1,99)
+   *   2 → [2, 3)   ·   3 → [3, 4)   ·   4 → [4, 5)
+   *   5 → promedio >= 5 (solo los de 5)
+   *   null/undefined → sin tope (todos)
    */
   async searchComentarios(opts: {
-    advisorId: string;
+    advisorId?: string | null;
+    advisorIds?: string[] | null;
     startDate?: string | null;
     endDate?: string | null;
     tipo?: string | null;
-    tope: number;
+    banda?: number | null;
   }) {
     const conds: string[] = [
-      `e."advisorId" = $1`,
       `e."comentario" IS NOT NULL AND TRIM(e."comentario") <> ''`,
-      `e."promedio" <= $2`,
     ];
-    const params: any[] = [opts.advisorId, opts.tope];
-    let i = 3;
+    const params: any[] = [];
+    let i = 1;
+    // Filtro por banda (rango de promedio). Sin banda → todos.
+    const banda = opts.banda;
+    if (banda === 5) {
+      conds.push(`e."promedio" >= $${i}`); params.push(5); i++;
+    } else if (banda === 1) {
+      conds.push(`e."promedio" < $${i}`); params.push(2); i++;
+    } else if (banda && banda >= 2 && banda <= 4) {
+      conds.push(`e."promedio" >= $${i} AND e."promedio" < $${i + 1}`);
+      params.push(banda, banda + 1); i += 2;
+    }
+    // Un advisor puntual, o el conjunto "Todos" (lista de advisors del alcance).
+    if (opts.advisorId) {
+      conds.push(`e."advisorId" = $${i}`); params.push(opts.advisorId); i++;
+    } else if (opts.advisorIds && opts.advisorIds.length) {
+      conds.push(`e."advisorId" = ANY($${i}::text[])`); params.push(opts.advisorIds); i++;
+    }
     if (opts.startDate) { conds.push(`e."fechaEvento" >= $${i}::date`); params.push(opts.startDate); i++; }
     if (opts.endDate)   { conds.push(`e."fechaEvento" <= $${i}::date`); params.push(opts.endDate);   i++; }
     if (opts.tipo)      { conds.push(`e."tipo" = $${i}`);               params.push(opts.tipo);      i++; }
@@ -180,6 +201,7 @@ class EvaluationsRepositoryClass extends BaseRepository {
     return queryMany<any>(
       `SELECT e."comentario", e."promedio", e."fechaEvento",
               e."tipo", e."subtipo", e."nivel", e."step", e."aiSentimiento",
+              adv."nombreCompleto" AS "advisorNombre",
               COALESCE(
                 NULLIF(TRIM(COALESCE(a."primerNombre",'') || ' ' || COALESCE(a."primerApellido",'')), ''),
                 NULLIF(TRIM(COALESCE(p."primerNombre",'') || ' ' || COALESCE(p."primerApellido",'')), ''),
@@ -189,6 +211,7 @@ class EvaluationsRepositoryClass extends BaseRepository {
          FROM "ACADEMICA_BOOKING_EVALUATIONS" e
          LEFT JOIN "ACADEMICA" a ON a."_id" = e."studentId"
          LEFT JOIN "PEOPLE"    p ON p."_id" = e."studentId"
+         LEFT JOIN "ADVISORS"  adv ON adv."_id" = e."advisorId"
         WHERE ${conds.join(' AND ')}
         ORDER BY e."promedio" ASC, e."fechaEvento" DESC
         LIMIT 2000`,

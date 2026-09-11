@@ -12,7 +12,7 @@ import { PeopleRepository } from '@/repositories/people.repository';
 import { ValidationError, NotFoundError } from '@/lib/errors';
 import { generateOtp, saveOtp, verifyOtp } from '@/lib/otp-store';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
-import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
+import { normalizeNumeroId } from '@/lib/numeroid-normalize';
 
 // ── Types ──
 
@@ -45,13 +45,18 @@ export async function sendConsentOtp(
 ) {
   const person = await PeopleRepository.getConsentData(titularId);
   if (!person) throw new NotFoundError('Titular', titularId);
-  assertNoEsContratoPrueba(person.contrato, 'solicitar la firma');
+  // PRB-: se permite ensayar la firma completa. El PDF sale con marca de agua
+  // y no se archiva en Drive; la APROBACIÓN sigue bloqueada (no crea ACADEMICA).
 
   if (person.hashConsentimiento) {
     throw new ValidationError('Este contrato ya tiene consentimiento declarativo');
   }
 
-  if (person.numeroId !== numeroDocumento) {
+  // Se compara NORMALIZADO en ambos lados: el cliente debe poder escribirlo
+  // como figura en su cédula ('18.201.897-K') y coincidir con el guardado
+  // ('18201897K'). Sin esto, un documento correcto se rechazaba y el cliente
+  // no podía firmar. Solo relaja el formato: nunca acepta un documento distinto.
+  if (normalizeNumeroId(person.numeroId) !== normalizeNumeroId(numeroDocumento)) {
     throw new ValidationError('El numero de documento no coincide');
   }
 
@@ -90,7 +95,6 @@ export async function verifyAndSaveConsent(
 ) {
   const person = await PeopleRepository.getConsentData(titularId);
   if (!person) throw new NotFoundError('Titular', titularId);
-  assertNoEsContratoPrueba(person.contrato, 'firmar el consentimiento');
 
   if (person.hashConsentimiento) {
     throw new ValidationError('Este contrato ya tiene consentimiento declarativo');
@@ -138,7 +142,6 @@ export async function autoApproveConsent(
 ) {
   const person = await PeopleRepository.getConsentData(titularId);
   if (!person) throw new NotFoundError('Titular', titularId);
-  assertNoEsContratoPrueba(person.contrato, 'autoaprobar el consentimiento');
 
   if (person.hashConsentimiento) {
     throw new ValidationError('Este contrato ya tiene consentimiento declarativo');

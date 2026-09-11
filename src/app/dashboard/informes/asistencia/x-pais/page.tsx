@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { exportToExcel } from '@/lib/export-excel'
 import { PermissionGuard } from '@/components/permissions/PermissionGuard'
@@ -213,7 +213,8 @@ export default function InformeXPaisPage() {
   const [startDate, setStartDate] = useState(firstOfYear)
   const [endDate, setEndDate]     = useState(today)
   const [data, setData]           = useState<XPaisResponse | null>(null)
-  const [loading, setLoading]     = useState(true)
+  const [loading, setLoading]     = useState(false)
+  const [consultado, setConsultado] = useState(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -226,7 +227,21 @@ export default function InformeXPaisPage() {
     finally { setLoading(false) }
   }, [startDate, endDate])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  const handleApply = () => {
+    if (!startDate || !endDate) {
+      alert('Selecciona el rango de fechas (Desde y Hasta) antes de consultar.')
+      return
+    }
+    setConsultado(true)
+    fetchData()
+  }
+
+  const handleClear = () => {
+    setStartDate(firstOfYear)
+    setEndDate(today)
+    setData(null)
+    setConsultado(false)
+  }
 
   const ses  = data?.sesiones        ?? { total: 0, asistieron: 0, cancelaron: 0, aprobaron: 0, noAprobaron: 0, porPlataforma: [] }
   const jmp  = data?.jumps           ?? { total: 0, asistieron: 0, cancelaron: 0, aprobaron: 0, noAprobaron: 0, porPlataforma: [] }
@@ -293,6 +308,7 @@ export default function InformeXPaisPage() {
             izquierdo se reutiliza para dos cuadros consolidados por país:
             (1) Sesiones+Jumps+Training+Clubes — total y asistieron combinados
             (2) Complementarias — total, generadas y % por país             */}
+        {consultado && (
         <aside className="w-72 flex-shrink-0">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sticky top-4">
             <h2 className="text-base font-bold text-gray-900 mb-1">Consolidado por País</h2>
@@ -446,6 +462,7 @@ export default function InformeXPaisPage() {
             })()}
           </div>
         </aside>
+        )}
 
         {/* ── Main Content ── */}
         <div className="flex-1 space-y-5">
@@ -464,7 +481,11 @@ export default function InformeXPaisPage() {
                   className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="flex gap-2 ml-auto">
-                <button type="button" onClick={() => { setStartDate(firstOfYear); setEndDate(today) }}
+                <button type="button" onClick={handleApply} disabled={loading}
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors">
+                  Consultar
+                </button>
+                <button type="button" onClick={handleClear}
                   className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
                   Limpiar filtros
                 </button>
@@ -481,6 +502,14 @@ export default function InformeXPaisPage() {
             </div>
           </div>
 
+          {!consultado && !loading && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center text-sm text-indigo-900">
+              Configura los filtros y pulsa <b>Consultar</b> para ver el informe.
+            </div>
+          )}
+
+          {consultado && (
+          <>
           <SectionCard title="Sesiones"
             subtitle="SESSION — Step 0–45 excluyendo múltiplos de 5"
             section={ses} metricKey="asistieron" metricLabel="Asist."
@@ -510,6 +539,8 @@ export default function InformeXPaisPage() {
             subtitle="Actividades complementarias — tipo COMPLEMENTARIA"
             section={comp} metricKey="asistieron" metricLabel="Generadas"
             loading={loading} isComplementaria />
+          </>
+          )}
 
         </div>
       </div>

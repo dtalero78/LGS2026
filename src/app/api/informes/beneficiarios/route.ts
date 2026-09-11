@@ -3,11 +3,12 @@
  * Obtiene todos los beneficiarios en un rango de fechas con su total de sesiones
  */
 
-import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
+import { successResponse } from '@/lib/api-helpers';
+import { handlerReport } from '@/lib/report-guard';
 import { ValidationError } from '@/lib/errors';
 import { query } from '@/lib/postgres';
 
-export const POST = handlerWithAuth(async (req) => {
+export const POST = handlerReport(async (req) => {
   const body = await req.json();
   const { fechaInicio, fechaFin } = body;
 
@@ -33,11 +34,14 @@ export const POST = handlerWithAuth(async (req) => {
       p."plataforma",
       p."tipoUsuario",
       p."_createdDate",
-      COUNT(ab."_id") as "totalSesiones",
-      COUNT(ab."_id") FILTER (WHERE ab."asistio" = true) as "sesionesAsistidas"
+      COUNT(DISTINCT ab."_id") as "totalSesiones",
+      COUNT(DISTINCT ab."_id") FILTER (WHERE ab."asistio" = true) as "sesionesAsistidas"
     FROM "PEOPLE" p
-    LEFT JOIN "ACADEMICA_BOOKINGS" ab ON p."_id" = ab."visitorId"
-    LEFT JOIN "CALENDARIO" c ON ab."eventoId" = c."_id"
+    LEFT JOIN "ACADEMICA" a ON a."numeroId" = p."numeroId"
+    LEFT JOIN "ACADEMICA_BOOKINGS" ab
+      ON ab."idEstudiante" = a."_id" OR ab."studentId" = a."_id"
+      OR ab."idEstudiante" = p."_id" OR ab."studentId" = p."_id"
+    LEFT JOIN "CALENDARIO" c ON COALESCE(ab."eventoId", ab."idEvento") = c."_id"
       AND c."dia" >= $1::timestamp with time zone
       AND c."dia" <= $2::timestamp with time zone
     WHERE p."tipoUsuario" = 'BENEFICIARIO'

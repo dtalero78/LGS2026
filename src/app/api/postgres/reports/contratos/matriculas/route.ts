@@ -1,5 +1,6 @@
 import 'server-only'
-import { handlerWithAuth, successResponse } from '@/lib/api-helpers'
+import { successResponse } from '@/lib/api-helpers'
+import { handlerReport } from '@/lib/report-guard'
 import { requirePermission } from '@/lib/api-permissions'
 import { query, queryOne } from '@/lib/postgres'
 import { InformesPermission } from '@/types/permissions'
@@ -52,7 +53,7 @@ const STEP_NUM  = `NULLIF(REGEXP_REPLACE("step",'[^0-9]','','g'),'')`
 // $1 = pais, $2 = startDate, $3 = endDate  (embudo de contratos por fecha)
 const PAIS_FECHA = `($1::text IS NULL OR "plataforma" = $1) AND (${CDATE} BETWEEN $2::date AND $3::date)`
 
-export const GET = handlerWithAuth(async (req, _ctx, session) => {
+export const GET = handlerReport(async (req, _ctx, session) => {
   await requirePermission(session, InformesPermission.CONTRATOS_MATRICULAS)
 
   const { searchParams } = new URL(req.url)

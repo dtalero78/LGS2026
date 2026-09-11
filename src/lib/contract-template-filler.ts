@@ -6,6 +6,8 @@
  * No 'server-only' import — safe for client-side use.
  */
 
+import { normalizeNumeroId } from '@/lib/numeroid-normalize';
+
 export interface ConsentDisplay {
   hasConsent: boolean;
   consent?: {
@@ -55,7 +57,7 @@ export function fillContractTemplate(
           `Beneficiario ${i + 1}:\n` +
           `- Numero de Contrato: ${b.contrato || 'Sin asignar'}\n` +
           `- Nombre Completo: ${[b.primerNombre, b.segundoNombre, b.primerApellido, b.segundoApellido].filter(Boolean).join(' ')}\n` +
-          `- Documento: ${b.numeroId || ''}\n` +
+          `- Documento: ${normalizeNumeroId(b.numeroId)}\n` +
           `- Fecha de nacimiento: ${fmtDate(b.fechaNacimiento)}\n` +
           `- Telefono: ${b.celular || ''}\n` +
           `- Pais: ${b.plataforma || ''}\n` +
@@ -108,7 +110,7 @@ export function fillContractTemplate(
 
     firmaText =
       `\n--- CONSENTIMIENTO DECLARATIVO VERIFICADO${tipo} ---\n` +
-      `Documento: ${c.numeroDocumento || ''}\n` +
+      `Documento: ${normalizeNumeroId(c.numeroDocumento)}\n` +
       `Fecha: ${fecha}\n` +
       `Celular Verificado: ${c.celularValidado || ''}\n` +
       `Hash: ${consentData.hash?.substring(0, 16) || ''}...\n` +
@@ -129,6 +131,76 @@ export function fillContractTemplate(
   const _totalPlanNum = _parseNum(financial?.totalPlan);
   const _inscNum = _parseNum(financial?.pagoInscripcion);
   const _saldoFirma = _totalPlanNum != null ? Math.max(0, _totalPlanNum - (_inscNum ?? 0)) : null;
+
+  // --- Contratante: persona natural vs empresa ------------------------------
+  // El wizard de Crear Contrato captura `tipoPersona`. En modo Empresa reutiliza
+  // `primerNombre` como razón social, `numeroId` como NIT/RUT y suma el
+  // representante legal (replegal / replegalid / replegalcel). Estos bloques se
+  // arman acá — mismo patrón que {{beneficiarios}} y {{firma}} — para que las 4
+  // plantillas por país conserven UN solo texto legal en vez de duplicarse.
+  const esEmpresa = String(titular?.tipoPersona || '').trim().toLowerCase() === 'empresa';
+
+  const nombreCompletoTitular = [
+    titular?.primerNombre, titular?.segundoNombre,
+    titular?.primerApellido, titular?.segundoApellido,
+  ].filter(Boolean).join(' ').trim();
+
+  /** ITEM Nº1 — datos del contratante. */
+  const datosTitularText = esEmpresa
+    ? [
+        `Razón social: ${titular?.primerNombre || ''}`,
+        `NIT / RUT: ${titular?.numeroId || ''}`,
+        `Rubro: ${titular?.rubro || ''}`,
+        `Domicilio: ${titular?.domicilio || ''}`,
+        `Ciudad: ${titular?.ciudad || ''}`,
+        `Teléfono: ${titular?.celular || titular?.telefono || ''}`,
+        `Correo: ${titular?.email || ''}`,
+        '',
+        'REPRESENTANTE DE LA EMPRESA:',
+        `Nombre: ${titular?.replegal || ''}`,
+        `Cargo: ${titular?.replegalcargo || ''}`,
+        `Documento: ${normalizeNumeroId(titular?.replegalid)}`,
+        `Celular: ${titular?.replegalcel || ''}`,
+      ].join('\n')
+    : [
+        `Nombre Completo: ${nombreCompletoTitular}`,
+        `Documento: ${titular?.numeroId || ''}`,
+        `Fecha de Nacimiento: ${fmtDate(titular?.fechaNacimiento)}`,
+        `Domicilio: ${titular?.domicilio || ''}`,
+        `Ciudad: ${titular?.ciudad || ''}`,
+        `Teléfono: ${titular?.celular || ''}`,
+        `Correo: ${titular?.email || ''}`,
+        `Ingresos: ${titular?.ingresos || ''}`,
+        `Empresa: ${titular?.empresa || ''}`,
+        `Cargo: ${titular?.cargo || ''}`,
+      ].join('\n');
+
+  /** Referencias personales: se omiten por completo en contratos de empresa. */
+  const referenciasText = esEmpresa
+    ? ''
+    : [
+        'REFERENCIAS:',
+        `- Nombre: ${titular?.referenciaUno || ''}`,
+        `- Parentesco: ${titular?.parentezcoRefUno || ''}`,
+        `- Teléfono: ${titular?.telefonoRefUno || ''}`,
+        '',
+        `- Nombre: ${titular?.referenciaDos || ''}`,
+        `- Parentesco: ${titular?.parentezcoRefDos || ''}`,
+        `- Teléfono: ${titular?.telefonoRefDos || ''}`,
+      ].join('\n');
+
+  /** Cierre del documento. En empresa firma el representante legal. */
+  const nombreTitularFirmaText = esEmpresa
+    ? [
+        `Razón social: ${titular?.primerNombre || ''}`,
+        `NIT / RUT: ${titular?.numeroId || ''}`,
+        `Representante de la empresa: ${titular?.replegal || ''}`,
+        `Número de Identificación: ${titular?.replegalid || ''}`,
+      ].join('\n')
+    : [
+        `Nombre del titular: ${nombreCompletoTitular}`,
+        `Número de Identificación: ${titular?.numeroId || ''}`,
+      ].join('\n');
 
   // Build data map
   const data: Record<string, string> = {
@@ -168,6 +240,18 @@ export function fillContractTemplate(
     asesor: ejecutivoComercial?.nombre || ejecutivoComercial?.email || titular?.asesor || '',
     telefonoRefDos: titular?.telefonoRefDos || '',
     firma: firmaText,
+    // Empresa / persona jurídica (wizard: tipoPersona = 'Empresa')
+    tipoPersona: titular?.tipoPersona || '',
+    rubro: titular?.rubro || '',
+    replegal: titular?.replegal || '',
+    replegalcargo: titular?.replegalcargo || '',
+    replegalid: titular?.replegalid || '',
+    replegalcel: titular?.replegalcel || '',
+    telefono: titular?.telefono || '',
+    // Bloques que cambian según persona natural / empresa
+    datosTitular: datosTitularText,
+    referencias: referenciasText,
+    nombreTitularFirma: nombreTitularFirmaText,
   };
 
   // Replace all {{key}} placeholders

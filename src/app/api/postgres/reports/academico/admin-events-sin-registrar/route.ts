@@ -9,7 +9,8 @@
  * Default cliente: ayer (excluye hoy — aún en ventana operativa).
  */
 import 'server-only';
-import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
+import { successResponse } from '@/lib/api-helpers';
+import { handlerReport } from '@/lib/report-guard';
 import { requirePermission } from '@/lib/api-permissions';
 import { AcademicoPermission } from '@/types/permissions';
 import { ValidationError } from '@/lib/errors';
@@ -18,7 +19,7 @@ import { queryMany } from '@/lib/postgres';
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const TZ_REGEX = /^[A-Za-z_]+\/[A-Za-z_+\-0-9]+(\/[A-Za-z_+\-0-9]+)?$/;
 
-export const GET = handlerWithAuth(async (request, _ctx, session) => {
+export const GET = handlerReport(async (request, _ctx, session) => {
   await requirePermission(session, AcademicoPermission.SESIONES_SIN_GESTION_VER);
 
   const { searchParams } = new URL(request.url);

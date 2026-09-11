@@ -57,3 +57,11 @@ export class ConflictError extends AppError {
     this.name = 'ConflictError';
   }
 }
+
+/** 503 — servicio ocupado (p.ej. límite de consultas de informes en curso). */
+export class ServiceBusyError extends AppError {
+  constructor(message: string = 'El sistema está ocupado. Espera unos segundos y reintenta.') {
+    super(message, 503, 'SERVICE_BUSY');
+    this.name = 'ServiceBusyError';
+  }
+}

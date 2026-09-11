@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { exportToExcel } from '@/lib/export-excel'
 import { PermissionGuard } from '@/components/permissions/PermissionGuard'
@@ -74,13 +74,13 @@ function StatRow({ label, value, color }: { label: string; value: number; color:
 
 // ── Filter Bar ─────────────────────────────────────────────────────────
 function FilterBar({ idPrefix, startDate, endDate, plataforma, nivel, plataformas, niveles, loading,
-  onStart, onEnd, onPlat, onNivel, onClear, onCSV }: {
+  onStart, onEnd, onPlat, onNivel, onApply, onClear, onCSV }: {
   idPrefix: string
   startDate: string; endDate: string; plataforma: string; nivel: string
   plataformas: string[]; niveles: string[]; loading: boolean
   onStart: (v: string) => void; onEnd: (v: string) => void
   onPlat: (v: string) => void; onNivel: (v: string) => void
-  onClear: () => void; onCSV: () => void
+  onApply: () => void; onClear: () => void; onCSV: () => void
 }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
@@ -112,6 +112,10 @@ function FilterBar({ idPrefix, startDate, endDate, plataforma, nivel, plataforma
           </select>
         </div>
         <div className="flex gap-2 ml-auto">
+          <button type="button" onClick={onApply} disabled={loading}
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors">
+            Consultar
+          </button>
           <button type="button" onClick={onClear}
             className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
             Limpiar filtros
@@ -139,7 +143,8 @@ export default function InformeSesionesPage() {
   const [sesPlat, setSesPlat]     = useState('')
   const [sesNivel, setSesNivel]   = useState('')
   const [sesData, setSesData]     = useState<SesResponse | null>(null)
-  const [sesLoading, setSesLoading] = useState(true)
+  const [sesLoading, setSesLoading] = useState(false)
+  const [sesConsultado, setSesConsultado] = useState(false)
 
   // Jumps state
   const [jmpStart, setJmpStart]   = useState(firstOfYear)
@@ -147,7 +152,8 @@ export default function InformeSesionesPage() {
   const [jmpPlat, setJmpPlat]     = useState('')
   const [jmpNivel, setJmpNivel]   = useState('')
   const [jmpData, setJmpData]     = useState<JmpResponse | null>(null)
-  const [jmpLoading, setJmpLoading] = useState(true)
+  const [jmpLoading, setJmpLoading] = useState(false)
+  const [jmpConsultado, setJmpConsultado] = useState(false)
 
   const fetchSesiones = useCallback(async () => {
     setSesLoading(true)
@@ -171,8 +177,22 @@ export default function InformeSesionesPage() {
     finally { setJmpLoading(false) }
   }, [jmpStart, jmpEnd, jmpPlat, jmpNivel])
 
-  useEffect(() => { fetchSesiones() }, [fetchSesiones])
-  useEffect(() => { fetchJumps() }, [fetchJumps])
+  const handleApplySesiones = () => {
+    if (!sesStart || !sesEnd) {
+      alert('Selecciona el rango de fechas (Desde y Hasta) antes de consultar.')
+      return
+    }
+    setSesConsultado(true)
+    fetchSesiones()
+  }
+  const handleApplyJumps = () => {
+    if (!jmpStart || !jmpEnd) {
+      alert('Selecciona el rango de fechas (Desde y Hasta) antes de consultar.')
+      return
+    }
+    setJmpConsultado(true)
+    fetchJumps()
+  }
 
   const s = sesData?.sesiones ?? { total: 0, asistieron: 0, noAsistieron: 0, cancelaron: 0 }
   const j = jmpData?.jumps    ?? { total: 0, asistieron: 0, cancelaron: 0, aprobaron: 0, noAprobaron: 0 }
@@ -266,10 +286,18 @@ export default function InformeSesionesPage() {
             plataformas={sesData?.plataformas ?? []} niveles={sesData?.niveles ?? []}
             loading={sesLoading}
             onStart={setSesStart} onEnd={setSesEnd} onPlat={setSesPlat} onNivel={setSesNivel}
-            onClear={() => { setSesStart(firstOfYear); setSesEnd(today); setSesPlat(''); setSesNivel('') }}
+            onApply={handleApplySesiones}
+            onClear={() => { setSesStart(firstOfYear); setSesEnd(today); setSesPlat(''); setSesNivel(''); setSesData(null); setSesConsultado(false) }}
             onCSV={handleCSVSesiones}
           />
 
+          {!sesConsultado && !sesLoading && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center text-sm text-indigo-900">
+              Configura los filtros y pulsa <b>Consultar</b> para ver el informe.
+            </div>
+          )}
+
+          {sesConsultado && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -288,6 +316,7 @@ export default function InformeSesionesPage() {
               ))}
             </div>
           </div>
+          )}
 
           {/* ── JUMPS ── */}
           <FilterBar
@@ -296,10 +325,18 @@ export default function InformeSesionesPage() {
             plataformas={jmpData?.plataformas ?? []} niveles={jmpData?.niveles ?? []}
             loading={jmpLoading}
             onStart={setJmpStart} onEnd={setJmpEnd} onPlat={setJmpPlat} onNivel={setJmpNivel}
-            onClear={() => { setJmpStart(firstOfYear); setJmpEnd(today); setJmpPlat(''); setJmpNivel('') }}
+            onApply={handleApplyJumps}
+            onClear={() => { setJmpStart(firstOfYear); setJmpEnd(today); setJmpPlat(''); setJmpNivel(''); setJmpData(null); setJmpConsultado(false) }}
             onCSV={handleCSVJumps}
           />
 
+          {!jmpConsultado && !jmpLoading && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center text-sm text-indigo-900">
+              Configura los filtros y pulsa <b>Consultar</b> para ver el informe.
+            </div>
+          )}
+
+          {jmpConsultado && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -322,6 +359,7 @@ export default function InformeSesionesPage() {
               <span className="font-bold text-gray-900 text-lg">{j.total.toLocaleString()}</span>
             </div>
           </div>
+          )}
 
         </div>
       </div>

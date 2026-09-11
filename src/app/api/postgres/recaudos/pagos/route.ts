@@ -29,6 +29,9 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
   const cuotaTipo: 'regular' | 'inscripcion' =
     cuotaTipoParam === 'inscripcion' ? 'inscripcion' : 'regular';
 
+  const vista: 'verificacion' | 'facturacion' =
+    searchParams.get('vista') === 'facturacion' ? 'facturacion' : 'verificacion';
+
   const fechaInicio    = searchParams.get('fechaInicio')   || null;
   const fechaFin       = searchParams.get('fechaFin')      || null;
   const search         = searchParams.get('search')        || null;
@@ -46,6 +49,7 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     {
       estado,
       cuotaTipo,
+      vista,
       fechaDesde: fechaInicio,
       fechaHasta: fechaFin,
       search,

@@ -55,12 +55,19 @@ export interface ContractPdfOptions {
   contrato?: string | null;
   /** Fecha a mostrar en el encabezado (ya formateada). */
   fecha?: string | null;
+  /**
+   * Contrato de prueba (PRB-): estampa una marca de agua diagonal
+   * "CONTRATO DE PRUEBA SIN VALIDEZ LEGAL" en cada página, para que un PDF
+   * de prueba no pueda confundirse con uno real si sale del entorno.
+   */
+  esPrueba?: boolean;
 }
 
 /** Construye el HTML completo del contrato listo para renderizar a PDF. */
 export function buildContractPdfHtml(contractText: string, opts: ContractPdfOptions = {}): string {
   const contrato = (opts.contrato ?? '').toString().trim();
   const fecha = (opts.fecha ?? '').toString().trim();
+  const esPrueba = opts.esPrueba === true;
   const logo = getLogo();
 
   return `<!DOCTYPE html>
@@ -72,6 +79,26 @@ export function buildContractPdfHtml(contractText: string, opts: ContractPdfOpti
     @page {
       margin: 16mm 16mm 18mm 18mm;
     }
+    /* Marca de agua de contrato de prueba: fija, se repite en cada página
+       impresa y queda DETRÁS del texto (z-index negativo) para no estorbar
+       la lectura. Sin pointer-events: es solo impresión. */
+    .wm-prueba {
+      position: fixed;
+      top: 45%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-32deg);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 30pt;
+      font-weight: bold;
+      letter-spacing: 2px;
+      color: #d92626;
+      opacity: 0.16;
+      white-space: nowrap;
+      text-align: center;
+      line-height: 1.25;
+      z-index: -1;
+    }
+    .wm-prueba small { display: block; font-size: 18pt; letter-spacing: 4px; }
     * { box-sizing: border-box; }
     body {
       font-family: Georgia, 'Times New Roman', serif;
@@ -150,6 +177,7 @@ export function buildContractPdfHtml(contractText: string, opts: ContractPdfOpti
   </style>
 </head>
 <body>
+  ${esPrueba ? `<div class="wm-prueba">CONTRATO DE PRUEBA<small>SIN VALIDEZ LEGAL</small></div>` : ''}
   <div class="header">
     ${logo ? `<img class="logo" src="${logo}" alt="LGS">` : '<div></div>'}
     <div class="meta">

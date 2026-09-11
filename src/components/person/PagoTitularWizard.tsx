@@ -7,6 +7,7 @@ import { api, handleApiError } from '@/hooks/use-api'
 import { PermissionGuard } from '@/components/permissions'
 import { PersonPermission } from '@/types/permissions'
 import { mediosPagoPara } from '@/lib/medios-pago'
+import { resolveRealizadoPor, diasDesdeAprobacion, VENTANA_COMERCIAL_DIAS } from '@/lib/cambio-contado'
 
 interface PagoTitularWizardProps {
   isOpen: boolean
@@ -22,6 +23,19 @@ interface PagoTitularWizardProps {
     primerApellido?: string
     /** Tipo Plan del titular (PEOPLE.plan) — se muestra read-only y se guarda en el pago. */
     plan?: string | null
+  }
+  /** Fecha de aprobación del contrato (con respaldo), solo para PREVISUALIZAR a
+   *  quién se atribuirá el Cambio Contado. El valor que se guarda lo calcula el
+   *  servidor con la misma regla — esto es únicamente ayuda visual. */
+  fechaBaseContrato?: string | null
+  /** Fechas del contrato para MOSTRAR el desglose de la atribución en el modal
+   *  de confirmación. Sin esto el operador ve "Comercial" sin saber desde qué
+   *  fecha se contaron los días. Solo display — el cálculo real es del servidor. */
+  fechasContrato?: {
+    /** PEOPLE.fechaIngreso — fecha de aprobación del contrato. */
+    aprobacion?: string | null
+    /** COALESCE(inicioContrato, fechaContrato) — fecha de inicio del contrato. */
+    contrato?: string | null
   }
   /** Display label of gestor recaudo to show in read-only field. */
   gestorLabel?: string | null
@@ -75,6 +89,22 @@ interface DraftState {
    * Mutuamente exclusivo (sólo uno marcado a la vez).
    */
   cambioCartera: '' | 'ultimopago' | 'penalidad'
+  /**
+   * Cambio Contado — marca que este pago corresponde al cambio de plan a
+   * contado. Al guardarlo, el servidor registra en `realizadopor` quién lo
+   * gestionó (Comercial dentro de los 30 días de aprobado el contrato,
+   * Recaudos después). Independiente de las casillas de cartera.
+   */
+  cambioContado: boolean
+  /** Nota del pago. Obligatoria si se marca "Penalidad o Recuperación" o
+   *  "Cambio Contado" — el servidor la exige igual (defensa en profundidad). */
+  nota: string
+  /**
+   * Pago doble — el operador captura UN valor y el servidor lo parte en DOS
+   * registros con la misma fecha: la cuota #N y la #N+1 (adelanto). El
+   * descuento, si lo hay, se aplica a la segunda.
+   */
+  pagoDoble: boolean
 }
 
 const DRAFT_TTL_MS = 72 * 60 * 60 * 1000 // 72 horas
@@ -107,6 +137,9 @@ const empty = (): DraftState => ({
   plataforma: '',
   documentosAdjuntos: [],
   cambioCartera: '',
+  cambioContado: false,
+  pagoDoble: false,
+  nota: '',
 })
 
 function toNum(v: string): number {
@@ -193,6 +226,7 @@ function MoneyInput({
 
 export default function PagoTitularWizard({
   isOpen, onClose, titular, gestorLabel, existingPagos, saldoActual, onCreated,
+  fechaBaseContrato, fechasContrato,
 }: PagoTitularWizardProps) {
   const draftKey = `pago-titular-draft-${titular._id}`
   const [form, setForm] = useState<DraftState>(empty())
@@ -203,6 +237,9 @@ export default function PagoTitularWizard({
   const mediosPago = mediosPagoPara(titular.plataforma)
   const [submitting, setSubmitting] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  // Marcado explícito cuando el pago tiene una anomalía (fecha o cuota fuera de
+  // secuencia). Obliga a una verificación consciente antes de registrar.
+  const [confirmAnomalia, setConfirmAnomalia] = useState(false)
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([])
   const [showDraftBanner, setShowDraftBanner] = useState(false)
   const draftRestored = useRef(false)
@@ -325,6 +362,48 @@ export default function PagoTitularWizard({
   const valorAplicar = Math.max(0, toNum(form.valorPagado) - toNum(form.descuento)) // "Valor Pagado Descuento"
   const saldoDespues = Math.max(0, saldoFechaNum - toNum(form.valorPagado))          // − Valor a Pagar
 
+  // ---- Controles de captura -------------------------------------------------
+  // Se comparan contra los pagos YA registrados (cuota #0 = inscripción queda
+  // fuera: no forma parte de la secuencia de cuotas).
+  const pagosReales: any[] = (Array.isArray(existingPagos) ? existingPagos : [])
+    .filter((x: any) => Number(x.numCuota) > 0)
+  const ultimoPago: any = pagosReales.length
+    ? [...pagosReales].sort((a: any, b: any) =>
+        String(b.fechaPago || '').slice(0, 10).localeCompare(String(a.fechaPago || '').slice(0, 10)))[0]
+    : null
+  const ultimaFechaPago = ultimoPago ? String(ultimoPago.fechaPago || '').slice(0, 10) : ''
+  const maxCuotaRegistrada = pagosReales.reduce((m: number, x: any) => {
+    const n = Number(x.numCuota)
+    return Number.isFinite(n) && n > m ? n : m
+  }, 0)
+  const numCuotaNum = form.numCuota !== '' ? Number(form.numCuota) : NaN
+  /** La fecha de pago es anterior a la del último pago registrado. */
+  const alertaFecha = !!(ultimaFechaPago && form.fechaPago && form.fechaPago < ultimaFechaPago)
+  /** El número de cuota no avanza respecto al último registrado. */
+  const alertaCuota = Number.isFinite(numCuotaNum) && maxCuotaRegistrada > 0 && numCuotaNum <= maxCuotaRegistrada
+  /** Además, ya hay un pago con ese mismo número de cuota. */
+  const cuotaYaExiste = Number.isFinite(numCuotaNum) && pagosReales.some((x: any) => Number(x.numCuota) === numCuotaNum)
+  // ── Pago doble ────────────────────────────────────────────────────────
+  // Mismo reparto que aplica el servidor: si el valor es impar, el peso
+  // sobrante queda en la primera cuota, así las dos mitades suman el total.
+  const totalAPagar   = toNum(form.valorPagado)
+  const mitadPrimera  = Math.ceil(totalAPagar / 2)
+  const mitadSegunda  = totalAPagar - mitadPrimera
+  const cuotaSiguiente = Number.isFinite(numCuotaNum) ? numCuotaNum + 1 : NaN
+  /** El pago doble necesita un # de cuota para saber cuál es la siguiente. */
+  const pagoDobleListo = form.pagoDoble && Number.isFinite(numCuotaNum) && numCuotaNum >= 1
+  /** La segunda cuota se sale del total pactado del contrato. */
+  const alertaCuotaSiguienteExcede = !!(
+    form.pagoDoble && cuotasTotalNum > 0 && Number.isFinite(cuotaSiguiente) && cuotaSiguiente > cuotasTotalNum
+  )
+
+  const hayAlertas = alertaFecha || alertaCuota || alertaCuotaSiguienteExcede
+  const fmtFecha = (f: string) => {
+    if (!f) return '—'
+    const [y, m, d] = f.slice(0, 10).split('-')
+    return d && m && y ? `${d}/${m}/${y}` : f
+  }
+
   // Upload de documentos (mismo flujo que UploadDocButton)
   const uploadFiles = async (files: File[]) => {
     if (!files.length) return
@@ -375,11 +454,43 @@ export default function PagoTitularWizard({
     setForm(f => ({ ...f, documentosAdjuntos: f.documentosAdjuntos.filter((_, i) => i !== idx) }))
   }
 
+  // Cambio Contado — vista previa de a quién se atribuirá. El valor REAL lo
+  // calcula el servidor con el mismo helper al guardar; esto solo evita que el
+  // usuario marque la casilla sin saber qué va a quedar registrado.
+  const diasPreview = diasDesdeAprobacion(fechaBaseContrato, form.fechaPago)
+  const realizadoPorPreview = resolveRealizadoPor(fechaBaseContrato, form.fechaPago)
+
+  // La nota es obligatoria en los dos casos donde el pago no es una cuota
+  // normal: penalidad/recuperación y cambio a contado.
+  const requiereNota = form.cambioCartera === 'penalidad' || form.cambioContado
+
+  // ¿Desde cuál fecha se contaron los días? fechaBaseContrato sale de una
+  // cascada (aprobación -> inicio -> contrato -> creación); comparándola con la
+  // de aprobación sabemos si esa fue la que ganó, para decirlo en el modal.
+  const soloFecha = (v?: string | null) => (v ? String(v).slice(0, 10) : '')
+  const baseEsAprobacion =
+    !!fechaBaseContrato &&
+    !!fechasContrato?.aprobacion &&
+    soloFecha(fechasContrato.aprobacion) === soloFecha(fechaBaseContrato)
+  const etiquetaBase = baseEsAprobacion ? 'aprobación' : 'fecha del contrato'
+
   // Valida y abre el modal de confirmación (no registra todavía).
   const handleSubmit = () => {
     if (!form.fechaPago) { toast.error('Fecha de pago es requerida'); return }
     if (toNum(form.valorPagado) <= 0) { toast.error('Valor pagado debe ser mayor a 0'); return }
     if (form.numCuota && Number(form.numCuota) < 0) { toast.error('Número de cuota no puede ser negativo'); return }
+    if (form.pagoDoble && !pagoDobleListo) {
+      toast.error('Para un pago doble indica el # de cuota (1 o mayor)'); return
+    }
+    if (requiereNota && !form.nota.trim()) {
+      toast.error(
+        form.cambioCartera === 'penalidad'
+          ? 'Escribe la nota: es obligatoria para una Penalidad o Recuperación'
+          : 'Escribe la nota: es obligatoria para un Cambio Contado',
+      )
+      return
+    }
+    setConfirmAnomalia(false)
     setShowConfirm(true)
   }
 
@@ -409,6 +520,13 @@ export default function PagoTitularWizard({
         documentosAdjuntos: form.documentosAdjuntos,
         // Penalidad: el backend guarda el valorCuota en vlrpenalidad y marca penalidad=true.
         penalidad: form.cambioCartera === 'penalidad',
+        // Cambio Contado: el backend deriva `realizadopor` de la fecha del pago
+        // vs la aprobación del contrato — acá solo se envía la marca.
+        cambioContado: form.cambioContado,
+        // Pago doble: el backend parte el valor y crea las DOS filas (#N y #N+1).
+        pagoDoble: form.pagoDoble,
+        // Nota del pago (obligatoria si penalidad/recuperación o cambio contado).
+        nota: form.nota.trim() || null,
       })
 
       // Cambio de tipoCartera disparado desde la casilla en el wizard.
@@ -428,7 +546,7 @@ export default function PagoTitularWizard({
         }
       }
 
-      toast.success('Pago registrado')
+      toast.success(form.pagoDoble ? 'Pago doble registrado (2 cuotas)' : 'Pago registrado')
       localStorage.removeItem(draftKey)
       onCreated()
       onClose()
@@ -546,7 +664,23 @@ export default function PagoTitularWizard({
               </div>
             </div>
             <div>
-              <label htmlFor="numCuota" className="block text-sm font-medium text-gray-700"># Cuota</label>
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor="numCuota" className="block text-sm font-medium text-gray-700"># Cuota</label>
+                {/* Pago doble: parte el valor capturado en la cuota #N y la #N+1. */}
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, pagoDoble: !f.pagoDoble }))}
+                  aria-pressed={form.pagoDoble}
+                  title="Cobra esta cuota y adelanta la siguiente en un solo pago"
+                  className={'px-2.5 py-1 rounded-full text-xs font-bold border transition-colors ' + (
+                    form.pagoDoble
+                      ? 'bg-indigo-600 border-indigo-600 text-white'
+                      : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                  )}
+                >
+                  Pago doble
+                </button>
+              </div>
               <input
                 id="numCuota" type="number" min={0}
                 value={form.numCuota}
@@ -554,6 +688,13 @@ export default function PagoTitularWizard({
                 className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-center font-semibold"
                 placeholder="0"
               />
+              {form.pagoDoble && (
+                <p className={'mt-1 text-sm font-semibold ' + (pagoDobleListo ? 'text-indigo-700' : 'text-amber-700')}>
+                  {pagoDobleListo
+                    ? 'Junto con la cuota #' + cuotaSiguiente
+                    : 'Indica el # de cuota para saber cuál se adelanta'}
+                </p>
+              )}
             </div>
           </div>
 
@@ -577,6 +718,44 @@ export default function PagoTitularWizard({
               value={form.valorPagado}
               onChange={v => setForm(f => ({ ...f, valorPagado: v }))} required highlight />
           </div>
+
+          {/* Fila 4 — Reparto del pago doble. El valor capturado arriba se
+              divide entre la cuota actual y la siguiente; si es impar, el peso
+              sobrante queda en la primera. El descuento se aplica a la segunda
+              (misma regla que corre en el servidor al guardar). */}
+          {pagoDobleListo && (
+            <div className="grid grid-cols-2 gap-4 rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+              <div>
+                <label className="block text-base font-bold text-indigo-900">
+                  Cuota #{numCuotaNum}
+                </label>
+                <div className="mt-1 px-3 py-2.5 bg-white border border-indigo-300 rounded-md text-xl font-bold text-gray-900">
+                  $ {new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(mitadPrimera)}
+                </div>
+              </div>
+              <div>
+                <label className="block text-base font-bold text-indigo-900">
+                  Cuota #{cuotaSiguiente}
+                </label>
+                <div className="mt-1 px-3 py-2.5 bg-white border border-indigo-300 rounded-md text-xl font-bold text-gray-900">
+                  $ {new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(mitadSegunda)}
+                </div>
+                {toNum(form.descuento) > 0 && (
+                  <p className="mt-1 text-sm font-medium text-indigo-700">
+                    Con el descuento de $ {new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(toNum(form.descuento))}
+                  </p>
+                )}
+              </div>
+              <p className="col-span-2 text-sm text-indigo-800">
+                Se guardarán <strong>dos registros</strong> con la misma fecha de pago, uno por cuota.
+                {alertaCuotaSiguienteExcede && (
+                  <span className="block mt-1 text-sm font-bold text-red-700">
+                    Ojo: el contrato tiene {cuotasTotalNum} cuotas y la #{cuotaSiguiente} se sale de ese total.
+                  </span>
+                )}
+              </p>
+            </div>
+          )}
 
           {/* Fila 5 — Descuento + computados (mismos cálculos actuales) */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -663,11 +842,91 @@ export default function PagoTitularWizard({
                     }))}
                     className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                   />
-                  <span className="text-sm font-medium text-orange-800">Penalidad</span>
+                  <span className="text-sm font-medium text-orange-800">Penalidad o Recuperación</span>
                 </label>
               </div>
             </div>
           </PermissionGuard>
+
+          {/* Cambio Contado — dato del pago, NO un estado de cartera: por eso va
+              fuera del PermissionGuard de arriba y no compite con las otras dos
+              casillas. Al marcarlo, el servidor registra en `realizadopor` si el
+              cambio lo gestionó Comercial (dentro de los 30 días de aprobado el
+              contrato) o Recaudos (después). */}
+          <div className="bg-teal-50 border border-teal-200 rounded-lg p-3">
+            <label className="inline-flex items-start gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.cambioContado}
+                onChange={e => setForm(f => ({ ...f, cambioContado: e.target.checked }))}
+                className="mt-0.5 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+              />
+              <span>
+                <span className="text-base font-bold text-teal-900">Cambio Contado</span>
+                <span className="block text-sm text-teal-800">
+                  Marca que este pago corresponde al cambio del plan a contado.
+                  Se registra automáticamente quién lo gestionó.
+                </span>
+              </span>
+            </label>
+
+            {form.cambioContado && (
+              <div className="mt-3 pt-3 border-t border-teal-200 text-sm text-teal-900">
+                {realizadoPorPreview ? (
+                  <>
+                    Quedará registrado como{' '}
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-base font-bold bg-teal-600 text-white align-middle">
+                      {realizadoPorPreview}
+                    </span>
+                    {diasPreview !== null && (
+                      <span className="block mt-1 text-teal-700">
+                        {diasPreview < 0
+                          ? ' — el pago es anterior a la aprobación del contrato'
+                          : ' — el pago es del día ' + diasPreview + ' desde la aprobación del contrato'}
+                        {' '}(hasta {VENTANA_COMERCIAL_DIAS} días es Comercial; después, Recaudos).
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-amber-800">
+                    El contrato no tiene fecha de aprobación registrada, así que el campo
+                    <em> Realizado por</em> quedará vacío. El pago se guarda igual.
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Nota del pago — obligatoria cuando el valor no corresponde a una
+              cuota normal (penalidad/recuperación o cambio a contado). */}
+          {requiereNota && (
+            <div className="bg-rose-50 border-2 border-rose-300 rounded-lg p-3">
+              <label className="block">
+                <span className="text-base font-bold text-rose-900">
+                  Nota <span className="text-rose-600">*</span>
+                </span>
+                <span className="block text-sm text-rose-800 mt-0.5 mb-2">
+                  {form.cambioCartera === 'penalidad'
+                    ? 'Obligatoria: explica el motivo de la penalidad o recuperación.'
+                    : 'Obligatoria: explica el motivo del cambio del plan a contado.'}
+                </span>
+                <textarea
+                  value={form.nota}
+                  onChange={e => setForm(f => ({ ...f, nota: e.target.value }))}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Motivo de este registro…"
+                  className="w-full px-3 py-2 border border-rose-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-rose-400 focus:border-rose-400"
+                />
+              </label>
+              <div className="flex justify-between mt-1">
+                <span className="text-xs text-rose-700">
+                  {form.nota.trim() ? '' : 'Sin la nota no se puede registrar el pago.'}
+                </span>
+                <span className="text-xs text-rose-600 tabular-nums">{form.nota.length}/500</span>
+              </div>
+            </div>
+          )}
 
           {/* Pago Tercero */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
@@ -757,6 +1016,14 @@ export default function PagoTitularWizard({
                 <strong>{titular.contrato || '—'}</strong></p>
               <p><span className="text-gray-500">Cuota #:</span>{' '}
                 <strong>{form.numCuota !== '' ? form.numCuota : '—'}</strong>
+                {pagoDobleListo && (
+                  <>
+                    {' y '}<strong>#{cuotaSiguiente}</strong>
+                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">
+                      Pago doble
+                    </span>
+                  </>
+                )}
                 {cuotasTotalNum > 0 && Number(form.numCuota) === cuotasTotalNum && (
                   <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
                     Última cuota
@@ -765,7 +1032,97 @@ export default function PagoTitularWizard({
               </p>
               <p><span className="text-gray-500">Valor del pago:</span>{' '}
                 <strong>$ {toNum(form.valorPagado).toLocaleString('es-CO')}</strong></p>
+              <p><span className="text-gray-500">Fecha de pago:</span>{' '}
+                <strong>{fmtFecha(form.fechaPago)}</strong></p>
             </div>
+
+            {/* Cómo se aplicará el pago: de dónde parte el saldo y en qué queda. */}
+            <div className="rounded-lg border border-gray-200 overflow-hidden">
+              <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-bold uppercase tracking-wide text-gray-600">
+                Así se aplicará el pago
+              </div>
+              <dl className="divide-y divide-gray-100 text-sm">
+                <div className="flex justify-between px-3 py-2">
+                  <dt className="text-gray-600">Saldo a la fecha</dt>
+                  <dd className="font-medium tabular-nums">$ {saldoFechaNum.toLocaleString('es-CO')}</dd>
+                </div>
+                <div className="flex justify-between px-3 py-2">
+                  <dt className="text-gray-600">Valor a pagar</dt>
+                  <dd className="font-medium tabular-nums text-purple-700">− $ {toNum(form.valorPagado).toLocaleString('es-CO')}</dd>
+                </div>
+                {pagoDobleListo && (
+                  <>
+                    <div className="flex justify-between px-3 py-2 bg-indigo-50">
+                      <dt className="text-indigo-900 pl-3">↳ Cuota #{numCuotaNum}</dt>
+                      <dd className="font-medium tabular-nums text-indigo-900">$ {mitadPrimera.toLocaleString('es-CO')}</dd>
+                    </div>
+                    <div className="flex justify-between px-3 py-2 bg-indigo-50">
+                      <dt className="text-indigo-900 pl-3">
+                        ↳ Cuota #{cuotaSiguiente}
+                        {toNum(form.descuento) > 0 && (
+                          <span className="text-indigo-600"> (lleva el descuento)</span>
+                        )}
+                      </dt>
+                      <dd className="font-medium tabular-nums text-indigo-900">$ {mitadSegunda.toLocaleString('es-CO')}</dd>
+                    </div>
+                  </>
+                )}
+                {toNum(form.descuento) > 0 && (
+                  <div className="flex justify-between px-3 py-2">
+                    <dt className="text-gray-600">Descuento <span className="text-gray-400">(no reduce el saldo)</span></dt>
+                    <dd className="font-medium tabular-nums">$ {toNum(form.descuento).toLocaleString('es-CO')}</dd>
+                  </div>
+                )}
+                <div className="flex justify-between px-3 py-2">
+                  <dt className="text-gray-600">Valor a aplicar</dt>
+                  <dd className="font-medium tabular-nums text-amber-700">$ {valorAplicar.toLocaleString('es-CO')}</dd>
+                </div>
+                <div className="flex justify-between px-3 py-2 bg-emerald-50">
+                  <dt className="font-semibold text-emerald-900">Saldo después del pago</dt>
+                  <dd className="font-bold tabular-nums text-emerald-700">$ {saldoDespues.toLocaleString('es-CO')}</dd>
+                </div>
+              </dl>
+            </div>
+
+            {/* Anomalías de secuencia: exigen verificación explícita. */}
+            {alertaCuotaSiguienteExcede && (
+              <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-900">
+                La cuota <strong>#{cuotaSiguiente}</strong> supera las {cuotasTotalNum} cuotas
+                pactadas en el contrato.
+              </div>
+            )}
+
+            {hayAlertas && (
+              <div className="rounded-lg bg-red-50 border border-red-300 p-3 space-y-2">
+                <p className="text-sm font-bold text-red-800">⚠️ Verifica antes de continuar</p>
+                <ul className="text-sm text-red-800 space-y-1.5 list-disc pl-5">
+                  {alertaFecha && (
+                    <li>
+                      La <strong>fecha de pago</strong> ({fmtFecha(form.fechaPago)}) es <strong>anterior</strong> a la del
+                      último pago registrado ({fmtFecha(ultimaFechaPago)}).
+                    </li>
+                  )}
+                  {alertaCuota && (
+                    <li>
+                      {cuotaYaExiste
+                        ? <>Ya existe un pago registrado con la <strong>cuota #{form.numCuota}</strong>.</>
+                        : <>La <strong>cuota #{form.numCuota}</strong> no avanza: la última registrada es la #{maxCuotaRegistrada}.</>}
+                    </li>
+                  )}
+                </ul>
+                <label className="flex items-start gap-2 pt-1 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={confirmAnomalia}
+                    onChange={(e) => setConfirmAnomalia(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-red-400 text-red-600 focus:ring-red-500"
+                  />
+                  <span className="text-sm text-red-900">
+                    Revisé los datos y confirmo que el pago se debe registrar así.
+                  </span>
+                </label>
+              </div>
+            )}
 
             {cuotasTotalNum > 0 && Number(form.numCuota) === cuotasTotalNum && (
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
@@ -773,10 +1130,72 @@ export default function PagoTitularWizard({
               </div>
             )}
 
+            {pagoDobleListo && (
+              <div className="rounded-lg bg-indigo-50 border border-indigo-200 p-3 text-sm text-indigo-900">
+                Se crearán <strong>dos registros</strong> con fecha {fmtFecha(form.fechaPago)}:
+                cuota <strong>#{numCuotaNum}</strong> y cuota <strong>#{cuotaSiguiente}</strong>.
+                Ambos quedan marcados como <strong>Adelanto cuota</strong>.
+              </div>
+            )}
+
+            {form.cambioContado && (
+              <div className="rounded-lg bg-teal-50 border border-teal-200 p-3 text-sm text-teal-900">
+                <div>
+                  Este pago se marca como <strong>Cambio Contado</strong>
+                  {realizadoPorPreview && <> y se atribuirá a <strong>{realizadoPorPreview}</strong></>}.
+                </div>
+
+                {/* Desglose de las fechas que producen la atribución. Sin esto el
+                    operador ve el resultado sin saber desde cuándo se contó, y
+                    asume que se mide desde el inicio del contrato cuando en
+                    realidad manda la fecha de aprobación. */}
+                <dl className="mt-2 pt-2 border-t border-teal-200 space-y-1">
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-teal-700">Fecha del contrato</dt>
+                    <dd className="tabular-nums font-medium">{fmtFecha(soloFecha(fechasContrato?.contrato))}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-teal-700">
+                      Fecha de aprobación
+                      {baseEsAprobacion && (
+                        <span className="ml-1 text-xs font-semibold text-teal-900">(base del cálculo)</span>
+                      )}
+                    </dt>
+                    <dd className="tabular-nums font-medium">{fmtFecha(soloFecha(fechasContrato?.aprobacion))}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-teal-700">Fecha del cambio (pago)</dt>
+                    <dd className="tabular-nums font-medium">{fmtFecha(form.fechaPago)}</dd>
+                  </div>
+                </dl>
+
+                {diasPreview !== null ? (
+                  <div className="mt-2 pt-2 border-t border-teal-200">
+                    {diasPreview < 0
+                      ? 'El pago es anterior a la ' + etiquetaBase + '.'
+                      : diasPreview + (diasPreview === 1 ? ' día' : ' días') + ' desde la ' + etiquetaBase + '.'}
+                    {' '}Hasta {VENTANA_COMERCIAL_DIAS} días queda en <strong>Comercial</strong>; después, <strong>Recaudos</strong>.
+                  </div>
+                ) : (
+                  <div className="mt-2 pt-2 border-t border-teal-200 text-amber-800">
+                    El contrato no tiene fecha de aprobación ni de contrato registrada, así que
+                    <em> Realizado por</em> quedará vacío. El pago se guarda igual.
+                  </div>
+                )}
+              </div>
+            )}
+
             {form.cambioCartera === 'penalidad' && (
               <div className="rounded-lg bg-orange-50 border border-orange-200 p-3 text-sm text-orange-800">
-                El valor de este pago corresponde a una <strong>penalidad</strong> y así será aplicado
+                El valor de este pago corresponde a una <strong>penalidad o recuperación</strong> y así será aplicado
                 (se registra en <em>Valor Penalidad</em> y el estado de cartera pasa a <strong>Penalidad</strong>).
+              </div>
+            )}
+
+            {requiereNota && form.nota.trim() && (
+              <div className="rounded-lg bg-rose-50 border border-rose-200 p-3 text-sm text-rose-900">
+                <span className="font-semibold">Nota que quedará registrada:</span>
+                <span className="block mt-1 whitespace-pre-wrap break-words">{form.nota.trim()}</span>
               </div>
             )}
 
@@ -788,8 +1207,9 @@ export default function PagoTitularWizard({
                 Cancelar
               </button>
               <button
-                type="button" onClick={doSubmit} disabled={submitting}
-                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50"
+                type="button" onClick={doSubmit} disabled={submitting || (hayAlertas && !confirmAnomalia)}
+                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={hayAlertas && !confirmAnomalia ? 'Marca la casilla de verificación para continuar' : undefined}
               >
                 {submitting ? 'Guardando…' : 'Seguir'}
               </button>

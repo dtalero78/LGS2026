@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { exportToExcel } from '@/lib/export-excel'
 import { PermissionGuard } from '@/components/permissions/PermissionGuard'
@@ -113,7 +113,8 @@ export default function InformeClubesPage() {
   const [trPlat, setTrPlat]     = useState('')
   const [trNivel, setTrNivel]   = useState('')
   const [trData, setTrData]     = useState<TrainingResp | null>(null)
-  const [trLoading, setTrLoading] = useState(true)
+  const [trLoading, setTrLoading] = useState(false)
+  const [trConsultado, setTrConsultado] = useState(false)
 
   // Clubs state
   const [clStart, setClStart]     = useState(firstOfYear)
@@ -122,7 +123,8 @@ export default function InformeClubesPage() {
   const [clNivel, setClNivel]     = useState('')
   const [clTipo, setClTipo]       = useState('')
   const [clData, setClData]       = useState<ClubesResp | null>(null)
-  const [clLoading, setClLoading] = useState(true)
+  const [clLoading, setClLoading] = useState(false)
+  const [clConsultado, setClConsultado] = useState(false)
 
   const fetchTraining = useCallback(async () => {
     setTrLoading(true)
@@ -146,8 +148,22 @@ export default function InformeClubesPage() {
     finally { setClLoading(false) }
   }, [clStart, clEnd, clPlat, clNivel, clTipo])
 
-  useEffect(() => { fetchTraining() }, [fetchTraining])
-  useEffect(() => { fetchClubes() }, [fetchClubes])
+  const handleApplyTraining = () => {
+    if (!trStart || !trEnd) {
+      alert('Selecciona el rango de fechas (Desde y Hasta) antes de consultar.')
+      return
+    }
+    setTrConsultado(true)
+    fetchTraining()
+  }
+  const handleApplyClubes = () => {
+    if (!clStart || !clEnd) {
+      alert('Selecciona el rango de fechas (Desde y Hasta) antes de consultar.')
+      return
+    }
+    setClConsultado(true)
+    fetchClubes()
+  }
 
   const tr = trData?.training    ?? { total: 0, asistieron: 0, noAsistieron: 0, cancelaron: 0 }
   const ct = clData?.clubesTotals ?? { total: 0, asistieron: 0, noAsistieron: 0, cancelaron: 0 }
@@ -256,7 +272,11 @@ export default function InformeClubesPage() {
                 </select>
               </div>
               <div className="flex gap-2 ml-auto">
-                <button type="button" onClick={() => { setTrStart(firstOfYear); setTrEnd(today); setTrPlat(''); setTrNivel('') }}
+                <button type="button" onClick={handleApplyTraining} disabled={trLoading}
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors">
+                  Consultar
+                </button>
+                <button type="button" onClick={() => { setTrStart(firstOfYear); setTrEnd(today); setTrPlat(''); setTrNivel(''); setTrData(null); setTrConsultado(false) }}
                   className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
                   Limpiar filtros
                 </button>
@@ -270,6 +290,13 @@ export default function InformeClubesPage() {
             </div>
           </div>
 
+          {!trConsultado && !trLoading && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center text-sm text-indigo-900">
+              Configura los filtros y pulsa <b>Consultar</b> para ver el informe.
+            </div>
+          )}
+
+          {trConsultado && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -288,6 +315,7 @@ export default function InformeClubesPage() {
               ))}
             </div>
           </div>
+          )}
 
           {/* ══ CLUBS ══ */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
@@ -327,7 +355,11 @@ export default function InformeClubesPage() {
                 </select>
               </div>
               <div className="flex gap-2 ml-auto">
-                <button type="button" onClick={() => { setClStart(firstOfYear); setClEnd(today); setClPlat(''); setClNivel(''); setClTipo('') }}
+                <button type="button" onClick={handleApplyClubes} disabled={clLoading}
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors">
+                  Consultar
+                </button>
+                <button type="button" onClick={() => { setClStart(firstOfYear); setClEnd(today); setClPlat(''); setClNivel(''); setClTipo(''); setClData(null); setClConsultado(false) }}
                   className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
                   Limpiar filtros
                 </button>
@@ -341,6 +373,13 @@ export default function InformeClubesPage() {
             </div>
           </div>
 
+          {!clConsultado && !clLoading && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center text-sm text-indigo-900">
+              Configura los filtros y pulsa <b>Consultar</b> para ver el informe.
+            </div>
+          )}
+
+          {clConsultado && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-2">
               <div>
@@ -364,6 +403,7 @@ export default function InformeClubesPage() {
               ))}
             </div>
           </div>
+          )}
 
         </div>
       </div>

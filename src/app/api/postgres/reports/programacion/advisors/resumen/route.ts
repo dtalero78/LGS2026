@@ -1,5 +1,6 @@
 import 'server-only'
-import { handlerWithAuth, successResponse } from '@/lib/api-helpers'
+import { successResponse } from '@/lib/api-helpers'
+import { handlerReport } from '@/lib/report-guard'
 import { queryMany } from '@/lib/postgres'
 
 type TipoFiltro = 'all' | 'sesiones' | 'jumps' | 'training' | 'clubes' | 'essential' | 'welcome'
@@ -61,7 +62,7 @@ function tipoWhereClause(tipoFiltro: TipoFiltro): string {
   return `AND (${TIPO_INFORME_EXPR}) = '${tipoFiltro}'`
 }
 
-export const GET = handlerWithAuth(async (req, _ctx, _session) => {
+export const GET = handlerReport(async (req, _ctx, _session) => {
   const { searchParams } = new URL(req.url)
   const fechaInicio = searchParams.get('fechaInicio') ?? `${new Date().getFullYear()}-01-01`
   const fechaFin    = searchParams.get('fechaFin')    ?? new Date().toISOString().substring(0, 10)

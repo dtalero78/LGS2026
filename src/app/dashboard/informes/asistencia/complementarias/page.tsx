@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { exportToExcel } from '@/lib/export-excel'
 import { PermissionGuard } from '@/components/permissions/PermissionGuard'
@@ -72,7 +72,8 @@ export default function InformeComplementariasPage() {
   const [plataforma, setPlataforma] = useState('')
   const [nivel, setNivel]           = useState('')
   const [data, setData]             = useState<CompResponse | null>(null)
-  const [loading, setLoading]       = useState(true)
+  const [loading, setLoading]       = useState(false)
+  const [consultado, setConsultado] = useState(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -85,7 +86,14 @@ export default function InformeComplementariasPage() {
     finally { setLoading(false) }
   }, [startDate, endDate, plataforma, nivel])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  const handleApply = () => {
+    if (!startDate || !endDate) {
+      alert('Selecciona el rango de fechas (Desde y Hasta) antes de consultar.')
+      return
+    }
+    setConsultado(true)
+    fetchData()
+  }
 
   const t = data?.totals ?? { total: 0, passed: 0, failed: 0, inProgress: 0 }
 
@@ -100,6 +108,8 @@ export default function InformeComplementariasPage() {
     setEndDate(today)
     setPlataforma('')
     setNivel('')
+    setData(null)
+    setConsultado(false)
   }
 
   const handleCSV = () => {
@@ -176,6 +186,10 @@ export default function InformeComplementariasPage() {
                 </select>
               </div>
               <div className="flex gap-2 ml-auto">
+                <button type="button" onClick={handleApply} disabled={loading}
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors">
+                  Consultar
+                </button>
                 <button type="button" onClick={handleClear}
                   className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
                   Limpiar filtros
@@ -193,7 +207,15 @@ export default function InformeComplementariasPage() {
             </div>
           </div>
 
+          {/* ── Estado vacío ── */}
+          {!consultado && !loading && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center text-sm text-indigo-900">
+              Configura los filtros y pulsa <b>Consultar</b> para ver el informe.
+            </div>
+          )}
+
           {/* ── Complementary Card ── */}
+          {consultado && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -212,6 +234,7 @@ export default function InformeComplementariasPage() {
               ))}
             </div>
           </div>
+          )}
 
         </div>
       </div>

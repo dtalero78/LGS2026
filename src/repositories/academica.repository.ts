@@ -8,6 +8,7 @@ import 'server-only';
 import { queryOne, queryMany, parseJsonbFields } from '@/lib/postgres';
 import { BaseRepository } from './base.repository';
 import { NotFoundError } from '@/lib/errors';
+import { ensureOnce } from '@/lib/ensure-once';
 
 const JSONB_FIELDS = ['extensionHistory'];
 
@@ -206,11 +207,14 @@ class AcademicaRepositoryClass extends BaseRepository {
   }
 
   /**
-   * Ensure cambioStepHistory column exists (idempotent).
+   * Ensure cambioStepHistory column exists (idempotent, una sola vez por proceso).
+   * El esquema se garantiza de verdad con scripts/add-columnas-legacy-ensure.js.
    */
   async ensureCambioStepHistoryColumn() {
     const { query: q } = await import('@/lib/postgres');
-    await q(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "cambioStepHistory" JSONB`, []);
+    return ensureOnce('ACADEMICA.cambioStepHistory', () =>
+      q(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "cambioStepHistory" JSONB`, [])
+    );
   }
 
   /**
@@ -230,13 +234,16 @@ class AcademicaRepositoryClass extends BaseRepository {
   }
 
   /**
-   * Ensure inicianivel/checkinicianivel columns exist (idempotent).
-   * Called once before the first use of Inicializar Nivel.
+   * Ensure inicianivel/checkinicianivel columns exist (idempotent, una sola vez
+   * por proceso). El esquema se garantiza de verdad con
+   * scripts/add-columnas-legacy-ensure.js.
    */
   async ensureInicializarNivelColumns() {
     const { query: q } = await import('@/lib/postgres');
-    await q(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "checkinicianivel" INTEGER`, []);
-    await q(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "inicianivel" JSONB`, []);
+    return ensureOnce('ACADEMICA.inicializarNivel', async () => {
+      await q(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "checkinicianivel" INTEGER`, []);
+      await q(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "inicianivel" JSONB`, []);
+    });
   }
 
   /**

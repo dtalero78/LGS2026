@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import EventReportFilters from './EventReportFilters'
 import EventReportKpis    from './EventReportKpis'
@@ -28,8 +28,9 @@ export default function EventReportPage({ reportType }: Props) {
 
   const [filters,  setFilters]  = useState<FilterState>(DEFAULT_FILTERS)
   const [data,     setData]     = useState<ReportResponse | null>(null)
-  const [loading,  setLoading]  = useState(true)
+  const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState<string | null>(null)
+  const [consultado, setConsultado] = useState(false)
 
   const fetchData = useCallback(async (f: FilterState) => {
     setLoading(true)
@@ -57,12 +58,18 @@ export default function EventReportPage({ reportType }: Props) {
     }
   }, [reportType])
 
-  useEffect(() => { fetchData(DEFAULT_FILTERS) }, [fetchData])
-
-  const handleApply = () => fetchData(filters)
+  const handleApply = () => {
+    if (!filters.fechaInicio || !filters.fechaFin) {
+      alert('Selecciona el rango de fechas (Desde y Hasta) antes de consultar.')
+      return
+    }
+    setConsultado(true)
+    fetchData(filters)
+  }
   const handleClear = () => {
     setFilters(DEFAULT_FILTERS)
-    fetchData(DEFAULT_FILTERS)
+    setData(null)
+    setConsultado(false)
   }
 
   const emptyMeta = { niveles: [], horas: [], advisors: [] }
@@ -104,27 +111,38 @@ export default function EventReportPage({ reportType }: Props) {
           </div>
         )}
 
-        {/* KPIs */}
-        <EventReportKpis
-          kpis={data?.kpis ?? { totalEventos: 0, totalPorTipo: {}, totalInscritos: 0, totalAsistentes: 0, totalCapacidad: 0, pctAsistencia: 0, pctOcupacion: 0 }}
-          config={config}
-          loading={loading}
-        />
+        {/* Estado vacío */}
+        {!consultado && !loading && !error && (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center text-sm text-indigo-900">
+            Configura los filtros y pulsa <b>Consultar</b> para ver el informe.
+          </div>
+        )}
 
-        {/* Charts */}
-        <EventReportCharts
-          charts={data?.charts ?? { eventosPorTipo: [], clubsPorTipo: [], eventosPorNivel: [], eventosPorHora: [], asistenciaVsInscritos: [], rankingAdvisors: [], heatmapDiaHora: [] }}
-          config={config}
-          loading={loading}
-        />
+        {consultado && (
+          <>
+            {/* KPIs */}
+            <EventReportKpis
+              kpis={data?.kpis ?? { totalEventos: 0, totalPorTipo: {}, totalInscritos: 0, totalAsistentes: 0, totalCapacidad: 0, pctAsistencia: 0, pctOcupacion: 0 }}
+              config={config}
+              loading={loading}
+            />
 
-        {/* Table */}
-        <EventReportTable
-          data={data?.table ?? []}
-          config={config}
-          loading={loading}
-          filters={{ fechaInicio: filters.fechaInicio, fechaFin: filters.fechaFin }}
-        />
+            {/* Charts */}
+            <EventReportCharts
+              charts={data?.charts ?? { eventosPorTipo: [], clubsPorTipo: [], eventosPorNivel: [], eventosPorHora: [], asistenciaVsInscritos: [], rankingAdvisors: [], heatmapDiaHora: [] }}
+              config={config}
+              loading={loading}
+            />
+
+            {/* Table */}
+            <EventReportTable
+              data={data?.table ?? []}
+              config={config}
+              loading={loading}
+              filters={{ fechaInicio: filters.fechaInicio, fechaFin: filters.fechaFin }}
+            />
+          </>
+        )}
 
       </div>
     </DashboardLayout>

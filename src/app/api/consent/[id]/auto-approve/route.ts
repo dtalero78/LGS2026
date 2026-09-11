@@ -7,6 +7,8 @@ import { query, queryOne, queryMany } from '@/lib/postgres';
 import { generateId } from '@/lib/id-generator';
 import { fillContractTemplate } from '@/lib/contract-template-filler';
 import { buildContractPdfHtml } from '@/lib/contract-pdf-html';
+import { generarYArchivarAnexoPdf } from '@/lib/anexo-pdf';
+import { esContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { getAsesorInfo } from '@/lib/asesor';
 import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
 import { archivarContratoEnDrive, buildContractFilename } from '@/lib/contract-drive';
@@ -126,6 +128,7 @@ export const POST = handlerWithAuth(async (request, { params }, session) => {
         );
 
         const htmlContent = buildContractPdfHtml(contractText, {
+          esPrueba: esContratoPrueba(titular?.contrato),
           contrato: titular.contrato,
           fecha: new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' }),
         });
@@ -160,6 +163,12 @@ export const POST = handlerWithAuth(async (request, { params }, session) => {
   } catch (pdfErr: any) {
     console.warn('⚠️ [auto-approve] PDF/Drive upload failed (non-critical):', pdfErr.message);
   }
+
+  // Anexo de constancia (ANEX-) — best-effort, no bloquea la respuesta.
+  generarYArchivarAnexoPdf(params.id).then(
+    (r) => console.log(`📎 [AutoApprove] Anexo: ${params.id} → ${r.ok ? 'archivado' : (r.skipped || r.error)}`),
+    (e) => console.error(`⚠️ [AutoApprove] No se pudo archivar el anexo (${params.id}):`, e?.message || e),
+  );
 
   return successResponse({
     message: 'Consentimiento automático registrado exitosamente',

@@ -7,6 +7,7 @@ import { formatDate } from '@/lib/utils'
 import { UserPlusIcon } from '@heroicons/react/24/outline'
 import { CheckCircleIcon } from '@heroicons/react/24/solid'
 import { PermissionGuard } from '@/components/permissions'
+import { usePermissions } from '@/hooks/usePermissions'
 import { PersonPermission } from '@/types/permissions'
 import { COUNTRY_CODES } from '@/lib/country-codes'
 import { isContratoPrueba } from '@/components/common/ContratoPruebaBadge'
@@ -41,6 +42,12 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
   const [showBeneficiaryForm, setShowBeneficiaryForm] = useState(false)
   const [newBeneficiaryId, setNewBeneficiaryId] = useState<string | null>(null)
   const [currentFormStep, setCurrentFormStep] = useState(1)
+  // Nombre y numeroId son datos de IDENTIDAD: se propagan a varias tablas, por
+  // eso cada uno tiene su permiso propio (aparte del genérico MODIFICAR).
+  const { hasPermission } = usePermissions()
+  const canEditarNombre = hasPermission(PersonPermission.EDITAR_NOMBRE)
+  const canEditarNumeroId = hasPermission(PersonPermission.EDITAR_NUMERO_ID)
+
   const [beneficiaryData, setBeneficiaryData] = useState({
     primerNombre: '',
     segundoNombre: '',
@@ -147,6 +154,32 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
   // Estados post-aprobación que requieren confirmación simple (sin bloqueo)
   const SIMPLE_CONFIRM_POST_APPROVAL = ['Pendiente', 'Retractado']
 
+  // ── Regla "Aprobado → Pendiente" (revertir la aprobación) ──
+  // Solo se permite mientras el contrato esté FRESCO. Bloqueo con OR: si ya pasó
+  // un mes desde el inicio del contrato O algún beneficiario ya avanzó de WELCOME,
+  // el cambio a "Pendiente" queda deshabilitado. El backend valida lo mismo.
+  const baseFechaContrato = person.inicioContrato || person.fechaContrato || null
+  const dentroDelMesContrato = (() => {
+    if (!baseFechaContrato) return false
+    const inicio = new Date(baseFechaContrato)
+    if (Number.isNaN(inicio.getTime())) return false
+    const limite = new Date(inicio.getTime())
+    limite.setMonth(limite.getMonth() + 1)
+    return Date.now() < limite.getTime()
+  })()
+  // ¿Algún beneficiario avanzó de WELCOME? (nivel real en ACADEMICA ≠ WELCOME y no vacío)
+  const algunBeneficiarioAvanzo = currentBeneficiaries.some(b => {
+    const nivel = (b.academicaNivel ?? b.nivel ?? '').toString().trim().toUpperCase()
+    return nivel !== '' && nivel !== 'WELCOME'
+  })
+  const puedePendiente = dentroDelMesContrato && !algunBeneficiarioAvanzo
+  const motivoBloqueoPendiente = (() => {
+    const motivos: string[] = []
+    if (!dentroDelMesContrato) motivos.push('ya pasó un mes desde el inicio del contrato')
+    if (algunBeneficiarioAvanzo) motivos.push('algún beneficiario ya avanzó de WELCOME')
+    return motivos.join(' y ')
+  })()
+
   const handleApproveSpecificBeneficiary = async (beneficiaryId: string) => {
     if (!beneficiaryId) return
 
@@ -226,6 +259,18 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         `Usa "Retractado" si necesitas anular el contrato post-aprobación.`
       )
       // Volver a sincronizar el dropdown con el estado real
+      setSelectedEstado(originalEstado as any)
+      return
+    }
+
+    // Bloqueo client-side: revertir Aprobado → Pendiente solo con contrato FRESCO
+    // (dentro del mes de inicio Y todos los beneficiarios aún en WELCOME/sin nivel).
+    if (originalEstado === 'Aprobado' && newEstado === 'Pendiente' && !puedePendiente) {
+      alert(
+        `No se puede pasar a "Pendiente": ${motivoBloqueoPendiente}.\n\n` +
+        `Revertir la aprobación solo es posible mientras el contrato esté dentro del mes ` +
+        `de inicio y los beneficiarios sigan en WELCOME o sin nivel.`
+      )
       setSelectedEstado(originalEstado as any)
       return
     }
@@ -486,6 +531,10 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
 
           // Snapshot para el diff del modal de confirmación
           setOriginalBeneficiary({
+            primerNombre: ben.primerNombre || '',
+            segundoNombre: ben.segundoNombre || '',
+            primerApellido: ben.primerApellido || '',
+            segundoApellido: ben.segundoApellido || '',
             numeroId: ben.numeroId || '',
             fechaNacimiento: fechaNac,
             celular: ben.celular || '',
@@ -599,6 +648,10 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     if (isEditMode && editingBeneficiaryId) {
       const normCel = (beneficiaryData.celular || '').replace(/\D/g, '')
       const campos: { key: string; label: string; now: string }[] = [
+        { key: 'primerNombre',    label: 'Primer Nombre',            now: beneficiaryData.primerNombre || '' },
+        { key: 'segundoNombre',   label: 'Segundo Nombre',           now: beneficiaryData.segundoNombre || '' },
+        { key: 'primerApellido',  label: 'Primer Apellido',          now: beneficiaryData.primerApellido || '' },
+        { key: 'segundoApellido', label: 'Segundo Apellido',         now: beneficiaryData.segundoApellido || '' },
         { key: 'numeroId',        label: 'Número de Identificación', now: (beneficiaryData.numeroId || '').toUpperCase().replace(/[.\s_]/g, '').trim() },
         { key: 'fechaNacimiento', label: 'Fecha de Nacimiento',      now: beneficiaryData.fechaNacimiento || '' },
         { key: 'celular',         label: 'Celular',                  now: normCel },
@@ -643,7 +696,15 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            numeroId: beneficiaryData.numeroId,
+            // Los campos de identidad se mandan SOLO con permiso: el backend
+            // los exige igual, esto evita un 403 por enviarlos sin querer.
+            ...(canEditarNombre ? {
+              primerNombre: beneficiaryData.primerNombre,
+              segundoNombre: beneficiaryData.segundoNombre || null,
+              primerApellido: beneficiaryData.primerApellido,
+              segundoApellido: beneficiaryData.segundoApellido || null,
+            } : {}),
+            ...(canEditarNumeroId ? { numeroId: beneficiaryData.numeroId } : {}),
             fechaNacimiento: beneficiaryData.fechaNacimiento || null,
             celular: normalizedCelular || undefined,
             domicilio: beneficiaryData.domicilio,
@@ -894,17 +955,23 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                       // Contrato de prueba: no se puede aprobar.
                       !(esContratoDePrueba && estado === 'Aprobado')
                     )
-                    .map((estado) => (
-                      <option key={estado} value={estado}>
-                        {estado === 'Aprobado' && '✅ '}
-                        {estado === 'Contrato nulo' && '⚪ '}
-                        {estado === 'Devuelto' && '🔄 '}
-                        {estado === 'Pendiente' && '⏳ '}
-                        {estado === 'Rechazado' && '❌ '}
-                        {estado === 'Retractado' && '↩️ '}
-                        {estado}
-                      </option>
-                    ))}
+                    .map((estado) => {
+                      // Revertir Aprobado → Pendiente solo con contrato fresco.
+                      const pendienteBloqueado =
+                        originalEstado === 'Aprobado' && estado === 'Pendiente' && !puedePendiente
+                      return (
+                        <option key={estado} value={estado} disabled={pendienteBloqueado}>
+                          {estado === 'Aprobado' && '✅ '}
+                          {estado === 'Contrato nulo' && '⚪ '}
+                          {estado === 'Devuelto' && '🔄 '}
+                          {estado === 'Pendiente' && '⏳ '}
+                          {estado === 'Rechazado' && '❌ '}
+                          {estado === 'Retractado' && '↩️ '}
+                          {estado}
+                          {pendienteBloqueado && ' (bloqueado)'}
+                        </option>
+                      )
+                    })}
                 </select>
               </div>
               <div className="flex items-center">
@@ -1118,7 +1185,38 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             {/* Edit Mode: Only 3 fields */}
             {isEditMode ? (
               <div className="space-y-4">
-                <h4 className="font-medium text-gray-900 mb-4">Identificación</h4>
+                <h4 className="font-medium text-gray-900 mb-4">Nombres</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {([
+                    ['primerNombre',    'Primer Nombre *'],
+                    ['segundoNombre',   'Segundo Nombre'],
+                    ['primerApellido',  'Primer Apellido *'],
+                    ['segundoApellido', 'Segundo Apellido'],
+                  ] as const).map(([campo, label]) => (
+                    <div key={campo}>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+                      <input
+                        type="text"
+                        value={beneficiaryData[campo]}
+                        onChange={(e) => handleBeneficiaryDataChange(campo, e.target.value)}
+                        readOnly={!canEditarNombre}
+                        disabled={!canEditarNombre}
+                        className={'input-field' + (!canEditarNombre ? ' bg-gray-100 cursor-not-allowed text-gray-500' : '')}
+                      />
+                    </div>
+                  ))}
+                </div>
+                {canEditarNombre ? (
+                  <p className="text-xs text-amber-600 -mt-2">
+                    ⚠️ El nombre se propaga a su <strong>registro académico</strong>, a sus <strong>listas de asistencia</strong> y a su <strong>usuario de acceso</strong>.
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-500 -mt-2">
+                    🔒 No tenés permiso para editar los nombres (<span className="font-mono">PERSON.INFO.EDITAR_NOMBRE</span>).
+                  </p>
+                )}
+
+                <h4 className="font-medium text-gray-900 mb-4 pt-2">Identificación</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1128,12 +1226,20 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                       type="text"
                       value={beneficiaryData.numeroId}
                       onChange={(e) => handleBeneficiaryDataChange('numeroId', e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))}
-                      className="input-field font-mono"
+                      readOnly={!canEditarNumeroId}
+                      disabled={!canEditarNumeroId}
+                      className={'input-field font-mono' + (!canEditarNumeroId ? ' bg-gray-100 cursor-not-allowed text-gray-500' : '')}
                       placeholder="Ej: 18201897-K"
                     />
-                    <p className="text-xs text-amber-600 mt-1">
-                      ⚠️ Es la llave que une al beneficiario con su registro académico. Al cambiarlo se actualiza también en ACADEMICA y en su usuario de acceso.
-                    </p>
+                    {canEditarNumeroId ? (
+                      <p className="text-xs text-amber-600 mt-1">
+                        ⚠️ Es la llave que une al beneficiario con su registro académico. Al cambiarlo se actualiza también en ACADEMICA y en su usuario de acceso.
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-500 mt-1">
+                        🔒 No tenés permiso para editar el número de identificación (<span className="font-mono">PERSON.INFO.EDITAR_NUMERO_ID</span>).
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1522,6 +1628,22 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                 </p>
               </div>
             )}
+            {pendingChanges.some(c => c.label.includes('Nombre') || c.label.includes('Apellido')) && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
+                <p className="text-xs text-amber-800 font-semibold mb-1">
+                  ⚠️ Estás cambiando el <strong>nombre</strong>. Se actualizará en todos estos lugares:
+                </p>
+                <ul className="text-xs text-amber-800 list-disc list-inside space-y-0.5">
+                  <li>Su <strong>ficha académica</strong> (ACADEMICA)</li>
+                  <li>Sus <strong>listas de asistencia</strong> — el nombre está copiado en cada clase agendada</li>
+                  <li>Su <strong>usuario de acceso</strong> (con el que inicia sesión)</li>
+                  <li>El <strong>registro financiero</strong> del contrato, si es el titular</li>
+                </ul>
+                <p className="text-xs text-amber-700 mt-1">
+                  Se aplica todo junto: si algo falla, no se guarda ningún cambio.
+                </p>
+              </div>
+            )}
             {pendingChanges.some(c => c.label === 'Email') && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
                 <p className="text-xs text-blue-800">
@@ -1703,6 +1825,15 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                 </span>
                 ?
               </p>
+              {originalEstado === 'Aprobado' && pendingEstado === 'Pendiente' && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-xs text-red-800">
+                  <strong>🔒 Se bloqueará el login de los beneficiarios.</strong> Pasar a{' '}
+                  <strong>Pendiente</strong> deja a{' '}
+                  <strong>{currentBeneficiaries.length}</strong> beneficiario(s) sin acceso a la
+                  plataforma (el titular no se ve afectado). Es reversible: al volver a{' '}
+                  <strong>Aprobado</strong> se reactiva su acceso.
+                </div>
+              )}
               {originalEstado === 'Aprobado' && SIMPLE_CONFIRM_POST_APPROVAL.includes(pendingEstado) && (
                 <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
                   <strong>⚠ Atención:</strong> el contrato ya está <strong>Aprobado</strong>.

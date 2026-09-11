@@ -10,6 +10,7 @@ import { PersonPermission } from '@/types/permissions'
 import { usePermissions } from '@/hooks/usePermissions'
 import { api, handleApiError } from '@/hooks/use-api'
 import PagoTitularWizard from './PagoTitularWizard'
+import { fechaBaseContrato as calcFechaBaseContrato } from '@/lib/cambio-contado'
 
 interface PersonFinancialProps {
   person: Person
@@ -43,6 +44,12 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
   // Marca manual "Opcional" — alimenta columna Opcional de /dashboard/recaudos/asignacion
   const [marcaOpcional, setMarcaOpcional] = useState<string | null>((person as any).marcaOpcional ?? null)
   const [togglingOpcional, setTogglingOpcional] = useState(false)
+  // Modal de la marca Opcional: al MARCAR hay que elegir si es definitiva o
+  // temporal (y hasta cuándo). Al quitarla no se pregunta nada.
+  const [showOpcionalModal, setShowOpcionalModal] = useState(false)
+  const [opcionalTipo, setOpcionalTipo] = useState<'definitivo' | 'temporal'>('definitivo')
+  const [opcionalHasta, setOpcionalHasta] = useState('')
+  const [marcaOpcionalHasta, setMarcaOpcionalHasta] = useState<string | null>((person as any).marcaOpcionalHasta ?? null)
   /** Sólo usuarios con rol RECAUDO_* (poblar dropdown del modal Asignar Ejecutivo) */
   const [recaudoUsers, setRecaudoUsers] = useState<RecaudoUser[]>([])
   /** Lista ampliada (incluye COMERCIAL/ADMIN) para resolver el _id de cualquier
@@ -280,22 +287,51 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
     setShowCarteraModal(true)
   }
 
-  /** Toggle de la marca "Opcional" (PEOPLE.marcaOpcional). Sin modal, sin
-   *  motivo — es una marca operativa simple del área de Recaudo. */
-  const handleToggleOpcional = async () => {
+  /**
+   * Click en el botón "Opcional".
+   *   - Si ya está marcado  → lo quita directo (quitar no necesita decisión).
+   *   - Si no está marcado  → abre el modal para elegir definitivo o temporal.
+   */
+  const handleToggleOpcional = () => {
+    if (marcaOpcional === 'OPC') {
+      aplicarOpcional(null, null)
+      return
+    }
+    setOpcionalTipo('definitivo')
+    setOpcionalHasta('')
+    setShowOpcionalModal(true)
+  }
+
+  /** Escribe la marca. `hasta` con fecha = temporal; null = definitiva. */
+  const aplicarOpcional = async (valor: 'OPC' | null, hasta: string | null) => {
     setTogglingOpcional(true)
     try {
-      const data = await api.post<{ marcaOpcional: string | null }>(
+      const data = await api.post<{ marcaOpcional: string | null; marcaOpcionalHasta: string | null; temporal: boolean }>(
         `/api/postgres/people/${person._id}/marca-opcional`,
-        {},
+        { valor, hasta },
       )
       setMarcaOpcional(data.marcaOpcional ?? null)
-      toast.success(data.marcaOpcional === 'OPC' ? 'Marcado como OPC' : 'Marca OPC removida')
+      setMarcaOpcionalHasta(data.marcaOpcionalHasta ?? null)
+      setShowOpcionalModal(false)
+      if (!data.marcaOpcional) {
+        toast.success('Marca OPC removida')
+      } else if (data.temporal) {
+        toast.success(`Marcado como OPC hasta el ${fmtFechaCorta(data.marcaOpcionalHasta)}`)
+      } else {
+        toast.success('Marcado como OPC (definitivo)')
+      }
     } catch (err) {
       handleApiError(err, 'Error al cambiar marca Opcional')
     } finally {
       setTogglingOpcional(false)
     }
+  }
+
+  /** 'YYYY-MM-DD' → 'DD/MM/AAAA' para los mensajes. */
+  const fmtFechaCorta = (f: string | null) => {
+    if (!f) return ''
+    const [y, m, d] = f.slice(0, 10).split('-')
+    return d && m && y ? `${d}/${m}/${y}` : f
   }
 
   const handleCambiarCartera = async () => {
@@ -435,7 +471,9 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                       : 'bg-white text-orange-700 border border-orange-300 hover:bg-orange-50')
                   }
                 >
-                  {marcaOpcional === 'OPC' ? '✓ Opcional (OPC)' : 'Opcional'}
+                  {marcaOpcional === 'OPC'
+                    ? (marcaOpcionalHasta ? `✓ Opcional · hasta ${fmtFechaCorta(marcaOpcionalHasta)}` : '✓ Opcional (OPC)')
+                    : 'Opcional'}
                 </button>
               </PermissionGuard>
             </div>
@@ -609,6 +647,7 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                         <th className="px-3 py-2 text-center font-medium text-gray-700"># Cuota</th>
                         <th className="px-3 py-2 text-left font-medium text-gray-700">Fecha</th>
                         <th className="px-3 py-2 text-left font-medium text-gray-700">Gestor</th>
+                        <th className="px-3 py-2 text-left font-medium text-gray-700">Realizado por</th>
                         <th className="px-3 py-2 text-right font-medium text-gray-700">Valor Pagado</th>
                         <th className="px-3 py-2 text-right font-medium text-gray-700">Descuento</th>
                         <th className="px-3 py-2 text-right font-medium text-gray-700">Saldo</th>
@@ -660,7 +699,21 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                           : (p.saldo != null ? Number(p.saldo) : null)
                         return (
                           <tr key={p._id} className="hover:bg-gray-50">
-                            <td className="px-3 py-2 text-center text-gray-900 font-medium">{p.numCuota ?? '—'}</td>
+                            <td className="px-3 py-2 text-center text-gray-900 font-medium">
+                              {p.numCuota ?? '—'}
+                              {/* Las dos filas de un Pago doble (cuota #N y #N+1)
+                                  se marcan como adelanto para que se lean juntas. */}
+                              {p.pagoDoble && (
+                                <span className="block mt-0.5 mx-auto w-fit px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-100 text-indigo-800 whitespace-nowrap">
+                                  Adelanto cuota
+                                </span>
+                              )}
+                              {p.cambioContado && (
+                                <span className="block mt-0.5 mx-auto w-fit px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-teal-100 text-teal-800">
+                                  Contado
+                                </span>
+                              )}
+                            </td>
                             <td className="px-3 py-2 text-gray-900">{fechaPago}</td>
                             <td className="px-3 py-2 text-gray-700">
                               {gestor ? (
@@ -672,6 +725,15 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                                 </div>
                               ) : (
                                 <span className="text-xs text-gray-400 italic">{gestorLabel}</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-gray-700">
+                              {p.realizadopor ? (
+                                <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-100 text-teal-800">
+                                  {p.realizadopor}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-gray-400">—</span>
                               )}
                             </td>
                             <td className="px-3 py-2 text-right text-gray-900 font-medium">{p.valorPagado ? formatCurrency(p.valorPagado) : '—'}</td>
@@ -781,6 +843,13 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
             primerNombre: person.primerNombre,
             primerApellido: person.primerApellido,
             plan: (person as any).plan ?? null,
+          }}
+          fechaBaseContrato={calcFechaBaseContrato(person as any)}
+          // Las fechas sueltas son SOLO para el desglose del modal (mostrar de
+          // dónde salen los días); la base del cálculo sigue siendo la cascada.
+          fechasContrato={{
+            aprobacion: (person as any).fechaIngreso ?? null,
+            contrato: (person as any).inicioContrato ?? (person as any).fechaContrato ?? null,
           }}
           gestorLabel={currentGestor ? `${currentGestor.nombre} · ${ROLE_LABEL[currentGestor.rol] || currentGestor.rol}` : null}
           existingPagos={pagos}
@@ -1097,6 +1166,89 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                 className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50"
               >
                 {saving ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: marca Opcional (definitiva o temporal) ─────────────────── */}
+      {showOpcionalModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-5">
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Marcar como Opcional</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              El titular quedará destacado con <strong>OPC</strong> en la vista de Recaudos.
+            </p>
+
+            <div className="space-y-2 mb-4">
+              <label className={'flex items-start gap-2 p-3 rounded-lg border cursor-pointer ' +
+                (opcionalTipo === 'definitivo' ? 'border-amber-400 bg-amber-50' : 'border-gray-200')}>
+                <input
+                  type="radio"
+                  name="opcionalTipo"
+                  checked={opcionalTipo === 'definitivo'}
+                  onChange={() => setOpcionalTipo('definitivo')}
+                  className="mt-1"
+                />
+                <span className="text-sm">
+                  <span className="font-semibold text-gray-900">Definitivo</span>
+                  <span className="block text-gray-600">
+                    La marca queda puesta hasta que alguien la quite a mano.
+                  </span>
+                </span>
+              </label>
+
+              <label className={'flex items-start gap-2 p-3 rounded-lg border cursor-pointer ' +
+                (opcionalTipo === 'temporal' ? 'border-amber-400 bg-amber-50' : 'border-gray-200')}>
+                <input
+                  type="radio"
+                  name="opcionalTipo"
+                  checked={opcionalTipo === 'temporal'}
+                  onChange={() => setOpcionalTipo('temporal')}
+                  className="mt-1"
+                />
+                <span className="text-sm">
+                  <span className="font-semibold text-gray-900">Temporal</span>
+                  <span className="block text-gray-600">
+                    Vence en la fecha que elijas y <strong>vuelve sola</strong> al estado anterior.
+                  </span>
+                </span>
+              </label>
+            </div>
+
+            {opcionalTipo === 'temporal' && (
+              <label className="block mb-4">
+                <span className="block text-sm font-medium text-gray-700 mb-1">Vigente hasta *</span>
+                <input
+                  type="date"
+                  value={opcionalHasta}
+                  min={new Date().toISOString().slice(0, 10)}
+                  onChange={e => setOpcionalHasta(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
+                <span className="block text-xs text-gray-500 mt-1">
+                  Ese día la marca sigue vigente; se retira al día siguiente.
+                </span>
+              </label>
+            )}
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowOpcionalModal(false)}
+                disabled={togglingOpcional}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => aplicarOpcional('OPC', opcionalTipo === 'temporal' ? opcionalHasta : null)}
+                disabled={togglingOpcional || (opcionalTipo === 'temporal' && !opcionalHasta)}
+                className="px-5 py-2 text-sm font-semibold text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50"
+              >
+                {togglingOpcional ? 'Guardando…' : 'Marcar como OPC'}
               </button>
             </div>
           </div>

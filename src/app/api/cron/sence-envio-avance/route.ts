@@ -29,6 +29,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Kill-switch por variable de entorno: con SENCE_CRON_ENABLED='false' el envío
+  // nocturno de avance a SENCE NO se ejecuta (útil durante pruebas). Cualquier
+  // otro valor (o sin definir) = habilitado (comportamiento por defecto).
+  if (process.env.SENCE_CRON_ENABLED === 'false') {
+    console.log('Cron sence-envio-avance: DESHABILITADO (SENCE_CRON_ENABLED=false)')
+    return NextResponse.json({
+      success: true,
+      skipped: true,
+      message: 'SENCE cron deshabilitado por SENCE_CRON_ENABLED=false',
+      timestamp: new Date().toISOString(),
+    })
+  }
+
   try {
     const result = await recordCronRun('sence-envio-avance', async () => {
       console.log('Cron sence-envio-avance: Iniciando envío nocturno de avance a SENCE')

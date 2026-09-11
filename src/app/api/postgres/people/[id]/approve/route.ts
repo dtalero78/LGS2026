@@ -340,6 +340,24 @@ export const POST = handlerWithAuth(async (
     }
     console.log(`👥 [Approve] Resumen: ${beneficiaryResults.filter(r => r.whatsappSent).length}/${beneficiaryResults.length} WhatsApp enviados`);
 
+    // Reversa de "Aprobado → Pendiente": ese flujo bloquea el login de los
+    // beneficiarios (USUARIOS_ROLES.activo=false) SIN tocar su `aprobacion`.
+    // Al re-aprobar el titular, los beneficiarios ya están 'Aprobado' → el loop
+    // de arriba no los procesa. Reactivamos su login explícitamente aquí.
+    try {
+      const react = await query(
+        `UPDATE "USUARIOS_ROLES" SET "activo" = true
+           WHERE LOWER("email") IN (
+             SELECT LOWER("email") FROM "PEOPLE"
+             WHERE "contrato" = $1 AND "tipoUsuario" = 'BENEFICIARIO' AND "email" IS NOT NULL
+           )`,
+        [contrato]
+      );
+      console.log(`🔓 [Approve] Login reactivado de ${react.rowCount || 0} beneficiario(s)`);
+    } catch (err: any) {
+      console.error('⚠️ [Approve] No se pudo reactivar login de beneficiarios:', err.message);
+    }
+
     return successResponse({
       message: 'Titular y beneficiarios aprobados exitosamente',
       academicId: mainResult.academicId,
