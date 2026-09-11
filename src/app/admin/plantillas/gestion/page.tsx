@@ -39,6 +39,7 @@ export default function GestionPlantillasPage() {
   const [editorMode, setEditorMode] = useState<EditorMode>(null)
   const [editing, setEditing] = useState<Partial<Template>>({})
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<Template | null>(null)
 
   const load = async (withInactive = includeInactive) => {
@@ -59,11 +60,13 @@ export default function GestionPlantillasPage() {
 
   const openCreate = () => {
     setEditing({ slug: '', nombre: '', descripcion: '', contenido: '', activo: true })
+    setSaveError(null)
     setEditorMode('create')
   }
 
   const openEdit = (t: Template) => {
     setEditing({ ...t })
+    setSaveError(null)
     setEditorMode('edit')
   }
 
@@ -71,6 +74,7 @@ export default function GestionPlantillasPage() {
     if (saving) return
     setEditorMode(null)
     setEditing({})
+    setSaveError(null)
   }
 
   const handleSave = async () => {
@@ -83,6 +87,7 @@ export default function GestionPlantillasPage() {
       return
     }
     setSaving(true)
+    setSaveError(null)
     try {
       const isCreate = editorMode === 'create'
       const url = isCreate ? '/api/admin/plantillas' : `/api/admin/plantillas/${editing._id}`
@@ -106,7 +111,9 @@ export default function GestionPlantillasPage() {
       closeEditor()
       load()
     } catch (e: any) {
-      toast.error(e?.message || 'Error al guardar')
+      const msg = e?.message || 'Error al guardar'
+      setSaveError(msg)
+      toast.error(msg)
     } finally {
       setSaving(false)
     }
@@ -361,6 +368,13 @@ export default function GestionPlantillasPage() {
                   </label>
                 )}
               </div>
+
+              {saveError && (
+                <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+                  <XMarkIcon className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-700">{saveError}</p>
+                </div>
+              )}
 
               <div className="mt-5 flex justify-end gap-2 pt-3 border-t border-gray-100">
                 <button

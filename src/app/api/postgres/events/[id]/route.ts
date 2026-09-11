@@ -55,9 +55,12 @@ export const DELETE = handlerWithAuth(async (request, { params }, session) => {
   const motivo = searchParams.get('motivo') || undefined;
   const skipLog = searchParams.get('skipLog') === 'true';
   const deleteGroup = searchParams.get('deleteGroup') === 'true';
+  // Modo "Sesión con booking": cancela los bookings (devuelve el cupo semanal),
+  // los envía a Cancelación sin reemplazo y registra 'NoAsistio' en Ctrl Horas.
+  const conBooking = searchParams.get('conBooking') === 'true';
   const actor = (session?.user as any)?.email || 'system';
 
-  const result = await deleteEvent(params.id, deleteBookings, { actor, motivo, skipLog, deleteGroup });
+  const result = await deleteEvent(params.id, deleteBookings, { actor, motivo, skipLog, deleteGroup, conBooking });
 
   return successResponse({
     message: 'Evento eliminado exitosamente',

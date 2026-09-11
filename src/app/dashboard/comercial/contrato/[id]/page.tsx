@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { normalizeNumeroId } from '@/lib/numeroid-normalize';
 import { useParams, useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
@@ -26,6 +27,7 @@ import {
   PaperClipIcon,
 } from '@heroicons/react/24/outline'
 import { fillContractTemplate, type ConsentDisplay } from '@/lib/contract-template-filler'
+import { isContratoPrueba } from '@/components/common/ContratoPruebaBadge'
 
 // ── Field definitions ──
 
@@ -56,7 +58,7 @@ const CAMPOS_TITULAR: FieldDef[] = [
   { campo: 'cargo', label: 'Cargo' },
   { campo: 'genero', label: 'Genero', tipo: 'select', opciones: ['Masculino', 'Femenino', 'Otro'] },
   { campo: 'medioPago', label: 'Medio de Pago' },
-  { campo: 'asesor', label: 'Asesor' },
+  { campo: 'asesor', label: 'Asesor Comercial' },
 ]
 
 const CAMPOS_REFERENCIAS: FieldDef[] = [
@@ -227,6 +229,8 @@ export default function ContratoDetailPage() {
 
   // Contract preview modal
   const [showContractModal, setShowContractModal] = useState(false)
+  // Confirmación al cerrar el modal del contrato: recuerda firmar/enviar/imprimir
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false)
   const [contractHtml, setContractHtml] = useState('')
   const [loadingTemplate, setLoadingTemplate] = useState(false)
 
@@ -279,6 +283,19 @@ export default function ContratoDetailPage() {
     loadData()
     loadConsentStatus()
   }, [loadData, loadConsentStatus])
+
+  // Refetch silencioso del titular al abrir la confirmación de cierre — el
+  // indicador "PDF archivado en Drive" lee PEOPLE.driveFileId, que puede haber
+  // cambiado (auto-archivado tras la firma OTP, Enviar PDF, regeneración).
+  useEffect(() => {
+    if (!showCloseConfirm) return
+    ;(async () => {
+      try {
+        const d = await api.get(`/api/postgres/contracts/${titularId}`)
+        if (d?.titular) setTitular(d.titular)
+      } catch { /* silencioso — se muestra el dato en memoria */ }
+    })()
+  }, [showCloseConfirm, titularId])
 
   // Poll consent status — only after sending WhatsApp, stops after 10 min or when signed
   const [pollingActive, setPollingActive] = useState(false)
@@ -360,9 +377,9 @@ export default function ContratoDetailPage() {
       const nombre = titular?.primerNombre || ''
 
       const message =
-        `Hola ${nombre}: \n\n` +
-        `*Tu contrato con LetsGoSpeak esta listo!*\n\n` +
-        `Para revisarlo sigue este enlace:\n\n` +
+        `Hola ${nombre}:\n\n` +
+        `*¡Tu contrato con Let's Go Speak ya está listo!*\n\n` +
+        `Para revisarlo y firmarlo sigue este enlace:\n\n` +
         `${contractUrl}\n\n` +
         `Si tienes alguna pregunta, no dudes en contactarnos.`
 
@@ -630,6 +647,11 @@ export default function ContratoDetailPage() {
     <DashboardLayout>
       <PermissionGuard permission={ComercialPermission.MODIFICAR_CONTRATO}>
         <div className="max-w-6xl mx-auto">
+          {isContratoPrueba(titular.contrato) && (
+            <div className="mb-4 rounded-md border border-orange-400 bg-orange-50 px-4 py-3 text-sm text-orange-900">
+              🧪 <strong>Contrato de prueba ({titular.contrato}).</strong> Solo se puede <strong>ver, editar y adjuntar documentación</strong>. No aplican solicitar firma, enviar PDF, imprimir, autoaprobar ni aprobar.
+            </div>
+          )}
           {/* Header */}
           <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -685,16 +707,18 @@ export default function ContratoDetailPage() {
                   </button>
                 </>
               )}
-              {!consentStatus?.hasConsent && (
-                <button
-                  type="button"
-                  onClick={autoApproveConsent}
-                  disabled={approvingConsent}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium disabled:opacity-50"
-                >
-                  <ShieldCheckIcon className="h-4 w-4" />
-                  {approvingConsent ? 'Aprobando...' : 'Auto-Aprobar Consentimiento'}
-                </button>
+              {!consentStatus?.hasConsent && !isContratoPrueba(titular.contrato) && (
+                <PermissionGuard permission={ComercialPermission.APROBACION_AUTONOMA}>
+                  <button
+                    type="button"
+                    onClick={autoApproveConsent}
+                    disabled={approvingConsent}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium disabled:opacity-50"
+                  >
+                    <ShieldCheckIcon className="h-4 w-4" />
+                    {approvingConsent ? 'Aprobando...' : 'Auto-Aprobar Consentimiento'}
+                  </button>
+                </PermissionGuard>
               )}
             </div>
           </div>
@@ -717,7 +741,7 @@ export default function ContratoDetailPage() {
                     {consentStatus.consent.numeroDocumento && (
                       <div>
                         <span className="font-medium">Documento:</span>{' '}
-                        {consentStatus.consent.numeroDocumento}
+                        {normalizeNumeroId(consentStatus.consent.numeroDocumento)}
                       </div>
                     )}
                     {consentStatus.consent.timestampAcceptacion && (
@@ -887,10 +911,10 @@ export default function ContratoDetailPage() {
           {showContractModal && (
             <div className="fixed inset-0 z-50 overflow-y-auto">
               <div className="flex min-h-full items-start justify-center p-4 pt-10">
-                {/* Backdrop */}
+                {/* Backdrop — también pasa por la confirmación de cierre */}
                 <div
                   className="fixed inset-0 bg-black/50 transition-opacity"
-                  onClick={() => setShowContractModal(false)}
+                  onClick={() => setShowCloseConfirm(true)}
                 />
 
                 {/* Modal panel */}
@@ -908,7 +932,7 @@ export default function ContratoDetailPage() {
                     <button
                       type="button"
                       title="Cerrar"
-                      onClick={() => setShowContractModal(false)}
+                      onClick={() => setShowCloseConfirm(true)}
                       className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
                     >
                       <XMarkIcon className="h-6 w-6" />
@@ -947,32 +971,7 @@ export default function ContratoDetailPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => {
-                          if (typeof window !== 'undefined') {
-                            const printWindow = window.open('', '_blank')
-                            if (printWindow) {
-                              printWindow.document.write(`
-                                <html>
-                                  <head>
-                                    <title>Contrato ${titular.contrato}</title>
-                                    <style>
-                                      body { font-family: Georgia, serif; padding: 40px; line-height: 1.6; white-space: pre-wrap; font-size: 14px; color: #1a1a1a; }
-                                      @media print { body { padding: 20px; } }
-                                    </style>
-                                  </head>
-                                  <body>${contractHtml.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</body>
-                                </html>
-                              `)
-                              printWindow.document.close()
-                              printWindow.print()
-                            }
-                          }
-                        }}
-                        className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 text-sm font-medium"
-                      >
-                        Imprimir
-                      </button>
+                      {!isContratoPrueba(titular.contrato) && (<>
                       <button
                         onClick={sendContractWhatsApp}
                         disabled={sendingWhatsApp || !titular?.celular}
@@ -996,8 +995,35 @@ export default function ContratoDetailPage() {
                         {sendingPdf ? 'Generando PDF...' : 'Enviar PDF'}
                       </button>
                       <button
-                        onClick={() => setShowContractModal(false)}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 text-sm font-medium"
+                        onClick={() => {
+                          if (typeof window !== 'undefined') {
+                            const printWindow = window.open('', '_blank')
+                            if (printWindow) {
+                              printWindow.document.write(`
+                                <html>
+                                  <head>
+                                    <title>Contrato ${titular.contrato}</title>
+                                    <style>
+                                      body { font-family: Georgia, serif; padding: 40px; line-height: 1.6; white-space: pre-wrap; font-size: 14px; color: #1a1a1a; }
+                                      @media print { body { padding: 20px; } }
+                                    </style>
+                                  </head>
+                                  <body>${contractHtml.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</body>
+                                </html>
+                              `)
+                              printWindow.document.close()
+                              printWindow.print()
+                            }
+                          }
+                        }}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-400 text-gray-900 rounded-md hover:bg-yellow-500 text-sm font-medium"
+                      >
+                        Imprimir
+                      </button>
+                      </>)}
+                      <button
+                        onClick={() => setShowCloseConfirm(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm font-medium"
                       >
                         Cerrar
                       </button>
@@ -1005,6 +1031,44 @@ export default function ContratoDetailPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Confirmación al cerrar: recordar firmar / enviar / imprimir */}
+              {showCloseConfirm && (
+                <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4">
+                  <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-2xl">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">¿Cerrar el contrato?</h3>
+                    <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                      ⚠️ Asegúrese de que el contrato esté <b>firmado</b> y <b>enviado al usuario</b>, y si así lo requiere, <b>imprimirlo</b>.
+                    </div>
+                    <div className="mb-4 space-y-1.5 text-sm">
+                      <p className="flex items-center gap-2">
+                        {consentStatus?.hasConsent
+                          ? <><span className="text-green-600 font-bold">✓</span> <span className="text-gray-700">Consentimiento firmado</span></>
+                          : <><span className="text-red-500 font-bold">✗</span> <span className="text-gray-700">Consentimiento <b>sin firmar</b></span></>}
+                      </p>
+                      <p className="flex items-center gap-2">
+                        {(titular?.driveFileId || pdfStatus === 'sent')
+                          ? <><span className="text-green-600 font-bold">✓</span> <span className="text-gray-700">PDF del contrato archivado en el Drive</span></>
+                          : <><span className="text-red-500 font-bold">✗</span> <span className="text-gray-700">PDF <b>no archivado</b> en el Drive — use &quot;Enviar PDF&quot;</span></>}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setShowCloseConfirm(false)}
+                        className="flex-1 bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                      >
+                        Volver
+                      </button>
+                      <button
+                        onClick={() => { setShowCloseConfirm(false); setShowContractModal(false) }}
+                        className="flex-1 bg-purple-600 text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-purple-700"
+                      >
+                        Aceptar y cerrar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

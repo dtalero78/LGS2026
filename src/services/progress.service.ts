@@ -21,6 +21,7 @@ import { PeopleRepository } from '@/repositories/people.repository';
 import { AcademicaRepository } from '@/repositories/academica.repository';
 import { StepOverridesRepository } from '@/repositories/niveles.repository';
 import { NotFoundError } from '@/lib/errors';
+import { tzForPlataforma } from '@/lib/timezone';
 
 // --- Helpers ---
 
@@ -123,8 +124,11 @@ export async function generateReport(studentId: string) {
 
   const nivelPrincipal = student.nivel;
 
-  // Get all classes for this student (exclude future sessions)
+  // Get all classes for this student (exclude future sessions). "Pasado" se
+  // evalúa en la hora LOCAL del estudiante ($2 = TZ por plataforma), no en UTC,
+  // para que una sesión de esta tarde-noche cuente hoy y no quede como "futura".
   // JOIN with CALENDARIO to get the real step/nivel from the event
+  const tz = tzForPlataforma(student.plataforma);
   const allClasses = await queryMany(
     `SELECT b."_id", b."eventoId",
             COALESCE(c."nivel", b."nivel") AS "nivel",
@@ -135,9 +139,10 @@ export async function generateReport(studentId: string) {
      FROM "ACADEMICA_BOOKINGS" b
      LEFT JOIN "CALENDARIO" c ON (c."_id" = b."eventoId" OR c."_id" = b."idEvento")
      WHERE (b."idEstudiante" = $1 OR b."studentId" = $1)
-       AND (b."fechaEvento" IS NULL OR b."fechaEvento"::date <= CURRENT_DATE)
+       AND (b."fechaEvento" IS NULL
+            OR (b."fechaEvento" AT TIME ZONE $2)::date <= (NOW() AT TIME ZONE $2)::date)
      ORDER BY b."fechaEvento" DESC`,
-    [student._id]
+    [student._id, tz]
   );
 
   // Filter classes for current nivel (exclude ESS and WELCOME from step progress)

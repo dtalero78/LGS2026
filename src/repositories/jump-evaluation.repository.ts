@@ -15,6 +15,7 @@
 
 import 'server-only';
 import { query, queryOne, queryMany } from '@/lib/postgres';
+import { ensureOnce } from '@/lib/ensure-once';
 
 const JSONB_FIELDS = ['criterios', 'fortalezas', 'debilidades', 'transcript'];
 
@@ -42,11 +43,7 @@ export interface JumpEvaluation {
   _updatedDate: string;
 }
 
-let ensured = false;
-
-/** Idempotent table creation. Runs once per server boot. */
-async function ensureTable(): Promise<void> {
-  if (ensured) return;
+async function createTable(): Promise<void> {
   await query(`
     CREATE TABLE IF NOT EXISTS "JUMP_EVALUATIONS" (
       "_id" VARCHAR(64) PRIMARY KEY,
@@ -78,7 +75,14 @@ async function ensureTable(): Promise<void> {
   await query(
     `CREATE INDEX IF NOT EXISTS "idx_jumpeval_review" ON "JUMP_EVALUATIONS" ("reviewStatus", "_createdDate" DESC)`
   );
-  ensured = true;
+}
+
+/**
+ * Idempotent table creation. Corre una sola vez por proceso, pase lo que pase.
+ * El esquema se garantiza de verdad con scripts/add-columnas-legacy-ensure.js.
+ */
+function ensureTable(): Promise<void> {
+  return ensureOnce('JUMP_EVALUATIONS', createTable);
 }
 
 function parse(row: any): JumpEvaluation | null {

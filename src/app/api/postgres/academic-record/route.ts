@@ -4,22 +4,20 @@ import { ValidationError, NotFoundError } from '@/lib/errors';
 import { autoAdvanceStep } from '@/services/student.service';
 import { query, queryOne } from '@/lib/postgres';
 import { getSessionWindow, EXPIRED_MESSAGE } from '@/lib/session-window';
+import { ensureOnce } from '@/lib/ensure-once';
 
 const UPDATABLE_FIELDS = [
   'asistio', 'asistencia', 'participacion', 'noAprobo',
   'calificacion', 'comentarios', 'advisorAnotaciones', 'actividadPropuesta',
 ];
 
-// Ensure ACADEMICA.pruebainter column exists (idempotent, once per server start)
-let pruebainterColumnEnsured = false;
-async function ensurePruebaInterColumn() {
-  if (pruebainterColumnEnsured) return;
-  try {
-    await query(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "pruebainter" VARCHAR(10)`, []);
-    pruebainterColumnEnsured = true;
-  } catch (err: any) {
-    console.warn('[academic-record] ensurePruebaInterColumn:', err.message);
-  }
+// Ensure ACADEMICA.pruebainter column exists (idempotent, once per server start).
+// Misma clave que booking.repository: si uno ya la aseguro, el otro no repite el DDL.
+// El esquema se garantiza de verdad con scripts/add-columnas-legacy-ensure.js.
+function ensurePruebaInterColumn() {
+  return ensureOnce('ACADEMICA.pruebainter', () =>
+    query(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "pruebainter" VARCHAR(10)`, [])
+  );
 }
 
 /**

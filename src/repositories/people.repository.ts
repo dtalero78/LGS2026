@@ -5,6 +5,7 @@
  */
 
 import 'server-only';
+import type { PoolClient } from 'pg';
 import { query, queryOne, queryMany, parseJsonbFields } from '@/lib/postgres';
 import { BaseRepository } from './base.repository';
 import { NotFoundError } from '@/lib/errors';
@@ -382,9 +383,11 @@ class PeopleRepositoryClass extends BaseRepository {
   // ── Dashboard helpers ──
 
   async countActive(): Promise<number> {
+    // Activo = NO inactivado. `estadoInactivo IS NOT TRUE` incluye false Y NULL
+    // (NULL = nunca inactivado = activo, misma convención que el cron y el resto
+    // de queries). Usar `= false` dejaba fuera ~4k filas con estadoInactivo NULL.
     // Excluye contratos de prueba (PRB-) del conteo del dashboard.
-    // Sin COALESCE en el WHERE — bloquea uso de índices sobre "contrato".
-    return this.count(`WHERE "estadoInactivo" = false AND ("contrato" IS NULL OR "contrato" NOT LIKE 'PRB-%')`);
+    return this.count(`WHERE "estadoInactivo" IS NOT TRUE AND ("contrato" IS NULL OR "contrato" NOT LIKE 'PRB-%')`);
   }
 
   async countInactive(): Promise<number> {
@@ -405,6 +408,91 @@ class PeopleRepositoryClass extends BaseRepository {
       `SELECT * FROM "PEOPLE" WHERE "numeroId" = $1 AND "tipoUsuario" = 'BENEFICIARIO' LIMIT 1`,
       [numeroId]
     );
+  }
+
+  /** Fechas de contrato de una persona por numeroId — usado para reportar fechaInicio/fechaFin a SENCE. */
+  async findContractDatesByNumeroId(numeroId: string) {
+    return queryOne<{ inicioContrato: string | null; fechaContrato: string | null; finalContrato: string | null }>(
+      `SELECT "inicioContrato", "fechaContrato", "finalContrato" FROM "PEOPLE" WHERE "numeroId" = $1 LIMIT 1`,
+      [numeroId]
+    );
+  }
+
+  // ── Conversión Titular → Beneficiario ──
+
+  /** Titular exacto por contrato + numeroId (para validar la coincidencia). */
+  async findTitularByContratoAndNumeroId(contrato: string, numeroId: string) {
+    const row = await queryOne(
+      `SELECT * FROM "PEOPLE"
+       WHERE "contrato" = $1 AND "numeroId" = $2 AND "tipoUsuario" = 'TITULAR' LIMIT 1`,
+      [contrato, numeroId]
+    );
+    return this.parse(row);
+  }
+
+  /**
+   * Busca un BENEFICIARIO existente que coincida con los datos identificatorios
+   * del titular: mismo numeroId, o mismo email, o mismo celular (ignorando
+   * valores vacíos). Sirve para advertir/cancelar la conversión si la persona
+   * ya figura como beneficiario en cualquier contrato. Devuelve el match o null.
+   */
+  async findBeneficiarioByTitularData(numeroId: string, email: string | null, celular: string | null) {
+    return queryOne(
+      `SELECT "_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
+              "email", "celular", "contrato"
+       FROM "PEOPLE"
+       WHERE "tipoUsuario" = 'BENEFICIARIO'
+         AND (
+           "numeroId" = $1
+           OR (COALESCE($2, '') <> '' AND "email" = $2)
+           OR (COALESCE($3, '') <> '' AND "celular" = $3)
+         )
+       LIMIT 1`,
+      [numeroId, email, celular]
+    );
+  }
+
+  /**
+   * Duplica TODAS las columnas de un TITULAR como una nueva fila BENEFICIARIO.
+   * Solo se transforma `tipoUsuario` (TITULAR → BENEFICIARIO); además se asigna
+   * `_id` nuevo, `titularId` = _id del titular y `_createdDate`/`_updatedDate`.
+   * El resto se copia verbatim (incluido JSONB — `INSERT ... SELECT` conserva el
+   * tipo nativo, sin round-trip en JS). Las columnas se leen de information_schema
+   * para que sea robusto ante cambios de esquema.
+   */
+  async duplicateTitularAsBeneficiario(titularId: string, newId: string, client?: PoolClient) {
+    const run = client
+      ? (sql: string, p: any[]) => client.query(sql, p)
+      : (sql: string, p: any[]) => query(sql, p);
+
+    const colsRes = await run(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'PEOPLE'
+       ORDER BY ordinal_position`,
+      []
+    );
+    const cols: string[] = colsRes.rows.map((r: any) => r.column_name);
+
+    // Expresiones SQL que sobrescriben columnas puntuales; el resto se copia tal cual.
+    // Cast explícito ::text — un parámetro suelto en la lista del SELECT no tiene
+    // contexto de tipo y Postgres no puede deducirlo ("inconsistent types").
+    const overrides: Record<string, string> = {
+      _id: '$2::text',
+      tipoUsuario: `'BENEFICIARIO'`,
+      titularId: '$1::text',
+      _createdDate: 'NOW()',
+      _updatedDate: 'NOW()',
+    };
+    const colList = cols.map((c) => `"${c}"`).join(', ');
+    const selectList = cols.map((c) => (overrides[c] ? `${overrides[c]} AS "${c}"` : `"${c}"`)).join(', ');
+
+    const res = await run(
+      `INSERT INTO "PEOPLE" (${colList})
+       SELECT ${selectList} FROM "PEOPLE" WHERE "_id" = $1 AND "tipoUsuario" = 'TITULAR'
+       RETURNING *`,
+      [titularId, newId]
+    );
+    return this.parse(res.rows[0]);
   }
 }
 

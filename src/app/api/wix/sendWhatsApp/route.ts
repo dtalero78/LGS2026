@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { whatsappConfigService } from '@/services/whatsapp-config.service'
 
 async function isAuthorized(request: NextRequest): Promise<boolean> {
   const wixSecret = request.headers.get('x-wix-secret');
@@ -42,12 +43,15 @@ export async function POST(request: NextRequest) {
 
     console.log('📤 Sending WhatsApp to:', formattedNumber, `(original: ${toNumber})`)
 
+    // Canal de WhatsApp según la config por tipo (Mantenimiento › Contingencia).
+    const token = await whatsappConfigService.getActiveToken('solicitar_firma')
+
     // Send WhatsApp message using the same API as Wix
     const whatsappResponse = await fetch('https://gate.whapi.cloud/messages/text', {
       method: 'POST',
       headers: {
         'accept': 'application/json',
-        'authorization': 'Bearer VSyDX4j7ooAJ7UGOhz8lGplUVDDs2EYj',
+        'authorization': `Bearer ${token}`,
         'content-type': 'application/json'
       },
       body: JSON.stringify({

@@ -44,7 +44,7 @@ export function useEvaluarMutation() {
 /** Dashboard admin de Performance Evaluation. */
 export function usePerformanceDashboard(filters: {
   startDate?: string | null; endDate?: string | null;
-  advisorId?: string | null; nivel?: string | null;
+  advisorId?: string | null; advisorIds?: string | null; nivel?: string | null;
   tipo?: string | null; plataforma?: string | null;
   comentarioSearch?: string | null;
 }) {
@@ -54,6 +54,23 @@ export function usePerformanceDashboard(filters: {
     keys.dashboard(filters as any),
     () => api.get(`${ADMIN_BASE}?${qs.toString()}`),
     { staleTime: 60 * 1000 }
+  )
+}
+
+/** Búsqueda de comentarios (un advisor o "Todos", con identidad del alumno) — pestaña "Búsqueda por comentario". */
+export function useComentariosBusqueda(filters: {
+  advisorId?: string | null; advisorIds?: string | null;
+  startDate?: string | null; endDate?: string | null;
+  tipo?: string | null; banda?: number | null;
+}, enabled: boolean = true) {
+  const qs = new URLSearchParams()
+  Object.entries(filters).forEach(([k, v]) => {
+    if (v !== null && v !== undefined && v !== '') qs.set(k, String(v))
+  })
+  return useQuery(
+    ['evaluations', 'comentarios-busqueda', filters],
+    () => api.get(`${ADMIN_BASE}/comentarios-busqueda?${qs.toString()}`),
+    { staleTime: 60 * 1000, enabled }
   )
 }
 

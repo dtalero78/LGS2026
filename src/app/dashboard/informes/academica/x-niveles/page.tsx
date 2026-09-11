@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { ArrowDownTrayIcon, AcademicCapIcon } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { exportToExcel } from '@/lib/export-excel'
@@ -20,8 +20,9 @@ export default function XNivelesPage() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate]     = useState('')
   const [data, setData]   = useState<Data | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [consultado, setConsultado] = useState(false)
 
   const fetchData = useCallback(async (nv: string, st: string, sd: string, ed: string) => {
     setLoading(true); setError(null)
@@ -39,15 +40,19 @@ export default function XNivelesPage() {
     finally { setLoading(false) }
   }, [])
 
-  useEffect(() => { fetchData('', '', '', '') }, [fetchData])
-
   // Cambiar nivel reinicia el step y recarga (así el dropdown de steps se
   // repuebla y el conteo/chips quedan siempre en sync con lo mostrado).
-  const onNivelChange = (v: string) => { setNivel(v); setStep(''); fetchData(v, '', startDate, endDate) }
-  const onStepChange  = (v: string) => { setStep(v); fetchData(nivel, v, startDate, endDate) }
-  const pickNivel     = (v: string) => { setNivel(v); setStep(''); fetchData(v, '', startDate, endDate) }
-  const handleApply   = () => fetchData(nivel, step, startDate, endDate)
-  const handleClear   = () => { setNivel(''); setStep(''); setStartDate(''); setEndDate(''); fetchData('', '', '', '') }
+  // Estos handlers solo son alcanzables tras la primera consulta (sus opciones
+  // vienen de `data`), por eso refrescan directamente.
+  const onNivelChange = (v: string) => { setNivel(v); setStep(''); setConsultado(true); fetchData(v, '', startDate, endDate) }
+  const onStepChange  = (v: string) => { setStep(v); setConsultado(true); fetchData(nivel, v, startDate, endDate) }
+  const pickNivel     = (v: string) => { setNivel(v); setStep(''); setConsultado(true); fetchData(v, '', startDate, endDate) }
+  const handleApply   = () => {
+    if (!window.confirm('Esta consulta recorre muchos registros y puede ser pesada. ¿Deseas continuar?')) return
+    setConsultado(true)
+    fetchData(nivel, step, startDate, endDate)
+  }
+  const handleClear   = () => { setNivel(''); setStep(''); setStartDate(''); setEndDate(''); setData(null); setConsultado(false) }
 
   const handleCSV = () => {
     if (!data?.rows.length) return
@@ -126,6 +131,15 @@ export default function XNivelesPage() {
             <button type="button" onClick={handleApply} className="ml-4 text-xs underline">Reintentar</button></div>
         )}
 
+        {/* Estado vacío */}
+        {!consultado && !loading && !error && (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center text-sm text-indigo-900">
+            Configura los filtros y pulsa <b>Consultar</b> para ver el informe.
+          </div>
+        )}
+
+        {consultado && (<>
+
         {/* Conteo + desglose por nivel */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-3">
@@ -184,6 +198,8 @@ export default function XNivelesPage() {
             </div>
           )}
         </div>
+
+        </>)}
       </div>
     </DashboardLayout>
   )

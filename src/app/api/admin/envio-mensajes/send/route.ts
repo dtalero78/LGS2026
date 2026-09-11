@@ -88,7 +88,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
     });
 
     try {
-      await sendWhatsAppMessage(d.celular, mensajeFinal);
+      await sendWhatsAppMessage(d.celular, mensajeFinal, 'masivo');
       resultados.push({
         numeroId: d.numeroId,
         nombre: `${d.nombre || ''} ${d.primerApellido || ''}`.trim() || '(sin nombre)',

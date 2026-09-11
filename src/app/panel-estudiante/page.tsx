@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useMemo, Suspense } from 'react'
+import { useState, useMemo, useEffect, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
 import {
   CalendarDaysIcon,
   BookOpenIcon,
@@ -8,8 +10,10 @@ import {
   VideoCameraIcon,
   XMarkIcon,
   UserCircleIcon,
+  SparklesIcon,
+  LockClosedIcon,
 } from '@heroicons/react/24/outline'
-import { useQuery } from 'react-query'
+import { useQuery, useQueryClient } from 'react-query'
 import {
   useStudentMe,
   useStudentEvents,
@@ -20,6 +24,7 @@ import {
   useStudentHistory,
   useCancelBooking,
 } from '@/hooks/use-panel-estudiante'
+import { getSenceErrorMessage } from '@/lib/sence-errors'
 
 import StudentHeader from '@/components/panel-estudiante/StudentHeader'
 import MyEventsSection from '@/components/panel-estudiante/MyEventsSection'
@@ -35,6 +40,15 @@ import WhatsAppContacts from '@/components/panel-estudiante/WhatsAppContacts'
 import AdvisorComments from '@/components/panel-estudiante/AdvisorComments'
 import ClassHistory from '@/components/panel-estudiante/ClassHistory'
 import JumpExamBanner from '@/components/panel-estudiante/JumpExamBanner'
+import ZoomAccessButton from '@/components/panel-estudiante/ZoomAccessButton'
+import { estadoZoom, proximoCambioZoom, MENSAJE_ZOOM_LISTO, MENSAJE_ZOOM_ESPERA, MENSAJE_ZOOM_RECONEXION, MENSAJE_ZOOM_VENCIDO, MENSAJE_ZOOM_CERRADO } from '@/lib/zoom-window'
+
+// Las reglas de la ventana de Zoom (ingreso −5/+10 + reconexión personal) viven
+// en lib/zoom-window. Aquí sólo cada cuánto reevaluar el estado del ícono.
+// NO dormimos hasta el hito exacto: los navegadores CONGELAN los timers largos
+// cuando la pestaña está en segundo plano o el móvil bloqueado, y el ícono no
+// cambiaría hasta que el alumno recargue. Reevaluar cada ≤20 s lo cambia solo.
+const ZOOM_REEVAL_MS = 20 * 1000
 
 function PanelEstudianteContent() {
   const [showBookingFlow, setShowBookingFlow] = useState(false)
@@ -48,6 +62,75 @@ function PanelEstudianteContent() {
   const [videoErr, setVideoErr] = useState(false)
   const [showInstructivos, setShowInstructivos] = useState(false)
   const [showPerfil, setShowPerfil] = useState(false)
+  const [showRecursos, setShowRecursos] = useState(false)
+  const [zoomTick, setZoomTick] = useState(0)
+  const [sencePending, setSencePending] = useState(false)
+  const [senceClosePending, setSenceClosePending] = useState(false)
+
+  // Retorno desde SENCE (inicio/cierre de sesión exitoso/fallido) — ver
+  // /api/sence/retorno, /api/sence/error, /api/sence/cierre-retorno, /api/sence/cierre-error
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  useEffect(() => {
+    const senceLogin = searchParams.get('senceLogin')
+    const senceClose = searchParams.get('senceClose')
+    if (senceLogin === 'success') {
+      toast.success('Sesión SENCE iniciada correctamente')
+    } else if (senceLogin === 'error') {
+      toast.error(getSenceErrorMessage(searchParams.get('glosaError')))
+    } else if (senceClose === 'success') {
+      toast.success('Sesión SENCE cerrada correctamente')
+    } else if (senceClose === 'error') {
+      toast.error(getSenceErrorMessage(searchParams.get('glosaError')))
+    } else {
+      return
+    }
+    router.replace('/panel-estudiante')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const submitSenceForm = async (
+    endpoint: string,
+    bookingId: string,
+    setPending: (v: boolean) => void
+  ) => {
+    setPending(true)
+    try {
+      const res = await fetch(`${endpoint}?bookingId=${encodeURIComponent(bookingId)}`)
+      const json = await res.json()
+      if (!json.success) {
+        toast.error(json.error || 'No se pudo conectar con SENCE')
+        setPending(false)
+        return
+      }
+      console.log(`📤 [SENCE] Enviando formulario a ${json.actionUrl}`, {
+        ...json.fields,
+        Token: json.fields?.Token ? `${String(json.fields.Token).slice(0, 4)}***` : '(vacío)',
+      })
+
+      const form = document.createElement('form')
+      form.method = 'POST'
+      form.action = json.actionUrl
+      Object.entries(json.fields as Record<string, string | number>).forEach(([name, value]) => {
+        const input = document.createElement('input')
+        input.type = 'hidden'
+        input.name = name
+        input.value = String(value)
+        form.appendChild(input)
+      })
+      document.body.appendChild(form)
+      form.submit()
+    } catch {
+      toast.error('No se pudo conectar con SENCE')
+      setPending(false)
+    }
+  }
+
+  const handleSenceLogin = (bookingId: string) =>
+    submitSenceForm('/api/postgres/panel-estudiante/sence-init', bookingId, setSencePending)
+
+  const handleSenceClose = (bookingId: string) =>
+    submitSenceForm('/api/postgres/panel-estudiante/sence-close-init', bookingId, setSenceClosePending)
 
   // Instructivos from API
   const instructivosQuery = useQuery(
@@ -81,6 +164,7 @@ function PanelEstudianteContent() {
 
   // Mutations
   const cancelMutation = useCancelBooking()
+  const queryClient = useQueryClient()
 
   const profile = meQuery.data?.profile
   const events = eventsQuery.data?.events || []
@@ -134,13 +218,78 @@ function PanelEstudianteContent() {
     setVideoOpen(true)
   }
 
+  // Estado del ícono de Zoom para ESTE alumno: ventana de ingreso (−5/+10) MÁS
+  // reconexión personal (quien entró conserva el ícono hasta 10 min antes del fin
+  // de la clase). Las reglas viven en lib/zoom-window; `zoomTick` (efecto abajo)
+  // reevalúa al llegar cada hito para que el ícono cambie solo sin recargar.
   const nextEventDate = nextClass ? new Date(nextClass.fechaEvento) : null
-  const now = new Date()
-  const showZoom = nextClass && nextEventDate
-    ? (nextEventDate.getTime() - now.getTime()) / (1000 * 60) <= 5
-      && (now.getTime() - nextEventDate.getTime()) / (1000 * 60) <= 10
-    : false
+  const inicioMs = nextEventDate ? nextEventDate.getTime() : null
+  const zoomTipo = nextClass?.eventTipo || nextClass?.tipo
+  const zoomAccesoEnMs = nextClass?.zoomAccesoEn ? new Date(nextClass.zoomAccesoEn).getTime() : null
+  const zoomEstado = inicioMs != null ? estadoZoom(inicioMs, zoomTipo, zoomAccesoEnMs) : 'espera'
+  const showZoom = zoomEstado === 'disponible'
   const zoomLink = nextClass?.eventLinkZoom || nextClass?.linkZoom
+  // Estudiantes SENCE deben iniciar sesión en SENCE (sistemas.sence.cl) antes
+  // de poder entrar a su clase. Se considera "hecho" cuando el booking tiene
+  // idSesionSence guardado (lo escribe /api/sence/retorno al volver de SENCE).
+  // El proceso SENCE está SIEMPRE activo (ya probado — se eliminó el switch).
+  // Se conserva la salvaguarda por-usuario `senceCode`: el CodigoCurso a veces
+  // no llega de inmediato al marcar al usuario como SENCE, y sin él /sence-init
+  // y /sence-close-init rechazan la solicitud (ValidationError). Mientras no
+  // tenga senceCode, se ignora el proceso SENCE y el usuario entra directo por Zoom.
+  const isSenceStudent =
+    !!(profile as any)?.sence && !!(profile as any)?.senceCode
+  const senceDone = !isSenceStudent || !!(nextClass as any)?.idSesionSence
+  // Sesión SENCE abierta (ya inició) pero aún no cerrada — se ofrece el botón
+  // de cierre independiente de la ventana de 5 min antes / 10 min después del
+  // link de Zoom (el alumno decide cuándo cerrarla).
+  const senceOpenNotClosed =
+    isSenceStudent && !!(nextClass as any)?.idSesionSence && !(nextClass as any)?.senceSessionClosedAt
+
+  // Deja constancia del acceso (para la reconexión) y refresca la lista para que el
+  // ícono quede activo hasta el fin de la clase. Best-effort: si falla, entra igual.
+  const registrarAccesoZoom = () => {
+    const eventoId = nextClass?.eventoId || nextClass?.idEvento
+    if (!eventoId) return
+    fetch('/api/postgres/panel-estudiante/zoom-acceso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventoId }),
+    })
+      .then(() => queryClient.invalidateQueries(['panel-estudiante', 'events']))
+      .catch(() => {})
+  }
+
+  // Reevalúa el estado del ícono sin que el alumno recargue. La espera se capa a
+  // ZOOM_REEVAL_MS: aunque falten 55 min para el hito, el timer despierta cada
+  // ≤20 s y recalcula con el reloj actual (los timers largos se congelan en
+  // segundo plano). Se re-arma solo por `zoomTick` en las deps y se DETIENE solo
+  // cuando ya no queda ningún cambio pendiente (proximoCambioZoom == null).
+  useEffect(() => {
+    if (inicioMs == null) return
+    const proximo = proximoCambioZoom(inicioMs, zoomTipo, zoomAccesoEnMs)
+    if (proximo == null) return
+    const espera = Math.max(1_000, Math.min(proximo - Date.now() + 1_000, ZOOM_REEVAL_MS))
+    const id = setTimeout(() => setZoomTick((t) => t + 1), espera)
+    return () => clearTimeout(id)
+  }, [inicioMs, zoomTipo, zoomAccesoEnMs, zoomTick])
+
+  // Al volver la pestaña a primer plano (móvil que se desbloquea, cambio de app o
+  // de pestaña), recalcula el ícono YA y refresca la data, sin esperar al timer
+  // —que pudo quedar congelado mientras estaba en segundo plano—.
+  useEffect(() => {
+    const despertar = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+      setZoomTick((t) => t + 1)
+      queryClient.invalidateQueries(['panel-estudiante', 'events'])
+    }
+    document.addEventListener('visibilitychange', despertar)
+    window.addEventListener('focus', despertar)
+    return () => {
+      document.removeEventListener('visibilitychange', despertar)
+      window.removeEventListener('focus', despertar)
+    }
+  }, [queryClient])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -175,6 +324,13 @@ function PanelEstudianteContent() {
           >
             <BookOpenIcon className="h-4 w-4" />
             Material
+          </button>
+          <button
+            onClick={() => setShowRecursos(true)}
+            className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1.5"
+          >
+            <SparklesIcon className="h-4 w-4" />
+            Recursos
           </button>
           <button
             onClick={() => setShowHistory(true)}
@@ -275,21 +431,47 @@ function PanelEstudianteContent() {
                   </p>
                 </div>
                 <div>
-                  <span className="text-xs text-primary-200 uppercase tracking-wide">Link de Ingreso</span>
-                  {showZoom && zoomLink ? (
-                    <a
-                      href={zoomLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 text-white text-sm font-medium rounded-lg hover:bg-white/30 transition-colors"
-                    >
-                      <VideoCameraIcon className="h-4 w-4" />
-                      Entrar a Zoom
-                    </a>
+                  <span className="text-xs text-primary-200 uppercase tracking-wide block">Link de Ingreso</span>
+                  {nextClass && isSenceStudent && !senceDone && showZoom ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleSenceLogin((nextClass as any)._id)}
+                        disabled={sencePending}
+                        className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white text-sm font-medium rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-60"
+                      >
+                        <LockClosedIcon className="h-4 w-4" />
+                        {sencePending ? 'Redirigiendo...' : 'Iniciar sesión SENCE'}
+                      </button>
+                      <p className="text-xs text-primary-200 mt-1">
+                        Debes iniciar sesión en SENCE antes de entrar a tu clase.
+                      </p>
+                    </>
+                  ) : zoomLink ? (
+                    <div className="mt-1 flex items-center gap-3">
+                      <ZoomAccessButton zoomLink={zoomLink} disponible={!!showZoom} onAcceso={registrarAccesoZoom} />
+                      {/* El aviso se mantiene visible; el texto cambia según el estado del enlace. */}
+                      <p className={`text-sm font-semibold ${showZoom ? 'text-emerald-200' : 'text-amber-200'}`}>
+                        {zoomEstado === 'disponible'
+                          ? (zoomAccesoEnMs ? MENSAJE_ZOOM_RECONEXION : MENSAJE_ZOOM_LISTO)
+                          : zoomEstado === 'vencido' ? MENSAJE_ZOOM_VENCIDO
+                          : zoomEstado === 'cerrado' ? MENSAJE_ZOOM_CERRADO
+                          : MENSAJE_ZOOM_ESPERA}
+                      </p>
+                    </div>
                   ) : (
-                    <p className="text-sm text-white">
-                      {zoomLink ? 'Enlace disponible 5 min antes, recuerda refrescar el navegador' : '---'}
-                    </p>
+                    <p className="text-sm text-white">---</p>
+                  )}
+                  {senceOpenNotClosed && (
+                    <button
+                      type="button"
+                      onClick={() => handleSenceClose((nextClass as any)._id)}
+                      disabled={senceClosePending}
+                      className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 text-white text-xs font-medium rounded-lg border border-white/30 hover:bg-white/20 transition-colors disabled:opacity-60"
+                    >
+                      <LockClosedIcon className="h-3.5 w-3.5" />
+                      {senceClosePending ? 'Redirigiendo...' : 'Cerrar sesión SENCE'}
+                    </button>
                   )}
                 </div>
                 <div className="pt-2 border-t border-white/20">
@@ -503,6 +685,79 @@ function PanelEstudianteContent() {
                 data={historyQuery.data}
                 isLoading={historyQuery.isLoading}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recursos Modal */}
+      {showRecursos && (
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between rounded-t-2xl">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <SparklesIcon className="h-5 w-5 text-primary-600" />
+                Recursos
+              </h2>
+              <button
+                onClick={() => setShowRecursos(false)}
+                className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6 flex flex-col items-center text-center">
+              {/* Animación del personaje (flotar suave). Respeta prefers-reduced-motion. */}
+              <style>{`
+                @keyframes lgs-recursos-float {
+                  0%, 100% { transform: translateY(0) rotate(0deg); }
+                  50%      { transform: translateY(-12px) rotate(-1.5deg); }
+                }
+                .lgs-recursos-float { animation: lgs-recursos-float 3.2s ease-in-out infinite; transform-origin: bottom center; }
+                @media (prefers-reduced-motion: reduce) {
+                  .lgs-recursos-float { animation: none; }
+                }
+              `}</style>
+              {/* Personaje LGS */}
+              <img
+                src="/recursos-personaje.png"
+                alt="Personaje LGS"
+                className="lgs-recursos-float w-32 sm:w-40 h-auto object-contain drop-shadow-md"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+              />
+              {/* Globo de diálogo */}
+              <div className="relative mt-4 max-w-md">
+                <div className="bg-primary-50 border border-primary-200 rounded-2xl px-5 py-4">
+                  <p className="text-base font-semibold text-primary-800">
+                    ¡Estamos trabajando para ti! 🚀
+                  </p>
+                  <p className="mt-2 text-sm text-gray-700 leading-relaxed">
+                    Estamos desarrollando más <span className="font-semibold">recursos</span> para
+                    acompañarte en tu proceso de aprendizaje del inglés. ¡Sigue agendando tus
+                    sesiones y clubes y espéralas muy pronto!
+                  </p>
+                  <p className="mt-2 text-sm font-medium text-primary-700">
+                    Mientras tanto, usa este botón para acceder el sitio Games to Learn English 💪
+                  </p>
+                </div>
+              </div>
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <a
+                  href="https://www.gamestolearnenglish.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
+                >
+                  🎮 GAMES
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setShowRecursos(false)}
+                  className="px-5 py-2.5 bg-primary-600 text-white text-sm font-semibold rounded-lg hover:bg-primary-700 transition-colors"
+                >
+                  ¡Entendido!
+                </button>
+              </div>
             </div>
           </div>
         </div>

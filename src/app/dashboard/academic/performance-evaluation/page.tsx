@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowDownTrayIcon, ArrowPathIcon, StarIcon, UserGroupIcon, UserCircleIcon } from '@heroicons/react/24/solid'
+import { ArrowDownTrayIcon, ArrowPathIcon, StarIcon, UserGroupIcon, UserCircleIcon, PrinterIcon, ListBulletIcon, ChatBubbleLeftEllipsisIcon } from '@heroicons/react/24/solid'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { exportToExcel } from '@/lib/export-excel'
 import { PermissionGuard } from '@/components/permissions/PermissionGuard'
 import { AcademicoPermission, Role } from '@/types/permissions'
-import { usePerformanceDashboard, useAdvisorsWithEvaluations } from '@/hooks/use-evaluations'
+import { usePerformanceDashboard, useAdvisorsWithEvaluations, useComentariosBusqueda } from '@/hooks/use-evaluations'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useSession } from 'next-auth/react'
 
@@ -31,26 +31,71 @@ const oneMonthBackStr = () => {
 /** Chips sugeridos sobre comentarios — clic filtra el buscador. */
 const COMMENT_KEYWORDS = ['tarde', 'rápido', 'no entendí', 'excelente', 'aburrido', 'práctica', 'audio']
 
+/** Plataformas (país del advisor) para el filtro de Alcance. */
+const PLATAFORMAS = ['Chile', 'Colombia', 'Ecuador', 'Perú']
+
+/** CSS de impresión / PDF compartido (Vista General y Por Advisor). */
+const PRINT_CSS = `
+  @media print {
+    .no-print, nav, footer { display: none !important; }
+    .print-header { display: flex !important; }
+    .print-expand { max-height: none !important; overflow: visible !important; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; }
+    .print-page { page-break-inside: avoid; }
+    @page { size: letter portrait; margin: 12mm 15mm 12mm 15mm; }
+    .watermark::after {
+      content: ''; position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%) rotate(-25deg);
+      width: 380px; height: 380px;
+      background: url('/logo.png') center / contain no-repeat;
+      opacity: 0.04; z-index: 9999; pointer-events: none;
+    }
+    table { page-break-inside: auto; }
+    tr { page-break-inside: avoid; }
+    thead { display: table-header-group; }
+  }
+  @media screen { .print-header { display: none !important; } }
+`
+
+/** Etiqueta legible del alcance actual (para cabeceras y PDF). */
+function alcanceLabel(usingLista: boolean, n: number, plataforma: string): string {
+  if (usingLista) return `Lista (${n} advisor${n === 1 ? '' : 's'})`
+  return plataforma ? `Plataforma: ${plataforma}` : 'Todos los advisors'
+}
+
 export default function PerformanceEvaluationPage() {
   const { data: session } = useSession()
   const role = (session?.user as any)?.role
   const canSeeRawComments = role === Role.SUPER_ADMIN || role === Role.ADMIN
   const { hasPermission } = usePermissions()
-  const canSeeByAdvisor = hasPermission(AcademicoPermission.PERFORMANCE_EVAL_POR_ADVISOR)
-                        || role === Role.SUPER_ADMIN || role === Role.ADMIN
+  const isAdmin = role === Role.SUPER_ADMIN || role === Role.ADMIN
+  const canSeeByAdvisor = hasPermission(AcademicoPermission.PERFORMANCE_EVAL_POR_ADVISOR) || isAdmin
+  const canSeeLista = hasPermission(AcademicoPermission.PERFORMANCE_EVAL_LISTA) || isAdmin
+  const canSeeBusqueda = hasPermission(AcademicoPermission.PERFORMANCE_EVAL_BUSQUEDA_COMENTARIO) || isAdmin
 
-  // Tab activo: vista general o vista por advisor.
-  const [view, setView] = useState<'general' | 'porAdvisor'>('general')
+  // Tab activo: vista general, por advisor, lista o búsqueda por comentario.
+  const [view, setView] = useState<'general' | 'porAdvisor' | 'lista' | 'busqueda'>('general')
 
   const [filters, setFilters] = useState({
     startDate: oneMonthBackStr(),
     endDate:   todayStr(),
-    advisorId: '',
-    nivel:     '',
     tipo:      '',
-    plataforma: '',
     comentarioSearch: '',
   })
+
+  // ── Alcance compartido por las 3 pestañas (modos EXCLUYENTES) ──────────
+  // Si hay advisors marcados en la pestaña Lista → manda la LISTA; si no,
+  // manda la PLATAFORMA (país del advisor); vacío = TODOS.
+  const [scopePlataforma, setScopePlataforma] = useState<string>('')   // '' = Todas
+  const [scopeAdvisorIds, setScopeAdvisorIds] = useState<string[]>([])
+  const usingLista = scopeAdvisorIds.length > 0
+  const scopeParams = usingLista
+    ? { advisorIds: scopeAdvisorIds.join(','), plataforma: null as string | null }
+    : { advisorIds: null as string | null, plataforma: scopePlataforma || null }
+
+  // Lista de advisors (con país) — se carga una vez y se comparte entre pestañas.
+  const advisorsQ = useAdvisorsWithEvaluations()
+  const advisorsRaw: any[] = advisorsQ.data?.advisors ?? []
 
   // Modal de radar por advisor (cuando se hace click en una fila del ranking).
   const [radarAdvisor, setRadarAdvisor] = useState<any | null>(null)
@@ -58,12 +103,12 @@ export default function PerformanceEvaluationPage() {
   const dashQ = usePerformanceDashboard({
     startDate: filters.startDate || null,
     endDate:   filters.endDate || null,
-    advisorId: filters.advisorId || null,
-    nivel:     filters.nivel || null,
     tipo:      filters.tipo || null,
-    plataforma: filters.plataforma || null,
+    ...scopeParams,
     comentarioSearch: filters.comentarioSearch || null,
   })
+
+  const handlePrint = () => window.print()
 
   const data: any = dashQ.data
   const kpis  = data?.kpis ?? null
@@ -109,20 +154,24 @@ export default function PerformanceEvaluationPage() {
       <PermissionGuard permission={AcademicoPermission.PERFORMANCE_EVAL_VER}>
         <div className="space-y-5 pb-10">
           {/* Header con tabs */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 no-print">
             <StarIcon className="h-7 w-7 text-amber-500" />
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Performance Evaluation</h1>
               <p className="text-sm text-gray-500">
                 {view === 'general'
                   ? 'Vista global de evaluaciones — Top 5 / 5 Promedios Más Bajos.'
-                  : 'Vista por advisor — métricas individuales comparadas contra el promedio general.'}
+                  : view === 'porAdvisor'
+                  ? 'Vista por advisor — métricas individuales comparadas contra el promedio general.'
+                  : view === 'lista'
+                  ? 'Lista de advisors — marca los que definen el Alcance (plataforma o selección).'
+                  : 'Búsqueda por comentario — comentarios filtrados por banda de promedio, con el usuario que los escribió.'}
               </p>
             </div>
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 border-b border-gray-200">
+          <div className="flex gap-1 border-b border-gray-200 no-print">
             <button
               type="button"
               onClick={() => setView('general')}
@@ -147,6 +196,33 @@ export default function PerformanceEvaluationPage() {
                 <UserCircleIcon className="h-4 w-4" /> Por Advisor
               </button>
             )}
+            {canSeeLista && (
+              <button
+                type="button"
+                onClick={() => setView('lista')}
+                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition ${
+                  view === 'lista'
+                    ? 'border-indigo-600 text-indigo-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+                }`}
+              >
+                <ListBulletIcon className="h-4 w-4" /> Lista
+                {usingLista && <span className="ml-1 text-[10px] bg-indigo-600 text-white rounded-full px-1.5 py-0.5">{scopeAdvisorIds.length}</span>}
+              </button>
+            )}
+            {canSeeBusqueda && (
+              <button
+                type="button"
+                onClick={() => setView('busqueda')}
+                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition ${
+                  view === 'busqueda'
+                    ? 'border-indigo-600 text-indigo-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+                }`}
+              >
+                <ChatBubbleLeftEllipsisIcon className="h-4 w-4" /> Búsqueda por comentario
+              </button>
+            )}
           </div>
 
           {/* ─────────────────────────────────────────────────────────────
@@ -158,6 +234,42 @@ export default function PerformanceEvaluationPage() {
                 filterDates={{ startDate: filters.startDate, endDate: filters.endDate, tipo: filters.tipo }}
                 onFilterDatesChange={(patch) => setFilters(f => ({ ...f, ...patch }))}
                 canExport={true}
+                advisorsRaw={advisorsRaw}
+                scopePlataforma={scopePlataforma}
+                setScopePlataforma={setScopePlataforma}
+                scopeAdvisorIds={scopeAdvisorIds}
+                usingLista={usingLista}
+              />
+            </PermissionGuard>
+          )}
+
+          {/* ─────────────────────────────────────────────────────────────
+              LISTA — selección de advisors que define el Alcance
+            ───────────────────────────────────────────────────────────── */}
+          {view === 'lista' && (
+            <PermissionGuard permission={AcademicoPermission.PERFORMANCE_EVAL_LISTA}>
+              <ListaView
+                advisorsRaw={advisorsRaw}
+                isLoading={advisorsQ.isLoading}
+                scopePlataforma={scopePlataforma}
+                setScopePlataforma={setScopePlataforma}
+                scopeAdvisorIds={scopeAdvisorIds}
+                setScopeAdvisorIds={setScopeAdvisorIds}
+              />
+            </PermissionGuard>
+          )}
+
+          {/* ─────────────────────────────────────────────────────────────
+              BÚSQUEDA POR COMENTARIO — comentarios por banda de promedio con identidad del alumno
+            ───────────────────────────────────────────────────────────── */}
+          {view === 'busqueda' && (
+            <PermissionGuard permission={AcademicoPermission.PERFORMANCE_EVAL_BUSQUEDA_COMENTARIO}>
+              <BusquedaComentarioView
+                advisorsRaw={advisorsRaw}
+                scopePlataforma={scopePlataforma}
+                setScopePlataforma={setScopePlataforma}
+                scopeAdvisorIds={scopeAdvisorIds}
+                usingLista={usingLista}
               />
             </PermissionGuard>
           )}
@@ -165,9 +277,44 @@ export default function PerformanceEvaluationPage() {
           {/* ─────────────────────────────────────────────────────────────
               VISTA GENERAL (la original — sin cambios funcionales)
             ───────────────────────────────────────────────────────────── */}
-          {view === 'general' && (<>
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex-1" />
+          {view === 'general' && (<div className="space-y-5 watermark">
+          <style>{PRINT_CSS}</style>
+          {/* Cabecera SOLO para impresión (logo + alcance + período) */}
+          <div className="print-header items-start justify-between mb-6 pb-4 border-b-2 border-indigo-600">
+            <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="Let's Go Speak" className="h-14 w-auto" />
+              <div>
+                <div className="text-lg font-bold text-gray-900">Performance Evaluation</div>
+                <div className="text-xs text-gray-500">
+                  {alcanceLabel(usingLista, scopeAdvisorIds.length, scopePlataforma)} · {filters.startDate} → {filters.endDate}
+                  {filters.tipo ? ` · ${filters.tipo}` : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between flex-wrap gap-3 no-print">
+            {/* Alcance: plataforma (país del advisor) o lista */}
+            <div className="flex items-end gap-2 flex-wrap">
+              <div>
+                <label htmlFor="pe-plat" className="block text-xs text-gray-500 mb-1">Plataforma</label>
+                <select id="pe-plat" value={scopePlataforma} disabled={usingLista}
+                  onChange={e => setScopePlataforma(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-400">
+                  <option value="">Todas</option>
+                  {PLATAFORMAS.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              {usingLista && (
+                <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 text-sm text-indigo-800">
+                  <ListBulletIcon className="h-4 w-4" />
+                  Lista: {scopeAdvisorIds.length} advisor{scopeAdvisorIds.length === 1 ? '' : 's'}
+                  <button type="button" onClick={() => setView('lista')} className="underline hover:no-underline text-xs">editar</button>
+                  <button type="button" onClick={() => setScopeAdvisorIds([])} className="underline hover:no-underline text-xs text-red-600">limpiar</button>
+                </div>
+              )}
+            </div>
             <div className="flex items-end gap-2 flex-wrap">
               <div>
                 <label htmlFor="pe-start" className="block text-xs text-gray-500 mb-1">Desde</label>
@@ -195,6 +342,13 @@ export default function PerformanceEvaluationPage() {
                 className="inline-flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50">
                 <ArrowPathIcon className="h-4 w-4" />Recargar
               </button>
+              <PermissionGuard permission={AcademicoPermission.PERFORMANCE_EVAL_EXPORTAR}>
+                <button type="button" onClick={handlePrint}
+                  className="inline-flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                  title="Imprimir / PDF. Recomendado: desactiva 'Encabezados y pies de página' en el diálogo de impresión.">
+                  <PrinterIcon className="h-4 w-4" />Imprimir / PDF
+                </button>
+              </PermissionGuard>
               <PermissionGuard permission={AcademicoPermission.PERFORMANCE_EVAL_EXPORTAR}>
                 <button type="button" onClick={handleCSV} disabled={dashQ.isLoading || !full.length}
                   className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
@@ -386,7 +540,7 @@ export default function PerformanceEvaluationPage() {
               </ul>
             )}
           </div>
-          </>)}
+          </div>)}
           {/* fin view === 'general' */}
         </div>
 
@@ -396,6 +550,351 @@ export default function PerformanceEvaluationPage() {
         )}
       </PermissionGuard>
     </DashboardLayout>
+  )
+}
+
+/** Pestaña LISTA — selección de advisors (con casilla) que define el Alcance. */
+function ListaView({
+  advisorsRaw, isLoading, scopePlataforma, setScopePlataforma, scopeAdvisorIds, setScopeAdvisorIds,
+}: {
+  advisorsRaw: any[];
+  isLoading: boolean;
+  scopePlataforma: string;
+  setScopePlataforma: (v: string) => void;
+  scopeAdvisorIds: string[];
+  setScopeAdvisorIds: (v: string[]) => void;
+}) {
+  const [estado, setEstado] = useState<'activos' | 'inactivos' | 'todos'>('todos')
+  const [busca, setBusca] = useState('')
+
+  const visibles = useMemo(() => {
+    let list = advisorsRaw
+    if (scopePlataforma) list = list.filter(a => (a.pais || '').toLowerCase() === scopePlataforma.toLowerCase())
+    if (estado === 'activos') list = list.filter(a => a.activo === true)
+    else if (estado === 'inactivos') list = list.filter(a => a.activo !== true)
+    if (busca.trim()) {
+      const q = busca.trim().toLowerCase()
+      list = list.filter(a => (a.nombre || '').toLowerCase().includes(q))
+    }
+    return list
+  }, [advisorsRaw, scopePlataforma, estado, busca])
+
+  const selectedSet = new Set(scopeAdvisorIds)
+  const visIds = visibles.map(a => a._id)
+  const allVisSelected = visIds.length > 0 && visIds.every(id => selectedSet.has(id))
+
+  const toggle = (id: string) => {
+    const s = new Set(scopeAdvisorIds)
+    if (s.has(id)) s.delete(id); else s.add(id)
+    setScopeAdvisorIds(Array.from(s))
+  }
+  const toggleAllVisibles = () => {
+    const s = new Set(scopeAdvisorIds)
+    if (allVisSelected) visIds.forEach(id => s.delete(id))
+    else visIds.forEach(id => s.add(id))
+    setScopeAdvisorIds(Array.from(s))
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-sm text-indigo-800">
+        Marca advisors para definir el <b>Alcance</b> de Vista General y Por Advisor. Si marcas ≥1, la consulta usa <b>solo esos</b> (ignora la plataforma). Sin marcados, se usa la <b>plataforma</b> elegida (o todos).
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-end gap-2 flex-wrap">
+        <div>
+          <label htmlFor="lst-plat" className="block text-xs text-gray-500 mb-1">Plataforma</label>
+          <select id="lst-plat" value={scopePlataforma} onChange={e => setScopePlataforma(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="">Todas</option>
+            {PLATAFORMAS.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="lst-estado" className="block text-xs text-gray-500 mb-1">Estado</label>
+          <select id="lst-estado" value={estado} onChange={e => setEstado(e.target.value as any)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="todos">Todos</option>
+            <option value="activos">Activos</option>
+            <option value="inactivos">Inactivos</option>
+          </select>
+        </div>
+        <div className="flex-1 min-w-[200px]">
+          <label htmlFor="lst-busca" className="block text-xs text-gray-500 mb-1">Buscar</label>
+          <input id="lst-busca" value={busca} onChange={e => setBusca(e.target.value)}
+            placeholder="Nombre del advisor"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <button type="button" onClick={toggleAllVisibles}
+          className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50">
+          {allVisSelected ? 'Desmarcar visibles' : 'Seleccionar visibles'}
+        </button>
+        <button type="button" onClick={() => setScopeAdvisorIds([])} disabled={!scopeAdvisorIds.length}
+          className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50">
+          Limpiar todo
+        </button>
+      </div>
+
+      <div className="text-sm text-gray-600">
+        {scopeAdvisorIds.length > 0
+          ? <><b className="text-indigo-700">{scopeAdvisorIds.length}</b> advisor(s) seleccionado(s) — el informe usará esta lista.</>
+          : <>Ningún advisor seleccionado — el informe usa {scopePlataforma ? <b>plataforma {scopePlataforma}</b> : <b>todos los advisors</b>}.</>}
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        {isLoading ? <div className="p-6 text-center text-sm text-gray-500">Cargando advisors…</div>
+         : visibles.length === 0 ? <div className="p-6 text-center text-sm text-gray-400">No hay advisors para este filtro.</div>
+         : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-gray-500 border-b border-gray-100 bg-gray-50">
+                <th className="w-10 py-2">
+                  <input type="checkbox" checked={allVisSelected} onChange={toggleAllVisibles} aria-label="Seleccionar visibles" />
+                </th>
+                <th className="text-left font-medium py-2 px-2">Advisor</th>
+                <th className="text-left font-medium py-2 px-2">Plataforma</th>
+                <th className="text-left font-medium py-2 px-2">Estado</th>
+                <th className="text-right font-medium py-2 px-2"># Evals</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibles.map(a => (
+                <tr key={a._id} className={`border-b border-gray-50 last:border-0 hover:bg-gray-50 ${selectedSet.has(a._id) ? 'bg-indigo-50/50' : ''}`}>
+                  <td className="text-center py-2">
+                    <input type="checkbox" checked={selectedSet.has(a._id)} onChange={() => toggle(a._id)} aria-label={`Seleccionar ${a.nombre}`} />
+                  </td>
+                  <td className="py-2 px-2 font-medium text-gray-800">{a.nombre}</td>
+                  <td className="py-2 px-2 text-gray-600">{a.pais || '—'}</td>
+                  <td className="py-2 px-2">
+                    {a.activo === true
+                      ? <span className="text-xs text-emerald-700 bg-emerald-50 rounded px-1.5 py-0.5">Activo</span>
+                      : <span className="text-xs text-gray-500 bg-gray-100 rounded px-1.5 py-0.5">Inactivo</span>}
+                  </td>
+                  <td className="py-2 px-2 text-right text-gray-700">{a.evaluaciones}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** Pestaña BÚSQUEDA POR COMENTARIO — comentarios de un advisor (o "Todos")
+ *  filtrados por BANDA de promedio (1→<2, 2→[2,3), 3→[3,4), 4→[4,5), 5→=5;
+ *  "Sin tope"→todos), con nombre + numeroId del ALUMNO (des-anonimizada). */
+function BusquedaComentarioView({
+  advisorsRaw, scopePlataforma, setScopePlataforma, scopeAdvisorIds, usingLista,
+}: {
+  advisorsRaw: any[];
+  scopePlataforma: string;
+  setScopePlataforma: (v: string) => void;
+  scopeAdvisorIds: string[];
+  usingLista: boolean;
+}) {
+  const [startDate, setStartDate] = useState(oneMonthBackStr())
+  const [endDate, setEndDate]     = useState(todayStr())
+  const [tipo, setTipo]           = useState('')
+  const [advisorFilter, setAdvisorFilter] = useState<'activos' | 'inactivos' | 'todos'>('activos')
+  const [advisorId, setAdvisorId] = useState('')
+  // Banda de promedio (rango por entero). null = sin tope (todos).
+  const [banda, setBanda]         = useState<number | null>(null)
+
+  // Dropdown de advisor limitado al Alcance (lista o plataforma) + estado.
+  const advisorsList = useMemo(() => {
+    let list = advisorsRaw
+    if (usingLista) {
+      const set = new Set(scopeAdvisorIds)
+      list = list.filter(a => set.has(a._id))
+    } else if (scopePlataforma) {
+      list = list.filter(a => (a.pais || '').toLowerCase() === scopePlataforma.toLowerCase())
+    }
+    if (advisorFilter === 'activos')   return list.filter(a => a.activo === true)
+    if (advisorFilter === 'inactivos') return list.filter(a => a.activo !== true)
+    return list
+  }, [advisorsRaw, advisorFilter, usingLista, scopeAdvisorIds, scopePlataforma])
+
+  useEffect(() => {
+    if (advisorId && advisorId !== '__ALL__' && !advisorsList.some(a => a._id === advisorId)) setAdvisorId('')
+  }, [advisorId, advisorsList])
+
+  // Etiqueta legible de la banda seleccionada.
+  const bandaLabel = (b: number | null) =>
+    b === null ? 'todas las bandas'
+    : b === 1 ? '0–1,99'
+    : b === 5 ? 'solo 5'
+    : `${b}–${b},99`
+
+  // "__ALL__" = Todos los advisors del alcance actual (plataforma/lista/estado).
+  const isAll = advisorId === '__ALL__'
+  const q = useComentariosBusqueda(
+    isAll
+      ? { advisorIds: advisorsList.map(a => a._id).join(','), startDate: startDate || null, endDate: endDate || null, tipo: tipo || null, banda }
+      : { advisorId: advisorId || null, startDate: startDate || null, endDate: endDate || null, tipo: tipo || null, banda },
+    isAll ? advisorsList.length > 0 : !!advisorId,
+  )
+  const rows: any[] = q.data?.comentarios ?? []
+  const advisorSelected = advisorsList.find(a => a._id === advisorId)
+
+  const handleCSV = () => {
+    if (!rows.length) return
+    exportToExcel(rows, [
+      { header: 'Promedio',   accessor: (r: any) => r.promedio },
+      { header: 'Fecha',      accessor: (r: any) => r.fechaEvento ? new Date(r.fechaEvento).toLocaleDateString('es-ES') : '' },
+      { header: 'Advisor',    accessor: (r: any) => r.advisorNombre || '' },
+      { header: 'Tipo',       accessor: (r: any) => r.tipo + (r.subtipo ? ` (${r.subtipo})` : '') },
+      { header: 'Nivel',      accessor: (r: any) => r.nivel || '' },
+      { header: 'Step',       accessor: (r: any) => r.step || '' },
+      { header: 'Usuario',    accessor: (r: any) => r.studentNombre || '' },
+      { header: 'ID Usuario', accessor: (r: any) => r.studentNumeroId || '' },
+      { header: 'Comentario', accessor: (r: any) => r.comentario || '' },
+      { header: 'IA Sentimiento', accessor: (r: any) => r.aiSentimiento || '' },
+    ], `perf-eval-comentarios_${(isAll ? 'TODOS' : (advisorSelected?.nombre || advisorId)).replace(/\s+/g, '_')}_banda${banda ?? 'todos'}_${startDate}_${endDate}`)
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
+        ⚠️ Esta vista muestra el <b>nombre y número de identificación del usuario</b> que escribió cada comentario (el resto del dashboard es anónimo). Úsala con criterio.
+      </div>
+
+      {/* Filtros (iguales a Por Advisor) + Tope */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-end gap-2 flex-wrap">
+        <div>
+          <label htmlFor="bc-start" className="block text-xs text-gray-500 mb-1">Desde</label>
+          <input id="bc-start" type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label htmlFor="bc-end" className="block text-xs text-gray-500 mb-1">Hasta</label>
+          <input id="bc-end" type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label htmlFor="bc-tipo" className="block text-xs text-gray-500 mb-1">Tipo</label>
+          <select id="bc-tipo" value={tipo} onChange={e => setTipo(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="">Todos</option>
+            <option value="SESSION">Session</option>
+            <option value="CLUB">Club</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="bc-plat" className="block text-xs text-gray-500 mb-1">Plataforma</label>
+          <select id="bc-plat" value={scopePlataforma} disabled={usingLista}
+            onChange={e => setScopePlataforma(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-400">
+            <option value="">Todas</option>
+            {PLATAFORMAS.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="bc-status" className="block text-xs text-gray-500 mb-1">Estado advisor</label>
+          <select id="bc-status" value={advisorFilter}
+            onChange={e => setAdvisorFilter(e.target.value as 'activos' | 'inactivos' | 'todos')}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="activos">Activos</option>
+            <option value="inactivos">Inactivos</option>
+            <option value="todos">Todos</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="bc-banda" className="block text-xs text-gray-500 mb-1">Banda (promedio ★)</label>
+          <select id="bc-banda" value={banda ?? ''} onChange={e => setBanda(e.target.value === '' ? null : Number(e.target.value))}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="">Sin tope (todos)</option>
+            <option value={1}>1 (0–1,99)</option>
+            <option value={2}>2 (2–2,99)</option>
+            <option value={3}>3 (3–3,99)</option>
+            <option value={4}>4 (4–4,99)</option>
+            <option value={5}>5 (solo 5)</option>
+          </select>
+        </div>
+        <div className="flex-1 min-w-[240px]">
+          <label htmlFor="bc-advisor" className="block text-xs text-gray-500 mb-1">
+            Advisor <span className="text-gray-400">({advisorsList.length} disponibles)</span>
+          </label>
+          <select id="bc-advisor" value={advisorId} onChange={e => setAdvisorId(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="">— Selecciona un advisor —</option>
+            <option value="__ALL__">— Todos los advisors ({advisorsList.length}) —</option>
+            {advisorsList.map(a => (
+              <option key={a._id} value={a._id}>
+                {a.nombre} ({a.evaluaciones} evals){a.activo === false ? ' · Inactivo' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+        <PermissionGuard permission={AcademicoPermission.PERFORMANCE_EVAL_EXPORTAR}>
+          <button type="button" onClick={handleCSV} disabled={!rows.length}
+            className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
+            <ArrowDownTrayIcon className="h-4 w-4" />CSV
+          </button>
+        </PermissionGuard>
+      </div>
+
+      {!advisorId ? (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center">
+          <ChatBubbleLeftEllipsisIcon className="h-12 w-12 text-indigo-400 mx-auto mb-2" />
+          <p className="text-sm text-indigo-900 font-medium">Selecciona un advisor —o “Todos”— para ver los comentarios</p>
+          <p className="text-xs text-indigo-700 mt-1">
+            {banda === null
+              ? 'Se muestran todos los comentarios, de peor a mejor.'
+              : `Se muestran los comentarios de la banda ${bandaLabel(banda)} ★, de peor a mejor.`}
+          </p>
+        </div>
+      ) : q.isLoading ? (
+        <div className="text-center text-sm text-gray-500 py-10">Cargando comentarios…</div>
+      ) : q.isError ? (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
+          Error al cargar los comentarios: {(q.error as any)?.message || 'intenta de nuevo'}
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-sm text-gray-400">
+          {isAll ? 'Ningún advisor tiene' : `${advisorSelected?.nombre} no tiene`} comentarios {banda === null ? '' : `en la banda ${bandaLabel(banda)} ★ `}en este período.
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-800">
+              {isAll ? 'Todos los advisors' : advisorSelected?.nombre} — {rows.length} comentario{rows.length === 1 ? '' : 's'}{banda === null ? '' : ` · banda ${bandaLabel(banda)} ★`}
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-gray-500 border-b border-gray-100 bg-gray-50">
+                  <th className="text-left font-medium py-2 px-3 w-20">Promedio</th>
+                  <th className="text-left font-medium py-2 px-3 w-28">Fecha</th>
+                  {isAll && <th className="text-left font-medium py-2 px-3">Advisor</th>}
+                  <th className="text-left font-medium py-2 px-3">Tipo · Nivel · Step</th>
+                  <th className="text-left font-medium py-2 px-3">Usuario</th>
+                  <th className="text-left font-medium py-2 px-3">Comentario</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r, idx) => (
+                  <tr key={idx} className="border-b border-gray-50 last:border-0 align-top">
+                    <td className="py-2.5 px-3 font-bold text-amber-600 whitespace-nowrap">{Number(r.promedio).toFixed(2)} ★</td>
+                    <td className="py-2.5 px-3 text-gray-600 whitespace-nowrap">{r.fechaEvento ? new Date(r.fechaEvento).toLocaleDateString('es-ES') : '—'}</td>
+                    {isAll && <td className="py-2.5 px-3 text-gray-700 text-xs whitespace-nowrap">{r.advisorNombre || '—'}</td>}
+                    <td className="py-2.5 px-3 text-gray-600 text-xs">
+                      {r.tipo}{r.subtipo ? ` (${r.subtipo})` : ''}{r.nivel ? ` · ${r.nivel}` : ''}{r.step ? ` · ${r.step}` : ''}
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <div className="font-medium text-gray-800">{r.studentNombre || '(sin nombre)'}</div>
+                      <div className="text-xs text-gray-500">ID: {r.studentNumeroId || '—'}</div>
+                    </td>
+                    <td className="py-2.5 px-3 text-gray-700">{r.comentario}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -556,40 +1055,56 @@ function RadarAdvisorModal({ advisor, onClose }: { advisor: any; onClose: () => 
    ═══════════════════════════════════════════════════════════════════════ */
 function ByAdvisorView({
   filterDates, onFilterDatesChange, canExport,
+  advisorsRaw, scopePlataforma, setScopePlataforma, scopeAdvisorIds, usingLista,
 }: {
   filterDates: { startDate: string; endDate: string; tipo: string };
   onFilterDatesChange: (patch: Partial<{ startDate: string; endDate: string; tipo: string }>) => void;
   canExport: boolean;
+  advisorsRaw: any[];
+  scopePlataforma: string;
+  setScopePlataforma: (v: string) => void;
+  scopeAdvisorIds: string[];
+  usingLista: boolean;
 }) {
   const [advisorFilter, setAdvisorFilter] = useState<'activos' | 'inactivos' | 'todos'>('activos')
   const [advisorId, setAdvisorId] = useState<string>('')
 
-  const advisorsQ = useAdvisorsWithEvaluations()
-  const advisorsRaw: any[] = advisorsQ.data?.advisors ?? []
+  // Alcance para las consultas (modos excluyentes): lista o plataforma.
+  const scopeParams = usingLista
+    ? { advisorIds: scopeAdvisorIds.join(','), plataforma: null as string | null }
+    : { advisorIds: null as string | null, plataforma: scopePlataforma || null }
 
+  // El dropdown de advisor se LIMITA al alcance (lista o plataforma) + estado.
   const advisorsList = useMemo(() => {
-    if (advisorFilter === 'activos')   return advisorsRaw.filter(a => a.activo === true)
-    if (advisorFilter === 'inactivos') return advisorsRaw.filter(a => a.activo !== true)
-    return advisorsRaw
-  }, [advisorsRaw, advisorFilter])
+    let list = advisorsRaw
+    if (usingLista) {
+      const set = new Set(scopeAdvisorIds)
+      list = list.filter(a => set.has(a._id))
+    } else if (scopePlataforma) {
+      list = list.filter(a => (a.pais || '').toLowerCase() === scopePlataforma.toLowerCase())
+    }
+    if (advisorFilter === 'activos')   return list.filter(a => a.activo === true)
+    if (advisorFilter === 'inactivos') return list.filter(a => a.activo !== true)
+    return list
+  }, [advisorsRaw, advisorFilter, usingLista, scopeAdvisorIds, scopePlataforma])
 
-  // Si el advisor seleccionado se sale del set por cambio de filtro, lo limpio.
+  // Si el advisor seleccionado se sale del set por cambio de filtro/alcance, lo limpio.
   useEffect(() => {
     if (advisorId && !advisorsList.some(a => a._id === advisorId)) {
       setAdvisorId('')
     }
   }, [advisorId, advisorsList])
 
-  // Stats del advisor + stats del promedio general (sin filtro de advisor)
-  // mismas fechas + mismo tipo para que la comparación sea justa.
+  // Stats del advisor + stats del promedio general DENTRO del alcance
+  // (mismas fechas + tipo + alcance) para que la comparación sea justa.
   const baseFilters = {
     startDate: filterDates.startDate || null,
     endDate:   filterDates.endDate || null,
     tipo:      filterDates.tipo || null,
-    nivel: null, plataforma: null, comentarioSearch: null,
+    nivel: null as string | null, comentarioSearch: null as string | null,
   }
-  const advisorStatsQ = usePerformanceDashboard({ ...baseFilters, advisorId: advisorId || null })
-  const generalStatsQ = usePerformanceDashboard({ ...baseFilters, advisorId: null })
+  const advisorStatsQ = usePerformanceDashboard({ ...baseFilters, plataforma: null, advisorIds: null, advisorId: advisorId || null })
+  const generalStatsQ = usePerformanceDashboard({ ...baseFilters, ...scopeParams, advisorId: null })
 
   const advData: any = advisorStatsQ.data
   const genData: any = generalStatsQ.data
@@ -603,6 +1118,24 @@ function ByAdvisorView({
   const advCom    = advData?.comentarios ?? []
   const fullGen   = genData?.rankingFull ?? []
 
+  // Evolución mensual comparada: promedio del advisor vs promedio del grupo
+  // (mismo mes). Iteramos sobre los meses con evals del advisor.
+  const evoComp = useMemo(() => {
+    const genEvo: any[] = genData?.evolucionMensual ?? []
+    const genByMes = new Map<string, any>(genEvo.map((e: any) => [e.mes, e]))
+    return advEvo.map((e: any) => {
+      const g = genByMes.get(e.mes)
+      const genProm = g ? Number(g.promedio) : null
+      return {
+        mes: e.mes,
+        advProm: Number(e.promedio),
+        advEvals: e.evaluaciones,
+        genProm,
+        delta: genProm != null ? Math.round((Number(e.promedio) - genProm) * 100) / 100 : null,
+      }
+    })
+  }, [advEvo, genData])
+
   // Posición en ranking general (1-based) entre advisors con ≥5 evals.
   const posicion = useMemo(() => {
     if (!advisorId || !fullGen.length) return null
@@ -612,7 +1145,6 @@ function ByAdvisorView({
   }, [advisorId, fullGen])
 
   const distrMax = Math.max(1, ...advDistr.map((d: any) => d.total))
-  const evoMax   = Math.max(1, ...advEvo.map((e: any) => e.evaluaciones))
 
   // Genera badge de delta: ▲ +0.04 (verde) o ▼ −0.03 (rojo) o = (gris).
   const renderDelta = (advVal: number | null, genVal: number | null, suffix = '') => {
@@ -639,10 +1171,34 @@ function ByAdvisorView({
   const advisorSelected = advisorsList.find(a => a._id === advisorId)
   const isLoading = advisorStatsQ.isLoading || generalStatsQ.isLoading
 
+  const { data: session } = useSession()
+  const handlePrint = () => window.print()
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 watermark">
+      <style>{`
+        @media print {
+          .no-print, nav, footer { display: none !important; }
+          .print-header { display: flex !important; }
+          .print-expand { max-height: none !important; overflow: visible !important; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; }
+          .print-page { page-break-inside: avoid; }
+          @page { size: letter portrait; margin: 12mm 15mm 12mm 15mm; }
+          .watermark::after {
+            content: ''; position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%) rotate(-25deg);
+            width: 380px; height: 380px;
+            background: url('/logo.png') center / contain no-repeat;
+            opacity: 0.04; z-index: 9999; pointer-events: none;
+          }
+          table { page-break-inside: auto; }
+          tr { page-break-inside: avoid; }
+          thead { display: table-header-group; }
+        }
+        @media screen { .print-header { display: none !important; } }
+      `}</style>
       {/* Filtros: fechas + tipo + activos/inactivos/todos + dropdown advisor */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-end gap-2 flex-wrap">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-end gap-2 flex-wrap no-print">
         <div>
           <label htmlFor="bya-start" className="block text-xs text-gray-500 mb-1">Desde</label>
           <input id="bya-start" type="date" value={filterDates.startDate}
@@ -666,6 +1222,16 @@ function ByAdvisorView({
           </select>
         </div>
         <div>
+          <label htmlFor="bya-plat" className="block text-xs text-gray-500 mb-1">Plataforma</label>
+          <select id="bya-plat" value={scopePlataforma} disabled={usingLista}
+            onChange={e => setScopePlataforma(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-400"
+            title={usingLista ? 'Hay una lista activa: se ignora la plataforma. Límpiala en la pestaña Lista.' : ''}>
+            <option value="">Todas</option>
+            {PLATAFORMAS.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+        <div>
           <label htmlFor="bya-status" className="block text-xs text-gray-500 mb-1">Estado advisor</label>
           <select id="bya-status" value={advisorFilter}
             onChange={e => setAdvisorFilter(e.target.value as 'activos' | 'inactivos' | 'todos')}
@@ -675,6 +1241,13 @@ function ByAdvisorView({
             <option value="todos">Todos</option>
           </select>
         </div>
+        {usingLista && (
+          <div className="flex items-end">
+            <div className="flex items-center gap-1 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 text-xs text-indigo-800">
+              <ListBulletIcon className="h-4 w-4" /> Lista: {scopeAdvisorIds.length}
+            </div>
+          </div>
+        )}
         <div className="flex-1 min-w-[260px]">
           <label htmlFor="bya-advisor" className="block text-xs text-gray-500 mb-1">
             Advisor <span className="text-gray-400">({advisorsList.length} disponibles)</span>
@@ -706,8 +1279,33 @@ function ByAdvisorView({
 
       {advisorId && !isLoading && advKpi && (
         <>
-          {/* Header del advisor */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3 flex-wrap">
+          {/* Cabecera SOLO para impresión (logo + datos del advisor + período) */}
+          <div className="print-header items-start justify-between mb-6 pb-4 border-b-2 border-indigo-600">
+            <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="Let's Go Speak" className="h-14 w-auto" />
+              <div>
+                <p className="text-sm font-bold text-gray-900">Let&apos;s Go Speak — Performance Evaluation</p>
+                <p className="text-[11px] text-gray-500">
+                  Generado: {new Date().toLocaleString('es-CO')} · Por: {session?.user?.name || session?.user?.email || '—'}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-base font-bold text-gray-900">Reporte de Desempeño</p>
+              <p className="text-sm text-gray-700">{advisorSelected?.nombre || advisorId}</p>
+              <p className="text-[11px] text-gray-500">
+                {advKpi.totalEvaluaciones} evals · Prom {advKpi.promedioGeneral}★
+                {posicion ? ` · Posición #${posicion.posicion} de ${posicion.total}` : ''}
+              </p>
+              <p className="text-[11px] text-gray-500">
+                Período: {filterDates.startDate || '—'} a {filterDates.endDate || '—'}{filterDates.tipo ? ` · Tipo: ${filterDates.tipo}` : ''}
+              </p>
+            </div>
+          </div>
+
+          {/* Header del advisor (pantalla) */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3 flex-wrap no-print">
             <UserCircleIcon className="h-10 w-10 text-indigo-500" />
             <div className="flex-1 min-w-0">
               <h2 className="text-lg font-bold text-gray-900 truncate">{advisorSelected?.nombre || advisorId}</h2>
@@ -717,6 +1315,11 @@ function ByAdvisorView({
                 {posicion && <span className="ml-2 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-[11px] font-medium">Posición #{posicion.posicion} de {posicion.total}</span>}
               </p>
             </div>
+            <button type="button" onClick={handlePrint}
+              title="En el diálogo de impresión, desactive 'Encabezados y pies de página' para un PDF limpio."
+              className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+              <PrinterIcon className="h-4 w-4" />Imprimir / PDF
+            </button>
             {canExport && (
               <button type="button" onClick={handleCSV} disabled={!advCom.length}
                 className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
@@ -726,7 +1329,7 @@ function ByAdvisorView({
           </div>
 
           {/* KPIs con comparativos */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 print-page">
             <KpiCompare
               label="Total Evaluaciones"
               value={advKpi.totalEvaluaciones?.toLocaleString() ?? '—'}
@@ -759,7 +1362,7 @@ function ByAdvisorView({
           </div>
 
           {/* Métricas por dimensión — advisor vs general */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm print-page">
             <div className="px-5 py-3 border-b border-gray-100">
               <h3 className="text-sm font-semibold text-gray-800">Métricas por dimensión · advisor vs promedio general</h3>
               <p className="text-[11px] text-gray-400">Promedio del advisor en barra sólida; el promedio general aparece debajo como referencia.</p>
@@ -799,7 +1402,7 @@ function ByAdvisorView({
           </div>
 
           {/* Distribución + Evolución */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 print-page">
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
               <h3 className="text-sm font-semibold text-gray-800 mb-3">Distribución de calificaciones · {advisorSelected?.nombre || ''}</h3>
               {advDistr.length === 0 ? <p className="text-sm text-gray-400">Sin datos</p> : (
@@ -817,16 +1420,34 @@ function ByAdvisorView({
               )}
             </div>
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-              <h3 className="text-sm font-semibold text-gray-800 mb-3">Evolución mensual · {advisorSelected?.nombre || ''}</h3>
-              {advEvo.length === 0 ? <p className="text-sm text-gray-400">Sin datos</p> : (
-                <div className="space-y-2">
-                  {advEvo.map((e: any) => (
-                    <div key={e.mes} className="flex items-center gap-3">
-                      <span className="text-xs text-gray-600 w-16">{e.mes}</span>
-                      <div className="flex-1 bg-gray-100 rounded h-5 relative overflow-hidden">
-                        <div className="h-full bg-indigo-500" style={{ width: `${(e.evaluaciones / evoMax) * 100}%` }} />
+              <h3 className="text-sm font-semibold text-gray-800 mb-1">Evolución mensual · {advisorSelected?.nombre || ''}</h3>
+              <div className="flex items-center gap-3 mb-3 text-[11px] text-gray-500">
+                <span className="inline-flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm bg-indigo-500" /> Advisor</span>
+                <span className="inline-flex items-center gap-1"><span className="inline-block w-0.5 h-3 bg-gray-600" /> Promedio del grupo</span>
+              </div>
+              {evoComp.length === 0 ? <p className="text-sm text-gray-400">Sin datos</p> : (
+                <div className="space-y-3">
+                  {evoComp.map((e: any) => (
+                    <div key={e.mes}>
+                      <div className="flex items-center justify-between text-xs mb-0.5">
+                        <span className="text-gray-600">{e.mes} · {e.advEvals} eval.</span>
+                        <span className="text-gray-700">
+                          <strong className="text-indigo-700">{e.advProm}★</strong>
+                          {e.genProm != null && <span className="text-gray-400"> vs grupo {e.genProm}★</span>}
+                          {e.delta != null && (
+                            <span className={`ml-1 font-semibold ${e.delta >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                              ({e.delta >= 0 ? '+' : ''}{e.delta})
+                            </span>
+                          )}
+                        </span>
                       </div>
-                      <span className="text-xs text-gray-700 w-20 text-right">{e.promedio} ★ · {e.evaluaciones}</span>
+                      {/* Barra = promedio del advisor (escala 0–5); línea = promedio del grupo */}
+                      <div className="relative bg-gray-100 rounded h-5 overflow-hidden" title={`Advisor ${e.advProm}★${e.genProm != null ? ` · Grupo ${e.genProm}★` : ''}`}>
+                        <div className="h-full bg-indigo-500" style={{ width: `${(e.advProm / 5) * 100}%` }} />
+                        {e.genProm != null && (
+                          <div className="absolute top-0 bottom-0 w-0.5 bg-gray-700" style={{ left: `${(e.genProm / 5) * 100}%` }} />
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -835,13 +1456,13 @@ function ByAdvisorView({
           </div>
 
           {/* Comentarios del advisor */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm print-page">
             <div className="px-5 py-3 border-b border-gray-100">
               <h3 className="text-sm font-semibold text-gray-800">Comentarios recibidos por {advisorSelected?.nombre || ''}</h3>
               <p className="text-[11px] text-gray-400">{advCom.length} {advCom.length === 1 ? 'comentario' : 'comentarios'}</p>
             </div>
             {advCom.length === 0 ? <p className="p-6 text-center text-sm text-gray-400">Sin comentarios en el período</p> : (
-              <ul className="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
+              <ul className="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto print-expand">
                 {advCom.map((c: any) => (
                   <li key={c._id} className="px-5 py-3">
                     <div className="flex items-center gap-2 text-xs text-gray-500 mb-1 flex-wrap">

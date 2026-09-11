@@ -8,7 +8,7 @@ export const GET = handlerWithAuth(async () => {
     `SELECT "_id", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
             "numeroId", "contrato", "celular", "email", "plataforma", "tipoUsuario",
             "aprobacion", "hashConsentimiento", "documentacion",
-            "_createdDate", "fechaCreacion"
+            "_createdDate", "fechaCreacion", "fechaIngreso"
      FROM "PEOPLE"
      WHERE "tipoUsuario" = 'TITULAR'
        AND ("aprobacion" IS NULL OR "aprobacion" != 'Aprobado')

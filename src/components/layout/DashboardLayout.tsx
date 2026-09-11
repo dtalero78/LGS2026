@@ -37,21 +37,25 @@ const getNavigation = (userEmail: string, userRole: string) => [
     icon: AcademicCapIcon,
     children: [
       { name: 'Agenda Sesiones', href: '/dashboard/academic/agenda-sesiones' },
-      { name: 'Agenda Académica', href: '/dashboard/academic/agenda-academica' },
-      { name: 'Advisors', href: '/dashboard/academic/advisors' },
-      // Si el usuario logueado ES advisor, su email va en la URL para abrir SU panel.
-      // Para coordinadores/admins el link va SIN email — el panel auto-selecciona
-      // el primer advisor del dropdown (si pasamos el email del coordinador, el
-      // endpoint /by-email retorna 404 y la página muestra "Error al buscar advisor").
-      { name: 'Panel Advisor', href: userRole === 'ADVISOR'
-        ? `/panel-advisor?email=${encodeURIComponent(userEmail)}`
-        : '/panel-advisor' },
-      { name: 'Actualizar Material', href: '/dashboard/academic/actualizar-material', newTab: true },
-      { name: 'Control Horas', href: '/dashboard/academic/control-horas' },
+      { name: 'Agenda Semanal', href: '/dashboard/academic/agenda-academica' },
       { name: 'Eventos Administrativos', href: '/dashboard/academic/eventos-administrativos', newTab: true },
-      { name: 'Sesiones sin gestión', href: '/dashboard/academic/sesiones-sin-gestion', newTab: true },
+      {
+        name: 'Advisors', isSubmenu: true, children: [
+          { name: 'Lista Advisors', href: '/dashboard/academic/advisors' },
+          // Si el usuario logueado ES advisor, su email va en la URL para abrir SU panel.
+          // Para coordinadores/admins el link va SIN email — el panel auto-selecciona
+          // el primer advisor del dropdown (si pasamos el email del coordinador, el
+          // endpoint /by-email retorna 404 y la página muestra "Error al buscar advisor").
+          { name: 'Panel Advisor', href: userRole === 'ADVISOR'
+            ? `/panel-advisor?email=${encodeURIComponent(userEmail)}`
+            : '/panel-advisor' },
+          { name: 'Control Horas', href: '/dashboard/academic/control-horas' },
+          { name: 'Sesiones sin registro', href: '/dashboard/academic/sesiones-sin-gestion', newTab: true },
+          { name: 'Performance Evaluation', href: '/dashboard/academic/performance-evaluation', newTab: true },
+        ],
+      },
+      { name: 'Actualizar Material', href: '/dashboard/academic/actualizar-material', newTab: true },
       { name: 'Evaluaciones Jump', href: '/dashboard/academic/jump-evaluaciones' },
-      { name: 'Performance Evaluation', href: '/dashboard/academic/performance-evaluation', newTab: true },
     ],
   },
   {
@@ -59,8 +63,9 @@ const getNavigation = (userEmail: string, userRole: string) => [
     icon: SpeakerWaveIcon,
     children: [
       { name: 'Welcome Session', href: '/dashboard/servicio/welcome-session' },
-      { name: 'Lista de Sesiones', href: '/dashboard/servicio/lista-sesiones' },
+      { name: 'Asistencia Sesiones', href: '/dashboard/servicio/lista-sesiones' },
       { name: 'Usuarios sin perfil creado', href: '/dashboard/servicio/sin-registro' },
+      { name: 'Cancelación sin reemplazo', href: '/dashboard/servicio/cancelacion-sin-reemplazo' },
       {
         name: 'Exam. Intern.', isSubmenu: true, children: [
           { name: 'IELTS',    href: '/dashboard/servicio/exam-intern/ielts',    newTab: true },
@@ -75,20 +80,27 @@ const getNavigation = (userEmail: string, userRole: string) => [
     icon: UsersIcon,
     children: [
       { name: 'Crear Contrato', href: '/dashboard/comercial/crear-contrato' },
+      { name: 'Matrículas', href: '/dashboard/comercial/matriculas' },
       { name: 'Subir Lote', href: '/subir-lote', superAdminOnly: true },
     ],
   },
   {
     name: 'Aprobación',
-    href: '/dashboard/aprobacion',
     icon: ShieldCheckIcon,
+    children: [
+      { name: 'Centro de Aprobaciones', href: '/dashboard/aprobacion' },
+      { name: 'Contratos aprobados', href: '/dashboard/aprobacion/contratos-aprobados' },
+      { name: 'Conversión Titular', href: '/dashboard/aprobacion/conversion-titular' },
+    ],
   },
   {
     name: 'Recaudos',
     icon: BanknotesIcon,
     children: [
-      { name: 'Gestión',    href: '/dashboard/recaudos/gestion',    newTab: true },
-      { name: 'Asignación', href: '/dashboard/recaudos/asignacion', newTab: true },
+      { name: 'Gestión',      href: '/dashboard/recaudos/gestion',      newTab: true },
+      { name: 'Bancos',       href: '/dashboard/recaudos/bancos',       newTab: true },
+      { name: 'Asignación',   href: '/dashboard/recaudos/asignacion',   newTab: true },
+      { name: 'Aprobaciones', href: '/dashboard/recaudos/aprobaciones', newTab: true },
     ],
   },
   {
@@ -170,11 +182,6 @@ const getNavigation = (userEmail: string, userRole: string) => [
         ],
       },
       {
-        name: 'Material', isSubmenu: true, children: [
-          { name: 'Actualizar Videos', href: '/admin/actualizar-videos', newTab: true },
-        ],
-      },
-      {
         name: 'Juegos',
         isSubmenu: true,
         children: [
@@ -190,13 +197,21 @@ const getNavigation = (userEmail: string, userRole: string) => [
       },
       {
         name: 'Usuarios', isSubmenu: true, children: [
+          { name: 'Clear Historic',    href: '/admin/clear-historic',   newTab: true },
+          { name: 'Gestión Usuarios',  href: '/admin/roles/create',     newTab: true },
+        ],
+      },
+      {
+        name: 'Contratos', isSubmenu: true, children: [
           { name: 'Bloqueo Contrato', href: '/admin/bloqueo-contrato', newTab: true },
-          { name: 'Clear Historic',   href: '/admin/clear-historic',   newTab: true },
           { name: 'Contratos Prueba', href: '/admin/contratos-prueba', newTab: true },
+          { name: 'Drive de Contratos', href: '/admin/drive-config', newTab: true },
+          { name: 'Proceso Kids', href: '/admin/kids-config', newTab: true },
+          { name: 'Página de Bienvenida', href: '/admin/bienvenida-config', newTab: true },
           { name: 'Edición Contrato', href: '/admin/edicion-contrato', newTab: true },
           { name: 'Generar Contrato', href: '/admin/generar-contrato', newTab: true },
+          { name: 'Cargar Beneficiarios', href: '/admin/cargar-beneficiarios', newTab: true },
           { name: 'Migrar Contrato',  href: '/admin/migrar-contrato',  newTab: true },
-          { name: 'Crea UserRol',     href: '/admin/roles/create',     newTab: true },
         ],
       },
       {
@@ -205,7 +220,13 @@ const getNavigation = (userEmail: string, userRole: string) => [
           { name: 'Consulta', href: '/admin/scripts/consulta', newTab: true },
         ],
       },
+      {
+        name: 'Contingencia', isSubmenu: true, children: [
+          { name: 'Canales WhatsApp', href: '/admin/contingencia/whatsapp', newTab: true },
+        ],
+      },
       { name: 'Diagnóstico', href: '/admin/diagnostico', newTab: true },
+      { name: 'Lgs-Buckets', href: '/admin/lgs-buckets', newTab: true },
     ],
   },
 ]
@@ -320,6 +341,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       ServicioPermission.USUARIOS_ACTUALIZAR,
       ServicioPermission.USUARIOS_EXPORTAR_CSV,
     ],
+    '/dashboard/servicio/cancelacion-sin-reemplazo': [
+      ServicioPermission.CANCELACION_SIN_REEMPLAZO_VER,
+    ],
     '/dashboard/servicio/exam-intern/ielts':   [ServicioPermission.EXAM_INTERN_IELTS_VER],
     '/dashboard/servicio/exam-intern/b2first': [ServicioPermission.EXAM_INTERN_B2F_VER],
     '/dashboard/servicio/exam-intern/toefl':   [ServicioPermission.EXAM_INTERN_TOEFL_VER],
@@ -331,6 +355,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       ComercialPermission.DESCARGAR,
       ComercialPermission.APROBACION_AUTONOMA,
     ],
+    '/dashboard/comercial/matriculas': [
+      ComercialPermission.MATRICULAS_VER,
+    ],
     '/subir-lote': [
       ComercialPermission.MODIFICAR_CONTRATO,
     ],
@@ -339,6 +366,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ],
     '/admin/bloqueo-contrato': [
       MantenimientoPermission.BLOQUEAR_CONTRATO,
+    ],
+    '/admin/drive-config': [
+      MantenimientoPermission.DRIVE_CONFIG,
+    ],
+    '/admin/kids-config': [
+      MantenimientoPermission.KIDS_CONFIG,
     ],
     '/admin/clear-historic': [
       MantenimientoPermission.CLEAR_HISTORIC,
@@ -349,6 +382,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/admin/generar-contrato': [
       MantenimientoPermission.GENERAR_CONTRATO,
     ],
+    '/admin/cargar-beneficiarios': [
+      MantenimientoPermission.CARGAR_BENEFICIARIOS,
+    ],
+    '/admin/contingencia/whatsapp': [
+      MantenimientoPermission.CONTINGENCIA_WHATSAPP,
+    ],
     '/admin/contratos-prueba': [
       MantenimientoPermission.CONTRATOS_PRUEBA,
     ],
@@ -356,6 +395,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       MantenimientoPermission.ENVIO_MENSAJES,
     ],
     '/admin/roles/create': [
+      MantenimientoPermission.CREAR_ROL,
+    ],
+    '/admin/roles/consulta': [
       MantenimientoPermission.CREAR_ROL,
     ],
     '/admin/ticker': [
@@ -379,21 +421,40 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/admin/diagnostico': [
       MantenimientoPermission.DIAGNOSTICO,
     ],
+    '/admin/lgs-buckets': [
+      MantenimientoPermission.LGS_BUCKETS,
+    ],
     // Recaudos
     '/dashboard/recaudos/gestion': [
       RecaudosPermission.GESTION_VER,
     ],
+    '/dashboard/recaudos/bancos': [
+      RecaudosPermission.BANCOS_VER,
+    ],
     '/dashboard/recaudos/asignacion': [
       RecaudosPermission.ASIGNACION_VER,
     ],
-    // Aprobación
+    '/dashboard/recaudos/aprobaciones': [
+      RecaudosPermission.APROBACIONES_VER,
+    ],
+    // Aprobación → Centro de Aprobaciones. CENTRO_VER es el permiso del ítem;
+    // se conservan los de acción para no romper roles ya configurados.
     '/dashboard/aprobacion': [
+      AprobacionPermission.CENTRO_VER,
       AprobacionPermission.ACTUALIZAR,
       AprobacionPermission.EXPORTAR_CSV,
       AprobacionPermission.VER_CONTRATO,
       AprobacionPermission.ENVIAR_PDF,
       AprobacionPermission.DESCARGAR,
       AprobacionPermission.APROBACION_AUTONOMA,
+    ],
+    // Aprobación → Conversión Titular (proceso adicional, su propio permiso).
+    '/dashboard/aprobacion/conversion-titular': [
+      AprobacionPermission.CONVERSION_TITULAR_VER,
+    ],
+    // Aprobación → Contratos aprobados (su propio permiso).
+    '/dashboard/aprobacion/contratos-aprobados': [
+      AprobacionPermission.CONTRATOS_APROBADOS_VER,
     ],
   }
 
@@ -440,6 +501,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       // SERVICIO.USUARIOS.*
       ServicioPermission.USUARIOS_ACTUALIZAR,
       ServicioPermission.USUARIOS_EXPORTAR_CSV,
+      // SERVICIO.CANCELACION_SIN_REEMPLAZO.*
+      ServicioPermission.CANCELACION_SIN_REEMPLAZO_VER,
     ],
     'Comercial': [
       // COMERCIAL.CONTRATO.*
@@ -451,7 +514,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       ComercialPermission.VER_PROSPECTOS,
     ],
     'Aprobación': [
-      // APROBACION.MODIFICAR.*
+      // Items del menú + APROBACION.MODIFICAR.*
+      AprobacionPermission.CENTRO_VER,
+      AprobacionPermission.CONVERSION_TITULAR_VER,
+      AprobacionPermission.CONTRATOS_APROBADOS_VER,
       AprobacionPermission.ACTUALIZAR,
       AprobacionPermission.EXPORTAR_CSV,
       AprobacionPermission.VER_CONTRATO,
@@ -461,7 +527,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ],
     'Recaudos': [
       RecaudosPermission.GESTION_VER,
+      RecaudosPermission.BANCOS_VER,
       RecaudosPermission.ASIGNACION_VER,
+      RecaudosPermission.APROBACIONES_VER,
     ],
   }
 
@@ -563,10 +631,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       }
 
       // Sub-grupos de Informes (Asistencia, Programación, Advisors, Académica,
-      // Planta, Estadísticas): modelo de 2 marcas — la sección se muestra si le
-      // queda ≥1 ítem visible tras el filtrado de nivel 3 (no necesita permiso
-      // propio de sección). Basta marcar el abuelo "Informes" + el ítem.
-      if (child.isSubmenu && item.name === 'Informes') {
+      // Planta, Estadísticas) y el submenú "Advisors" de Académico: modelo de 2
+      // marcas — la sección se muestra si le queda ≥1 ítem visible tras el
+      // filtrado de nivel 3 (no necesita permiso propio de sección). Así un rol
+      // sin permisos de advisor NO ve el grupo "Advisors" vacío.
+      if (child.isSubmenu && (item.name === 'Informes' || item.name === 'Académico')) {
         return (child.children?.length ?? 0) > 0
       }
 

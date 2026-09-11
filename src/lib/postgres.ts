@@ -26,6 +26,11 @@ const getDatabaseConfig = () => {
       max: 8,
       idleTimeoutMillis: 10000,
       connectionTimeoutMillis: 10000,
+      // NO agregar statement_timeout / idle_in_transaction_session_timeout aca:
+      // DATABASE_URL apunta al pooler (PgBouncer) de Digital Ocean, que en modo
+      // transaccion rechaza la conexion entera con "unsupported startup
+      // parameter" y tumba TODAS las queries. El tope se aplica del lado del
+      // servidor con ALTER ROLE/ALTER DATABASE ... SET statement_timeout.
       ssl: {
         rejectUnauthorized: false,
       },

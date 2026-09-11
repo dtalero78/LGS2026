@@ -20,6 +20,7 @@ interface CalendarEvent {
   linkZoom?: string
   inscritos?: number
   asistieron?: number
+  eventoCompartidoId?: string | null
   _createdDate?: string | Date
 }
 
@@ -259,6 +260,9 @@ export default function DailyAgenda({
                             <span className={`badge ${getEventBadge(event.evento || event.tipo || '')}`}>
                               {event.evento || event.tipo}
                             </span>
+                            {event.eventoCompartidoId && (
+                              <span title="Compartido entre niveles" aria-label="Compartido entre niveles">🔗</span>
+                            )}
                             <span className="font-medium text-sm">
                               {event.tituloONivel}
                             </span>

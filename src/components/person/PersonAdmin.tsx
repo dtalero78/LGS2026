@@ -7,7 +7,11 @@ import { formatDate } from '@/lib/utils'
 import { UserPlusIcon } from '@heroicons/react/24/outline'
 import { CheckCircleIcon } from '@heroicons/react/24/solid'
 import { PermissionGuard } from '@/components/permissions'
+import { usePermissions } from '@/hooks/usePermissions'
 import { PersonPermission } from '@/types/permissions'
+import { COUNTRY_CODES } from '@/lib/country-codes'
+import { isContratoPrueba } from '@/components/common/ContratoPruebaBadge'
+import KidsBeneficiarioModal, { KidsData } from '@/components/comercial/KidsBeneficiarioModal'
 
 interface PersonAdminProps {
   person: Person
@@ -22,15 +26,8 @@ const PREFIJOS_PAISES = [
   { pais: "Perú", prefijo: "+51" },
 ]
 
-// Indicativos telefónicos disponibles (para selector de celular)
-const PREFIJOS_CELULAR = [
-  { pais: "Australia", codigo: "AU", prefijo: "+61" },
-  { pais: "Chile", codigo: "CL", prefijo: "+56" },
-  { pais: "Colombia", codigo: "CO", prefijo: "+57" },
-  { pais: "Ecuador", codigo: "EC", prefijo: "+593" },
-  { pais: "Estados Unidos", codigo: "US", prefijo: "+1" },
-  { pais: "Perú", codigo: "PE", prefijo: "+51" },
-]
+// Indicativos telefónicos (selector de celular) — catálogo completo compartido.
+const PREFIJOS_CELULAR = COUNTRY_CODES
 
 export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps) {
   console.log('🧪 PersonAdmin render - Props:', {
@@ -39,10 +36,18 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     beneficiaries
   })
   const [selectedEstado, setSelectedEstado] = useState(person.aprobacion || 'Pendiente')
+  // Contrato de prueba (PRB-): solo ver/editar/adjuntar; no aprobar ni agregar beneficiarios.
+  const esContratoDePrueba = isContratoPrueba(person.contrato)
   const [newComment, setNewComment] = useState('')
   const [showBeneficiaryForm, setShowBeneficiaryForm] = useState(false)
   const [newBeneficiaryId, setNewBeneficiaryId] = useState<string | null>(null)
   const [currentFormStep, setCurrentFormStep] = useState(1)
+  // Nombre y numeroId son datos de IDENTIDAD: se propagan a varias tablas, por
+  // eso cada uno tiene su permiso propio (aparte del genérico MODIFICAR).
+  const { hasPermission } = usePermissions()
+  const canEditarNombre = hasPermission(PersonPermission.EDITAR_NOMBRE)
+  const canEditarNumeroId = hasPermission(PersonPermission.EDITAR_NUMERO_ID)
+
   const [beneficiaryData, setBeneficiaryData] = useState({
     primerNombre: '',
     segundoNombre: '',
@@ -59,7 +64,18 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     email: '',
     genero: ''
   })
+  // Kids: switch en el alta de beneficiario (misma opción que Crear Contrato).
+  const [kidsFeatureEnabled, setKidsFeatureEnabled] = useState(false)
+  const [beneficiaryKids, setBeneficiaryKids] = useState(false)
+  const [beneficiaryKidsData, setBeneficiaryKidsData] = useState<KidsData | null>(null)
+  const [showKidsModal, setShowKidsModal] = useState(false)
+  useEffect(() => {
+    fetch('/api/admin/kids-config').then(r => r.json()).then(d => setKidsFeatureEnabled(!!d.active)).catch(() => setKidsFeatureEnabled(false))
+  }, [])
   const [currentBeneficiaries, setCurrentBeneficiaries] = useState<Beneficiary[]>(beneficiaries)
+  // Beneficiario que aún no es usuario académico (para el modal informativo).
+  // enWelcome = tiene ficha pero está en WELCOME (aún no pasa a BN1).
+  const [sinAcademico, setSinAcademico] = useState<{ nombre: string; enWelcome: boolean } | null>(null)
   const [approvingBeneficiaries, setApprovingBeneficiaries] = useState<Set<string>>(new Set())
   const [processStatus, setProcessStatus] = useState<Record<string, string>>({})
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -72,6 +88,19 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
   const [isEditMode, setIsEditMode] = useState(false)
   const [editingBeneficiaryId, setEditingBeneficiaryId] = useState<string | null>(null)
   const [isTogglingContract, setIsTogglingContract] = useState(false)
+  // Snapshot de los valores al abrir "Modificar" — se compara contra el form
+  // para mostrar SOLO lo que cambió en el modal de confirmación.
+  const [originalBeneficiary, setOriginalBeneficiary] = useState<Record<string, string>>({})
+  const [showConfirmChangesModal, setShowConfirmChangesModal] = useState(false)
+  const [pendingChanges, setPendingChanges] = useState<{ label: string; from: string; to: string }[]>([])
+  const [isSavingBeneficiary, setIsSavingBeneficiary] = useState(false)
+  // Protección de historial: si el beneficiario recién agregado ya tomó el
+  // programa antes (mismo numeroId, otro contrato), se archiva SIEMPRE su
+  // historial como documento del titular y se limpia la ficha. El modal es
+  // informativo (progreso → confirmación); solo ofrece salida si el PDF falla.
+  const [proteccionModal, setProteccionModal] = useState<{ numeroId: string; contratoViejo: string | null; bookings: number; nombre: string } | null>(null)
+  const [proteccionStatus, setProteccionStatus] = useState<'running' | 'done' | 'error'>('running')
+  const [proteccionMsg, setProteccionMsg] = useState('')
 
   // Modal "Motivo de suspensión administrativa" — usado por el toggle del
   // contrato y por el botón "Inactivar" individual de beneficiario.
@@ -124,6 +153,32 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
   const PRE_APPROVAL_ONLY = ['Contrato nulo', 'Devuelto', 'Rechazado']
   // Estados post-aprobación que requieren confirmación simple (sin bloqueo)
   const SIMPLE_CONFIRM_POST_APPROVAL = ['Pendiente', 'Retractado']
+
+  // ── Regla "Aprobado → Pendiente" (revertir la aprobación) ──
+  // Solo se permite mientras el contrato esté FRESCO. Bloqueo con OR: si ya pasó
+  // un mes desde el inicio del contrato O algún beneficiario ya avanzó de WELCOME,
+  // el cambio a "Pendiente" queda deshabilitado. El backend valida lo mismo.
+  const baseFechaContrato = person.inicioContrato || person.fechaContrato || null
+  const dentroDelMesContrato = (() => {
+    if (!baseFechaContrato) return false
+    const inicio = new Date(baseFechaContrato)
+    if (Number.isNaN(inicio.getTime())) return false
+    const limite = new Date(inicio.getTime())
+    limite.setMonth(limite.getMonth() + 1)
+    return Date.now() < limite.getTime()
+  })()
+  // ¿Algún beneficiario avanzó de WELCOME? (nivel real en ACADEMICA ≠ WELCOME y no vacío)
+  const algunBeneficiarioAvanzo = currentBeneficiaries.some(b => {
+    const nivel = (b.academicaNivel ?? b.nivel ?? '').toString().trim().toUpperCase()
+    return nivel !== '' && nivel !== 'WELCOME'
+  })
+  const puedePendiente = dentroDelMesContrato && !algunBeneficiarioAvanzo
+  const motivoBloqueoPendiente = (() => {
+    const motivos: string[] = []
+    if (!dentroDelMesContrato) motivos.push('ya pasó un mes desde el inicio del contrato')
+    if (algunBeneficiarioAvanzo) motivos.push('algún beneficiario ya avanzó de WELCOME')
+    return motivos.join(' y ')
+  })()
 
   const handleApproveSpecificBeneficiary = async (beneficiaryId: string) => {
     if (!beneficiaryId) return
@@ -204,6 +259,18 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         `Usa "Retractado" si necesitas anular el contrato post-aprobación.`
       )
       // Volver a sincronizar el dropdown con el estado real
+      setSelectedEstado(originalEstado as any)
+      return
+    }
+
+    // Bloqueo client-side: revertir Aprobado → Pendiente solo con contrato FRESCO
+    // (dentro del mes de inicio Y todos los beneficiarios aún en WELCOME/sin nivel).
+    if (originalEstado === 'Aprobado' && newEstado === 'Pendiente' && !puedePendiente) {
+      alert(
+        `No se puede pasar a "Pendiente": ${motivoBloqueoPendiente}.\n\n` +
+        `Revertir la aprobación solo es posible mientras el contrato esté dentro del mes ` +
+        `de inicio y los beneficiarios sigan en WELCOME o sin nivel.`
+      )
       setSelectedEstado(originalEstado as any)
       return
     }
@@ -458,6 +525,22 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         const result = await response.json()
         if (result.success && result.person) {
           const ben = result.person
+          // fechaNacimiento es DATE puro en BD, pero puede llegar como ISO
+          // ("2000-05-12T00:00:00.000Z"); <input type="date"> exige YYYY-MM-DD.
+          const fechaNac = (ben.fechaNacimiento || '').toString().slice(0, 10)
+
+          // Snapshot para el diff del modal de confirmación
+          setOriginalBeneficiary({
+            primerNombre: ben.primerNombre || '',
+            segundoNombre: ben.segundoNombre || '',
+            primerApellido: ben.primerApellido || '',
+            segundoApellido: ben.segundoApellido || '',
+            numeroId: ben.numeroId || '',
+            fechaNacimiento: fechaNac,
+            celular: ben.celular || '',
+            domicilio: ben.domicilio || '',
+            email: ben.email || '',
+          })
 
           setBeneficiaryData({
             primerNombre: ben.primerNombre || '',
@@ -465,7 +548,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             primerApellido: ben.primerApellido || '',
             segundoApellido: ben.segundoApellido || '',
             numeroId: ben.numeroId || '',
-            fechaNacimiento: ben.fechaNacimiento || '',
+            fechaNacimiento: fechaNac,
             edad: ben.edad || '',
             pais: ben.pais || ben.plataforma || '',
             domicilio: ben.domicilio || '',
@@ -497,7 +580,9 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
       numeroId: '',
       fechaNacimiento: '',
       edad: '',
-      pais: '',
+      // Precargado con la plataforma del titular (el beneficiario se suma a SU
+      // contrato). Editable por si el beneficiario está en otro país.
+      pais: person.plataforma || '',
       domicilio: '',
       ciudad: '',
       celularPrefijo: '+57',
@@ -506,6 +591,8 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
       genero: ''
     })
     setNewBeneficiaryId('__new__')
+    setBeneficiaryKids(false)
+    setBeneficiaryKidsData(null)
     setShowBeneficiaryForm(true)
     setCurrentFormStep(1)
   }
@@ -552,7 +639,41 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     }
   }
 
+  /**
+   * En modo EDICIÓN no guarda directo: calcula qué campos cambiaron respecto al
+   * snapshot original y abre el modal de confirmación. El PATCH real lo hace
+   * confirmSaveBeneficiary(). En modo CREAR sigue guardando directo.
+   */
   const handleSaveBeneficiary = async () => {
+    if (isEditMode && editingBeneficiaryId) {
+      const normCel = (beneficiaryData.celular || '').replace(/\D/g, '')
+      const campos: { key: string; label: string; now: string }[] = [
+        { key: 'primerNombre',    label: 'Primer Nombre',            now: beneficiaryData.primerNombre || '' },
+        { key: 'segundoNombre',   label: 'Segundo Nombre',           now: beneficiaryData.segundoNombre || '' },
+        { key: 'primerApellido',  label: 'Primer Apellido',          now: beneficiaryData.primerApellido || '' },
+        { key: 'segundoApellido', label: 'Segundo Apellido',         now: beneficiaryData.segundoApellido || '' },
+        { key: 'numeroId',        label: 'Número de Identificación', now: (beneficiaryData.numeroId || '').toUpperCase().replace(/[.\s_]/g, '').trim() },
+        { key: 'fechaNacimiento', label: 'Fecha de Nacimiento',      now: beneficiaryData.fechaNacimiento || '' },
+        { key: 'celular',         label: 'Celular',                  now: normCel },
+        { key: 'domicilio',       label: 'Domicilio',                now: beneficiaryData.domicilio || '' },
+        { key: 'email',           label: 'Email',                    now: beneficiaryData.email || '' },
+      ]
+      const diffs = campos
+        .filter(c => c.now !== (originalBeneficiary[c.key] || ''))
+        .map(c => ({ label: c.label, from: originalBeneficiary[c.key] || '—', to: c.now || '—' }))
+
+      if (diffs.length === 0) {
+        alert('No hay cambios para guardar.')
+        return
+      }
+      setPendingChanges(diffs)
+      setShowConfirmChangesModal(true)
+      return
+    }
+    await doSaveBeneficiary()
+  }
+
+  const doSaveBeneficiary = async () => {
     const isEdit = isEditMode && !!editingBeneficiaryId
     // En CREAR: el celular es solo el número local, hay que concatenar el prefijo.
     //   "+57" + "3008021701" → "573008021701"
@@ -568,11 +689,23 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
       let response: Response
 
       if (isEditMode && editingBeneficiaryId) {
-        // PATCH - only contact fields are editable
+        // PATCH — identificación + contacto. El backend normaliza numeroId y
+        // propaga numeroId/email/celular/fechaNacimiento a ACADEMICA y
+        // USUARIOS_ROLES (matcheando por los valores ANTERIORES).
         response = await fetch(`/api/postgres/people/${editingBeneficiaryId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            // Los campos de identidad se mandan SOLO con permiso: el backend
+            // los exige igual, esto evita un 403 por enviarlos sin querer.
+            ...(canEditarNombre ? {
+              primerNombre: beneficiaryData.primerNombre,
+              segundoNombre: beneficiaryData.segundoNombre || null,
+              primerApellido: beneficiaryData.primerApellido,
+              segundoApellido: beneficiaryData.segundoApellido || null,
+            } : {}),
+            ...(canEditarNumeroId ? { numeroId: beneficiaryData.numeroId } : {}),
+            fechaNacimiento: beneficiaryData.fechaNacimiento || null,
             celular: normalizedCelular || undefined,
             domicilio: beneficiaryData.domicilio,
             email: beneficiaryData.email,
@@ -597,12 +730,20 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             fechaNacimiento: beneficiaryData.fechaNacimiento || undefined,
             ciudad: beneficiaryData.ciudad || undefined,
             domicilio: beneficiaryData.domicilio || undefined,
-            // Campos del form
+            // Campos del form (plataforma viene precargada con la del titular)
             plataforma: beneficiaryData.pais || undefined,
-            // Campos heredados del titular
+            // Campos heredados del titular — mismo criterio que Crear Contrato:
+            // el beneficiario se suma al contrato del titular, así que hereda su
+            // vínculo (titularId) y las fechas del contrato.
+            titularId: person._id,
+            inicioContrato: person.inicioContrato || undefined,
+            fechaContrato: person.fechaContrato || undefined,
             finalContrato: person.finalContrato || undefined,
             vigencia: person.vigencia || undefined,
             fechaIngreso: new Date().toISOString(),
+            // Kids: marca + datos de curso/apoderado (se guardan en KIDS_INSCRIPCIONES)
+            kids: beneficiaryKids || undefined,
+            kidsData: beneficiaryKids ? beneficiaryKidsData : undefined,
           })
         })
       }
@@ -631,6 +772,18 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             fechaCreacion: created._createdDate || new Date().toISOString(),
           }
           setCurrentBeneficiaries(prev => [...prev, newBen])
+
+          // ¿Este documento ya tomó el programa antes? → SIEMPRE se archiva el
+          // historial (informe como documento del titular) y se limpia la ficha.
+          const numId = created.numeroId
+          fetch(`/api/postgres/proteccion-historial/check?numeroId=${encodeURIComponent(numId)}&contratoNuevo=${encodeURIComponent(person.contrato || '')}`)
+            .then(r => r.json())
+            .then(cd => {
+              if (cd?.success && cd.existeHistorial && cd.bookings > 0) {
+                runProteccion({ numeroId: numId, contratoViejo: cd.contratoViejo, bookings: cd.bookings, nombre: `${created.primerNombre} ${created.primerApellido}`.trim() })
+              }
+            })
+            .catch(() => {})
         }
 
         setShowBeneficiaryForm(false)
@@ -649,6 +802,31 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
       }
     } catch (error) {
       console.error('❌ Error guardando beneficiario:', error)
+    }
+  }
+
+  const runProteccion = async (caso: { numeroId: string; contratoViejo: string | null; bookings: number; nombre: string }) => {
+    setProteccionModal(caso)
+    setProteccionStatus('running')
+    setProteccionMsg('')
+    try {
+      const res = await fetch('/api/postgres/proteccion-historial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          numeroId: caso.numeroId,
+          titularId: person._id,               // titular del contrato nuevo
+          contratoViejo: caso.contratoViejo,
+          contratoNuevo: person.contrato || null,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data?.error || `Error ${res.status}`)
+      setProteccionMsg(`${data.eliminados?.bookings ?? 0} agendamiento(s) archivado(s) en el informe adjunto a la documentación del titular, y limpiado(s) de la ficha.`)
+      setProteccionStatus('done')
+    } catch (e: any) {
+      setProteccionMsg(e?.message || String(e))
+      setProteccionStatus('error')
     }
   }
 
@@ -748,6 +926,12 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
 
       </div>
 
+      {esContratoDePrueba && (
+        <div className="rounded-md border border-orange-400 bg-orange-50 px-4 py-3 text-sm text-orange-900">
+          🧪 <strong>Contrato de prueba ({person.contrato}).</strong> Solo se puede ver, editar y adjuntar documentación. No se puede aprobar, agregar beneficiarios, agendar ni crear fichas en ACADEMICA.
+        </div>
+      )}
+
       {/* Titular Status */}
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">Estado del Titular</h3>
@@ -767,19 +951,27 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                     // Si ya está Aprobado, ocultar opciones pre-aprobación
                     // ('Contrato nulo', 'Devuelto', 'Rechazado').
                     .filter(estado =>
-                      originalEstado !== 'Aprobado' || !PRE_APPROVAL_ONLY.includes(estado)
+                      (originalEstado !== 'Aprobado' || !PRE_APPROVAL_ONLY.includes(estado)) &&
+                      // Contrato de prueba: no se puede aprobar.
+                      !(esContratoDePrueba && estado === 'Aprobado')
                     )
-                    .map((estado) => (
-                      <option key={estado} value={estado}>
-                        {estado === 'Aprobado' && '✅ '}
-                        {estado === 'Contrato nulo' && '⚪ '}
-                        {estado === 'Devuelto' && '🔄 '}
-                        {estado === 'Pendiente' && '⏳ '}
-                        {estado === 'Rechazado' && '❌ '}
-                        {estado === 'Retractado' && '↩️ '}
-                        {estado}
-                      </option>
-                    ))}
+                    .map((estado) => {
+                      // Revertir Aprobado → Pendiente solo con contrato fresco.
+                      const pendienteBloqueado =
+                        originalEstado === 'Aprobado' && estado === 'Pendiente' && !puedePendiente
+                      return (
+                        <option key={estado} value={estado} disabled={pendienteBloqueado}>
+                          {estado === 'Aprobado' && '✅ '}
+                          {estado === 'Contrato nulo' && '⚪ '}
+                          {estado === 'Devuelto' && '🔄 '}
+                          {estado === 'Pendiente' && '⏳ '}
+                          {estado === 'Rechazado' && '❌ '}
+                          {estado === 'Retractado' && '↩️ '}
+                          {estado}
+                          {pendienteBloqueado && ' (bloqueado)'}
+                        </option>
+                      )
+                    })}
                 </select>
               </div>
               <div className="flex items-center">
@@ -810,17 +1002,38 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3">
-                    <h4 className="font-medium text-gray-900">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nivelAcad = String(beneficiary.academicaNivel || '').toUpperCase()
+                        // Es usuario académico solo si tiene ficha Y ya pasó a un nivel real (no WELCOME).
+                        const esAcademico = !!beneficiary.existeEnAcademica && !!beneficiary.academicaId && !!nivelAcad && nivelAcad !== 'WELCOME'
+                        if (esAcademico) {
+                          window.open(`/student/${beneficiary.academicaId}`, '_blank', 'noopener,noreferrer')
+                        } else {
+                          setSinAcademico({
+                            nombre: `${beneficiary.nombre} ${beneficiary.apellido}`.trim(),
+                            enWelcome: nivelAcad === 'WELCOME',
+                          })
+                        }
+                      }}
+                      title="Ver perfil académico del beneficiario"
+                      className="font-medium text-gray-900 hover:text-blue-600 hover:underline text-left"
+                    >
                       {beneficiary.nombre} {beneficiary.apellido}
-                    </h4>
+                    </button>
                     <span className={`badge ${getEstadoBadgeClass(beneficiary.estado)}`}>
                       {beneficiary.estado}
                     </span>
-                    {!(beneficiary as any).existeEnAcademica && (
+                    {!beneficiary.existeEnAcademica ? (
                       <span className="badge bg-red-100 text-red-700">
                         SIN REGISTRO ACADÉMICO
                       </span>
-                    )}
+                    ) : String(beneficiary.academicaNivel || '').toUpperCase() === 'WELCOME' ? (
+                      <span className="badge bg-amber-100 text-amber-700">
+                        EN WELCOME
+                      </span>
+                    ) : null}
                     {beneficiary.estado === 'Aprobado' && whatsappSent && (
                       <div className="flex items-center space-x-1 text-green-600 bg-green-100 px-2 py-1 rounded" title="WhatsApp enviado">
                         <span className="text-sm">📱✅ WhatsApp Enviado</span>
@@ -842,7 +1055,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                       Modificar
                     </button>
                   </PermissionGuard>
-                  {((!beneficiary.estado || beneficiary.estado === 'Pendiente') || approvingBeneficiaries.has(beneficiary._id)) && (
+                  {!esContratoDePrueba && ((!beneficiary.estado || beneficiary.estado === 'Pendiente') || approvingBeneficiaries.has(beneficiary._id)) && (
                     <PermissionGuard permission={PersonPermission.APROBAR}>
                       <button
                         onClick={() => handleApproveSpecificBeneficiary(beneficiary._id)}
@@ -891,7 +1104,8 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             )
           })}
 
-          {/* Add Beneficiary Button - Now at the bottom */}
+          {/* Add Beneficiary Button - Now at the bottom (oculto en contratos de prueba) */}
+          {!esContratoDePrueba && (
           <PermissionGuard permission={PersonPermission.AGREGAR_BENEFICIARIO}>
             <div className="pt-4 flex justify-end">
               <button
@@ -903,6 +1117,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
               </button>
             </div>
           </PermissionGuard>
+          )}
           </div>
         </div>
       </div>
@@ -970,7 +1185,76 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             {/* Edit Mode: Only 3 fields */}
             {isEditMode ? (
               <div className="space-y-4">
-                <h4 className="font-medium text-gray-900 mb-4">Información de Contacto</h4>
+                <h4 className="font-medium text-gray-900 mb-4">Nombres</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {([
+                    ['primerNombre',    'Primer Nombre *'],
+                    ['segundoNombre',   'Segundo Nombre'],
+                    ['primerApellido',  'Primer Apellido *'],
+                    ['segundoApellido', 'Segundo Apellido'],
+                  ] as const).map(([campo, label]) => (
+                    <div key={campo}>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+                      <input
+                        type="text"
+                        value={beneficiaryData[campo]}
+                        onChange={(e) => handleBeneficiaryDataChange(campo, e.target.value)}
+                        readOnly={!canEditarNombre}
+                        disabled={!canEditarNombre}
+                        className={'input-field' + (!canEditarNombre ? ' bg-gray-100 cursor-not-allowed text-gray-500' : '')}
+                      />
+                    </div>
+                  ))}
+                </div>
+                {canEditarNombre ? (
+                  <p className="text-xs text-amber-600 -mt-2">
+                    ⚠️ El nombre se propaga a su <strong>registro académico</strong>, a sus <strong>listas de asistencia</strong> y a su <strong>usuario de acceso</strong>.
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-500 -mt-2">
+                    🔒 No tenés permiso para editar los nombres (<span className="font-mono">PERSON.INFO.EDITAR_NOMBRE</span>).
+                  </p>
+                )}
+
+                <h4 className="font-medium text-gray-900 mb-4 pt-2">Identificación</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Número de Identificación *
+                    </label>
+                    <input
+                      type="text"
+                      value={beneficiaryData.numeroId}
+                      onChange={(e) => handleBeneficiaryDataChange('numeroId', e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))}
+                      readOnly={!canEditarNumeroId}
+                      disabled={!canEditarNumeroId}
+                      className={'input-field font-mono' + (!canEditarNumeroId ? ' bg-gray-100 cursor-not-allowed text-gray-500' : '')}
+                      placeholder="Ej: 18201897-K"
+                    />
+                    {canEditarNumeroId ? (
+                      <p className="text-xs text-amber-600 mt-1">
+                        ⚠️ Es la llave que une al beneficiario con su registro académico. Al cambiarlo se actualiza también en ACADEMICA y en su usuario de acceso.
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-500 mt-1">
+                        🔒 No tenés permiso para editar el número de identificación (<span className="font-mono">PERSON.INFO.EDITAR_NUMERO_ID</span>).
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Fecha de Nacimiento
+                    </label>
+                    <input
+                      type="date"
+                      value={beneficiaryData.fechaNacimiento}
+                      onChange={(e) => handleBeneficiaryDataChange('fechaNacimiento', e.target.value)}
+                      className="input-field"
+                    />
+                  </div>
+                </div>
+
+                <h4 className="font-medium text-gray-900 mb-4 pt-2">Información de Contacto</h4>
                 <div className="grid grid-cols-1 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1016,6 +1300,20 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                 {currentFormStep === 1 && (
                   <div className="space-y-4">
                     <h4 className="font-medium text-gray-900 mb-4">Información Básica</h4>
+                    {kidsFeatureEnabled && (
+                      <div className="flex items-center justify-between rounded-lg border border-purple-200 bg-purple-50 px-4 py-2">
+                        <span className="text-sm font-semibold text-purple-800">🧒 ¿Es beneficiario Kids?</span>
+                        {beneficiaryKids ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-purple-700 bg-purple-100 rounded-full px-2 py-0.5">Kids ✓</span>
+                            <button type="button" onClick={() => setShowKidsModal(true)} className="px-2 py-1 text-xs rounded border border-purple-300 bg-white text-purple-700">Editar datos</button>
+                            <button type="button" onClick={() => { setBeneficiaryKids(false); setBeneficiaryKidsData(null) }} className="px-2 py-1 text-xs rounded border border-gray-300 bg-white text-gray-600">Quitar</button>
+                          </div>
+                        ) : (
+                          <button type="button" onClick={() => setShowKidsModal(true)} className="px-3 py-1.5 text-sm font-semibold rounded-full bg-purple-600 text-white">Activar Kids</button>
+                        )}
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1160,11 +1458,12 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                           <select
                             value={beneficiaryData.celularPrefijo}
                             onChange={(e) => handleBeneficiaryDataChange('celularPrefijo', e.target.value)}
-                            className="input-field w-28 flex-shrink-0"
+                            className="input-field w-48 flex-shrink-0"
+                            title="Teclea el nombre del país para buscarlo"
                           >
                             {PREFIJOS_CELULAR.map(item => (
                               <option key={item.codigo} value={item.prefijo}>
-                                {item.prefijo} ({item.codigo})
+                                {item.pais} ({item.prefijo})
                               </option>
                             ))}
                           </select>
@@ -1200,7 +1499,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
               <div className="flex justify-end mt-6 pt-4 border-t border-gray-200">
                 <button
                   onClick={handleSaveBeneficiary}
-                  disabled={!beneficiaryData.celular || !beneficiaryData.domicilio || !beneficiaryData.email}
+                  disabled={!beneficiaryData.numeroId?.trim() || !beneficiaryData.celular || !beneficiaryData.domicilio || !beneficiaryData.email}
                   className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Guardar Cambios
@@ -1260,6 +1559,129 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         </div>
       )}
 
+      {/* Modal Kids: captura curso + apoderado (mismo del wizard de Crear Contrato) */}
+      <KidsBeneficiarioModal
+        open={showKidsModal}
+        initial={{
+          primerNombre: beneficiaryData.primerNombre,
+          segundoNombre: beneficiaryData.segundoNombre,
+          primerApellido: beneficiaryData.primerApellido,
+          segundoApellido: beneficiaryData.segundoApellido,
+          numeroId: beneficiaryData.numeroId,
+          fechaNacimiento: beneficiaryData.fechaNacimiento,
+          email: beneficiaryData.email,
+          celular: beneficiaryData.celular,
+          kidsData: beneficiaryKidsData || undefined,
+        }}
+        titularNombre={`${person.primerNombre} ${person.primerApellido}`}
+        titularCelular={person.celular}
+        titularEmail={person.email}
+        onSave={(v) => {
+          // Sincroniza al form los datos del beneficiario capturados en el modal.
+          setBeneficiaryData(prev => ({
+            ...prev,
+            primerNombre: v.primerNombre ?? prev.primerNombre,
+            segundoNombre: v.segundoNombre ?? prev.segundoNombre,
+            primerApellido: v.primerApellido ?? prev.primerApellido,
+            segundoApellido: v.segundoApellido ?? prev.segundoApellido,
+            numeroId: v.numeroId ?? prev.numeroId,
+            fechaNacimiento: v.fechaNacimiento ?? prev.fechaNacimiento,
+            email: v.email ?? prev.email,
+            celular: v.celular ?? prev.celular,
+          }))
+          setBeneficiaryKidsData(v.kidsData || null)
+          setBeneficiaryKids(true)
+          setShowKidsModal(false)
+        }}
+        onCancel={() => {
+          setShowKidsModal(false)
+          if (!beneficiaryKidsData) setBeneficiaryKids(false)
+        }}
+      />
+
+      {/* Confirmación de cambios del beneficiario */}
+      {showConfirmChangesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full">
+            <h3 className="text-lg font-bold text-gray-900 mb-1">Confirmar cambios</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Vas a modificar {pendingChanges.length === 1 ? 'el siguiente campo' : `los siguientes ${pendingChanges.length} campos`} del beneficiario. Revisá antes de guardar.
+            </p>
+
+            <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 mb-4">
+              {pendingChanges.map(c => (
+                <div key={c.label} className="px-3 py-2.5">
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{c.label}</div>
+                  <div className="flex items-center gap-2 text-sm flex-wrap">
+                    <span className="line-through text-red-600 bg-red-50 px-1.5 py-0.5 rounded font-mono text-xs break-all">{c.from}</span>
+                    <span className="text-gray-400">→</span>
+                    <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-mono text-xs font-semibold break-all">{c.to}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {pendingChanges.some(c => c.label === 'Número de Identificación') && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
+                <p className="text-xs text-amber-800">
+                  ⚠️ Estás cambiando el <strong>número de identificación</strong>. Se actualizará también en <strong>ACADEMICA</strong> y en su <strong>usuario de acceso</strong> para no romper el vínculo.
+                </p>
+              </div>
+            )}
+            {pendingChanges.some(c => c.label.includes('Nombre') || c.label.includes('Apellido')) && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
+                <p className="text-xs text-amber-800 font-semibold mb-1">
+                  ⚠️ Estás cambiando el <strong>nombre</strong>. Se actualizará en todos estos lugares:
+                </p>
+                <ul className="text-xs text-amber-800 list-disc list-inside space-y-0.5">
+                  <li>Su <strong>ficha académica</strong> (ACADEMICA)</li>
+                  <li>Sus <strong>listas de asistencia</strong> — el nombre está copiado en cada clase agendada</li>
+                  <li>Su <strong>usuario de acceso</strong> (con el que inicia sesión)</li>
+                  <li>El <strong>registro financiero</strong> del contrato, si es el titular</li>
+                </ul>
+                <p className="text-xs text-amber-700 mt-1">
+                  Se aplica todo junto: si algo falla, no se guarda ningún cambio.
+                </p>
+              </div>
+            )}
+            {pendingChanges.some(c => c.label === 'Email') && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                <p className="text-xs text-blue-800">
+                  ℹ️ Al cambiar el <strong>email</strong> también cambia el <strong>usuario con el que inicia sesión</strong>.
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowConfirmChangesModal(false)}
+                disabled={isSavingBeneficiary}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsSavingBeneficiary(true)
+                  try {
+                    await doSaveBeneficiary()
+                    setShowConfirmChangesModal(false)
+                  } finally {
+                    setIsSavingBeneficiary(false)
+                  }
+                }}
+                disabled={isSavingBeneficiary}
+                className="px-5 py-2 text-sm font-semibold text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+              >
+                {isSavingBeneficiary ? 'Guardando…' : 'Confirmar cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       {showDeleteModal && beneficiaryToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1310,6 +1732,70 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         </div>
       )}
 
+      {/* Protección de Historial Modal (automático, informativo) */}
+      {proteccionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
+            <div className="flex items-center mb-3">
+              <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center mr-3 ${proteccionStatus === 'error' ? 'bg-red-100' : proteccionStatus === 'done' ? 'bg-emerald-100' : 'bg-amber-100'}`}>
+                <span className="text-xl">{proteccionStatus === 'error' ? '⚠️' : proteccionStatus === 'done' ? '✅' : '📚'}</span>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {proteccionStatus === 'done' ? 'Historial protegido'
+                  : proteccionStatus === 'error' ? 'No se pudo proteger el historial'
+                  : 'Protegiendo historial…'}
+              </h3>
+            </div>
+
+            <div className="mb-4 text-sm text-gray-600 space-y-2">
+              <p>
+                <span className="font-medium text-gray-900">{proteccionModal.nombre}</span>{' '}
+                (ID {proteccionModal.numeroId}) ya tomó el programa
+                {proteccionModal.contratoViejo ? (
+                  <> en el contrato <span className="font-medium text-gray-900">{proteccionModal.contratoViejo}</span></>
+                ) : ' en un contrato anterior'}{' '}
+                (<span className="font-medium text-gray-900">{proteccionModal.bookings} agendamiento(s)</span>).
+              </p>
+
+              {proteccionStatus === 'running' && (
+                <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-md p-3 text-amber-800">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-600"></div>
+                  Generando el informe (PDF), adjuntándolo a la documentación del titular y limpiando la ficha…
+                </div>
+              )}
+              {proteccionStatus === 'done' && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-md p-3 text-emerald-800">
+                  {proteccionMsg}
+                </div>
+              )}
+              {proteccionStatus === 'error' && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3 text-red-800">
+                  {proteccionMsg}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center space-x-3">
+              {proteccionStatus === 'error' && (
+                <button
+                  onClick={() => runProteccion(proteccionModal)}
+                  className="flex-1 bg-amber-600 border border-transparent rounded-md px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
+                >
+                  Reintentar
+                </button>
+              )}
+              <button
+                onClick={() => setProteccionModal(null)}
+                disabled={proteccionStatus === 'running'}
+                className="flex-1 bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                {proteccionStatus === 'done' ? 'Entendido' : proteccionStatus === 'error' ? 'Cerrar' : 'Espere…'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Estado Change Confirmation Modal */}
       {showEstadoModal && pendingEstado && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1339,6 +1825,15 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                 </span>
                 ?
               </p>
+              {originalEstado === 'Aprobado' && pendingEstado === 'Pendiente' && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-xs text-red-800">
+                  <strong>🔒 Se bloqueará el login de los beneficiarios.</strong> Pasar a{' '}
+                  <strong>Pendiente</strong> deja a{' '}
+                  <strong>{currentBeneficiaries.length}</strong> beneficiario(s) sin acceso a la
+                  plataforma (el titular no se ve afectado). Es reversible: al volver a{' '}
+                  <strong>Aprobado</strong> se reactiva su acceso.
+                </div>
+              )}
               {originalEstado === 'Aprobado' && SIMPLE_CONFIRM_POST_APPROVAL.includes(pendingEstado) && (
                 <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
                   <strong>⚠ Atención:</strong> el contrato ya está <strong>Aprobado</strong>.
@@ -1454,6 +1949,30 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
           </div>
         )
       })()}
+
+      {/* Modal: beneficiario que aún no es usuario académico */}
+      {sinAcademico && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 text-center space-y-4">
+            <div className="text-4xl">🎓</div>
+            <h3 className="text-lg font-bold text-gray-900">Aún no es usuario académico</h3>
+            <p className="text-sm text-gray-600">
+              {sinAcademico.enWelcome ? (
+                <><strong>{sinAcademico.nombre}</strong> está en <strong>WELCOME</strong>. Será usuario académico cuando pase a <strong>BN1</strong> (tras asistir a su sesión Welcome).</>
+              ) : (
+                <><strong>{sinAcademico.nombre}</strong> aún no está con perfil académico.</>
+              )}
+            </p>
+            <button
+              type="button"
+              onClick={() => setSinAcademico(null)}
+              className="w-full px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   )

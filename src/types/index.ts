@@ -20,6 +20,8 @@ export interface Student {
   step: string           // Step principal
   nivelParalelo?: string // Nivel paralelo opcional (ej: ESS)
   stepParalelo?: string  // Step paralelo opcional
+  sence?: boolean        // Usuario SENCE (Chile)
+  senceCode?: string     // Código SENCE (alfanumérico)
   asesor?: string
   fechaNacimiento?: string
   celular?: string
@@ -72,6 +74,8 @@ export interface Person {
   step?: string           // Step principal (opcional para titulares)
   nivelParalelo?: string // Nivel paralelo opcional (ej: ESS)
   stepParalelo?: string  // Step paralelo opcional
+  sence?: boolean        // Franquicia SENCE (Chile, solo Empresa)
+  tipoPersona?: 'Persona Natural' | 'Empresa' // Tipo de persona del titular
   aprobacion?: 'Aprobado' | 'Pendiente' | 'Rechazado' | 'Contrato nulo' | 'Devuelto'
   estadoInactivo?: boolean
   estado?: string
@@ -90,6 +94,10 @@ export interface Person {
   hashConsentimiento?: string
   numeroDocumentoVerificado?: string
   inicioContrato?: string
+  /** Fecha de APROBACIÓN del contrato (se sella al aprobar). Solo la tienen los
+   *  contratos aprobados desde mayo 2026; en los anteriores es null y hay que
+   *  caer a inicioContrato/fechaContrato (ver src/lib/cambio-contado.ts). */
+  fechaIngreso?: string
   // Documents
   documentacion?: Array<string | { url: string; nombre: string; tipo?: string; fechaSubida?: string }>
 
@@ -206,6 +214,12 @@ export interface Beneficiary {
   fechaCreacion: string
   whatsappSent?: boolean
   estadoInactivo?: boolean
+  nivel?: string
+  /** ACADEMICA._id si el beneficiario ya tiene ficha académica (null si no). */
+  academicaId?: string | null
+  existeEnAcademica?: boolean
+  /** Nivel real en ACADEMICA. WELCOME = aún no es usuario académico (solo lo es en BN1+). */
+  academicaNivel?: string | null
 }
 
 // Comment types

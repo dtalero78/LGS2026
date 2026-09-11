@@ -1,5 +1,6 @@
 import 'server-only'
-import { handlerWithAuth, successResponse } from '@/lib/api-helpers'
+import { successResponse } from '@/lib/api-helpers'
+import { handlerReport } from '@/lib/report-guard'
 import { queryMany } from '@/lib/postgres'
 
 // ── Raw row returned from SQL ────────────────────────────────────────────────
@@ -139,7 +140,7 @@ function buildTimeSeries(rows: EventRow[]) {
 }
 
 // ── Route ────────────────────────────────────────────────────────────────────
-export const GET = handlerWithAuth(async (req, _ctx, _session) => {
+export const GET = handlerReport(async (req, _ctx, _session) => {
   const { searchParams } = new URL(req.url)
   const reportType    = searchParams.get('reportType') ?? 'sessions-jumps'
   const fechaInicio   = searchParams.get('fechaInicio') ?? `${new Date().getFullYear()}-01-01`

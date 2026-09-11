@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Student } from '@/types'
 import { formatDate } from '@/lib/utils'
 import { MessageCircle, Loader2, Check, AlertCircle } from 'lucide-react'
 import { ArrowUpTrayIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import { PermissionGuard } from '@/components/permissions'
-import { PersonPermission } from '@/types/permissions'
+import { PersonPermission, StudentPermission } from '@/types/permissions'
 import { api, handleApiError } from '@/hooks/use-api'
 import toast from 'react-hot-toast'
 import SuspendidaBadge from '@/components/common/SuspendidaBadge'
@@ -17,12 +17,27 @@ interface StudentGeneralProps {
   isSuspendida?: boolean
 }
 
+/** Badge con el número de veces que se envió un mensaje. */
+function Contador({ n, color }: { n: number; color: string }) {
+  return (
+    <span
+      title={`Enviado ${n} ${n === 1 ? 'vez' : 'veces'}`}
+      className={`inline-flex items-center justify-center min-w-[1.75rem] h-6 px-1.5 rounded-full text-xs font-bold ${color}`}
+    >
+      {n}
+    </span>
+  )
+}
+
 export default function StudentGeneral({ student, isSuspendida }: StudentGeneralProps) {
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false)
   const [whatsAppSent, setWhatsAppSent] = useState(false)
   const [whatsAppError, setWhatsAppError] = useState<string | null>(null)
   const [sendingProfileOnly, setSendingProfileOnly] = useState(false)
   const [profileOnlySent, setProfileOnlySent] = useState(false)
+  const [sendingReagendar, setSendingReagendar] = useState(false)
+  const [reagendarSent, setReagendarSent] = useState(false)
+  const [msgCounts, setMsgCounts] = useState<{ welcome: number; soloPerfil: number; reagendar: number }>({ welcome: 0, soloPerfil: 0, reagendar: 0 })
   const [showDocuments, setShowDocuments] = useState(false)
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([])
   const [editingPassword, setEditingPassword] = useState(false)
@@ -33,6 +48,54 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
 
   // The PEOPLE _id for document API calls
   const peopleId = (student as any).peopleId || student._id
+
+  // Contadores de envío de mensajes (guardados en ACADEMICA por student._id).
+  useEffect(() => {
+    if (!student?._id) return
+    fetch(`/api/postgres/students/${student._id}/msg-counts`)
+      .then(r => r.json())
+      .then(d => setMsgCounts({ welcome: Number(d.welcome ?? 0), soloPerfil: Number(d.soloPerfil ?? 0), reagendar: Number(d.reagendar ?? 0) }))
+      .catch(() => { /* deja en 0 */ })
+  }, [student?._id])
+
+  // ── SENCE ──────────────────────────────────────────────────────
+  const [sence, setSence] = useState<boolean>(!!(student as any).sence)
+  const [senceCode, setSenceCode] = useState<string>((student as any).senceCode || '')
+  const [showDesmarcar, setShowDesmarcar] = useState(false)
+  const [showCodeModal, setShowCodeModal] = useState(false)
+  const [codeInput, setCodeInput] = useState('')
+  const [codeConfirm, setCodeConfirm] = useState(false) // paso 2 del modal de código
+  const [senceProcessing, setSenceProcessing] = useState(false)
+
+  // Toggle de Franquicia SENCE: marca si está en NO, desmarca si está en SÍ.
+  const doToggleSence = async () => {
+    setSenceProcessing(true)
+    try {
+      if (sence) {
+        await api.post(`/api/postgres/students/${student._id}/sence`, { action: 'desmarcar' })
+        setSence(false); setSenceCode('')
+        toast.success('Franquicia SENCE desmarcada')
+      } else {
+        await api.post(`/api/postgres/students/${student._id}/sence`, { action: 'marcar' })
+        setSence(true)
+        toast.success('Franquicia SENCE marcada')
+      }
+      setShowDesmarcar(false)
+    } catch (e) { handleApiError(e) }
+    finally { setSenceProcessing(false) }
+  }
+
+  const doSaveCode = async () => {
+    const code = codeInput.trim()
+    if (!code) return
+    setSenceProcessing(true)
+    try {
+      await api.post(`/api/postgres/students/${student._id}/sence`, { action: 'set-code', code })
+      setSenceCode(code); setShowCodeModal(false); setCodeConfirm(false); setCodeInput('')
+      toast.success('Código SENCE guardado')
+    } catch (e) { handleApiError(e) }
+    finally { setSenceProcessing(false) }
+  }
 
   const [docs, setDocs] = useState(() => {
     const rawDocs: any[] = (student as any).documentacion || []
@@ -114,7 +177,15 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
     }
   }
 
+  // Los 3 botones (Crea Perfil con Welcome / Crear solo perfil / Reagendar Welcome)
+  // están pensados para nivel WELCOME. Si el usuario no lo está, pedir confirmación.
+  const confirmIfNotWelcome = (): boolean => {
+    if (String(student.nivel || '').toUpperCase() === 'WELCOME') return true
+    return window.confirm('El usuario no está en nivel WELCOME. ¿Está seguro de enviar el mensaje?')
+  }
+
   const handleSendWhatsApp = async () => {
+    if (!confirmIfNotWelcome()) return
     if (!student.celular && !student.telefono) {
       setWhatsAppError('Este estudiante no tiene número de teléfono registrado')
       setTimeout(() => setWhatsAppError(null), 5000)
@@ -144,6 +215,7 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
 
       if (data.success) {
         setWhatsAppSent(true)
+        setMsgCounts(c => ({ ...c, welcome: typeof data.contador === 'number' ? data.contador : c.welcome + 1 }))
         toast.success('WhatsApp de bienvenida enviado exitosamente')
 
         // Reset success state after 3 seconds
@@ -161,6 +233,7 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
   }
 
   const handleSendProfileOnly = async () => {
+    if (!confirmIfNotWelcome()) return
     if (!student.celular && !student.telefono) {
       setWhatsAppError('Este estudiante no tiene número de teléfono registrado')
       setTimeout(() => setWhatsAppError(null), 5000)
@@ -189,6 +262,7 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
 
       if (data.success) {
         setProfileOnlySent(true)
+        setMsgCounts(c => ({ ...c, soloPerfil: typeof data.contador === 'number' ? data.contador : c.soloPerfil + 1 }))
         toast.success('Link de perfil enviado exitosamente')
         setTimeout(() => setProfileOnlySent(false), 3000)
       } else {
@@ -199,6 +273,49 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
       setTimeout(() => setWhatsAppError(null), 5000)
     } finally {
       setSendingProfileOnly(false)
+    }
+  }
+
+  const handleSendReagendar = async () => {
+    if (!confirmIfNotWelcome()) return
+    if (!student.celular && !student.telefono) {
+      setWhatsAppError('Este estudiante no tiene número de teléfono registrado')
+      setTimeout(() => setWhatsAppError(null), 5000)
+      return
+    }
+
+    setSendingReagendar(true)
+    setWhatsAppError(null)
+
+    try {
+      const phoneNumber = student.celular || student.telefono
+      const fullName = `${student.primerNombre} ${student.segundoNombre || ''} ${student.primerApellido} ${student.segundoApellido || ''}`.trim()
+
+      const response = await fetch('/api/wix/sendReagendarWhatsApp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          celular: phoneNumber,
+          beneficiarioId: student._id,
+          nombre: fullName,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setReagendarSent(true)
+        setMsgCounts(c => ({ ...c, reagendar: typeof data.contador === 'number' ? data.contador : c.reagendar + 1 }))
+        toast.success('WhatsApp de reagendar Welcome enviado')
+        setTimeout(() => setReagendarSent(false), 3000)
+      } else {
+        throw new Error(data.error || 'Error al enviar WhatsApp')
+      }
+    } catch (error: any) {
+      setWhatsAppError(error.message || 'Error al enviar mensaje de WhatsApp')
+      setTimeout(() => setWhatsAppError(null), 5000)
+    } finally {
+      setSendingReagendar(false)
     }
   }
 
@@ -235,8 +352,9 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
       {/* Personal Information */}
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">Datos Personales</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {/* Columnas 1-2: datos personales en 2 columnas */}
+          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Primer Nombre</label>
               <p className="mt-1 text-sm text-gray-900">{student.primerNombre || 'No especificado'}</p>
@@ -261,6 +379,18 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
               <label className="block text-sm font-medium text-gray-700">Número de Documento</label>
               <p className="mt-1 text-sm text-gray-900">{student.numeroId}</p>
             </div>
+            {student.celular && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Celular</label>
+                <p className="mt-1 text-sm text-gray-900">{student.celular}</p>
+              </div>
+            )}
+            {student.email && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Email</label>
+                <p className="mt-1 text-sm text-gray-900">{student.email}</p>
+              </div>
+            )}
             {student.fechaNacimiento && (
               <div>
                 <label className="block text-sm font-medium text-gray-700">Fecha de Nacimiento</label>
@@ -269,87 +399,44 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
             )}
           </div>
 
+          {/* Columna 3: Franquicia SENCE, Tipo de Usuario, Plataforma */}
           <div className="space-y-4">
-            {student.celular && (
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-sm font-medium text-gray-700">Celular</label>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleSendWhatsApp}
-                      disabled={sendingWhatsApp || whatsAppSent}
-                      className={`
-                        inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md
-                        transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
-                        ${whatsAppSent
-                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                          : 'bg-green-600 text-white hover:bg-green-700 active:bg-green-800'
-                        }
-                      `}
-                    >
-                      {sendingWhatsApp ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Enviando...</span>
-                        </>
-                      ) : whatsAppSent ? (
-                        <>
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Enviado</span>
-                        </>
-                      ) : (
-                        <>
-                          <MessageCircle className="w-3.5 h-3.5" />
-                          <span>Mensaje de Bienvenida</span>
-                        </>
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSendProfileOnly}
-                      disabled={sendingProfileOnly || profileOnlySent}
-                      className={`
-                        inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md
-                        transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
-                        ${profileOnlySent
-                          ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                          : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
-                        }
-                      `}
-                    >
-                      {sendingProfileOnly ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Enviando...</span>
-                        </>
-                      ) : profileOnlySent ? (
-                        <>
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Enviado</span>
-                        </>
-                      ) : (
-                        <>
-                          <MessageCircle className="w-3.5 h-3.5" />
-                          <span>Crear solo perfil</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Franquicia SENCE</label>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${sence ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-600'}`}>
+                    {sence ? 'SÍ' : 'NO'}
+                  </span>
+                  {sence && senceCode && <span className="text-xs text-gray-500">Código: <span className="font-mono text-gray-700">{senceCode}</span></span>}
                 </div>
-                <p className="mt-1 text-sm text-gray-900">{student.celular}</p>
               </div>
-            )}
+            {/* Botones Franquicia SENCE — gateados por STUDENT.GENERAL.FRANQUICIA_SENCE */}
+            <PermissionGuard permission={StudentPermission.FRANQUICIA_SENCE}>
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Naranja: toggle marcar/desmarcar (siempre activo, con modal de confirmación) */}
+                <button
+                  type="button"
+                  onClick={() => setShowDesmarcar(true)}
+                  disabled={senceProcessing}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Franquicia SENCE
+                </button>
+                {/* Código: solo habilitado cuando la Franquicia está en SÍ */}
+                <button
+                  type="button"
+                  onClick={() => { setCodeInput(senceCode || ''); setCodeConfirm(false); setShowCodeModal(true) }}
+                  disabled={!sence || senceProcessing}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Código Franquicia SENCE
+                </button>
+              </div>
+            </PermissionGuard>
             {whatsAppError && (
               <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-red-700">{whatsAppError}</p>
-              </div>
-            )}
-            {student.email && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Email</label>
-                <p className="mt-1 text-sm text-gray-900">{student.email}</p>
               </div>
             )}
             <div>
@@ -367,6 +454,111 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
               </div>
             )}
           </div>
+
+          {/* Columna 4: botones */}
+          {student.celular && (
+            <div className="flex flex-col items-start gap-2">
+              <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleSendWhatsApp}
+                disabled={sendingWhatsApp || whatsAppSent}
+                className={`
+                  inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md
+                  transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+                  ${whatsAppSent
+                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                    : 'bg-green-600 text-white hover:bg-green-700 active:bg-green-800'
+                  }
+                `}
+              >
+                {sendingWhatsApp ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Enviando...</span>
+                  </>
+                ) : whatsAppSent ? (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Enviado</span>
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>Crea Perfil con Welcome</span>
+                  </>
+                )}
+              </button>
+              <Contador n={msgCounts.welcome} color="bg-green-100 text-green-700" />
+              </div>
+              <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleSendProfileOnly}
+                disabled={sendingProfileOnly || profileOnlySent}
+                className={`
+                  inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md
+                  transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+                  ${profileOnlySent
+                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+                  }
+                `}
+              >
+                {sendingProfileOnly ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Enviando...</span>
+                  </>
+                ) : profileOnlySent ? (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Enviado</span>
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>Crear solo perfil</span>
+                  </>
+                )}
+              </button>
+              <Contador n={msgCounts.soloPerfil} color="bg-blue-100 text-blue-700" />
+              </div>
+              <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleSendReagendar}
+                disabled={sendingReagendar || reagendarSent}
+                className={`
+                  inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md
+                  transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+                  ${reagendarSent
+                    ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                    : 'bg-purple-600 text-white hover:bg-purple-700 active:bg-purple-800'
+                  }
+                `}
+              >
+                {sendingReagendar ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Enviando...</span>
+                  </>
+                ) : reagendarSent ? (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Enviado</span>
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>Reagendar Welcome</span>
+                  </>
+                )}
+              </button>
+              <Contador n={msgCounts.reagendar} color="bg-purple-100 text-purple-700" />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -547,6 +739,83 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
                 Confirmar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Franquicia SENCE — confirmación del toggle (marcar / desmarcar) */}
+      {showDesmarcar && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              {sence ? 'Desmarcar Franquicia SENCE' : 'Marcar Franquicia SENCE'}
+            </h3>
+            {sence ? (
+              senceCode ? (
+                <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  ⚠️ Este usuario tiene un <b>código SENCE</b>: <span className="font-mono">{senceCode}</span>.
+                  Al desmarcar la Franquicia SENCE, <b>se borrará el código</b> de la ficha. Esta acción no se puede deshacer.
+                </div>
+              ) : (
+                <p className="mb-4 text-sm text-gray-600">Se <b>desmarcará</b> la Franquicia SENCE (sence = NO) en PEOPLE y ACADEMICA para este documento.</p>
+              )
+            ) : (
+              <p className="mb-4 text-sm text-gray-600">Se <b>marcará</b> la Franquicia SENCE (sence = SÍ) en PEOPLE y ACADEMICA para este documento. Luego podrás capturar el código.</p>
+            )}
+            <div className="flex items-center gap-3">
+              <button onClick={() => setShowDesmarcar(false)} disabled={senceProcessing}
+                className="flex-1 bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                Cancelar
+              </button>
+              <button onClick={doToggleSence} disabled={senceProcessing}
+                className="flex-1 bg-orange-600 text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-orange-700 disabled:opacity-50 inline-flex items-center justify-center gap-2">
+                {senceProcessing && <Loader2 className="h-4 w-4 animate-spin" />}
+                {sence ? (senceCode ? 'Desmarcar y borrar código' : 'Desmarcar') : 'Marcar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Ingresar código SENCE (2 pasos) */}
+      {showCodeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Código Franquicia SENCE</h3>
+            {!codeConfirm ? (
+              <>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Código (alfanumérico)</label>
+                <input
+                  type="text"
+                  value={codeInput}
+                  onChange={(e) => setCodeInput(e.target.value.replace(/[^A-Za-z0-9-]/g, ''))}
+                  placeholder="Ej: ABC123"
+                  autoFocus
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 font-mono"
+                />
+                <div className="mt-4 flex items-center gap-3">
+                  <button onClick={() => setShowCodeModal(false)} className="flex-1 bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancelar</button>
+                  <button onClick={() => setCodeConfirm(true)} disabled={!codeInput.trim()}
+                    className="flex-1 bg-indigo-600 text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">Continuar</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600 mb-2">Vas a guardar el siguiente código SENCE en la ficha:</p>
+                <div className="mb-4 rounded-md border border-indigo-200 bg-indigo-50 p-3 text-center">
+                  <span className="font-mono text-lg text-indigo-800">{codeInput.trim()}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setCodeConfirm(false)} disabled={senceProcessing}
+                    className="flex-1 bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">Volver</button>
+                  <button onClick={doSaveCode} disabled={senceProcessing}
+                    className="flex-1 bg-indigo-600 text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 inline-flex items-center justify-center gap-2">
+                    {senceProcessing && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Confirmar y guardar
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

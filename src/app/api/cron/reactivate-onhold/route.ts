@@ -70,34 +70,30 @@ export async function GET(request: NextRequest) {
           const diasPausados = Math.ceil((fechaFinOnHold.getTime() - fechaOnHold.getTime()) / (1000 * 60 * 60 * 24))
 
           let newFinalContrato = student.finalContrato
+          let newVigencia = student.vigencia ?? null
           if (student.finalContrato) {
             const finalDate = new Date(student.finalContrato)
             finalDate.setDate(finalDate.getDate() + diasPausados)
             newFinalContrato = finalDate.toISOString().split('T')[0]
+            newVigencia = Math.ceil((finalDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
           }
 
+          // Reactivación idéntica al panel/manual: limpia OnHold, extiende
+          // finalContrato por los días pausados y RESTAURA estado='ACTIVA'.
+          // NO toca extensionCount/extensionHistory (la traza vive en
+          // onHoldHistory) — consistente con contractService.deactivateOnHold
+          // y panel-estudiante.service.resolveStudentFromSession.
           await query(
             `UPDATE "PEOPLE" SET
               "estadoInactivo" = false,
+              "estado" = 'ACTIVA',
               "fechaOnHold" = NULL,
               "fechaFinOnHold" = NULL,
               "finalContrato" = $2,
-              "extensionCount" = COALESCE("extensionCount", 0) + 1,
-              "extensionHistory" = COALESCE("extensionHistory", '[]'::jsonb) || $3::jsonb,
+              "vigencia" = $3,
               "_updatedDate" = NOW()
             WHERE "_id" = $1`,
-            [
-              student._id,
-              newFinalContrato,
-              JSON.stringify({
-                numero: (student.extensionCount || 0) + 1,
-                fechaEjecucion: new Date().toISOString(),
-                vigenciaAnterior: student.finalContrato,
-                vigenciaNueva: newFinalContrato,
-                diasExtendidos: diasPausados,
-                motivo: `Extensión automática por OnHold (${diasPausados} días pausados desde ${student.fechaOnHold} hasta ${student.fechaFinOnHold}) - Cron Job`
-              })
-            ]
+            [student._id, newFinalContrato, newVigencia]
           )
 
           // Sync ACADEMICA.estadoInactivo (por numeroId).
@@ -106,6 +102,17 @@ export async function GET(request: NextRequest) {
               `UPDATE "ACADEMICA" SET "estadoInactivo" = false, "_updatedDate" = NOW() WHERE "numeroId" = $1`,
               [student.numeroId]
             ).catch(err => console.warn(`Cron reactivate-onhold: ACADEMICA sync failed for ${student.numeroId}:`, err))
+          }
+
+          // Sync USUARIOS_ROLES.activo=true (RESTAURAR login). Sin esto el
+          // estudiante quedaba reactivado (estadoInactivo=false) pero con el
+          // login bloqueado → no podía entrar. Bug histórico: el cron no
+          // restauraba el acceso (el panel/manual sí lo hacen).
+          if (student.email) {
+            await query(
+              `UPDATE "USUARIOS_ROLES" SET "activo" = true, "_updatedDate" = NOW() WHERE LOWER("email") = LOWER($1)`,
+              [student.email]
+            ).catch(err => console.warn(`Cron reactivate-onhold: USUARIOS_ROLES sync failed for ${student.email}:`, err))
           }
 
           console.log(`Cron reactivate-onhold: Estudiante ${student._id} reactivado exitosamente`)

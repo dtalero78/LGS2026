@@ -35,11 +35,11 @@ class EvaluationsRepositoryClass extends BaseRepository {
    * Excluye: cancelados, no-show, WELCOME, COMPLEMENTARIA.
    * Usa CALENDARIO JOIN para tomar tipo/nivel/step reales del evento.
    *
-   * Ventana semanal: PostgreSQL `date_trunc('week', NOW())` arranca en LUNES
-   * (ISO 8601). Tomamos [lunes 00:00, lunes próxima semana 00:00). Lo que cae
-   * fuera de esa ventana se considera expirado para evaluación.
+   * Ventana semanal: semana ISO (lunes-domingo) en la hora LOCAL del estudiante
+   * ($2 = TZ IANA), no en UTC, para que coincida con la semana que ve en el panel.
+   * Tomamos [lunes 00:00 local, lunes próxima semana 00:00 local).
    */
-  async findEligibleByStudent(academicaId: string) {
+  async findEligibleByStudent(academicaId: string, tz: string) {
     return queryMany<any>(
       `SELECT
          b."_id"                                      AS "bookingId",
@@ -65,13 +65,15 @@ class EvaluationsRepositoryClass extends BaseRepository {
          AND COALESCE(c."tipo", b."tipoEvento", b."tipo", '') IN ('SESSION', 'CLUB')
          AND COALESCE(c."dia", b."fechaEvento") IS NOT NULL
          AND COALESCE(c."dia", b."fechaEvento") <= NOW()
-         AND COALESCE(c."dia", b."fechaEvento") >= date_trunc('week', NOW())
-         AND COALESCE(c."dia", b."fechaEvento") <  date_trunc('week', NOW()) + INTERVAL '7 days'
+         AND (COALESCE(c."dia", b."fechaEvento") AT TIME ZONE $2)
+             >= date_trunc('week', NOW() AT TIME ZONE $2)
+         AND (COALESCE(c."dia", b."fechaEvento") AT TIME ZONE $2)
+             <  date_trunc('week', NOW() AT TIME ZONE $2) + INTERVAL '7 days'
          AND NOT EXISTS (
            SELECT 1 FROM "ACADEMICA_BOOKING_EVALUATIONS" e WHERE e."bookingId" = b."_id"
          )
        ORDER BY COALESCE(c."dia", b."fechaEvento") DESC`,
-      [academicaId]
+      [academicaId, tz]
     );
   }
 
@@ -114,6 +116,7 @@ class EvaluationsRepositoryClass extends BaseRepository {
     startDate?: string | null;
     endDate?: string | null;
     advisorId?: string | null;
+    advisorIds?: string[] | null;
     nivel?: string | null;
     tipo?: string | null;
     plataforma?: string | null;
@@ -125,9 +128,15 @@ class EvaluationsRepositoryClass extends BaseRepository {
     if (opts.startDate) { conds.push(`"fechaEvento" >= $${i}::date`);    params.push(opts.startDate); i++; }
     if (opts.endDate)   { conds.push(`"fechaEvento" <= $${i}::date`);    params.push(opts.endDate);   i++; }
     if (opts.advisorId) { conds.push(`"advisorId" = $${i}`);             params.push(opts.advisorId); i++; }
+    // Lista de advisors seleccionados (pestaña "Lista"): filtra por ese conjunto.
+    if (opts.advisorIds && opts.advisorIds.length) {
+      conds.push(`"advisorId" = ANY($${i}::text[])`); params.push(opts.advisorIds); i++;
+    }
     if (opts.nivel)     { conds.push(`"nivel" = $${i}`);                  params.push(opts.nivel);     i++; }
     if (opts.tipo)      { conds.push(`"tipo" = $${i}`);                   params.push(opts.tipo);      i++; }
-    if (opts.plataforma){ conds.push(`"plataforma" = $${i}`);             params.push(opts.plataforma); i++; }
+    // "plataforma" = país del ADVISOR (advisor.pais), no la del alumno: coherente
+    // con la pestaña Lista, que filtra advisors por su país.
+    if (opts.plataforma){ conds.push(`"advisorId" IN (SELECT "_id" FROM "ADVISORS" WHERE LOWER("pais") = LOWER($${i}))`); params.push(opts.plataforma); i++; }
     if (opts.comentarioSearch && opts.comentarioSearch.trim()) {
       conds.push(`"comentario" ILIKE $${i}`);
       params.push(`%${opts.comentarioSearch.trim()}%`);
@@ -139,6 +148,73 @@ class EvaluationsRepositoryClass extends BaseRepository {
        WHERE ${conds.join(' AND ')}
        ORDER BY "_createdDate" DESC
        LIMIT 5000`,
+      params
+    );
+  }
+
+  /**
+   * Búsqueda de comentarios de un advisor (o "Todos") por BANDA de promedio,
+   * resolviendo la IDENTIDAD del alumno que escribió el comentario
+   * (nombre + numeroId) vía `studentId` → ACADEMICA (fallback PEOPLE). Solo filas
+   * con comentario no vacío. Usado por la pestaña "Búsqueda por comentario"
+   * (des-anonimizada, gateada por permiso dedicado).
+   *
+   * `banda` (rango por entero, NO acumulativo):
+   *   1 → promedio < 2 (de 0 a 1,99)
+   *   2 → [2, 3)   ·   3 → [3, 4)   ·   4 → [4, 5)
+   *   5 → promedio >= 5 (solo los de 5)
+   *   null/undefined → sin tope (todos)
+   */
+  async searchComentarios(opts: {
+    advisorId?: string | null;
+    advisorIds?: string[] | null;
+    startDate?: string | null;
+    endDate?: string | null;
+    tipo?: string | null;
+    banda?: number | null;
+  }) {
+    const conds: string[] = [
+      `e."comentario" IS NOT NULL AND TRIM(e."comentario") <> ''`,
+    ];
+    const params: any[] = [];
+    let i = 1;
+    // Filtro por banda (rango de promedio). Sin banda → todos.
+    const banda = opts.banda;
+    if (banda === 5) {
+      conds.push(`e."promedio" >= $${i}`); params.push(5); i++;
+    } else if (banda === 1) {
+      conds.push(`e."promedio" < $${i}`); params.push(2); i++;
+    } else if (banda && banda >= 2 && banda <= 4) {
+      conds.push(`e."promedio" >= $${i} AND e."promedio" < $${i + 1}`);
+      params.push(banda, banda + 1); i += 2;
+    }
+    // Un advisor puntual, o el conjunto "Todos" (lista de advisors del alcance).
+    if (opts.advisorId) {
+      conds.push(`e."advisorId" = $${i}`); params.push(opts.advisorId); i++;
+    } else if (opts.advisorIds && opts.advisorIds.length) {
+      conds.push(`e."advisorId" = ANY($${i}::text[])`); params.push(opts.advisorIds); i++;
+    }
+    if (opts.startDate) { conds.push(`e."fechaEvento" >= $${i}::date`); params.push(opts.startDate); i++; }
+    if (opts.endDate)   { conds.push(`e."fechaEvento" <= $${i}::date`); params.push(opts.endDate);   i++; }
+    if (opts.tipo)      { conds.push(`e."tipo" = $${i}`);               params.push(opts.tipo);      i++; }
+
+    return queryMany<any>(
+      `SELECT e."comentario", e."promedio", e."fechaEvento",
+              e."tipo", e."subtipo", e."nivel", e."step", e."aiSentimiento",
+              adv."nombreCompleto" AS "advisorNombre",
+              COALESCE(
+                NULLIF(TRIM(COALESCE(a."primerNombre",'') || ' ' || COALESCE(a."primerApellido",'')), ''),
+                NULLIF(TRIM(COALESCE(p."primerNombre",'') || ' ' || COALESCE(p."primerApellido",'')), ''),
+                ''
+              ) AS "studentNombre",
+              COALESCE(a."numeroId", p."numeroId") AS "studentNumeroId"
+         FROM "ACADEMICA_BOOKING_EVALUATIONS" e
+         LEFT JOIN "ACADEMICA" a ON a."_id" = e."studentId"
+         LEFT JOIN "PEOPLE"    p ON p."_id" = e."studentId"
+         LEFT JOIN "ADVISORS"  adv ON adv."_id" = e."advisorId"
+        WHERE ${conds.join(' AND ')}
+        ORDER BY e."promedio" ASC, e."fechaEvento" DESC
+        LIMIT 2000`,
       params
     );
   }

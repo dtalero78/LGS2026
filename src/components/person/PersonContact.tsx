@@ -34,26 +34,22 @@ export default function PersonContact({ person }: PersonContactProps) {
       {/* Primary Contact Information */}
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">📞 Información de Contacto Principal</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            {person.celular && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Celular Principal</label>
-                <p className="mt-1 text-sm text-gray-900">{person.celular}</p>
-              </div>
-            )}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {person.celular && (
             <div>
-              <label className="block text-sm font-medium text-gray-700">Teléfono Fijo</label>
-              <p className="mt-1 text-sm text-gray-900">{contactInfo.telefonoFijo}</p>
+              <label className="block text-sm font-medium text-gray-700">Celular Principal</label>
+              <p className="mt-1 text-sm text-gray-900">{person.celular}</p>
             </div>
-          </div>
-          <div className="space-y-4">
-            {person.email && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Email Principal</label>
-                <p className="mt-1 text-sm text-gray-900">{person.email}</p>
-              </div>
-            )}
+          )}
+          {person.email && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Email Principal</label>
+              <p className="mt-1 text-sm text-gray-900">{person.email}</p>
+            </div>
+          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Teléfono Fijo</label>
+            <p className="mt-1 text-sm text-gray-900">{contactInfo.telefonoFijo}</p>
           </div>
         </div>
       </div>
@@ -80,7 +76,7 @@ export default function PersonContact({ person }: PersonContactProps) {
           {/* Personal Reference */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h4 className="font-semibold text-blue-800 mb-3">Referencia Personal</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-medium text-blue-700">Nombre Completo</label>
                 <p className="text-sm text-blue-900">{contactInfo.referencias.personal.nombre}</p>
@@ -99,7 +95,7 @@ export default function PersonContact({ person }: PersonContactProps) {
           {/* Family Reference */}
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
             <h4 className="font-semibold text-purple-800 mb-3">Referencia Familiar</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-medium text-purple-700">Nombre Completo</label>
                 <p className="text-sm text-purple-900">{contactInfo.referencias.familiar.nombre}</p>

@@ -8,7 +8,6 @@ import PersonContact from './PersonContact'
 import PersonFinancial from './PersonFinancial'
 import PersonAdmin from './PersonAdmin'
 import PersonComments from './PersonComments'
-import PersonDocuments from './PersonDocuments'
 
 interface PersonTabsProps {
   person: Person
@@ -27,7 +26,6 @@ const tabs = [
   { id: 'financial', name: 'Financiera', icon: '💰' },
   { id: 'admin', name: 'Administración', icon: '⚙️' },
   { id: 'comments', name: 'Comentarios', icon: '💬' },
-  { id: 'docs', name: 'Documentación', icon: '📎' },
 ]
 
 // Alias para deep-links desde URL (?tab=financiera, ?tab=admin, etc.)
@@ -42,9 +40,6 @@ const TAB_ALIASES: Record<string, string> = {
   admin: 'admin',
   comentarios: 'comments',
   comments: 'comments',
-  documentacion: 'docs',
-  documentación: 'docs',
-  docs: 'docs',
 }
 
 function resolveInitialTab(initial?: string): string {
@@ -68,8 +63,6 @@ export default function PersonTabs({ person, financialData, beneficiaries, initi
         return <PersonAdmin person={person} beneficiaries={beneficiaries} />
       case 'comments':
         return <PersonComments personId={person._id} />
-      case 'docs':
-        return <PersonDocuments documents={person.documentacion || []} />
       default:
         return <PersonGeneral person={person} isSuspendida={isSuspendida} />
     }

@@ -8,6 +8,7 @@ import 'server-only';
 import { queryOne, queryMany, parseJsonbFields } from '@/lib/postgres';
 import { BaseRepository } from './base.repository';
 import { NotFoundError } from '@/lib/errors';
+import { ensureOnce } from '@/lib/ensure-once';
 
 const JSONB_FIELDS = ['extensionHistory'];
 
@@ -21,12 +22,16 @@ class AcademicaRepositoryClass extends BaseRepository {
    */
   async findByAnyId(id: string) {
     const row = await queryOne(
+      // NOTA: los campos de contrato/extensión/OnHold viven en PEOPLE, no en
+      // ACADEMICA. Las columnas legacy de Wix (finalContrato, vigencia,
+      // fechaContrato, extensionCount, extensionHistory, onHoldCount) se
+      // eliminaron de ACADEMICA — no se seleccionan aquí. `estadoInactivo` SÍ
+      // vive en ACADEMICA (se sincroniza) y se conserva.
       `SELECT "_id", "studentId", "numeroId", "nivel", "step", "nivelParalelo", "stepParalelo",
               "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
               "asesor", "fechaNacimiento", "celular", "telefono", "email", "contrato",
               "fechaCreacion", "tipoUsuario", "plataforma", "usuarioId", "peopleId",
-              "estadoInactivo", "fechaContrato", "finalContrato", "vigencia",
-              "extensionCount", "extensionHistory", "onHoldCount"
+              "estadoInactivo"
        FROM "ACADEMICA"
        WHERE "_id" = $1 OR "studentId" = $1 OR "peopleId" = $1 OR "numeroId" = $1`,
       [id]
@@ -98,12 +103,13 @@ class AcademicaRepositoryClass extends BaseRepository {
               COALESCE(p."estadoInactivo", a."estadoInactivo"::boolean) AS "estadoInactivo", p."estado", p."fechaOnHold", p."fechaFinOnHold",
               p."vigenciaOriginalPreOnHold", p."onHoldCount", p."onHoldHistory",
               p."extensionCount", p."extensionHistory", p."fechaContrato", p."finalContrato",
-              COALESCE(p."vigencia"::text, a."vigencia"::text) AS "vigencia",
+              p."vigencia"::text AS "vigencia",
               p."titularId", a."asesor", a."usuarioId", p."_id" AS "peopleId", p."ingresos", p."genero",
               COALESCE(a."clave", p."clave") AS "clave",
               p."empresa", p."cargo", p."referenciaUno", p."parentezcoRefUno", p."telefonoRefUno",
               p."referenciaDos", p."parentezcoRefDos", p."telefonoRefDos",
               p."suspenddata", p."suspendcount",
+              COALESCE(p."sence", a."sence") AS "sence", a."senceCode",
               a."_createdDate", a."_updatedDate", p."documentacion"
        FROM "ACADEMICA" a
        LEFT JOIN LATERAL (
@@ -201,11 +207,14 @@ class AcademicaRepositoryClass extends BaseRepository {
   }
 
   /**
-   * Ensure cambioStepHistory column exists (idempotent).
+   * Ensure cambioStepHistory column exists (idempotent, una sola vez por proceso).
+   * El esquema se garantiza de verdad con scripts/add-columnas-legacy-ensure.js.
    */
   async ensureCambioStepHistoryColumn() {
     const { query: q } = await import('@/lib/postgres');
-    await q(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "cambioStepHistory" JSONB`, []);
+    return ensureOnce('ACADEMICA.cambioStepHistory', () =>
+      q(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "cambioStepHistory" JSONB`, [])
+    );
   }
 
   /**
@@ -225,13 +234,16 @@ class AcademicaRepositoryClass extends BaseRepository {
   }
 
   /**
-   * Ensure inicianivel/checkinicianivel columns exist (idempotent).
-   * Called once before the first use of Inicializar Nivel.
+   * Ensure inicianivel/checkinicianivel columns exist (idempotent, una sola vez
+   * por proceso). El esquema se garantiza de verdad con
+   * scripts/add-columnas-legacy-ensure.js.
    */
   async ensureInicializarNivelColumns() {
     const { query: q } = await import('@/lib/postgres');
-    await q(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "checkinicianivel" INTEGER`, []);
-    await q(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "inicianivel" JSONB`, []);
+    return ensureOnce('ACADEMICA.inicializarNivel', async () => {
+      await q(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "checkinicianivel" INTEGER`, []);
+      await q(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "inicianivel" JSONB`, []);
+    });
   }
 
   /**

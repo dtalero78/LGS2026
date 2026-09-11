@@ -35,4 +35,6 @@ export const ids = {
   audit: () => generateId('aud'),
   payment: () => generateId('pag'),
   advisorEventLog: () => generateId('ael'),
+  cancelacion: () => generateId('can'),
+  kidsInscripcion: () => generateId('kid'),
 };

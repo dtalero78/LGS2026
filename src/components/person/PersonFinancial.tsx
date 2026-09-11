@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
-import { CheckBadgeIcon, TrashIcon, PlusIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
+import { CheckBadgeIcon, TrashIcon, PlusIcon, DocumentTextIcon, PaperClipIcon, ArrowTopRightOnSquareIcon, ArrowUpTrayIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { Person, FinancialData } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { PermissionGuard } from '@/components/permissions'
@@ -10,6 +10,7 @@ import { PersonPermission } from '@/types/permissions'
 import { usePermissions } from '@/hooks/usePermissions'
 import { api, handleApiError } from '@/hooks/use-api'
 import PagoTitularWizard from './PagoTitularWizard'
+import { fechaBaseContrato as calcFechaBaseContrato } from '@/lib/cambio-contado'
 
 interface PersonFinancialProps {
   person: Person
@@ -43,6 +44,12 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
   // Marca manual "Opcional" — alimenta columna Opcional de /dashboard/recaudos/asignacion
   const [marcaOpcional, setMarcaOpcional] = useState<string | null>((person as any).marcaOpcional ?? null)
   const [togglingOpcional, setTogglingOpcional] = useState(false)
+  // Modal de la marca Opcional: al MARCAR hay que elegir si es definitiva o
+  // temporal (y hasta cuándo). Al quitarla no se pregunta nada.
+  const [showOpcionalModal, setShowOpcionalModal] = useState(false)
+  const [opcionalTipo, setOpcionalTipo] = useState<'definitivo' | 'temporal'>('definitivo')
+  const [opcionalHasta, setOpcionalHasta] = useState('')
+  const [marcaOpcionalHasta, setMarcaOpcionalHasta] = useState<string | null>((person as any).marcaOpcionalHasta ?? null)
   /** Sólo usuarios con rol RECAUDO_* (poblar dropdown del modal Asignar Ejecutivo) */
   const [recaudoUsers, setRecaudoUsers] = useState<RecaudoUser[]>([])
   /** Lista ampliada (incluye COMERCIAL/ADMIN) para resolver el _id de cualquier
@@ -69,6 +76,11 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
   const [validateModal, setValidateModal] = useState<{ id: string; numCuota: number | null } | null>(null)
   const [facturaInput, setFacturaInput] = useState('')
   const [validating, setValidating] = useState(false)
+  const canRegistrarPago = hasPermission(PersonPermission.PAGOS_REGISTRAR)
+  const canRecibo = hasPermission(PersonPermission.PAGOS_RECIBO)
+  // Modal de documentos adjuntos del pago (ver + adjuntar después de registrar)
+  const [docsModal, setDocsModal] = useState<{ pago: any } | null>(null)
+  const [uploadingDoc, setUploadingDoc] = useState(false)
 
   // Cambio Estado Cartera modal state
   const [showCarteraModal, setShowCarteraModal] = useState(false)
@@ -93,6 +105,65 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
   useEffect(() => {
     if (isTitular && canVerPagos) loadPagos()
   }, [isTitular, canVerPagos, loadPagos])
+
+  // Adjuntar documentos a un pago ya registrado: sube a Spaces (reusa el
+  // endpoint de contratos) y los agrega vía el endpoint dedicado de pagos.
+  const handleAttachDocs = async (files: File[]) => {
+    if (!docsModal || !files.length) return
+    setUploadingDoc(true)
+    try {
+      const nuevos: any[] = []
+      for (const file of files) {
+        const fd = new FormData()
+        fd.append('file', file)
+        const res = await fetch(`/api/contracts/${person._id}/upload-url`, { method: 'POST', body: fd })
+        const j = await res.json()
+        if (!res.ok || !j?.publicUrl) throw new Error(j?.details || j?.error || `Error subiendo ${file.name}`)
+        nuevos.push({ url: j.publicUrl, nombre: file.name, tipo: file.type, fechaSubida: new Date().toISOString() })
+      }
+      const data = await api.post<{ pago: any }>(
+        `/api/postgres/pagos-titulares/${docsModal.pago._id}/documentos`,
+        { documentos: nuevos }
+      )
+      toast.success(`${nuevos.length} documento(s) adjuntado(s)`)
+      setDocsModal({ pago: data.pago })
+      loadPagos()
+    } catch (err: any) {
+      toast.error(`No se pudo adjuntar: ${err?.message || ''}`)
+    } finally {
+      setUploadingDoc(false)
+    }
+  }
+
+  // Eliminar un documento adjunto del pago (en caso de error). Quita la entrada
+  // del array y borra el archivo de Spaces (best-effort en el backend).
+  const handleDeleteDoc = async (url: string) => {
+    if (!docsModal) return
+    if (!window.confirm('¿Eliminar este documento del pago? Esta acción no se puede deshacer.')) return
+    try {
+      const res = await fetch(`/api/postgres/pagos-titulares/${docsModal.pago._id}/documentos`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+      const j = await res.json()
+      if (!res.ok) throw new Error(j?.error || 'Error eliminando documento')
+      toast.success('Documento eliminado')
+      setDocsModal({ pago: j.pago })
+      loadPagos()
+    } catch (err: any) {
+      toast.error(`No se pudo eliminar: ${err?.message || ''}`)
+    }
+  }
+
+  const openDocsPicker = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.multiple = true
+    input.accept = 'image/jpeg,image/jpg,image/png,image/webp,image/heic,application/pdf'
+    input.onchange = () => handleAttachDocs(Array.from(input.files || []))
+    input.click()
+  }
 
   const openValidarModal = (id: string, numCuota: number | null) => {
     setFacturaInput('')
@@ -178,6 +249,16 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
 
   const currentGestor = recaudoUsers.find(u => u._id === gestorRecaudoId) || null
 
+  // Asesor Comercial que creó el contrato. Prioridad: asesorCreadorContrato
+  // (NOMBRE guardado al crear el contrato) → nombre resuelto desde el email
+  // (PEOPLE.asesor vía displayUsers) → valor crudo (email).
+  const asesorCreador = ((person as any).asesorCreadorContrato || '').toString().trim()
+  const asesorRaw = ((person as any).asesor || '').toString().trim()
+  const asesorUser = asesorRaw
+    ? displayUsers.find(u => (u.email || '').toLowerCase() === asesorRaw.toLowerCase()) || null
+    : null
+  const asesorNombre = asesorCreador || asesorUser?.nombre || asesorRaw || ''
+
   const openAssignModal = () => {
     setSelectedUserId(gestorRecaudoId || '')
     setShowAssignModal(true)
@@ -206,22 +287,51 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
     setShowCarteraModal(true)
   }
 
-  /** Toggle de la marca "Opcional" (PEOPLE.marcaOpcional). Sin modal, sin
-   *  motivo — es una marca operativa simple del área de Recaudo. */
-  const handleToggleOpcional = async () => {
+  /**
+   * Click en el botón "Opcional".
+   *   - Si ya está marcado  → lo quita directo (quitar no necesita decisión).
+   *   - Si no está marcado  → abre el modal para elegir definitivo o temporal.
+   */
+  const handleToggleOpcional = () => {
+    if (marcaOpcional === 'OPC') {
+      aplicarOpcional(null, null)
+      return
+    }
+    setOpcionalTipo('definitivo')
+    setOpcionalHasta('')
+    setShowOpcionalModal(true)
+  }
+
+  /** Escribe la marca. `hasta` con fecha = temporal; null = definitiva. */
+  const aplicarOpcional = async (valor: 'OPC' | null, hasta: string | null) => {
     setTogglingOpcional(true)
     try {
-      const data = await api.post<{ marcaOpcional: string | null }>(
+      const data = await api.post<{ marcaOpcional: string | null; marcaOpcionalHasta: string | null; temporal: boolean }>(
         `/api/postgres/people/${person._id}/marca-opcional`,
-        {},
+        { valor, hasta },
       )
       setMarcaOpcional(data.marcaOpcional ?? null)
-      toast.success(data.marcaOpcional === 'OPC' ? 'Marcado como OPC' : 'Marca OPC removida')
+      setMarcaOpcionalHasta(data.marcaOpcionalHasta ?? null)
+      setShowOpcionalModal(false)
+      if (!data.marcaOpcional) {
+        toast.success('Marca OPC removida')
+      } else if (data.temporal) {
+        toast.success(`Marcado como OPC hasta el ${fmtFechaCorta(data.marcaOpcionalHasta)}`)
+      } else {
+        toast.success('Marcado como OPC (definitivo)')
+      }
     } catch (err) {
       handleApiError(err, 'Error al cambiar marca Opcional')
     } finally {
       setTogglingOpcional(false)
     }
+  }
+
+  /** 'YYYY-MM-DD' → 'DD/MM/AAAA' para los mensajes. */
+  const fmtFechaCorta = (f: string | null) => {
+    if (!f) return ''
+    const [y, m, d] = f.slice(0, 10).split('-')
+    return d && m && y ? `${d}/${m}/${y}` : f
   }
 
   const handleCambiarCartera = async () => {
@@ -320,7 +430,8 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
 
   return (
     <div className="space-y-6">
-      {/* Financial Summary */}
+      {/* Financial Summary — gateado por PERSON.FINANCIERA.RESUMEN_VER */}
+      <PermissionGuard permission={PersonPermission.RESUMEN_FINANCIERO_VER}>
       <div>
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <h3 className="text-lg font-medium text-gray-900">💳 Resumen Financiero del Titular</h3>
@@ -360,7 +471,9 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                       : 'bg-white text-orange-700 border border-orange-300 hover:bg-orange-50')
                   }
                 >
-                  {marcaOpcional === 'OPC' ? '✓ Opcional (OPC)' : 'Opcional'}
+                  {marcaOpcional === 'OPC'
+                    ? (marcaOpcionalHasta ? `✓ Opcional · hasta ${fmtFechaCorta(marcaOpcionalHasta)}` : '✓ Opcional (OPC)')
+                    : 'Opcional'}
                 </button>
               </PermissionGuard>
             </div>
@@ -407,30 +520,55 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
           </div>
         </div>
       </div>
+      </PermissionGuard>
 
-      {/* Payment Information */}
+      {/* Payment Information — gateado por PERSON.FINANCIERA.INFO_PAGOS_VER */}
+      <PermissionGuard permission={PersonPermission.INFO_PAGOS_VER}>
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">💰 Información de Pagos</h3>
         <div className="bg-white border border-gray-200 rounded-lg p-6">
-          {/* Ejecutivo de Recaudos badge (only for TITULAR) */}
-          {isTitular && (
-            <div className="mb-4 pb-4 border-b border-gray-200">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ejecutivo de Recaudos</label>
-              {loadingUsers && !currentGestor ? (
-                <p className="text-sm text-gray-400 italic">Cargando…</p>
-              ) : currentGestor ? (
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
-                    {ROLE_LABEL[currentGestor.rol] || currentGestor.rol}
-                  </span>
-                  <span className="text-sm font-semibold text-gray-900">{currentGestor.nombre}</span>
-                  <span className="text-xs text-gray-500">· {currentGestor.email}</span>
-                </div>
-              ) : (
-                <p className="text-sm text-amber-700 italic">⚠️ Pendiente asignar Ejecutivo de Recaudos</p>
-              )}
+          {/* Asesor Comercial · Ejecutivo de Recaudos · Estado Cartera — una línea, 3 columnas */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4 pb-4 border-b border-gray-200">
+            {/* Asesor Comercial (only for TITULAR) */}
+            {isTitular && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Asesor Comercial</label>
+                {asesorNombre ? (
+                  <span className="text-sm font-semibold text-gray-900">{asesorNombre}</span>
+                ) : (
+                  <p className="text-sm text-gray-400 italic">—</p>
+                )}
+              </div>
+            )}
+
+            {/* Ejecutivo de Recaudos (only for TITULAR) */}
+            {isTitular && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ejecutivo de Recaudos</label>
+                {loadingUsers && !currentGestor ? (
+                  <p className="text-sm text-gray-400 italic">Cargando…</p>
+                ) : currentGestor ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
+                      {ROLE_LABEL[currentGestor.rol] || currentGestor.rol}
+                    </span>
+                    <span className="text-sm font-semibold text-gray-900">{currentGestor.nombre}</span>
+                    <span className="text-xs text-gray-500">· {currentGestor.email}</span>
+                  </div>
+                ) : (
+                  <p className="text-sm text-amber-700 italic">⚠️ Pendiente asignar Ejecutivo de Recaudos</p>
+                )}
+              </div>
+            )}
+
+            {/* Estado Cartera */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Estado Cartera</label>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${estadoMeta.cls}`}>
+                {estadoMeta.label}
+              </span>
             </div>
-          )}
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
@@ -473,16 +611,11 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                   : 'No disponible'}
               </p>
             </div>
-            <div className="md:col-span-3 pt-3 border-t border-gray-100">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Estado Cartera</label>
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${estadoMeta.cls}`}>
-                {estadoMeta.label}
-              </span>
-            </div>
           </div>
 
         </div>
       </div>
+      </PermissionGuard>
 
       {/* ── Pagos del Titular ─────────────────────────────────────────────── */}
       {isTitular && (
@@ -514,6 +647,7 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                         <th className="px-3 py-2 text-center font-medium text-gray-700"># Cuota</th>
                         <th className="px-3 py-2 text-left font-medium text-gray-700">Fecha</th>
                         <th className="px-3 py-2 text-left font-medium text-gray-700">Gestor</th>
+                        <th className="px-3 py-2 text-left font-medium text-gray-700">Realizado por</th>
                         <th className="px-3 py-2 text-right font-medium text-gray-700">Valor Pagado</th>
                         <th className="px-3 py-2 text-right font-medium text-gray-700">Descuento</th>
                         <th className="px-3 py-2 text-right font-medium text-gray-700">Saldo</th>
@@ -565,7 +699,21 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                           : (p.saldo != null ? Number(p.saldo) : null)
                         return (
                           <tr key={p._id} className="hover:bg-gray-50">
-                            <td className="px-3 py-2 text-center text-gray-900 font-medium">{p.numCuota ?? '—'}</td>
+                            <td className="px-3 py-2 text-center text-gray-900 font-medium">
+                              {p.numCuota ?? '—'}
+                              {/* Las dos filas de un Pago doble (cuota #N y #N+1)
+                                  se marcan como adelanto para que se lean juntas. */}
+                              {p.pagoDoble && (
+                                <span className="block mt-0.5 mx-auto w-fit px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-100 text-indigo-800 whitespace-nowrap">
+                                  Adelanto cuota
+                                </span>
+                              )}
+                              {p.cambioContado && (
+                                <span className="block mt-0.5 mx-auto w-fit px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-teal-100 text-teal-800">
+                                  Contado
+                                </span>
+                              )}
+                            </td>
                             <td className="px-3 py-2 text-gray-900">{fechaPago}</td>
                             <td className="px-3 py-2 text-gray-700">
                               {gestor ? (
@@ -577,6 +725,15 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                                 </div>
                               ) : (
                                 <span className="text-xs text-gray-400 italic">{gestorLabel}</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-gray-700">
+                              {p.realizadopor ? (
+                                <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-100 text-teal-800">
+                                  {p.realizadopor}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-gray-400">—</span>
                               )}
                             </td>
                             <td className="px-3 py-2 text-right text-gray-900 font-medium">{p.valorPagado ? formatCurrency(p.valorPagado) : '—'}</td>
@@ -600,6 +757,20 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                             <td className="px-3 py-2 text-gray-700 text-xs">{p.numeroFactura || '—'}</td>
                             <td className="px-3 py-2 text-right">
                               <div className="flex items-center justify-end gap-1">
+                                {/* Documentos: ver/adjuntar evidencia del pago (incluso ya validado) */}
+                                <button
+                                  type="button"
+                                  onClick={() => setDocsModal({ pago: p })}
+                                  title={`Documentos del pago${Array.isArray(p.documentosAdjuntos) && p.documentosAdjuntos.length ? ` (${p.documentosAdjuntos.length})` : ''}`}
+                                  className="relative p-1 text-gray-500 hover:text-gray-800"
+                                >
+                                  <PaperClipIcon className="h-4 w-4" />
+                                  {Array.isArray(p.documentosAdjuntos) && p.documentosAdjuntos.length > 0 && (
+                                    <span className="absolute -top-1.5 -right-1.5 bg-indigo-600 text-white text-[9px] leading-none rounded-full px-1 py-0.5">
+                                      {p.documentosAdjuntos.length}
+                                    </span>
+                                  )}
+                                </button>
                                 {/* Recibo: disponible apenas se registra el pago (NO requiere validado).
                                     Para RECAUDO_ASIST ésta es la única acción visible. */}
                                 <PermissionGuard permission={PersonPermission.PAGOS_RECIBO}>
@@ -666,10 +837,19 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
           titular={{
             _id: person._id,
             numeroId: person.numeroId,
+            contrato: person.contrato,
             plataforma: person.plataforma,
             gestorRecaudo: gestorRecaudoId,
             primerNombre: person.primerNombre,
             primerApellido: person.primerApellido,
+            plan: (person as any).plan ?? null,
+          }}
+          fechaBaseContrato={calcFechaBaseContrato(person as any)}
+          // Las fechas sueltas son SOLO para el desglose del modal (mostrar de
+          // dónde salen los días); la base del cálculo sigue siendo la cascada.
+          fechasContrato={{
+            aprobacion: (person as any).fechaIngreso ?? null,
+            contrato: (person as any).inicioContrato ?? (person as any).fechaContrato ?? null,
           }}
           gestorLabel={currentGestor ? `${currentGestor.nombre} · ${ROLE_LABEL[currentGestor.rol] || currentGestor.rol}` : null}
           existingPagos={pagos}
@@ -752,6 +932,94 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
               >
                 Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Documentos del Pago (ver + adjuntar, incluso ya validado) ──────── */}
+      {docsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <PaperClipIcon className="h-5 w-5 text-gray-500" />
+                Documentos del pago{docsModal.pago.numCuota != null ? ` · cuota ${docsModal.pago.numCuota}` : ''}
+              </h3>
+              <button type="button" onClick={() => setDocsModal(null)} title="Cerrar" className="text-gray-400 hover:text-gray-600">
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            {Array.isArray(docsModal.pago.documentosAdjuntos) && docsModal.pago.documentosAdjuntos.length > 0 ? (
+              <ul className="space-y-3">
+                {docsModal.pago.documentosAdjuntos.map((d: any, i: number) => {
+                  const isImg = (d.tipo || '').startsWith('image/') || /\.(jpe?g|png|webp|heic|gif)$/i.test(d.url || '')
+                  return (
+                    <li key={i} className="border border-gray-200 rounded-lg p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{d.nombre || `Documento ${i + 1}`}</p>
+                          <p className="text-[11px] text-gray-500">{d.tipo || 'archivo'}{d.fechaSubida ? ` · ${new Date(d.fechaSubida).toLocaleDateString('es')}` : ''}</p>
+                        </div>
+                        <div className="shrink-0 flex items-center gap-1.5">
+                          <a href={d.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700">
+                            <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" /> Abrir
+                          </a>
+                          {canRegistrarPago && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteDoc(d.url)}
+                              title="Eliminar documento"
+                              className="inline-flex items-center px-2 py-1 text-xs font-medium text-red-600 bg-red-50 rounded hover:bg-red-100"
+                            >
+                              <TrashIcon className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {isImg && (
+                        <a href={d.url} target="_blank" rel="noopener noreferrer" className="block mt-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={d.url} alt={d.nombre || 'documento'} className="max-h-40 rounded border border-gray-100 object-contain" />
+                        </a>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            ) : (
+              <p className="text-sm text-gray-400 italic">Este pago no tiene documentos adjuntos.</p>
+            )}
+
+            {canRegistrarPago && (
+              <div className="border-t border-gray-100 pt-3">
+                <button
+                  type="button"
+                  disabled={uploadingDoc}
+                  onClick={openDocsPicker}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  <ArrowUpTrayIcon className="h-4 w-4" /> {uploadingDoc ? 'Subiendo…' : 'Adjuntar documentos'}
+                </button>
+                <p className="text-[11px] text-gray-400 mt-1">JPG, PNG, WEBP, HEIC o PDF (máx 20MB c/u). Permitido incluso en pagos validados.</p>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between pt-1 border-t border-gray-100">
+              {canRecibo ? (
+                <button
+                  type="button"
+                  onClick={() => handleGenerarRecibo(docsModal.pago._id)}
+                  title={docsModal.pago.numeroRecibo ? `Descargar recibo ${docsModal.pago.numeroRecibo}` : 'Generar e imprimir recibo de pago'}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 mt-3"
+                >
+                  <DocumentTextIcon className="h-4 w-4" /> Imprimir recibo
+                </button>
+              ) : <span />}
+              <button type="button" onClick={() => setDocsModal(null)} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 mt-3">
+                Cerrar
               </button>
             </div>
           </div>
@@ -898,6 +1166,89 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                 className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50"
               >
                 {saving ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: marca Opcional (definitiva o temporal) ─────────────────── */}
+      {showOpcionalModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-5">
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Marcar como Opcional</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              El titular quedará destacado con <strong>OPC</strong> en la vista de Recaudos.
+            </p>
+
+            <div className="space-y-2 mb-4">
+              <label className={'flex items-start gap-2 p-3 rounded-lg border cursor-pointer ' +
+                (opcionalTipo === 'definitivo' ? 'border-amber-400 bg-amber-50' : 'border-gray-200')}>
+                <input
+                  type="radio"
+                  name="opcionalTipo"
+                  checked={opcionalTipo === 'definitivo'}
+                  onChange={() => setOpcionalTipo('definitivo')}
+                  className="mt-1"
+                />
+                <span className="text-sm">
+                  <span className="font-semibold text-gray-900">Definitivo</span>
+                  <span className="block text-gray-600">
+                    La marca queda puesta hasta que alguien la quite a mano.
+                  </span>
+                </span>
+              </label>
+
+              <label className={'flex items-start gap-2 p-3 rounded-lg border cursor-pointer ' +
+                (opcionalTipo === 'temporal' ? 'border-amber-400 bg-amber-50' : 'border-gray-200')}>
+                <input
+                  type="radio"
+                  name="opcionalTipo"
+                  checked={opcionalTipo === 'temporal'}
+                  onChange={() => setOpcionalTipo('temporal')}
+                  className="mt-1"
+                />
+                <span className="text-sm">
+                  <span className="font-semibold text-gray-900">Temporal</span>
+                  <span className="block text-gray-600">
+                    Vence en la fecha que elijas y <strong>vuelve sola</strong> al estado anterior.
+                  </span>
+                </span>
+              </label>
+            </div>
+
+            {opcionalTipo === 'temporal' && (
+              <label className="block mb-4">
+                <span className="block text-sm font-medium text-gray-700 mb-1">Vigente hasta *</span>
+                <input
+                  type="date"
+                  value={opcionalHasta}
+                  min={new Date().toISOString().slice(0, 10)}
+                  onChange={e => setOpcionalHasta(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
+                <span className="block text-xs text-gray-500 mt-1">
+                  Ese día la marca sigue vigente; se retira al día siguiente.
+                </span>
+              </label>
+            )}
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowOpcionalModal(false)}
+                disabled={togglingOpcional}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => aplicarOpcional('OPC', opcionalTipo === 'temporal' ? opcionalHasta : null)}
+                disabled={togglingOpcional || (opcionalTipo === 'temporal' && !opcionalHasta)}
+                className="px-5 py-2 text-sm font-semibold text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50"
+              >
+                {togglingOpcional ? 'Guardando…' : 'Marcar como OPC'}
               </button>
             </div>
           </div>

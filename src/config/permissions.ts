@@ -40,6 +40,20 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Botón que abre un modal con la plantilla del contrato completamente llenada (solo lectura, sin opciones de impresión/firma/envío PDF)',
   },
   {
+    code: PersonPermission.RESUMEN_FINANCIERO_VER,
+    module: Module.PERSON,
+    section: 'Financiera',
+    name: 'Sección "Resumen Financiero del Titular"',
+    description: 'Visualizar las tarjetas del resumen financiero (Valor Plan, Inscripción, Saldo a la Firma, Total Cuotas, Saldo a la Fecha) en la pestaña Financiera. Sin este permiso la sección no aparece. Los botones de acción (Asignar Ejecutivo, Cambio Estado Cartera, Opcional) conservan sus permisos propios',
+  },
+  {
+    code: PersonPermission.INFO_PAGOS_VER,
+    module: Module.PERSON,
+    section: 'Financiera',
+    name: 'Sección "Información de Pagos"',
+    description: 'Visualizar el bloque Información de Pagos (Asesor Comercial, Ejecutivo de Recaudos, Método de Pago, Tipo de Plan, Cuotas Pagadas, Total del Plan, Inscripción Pagada, Valor Cuota, Estado Cartera) en la pestaña Financiera. Sin este permiso la sección no aparece',
+  },
+  {
     code: PersonPermission.ASIGNAR_GESTOR_RECAUDO,
     module: Module.PERSON,
     section: 'Financiera',
@@ -82,6 +96,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Marcar un pago como validado (validado=true, fechaValidacion=hoy, validadoPor=usuario actual). Una vez validado el pago se considera final',
   },
   {
+    code: PersonPermission.PAGOS_EDITAR,
+    module: Module.PERSON,
+    section: 'Financiera',
+    name: 'Botón "Editar Pago"',
+    description: 'Editar un pago pendiente (fecha, valor, descuento, medio de pago, # referencia, # cuota) desde el Centro de Validación. Bloqueado cuando el pago ya está validado',
+  },
+  {
     code: PersonPermission.PAGOS_ELIMINAR,
     module: Module.PERSON,
     section: 'Financiera',
@@ -94,6 +115,27 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     section: 'Financiera',
     name: 'Botón "Generar Recibo de Pago"',
     description: 'Genera y descarga el PDF del recibo de un pago validado (formato LGS-#### con numeración consecutiva automática). Solo aparece cuando el pago ya está validado',
+  },
+  {
+    code: PersonPermission.PAGOS_FACTURAR,
+    module: Module.PERSON,
+    section: 'Financiera',
+    name: 'Botón "Facturar"',
+    description: 'Registra el número de factura de un pago ya validado desde la pestaña Facturación del Centro de Validación. El pago aparece en Facturación tras verificarlo (validado=true sin factura) y sale de la cola al facturarlo. Sin este permiso el botón no aparece (usuarios de solo consulta)',
+  },
+  {
+    code: PersonPermission.EDITAR_NOMBRE,
+    module: Module.PERSON,
+    section: 'Información General',
+    name: 'Editar nombres del beneficiario',
+    description: 'Habilita los campos de nombres y apellidos en el modal "Modificar Beneficiario". El cambio se propaga a ACADEMICA, ACADEMICA_BOOKINGS (listas de asistencia), USUARIOS_ROLES, FINANCIEROS y STEP_OVERRIDES. Sin este permiso los campos se ven pero no se pueden editar',
+  },
+  {
+    code: PersonPermission.EDITAR_NUMERO_ID,
+    module: Module.PERSON,
+    section: 'Información General',
+    name: 'Editar # de identificación',
+    description: 'Habilita el campo Número de Identificación en el modal "Modificar Beneficiario". Es la LLAVE que une PEOPLE con ACADEMICA y con el usuario de acceso: al cambiarlo se actualiza en todas esas tablas. Sin este permiso el campo queda de solo lectura',
   },
   {
     code: PersonPermission.VER_DOCUMENTACION,
@@ -253,8 +295,8 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     code: StudentPermission.AGENDAR_CLASE,
     module: Module.STUDENT,
     section: 'Tab Académica',
-    name: 'Botón "Agendar Nueva Clase"',
-    description: 'Wizard para agendar clase: tipo → día → hora',
+    name: 'Botón "Agendar Sesión"',
+    description: 'Wizard para agendar sesión: tipo → día → hora',
   },
   {
     code: StudentPermission.MARCAR_STEP,
@@ -322,6 +364,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     section: 'Tab Financiera',
     name: 'Botón "Enviar Recordatorio"',
     description: 'Enviar recordatorio de pago por WhatsApp',
+  },
+  {
+    code: StudentPermission.FRANQUICIA_SENCE,
+    module: Module.STUDENT,
+    section: 'Información General',
+    name: 'Botones "Franquicia SENCE" y "Código Franquicia SENCE"',
+    description: 'En la pestaña Información General del estudiante: botón naranja para marcar/desmarcar la Franquicia SENCE (con modal de confirmación en ambos sentidos) y botón para capturar el Código Franquicia SENCE. Sin este permiso ambos botones no aparecen',
   },
 
   // ========== ACADEMICO MODULE ==========
@@ -450,13 +499,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Descargar estadísticas académicas como CSV',
   },
 
-  // -- Página: Advisors (/dashboard/academic/advisors) --
+  // -- Página: Lista Advisors (/dashboard/academic/advisors) --
   {
     code: AcademicoPermission.LISTA_ADVISORS_VER,
     module: Module.ACADEMICO,
     section: 'Advisors',
-    name: 'Página "Lista de Advisors"',
-    description: 'Acceso a /dashboard/academic/advisors con lista de profesores',
+    name: 'Página "Lista Advisors"',
+    description: 'Acceso a /dashboard/academic/advisors con la lista de profesores',
   },
   {
     code: AcademicoPermission.ADVISOR_VER_ENLACE,
@@ -491,14 +540,14 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
   {
     code: AcademicoPermission.CONTROL_HORAS_VER,
     module: Module.ACADEMICO,
-    section: 'Control Horas',
+    section: 'Advisors',
     name: 'Página "Control Horas"',
     description: 'Acceso a /dashboard/academic/control-horas. Cada advisor ve sus propias horas.',
   },
   {
     code: AcademicoPermission.CONTROL_HORAS_VER_TODOS,
     module: Module.ACADEMICO,
-    section: 'Control Horas',
+    section: 'Advisors',
     name: 'Selector de Advisor en Control Horas',
     description: 'Habilita el dropdown para seleccionar/consultar el Control de Horas de CUALQUIER advisor (no sólo el propio). Sin este permiso el usuario sólo ve su propia info. SUPER_ADMIN/ADMIN lo tienen implícito.',
   },
@@ -512,29 +561,43 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
   {
     code: AcademicoPermission.PERFORMANCE_EVAL_VER,
     module: Module.ACADEMICO,
-    section: 'Performance Evaluation',
+    section: 'Advisors',
     name: 'Ver Dashboard Performance Evaluation',
     description: 'Acceso a /dashboard/academic/performance-evaluation. KPIs, ranking Top 5 / Bottom 5 advisors, distribución de calificaciones, evolución mensual y tabla de comentarios. Pensado para roles COORDINADOR_ACADEMICO / ACADEMICO_JEFE. Sujeto al feature flag global performance_eval_mode (off / beta / on).',
   },
   {
     code: AcademicoPermission.PERFORMANCE_EVAL_EXPORTAR,
     module: Module.ACADEMICO,
-    section: 'Performance Evaluation',
+    section: 'Advisors',
     name: '↳ Descargar CSV (Performance Evaluation)',
     description: 'Botón Exportar CSV del informe Performance Evaluation.',
   },
   {
     code: AcademicoPermission.PERFORMANCE_EVAL_POR_ADVISOR,
     module: Module.ACADEMICO,
-    section: 'Performance Evaluation',
+    section: 'Advisors',
     name: '↳ Pestaña Por Advisor (Performance Evaluation)',
     description: 'Acceso a la pestaña "Por Advisor" dentro del dashboard Performance Evaluation. Permite filtrar por un advisor específico y ver sus métricas comparadas contra el promedio general (KPIs con delta, métricas por dimensión, distribución, evolución y comentarios filtrados). Requiere también PERFORMANCE_EVAL.VER.',
   },
   {
+    code: AcademicoPermission.PERFORMANCE_EVAL_LISTA,
+    module: Module.ACADEMICO,
+    section: 'Advisors',
+    name: '↳ Pestaña Lista (Performance Evaluation)',
+    description: 'Acceso a la pestaña "Lista" dentro del dashboard Performance Evaluation: lista de advisors con casilla de selección y filtro por plataforma (país del advisor). La selección define el "Alcance" (todos / una plataforma / los advisors marcados) que aplican Vista General y Por Advisor. Requiere también PERFORMANCE_EVAL.VER.',
+  },
+  {
+    code: AcademicoPermission.PERFORMANCE_EVAL_BUSQUEDA_COMENTARIO,
+    module: Module.ACADEMICO,
+    section: 'Advisors',
+    name: '↳ Pestaña Búsqueda por comentario (Performance Evaluation)',
+    description: 'Acceso a la pestaña "Búsqueda por comentario": muestra los comentarios de un advisor con promedio ≤ tope de estrellas, INCLUYENDO el nombre y número de identificación del ALUMNO que lo escribió (des-anonimiza; el resto del dashboard es anónimo). Por defecto solo SUPER_ADMIN/ADMIN. Requiere también PERFORMANCE_EVAL.VER.',
+  },
+  {
     code: AcademicoPermission.SESIONES_SIN_GESTION_VER,
     module: Module.ACADEMICO,
-    section: 'Sesiones sin gestión',
-    name: 'Página "Sesiones sin gestión"',
+    section: 'Advisors',
+    name: 'Página "Sesiones sin registro"',
     description: 'Acceso a /dashboard/academic/sesiones-sin-gestion. Lista de eventos pasados sin registrar (sesionCerrada=false) con filtros por fecha y advisor. Muestra inscritos/asistencia marcada para detectar si el advisor empezó pero no cerró, y un acceso directo al panel del evento para que el coordinador gestione el cierre.',
   },
   {
@@ -759,6 +822,15 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Columna CONFIRMADO + botón rojo que extiende 100 días desde fecha base a los marcados y bloquea (DONE Step 50) a los no marcados. Acción irreversible.',
   },
 
+  // -- Página: Cancelación sin reemplazo (/dashboard/servicio/cancelacion-sin-reemplazo) --
+  {
+    code: ServicioPermission.CANCELACION_SIN_REEMPLAZO_VER,
+    module: Module.SERVICIO,
+    section: 'Cancelación sin reemplazo',
+    name: 'Página "Cancelación sin reemplazo"',
+    description: 'Listado de usuarios de sesiones canceladas con booking (No Asistió) y su gestión: estado por usuario, gestionada por Servicio/Académico y botón global "Gestionada"',
+  },
+
   // ========== COMERCIAL MODULE ==========
   // -- Página: Contrato Detalle (/dashboard/comercial/contrato/[id]) --
   {
@@ -798,8 +870,57 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     name: 'Página "Prospectos"',
     description: 'Acceso al pipeline comercial de prospectos',
   },
+  {
+    code: ComercialPermission.MATRICULAS_VER,
+    module: Module.COMERCIAL,
+    section: 'Matrículas',
+    name: 'Página "Matrículas"',
+    description: 'Acceso a /dashboard/comercial/matriculas: consulta de todos los contratos con filtros (asesor, número, estado, plataforma, fechas) y exportación.',
+  },
+  {
+    code: ComercialPermission.MATRICULAS_BORRAR,
+    module: Module.COMERCIAL,
+    section: 'Matrículas',
+    name: '↳ Borrar matrícula (contratos SIN FIRMAR)',
+    description: 'Habilita el borrado en cascada de un contrato SIN FIRMAR (titular + beneficiarios + FINANCIEROS + PAGOS_TITULARES). Solo aplica a contratos sin consentimiento ni aprobación; el borrado queda auditado en PURGE_LOG.',
+  },
+  {
+    code: ComercialPermission.MATRICULAS_DETALLE,
+    module: Module.COMERCIAL,
+    section: 'Matrículas',
+    name: '↳ Ver detalle de matrícula (tarjetas)',
+    description: 'Acceso a la vista de resumen de una matrícula (/dashboard/comercial/matriculas/[id]): tarjeta del titular con el estado de la matrícula + tarjetas de beneficiarios con su estado de perfil académico (nivel/step o "sin perfil").',
+  },
 
   // ========== APROBACION MODULE (/dashboard/aprobacion) ==========
+  {
+    code: AprobacionPermission.CENTRO_VER,
+    module: Module.APROBACION,
+    section: 'Menú Aprobación',
+    name: 'Ítem "Centro de Aprobaciones"',
+    description: 'Ver el ítem y la página del Centro de Aprobaciones en el menú',
+  },
+  {
+    code: AprobacionPermission.CONVERSION_TITULAR_VER,
+    module: Module.APROBACION,
+    section: 'Menú Aprobación',
+    name: 'Ítem "Conversión Titular"',
+    description: 'Ver el ítem y la página de Conversión Titular en el menú',
+  },
+  {
+    code: AprobacionPermission.CONTRATOS_APROBADOS_VER,
+    module: Module.APROBACION,
+    section: 'Menú Aprobación',
+    name: 'Ítem "Contratos aprobados"',
+    description: 'Ver el ítem y la página de Contratos Aprobados (Aprobados/Inactivos/Finalizados)',
+  },
+  {
+    code: AprobacionPermission.CENTRO_BORRAR,
+    module: Module.APROBACION,
+    section: 'Menú Aprobación',
+    name: 'Borrar contrato en el Centro de Aprobaciones',
+    description: 'Muestra la casilla de selección + botón "Borrar" en el Centro de Aprobaciones y permite borrar un contrato NO aprobado con todos sus registros (cascade + snapshot en PURGE_LOG). Rechaza contratos ya aprobados. SUPER_ADMIN/ADMIN siempre pueden.',
+  },
   {
     code: AprobacionPermission.ACTUALIZAR,
     module: Module.APROBACION,
@@ -857,6 +978,41 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     section: 'Usuarios',
     name: 'Página "Bloqueo Contrato"',
     description: 'Acceso a /admin/bloqueo-contrato. Permite bloquear manualmente titular y beneficiarios de un contrato vencido. Respeta extensiones individuales de beneficiarios (no bloquea si tienen finalContrato > hoy)',
+  },
+  {
+    code: MantenimientoPermission.DRIVE_CONFIG,
+    module: Module.MANTENIMIENTO,
+    section: 'Usuarios',
+    name: 'Página "Drive de Contratos"',
+    description: 'Acceso a /admin/drive-config. Interruptor de dónde se archivan los PDF de contrato: bsl-utilidades (externo) o LGS directo a la Unidad compartida.',
+  },
+  {
+    code: MantenimientoPermission.KIDS_CONFIG,
+    module: Module.MANTENIMIENTO,
+    section: 'Usuarios',
+    name: 'Página "Proceso Kids"',
+    description: 'Acceso a /admin/kids-config. Interruptor del proceso Kids (switch + modal en Crear Contrato). Con el flag apagado el switch no se muestra.',
+  },
+  {
+    code: MantenimientoPermission.BIENVENIDA_CONFIG,
+    module: Module.MANTENIMIENTO,
+    section: 'Usuarios',
+    name: 'Página "Bienvenida post-firma"',
+    description: 'Acceso a /admin/bienvenida-config. Interruptor de la página de bienvenida que ve el cliente al terminar de firmar el contrato. Apagado, se mantiene la redirección a letsgospeak.cl.',
+  },
+  {
+    code: MantenimientoPermission.CARGAR_BENEFICIARIOS,
+    module: Module.MANTENIMIENTO,
+    section: 'Usuarios',
+    name: 'Página "Cargar Beneficiarios"',
+    description: 'Acceso a /admin/cargar-beneficiarios. Carga masiva de beneficiarios a un contrato existente (pega/CSV, pide el número de contrato). Hereda los datos del titular y omite los documentos que ya existen.',
+  },
+  {
+    code: MantenimientoPermission.CONTINGENCIA_WHATSAPP,
+    module: Module.MANTENIMIENTO,
+    section: 'Contingencia',
+    name: 'Página "Canales WhatsApp"',
+    description: 'Acceso a /admin/contingencia/whatsapp. Elige por cuál número (canal Whapi) sale TODO el WhatsApp; útil si un teléfono se cae. Muestra el estado en vivo de ambos canales.',
   },
   {
     code: MantenimientoPermission.CLEAR_HISTORIC,
@@ -949,6 +1105,20 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     name: 'Página "Diagnóstico de Endpoints"',
     description: 'Acceso a /admin/diagnostico. Mide tiempos DNS / Connect TCP / TLS handshake / TTFB / Total para endpoints clave de la API desde el navegador del admin (Resource Timing API). Útil para detectar endpoints lentos o cuellos de botella. Sólo lectura — no escribe en BD.',
   },
+  {
+    code: MantenimientoPermission.LGS_BUCKETS,
+    module: Module.MANTENIMIENTO,
+    section: 'Lgs-Buckets',
+    name: 'Página "Lgs-Buckets"',
+    description: 'Acceso a /admin/lgs-buckets. Visor de las fotos almacenadas en DO Spaces (lgs-bucket): fotos de advisors (ADVISORS.fotoAdvisor) y de usuarios (ACADEMICA.foto), con preview y descarga. Sólo lectura — no sube ni borra archivos.',
+  },
+  {
+    code: MantenimientoPermission.LGS_BUCKETS_EDITAR,
+    module: Module.MANTENIMIENTO,
+    section: 'Lgs-Buckets',
+    name: 'Reemplazar foto (Lgs-Buckets)',
+    description: 'Permite reemplazar la foto de un advisor o usuario desde /admin/lgs-buckets (sube una nueva imagen a Spaces y actualiza ADVISORS.fotoAdvisor / ACADEMICA.foto). Acción de escritura — separada del permiso de sólo lectura.',
+  },
 
   // ========== RECAUDOS MODULE (Menú Recaudos) ==========
   {
@@ -956,7 +1126,14 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     module: Module.RECAUDOS,
     section: 'Gestión',
     name: 'Sub-ítem "Gestión" (sidebar Recaudos)',
-    description: 'Acceso al grupo Recaudos > Gestión en el sidebar. Página de gestión de pagos/recaudos (en construcción)',
+    description: 'Acceso al Centro de Validación de Pagos (Recaudos > Gestión): pestañas Pagos pendientes e Inscripciones pendientes, validación de pagos',
+  },
+  {
+    code: RecaudosPermission.BANCOS_VER,
+    module: Module.RECAUDOS,
+    section: 'Bancos',
+    name: 'Sub-ítem "Bancos" (sidebar Recaudos)',
+    description: 'Acceso a /dashboard/recaudos/bancos — misma consulta del Centro de Validación pero filtrada/agrupada por Medio de Pago',
   },
   {
     code: RecaudosPermission.ASIGNACION_VER,
@@ -971,6 +1148,34 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     section: 'Asignación',
     name: 'Botón "Exportar Excel" en Asignación',
     description: 'Permite descargar a Excel la tabla de titulares asignados. SUPER_ADMIN y ADMIN siempre pueden; otros roles requieren este permiso explícito',
+  },
+  {
+    code: RecaudosPermission.ASIGNACION_MIGRAR,
+    module: Module.RECAUDOS,
+    section: 'Asignación',
+    name: 'Botón "Migrar Cuentas" en Asignación',
+    description: 'Reasigna DE UNA VEZ todos los titulares de un gestor de recaudo a otro — pensado para cuando el gestor anterior se retira. Opcionalmente arrastra también sus pagos PENDIENTES (los ya validados nunca se tocan: son el registro de quién los validó). Acción masiva e irreversible desde la UI, por eso va separada de la asignación individual',
+  },
+  {
+    code: RecaudosPermission.APROBACIONES_VER,
+    module: Module.RECAUDOS,
+    section: 'Aprobaciones',
+    name: 'Sub-ítem "Aprobaciones" (sidebar Recaudos)',
+    description: 'Acceso a /dashboard/recaudos/aprobaciones — lista de titulares aprobados activos para asignar gestor de recaudo',
+  },
+  {
+    code: RecaudosPermission.APROBACIONES_ASIGNAR,
+    module: Module.RECAUDOS,
+    section: 'Aprobaciones',
+    name: 'Asignación masiva de gestor en Aprobaciones',
+    description: 'Permite asignar masivamente un ejecutivo de recaudo (gestorRecaudo) a los contratos seleccionados en Aprobaciones',
+  },
+  {
+    code: RecaudosPermission.APROBACION_MASIVA,
+    module: Module.RECAUDOS,
+    section: 'Gestión',
+    name: 'Aprobación masiva de pagos e inscripciones',
+    description: 'Habilita las casillas de selección + botón "Aprobar seleccionados" para validar pagos e inscripciones EN BLOQUE en el Centro de Validación (Gestión / Bancos)',
   },
 ];
 

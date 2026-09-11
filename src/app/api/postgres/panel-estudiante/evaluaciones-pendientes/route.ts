@@ -13,6 +13,7 @@ import 'server-only';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { resolveStudentFromSession } from '@/services/panel-estudiante.service';
 import { isEnabledForEmail, findEvaluablesForStudent } from '@/services/evaluations.service';
+import { tzForPlataforma } from '@/lib/timezone';
 
 export const GET = handlerWithAuth(async (_request, _ctx, session) => {
   const email = (session?.user as any)?.email ?? '';
@@ -27,6 +28,7 @@ export const GET = handlerWithAuth(async (_request, _ctx, session) => {
   // Las bookings se enlazan con ACADEMICA._id vía studentId/idEstudiante.
   // resolveStudentFromSession devuelve _id = PEOPLE._id y academicaId aparte.
   const academicaId = (student as any).academicaId || student._id;
-  const rows = await findEvaluablesForStudent(academicaId);
+  const tz = tzForPlataforma((student as any).plataforma);
+  const rows = await findEvaluablesForStudent(academicaId, tz);
   return successResponse({ featureEnabled: true, rows, total: rows.length });
 });

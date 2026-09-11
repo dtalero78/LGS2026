@@ -5,6 +5,7 @@ import { UsersIcon, AcademicCapIcon, CheckCircleIcon, CalendarDaysIcon } from '@
 
 interface DashboardStatsData {
   totalUsuarios: number
+  totalActivos: number
   totalInactivos: number
   sesionesHoy: number
   usuariosInscritosHoy: number
@@ -31,6 +32,7 @@ export default function DashboardStats() {
 
   const statsData = stats || {
     totalUsuarios: 0,
+    totalActivos: 0,
     totalInactivos: 0,
     sesionesHoy: 0,
     usuariosInscritosHoy: 0,
@@ -45,8 +47,8 @@ export default function DashboardStats() {
       description: 'Usuarios registrados en ACADEMICA'
     },
     {
-      name: 'Usuarios Inactivos',
-      value: statsData.totalInactivos.toLocaleString(),
+      name: 'Usuarios Activos',
+      value: statsData.totalActivos.toLocaleString(),
       icon: UsersIcon,
       description: 'Usuarios con estado activo'
     },
@@ -123,6 +125,7 @@ async function fetchDashboardStats(): Promise<DashboardStatsData> {
     if (data.success && data.stats) {
       return {
         totalUsuarios: data.stats.totalUsuarios || 0,
+        totalActivos: data.stats.totalActivos || 0,
         totalInactivos: data.stats.totalInactivos || 0,
         sesionesHoy: data.stats.sesionesHoy || 0,
         usuariosInscritosHoy: data.stats.usuariosInscritosHoy || 0,

@@ -1,5 +1,6 @@
 import 'server-only'
-import { handler, successResponse } from '@/lib/api-helpers'
+import { successResponse } from '@/lib/api-helpers'
+import { handlerReportPublic } from '@/lib/report-guard'
 import { queryMany } from '@/lib/postgres'
 
 async function safeQuery<T>(fn: () => Promise<T[]>, fallback: T[] = []): Promise<T[]> {
@@ -17,7 +18,7 @@ function sanitizeTz(raw: string | null): string {
   return /^[A-Za-z_\/+\-0-9]+$/.test(raw) ? raw : fallback
 }
 
-export const GET = handler(async (req) => {
+export const GET = handlerReportPublic(async (req) => {
   const { searchParams } = new URL(req.url)
   const startDate = searchParams.get('startDate') || '2020-01-01'
   const endDate   = searchParams.get('endDate')   || '2030-12-31'

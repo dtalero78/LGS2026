@@ -17,6 +17,9 @@ import { ids } from '@/lib/id-generator';
 import { query, queryOne } from '@/lib/postgres';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { computePlataformaScope, getSessionPlataforma, buildPlataformaWhereSql, type PlataformaScope } from '@/lib/recaudos-scope';
+import { spacesClient, SPACES_BUCKET, SPACES_CDN } from '@/lib/spaces';
+import { fechaBaseContrato, resolveRealizadoPor } from '@/lib/cambio-contado';
+import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
 
@@ -42,6 +45,11 @@ const UPDATABLE_FIELDS = [
   'numeroFactura',
   'documentosAdjuntos',
   'tipoCartera',
+  'cambioContado',
+  'nota',
+  // 'realizadopor' NO es editable a mano: es derivado. Se recalcula en update()
+  // cuando cambia la fecha del pago (ver más abajo).
+  'realizadopor',
 ];
 
 // Valores canónicos del tipo de cartera (mayo 2026).
@@ -54,7 +62,15 @@ const TIPO_CARTERA_VALIDOS_READ = [...TIPO_CARTERA_VALIDOS, ...TIPO_CARTERA_LEGA
 
 function toNum(v: any): number {
   if (v === null || v === undefined || v === '') return 0;
-  const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+  let s = String(v).trim();
+  // Formato "europeo/Perú" con coma decimal (ej. "3.780,00", "270,00"): el punto
+  // es separador de MILES y la coma es DECIMAL. Sin este caso, parseFloat leía
+  // "3.780,00" → "3.780.00" → 3.78 (saldo mal calculado → tarjeta en $0).
+  // Los valores SIN coma (ej. "1540000", "270.00" que devuelve numeric) se dejan
+  // como están: parseFloat los maneja bien.
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  const n = parseFloat(s.replace(/[^0-9.\-]/g, ''));
   return Number.isFinite(n) ? n : 0;
 }
 
@@ -158,6 +174,7 @@ export const pagosTitularesService = {
       gestorRecaudo?: string | null;
       fechaDesde?: string | null;
       fechaHasta?: string | null;
+      plataforma?: string | null;
       page?: number;
       pageSize?: number;
     },
@@ -228,6 +245,7 @@ export const pagosTitularesService = {
       estadoCartera: opts.estadoCartera ?? null,
       fechaDesde: opts.fechaDesde ?? null,
       fechaHasta: opts.fechaHasta ?? null,
+      plataforma: opts.plataforma ?? null,
       plataformaScope,
       limit: pageSize,
       offset,
@@ -242,14 +260,21 @@ export const pagosTitularesService = {
    * Aplica scope de plataforma del usuario logueado (RECAUDOS_JEFE) sobre
    * `PEOPLE.plataforma` del titular. SUPER_ADMIN/ADMIN bypassean.
    */
+  async listMediosPago(): Promise<string[]> {
+    return PagosTitularesRepository.findDistinctMediosPago();
+  },
+
   async listForGestion(
     session: { role: string; email?: string | null },
     opts: {
       estado?: 'validado' | 'pendiente';
+      cuotaTipo?: 'regular' | 'inscripcion';
+      vista?: 'verificacion' | 'facturacion';
       fechaDesde?: string | null;
       fechaHasta?: string | null;
       search?: string | null;
       gestorRecaudo?: string | null;
+      medioPago?: string | null;
       plataforma?: string | null;
       page?: number;
       pageSize?: number;
@@ -269,10 +294,13 @@ export const pagosTitularesService = {
 
     const { rows, total } = await PagosTitularesRepository.findAllWithTitular({
       estado: opts.estado,
+      cuotaTipo: opts.cuotaTipo ?? 'regular',
+      vista: opts.vista ?? 'verificacion',
       fechaDesde: opts.fechaDesde ?? null,
       fechaHasta: opts.fechaHasta ?? null,
       search: opts.search ?? null,
       gestorRecaudo: opts.gestorRecaudo ?? null,
+      medioPago: opts.medioPago ?? null,
       plataforma: opts.plataforma ?? null,
       plataformaScope,
       limit: pageSize,
@@ -287,7 +315,17 @@ export const pagosTitularesService = {
     return row;
   },
 
-  async create(input: Partial<PagoTitular>, createdBy: string): Promise<PagoTitular> {
+  /**
+   * Crea UN pago. `opts.saldoBase` permite encadenar: el pago doble pasa acá el
+   * saldo que dejó la primera cuota, para que la segunda no vuelva a partir del
+   * saldo de FINANCIEROS (que no cambia hasta validar y daría el mismo número
+   * en las dos filas).
+   */
+  async create(
+    input: Partial<PagoTitular>,
+    createdBy: string,
+    opts?: { saldoBase?: number },
+  ): Promise<PagoTitular> {
     if (!input.idPeople) throw new ValidationError('idPeople es requerido');
 
     const titular = await PeopleRepository.findById(input.idPeople);
@@ -306,30 +344,63 @@ export const pagosTitularesService = {
     }
 
     // Saldo del pago = "Saldo después de pago" en el wizard
-    // (= Saldo a la Fecha actual − (Valor a Pagar − Descuento)).
+    // (= Saldo a la Fecha actual − Valor a Aplicar, donde Valor a Aplicar = Valor a Pagar).
+    // El descuento NO reduce el saldo (es informativo: "Valor Pagado Descuento").
     // Saldo a la Fecha lo obtenemos de FINANCIEROS.saldo (mantenido al día
     // por syncFinancieroSaldo). Para cuota#0 no aplica — esa fila se inserta
     // directamente en /api/postgres/contracts y /api/admin/migrar-contrato
     // con su propia lógica; este path es para cuotas posteriores.
     const valorPagadoNum = toNum(input.valorPagado);
-    const descuentoNum   = toNum(input.descuento);
-    const valorAplicar   = Math.max(0, valorPagadoNum - descuentoNum);
 
     let saldoAFecha = 0;
-    const titularContrato = (titular as any).contrato as string | undefined;
-    if (titularContrato) {
-      const finRow = await queryOne<{ saldo: string | null }>(
-        `SELECT "saldo" FROM "FINANCIEROS" WHERE "contrato" = $1 LIMIT 1`,
-        [titularContrato]
-      );
-      saldoAFecha = toNum(finRow?.saldo);
+    if (opts?.saldoBase !== undefined) {
+      saldoAFecha = opts.saldoBase;
+    } else {
+      const titularContrato = (titular as any).contrato as string | undefined;
+      if (titularContrato) {
+        const finRow = await queryOne<{ saldo: string | null }>(
+          `SELECT "saldo" FROM "FINANCIEROS" WHERE "contrato" = $1 LIMIT 1`,
+          [titularContrato]
+        );
+        saldoAFecha = toNum(finRow?.saldo);
+      }
     }
-    const saldo = Math.max(0, saldoAFecha - valorAplicar);
+    const saldo = Math.max(0, saldoAFecha - valorPagadoNum);
 
     // Si el wizard no manda fechaReporte (clientes viejos), default hoy
     // local del server (la diferencia con la TZ del cliente es de ±1 día,
     // pero el cliente normalmente la manda explícita igual a su hoy local).
     const fechaReporteDefault = new Date().toISOString().slice(0, 10);
+
+    // Penalidad: si viene marcada, el valor de la cuota NO se guarda en
+    // `valorCuota` sino en `vlrpenalidad`, y se marca `penalidad=true`.
+    // (El cambio de estado de cartera a 'penalidad' lo dispara el wizard aparte
+    //  vía /cambio-cartera — este flujo solo persiste el pago.)
+    const esPenalidad = input.penalidad === true;
+    const valorCuotaIn = input.valorCuota ?? null;
+
+    // Cambio Contado: marca el pago como el cambio de plan a contado y registra
+    // QUIÉN lo gestionó. La atribución la decide el SERVIDOR comparando la fecha
+    // del pago con la de aprobación del contrato (30 días → Comercial, después →
+    // Recaudos). Lo que mande el cliente en `realizadopor` se ignora.
+    const esCambioContado = input.cambioContado === true;
+
+    // Nota OBLIGATORIA en los dos casos donde el pago no es una cuota normal:
+    // penalidad/recuperación y cambio a contado. Se exige acá (servidor) además
+    // de en el wizard, para que ningún cliente pueda saltarse el motivo.
+    const nota = typeof input.nota === 'string' ? input.nota.trim() : '';
+    if ((esPenalidad || esCambioContado) && !nota) {
+      throw new ValidationError(
+        esPenalidad
+          ? 'La nota es obligatoria cuando el pago se marca como Penalidad o Recuperación'
+          : 'La nota es obligatoria cuando el pago se marca como Cambio Contado',
+      );
+    }
+
+    const fechaPagoFinal = input.fechaPago ?? new Date().toISOString().slice(0, 10);
+    const realizadopor = esCambioContado
+      ? resolveRealizadoPor(fechaBaseContrato(titular as any), fechaPagoFinal)
+      : null;
 
     const data: Partial<PagoTitular> = {
       _id: ids.payment(),
@@ -339,16 +410,23 @@ export const pagosTitularesService = {
       plataforma: input.plataforma ?? (titular as any).plataforma ?? null,
       pagoTercero: input.pagoTercero ?? null,
       idTercero: input.idTercero ?? null,
-      fechaPago: input.fechaPago ?? new Date().toISOString().slice(0, 10),
+      fechaPago: fechaPagoFinal,
       fechaVencimiento: input.fechaVencimiento ?? null,
       fechaReporte: input.fechaReporte ?? fechaReporteDefault,
       plan: input.plan ?? null,
       vlrTotalProg: input.vlrTotalProg ?? null,
       numCuota: input.numCuota ?? null,
-      valorCuota: input.valorCuota ?? null,
+      valorCuota: esPenalidad ? null : valorCuotaIn,
+      vlrpenalidad: esPenalidad ? valorCuotaIn : null,
+      penalidad: esPenalidad,
+      cambioContado: esCambioContado,
+      realizadopor,
+      pagoDoble: input.pagoDoble === true,
+      nota: nota || null,
       valorPagado: input.valorPagado ?? null,
       saldo,
       descuento: input.descuento ?? 0,
+      valorAplicado: valorPagadoNum, // "Valor a Aplicar" = Valor a Pagar (lo que reduce el saldo)
       inscripcion: input.inscripcion ?? null,
       medioPago: input.medioPago ?? null,
       numeroReferencia: input.numeroReferencia ?? null,
@@ -359,6 +437,70 @@ export const pagosTitularesService = {
     };
 
     return PagosTitularesRepository.create(data);
+  },
+
+  /**
+   * PAGO DOBLE — el operador captura UN valor y acá se parte en DOS registros
+   * con la MISMA fecha de pago: la cuota #N y la #N+1 (adelanto de la siguiente).
+   *
+   * Reglas:
+   *  - El valor se divide en dos; si es impar, el peso sobrante va a la PRIMERA
+   *    cuota, de modo que las dos mitades siempre suman el valor capturado.
+   *  - El DESCUENTO se aplica solo a la SEGUNDA cuota (así lo pidió negocio).
+   *  - El saldo se encadena: la segunda fila parte del saldo que dejó la primera.
+   *  - Ambas filas quedan con `pagoDoble=true` → la tabla las muestra como
+   *    "Adelanto cuota".
+   *
+   * No es una transacción SQL: `create` es un INSERT por fila. Si la segunda
+   * fallara, la primera queda registrada — se ve en la tabla como una cuota
+   * suelta sin su par y el error se devuelve al operador.
+   */
+  async createPagoDoble(
+    input: Partial<PagoTitular>,
+    createdBy: string,
+  ): Promise<PagoTitular[]> {
+    if (!input.idPeople) throw new ValidationError('idPeople es requerido');
+
+    const numCuota = Number(input.numCuota);
+    if (!Number.isFinite(numCuota) || numCuota < 1) {
+      throw new ValidationError('Pago doble requiere un # de cuota válido (1 o mayor)');
+    }
+
+    const total = toNum(input.valorPagado);
+    if (total <= 0) throw new ValidationError('Pago doble requiere un valor a pagar mayor a 0');
+
+    // Impar → el peso extra queda en la primera cuota; mitad1 + mitad2 === total.
+    const mitad1 = Math.ceil(total / 2);
+    const mitad2 = total - mitad1;
+
+    const titular = await PeopleRepository.findById(input.idPeople);
+    if (!titular) throw new NotFoundError('PEOPLE', input.idPeople);
+
+    let saldoAFecha = 0;
+    const contrato = (titular as any).contrato as string | undefined;
+    if (contrato) {
+      const finRow = await queryOne<{ saldo: string | null }>(
+        `SELECT "saldo" FROM "FINANCIEROS" WHERE "contrato" = $1 LIMIT 1`,
+        [contrato]
+      );
+      saldoAFecha = toNum(finRow?.saldo);
+    }
+
+    // Cuota #N — sin descuento.
+    const primero = await this.create(
+      { ...input, numCuota, valorPagado: mitad1, descuento: 0, pagoDoble: true },
+      createdBy,
+      { saldoBase: saldoAFecha },
+    );
+
+    // Cuota #N+1 — recibe el descuento y arranca del saldo que dejó la primera.
+    const segundo = await this.create(
+      { ...input, numCuota: numCuota + 1, valorPagado: mitad2, descuento: input.descuento ?? 0, pagoDoble: true },
+      createdBy,
+      { saldoBase: Math.max(0, saldoAFecha - mitad1) },
+    );
+
+    return [primero, segundo];
   },
 
   async update(id: string, body: Record<string, any>): Promise<PagoTitular> {
@@ -384,10 +526,76 @@ export const pagosTitularesService = {
 
     const next = { ...existing, ...body };
     const saldo = computeSaldo(next.valorCuota, next.valorPagado, next.descuento);
-    const payload = { ...body, saldo };
+    const payload: Record<string, any> = { ...body, saldo };
 
-    const updated = await PagosTitularesRepository.updateFields(id, payload, [...UPDATABLE_FIELDS, 'saldo']);
+    // `realizadopor` es derivado de la fecha del pago, así que se recalcula
+    // (nunca se toma del body) cuando el pago queda marcado como Cambio Contado.
+    // Si se desmarca, el campo se limpia para no dejar una atribución huérfana.
+    if (next.cambioContado === true) {
+      const titularDelPago = await PeopleRepository.findById(existing.idPeople);
+      payload.realizadopor = titularDelPago
+        ? resolveRealizadoPor(fechaBaseContrato(titularDelPago as any), next.fechaPago)
+        : null;
+    } else if (body.cambioContado === false) {
+      payload.realizadopor = null;
+    } else {
+      delete payload.realizadopor;
+    }
+
+    // UPDATABLE_FIELDS ya incluye 'saldo' — NO volver a agregarlo (causaría
+    // "multiple assignments to same column saldo" en el UPDATE).
+    const updated = await PagosTitularesRepository.updateFields(id, payload, UPDATABLE_FIELDS);
     if (!updated) throw new ValidationError('No se pudieron aplicar los cambios');
+    return updated;
+  },
+
+  /**
+   * Adjunta documentos a un pago YA registrado, incluso si está validado
+   * (solo agrega evidencia de soporte — no toca campos financieros). Cada doc
+   * debe traer al menos `url`. No reemplaza los existentes, los concatena.
+   */
+  async addDocumentos(id: string, docs: any[]): Promise<PagoTitular> {
+    const existing = await PagosTitularesRepository.findById(id);
+    if (!existing) throw new NotFoundError('PAGOS_TITULARES', id);
+
+    const clean = (Array.isArray(docs) ? docs : [])
+      .filter(d => d && typeof d.url === 'string' && d.url.trim())
+      .map(d => ({
+        url: String(d.url).trim(),
+        nombre: d.nombre ? String(d.nombre) : null,
+        tipo: d.tipo ? String(d.tipo) : null,
+        fechaSubida: d.fechaSubida ? String(d.fechaSubida) : new Date().toISOString(),
+      }));
+    if (!clean.length) throw new ValidationError('No hay documentos válidos para adjuntar');
+
+    const updated = await PagosTitularesRepository.appendDocumentos(id, clean);
+    if (!updated) throw new ValidationError('No se pudo adjuntar la documentación');
+    return updated;
+  },
+
+  /**
+   * Elimina un documento adjunto del pago (por su `url`), incluso si el pago
+   * está validado (solo evidencia de soporte). Best-effort: también borra el
+   * objeto en DO Spaces si la url pertenece a nuestro bucket.
+   */
+  async removeDocumento(id: string, url: string): Promise<PagoTitular> {
+    const existing = await PagosTitularesRepository.findById(id);
+    if (!existing) throw new NotFoundError('PAGOS_TITULARES', id);
+    const u = (url || '').trim();
+    if (!u) throw new ValidationError('url del documento requerida');
+
+    const updated = await PagosTitularesRepository.removeDocumento(id, u);
+    if (!updated) throw new ValidationError('No se pudo eliminar el documento');
+
+    // Best-effort: borrar el archivo de Spaces (si es de nuestro bucket).
+    try {
+      if (u.startsWith(SPACES_CDN + '/')) {
+        const key = decodeURIComponent(u.slice(SPACES_CDN.length + 1));
+        await spacesClient.send(new DeleteObjectCommand({ Bucket: SPACES_BUCKET, Key: key }));
+      }
+    } catch (err: any) {
+      console.warn(`[pagos-titulares] no se pudo borrar el objeto de Spaces: ${err?.message || err}`);
+    }
     return updated;
   },
 
@@ -401,8 +609,8 @@ export const pagosTitularesService = {
     if (!existing) throw new NotFoundError('PAGOS_TITULARES', id);
     if (existing.validado) throw new ValidationError('El pago ya está validado');
 
+    // El número de factura es OPCIONAL: si no se proporciona, se guarda vacío.
     const factura = (numeroFactura || '').trim();
-    if (!factura) throw new ValidationError('Número de factura es requerido para validar');
 
     const updated = await PagosTitularesRepository.validar(id, validadoPor, factura, fechaValidacion);
     if (!updated) throw new ValidationError('No se pudo validar el pago');
@@ -411,6 +619,78 @@ export const pagosTitularesService = {
     await syncFinancieroSaldo(existing.idPeople);
 
     return updated;
+  },
+
+  /**
+   * Paso Facturación: registra el número de factura de un pago YA validado.
+   * No toca el saldo (el saldo ya se recalculó al validar). El pago sale de la
+   * cola de Facturación al quedar con número de factura.
+   */
+  async facturar(
+    id: string,
+    numeroFactura: string,
+    documento?: { url?: string; nombre?: string; tipo?: string } | null,
+  ): Promise<PagoTitular> {
+    const factura = (numeroFactura || '').trim();
+    if (!factura) throw new ValidationError('El número de factura es obligatorio');
+
+    const existing = await PagosTitularesRepository.findById(id);
+    if (!existing) throw new NotFoundError('PAGOS_TITULARES', id);
+    if (!existing.validado) throw new ValidationError('Solo se puede facturar un pago ya verificado');
+
+    const updated = await PagosTitularesRepository.facturar(id, factura);
+    if (!updated) throw new ValidationError('No se pudo registrar la factura');
+
+    // Adjunta el archivo de la factura (opcional, ya subido a Spaces por el cliente).
+    if (documento && typeof documento.url === 'string' && documento.url.trim()) {
+      const withDoc = await PagosTitularesRepository.appendDocumentos(id, [{
+        url: documento.url.trim(),
+        nombre: documento.nombre ? String(documento.nombre) : `Factura ${factura}`,
+        tipo: documento.tipo ? String(documento.tipo) : null,
+        fechaSubida: new Date().toISOString(),
+      }]);
+      if (withDoc) return withDoc;
+    }
+    return updated;
+  },
+
+  /**
+   * Validación EN BLOQUE de pagos/inscripciones. Valida cada id (omite los ya
+   * validados o inexistentes) y recalcula el saldo UNA sola vez por titular
+   * (dedup). Devuelve resumen ok/fail + errores por id. Gateado en el endpoint
+   * por RECAUDOS.APROBACION_MASIVA.
+   */
+  async validarMasivo(
+    ids: string[],
+    validadoPor: string,
+    numeroFactura: string,
+    fechaValidacion: string | null = null,
+  ): Promise<{ ok: number; fail: number; errores: { id: string; error: string }[] }> {
+    const factura = (numeroFactura || '').trim();
+    const idPeopleSet = new Set<string>();
+    const errores: { id: string; error: string }[] = [];
+    let ok = 0;
+
+    for (const id of ids) {
+      try {
+        const existing = await PagosTitularesRepository.findById(id);
+        if (!existing) { errores.push({ id, error: 'no existe' }); continue; }
+        if (existing.validado) { errores.push({ id, error: 'ya validado' }); continue; }
+        const updated = await PagosTitularesRepository.validar(id, validadoPor, factura, fechaValidacion);
+        if (!updated) { errores.push({ id, error: 'no se pudo validar' }); continue; }
+        idPeopleSet.add(existing.idPeople);
+        ok++;
+      } catch (e: any) {
+        errores.push({ id, error: e?.message || 'error' });
+      }
+    }
+
+    // Recalcular saldo una vez por titular afectado.
+    for (const idp of idPeopleSet) {
+      await syncFinancieroSaldo(idp).catch(() => { /* best-effort */ });
+    }
+
+    return { ok, fail: errores.length, errores };
   },
 
   /**

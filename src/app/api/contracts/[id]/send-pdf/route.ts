@@ -3,11 +3,14 @@ import { handler, successResponse } from '@/lib/api-helpers';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { queryOne, queryMany } from '@/lib/postgres';
 import { fillContractTemplate } from '@/lib/contract-template-filler';
+import { buildContractPdfHtml } from '@/lib/contract-pdf-html';
 import { getAsesorInfo } from '@/lib/asesor';
+import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
+import { archivarContratoEnDrive, buildContractFilename } from '@/lib/contract-drive';
+import { esContratoPrueba } from '@/lib/contrato-prueba-guard';
+import { whatsappConfigService } from '@/services/whatsapp-config.service';
 
 const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
-const WHAPI_TOKEN = 'VSyDX4j7ooAJ7UGOhz8lGplUVDDs2EYj';
-const BSL_UPLOAD_URL = 'https://bsl-utilidades-yp78a.ondigitalocean.app/subir-pdf-directo';
 
 export const POST = handler(async (_request, { params }) => {
   const titularId = params.id;
@@ -18,6 +21,9 @@ export const POST = handler(async (_request, { params }) => {
     [titularId]
   );
   if (!titular) throw new NotFoundError('Titular', titularId);
+  // Los contratos de prueba SÍ generan y envían PDF (para poder ensayar el
+  // flujo completo), pero salen con marca de agua y NO se archivan en Drive.
+  const esPrueba = esContratoPrueba(titular.contrato);
   if (!titular.celular) throw new ValidationError('El titular no tiene celular registrado');
   if (!titular.plataforma) throw new ValidationError('El titular no tiene plataforma asignada');
 
@@ -26,6 +32,8 @@ export const POST = handler(async (_request, { params }) => {
     `SELECT * FROM "PEOPLE" WHERE "contrato" = $1 AND "_id" != $2 ORDER BY "_createdDate" ASC`,
     [titular.contrato, titularId]
   );
+  // Adjunta el detalle de KIDS_INSCRIPCIONES a los beneficiarios kids (para la plantilla).
+  await attachKidsInscripciones(titular.contrato, beneficiarios);
 
   // FINANCIEROS se busca por "contrato" (la tabla no tiene titularId / éste columna
   // legacy quedó NULL en la migración). Mismo patrón que el endpoint público
@@ -60,7 +68,7 @@ export const POST = handler(async (_request, { params }) => {
     : { hasConsent: false };
 
   // 3b. Resolve ejecutivo comercial (asesor) — incluido al final del bloque de consentimiento.
-  const asesorInfo = await getAsesorInfo((titular as any).asesor);
+  const asesorInfo = await getAsesorInfo((titular as any).asesor, (titular as any).asesorCreadorContrato);
 
   // 4. Fill template with data (full contract text)
   const contractText = fillContractTemplate(
@@ -72,28 +80,12 @@ export const POST = handler(async (_request, { params }) => {
     asesorInfo,
   );
 
-  // 5. Wrap in HTML for PDF generation
-  const htmlContent = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Contrato ${titular.contrato || ''}</title>
-  <style>
-    @page { margin: 15mm 15mm 15mm 20mm; }
-    body {
-      font-family: Georgia, 'Times New Roman', serif;
-      font-size: 10.5pt;
-      line-height: 1.5;
-      color: #111;
-      margin: 0;
-      padding: 0;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
-  </style>
-</head>
-<body>${contractText}</body>
-</html>`;
+  // 5. Wrap in HTML for PDF generation (diseño compartido — src/lib/contract-pdf-html.ts)
+  const htmlContent = buildContractPdfHtml(contractText, {
+    esPrueba,
+    contrato: titular.contrato,
+    fecha: new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' }),
+  });
 
   // 6. Generate PDF with API2PDF (HTML mode — no URL dependency)
   const pdfRes = await fetch('https://v2018.api2pdf.com/chrome/html', {
@@ -120,20 +112,21 @@ export const POST = handler(async (_request, { params }) => {
 
   const tempPdfUrl: string = pdfData.pdf;
 
-  // 7. Upload PDF to Drive via bsl-utilidades in parallel with WhatsApp send
-  const uploadPromise = fetch(BSL_UPLOAD_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pdfUrl: tempPdfUrl, documento: titularId, empresa: 'LGS' }),
-  }).then(r => r.json()).catch(() => ({}));
+  // Filename: "lgs" + primerNombre + primerApellido + numeroId. El prefijo `lgs`
+  // identifica el origen del contrato en el archivo que recibe el cliente y (modo
+  // LGS) también en el nombre en Drive.
+  const filename = buildContractFilename(titular);
+
+  // 7. Archivar el PDF en Drive (según el interruptor: bsl o LGS) en paralelo con
+  //    el envío por WhatsApp.
+  // Un contrato de prueba nunca entra al Drive de contratos reales.
+  const uploadPromise = esPrueba
+    ? Promise.resolve({ ok: false as const, error: 'contrato de prueba: no se archiva' })
+    : archivarContratoEnDrive({ pdfUrl: tempPdfUrl, titularId, filename });
 
   // 8. Send PDF via Whapi using the API2PDF direct URL (clean S3 link, no redirects)
   const phone = titular.celular.toString().replace(/\D/g, '');
-  // Filename: primerNombre + primerApellido + numeroId
-  const nameParts = [titular.primerNombre, titular.primerApellido, titular.numeroId].filter(Boolean);
-  const filename = nameParts.length > 0
-    ? `${nameParts.join(' ')}.pdf`
-    : `Contrato-LGS.pdf`;
+  const WHAPI_TOKEN = await whatsappConfigService.getActiveToken('contrato_pdf');
 
   const whapiRes = await fetch('https://gate.whapi.cloud/messages/document', {
     method: 'POST',
@@ -146,7 +139,7 @@ export const POST = handler(async (_request, { params }) => {
       to: phone,
       media: tempPdfUrl,
       filename,
-      caption: `Hola ${titular.primerNombre || ''}, adjunto encontrarás tu contrato con LetsGoSpeak. 📄`,
+      caption: `Hola ${titular.primerNombre || ''}, adjunto encontrarás tu contrato con Let's Go Speak. 📄`,
     }),
   });
 

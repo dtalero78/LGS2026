@@ -4,6 +4,62 @@ import { query } from '@/lib/postgres';
 import { ValidationError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 import { syncFinancieroSaldo } from '@/services/pagos-titulares.service';
+import { checkBeneficiarioUnico, anularBeneficiariosViejos } from '@/lib/beneficiario-unico';
+import { kidsIntake } from '@/lib/kids-intake';
+import { buildKidsReservation, plataformaToCountryCode, toISODate } from '@/lib/kids-mapping';
+import crypto from 'crypto';
+
+const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
+
+/**
+ * Respaldo para `EQUIPO_COMERCIAL.nombre` (NOT NULL) cuando el contrato no trae
+ * el nombre del comercial. Se trata como "vacío" en el upsert: si más adelante
+ * llega un contrato con el nombre real, lo reemplaza.
+ */
+const NOMBRE_COMERCIAL_PLACEHOLDER = 'Nombre Comercial';
+
+/**
+ * Registra al comercial que creó el contrato en EQUIPO_COMERCIAL.
+ *
+ *   correo     ← titular.asesor (EMAIL — es la llave, índice único ci)
+ *   nombre     ← titular.asesorCreadorContrato
+ *   plataforma ← titular.plataforma
+ *
+ * Se salta si `asesor` no es un email válido (dato legacy: hay contratos viejos
+ * donde ese campo guarda el nombre — ver scripts/fix-asesor-nombre-en-campo-email.js).
+ *
+ * ON CONFLICT: si el comercial YA existe (p.ej. dado de alta en "Crea UserRol"
+ * con clave/filial/usuarioRolId), NO se pisa nada — solo se rellenan `nombre` y
+ * `plataforma` si estaban vacíos. Nunca toca clave/filial/usuarioRolId/activo.
+ *
+ * Best-effort: cualquier error se loguea y se ignora (el contrato ya está creado).
+ */
+async function upsertEquipoComercial(titular: any, contrato: string): Promise<void> {
+  try {
+    const correo = String(titular?.asesor ?? '').trim().toLowerCase();
+    if (!correo || !isEmail(correo)) return;
+
+    // `nombre` es NOT NULL: si no vino el nombre, se guarda un placeholder.
+    const nombre = String(titular?.asesorCreadorContrato ?? '').trim() || NOMBRE_COMERCIAL_PLACEHOLDER;
+    const plataforma = String(titular?.plataforma ?? '').trim() || null;
+
+    // El nombre guardado se considera "vacío" si está en blanco O si es el
+    // placeholder → así un contrato posterior con el nombre real lo reemplaza,
+    // en vez de quedar pegado para siempre. Un nombre real nunca se pisa.
+    await query(
+      `INSERT INTO "EQUIPO_COMERCIAL"
+         ("_id", "nombre", "correo", "plataforma", "activo", "_createdDate", "_updatedDate")
+       VALUES ($1, $2, $3, $4, true, NOW(), NOW())
+       ON CONFLICT (LOWER(TRIM("correo"))) DO UPDATE
+         SET "nombre"     = COALESCE(NULLIF(NULLIF(TRIM("EQUIPO_COMERCIAL"."nombre"), ''), $5), EXCLUDED."nombre"),
+             "plataforma" = COALESCE(NULLIF(TRIM("EQUIPO_COMERCIAL"."plataforma"), ''), EXCLUDED."plataforma"),
+             "_updatedDate" = NOW()`,
+      [crypto.randomUUID(), nombre, correo, plataforma, NOMBRE_COMERCIAL_PLACEHOLDER]
+    );
+  } catch (err: any) {
+    console.warn(`[contracts] EQUIPO_COMERCIAL upsert falló para ${contrato}:`, err?.message || err);
+  }
+}
 
 function parseMoney(v: any): number {
   if (v === null || v === undefined || v === '') return 0;
@@ -63,7 +119,7 @@ async function generateContractNumber(plataforma: string, esPrueba: boolean): Pr
   return `${codigoPais}-${siguiente}-${anoActual}`;
 }
 
-const VALID_TIPO_PLAN = ['Contado', 'Credito', 'Colaborador'] as const;
+const VALID_TIPO_PLAN = ['Contado', 'Credito', 'Colaborador', 'Empresa'] as const;
 type TipoPlan = typeof VALID_TIPO_PLAN[number];
 function normalizeTipoPlan(v: any): TipoPlan | null {
   if (!v) return null;
@@ -72,19 +128,43 @@ function normalizeTipoPlan(v: any): TipoPlan | null {
 }
 
 export const POST = handlerWithAuth(async (request, _ctx, session) => {
-  const { titular, financial, beneficiarios, titularEsBeneficiario, clientToday, esContratoPrueba } = await request.json();
+  const { titular, financial, beneficiarios, titularEsBeneficiario, sence, clientToday, esContratoPrueba } = await request.json();
   const esPrueba = esContratoPrueba === true;
+  // Tipo de persona del titular (defensa server-side): 'Empresa' | 'Persona Natural'.
+  const tipoPersona = String(titular?.tipoPersona || '').trim() === 'Empresa' ? 'Empresa' : 'Persona Natural';
+  const esEmpresa = tipoPersona === 'Empresa';
+  // Franquicia SENCE: solo Empresa + Chile (defensa server-side). El código NO se
+  // captura a nivel del titular — se captura por beneficiario.
+  const esChile = String(titular?.plataforma || '').trim().toLowerCase() === 'chile';
+  const senceVal = sence === true && esChile && esEmpresa;
+  // Una empresa nunca es beneficiaria (no toma el programa) — defensa server-side.
+  const titularBenef = esEmpresa ? false : (titularEsBeneficiario === true);
 
   // Plataforma sólo es obligatoria para contratos REALES; en pruebas se permite sin plataforma.
   if (!esPrueba && !titular?.plataforma) throw new ValidationError('plataforma is required');
-  if (!titular?.numeroId || !titular?.primerNombre || !titular?.primerApellido) {
-    throw new ValidationError('titular with numeroId, primerNombre, and primerApellido is required');
+  // En modo Empresa el titular no tiene apellido (la razón social va en primerNombre).
+  if (!titular?.numeroId || !titular?.primerNombre || (!esEmpresa && !titular?.primerApellido)) {
+    throw new ValidationError('titular with numeroId and primerNombre is required');
   }
 
   // tipoPlan (Contado / Credito / Colaborador) — se valida y propaga a 3 tablas
   const tipoPlan = normalizeTipoPlan(financial?.tipoPlan);
   if (financial?.tipoPlan && !tipoPlan) {
     throw new ValidationError(`tipoPlan debe ser uno de: ${VALID_TIPO_PLAN.join(', ')}`);
+  }
+
+  // Invariante: un documento solo puede ser BENEFICIARIO en un contrato vivo.
+  // Los que serán beneficiarios en ESTE contrato: los listados + el titular si
+  // titularEsBeneficiario. Si ya es beneficiario en un contrato APROBADO vivo →
+  // ConflictError (bloquea). Si es un borrador SIN APROBAR vivo → se anula (queda
+  // válido el nuevo). FINALIZADA/anulado/inactivo se ignoran (re-matrícula).
+  // No aplica a contratos de prueba (PRB-).
+  if (!esPrueba) {
+    const benefNumeroIds: (string | null | undefined)[] = [];
+    if (titularBenef) benefNumeroIds.push(titular.numeroId);
+    if (Array.isArray(beneficiarios)) benefNumeroIds.push(...beneficiarios.map((b: any) => b?.numeroId));
+    const { anular } = await checkBeneficiarioUnico(benefNumeroIds);
+    if (anular.length) await anularBeneficiariosViejos(anular.map(r => r._id));
   }
 
   // Generate contract number server-side to avoid race conditions.
@@ -109,8 +189,8 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
       "email", "celular", "telefono", "fechaNacimiento", "domicilio", "ciudad",
       "plataforma", "ingresos", "empresa", "cargo", "genero",
       "referenciaUno", "parentezcoRefUno", "telefonoRefUno", "referenciaDos", "parentezcoRefDos", "telefonoRefDos",
-      "asesor", "tipoUsuario", "contrato", "vigencia", "fechaContrato", "finalContrato", "plan", "origen", "_createdDate", "_updatedDate")
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,'TITULAR',$25,$26,NOW(),$27::date,$28,'POSTGRES',NOW(),NOW()) RETURNING *`,
+      "asesor", "asesorCreadorContrato", "tipoUsuario", "contrato", "vigencia", "fechaContrato", "finalContrato", "plan", "sence", "tipoPersona", "rubro", "replegal", "replegalcargo", "replegalid", "replegalcel", "origen", "_createdDate", "_updatedDate")
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$29,'TITULAR',$25,$26,NOW(),$27::date,$28,$30,$31,$35,$32,$36,$33,$34,'POSTGRES',NOW(),NOW()) RETURNING *`,
     [titularId, titular.numeroId, titular.primerNombre, titular.segundoNombre || null,
      titular.primerApellido, titular.segundoApellido || null,
      titular.email || null, titular.celular || null, titular.telefono || null,
@@ -118,14 +198,17 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
      titular.plataforma || null, titular.ingresos || null, titular.empresa || null, titular.cargo || null, titular.genero || null,
      titular.referenciaUno || null, titular.parentezcoRefUno || null, titular.telRefUno || null,
      titular.referenciaDos || null, titular.parentezcoRefDos || null, titular.telRefDos || null,
-     titular.asesor || null, contrato, financial?.vigencia || null, finalContrato, tipoPlan]
+     titular.asesor || null, contrato, financial?.vigencia || null, finalContrato, tipoPlan,
+     titular.asesorCreadorContrato || null, senceVal, tipoPersona,
+     titular.replegal || null, titular.replegalid || null, titular.replegalcel || null,
+     titular.rubro || null, titular.replegalcargo || null]  // $29 asesorCreadorContrato, $30 sence, $31 tipoPersona, $32-34 rep. legal, $35 rubro, $36 cargo del representante
   );
   created.titular = titularResult.rows[0];
 
   // 2. Build beneficiarios list (include titular if titularEsBeneficiario)
   const allBeneficiarios: any[] = [];
 
-  if (titularEsBeneficiario) {
+  if (titularBenef) {
     allBeneficiarios.push({
       primerNombre: titular.primerNombre,
       segundoNombre: titular.segundoNombre,
@@ -135,6 +218,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
       fechaNacimiento: titular.fechaNacimiento,
       email: titular.email,
       celular: titular.celular,
+      sence: senceVal, // el titular-beneficiario hereda la marca SENCE (código se captura por beneficiario)
     });
   }
 
@@ -149,14 +233,70 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
       `INSERT INTO "PEOPLE" ("_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
         "email", "celular", "fechaNacimiento", "titularId",
         "tipoUsuario", "contrato", "plataforma", "estadoInactivo",
-        "vigencia", "fechaContrato", "finalContrato", "origen", "_createdDate", "_updatedDate")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'BENEFICIARIO',$11,$12,false,$13,NOW(),$14::date,'POSTGRES',NOW(),NOW()) RETURNING *`,
+        "vigencia", "fechaContrato", "finalContrato", "sence", "senceCode", "kids", "origen", "_createdDate", "_updatedDate")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'BENEFICIARIO',$11,$12,false,$13,NOW(),$14::date,$15,$16,$17,'POSTGRES',NOW(),NOW()) RETURNING *`,
       [benefId, b.numeroId, b.primerNombre, b.segundoNombre || null,
        b.primerApellido, b.segundoApellido || null,
        b.email || null, b.celular || null, b.fechaNacimiento || null, titularId,
-       contrato, titular.plataforma || null, financial?.vigencia || null, finalContrato]
+       contrato, titular.plataforma || null, financial?.vigencia || null, finalContrato,
+       b.sence === true && esChile && esEmpresa,
+       (b.sence === true && esChile && esEmpresa) ? (String(b.senceCode || '').trim() || null) : null,
+       b.kids === true]
     );
     created.beneficiarios.push(benefResult.rows[0]);
+
+    // Inscripción Kids (si el beneficiario se marcó como kid en el wizard).
+    if (b.kids === true) {
+      const kd = b.kidsData || {};
+      const kidsInscId = ids.kidsInscripcion();
+      try {
+        await query(
+          `INSERT INTO "KIDS_INSCRIPCIONES"
+             ("_id","contrato","beneficiarioId","numeroId","nombre","plataforma",
+              "campaign","tipoCurso","horario","classroomId","salonNombre",
+              "apoderado","apoderadoApellidos","apoderadoDoc","apoderadoTelefono","apoderadoMail","parentesco")
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+          [kidsInscId, contrato, benefId, b.numeroId,
+           `${b.primerNombre || ''} ${b.primerApellido || ''}`.trim() || null, titular.plataforma || null,
+           kd.campaign || null, kd.tipoCurso || null, kd.horario || null, kd.classroomId || null, kd.salonNombre || null,
+           kd.apoderado || null, kd.apoderadoApellidos || null, kd.apoderadoDoc || null,
+           kd.apoderadoTelefono || null, kd.apoderadoMail || null, kd.parentesco || null]
+        );
+      } catch (e) {
+        console.error('[contracts] Error guardando KIDS_INSCRIPCIONES (best-effort):', e);
+      }
+
+      // Enviar la reserva a KIDS2026 (best-effort — NO rompe la creación del contrato).
+      // Requiere integración configurada (KIDS_API_URL/KIDS_INTAKE_API_KEY) y un salón elegido.
+      if (kidsIntake.isConfigured() && kd.classroomId) {
+        try {
+          const input = buildKidsReservation({
+            // externalRef único por niño (un contrato LGS puede tener varios kids).
+            externalRef: `${contrato}#${b.numeroId}`,
+            countryCode: plataformaToCountryCode(titular.plataforma),
+            inicio: toISODate(clientToday) || new Date().toISOString().slice(0, 10),
+            finalContrato: toISODate(finalContrato),
+            titular,
+            beneficiario: b,
+            kidsData: kd,
+          });
+          const r = await kidsIntake.createReservation(input);
+          await query(
+            `UPDATE "KIDS_INSCRIPCIONES"
+               SET "enviadoAKids"=true, "kidsExternalRef"=$2, "kidsContractId"=$3,
+                   "kidsEnrollmentId"=$4, "fechaEnvioKids"=NOW(), "errorKids"=NULL, "_updatedDate"=NOW()
+             WHERE "_id"=$1`,
+            [kidsInscId, r.externalRef, r.contractId, r.enrollmentId]
+          );
+        } catch (e: any) {
+          console.error('[contracts] Error enviando reserva a KIDS (best-effort):', e?.message);
+          try {
+            await query(`UPDATE "KIDS_INSCRIPCIONES" SET "errorKids"=$2, "_updatedDate"=NOW() WHERE "_id"=$1`,
+              [kidsInscId, String(e?.message || 'error').slice(0, 500)]);
+          } catch { /* noop */ }
+        }
+      }
+    }
   }
 
   // 4. Create FINANCIERO if financial data present
@@ -177,8 +317,10 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
     //    Cuota #0 representa el pago de inscripción realizado al firmar:
     //      - valorPagado = inscripción (la plata efectivamente recibida)
     //      - inscripcion = inscripción (etiqueta semántica, redundante con valorPagado)
-    //      - validado    = true (la inscripción se considera validada al crear el contrato)
-    //      - validadoPor / fechaValidacion = sesión actual / hoy
+    //      - validado    = false → nace PENDIENTE. Se valida en Recaudos →
+    //                      "Inscripciones pendientes". Sólo al validarla cuenta
+    //                      en el saldo (syncFinancieroSaldo suma validados).
+    //      - validadoPor / fechaValidacion = null (se llenan al validar)
     //      - gestorRecaudo = USUARIOS_ROLES._id del comercial que crea el contrato
     //                       (titular.asesor email → _id; fallback session.user.email).
     //    Si falla NO rompe la creación del contrato (log y se continúa).
@@ -212,16 +354,16 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
         `INSERT INTO "PAGOS_TITULARES" (
            "_id", "idPeople", "numeroId", "gestorRecaudo", "plataforma",
            "fechaPago", "fechaVencimiento", "numCuota", "cuotasTotal", "vlrTotalProg",
-           "valorCuota", "valorPagado", "inscripcion", "saldo", "descuento",
+           "valorCuota", "valorPagado", "inscripcion", "saldo", "descuento", "valorAplicado",
            "medioPago", "documentosAdjuntos",
            "validado", "fechaValidacion", "validadoPor",
            "createdBy", "tipoCartera", "plan", "_createdDate", "_updatedDate"
          ) VALUES (
            $1, $2, $3, $4, $5,
            COALESCE($15::date, CURRENT_DATE), $6::date, 0, $7, $8,
-           $9, $10, $11, $12, 0,
+           $9, $10, $11, $12, 0, $10,
            $13, '[]'::jsonb,
-           true, COALESCE($15::date, CURRENT_DATE), $14,
+           false, NULL, NULL,
            $14, 'normal', $16, NOW(), NOW()
          ) RETURNING "_id"`,
         [
@@ -254,6 +396,12 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
       console.warn(`[contracts] PAGOS_TITULARES cuota#0 falló para ${contrato}:`, err?.message || err);
     }
   }
+
+  // 7. Propagar el comercial a EQUIPO_COMERCIAL (registro del equipo).
+  //    correo = titular.asesor (EMAIL) · nombre = titular.asesorCreadorContrato
+  //    · plataforma = titular.plataforma.
+  //    Best-effort: si falla, el contrato ya está creado y no se rompe.
+  await upsertEquipoComercial(titular, contrato);
 
   return successResponse({
     message: `Contrato ${contrato} creado exitosamente`,

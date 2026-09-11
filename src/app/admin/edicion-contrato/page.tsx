@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { MagnifyingGlassIcon, ArrowTopRightOnSquareIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
+import { PermissionGuard } from '@/components/permissions'
+import { MantenimientoPermission } from '@/types/permissions'
 
 interface ContractResult {
   contrato: string
@@ -81,6 +83,7 @@ export default function EdicionContratoPage() {
   const contractUrl = titular ? `${BASE_URL}/${titular._id}` : null
 
   return (
+    <PermissionGuard permission={MantenimientoPermission.EDICION_CONTRATO} showDefaultMessage>
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-3">
@@ -186,5 +189,6 @@ export default function EdicionContratoPage() {
         )}
       </div>
     </div>
+    </PermissionGuard>
   )
 }

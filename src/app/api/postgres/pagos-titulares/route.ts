@@ -27,6 +27,15 @@ export const POST = handlerWithAuth(async (req, _ctx, session) => {
 
   const body = await req.json();
   const createdBy = (session.user as any)?.email || 'unknown';
+
+  // Pago doble: un solo valor capturado se parte en DOS filas (cuota #N y #N+1)
+  // con la misma fecha de pago. Devolvemos las dos; `pago` queda apuntando a la
+  // primera para no romper a los clientes que solo leen esa clave.
+  if (body?.pagoDoble === true) {
+    const pagos = await pagosTitularesService.createPagoDoble(body, createdBy);
+    return successResponse({ pagos, pago: pagos[0] }, 201);
+  }
+
   const pago = await pagosTitularesService.create(body, createdBy);
   return successResponse({ pago }, 201);
 });

@@ -29,10 +29,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Update PEOPLE table - set aprobacion to 'Aprobado'
+    // Update PEOPLE table - set aprobacion to 'Aprobado' + sella fechaIngreso
+    // (COALESCE: solo la primera vez, no pisa una fecha existente).
     const result = await query(
       `UPDATE "PEOPLE"
-       SET "aprobacion" = 'Aprobado', "_updatedDate" = NOW()
+       SET "aprobacion" = 'Aprobado',
+           "fechaIngreso" = COALESCE("fechaIngreso", NOW()),
+           "_updatedDate" = NOW()
        WHERE "_id" = $1
        RETURNING *`,
       [id]

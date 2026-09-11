@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { query } from '@/lib/postgres'
+import { whatsappConfigService } from '@/services/whatsapp-config.service'
 
 async function isAuthorized(request: NextRequest): Promise<boolean> {
   const wixSecret = request.headers.get('x-wix-secret');
@@ -46,13 +48,14 @@ export async function POST(request: NextRequest) {
     const message = `Hola ${nombre || ''} 👋:\n\n*¡Eres parte de Let's Go Speak!* 🎉 \n\nPara terminar tu registro y crear tu usuario sigue este enlace:\n\n${registroUrl}\n\nSi tienes alguna pregunta, no dudes en contactarnos.\n\n¡Bienvenido a la familia LGS! 🚀`
 
     console.log('📤 Sending Welcome WhatsApp to:', formattedNumber)
+    const token = await whatsappConfigService.getActiveToken('bienvenida')
 
     // Send WhatsApp message using Whapi.cloud
     const whatsappResponse = await fetch('https://gate.whapi.cloud/messages/text', {
       method: 'POST',
       headers: {
         'accept': 'application/json',
-        'authorization': `Bearer ${process.env.WHAPI_TOKEN || 'I1s8u9FihgMttIDRvRDoMpOJB1LzPgtx'}`,
+        'authorization': `Bearer ${token}`,
         'content-type': 'application/json'
       },
       body: JSON.stringify({
@@ -99,9 +102,24 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Welcome WhatsApp sent successfully to', nombre || 'beneficiario')
 
+    // Incrementa el contador del mensaje en ACADEMICA (por beneficiarioId = ACADEMICA._id).
+    // 'msgSoloPerfilCount' si noWelcome, 'msgWelcomeCount' si es con bienvenida.
+    const col = noWelcome ? 'msgSoloPerfilCount' : 'msgWelcomeCount'
+    let contador: number | null = null
+    try {
+      const r = await query(
+        `UPDATE "ACADEMICA" SET "${col}" = COALESCE("${col}",0)+1, "_updatedDate"=NOW() WHERE "_id"=$1 RETURNING "${col}" AS n`,
+        [beneficiarioId]
+      )
+      contador = (r.rows[0] as any)?.n ?? null
+    } catch (e) {
+      console.error('⚠️ No se pudo incrementar el contador de mensaje:', e)
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Welcome WhatsApp message sent successfully',
+      contador,
       data: whatsappData
     })
 

@@ -6,19 +6,25 @@
  * Gateado por ACADEMICO.PERFORMANCE_EVAL.VER (SUPER_ADMIN/ADMIN bypass).
  */
 import 'server-only';
-import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
+import { successResponse } from '@/lib/api-helpers';
+import { handlerReport } from '@/lib/report-guard';
 import { requirePermission } from '@/lib/api-permissions';
 import { AcademicoPermission } from '@/types/permissions';
 import { getDashboardStats } from '@/services/evaluations.service';
 
-export const GET = handlerWithAuth(async (req, _ctx, session) => {
+export const GET = handlerReport(async (req, _ctx, session) => {
   await requirePermission(session, AcademicoPermission.PERFORMANCE_EVAL_VER);
 
   const { searchParams } = new URL(req.url);
+  const advisorIdsRaw = searchParams.get('advisorIds');
+  const advisorIds = advisorIdsRaw
+    ? advisorIdsRaw.split(',').map(s => s.trim()).filter(Boolean)
+    : null;
   const stats = await getDashboardStats({
     startDate: searchParams.get('startDate'),
     endDate:   searchParams.get('endDate'),
     advisorId: searchParams.get('advisorId'),
+    advisorIds,
     nivel:     searchParams.get('nivel'),
     tipo:      searchParams.get('tipo'),
     plataforma: searchParams.get('plataforma'),

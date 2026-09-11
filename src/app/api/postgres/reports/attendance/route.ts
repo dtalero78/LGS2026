@@ -4,10 +4,11 @@
  */
 
 import { NextResponse } from 'next/server';
-import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
+import { successResponse } from '@/lib/api-helpers';
+import { handlerReport } from '@/lib/report-guard';
 import { query } from '@/lib/postgres';
 
-export const GET = handlerWithAuth(async (req) => {
+export const GET = handlerReport(async (req) => {
   const { searchParams } = new URL(req.url);
   const startDate = searchParams.get('startDate');
   const endDate = searchParams.get('endDate');

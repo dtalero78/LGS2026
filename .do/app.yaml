@@ -6,8 +6,9 @@
 # Componentes:
 #   - services.lgs2026          → Next.js web (lgs-plataforma.com)
 #   - workers.cron-worker       → node-cron daemon que dispara los endpoints
-#                                  /api/cron/reactivate-onhold y
-#                                  /api/cron/expire-contracts diariamente.
+#                                  /api/cron/reactivate-onhold,
+#                                  /api/cron/expire-contracts y
+#                                  /api/cron/sence-envio-avance diariamente.
 
 name: lgs2026
 region: atl

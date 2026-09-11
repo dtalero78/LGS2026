@@ -11,19 +11,16 @@ import { PeopleRepository } from '@/repositories/people.repository';
 import { BookingRepository } from '@/repositories/booking.repository';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { query, queryOne, queryMany } from '@/lib/postgres';
+import { ensureOnce } from '@/lib/ensure-once';
 
 // Ensure ACADEMICA.fechaPromocionEspecial column exists (idempotent, once per server start).
 // Written when student is promoted from F3 Step 45 to MASTER/IELS/B2FIRST/TOEFL;
 // IELS/B2FIRST/TOEFL use it to compute the 100-day auto-promotion to DONE.
-let fechaPromoEnsured = false;
-async function ensureFechaPromocionEspecial() {
-  if (fechaPromoEnsured) return;
-  try {
-    await query(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "fechaPromocionEspecial" TIMESTAMPTZ`, []);
-    fechaPromoEnsured = true;
-  } catch (err: any) {
-    console.warn('[student.service] ensureFechaPromocionEspecial:', err.message);
-  }
+// El esquema se garantiza de verdad con scripts/add-columnas-legacy-ensure.js.
+function ensureFechaPromocionEspecial() {
+  return ensureOnce('ACADEMICA.fechaPromocionEspecial', () =>
+    query(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "fechaPromocionEspecial" TIMESTAMPTZ`, [])
+  );
 }
 
 /**
@@ -156,6 +153,27 @@ export async function toggleStatus(id: string, active: boolean, opts: ToggleStat
   // Persist toggle + suspenddata + (conditionally) increment suspendcount.
   // suspendcount only grows on INACTIVACION; REACTIVACION leaves it intact.
   const updated = await PeopleRepository.toggleStatusWithSuspendData(id, wantInactive, suspendData);
+
+  // Resync `estado` al REACTIVAR: si quedó stale (ej. ANULADO de cuando el
+  // contrato fue anulado pre-aprobación), lo derivamos del `aprobacion` actual
+  // para que coincida con la realidad. Mismo mapeo que PATCH /people/[id].
+  // (En INACTIVACION manual no forzamos `estado` — no hay un estado canónico de
+  //  "suspensión administrativa"; lo refleja `estadoInactivo` + suspenddata.)
+  if (!wantInactive) {
+    const apro = ((person as any).aprobacion || '').toString();
+    let nuevoEstado: string | null = null;
+    if (apro === 'Aprobado')        nuevoEstado = Number((person as any).extensionCount) > 0 ? 'CON EXTENSION' : 'ACTIVA';
+    else if (apro === 'Pendiente')  nuevoEstado = 'PENDIENTE';
+    else if (apro === 'Retractado') nuevoEstado = 'RETRACTADO';
+    if (nuevoEstado && nuevoEstado !== (person as any).estado) {
+      try {
+        await query(`UPDATE "PEOPLE" SET "estado" = $1, "_updatedDate" = NOW() WHERE "_id" = $2`, [nuevoEstado, id]);
+        (updated as any).estado = nuevoEstado;
+      } catch (err) {
+        console.warn('⚠️ Could not resync estado for', id, err);
+      }
+    }
+  }
 
   // Sync estadoInactivo in ACADEMICA (match by numeroId)
   if (person.numeroId) {

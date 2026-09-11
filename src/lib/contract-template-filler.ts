@@ -6,6 +6,8 @@
  * No 'server-only' import — safe for client-side use.
  */
 
+import { normalizeNumeroId } from '@/lib/numeroid-normalize';
+
 export interface ConsentDisplay {
   hasConsent: boolean;
   consent?: {
@@ -50,18 +52,43 @@ export function fillContractTemplate(
   // Build beneficiarios text block
   const beneficiariosText = beneficiarios.length === 0
     ? ''
-    : beneficiarios.map((b: any, i: number) =>
-        `Beneficiario ${i + 1}:\n` +
-        `- Numero de Contrato: ${b.contrato || 'Sin asignar'}\n` +
-        `- Nombre Completo: ${[b.primerNombre, b.segundoNombre, b.primerApellido, b.segundoApellido].filter(Boolean).join(' ')}\n` +
-        `- Documento: ${b.numeroId || ''}\n` +
-        `- Fecha de nacimiento: ${fmtDate(b.fechaNacimiento)}\n` +
-        `- Telefono: ${b.celular || ''}\n` +
-        `- Pais: ${b.plataforma || ''}\n` +
-        `- Ciudad: ${b.ciudad || ''}\n` +
-        `- Domicilio: ${b.domicilio || ''}\n` +
-        `- Email: ${b.email || ''}`
-      ).join('\n\n');
+    : beneficiarios.map((b: any, i: number) => {
+        const base =
+          `Beneficiario ${i + 1}:\n` +
+          `- Numero de Contrato: ${b.contrato || 'Sin asignar'}\n` +
+          `- Nombre Completo: ${[b.primerNombre, b.segundoNombre, b.primerApellido, b.segundoApellido].filter(Boolean).join(' ')}\n` +
+          `- Documento: ${normalizeNumeroId(b.numeroId)}\n` +
+          `- Fecha de nacimiento: ${fmtDate(b.fechaNacimiento)}\n` +
+          `- Telefono: ${b.celular || ''}\n` +
+          `- Pais: ${b.plataforma || ''}\n` +
+          `- Ciudad: ${b.ciudad || ''}\n` +
+          `- Domicilio: ${b.domicilio || ''}\n` +
+          `- Email: ${b.email || ''}`;
+
+        // Solo si el beneficiario es de Kids: agregar debajo el detalle de la
+        // inscripción (curso + apoderado). Los datos vienen de KIDS_INSCRIPCIONES
+        // (adjuntados como b.kidsInscripcion) o del wizard en memoria (b.kidsData).
+        // Se muestran únicamente las líneas con dato — nunca aparece para adultos.
+        const ki = b.kidsInscripcion || b.kidsData || null;
+        if (b.kids === true && ki) {
+          const filas = ([
+            ['Campaña', ki.campaign],
+            ['Tipo de curso', ki.tipoCurso],
+            ['Horario', ki.horario],
+            ['Salón', ki.salonNombre],
+            ['Apoderado', [ki.apoderado, ki.apoderadoApellidos].filter(Boolean).join(' ').trim()],
+            ['Documento del apoderado', ki.apoderadoDoc],
+            ['Parentesco', ki.parentesco],
+            ['Teléfono del apoderado', ki.apoderadoTelefono],
+            ['Correo del apoderado', ki.apoderadoMail],
+          ] as Array<[string, any]>).filter(([, v]) => v != null && String(v).trim() !== '');
+          if (filas.length) {
+            return base + `\n  Programa KIDS:\n` +
+              filas.map(([l, v]) => `  - ${l}: ${String(v).trim()}`).join('\n');
+          }
+        }
+        return base;
+      }).join('\n\n');
 
   // Build firma (consent) text
   let firmaText = '';
@@ -72,21 +99,108 @@ export function fillContractTemplate(
       : '';
     const tipo = c.tipoAprobacion === 'AUTOMATICA' ? ' (Aprobacion Automatica)' : '';
 
+    // La línea del correo solo se imprime si REALMENTE hay un email. En
+    // contratos viejos `asesor` guarda el nombre (no un correo) y antes se
+    // repetía el nombre en ambas líneas.
     const ejecutivoLineas =
       (ejecutivoComercial && (ejecutivoComercial.nombre || ejecutivoComercial.email))
-        ? `Ejecutivo Comercial: ${ejecutivoComercial.nombre || ''}\n` +
-          `Correo del ejecutivo: ${ejecutivoComercial.email || ''}\n`
+        ? `Asesor Comercial: ${ejecutivoComercial.nombre || ejecutivoComercial.email || ''}\n` +
+          (ejecutivoComercial.email ? `Correo del asesor: ${ejecutivoComercial.email}\n` : '')
         : '';
 
     firmaText =
       `\n--- CONSENTIMIENTO DECLARATIVO VERIFICADO${tipo} ---\n` +
-      `Documento: ${c.numeroDocumento || ''}\n` +
+      `Documento: ${normalizeNumeroId(c.numeroDocumento)}\n` +
       `Fecha: ${fecha}\n` +
       `Celular Verificado: ${c.celularValidado || ''}\n` +
       `Hash: ${consentData.hash?.substring(0, 16) || ''}...\n` +
       ejecutivoLineas +
       `---`;
   }
+
+  // "Saldo a pagar" del contrato = saldo a la FIRMA = totalPlan − inscripción
+  // (valor contractual fijo, lo que se financia en cuotas). NO se usa el
+  // FINANCIEROS.saldo dinámico: desde que la inscripción (cuota #0) nace
+  // PENDIENTE, ese saldo incluye la inscripción hasta que Recaudos la valide,
+  // lo que haría aparecer el total sin descontar en el contrato.
+  const _parseNum = (v: any): number | null => {
+    if (v == null) return null;
+    const n = Number(String(v).replace(/[^0-9.-]/g, ''));
+    return Number.isFinite(n) ? n : null;
+  };
+  const _totalPlanNum = _parseNum(financial?.totalPlan);
+  const _inscNum = _parseNum(financial?.pagoInscripcion);
+  const _saldoFirma = _totalPlanNum != null ? Math.max(0, _totalPlanNum - (_inscNum ?? 0)) : null;
+
+  // --- Contratante: persona natural vs empresa ------------------------------
+  // El wizard de Crear Contrato captura `tipoPersona`. En modo Empresa reutiliza
+  // `primerNombre` como razón social, `numeroId` como NIT/RUT y suma el
+  // representante legal (replegal / replegalid / replegalcel). Estos bloques se
+  // arman acá — mismo patrón que {{beneficiarios}} y {{firma}} — para que las 4
+  // plantillas por país conserven UN solo texto legal en vez de duplicarse.
+  const esEmpresa = String(titular?.tipoPersona || '').trim().toLowerCase() === 'empresa';
+
+  const nombreCompletoTitular = [
+    titular?.primerNombre, titular?.segundoNombre,
+    titular?.primerApellido, titular?.segundoApellido,
+  ].filter(Boolean).join(' ').trim();
+
+  /** ITEM Nº1 — datos del contratante. */
+  const datosTitularText = esEmpresa
+    ? [
+        `Razón social: ${titular?.primerNombre || ''}`,
+        `NIT / RUT: ${titular?.numeroId || ''}`,
+        `Rubro: ${titular?.rubro || ''}`,
+        `Domicilio: ${titular?.domicilio || ''}`,
+        `Ciudad: ${titular?.ciudad || ''}`,
+        `Teléfono: ${titular?.celular || titular?.telefono || ''}`,
+        `Correo: ${titular?.email || ''}`,
+        '',
+        'REPRESENTANTE DE LA EMPRESA:',
+        `Nombre: ${titular?.replegal || ''}`,
+        `Cargo: ${titular?.replegalcargo || ''}`,
+        `Documento: ${normalizeNumeroId(titular?.replegalid)}`,
+        `Celular: ${titular?.replegalcel || ''}`,
+      ].join('\n')
+    : [
+        `Nombre Completo: ${nombreCompletoTitular}`,
+        `Documento: ${titular?.numeroId || ''}`,
+        `Fecha de Nacimiento: ${fmtDate(titular?.fechaNacimiento)}`,
+        `Domicilio: ${titular?.domicilio || ''}`,
+        `Ciudad: ${titular?.ciudad || ''}`,
+        `Teléfono: ${titular?.celular || ''}`,
+        `Correo: ${titular?.email || ''}`,
+        `Ingresos: ${titular?.ingresos || ''}`,
+        `Empresa: ${titular?.empresa || ''}`,
+        `Cargo: ${titular?.cargo || ''}`,
+      ].join('\n');
+
+  /** Referencias personales: se omiten por completo en contratos de empresa. */
+  const referenciasText = esEmpresa
+    ? ''
+    : [
+        'REFERENCIAS:',
+        `- Nombre: ${titular?.referenciaUno || ''}`,
+        `- Parentesco: ${titular?.parentezcoRefUno || ''}`,
+        `- Teléfono: ${titular?.telefonoRefUno || ''}`,
+        '',
+        `- Nombre: ${titular?.referenciaDos || ''}`,
+        `- Parentesco: ${titular?.parentezcoRefDos || ''}`,
+        `- Teléfono: ${titular?.telefonoRefDos || ''}`,
+      ].join('\n');
+
+  /** Cierre del documento. En empresa firma el representante legal. */
+  const nombreTitularFirmaText = esEmpresa
+    ? [
+        `Razón social: ${titular?.primerNombre || ''}`,
+        `NIT / RUT: ${titular?.numeroId || ''}`,
+        `Representante de la empresa: ${titular?.replegal || ''}`,
+        `Número de Identificación: ${titular?.replegalid || ''}`,
+      ].join('\n')
+    : [
+        `Nombre del titular: ${nombreCompletoTitular}`,
+        `Número de Identificación: ${titular?.numeroId || ''}`,
+      ].join('\n');
 
   // Build data map
   const data: Record<string, string> = {
@@ -110,7 +224,7 @@ export function fillContractTemplate(
     beneficiarios: beneficiariosText,
     totalPlan: financial?.totalPlan != null ? String(financial.totalPlan) : '',
     pagoInscripcion: financial?.pagoInscripcion != null ? String(financial.pagoInscripcion) : '',
-    saldo: financial?.saldo != null ? String(financial.saldo) : '',
+    saldo: _saldoFirma != null ? String(_saldoFirma) : (financial?.saldo != null ? String(financial.saldo) : ''),
     numeroCuotas: financial?.numeroCuotas != null ? String(financial.numeroCuotas) : '',
     valorCuota: financial?.valorCuota != null ? String(financial.valorCuota) : '',
     formaPago: financial?.formaPago || '',
@@ -126,6 +240,18 @@ export function fillContractTemplate(
     asesor: ejecutivoComercial?.nombre || ejecutivoComercial?.email || titular?.asesor || '',
     telefonoRefDos: titular?.telefonoRefDos || '',
     firma: firmaText,
+    // Empresa / persona jurídica (wizard: tipoPersona = 'Empresa')
+    tipoPersona: titular?.tipoPersona || '',
+    rubro: titular?.rubro || '',
+    replegal: titular?.replegal || '',
+    replegalcargo: titular?.replegalcargo || '',
+    replegalid: titular?.replegalid || '',
+    replegalcel: titular?.replegalcel || '',
+    telefono: titular?.telefono || '',
+    // Bloques que cambian según persona natural / empresa
+    datosTitular: datosTitularText,
+    referencias: referenciasText,
+    nombreTitularFirma: nombreTitularFirmaText,
   };
 
   // Replace all {{key}} placeholders

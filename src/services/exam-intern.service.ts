@@ -21,6 +21,7 @@ import { ids } from '@/lib/id-generator';
 import { ValidationError } from '@/lib/errors';
 import { sendWhatsAppMessage, formatPhoneNumber } from '@/lib/whatsapp';
 import { promoteToDoneAndBlock } from '@/services/special-nivel.service';
+import { ensureOnce } from '@/lib/ensure-once';
 
 export type ExamPrueba = 'IELTS' | 'B2FIRST' | 'TOEFL';
 
@@ -43,11 +44,10 @@ const EXTENSION_DAYS = 100;
 // One-time table creation (idempotent)
 // ─────────────────────────────────────────────────────────────────────────────
 
-let auditTableEnsured = false;
-async function ensureAuditTable() {
-  if (auditTableEnsured) return;
-  try {
-    await query(
+// Corre una sola vez por proceso, pase lo que pase (ver lib/ensure-once).
+function ensureAuditTable() {
+  return ensureOnce('EXAM_INTERN_AUDIT', () =>
+    query(
       `CREATE TABLE IF NOT EXISTS "EXAM_INTERN_AUDIT" (
         "_id"                TEXT PRIMARY KEY,
         "studentId"          TEXT NOT NULL,
@@ -67,11 +67,8 @@ async function ensureAuditTable() {
         "_createdDate"       TIMESTAMPTZ DEFAULT NOW()
       )`,
       []
-    );
-    auditTableEnsured = true;
-  } catch (err: any) {
-    console.error('⚠️ [exam-intern] No se pudo crear EXAM_INTERN_AUDIT:', err.message);
-  }
+    )
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -283,7 +280,7 @@ export async function aplicarConfirmacion(
       if (student.celular) {
         try {
           const phone = formatPhoneNumber(student.celular);
-          await sendWhatsAppMessage(phone, whatsappMessageFor(student.primerNombre));
+          await sendWhatsAppMessage(phone, whatsappMessageFor(student.primerNombre), 'exam_intern');
           whatsappOk = true;
           result.whatsappEnviados += 1;
         } catch (err: any) {

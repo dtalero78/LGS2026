@@ -16,7 +16,7 @@ import {
   BookOpenIcon,
   ArrowDownTrayIcon
 } from '@heroicons/react/24/outline'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, addMonths, subMonths } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, addMonths, subMonths, addDays, subDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import HolidayBadge from '@/components/common/HolidayBadge'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -181,12 +181,15 @@ function PanelAdvisorContent() {
     try {
       setEventsLoading(true)
 
-      // Usar el mes actual del calendario
+      // Rango del mes ampliado ±1 día para cubrir la frontera de zona horaria:
+      // los eventos se agrupan por día en la hora LOCAL del cliente, así que
+      // traemos también los del borde (un evento cerca de medianoche puede caer
+      // en el día vecino según la TZ del navegador).
       const monthStart = startOfMonth(currentMonth)
       const monthEnd = endOfMonth(currentMonth)
 
-      const startDate = monthStart.toISOString().split('T')[0]
-      const endDate = monthEnd.toISOString().split('T')[0]
+      const startDate = format(subDays(monthStart, 1), 'yyyy-MM-dd')
+      const endDate = format(addDays(monthEnd, 1), 'yyyy-MM-dd')
 
       const response = await fetch(`/api/postgres/calendar/events?startDate=${startDate}&endDate=${endDate}&advisor=${encodeURIComponent(advisor._id)}&limit=1000`)
 
@@ -238,7 +241,9 @@ function PanelAdvisorContent() {
           return {
             ...event,
             estudiantesInscritosCount: inscritos,
-            estudiantesNoCalificados: noCalificados > 0 ? noCalificados : 0
+            estudiantesNoCalificados: noCalificados > 0 ? noCalificados : 0,
+            inscritos,
+            asistieron,
           }
         })
 
@@ -302,27 +307,31 @@ function PanelAdvisorContent() {
     setShowEventDetailModal(true)
   }
 
+  // Agrupar por día en la hora LOCAL del cliente (cada advisor ve su hora).
   const getEventsForDay = (date: Date) => {
-    return events.filter(event => {
-      const eventDate = new Date(event.dia)
-      return isSameDay(eventDate, date)
-    })
+    return events.filter(event => isSameDay(new Date(event.dia), date))
   }
 
   const getAdminEventsForDay = (date: Date) => {
     return adminEvents.filter(ae => isSameDay(new Date(ae.fechaInicio), date))
   }
 
-  const getEventColor = (tipo: string) => {
+  // Color del bloque del evento. Misma regla que Control de Horas: una SESSION
+  // o CLUB ya ocurrida, SIN asistentes (asistieron=0) y que NO sea evento
+  // compartido se pinta NARANJA ("sin asistentes"). El resto, por tipo.
+  const getEventColor = (event: CalendarioEvent) => {
+    const tipo = (event.evento || event.tipo || '').toUpperCase()
+    const isShared = !!(event as any).eventoCompartidoId
+    const yaOcurrio = new Date(event.dia).getTime() <= Date.now()
+    const asistieron = event.asistieron || 0
+    if ((tipo === 'SESSION' || tipo === 'CLUB') && !isShared && yaOcurrio && asistieron === 0) {
+      return 'bg-orange-500'
+    }
     switch (tipo) {
-      case 'SESSION':
-        return 'bg-blue-500'
-      case 'CLUB':
-        return 'bg-green-500'
-      case 'WELCOME':
-        return 'bg-purple-500'
-      default:
-        return 'bg-gray-500'
+      case 'SESSION': return 'bg-blue-500'
+      case 'CLUB':    return 'bg-green-500'
+      case 'WELCOME': return 'bg-purple-500'
+      default:        return 'bg-gray-500'
     }
   }
 
@@ -481,7 +490,7 @@ function PanelAdvisorContent() {
                           return (
                           <div
                             key={event._id}
-                            className={`text-xs px-1 py-0.5 rounded text-white truncate ${getEventColor(event.evento || event.tipo || '')} cursor-pointer hover:opacity-80`}
+                            className={`text-xs px-1 py-0.5 rounded text-white truncate ${getEventColor(event)} cursor-pointer hover:opacity-80`}
                             title={`${event.evento || event.tipo || ''} - ${event.tituloONivel} ${event.nombreEvento || ''}${isShared ? ' (compartido entre niveles)' : ''}`}
                             onClick={(e) => {
                               e.stopPropagation()
@@ -498,13 +507,14 @@ function PanelAdvisorContent() {
                             +{dayEvents.length - 3} más
                           </div>
                         )}
-                        {/* Admin events del día — color naranja (Welcome ya es morado).
+                        {/* Admin events del día — color VIOLETA (igual que Control de
+                            Horas; el naranja queda exclusivo de "sin asistentes").
                             Click abre modal de registro. */}
                         {getAdminEventsForDay(date).slice(0, 2).map(ae => (
                           <div
                             key={ae._id}
-                            className={`text-xs px-1 py-0.5 rounded text-white truncate cursor-pointer hover:opacity-80 ${
-                              ae.registrado ? 'bg-orange-400' : 'bg-orange-600'
+                            className={`text-xs px-1 py-0.5 rounded truncate cursor-pointer hover:opacity-80 ${
+                              ae.registrado ? 'bg-violet-600 text-white' : 'bg-violet-300 text-violet-900'
                             }`}
                             title={`[ADMIN ${ae.tipo}] ${ae.titulo || ''} · ${ae.horas}h${ae.registrado ? ' (registrado)' : ''}`}
                             onClick={(e) => { e.stopPropagation(); setSelectedAdminEvent(ae) }}
@@ -513,7 +523,7 @@ function PanelAdvisorContent() {
                           </div>
                         ))}
                         {getAdminEventsForDay(date).length > 2 && (
-                          <div className="text-xs text-orange-600">
+                          <div className="text-xs text-violet-600">
                             +{getAdminEventsForDay(date).length - 2} admin
                           </div>
                         )}
@@ -557,7 +567,7 @@ function PanelAdvisorContent() {
                     setDayEventsModalDate(null)
                     handleEventClick(event)
                   }}
-                  className={`p-3 rounded-lg cursor-pointer hover:opacity-80 transition-opacity ${getEventColor(event.evento || event.tipo || '')} text-white`}
+                  className={`p-3 rounded-lg cursor-pointer hover:opacity-80 transition-opacity ${getEventColor(event)} text-white`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -571,7 +581,8 @@ function PanelAdvisorContent() {
                   </div>
                 </div>
               ))}
-              {/* Admin events del día — color naranja, click abre modal de registro */}
+              {/* Admin events del día — color VIOLETA (igual que Control de Horas),
+                  click abre modal de registro */}
               {getAdminEventsForDay(dayEventsModalDate).map(ae => (
                 <div
                   key={ae._id}
@@ -580,8 +591,8 @@ function PanelAdvisorContent() {
                     setDayEventsModalDate(null)
                     setSelectedAdminEvent(ae)
                   }}
-                  className={`p-3 rounded-lg cursor-pointer hover:opacity-80 transition-opacity text-white ${
-                    ae.registrado ? 'bg-orange-400' : 'bg-orange-600'
+                  className={`p-3 rounded-lg cursor-pointer hover:opacity-80 transition-opacity ${
+                    ae.registrado ? 'bg-violet-600 text-white' : 'bg-violet-300 text-violet-900'
                   }`}
                 >
                   <div className="flex items-center justify-between">

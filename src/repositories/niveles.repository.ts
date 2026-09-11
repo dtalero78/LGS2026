@@ -84,6 +84,18 @@ class NivelesRepositoryClass extends BaseRepository {
   }
 
   /**
+   * Cuántos steps tiene un nivel (una fila por step en NIVELES; incluye el JUMP).
+   * Ej: BN2 → 5 (Steps 6-10). Usado por el contador de ejercicios de práctica.
+   */
+  async countStepsByNivel(code: string): Promise<number> {
+    const row = await queryOne<{ n: number }>(
+      `SELECT COUNT(*)::int AS n FROM "NIVELES" WHERE "code" = $1`,
+      [code]
+    );
+    return row?.n ?? 0;
+  }
+
+  /**
    * Get step content for complementary activity question generation
    */
   async findContenidoByNivelAndStep(nivel: string, step: string): Promise<string | null> {

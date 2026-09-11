@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import {
   BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -27,13 +27,14 @@ interface HorasRow {
   conducted: number
   suspended: number
   cancelled: number
+  noasistio: number
   total: number
 }
 
 interface Totals {
   sesiones: number; jumps: number; training: number; clubes: number
   welcome: number; essential: number; otros: number
-  conducted: number; suspended: number; cancelled: number; total: number
+  conducted: number; suspended: number; cancelled: number; noasistio: number; total: number
   advisorsActivos: number; advisorsConActividad: number; advisorsInactivosConActividad: number
 }
 
@@ -41,7 +42,7 @@ interface ReportData {
   table: HorasRow[]
   totals: Totals
   charts: {
-    barByAdvisor: { name: string; fullName: string; conducted: number; suspended: number; cancelled: number }[]
+    barByAdvisor: { name: string; fullName: string; conducted: number; suspended: number; cancelled: number; noasistio: number }[]
     donut: { name: string; value: number }[]
     byType: { name: string; value: number }[]
   }
@@ -52,6 +53,8 @@ const STATE_COLORS: Record<string, string> = {
   conducted: '#22c55e',
   suspended: '#f59e0b',
   cancelled: '#ef4444',
+  noasistio: '#8b5cf6',
+  'no asistió': '#8b5cf6',   // clave para el nombre del segmento de la dona
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -136,7 +139,8 @@ export default function HorasAdvisorPage() {
   const [advisorId,   setAdvisorId]   = useState('')
   const [tipo,        setTipo]        = useState('all')
   const [data,    setData]    = useState<ReportData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [consultado, setConsultado] = useState(false)
   const [error,   setError]   = useState<string | null>(null)
   // advisorId efectivamente consultado (de la última carga), para el mensaje
   // "sin agendamiento" cuando se filtra por un advisor sin actividad.
@@ -157,12 +161,17 @@ export default function HorasAdvisorPage() {
     finally { setLoading(false) }
   }, [])
 
-  useEffect(() => { fetchData(firstOfYear, today, '', '', 'all') }, [fetchData])
-
-  const handleApply = () => fetchData(fechaInicio, fechaFin, plataforma, advisorId, tipo)
+  const handleApply = () => {
+    if (!fechaInicio || !fechaFin) {
+      alert('Selecciona el rango de fechas (Desde y Hasta) antes de consultar.')
+      return
+    }
+    setConsultado(true)
+    fetchData(fechaInicio, fechaFin, plataforma, advisorId, tipo)
+  }
   const handleClear = () => {
     setFechaInicio(firstOfYear); setFechaFin(today); setPlataforma(''); setAdvisorId(''); setTipo('all')
-    fetchData(firstOfYear, today, '', '', 'all')
+    setData(null); setConsultado(false); setError(null); setQueriedAdvisorId('')
   }
 
   const handleExport = () => {
@@ -184,6 +193,7 @@ export default function HorasAdvisorPage() {
         { header: 'Conducted',  accessor: r => r.conducted },
         { header: 'Suspended',  accessor: r => r.suspended },
         { header: 'Cancelled',  accessor: r => r.cancelled },
+        { header: 'No Asistió', accessor: r => r.noasistio },
         { header: 'Total Booking', accessor: r => r.total },
       ],
       `horas-advisor_${fechaInicio}_${fechaFin}`
@@ -208,7 +218,7 @@ export default function HorasAdvisorPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Informe de horas Advisor</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Sesiones conducted (por tipo), suspended y cancelled por advisor en el período seleccionado.
+            Sesiones conducted (por tipo), suspended, cancelled y No Asistió (cancelación con booking) por advisor en el período seleccionado.
           </p>
         </div>
 
@@ -252,7 +262,7 @@ export default function HorasAdvisorPage() {
             <div className="flex gap-2 ml-auto flex-wrap">
               <button type="button" onClick={handleApply} disabled={loading}
                 className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium">
-                Aplicar filtros
+                Consultar
               </button>
               <button type="button" onClick={handleClear} disabled={loading}
                 className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
@@ -276,13 +286,24 @@ export default function HorasAdvisorPage() {
           </div>
         )}
 
+        {/* Estado vacío */}
+        {!consultado && !loading && !error && (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center text-sm text-indigo-900">
+            Configura los filtros y pulsa <b>Consultar</b> para ver el informe.
+          </div>
+        )}
+
+        {consultado && (
+        <>
+
         {/* KPIs */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <KpiCard label="Advisors Activos" value={(totals?.advisorsActivos ?? 0).toLocaleString()} color="#6366f1" />
           <KpiCard label="Total Sesiones" value={(totals?.total ?? 0).toLocaleString()} color="#3b82f6" />
           <KpiCard label="Conducted" value={(totals?.conducted ?? 0).toLocaleString()} color={STATE_COLORS.conducted} />
           <KpiCard label="Suspended" value={(totals?.suspended ?? 0).toLocaleString()} color={STATE_COLORS.suspended} />
           <KpiCard label="Cancelled" value={(totals?.cancelled ?? 0).toLocaleString()} color={STATE_COLORS.cancelled} />
+          <KpiCard label="No Asistió" value={(totals?.noasistio ?? 0).toLocaleString()} color={STATE_COLORS.noasistio} />
         </div>
 
         {/* Fila 1: barras horizontales por advisor (izq) + dona por estado (der) */}
@@ -310,7 +331,8 @@ export default function HorasAdvisorPage() {
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   <Bar dataKey="conducted" name="Conducted" fill={STATE_COLORS.conducted} stackId="a" />
                   <Bar dataKey="suspended" name="Suspended" fill={STATE_COLORS.suspended} stackId="a" />
-                  <Bar dataKey="cancelled" name="Cancelled" fill={STATE_COLORS.cancelled} stackId="a" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="cancelled" name="Cancelled" fill={STATE_COLORS.cancelled} stackId="a" />
+                  <Bar dataKey="noasistio" name="No Asistió" fill={STATE_COLORS.noasistio} stackId="a" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -387,7 +409,7 @@ export default function HorasAdvisorPage() {
               <table className="w-full text-sm whitespace-nowrap">
                 <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
                   <tr>
-                    {['#', 'Advisor', 'NumeroId', 'Sesiones', 'Jumps', 'Training', 'Clubes', 'Welcome', 'Essential', 'Otros', 'Conducted', 'Suspended', 'Cancelled', 'Total'].map(h => (
+                    {['#', 'Advisor', 'NumeroId', 'Sesiones', 'Jumps', 'Training', 'Clubes', 'Welcome', 'Essential', 'Otros', 'Conducted', 'Suspended', 'Cancelled', 'No Asistió', 'Total'].map(h => (
                       <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">{h}</th>
                     ))}
                   </tr>
@@ -411,6 +433,7 @@ export default function HorasAdvisorPage() {
                       <td className="px-3 py-2.5 text-center font-semibold text-green-700">{row.conducted}</td>
                       <td className="px-3 py-2.5 text-center text-amber-700">{row.suspended}</td>
                       <td className="px-3 py-2.5 text-center text-red-600">{row.cancelled}</td>
+                      <td className="px-3 py-2.5 text-center text-violet-600">{row.noasistio}</td>
                       <td className="px-3 py-2.5 text-right font-bold text-gray-900">{row.total}</td>
                     </tr>
                   ))}
@@ -428,6 +451,7 @@ export default function HorasAdvisorPage() {
                     <td className="px-3 py-3 text-center text-green-700">{totals?.conducted ?? 0}</td>
                     <td className="px-3 py-3 text-center text-amber-700">{totals?.suspended ?? 0}</td>
                     <td className="px-3 py-3 text-center text-red-600">{totals?.cancelled ?? 0}</td>
+                    <td className="px-3 py-3 text-center text-violet-600">{totals?.noasistio ?? 0}</td>
                     <td className="px-3 py-3 text-right">{totals?.total ?? 0}</td>
                   </tr>
                 </tfoot>
@@ -435,6 +459,9 @@ export default function HorasAdvisorPage() {
             </div>
           )}
         </div>
+
+        </>
+        )}
 
       </div>
     </DashboardLayout>

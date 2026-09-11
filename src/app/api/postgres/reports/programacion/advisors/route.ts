@@ -1,5 +1,6 @@
 import 'server-only'
-import { handlerWithAuth, successResponse } from '@/lib/api-helpers'
+import { successResponse } from '@/lib/api-helpers'
+import { handlerReport } from '@/lib/report-guard'
 import { queryMany } from '@/lib/postgres'
 
 export type AdvisorReportType = 'sesiones' | 'jumps' | 'training' | 'clubes' | 'welcome' | 'essential'
@@ -98,7 +99,7 @@ function buildTypeCondition(reportType: AdvisorReportType): string {
   }
 }
 
-export const GET = handlerWithAuth(async (req, _ctx, _session) => {
+export const GET = handlerReport(async (req, _ctx, _session) => {
   const { searchParams } = new URL(req.url)
   const reportType  = (searchParams.get('reportType') ?? 'sesiones') as AdvisorReportType
   const fechaInicio = searchParams.get('fechaInicio') ?? `${new Date().getFullYear()}-01-01`

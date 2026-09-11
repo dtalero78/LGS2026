@@ -9,12 +9,16 @@ import { randomUUID } from 'crypto';
 import { CalendarioRepository, EventFilters } from '@/repositories/calendar.repository';
 import { BookingRepository } from '@/repositories/booking.repository';
 import { AdvisorEventLogRepository } from '@/repositories/advisor-event-log.repository';
+import { AdvisorRepository } from '@/repositories/advisor.repository';
 import { NotFoundError, ValidationError, ConflictError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 import { withTransaction } from '@/lib/postgres';
 import { isEventoCompartible, reasonNotCompartible, MAX_NIVELES_COMPARTIDOS, extractClubPrefix } from '@/lib/evento-compartido';
 
 const MAX_ADVISOR_REASSIGNMENTS = 2;
+
+/** ¿El nivel es WELCOME? (sesión de bienvenida). */
+const isWelcomeNivel = (n?: string | null) => String(n || '').trim().toUpperCase() === 'WELCOME';
 
 /**
  * Get events with filters and advisor details.
@@ -132,6 +136,12 @@ export async function createEvent(data: {
     eventoCompartidoId = randomUUID();
   }
 
+  // WELCOME: el link SIEMPRE es el zoom del advisor ADVISOR WELCOME, sin importar
+  // el advisor asignado (que sí se guarda y cuenta sus horas). Fallback al link
+  // recibido si el advisor WELCOME no tiene zoom.
+  const esWelcome = isWelcomeNivel(data.nivel);
+  const welcomeZoom = esWelcome ? await AdvisorRepository.getWelcomeZoom() : null;
+
   const baseEventData: Record<string, any> = {
     _id: ids.event(),
     dia: data.dia,
@@ -145,7 +155,7 @@ export async function createEvent(data: {
     titulo: data.titulo || data.nombreEvento || '',
     nombreEvento: data.nombreEvento || data.titulo || '',
     tituloONivel: data.tituloONivel || (data.nivel ? `${data.nivel} ${data.step || ''}`.trim() : ''),
-    linkZoom: data.linkZoom || null,
+    linkZoom: esWelcome ? (welcomeZoom || data.linkZoom || null) : (data.linkZoom || null),
     limiteUsuarios: data.limiteUsuarios || 0,
     club: data.club || null,
     observaciones: data.observaciones || null,
@@ -183,6 +193,101 @@ export async function createEvent(data: {
       await CalendarioRepository.create(siblingData, client);
     }
     return baseRow;
+  });
+}
+
+/**
+ * Agrega niveles a un evento existente, convirtiéndolo en compartido (o ampliando
+ * un grupo ya compartido). Restricciones:
+ *   - El evento base debe ser de un tipo compartible (Jump / MASTER / CLUB).
+ *   - Debe ser FUTURO (dia > ahora) y NO estar cerrado (sesionCerrada != true).
+ *   - Total de niveles (existentes + nuevos) ≤ MAX_NIVELES_COMPARTIDOS.
+ *   - Niveles nuevos distintos entre sí y de los existentes.
+ *   - Para CLUB, todos del mismo tipo de club que el base.
+ * Si el evento no era compartido, genera el eventoCompartidoId y lo setea al base.
+ */
+export async function addLevelsToEvent(
+  eventId: string,
+  nuevos: Array<{ nivel: string; step: string; nombreEvento?: string }>,
+): Promise<{ eventoCompartidoId: string; added: number }> {
+  const event = await CalendarioRepository.findById(eventId);
+  if (!event) throw new NotFoundError('Event', eventId);
+
+  const tipo = (event.tipo || event.evento || '').toUpperCase();
+  const baseStepRef = event.step || event.nombreEvento;
+
+  if (!isEventoCompartible(tipo, baseStepRef)) {
+    throw new ValidationError(reasonNotCompartible(tipo, baseStepRef) || 'Este evento no se puede compartir.');
+  }
+  if (new Date(event.dia).getTime() <= Date.now()) {
+    throw new ValidationError('Solo se pueden agregar niveles a eventos futuros (aún no ocurridos).');
+  }
+  if ((event as any).sesionCerrada === true) {
+    throw new ValidationError('El evento ya está cerrado; no se pueden agregar niveles.');
+  }
+
+  const lista = Array.isArray(nuevos) ? nuevos.filter(n => n && (n.nivel || '').trim() && (n.step || '').trim()) : [];
+  if (lista.length === 0) throw new ValidationError('Debes indicar al menos un nivel con su step.');
+
+  const siblings = await CalendarioRepository.findGroupSiblings(eventId);
+  const existingLevels = new Set(siblings.map((s: any) => (s.nivel || '').trim().toUpperCase()));
+
+  if (siblings.length + lista.length > MAX_NIVELES_COMPARTIDOS) {
+    throw new ValidationError(`Máximo ${MAX_NIVELES_COMPARTIDOS} niveles por grupo (ya hay ${siblings.length}).`);
+  }
+
+  const nuevosLevels = lista.map(n => (n.nivel || '').trim().toUpperCase());
+  const seen = new Set<string>();
+  for (const nl of nuevosLevels) {
+    if (existingLevels.has(nl)) throw new ValidationError(`El nivel ${nl} ya está en el grupo.`);
+    if (seen.has(nl)) throw new ValidationError(`Nivel ${nl} repetido en la selección.`);
+    seen.add(nl);
+  }
+
+  if (tipo === 'CLUB') {
+    const basePrefix = extractClubPrefix(baseStepRef);
+    if (!basePrefix) throw new ValidationError('No se pudo determinar el tipo de club del evento base.');
+    for (const n of lista) {
+      const p = extractClubPrefix(n.step);
+      if (p !== basePrefix) {
+        throw new ValidationError(`Todos los niveles deben ser del mismo tipo de club (base = ${basePrefix}, ${n.nivel} = ${p || 'desconocido'}).`);
+      }
+    }
+  }
+
+  const cid = (event as any).eventoCompartidoId || randomUUID();
+
+  return withTransaction(async (client) => {
+    // Si el base aún no era compartido, marcarlo con el nuevo UUID.
+    if (!(event as any).eventoCompartidoId) {
+      await client.query(`UPDATE "CALENDARIO" SET "eventoCompartidoId" = $2 WHERE "_id" = $1`, [eventId, cid]);
+    }
+    for (const n of lista) {
+      const adicNivel = (n.nivel || '').trim();
+      const adicStep = (n.step || '').trim();
+      const adicNombre = (n.nombreEvento || adicStep).trim();
+      const siblingData: Record<string, any> = {
+        _id: ids.event(),
+        dia: event.dia,
+        fecha: event.fecha || new Date(event.dia).toISOString().split('T')[0],
+        hora: event.hora,
+        advisor: event.advisor,
+        nivel: adicNivel,
+        step: adicStep,
+        tipo,
+        evento: tipo,
+        titulo: adicNombre,
+        nombreEvento: adicNombre,
+        tituloONivel: adicNivel ? `${adicNivel} - ${adicNombre}` : '',
+        linkZoom: event.linkZoom || null,
+        limiteUsuarios: event.limiteUsuarios || 0,
+        club: (event as any).club || null,
+        observaciones: event.observaciones || null,
+        eventoCompartidoId: cid,
+      };
+      await CalendarioRepository.create(siblingData, client);
+    }
+    return { eventoCompartidoId: cid, added: lista.length };
   });
 }
 
@@ -247,6 +352,15 @@ export async function updateEvent(
         `No se puede cambiar el nivel/step de este evento: tiene ${activeCount} estudiante(s) inscrito(s). Cancela las inscripciones primero o crea un evento nuevo.`,
       );
     }
+  }
+
+  // WELCOME: el link SIEMPRE es el zoom del ADVISOR WELCOME. Se fuerza antes del
+  // UPDATE para que ambas ramas y la propagación a bookings usen el link correcto,
+  // aunque el editor haya cambiado el advisor (que sí se guarda y cuenta horas).
+  const nivelEfectivo = data.nivel ?? event.nivel;
+  if (isWelcomeNivel(nivelEfectivo)) {
+    const wz = await AdvisorRepository.getWelcomeZoom();
+    if (wz) data.linkZoom = wz;
   }
 
   const isAdvisorChange = !!data.advisor && data.advisor !== event.advisor;
@@ -324,10 +438,11 @@ export async function updateEvent(
   }
 
   // Eventos compartidos: si este evento pertenece a un grupo, propagamos los
-  // campos COMUNES (advisor, hora, dia, linkZoom, tipo, observaciones,
-  // limiteUsuarios, sesionCerrada, timeout, notasadvisor) a los hermanos.
-  // NO propagamos nivel/step/tituloONivel/nombreEvento — esos son específicos
-  // por nivel y los hermanos los mantienen tal cual.
+  // campos COMUNES (advisor, hora, dia, linkZoom, tipo, observaciones) a los
+  // hermanos.
+  // NO propagamos nivel/step/tituloONivel/nombreEvento NI `limiteUsuarios` —
+  // esos son específicos por nivel/club: cada club del grupo puede tener un
+  // cupo distinto, así que cambiar el límite de uno NO debe afectar a los otros.
   // Si el advisor cambió, también propagamos para mantener consistencia
   // operativa (1 sola clase real del advisor).
   if ((updated as any).eventoCompartidoId) {
@@ -338,7 +453,6 @@ export async function updateEvent(
     if (data.linkZoom && data.linkZoom !== event.linkZoom) sharedUpdates.linkZoom = data.linkZoom;
     if (data.tipo && data.tipo !== event.tipo) { sharedUpdates.tipo = data.tipo; sharedUpdates.evento = data.tipo; }
     if (data.observaciones !== undefined && data.observaciones !== event.observaciones) sharedUpdates.observaciones = data.observaciones;
-    if (data.limiteUsuarios !== undefined && data.limiteUsuarios !== event.limiteUsuarios) sharedUpdates.limiteUsuarios = data.limiteUsuarios;
     if (Object.keys(sharedUpdates).length > 0) {
       const n = await CalendarioRepository.updateGroupSiblings(eventId, sharedUpdates);
       // Propaga a los bookings de los hermanos también (no sólo del evento principal).
@@ -372,7 +486,7 @@ export async function updateEvent(
 export async function deleteEvent(
   eventId: string,
   deleteBookings: boolean = true,
-  opts?: { actor?: string; motivo?: string; skipLog?: boolean; deleteGroup?: boolean },
+  opts?: { actor?: string; motivo?: string; skipLog?: boolean; deleteGroup?: boolean; conBooking?: boolean },
 ) {
   const event = await CalendarioRepository.findById(eventId);
   if (!event) throw new NotFoundError('Event', eventId);
@@ -391,40 +505,112 @@ export async function deleteEvent(
 
   return await withTransaction(async (client) => {
     let bookingsDeleted = 0;
+    let bookingsCanceled = 0;
     for (const id of idsToDelete) {
       const ev = id === eventId ? event : await CalendarioRepository.findById(id);
       if (!ev) continue;
 
-      if (ev.advisor && !opts?.skipLog) {
-        await AdvisorEventLogRepository.insert({
-          advisorId:     ev.advisor,
-          eventoId:      id,
-          estado:        'Suspended',
-          fechaEvento:   ev.dia,
-          horaInicio:    ev.hora,
-          tipo:          ev.tipo,
-          nivel:         ev.nivel,
-          step:          ev.step,
-          tituloEvento:  ev.tituloONivel || ev.titulo || ev.nombreEvento,
-          horaFin:       (ev as any).timeout ?? null,
-          observaciones: (ev as any).notasadvisor ?? null,
-          canceladoPor:  opts?.actor || 'system',
-          motivoTransicion: opts?.motivo || null,
-        }, client);
-      }
+      const tituloEvento = ev.tituloONivel || ev.titulo || ev.nombreEvento;
+      const logBase = {
+        advisorId: ev.advisor as string,
+        eventoId: id,
+        fechaEvento: ev.dia,
+        horaInicio: ev.hora,
+        tipo: ev.tipo,
+        nivel: ev.nivel,
+        step: ev.step,
+        tituloEvento,
+        horaFin: (ev as any).timeout ?? null,
+        observaciones: (ev as any).notasadvisor ?? null,
+        canceladoPor: opts?.actor || 'system',
+        motivoTransicion: opts?.motivo || null,
+      };
 
-      if (deleteBookings) {
-        const r = await client.query(
-          `DELETE FROM "ACADEMICA_BOOKINGS" WHERE "eventoId" = $1 OR "idEvento" = $1 RETURNING "_id"`,
+      if (opts?.conBooking) {
+        // Modo "Sesión con booking": la sesión tenía inscritos. Se cancelan sus
+        // bookings (devuelve el cupo semanal — el conteo excluye cancelo=true),
+        // se guarda a los alumnos en CANCELACIONES_SIN_REEMPLAZO para que Servicio
+        // los gestione, se registra 'NoAsistio' en Ctrl Horas y cuenta cancelada+noasistio.
+        const advRow: any = ev.advisor
+          ? await client.query(
+              `SELECT "nombreCompleto" FROM "ADVISORS"
+                WHERE "_id" = $1 OR LOWER(TRIM("email")) = LOWER(TRIM($1)) LIMIT 1`,
+              [ev.advisor],
+            )
+          : null;
+        const advisorNombre: string | null = advRow?.rows?.[0]?.nombreCompleto ?? (ev.advisor || null);
+
+        const alumnos: any = await client.query(
+          `SELECT COALESCE(b."idEstudiante", b."studentId") AS "studentId",
+                  b."numeroId",
+                  NULLIF(TRIM(COALESCE(b."primerNombre",'') || ' ' || COALESCE(b."primerApellido",'')), '') AS nombre,
+                  COALESCE(NULLIF(b."celular", ''), a."celular") AS telefono,
+                  a."email" AS email
+             FROM "ACADEMICA_BOOKINGS" b
+             LEFT JOIN LATERAL (
+               SELECT a2."email", a2."celular"
+                 FROM "ACADEMICA" a2
+                WHERE a2."numeroId" = b."numeroId"
+                ORDER BY (a2."tipoUsuario" = 'BENEFICIARIO') DESC
+                LIMIT 1
+             ) a ON true
+            WHERE (b."eventoId" = $1 OR b."idEvento" = $1) AND b."cancelo" IS NOT TRUE`,
           [id],
         );
-        bookingsDeleted += r.rowCount ?? 0;
+        for (const al of alumnos.rows) {
+          await client.query(
+            `INSERT INTO "CANCELACIONES_SIN_REEMPLAZO"
+               ("_id","loteId","eventoId","fechaEvento","horaEvento","tipo","nivel","step","tituloEvento",
+                "advisorId","advisorNombre","studentId","numeroId","nombre","telefono","email")
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+            [ids.cancelacion(), id, id, ev.dia, ev.hora, ev.tipo, ev.nivel, ev.step, tituloEvento,
+             ev.advisor || null, advisorNombre, al.studentId, al.numeroId, al.nombre, al.telefono, al.email],
+          );
+        }
+
+        const rc: any = await client.query(
+          `UPDATE "ACADEMICA_BOOKINGS" SET "cancelo" = true
+            WHERE ("eventoId" = $1 OR "idEvento" = $1) AND "cancelo" IS NOT TRUE`,
+          [id],
+        );
+        bookingsCanceled += rc.rowCount ?? 0;
+
+        if (ev.advisor) {
+          await AdvisorEventLogRepository.insert({ ...logBase, estado: 'NoAsistio' }, client);
+          await client.query(
+            `UPDATE "ADVISORS"
+                SET "cancelada" = COALESCE("cancelada",0) + 1,
+                    "noasistio" = COALESCE("noasistio",0) + 1,
+                    "_updatedDate" = NOW()
+              WHERE "_id" = $1 OR LOWER(TRIM("email")) = LOWER(TRIM($1))`,
+            [ev.advisor],
+          );
+        }
+      } else {
+        // Suspensión (skipLog=false) o Restructuración (skipLog=true).
+        if (ev.advisor && !opts?.skipLog) {
+          await AdvisorEventLogRepository.insert({ ...logBase, estado: 'Suspended' }, client);
+          // La Suspensión cuenta como "cancelada" para el advisor (Restructuración NO).
+          await client.query(
+            `UPDATE "ADVISORS" SET "cancelada" = COALESCE("cancelada",0) + 1, "_updatedDate" = NOW()
+              WHERE "_id" = $1 OR LOWER(TRIM("email")) = LOWER(TRIM($1))`,
+            [ev.advisor],
+          );
+        }
+
+        if (deleteBookings) {
+          const r = await client.query(
+            `DELETE FROM "ACADEMICA_BOOKINGS" WHERE "eventoId" = $1 OR "idEvento" = $1 RETURNING "_id"`,
+            [id],
+          );
+          bookingsDeleted += r.rowCount ?? 0;
+        }
       }
 
       await client.query(`DELETE FROM "CALENDARIO" WHERE "_id" = $1`, [id]);
     }
 
-    return { bookingsDeleted, eventsDeleted: idsToDelete.length };
+    return { bookingsDeleted, bookingsCanceled, eventsDeleted: idsToDelete.length };
   });
 }
 

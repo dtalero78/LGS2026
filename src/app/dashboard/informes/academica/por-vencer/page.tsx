@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { ArrowDownTrayIcon, ArrowPathIcon, ClockIcon } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { exportToExcel } from '@/lib/export-excel'
@@ -57,8 +57,9 @@ export default function PorVencerPage() {
   const [hold, setHold]           = useState<'todos' | 'con' | 'sin'>('todos')
   const [extension, setExtension] = useState<'todos' | 'con' | 'sin'>('todos')
   const [data, setData]    = useState<Data | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError]  = useState<string | null>(null)
+  const [consultado, setConsultado] = useState(false)
 
   const fetchData = useCallback(async (
     t: Tipo, q: string, sd: string, ed: string, h: string, ex: string
@@ -78,17 +79,20 @@ export default function PorVencerPage() {
     finally { setLoading(false) }
   }, [])
 
-  useEffect(() => { fetchData(tipo, '', startDate, endDate, hold, extension) }, [fetchData]) // eslint-disable-line
-
-  const handleApply = () => fetchData(tipo, search, startDate, endDate, hold, extension)
+  const handleApply = () => {
+    if (!window.confirm('Esta consulta recorre muchos registros y puede ser pesada. ¿Deseas continuar?')) return
+    setConsultado(true)
+    fetchData(tipo, search, startDate, endDate, hold, extension)
+  }
   const handleClear = () => {
     setSearch(''); setStartDate(todayStr()); setEndDate(oneMonthFromTodayStr())
     setHold('todos'); setExtension('todos')
-    fetchData(tipo, '', todayStr(), oneMonthFromTodayStr(), 'todos', 'todos')
+    setData(null); setConsultado(false)
   }
   const switchTipo = (t: Tipo) => {
     setTipo(t)
-    fetchData(t, search, startDate, endDate, hold, extension)
+    // Solo re-consulta si ya se hizo una consulta; antes de eso mantiene el estado vacío.
+    if (consultado) fetchData(t, search, startDate, endDate, hold, extension)
   }
 
   const handleCSV = () => {
@@ -227,6 +231,15 @@ export default function PorVencerPage() {
             <button type="button" onClick={handleApply} className="ml-4 text-xs underline">Reintentar</button></div>
         )}
 
+        {/* Estado vacío */}
+        {!consultado && !loading && !error && (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center text-sm text-indigo-900">
+            Configura los filtros y pulsa <b>Consultar</b> para ver el informe.
+          </div>
+        )}
+
+        {consultado && (<>
+
         {/* Cabecera contador */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-3 flex flex-wrap items-center gap-4">
           <div>
@@ -333,6 +346,8 @@ export default function PorVencerPage() {
             </div>
           )}
         </div>
+
+        </>)}
       </div>
     </DashboardLayout>
   )

@@ -4,28 +4,12 @@ import { useQuery } from 'react-query'
 import {
   ArrowDownTrayIcon,
   BookOpenIcon,
-  GlobeAltIcon,
   SparklesIcon,
+  PencilSquareIcon,
 } from '@heroicons/react/24/outline'
-
-const INTERACTIVE_MATERIAL_URLS: Record<string, string> = {
-  'BN1': 'https://www.lgsplataforma.com/material-bn1',
-  'BN2': 'https://www.lgsplataforma.com/material-bn2',
-  'BN3': 'https://www.lgsplataforma.com/material-bn3',
-  'P1':  'https://www.lgsplataforma.com/material-p1',
-  'P2':  'https://www.lgsplataforma.com/material-p2',
-  'P3':  'https://www.lgsplataforma.com/material-p3',
-  'F1':  'https://www.lgsplataforma.com/material-f1',
-  'F2':  'https://www.lgsplataforma.com/material-f2',
-  'F3':  'https://www.lgsplataforma.com/material-f3',
-}
 
 function normalizeNivelCode(nivel: string): string {
   return (nivel || '').replace(/\s*JUMP\s*/i, '').trim().toUpperCase()
-}
-
-function getInteractiveMaterialUrl(nivel: string): string | null {
-  return INTERACTIVE_MATERIAL_URLS[normalizeNivelCode(nivel)] || null
 }
 
 interface MaterialsListProps {
@@ -37,6 +21,8 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
   const materials = data?.materials || []
   const nivel = data?.nivel || ''
   const nivelNormalizado = normalizeNivelCode(nivel)
+  // WELCOME es onboarding: no tiene material ni ejercicios de práctica.
+  const isWelcome = nivelNormalizado === 'WELCOME'
 
   // Feature flag check: ¿está disponible el visor v2 (LGS) para este nivel?
   // React Query con staleTime 5 min — evita queries innecesarias en navegacion
@@ -55,6 +41,8 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
     }
   )
   const v2Available: boolean = Boolean(libroData?.available)
+  // Fase 2 — ejercicios de práctica (flag independiente).
+  const ejerciciosActivo: boolean = Boolean(libroData?.ejerciciosActivo)
 
   if (isLoading) {
     return (
@@ -89,7 +77,8 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
     }
   }
 
-  const classicUrl = getInteractiveMaterialUrl(nivel)
+  // Para WELCOME no se muestra material ni ejercicios.
+  const shownMaterials = isWelcome ? [] : allMaterials
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
@@ -98,7 +87,7 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
       </h3>
 
       {/* v2 (LGS) — solo si el flag global está ON y el nivel tiene libro configurado */}
-      {v2Available && (
+      {v2Available && !isWelcome && (
         <a
           href={`/panel-estudiante/material-interactivo/${encodeURIComponent(nivelNormalizado)}`}
           className="flex items-center gap-3 p-3 mb-3 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors group border border-emerald-200"
@@ -113,34 +102,30 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
         </a>
       )}
 
-      {/* Wix (clásico) — sigue mientras dure la coexistencia */}
-      {classicUrl && (
+      {/* Fase 2 — Ejercicios de práctica (auto-gradables) del step actual */}
+      {ejerciciosActivo && !isWelcome && (
         <a
-          href={classicUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-3 p-3 mb-3 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors group border border-indigo-200"
+          href="/panel-estudiante/ejercicios-interactivos"
+          className="flex items-center gap-3 p-3 mb-3 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors group border border-amber-200"
         >
-          <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-200">
-            <GlobeAltIcon className="h-5 w-5 text-indigo-600" />
+          <div className="flex-shrink-0 w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center group-hover:bg-amber-200">
+            <PencilSquareIcon className="h-5 w-5 text-amber-600" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-indigo-900">
-              {v2Available ? 'Material Interactivo (clásico)' : 'Material Interactivo'}
-            </p>
-            <p className="text-xs text-indigo-500">{nivel}</p>
+            <p className="text-sm font-semibold text-amber-900">Ejercicios de práctica</p>
+            <p className="text-xs text-amber-600">Practica tu step actual — sin nota</p>
           </div>
         </a>
       )}
 
-      {allMaterials.length === 0 ? (
+      {shownMaterials.length === 0 ? (
         <div className="text-center py-8 text-gray-400">
           <BookOpenIcon className="h-10 w-10 mx-auto mb-2 text-gray-300" />
           <p className="text-sm">No hay material disponible para tu nivel</p>
         </div>
       ) : (
         <div className="space-y-2 max-h-[400px] overflow-y-auto">
-          {allMaterials.map((mat, idx) => (
+          {shownMaterials.map((mat, idx) => (
             <a
               key={idx}
               href={mat.url}

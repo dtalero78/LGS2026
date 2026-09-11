@@ -8,19 +8,16 @@ import 'server-only';
 import { query, queryOne, queryMany } from '@/lib/postgres';
 import { BaseRepository } from './base.repository';
 import { buildDynamicUpdate } from '@/lib/query-builder';
+import { ensureOnce } from '@/lib/ensure-once';
 
 // Ensure ACADEMICA.pruebainter column exists (idempotent, runs once per server start).
 // Required so SELECT a."pruebainter" in findByEventIdWithStudentDetails does not fail
 // before the first Step 45 evaluation is saved (which is what creates the column elsewhere).
-let pruebainterEnsured = false;
-async function ensurePruebaInterColumn() {
-  if (pruebainterEnsured) return;
-  try {
-    await query(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "pruebainter" VARCHAR(10)`, []);
-    pruebainterEnsured = true;
-  } catch (err: any) {
-    console.warn('[booking.repository] ensurePruebaInterColumn:', err.message);
-  }
+// El esquema se garantiza de verdad con scripts/add-columnas-legacy-ensure.js.
+function ensurePruebaInterColumn() {
+  return ensureOnce('ACADEMICA.pruebainter', () =>
+    query(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "pruebainter" VARCHAR(10)`, [])
+  );
 }
 
 class BookingRepositoryClass extends BaseRepository {
@@ -378,12 +375,31 @@ class BookingRepositoryClass extends BaseRepository {
          ab."nivel",
          ab."advisor",
          COALESCE(p."plataforma", a."plataforma", '') as "plataforma",
+         COALESCE(p."contrato", a."contrato", '') as "contrato",
          COUNT(*) OVER (PARTITION BY COALESCE(ab."studentId", ab."idEstudiante")) as "totalSesionesWelcome"
        FROM "ACADEMICA_BOOKINGS" ab
        LEFT JOIN "CALENDARIO" c ON (c."_id" = ab."eventoId" OR c."_id" = ab."idEvento")
-       LEFT JOIN "ACADEMICA" a ON (ab."studentId" = a."_id" OR ab."idEstudiante" = a."_id")
-       LEFT JOIN "PEOPLE" p ON a."numeroId" = p."numeroId"
-         AND (p."tipoUsuario" = 'BENEFICIARIO' OR p."tipoUsuario" = 'BENEFICIARIA')
+       -- LATERAL + LIMIT 1: garantizan 1 fila por booking. Sin esto, cuando un
+       -- estudiante tiene registros DUPLICADOS en ACADEMICA o PEOPLE (mismo
+       -- numeroId, caso BENEFICIARIO duplicado), el JOIN plano multiplicaba la
+       -- fila del booking → personas repetidas en la tabla y conteo de sesiones
+       -- inflado (COUNT OVER contaba las filas duplicadas).
+       LEFT JOIN LATERAL (
+         SELECT aa."primerNombre", aa."primerApellido", aa."segundoNombre",
+                aa."segundoApellido", aa."celular", aa."numeroId", aa."plataforma", aa."contrato"
+         FROM "ACADEMICA" aa
+         WHERE aa."_id" = ab."studentId" OR aa."_id" = ab."idEstudiante"
+         LIMIT 1
+       ) a ON true
+       LEFT JOIN LATERAL (
+         SELECT pp."primerNombre", pp."primerApellido", pp."segundoNombre",
+                pp."segundoApellido", pp."celular", pp."numeroId", pp."plataforma", pp."contrato"
+         FROM "PEOPLE" pp
+         WHERE pp."numeroId" = a."numeroId"
+           AND (pp."tipoUsuario" = 'BENEFICIARIO' OR pp."tipoUsuario" = 'BENEFICIARIA')
+         ORDER BY pp."_createdDate" ASC
+         LIMIT 1
+       ) p ON true
        WHERE ${conditions.join(' AND ')}
        ORDER BY COALESCE(c."dia", ab."fechaEvento") ASC, ab."primerApellido" ASC, ab."primerNombre" ASC`,
       params
@@ -412,8 +428,13 @@ class BookingRepositoryClass extends BaseRepository {
       paramIdx++;
     }
 
+    // DISTINCT ON (ab."_id"): 1 fila por booking. Sin esto, cuando un estudiante
+    // tiene registros DUPLICADOS en PEOPLE/ACADEMICA (mismo numeroId, BENEFICIARIO
+    // duplicado), el JOIN plano multiplicaba la fila → bookings repetidos en la
+    // tabla con `_id` repetido → colisión de `key` en React (al cambiar el filtro
+    // dejaba filas viejas pegadas, p.ej. "Asistió" bajo el filtro "No asistió").
     return queryMany(
-      `SELECT
+      `SELECT DISTINCT ON (ab."_id")
          ab."_id",
          COALESCE(ab."primerNombre", a."primerNombre", p."primerNombre", '') as "primerNombre",
          COALESCE(ab."primerApellido", a."primerApellido", p."primerApellido", '') as "primerApellido",
@@ -421,7 +442,16 @@ class BookingRepositoryClass extends BaseRepository {
          COALESCE(p."segundoApellido", a."segundoApellido", '') as "segundoApellido",
          COALESCE(p."celular", a."celular", '') as "celular",
          c."dia" as "fechaEvento",
-         ab."asistio" as "asistencia",
+         -- La verdad de asistencia es asistio OR asistencia (mismas dos columnas
+         -- que usa el diagnóstico "¿Cómo voy?"). En datos migrados de Wix quedó
+         -- asistencia=true con asistio NULL/false, así que leer solo asistio
+         -- marcaba como "No asistió" a quienes SÍ asistieron. Preserva NULL
+         -- (ambas sin marcar) para que el badge muestre "Pendiente".
+         CASE
+           WHEN ab."asistio" IS TRUE OR ab."asistencia" IS TRUE THEN true
+           WHEN ab."asistio" IS FALSE OR ab."asistencia" IS FALSE THEN false
+           ELSE NULL
+         END as "asistencia",
          COALESCE(p."numeroId", a."numeroId", '') as "numeroId",
          COALESCE(ab."studentId", ab."idEstudiante") as "idEstudiante",
          COALESCE(c."nivel", ab."nivel") as "nivel",
@@ -434,7 +464,7 @@ class BookingRepositoryClass extends BaseRepository {
        LEFT JOIN "PEOPLE" p ON a."numeroId" = p."numeroId" AND p."tipoUsuario" = 'BENEFICIARIO'
        LEFT JOIN "ADVISORS" adv ON c."advisor" = adv."_id"
        WHERE ${conditions.join(' AND ')}
-       ORDER BY c."dia" DESC, ab."primerApellido" ASC, ab."primerNombre" ASC`,
+       ORDER BY ab."_id", c."dia" DESC`,
       params
     );
   }
@@ -447,7 +477,12 @@ class BookingRepositoryClass extends BaseRepository {
               COALESCE(c."step", ab."step") AS "step",
               COALESCE(c."nombreEvento", ab."nombreEvento") AS "nombreEvento",
               a."nombreCompleto" as "advisorNombre",
-              c."linkZoom" as "eventLinkZoom"
+              c."linkZoom" as "eventLinkZoom",
+              c."tipo" as "eventTipo",
+              (SELECT MIN(z."_createdDate") FROM "ZOOM_ACCESOS" z
+                WHERE z."academicaId" = $1
+                  AND (z."eventoId" = COALESCE(ab."eventoId", ab."idEvento") OR z."fechaEvento" = ab."fechaEvento")
+              ) AS "zoomAccesoEn"
        FROM "ACADEMICA_BOOKINGS" ab
        LEFT JOIN "ADVISORS" a ON ab."advisor" = a."_id"
        LEFT JOIN "CALENDARIO" c ON (ab."eventoId" = c."_id" OR ab."idEvento" = c."_id")
@@ -504,36 +539,47 @@ class BookingRepositoryClass extends BaseRepository {
     );
   }
 
-  async countWeeklyBookingsByType(studentId: string, weekStart: string, weekEnd: string) {
+  // "Misma semana" = misma semana ISO (lunes-domingo) en la hora LOCAL del
+  // estudiante ($3 = TZ IANA). Se compara contra la semana local del evento que
+  // se intenta agendar ($2 = su `dia`). date_trunc en hora local evita que un
+  // evento domingo-noche / lunes-madrugada caiga en la semana UTC equivocada.
+  async countWeeklyBookingsByType(studentId: string, eventDia: string, tz: string) {
     return queryMany(
       `SELECT COALESCE("tipo", "tipoEvento") as tipo, COUNT(*)::int as count
        FROM "ACADEMICA_BOOKINGS"
        WHERE ("idEstudiante" = $1 OR "studentId" = $1)
-         AND "fechaEvento" >= $2::timestamp
-         AND "fechaEvento" <= $3::timestamp
+         AND date_trunc('week', "fechaEvento" AT TIME ZONE $3)
+             = date_trunc('week', $2::timestamptz AT TIME ZONE $3)
          AND "cancelo" = false
          AND NOT (
            COALESCE("nivel", "tituloONivel") = 'WELCOME'
            AND COALESCE("tipo", "tipoEvento") = 'SESSION'
            AND ("asistio" = true OR "asistencia" = true)
          )
+         -- Los JUMP (SESSION con step múltiplo de 5) NO cuentan para el
+         -- límite semanal de sesiones: son adicionales.
+         AND NOT (
+           COALESCE("tipo", "tipoEvento") = 'SESSION'
+           AND COALESCE(NULLIF(REGEXP_REPLACE(COALESCE("step",''), '[^0-9]', '', 'g'), '')::int, 0) > 0
+           AND COALESCE(NULLIF(REGEXP_REPLACE(COALESCE("step",''), '[^0-9]', '', 'g'), '')::int, 0) % 5 = 0
+         )
        GROUP BY COALESCE("tipo", "tipoEvento")`,
-      [studentId, weekStart, weekEnd]
+      [studentId, eventDia, tz]
     );
   }
 
-  async countWeeklyTrainingBookings(studentId: string, weekStart: string, weekEnd: string): Promise<number> {
+  async countWeeklyTrainingBookings(studentId: string, eventDia: string, tz: string): Promise<number> {
     const row = await queryOne<{ count: number }>(
       `SELECT COUNT(*)::int as count
        FROM "ACADEMICA_BOOKINGS"
        WHERE ("idEstudiante" = $1 OR "studentId" = $1)
-         AND "fechaEvento" >= $2::timestamp
-         AND "fechaEvento" <= $3::timestamp
+         AND date_trunc('week', "fechaEvento" AT TIME ZONE $3)
+             = date_trunc('week', $2::timestamptz AT TIME ZONE $3)
          AND "cancelo" = false
          AND (
            COALESCE("nombreEvento", "step", '') ILIKE 'TRAINING%'
          )`,
-      [studentId, weekStart, weekEnd]
+      [studentId, eventDia, tz]
     );
     return row?.count ?? 0;
   }
@@ -550,15 +596,19 @@ class BookingRepositoryClass extends BaseRepository {
     return !!row;
   }
 
-  async existsSameDaySession(studentId: string, dateStr: string): Promise<boolean> {
+  // "Mismo día" = mismo día calendario en la hora LOCAL del estudiante ($3 = TZ
+  // IANA), comparado contra el día local del evento que se intenta agendar
+  // ($2 = su `dia`). Antes usaba DATE("fechaEvento") en UTC, lo que contaba una
+  // sesión de las 8 PM (Colombia) como del día siguiente y bloqueaba agendar.
+  async existsSameDaySession(studentId: string, eventDia: string, tz: string): Promise<boolean> {
     const row = await queryOne(
       `SELECT 1 FROM "ACADEMICA_BOOKINGS"
        WHERE ("idEstudiante" = $1 OR "studentId" = $1)
-         AND DATE("fechaEvento") = $2::date
+         AND ("fechaEvento" AT TIME ZONE $3)::date = ($2::timestamptz AT TIME ZONE $3)::date
          AND COALESCE("tipo", "tipoEvento") = 'SESSION'
          AND "cancelo" = false
        LIMIT 1`,
-      [studentId, dateStr]
+      [studentId, eventDia, tz]
     );
     return !!row;
   }
@@ -655,6 +705,134 @@ class BookingRepositoryClass extends BaseRepository {
       [academicaId, nivel]
     );
     return result.rowCount ?? 0;
+  }
+
+  /**
+   * Alumnos SENCE (ACADEMICA.sence=true, con senceCode) que tuvieron un avance
+   * de Jump Step (múltiplo de 5) en un booking cuyo evento cae dentro del
+   * día `targetDate` (YYYY-MM-DD) en la zona horaria `tz`. Usado por el
+   * cron de envío nocturno de avance a SENCE — 1 fila por alumno, con su
+   * step/nivel ACTUAL en ACADEMICA para calcular el % de avance acumulado
+   * (no solo el jump aprobado ese día).
+   *
+   * Un alumno puede tener varios bookings del MISMO jump step el mismo día
+   * (reagendó tras faltar, reprobó y lo repitió, etc.), así que la query
+   * NO filtra por asistencia/aprobación a nivel de fila: trae todos los
+   * bookings no cancelados del día por (alumno, step) y el filtrado de
+   * "¿el ÚLTIMO intento fue aprobado?" se resuelve en código, quedándose
+   * con el booking más reciente de cada (academicaId, step) — así un
+   * intento fallido/sin asistir anterior el mismo día no puede "tapar" un
+   * intento posterior aprobado, ni viceversa.
+   */
+  async findSenceAvanceCandidates(targetDate: string, tz: string = 'America/Santiago') {
+    const rows = await queryMany<{
+      academicaId: string;
+      numeroId: string;
+      senceCode: string;
+      nivel: string;
+      step: string;
+      stepNumber: number;
+      eventDia: string;
+      createdDate: string;
+      asistio: boolean | null;
+      asistencia: boolean | null;
+      participacion: boolean | null;
+      noAprobo: boolean | null;
+    }>(
+      `SELECT
+         a."_id" as "academicaId",
+         a."numeroId",
+         a."senceCode",
+         a."nivel",
+         a."step",
+         NULLIF(REGEXP_REPLACE(COALESCE(c."step", ab."step", ''), '[^0-9]', '', 'g'), '')::int as "stepNumber",
+         COALESCE(c."dia", ab."fechaEvento") as "eventDia",
+         ab."_createdDate" as "createdDate",
+         ab."asistio",
+         ab."asistencia",
+         ab."participacion",
+         ab."noAprobo"
+       FROM "ACADEMICA_BOOKINGS" ab
+       LEFT JOIN "CALENDARIO" c ON (ab."eventoId" = c."_id" OR ab."idEvento" = c."_id")
+       INNER JOIN "ACADEMICA" a ON (ab."studentId" = a."_id" OR ab."idEstudiante" = a."_id")
+       WHERE a."sence" = true
+         AND NULLIF(TRIM(a."senceCode"), '') IS NOT NULL
+         AND COALESCE(c."dia", ab."fechaEvento") >= ($1::date)::timestamp AT TIME ZONE $2
+         AND COALESCE(c."dia", ab."fechaEvento") < ($1::date + INTERVAL '1 day')::timestamp AT TIME ZONE $2
+         AND (ab."cancelo" IS NULL OR ab."cancelo" = false)
+         AND NULLIF(REGEXP_REPLACE(COALESCE(c."step", ab."step", ''), '[^0-9]', '', 'g'), '')::int BETWEEN 5 AND 45
+         AND NULLIF(REGEXP_REPLACE(COALESCE(c."step", ab."step", ''), '[^0-9]', '', 'g'), '')::int % 5 = 0`,
+      [targetDate, tz]
+    );
+
+    // Último booking (por fecha de evento, desempatado por _createdDate) de
+    // cada (alumno, step) del día — solo ese intento decide si hubo avance.
+    const ultimoPorAlumnoStep = new Map<string, (typeof rows)[number]>();
+    for (const row of rows) {
+      const key = `${row.academicaId}::${row.stepNumber}`;
+      const previo = ultimoPorAlumnoStep.get(key);
+      if (
+        !previo ||
+        new Date(row.eventDia).getTime() > new Date(previo.eventDia).getTime() ||
+        (new Date(row.eventDia).getTime() === new Date(previo.eventDia).getTime() &&
+          new Date(row.createdDate).getTime() > new Date(previo.createdDate).getTime())
+      ) {
+        ultimoPorAlumnoStep.set(key, row);
+      }
+    }
+
+    const candidatosPorAlumno = new Map<
+      string,
+      { academicaId: string; numeroId: string; senceCode: string; nivel: string; step: string }
+    >();
+    for (const row of ultimoPorAlumnoStep.values()) {
+      const aprobado =
+        (row.asistio === true || row.asistencia === true) &&
+        row.participacion === true &&
+        row.noAprobo !== true;
+      if (!aprobado) continue;
+      candidatosPorAlumno.set(row.academicaId, {
+        academicaId: row.academicaId,
+        numeroId: row.numeroId,
+        senceCode: row.senceCode,
+        nivel: row.nivel,
+        step: row.step,
+      });
+    }
+
+    return Array.from(candidatosPorAlumno.values());
+  }
+
+  /**
+   * IDs de todos los bookings históricos de un alumno (cualquier tipo/fecha)
+   * con asistencia exitosa y sin marca de reprobado — usados como
+   * `codigoActividad` en `listaActividades` del envío de avance a SENCE.
+   * Resuelve candidatos (ACADEMICA._id + PEOPLE._id duplicados por mismo
+   * numeroId) igual que `findByStudentId`, porque los bookings pueden estar
+   * enlazados por `idEstudiante`/`studentId` a cualquiera de esos IDs.
+   */
+  async findSenceActivityIds(academicaId: string): Promise<string[]> {
+    const idsRow = await queryMany<{ id: string }>(
+      `SELECT a."_id" AS id FROM "ACADEMICA" a WHERE a."_id" = $1
+       UNION
+       SELECT p."_id" AS id FROM "PEOPLE" p
+        WHERE p."numeroId" = (
+          SELECT a."numeroId" FROM "ACADEMICA" a WHERE a."_id" = $1 LIMIT 1
+        )`,
+      [academicaId]
+    );
+    const candidateIds = idsRow.map(r => r.id);
+    if (candidateIds.length === 0) candidateIds.push(academicaId);
+
+    const rows = await queryMany<{ _id: string }>(
+      `SELECT "_id" FROM "ACADEMICA_BOOKINGS"
+       WHERE ("idEstudiante" = ANY($1::text[]) OR "studentId" = ANY($1::text[]))
+         AND ("asistio" IS TRUE OR "asistencia" IS TRUE)
+         AND "noAprobo" IS NOT TRUE
+       ORDER BY "fechaEvento" ASC`,
+      [candidateIds]
+    );
+    return rows.map(r => r._id);
   }
 }
 

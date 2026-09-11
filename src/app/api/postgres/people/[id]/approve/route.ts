@@ -2,9 +2,12 @@ import 'server-only';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { query, queryOne, queryMany } from '@/lib/postgres';
 import { NotFoundError, ConflictError } from '@/lib/errors';
+import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { ids } from '@/lib/id-generator';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
+import { kidsIntake } from '@/lib/kids-intake';
 
+interface KidsCredenciales { numeroId: string; nombre: string; username: string | null; password: string | null }
 interface ApproveResult {
   personId: string;
   nombre: string;
@@ -12,6 +15,7 @@ interface ApproveResult {
   academicCreated: boolean;
   whatsappSent: boolean;
   whatsappError: string | null;
+  kidsCredenciales?: KidsCredenciales[];
 }
 
 /**
@@ -52,6 +56,13 @@ async function approveOnePerson(
   // Use provided contrato or person's own
   const effectiveContrato = contrato || person.contrato;
 
+  // Beneficiario Kids: su programa es KIDS2026, NO el de adultos de LGS. Por eso
+  // NO se le crea ficha ACADEMICA ni se le envía el WhatsApp de auto-registro de
+  // LGS (ese mensaje lo maneja el flujo KIDS2026). Sí queda aprobado en PEOPLE
+  // (aprobacion/estado/fechaIngreso) y sigue el paso de aprobación de la reserva
+  // Kids más abajo.
+  const esKids = person.kids === true;
+
   // Update PEOPLE.aprobacion = 'Aprobado' + estado = 'ACTIVA'.
   // El mapeo aprobacion→estado está documentado en /api/postgres/approvals/[id]
   // (APROBACION_TO_ESTADO); aquí lo aplicamos para que ambos endpoints dejen el
@@ -73,13 +84,16 @@ async function approveOnePerson(
     }
 
     const setClause = extraFields.length > 0 ? `, ${extraFields.join(', ')}` : '';
+    // Al aprobar se sella la fecha de ingreso con el día de hoy (titular y
+    // beneficiarios). No pisa el valor si ya estaba aprobado: este UPDATE solo
+    // corre en la primera aprobación (el skip de arriba lo garantiza).
     await query(
-      `UPDATE "PEOPLE" SET "aprobacion" = 'Aprobado', "estado" = 'ACTIVA'${setClause}, "_updatedDate" = NOW() WHERE "_id" = $1`,
+      `UPDATE "PEOPLE" SET "aprobacion" = 'Aprobado', "estado" = 'ACTIVA', "fechaIngreso" = NOW()${setClause}, "_updatedDate" = NOW() WHERE "_id" = $1`,
       [personId, ...extraValues]
     );
   } else {
     await query(
-      `UPDATE "PEOPLE" SET "aprobacion" = 'Aprobado', "estado" = 'ACTIVA', "_updatedDate" = NOW() WHERE "_id" = $1`,
+      `UPDATE "PEOPLE" SET "aprobacion" = 'Aprobado', "estado" = 'ACTIVA', "fechaIngreso" = NOW(), "_updatedDate" = NOW() WHERE "_id" = $1`,
       [personId]
     );
   }
@@ -94,7 +108,7 @@ async function approveOnePerson(
   let academicId: string | null = null;
   let academicCreated = false;
 
-  if (person.tipoUsuario === 'BENEFICIARIO') {
+  if (person.tipoUsuario === 'BENEFICIARIO' && !esKids) {
     const existingAcademic = await queryOne(
       `SELECT "_id" FROM "ACADEMICA" WHERE "numeroId" = $1 LIMIT 1`,
       [person.numeroId]
@@ -109,10 +123,10 @@ async function approveOnePerson(
           "_id", "numeroId", "primerNombre", "segundoNombre",
           "primerApellido", "segundoApellido", "email", "celular",
           "nivel", "step", "plataforma", "estadoInactivo",
-          "contrato", "usuarioId",
+          "contrato", "usuarioId", "sence", "senceCode",
           "_createdDate", "_updatedDate"
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, false, $12, $13, NOW(), NOW()
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, false, $12, $13, $14, $15, NOW(), NOW()
         )`,
         [
           academicId,
@@ -128,6 +142,8 @@ async function approveOnePerson(
           person.plataforma || null,
           effectiveContrato || null,
           personId,
+          person.sence === true, // propaga la marca SENCE del PEOPLE a la ficha
+          person.senceCode || null, // y su código SENCE
         ]
       );
       academicCreated = true;
@@ -135,6 +151,8 @@ async function approveOnePerson(
     } else {
       console.log(`ℹ️ [Approve] Registro ACADEMICA ya existía: ${academicId}`);
     }
+  } else if (esKids) {
+    console.log(`ℹ️ [Approve] Beneficiario KIDS — se omite ACADEMICA (su programa es KIDS2026, no el de adultos)`);
   } else {
     console.log(`ℹ️ [Approve] ${person.tipoUsuario} — se omite creación de ACADEMICA (sólo beneficiarios necesitan registro académico)`);
   }
@@ -149,6 +167,9 @@ async function approveOnePerson(
   if (person.tipoUsuario !== 'BENEFICIARIO') {
     whatsappError = 'Omitido — los titulares no reciben mensaje de auto-registro';
     console.log(`ℹ️ [Approve] ${person.tipoUsuario} — se omite WhatsApp de bienvenida`);
+  } else if (esKids) {
+    whatsappError = 'Omitido — beneficiario KIDS (el WhatsApp lo maneja el flujo KIDS2026)';
+    console.log(`ℹ️ [Approve] Beneficiario KIDS — se omite WhatsApp de LGS`);
   } else {
     const celular = person.celular;
     console.log(`📱 [Approve] Celular: "${celular}" (${celular ? celular.length + ' chars' : 'null/undefined'})`);
@@ -158,7 +179,7 @@ async function approveOnePerson(
         const nombre = person.primerNombre || '';
         const message = `Hola ${nombre} 👋:\n\n*¡Eres parte de Let's Go Speak!* 🎉 \n\nPara terminar tu registro y crear tu usuario sigue este enlace:\n\nhttps://lgs-plataforma.com/nuevo-usuario/${academicId}\n\nSi tienes alguna pregunta, no dudes en contactarnos.\n\n¡Bienvenido a la familia LGS! 🚀`;
         console.log(`📤 [Approve] Enviando WhatsApp a: ${celular}`);
-        const whatsappResult = await sendWhatsAppMessage(celular, message);
+        const whatsappResult = await sendWhatsAppMessage(celular, message, 'bienvenida_aprobar');
         whatsappSent = true;
         console.log(`✅ [Approve] WhatsApp enviado a ${celular}`, whatsappResult);
       } catch (err: any) {
@@ -171,6 +192,62 @@ async function approveOnePerson(
     }
   }
 
+  // Aprobar la(s) reserva(s) Kids en KIDS2026 (best-effort). Al aprobar el
+  // beneficiario en LGS activa su matrícula allá (RESERVADA→ACTIVA) y guarda las
+  // credenciales del alumno (para mostrarlas/entregarlas al apoderado).
+  const kidsCredenciales: KidsCredenciales[] = [];
+  // Beneficiario Kids: marca su(s) inscripción(es) en KIDS_INSCRIPCIONES como
+  // APROBADA(S) en LGS — siempre, haya o no integración con KIDS2026. Es la
+  // constancia local de que el kid quedó aprobado; el flujo KIDS2026 la usará
+  // (y enviará su propio WhatsApp).
+  if (person.tipoUsuario === 'BENEFICIARIO' && esKids) {
+    try {
+      await query(
+        `UPDATE "KIDS_INSCRIPCIONES" SET "aprobado"=true, "fechaAprobado"=NOW(), "_updatedDate"=NOW()
+           WHERE "beneficiarioId"=$1`,
+        [personId]
+      );
+      console.log(`✅ [Approve] KIDS_INSCRIPCIONES marcada como aprobada para ${personId}`);
+    } catch (e: any) {
+      console.error('[approve] Error marcando KIDS_INSCRIPCIONES.aprobado (best-effort):', e?.message);
+    }
+  }
+  // Si la integración KIDS2026 está activa, además aprueba la reserva allá
+  // (RESERVADA→ACTIVA) y guarda las credenciales del alumno.
+  if (person.tipoUsuario === 'BENEFICIARIO' && esKids && kidsIntake.isConfigured()) {
+    try {
+      const inscs = await queryMany<any>(
+        `SELECT "_id","numeroId","nombre","kidsExternalRef" FROM "KIDS_INSCRIPCIONES"
+          WHERE "beneficiarioId" = $1 AND "enviadoAKids" = true
+            AND "aprobadoEnKids" IS NOT TRUE AND "kidsExternalRef" IS NOT NULL`,
+        [personId]
+      );
+      for (const insc of inscs) {
+        try {
+          const r = await kidsIntake.approveReservation(insc.kidsExternalRef);
+          const cred = r.credenciales;
+          await query(
+            `UPDATE "KIDS_INSCRIPCIONES"
+               SET "aprobadoEnKids"=true, "fechaAprobacionKids"=NOW(),
+                   "kidsUserId"=$2, "kidsUsername"=$3, "kidsPassword"=$4,
+                   "kidsEnrollmentId"=COALESCE($5,"kidsEnrollmentId"), "errorKids"=NULL, "_updatedDate"=NOW()
+             WHERE "_id"=$1`,
+            [insc._id, cred?.userId || null, cred?.username || null, cred?.passwordInicial || null, r.enrollmentId || null]
+          );
+          kidsCredenciales.push({
+            numeroId: insc.numeroId, nombre: insc.nombre,
+            username: cred?.username || null, password: cred?.passwordInicial || null,
+          });
+        } catch (e: any) {
+          console.error('[approve] Error aprobando reserva Kids (best-effort):', e?.message);
+          try { await query(`UPDATE "KIDS_INSCRIPCIONES" SET "errorKids"=$2, "_updatedDate"=NOW() WHERE "_id"=$1`, [insc._id, String(e?.message || 'error').slice(0, 500)]); } catch { /* noop */ }
+        }
+      }
+    } catch (e: any) {
+      console.error('[approve] Error consultando KIDS_INSCRIPCIONES (best-effort):', e?.message);
+    }
+  }
+
   return {
     personId,
     nombre: `${person.primerNombre} ${person.primerApellido}`,
@@ -178,6 +255,7 @@ async function approveOnePerson(
     academicCreated,
     whatsappSent,
     whatsappError,
+    kidsCredenciales: kidsCredenciales.length ? kidsCredenciales : undefined,
   };
 }
 
@@ -200,7 +278,8 @@ async function approveOnePerson(
  */
 export const POST = handlerWithAuth(async (
   _request: Request,
-  { params }: { params: Record<string, string> }
+  { params }: { params: Record<string, string> },
+  session
 ) => {
   const personId = params.id;
 
@@ -210,6 +289,11 @@ export const POST = handlerWithAuth(async (
     [personId]
   );
   if (!person) throw new NotFoundError('Person', personId);
+
+  // Contratos de prueba (PRB-): NADIE puede aprobarlos (tampoco SUPER_ADMIN).
+  // Aprobar dispara efectos reales (WhatsApp al celular del registro,
+  // fechaIngreso, creación de ACADEMICA para los beneficiarios, etc.).
+  assertNoEsContratoPrueba(person.contrato, 'aprobar el contrato');
 
   if (person.aprobacion === 'Aprobado') {
     throw new ConflictError('La persona ya está aprobada');
@@ -256,6 +340,24 @@ export const POST = handlerWithAuth(async (
     }
     console.log(`👥 [Approve] Resumen: ${beneficiaryResults.filter(r => r.whatsappSent).length}/${beneficiaryResults.length} WhatsApp enviados`);
 
+    // Reversa de "Aprobado → Pendiente": ese flujo bloquea el login de los
+    // beneficiarios (USUARIOS_ROLES.activo=false) SIN tocar su `aprobacion`.
+    // Al re-aprobar el titular, los beneficiarios ya están 'Aprobado' → el loop
+    // de arriba no los procesa. Reactivamos su login explícitamente aquí.
+    try {
+      const react = await query(
+        `UPDATE "USUARIOS_ROLES" SET "activo" = true
+           WHERE LOWER("email") IN (
+             SELECT LOWER("email") FROM "PEOPLE"
+             WHERE "contrato" = $1 AND "tipoUsuario" = 'BENEFICIARIO' AND "email" IS NOT NULL
+           )`,
+        [contrato]
+      );
+      console.log(`🔓 [Approve] Login reactivado de ${react.rowCount || 0} beneficiario(s)`);
+    } catch (err: any) {
+      console.error('⚠️ [Approve] No se pudo reactivar login de beneficiarios:', err.message);
+    }
+
     return successResponse({
       message: 'Titular y beneficiarios aprobados exitosamente',
       academicId: mainResult.academicId,
@@ -294,10 +396,10 @@ export const POST = handlerWithAuth(async (
         console.log(`✅ [Approve] inicioContrato propagado al beneficiario: ${titular.inicioContrato}`);
       }
 
-      // Auto-approve titular if still pending
+      // Auto-approve titular if still pending (también sella su fechaIngreso hoy)
       if (titular.aprobacion !== 'Aprobado') {
         await query(
-          `UPDATE "PEOPLE" SET "aprobacion" = 'Aprobado', "_updatedDate" = NOW() WHERE "_id" = $1`,
+          `UPDATE "PEOPLE" SET "aprobacion" = 'Aprobado', "fechaIngreso" = NOW(), "_updatedDate" = NOW() WHERE "_id" = $1`,
           [titular._id]
         );
         titularAutoApproved = true;

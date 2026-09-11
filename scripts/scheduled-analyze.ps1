@@ -4,7 +4,10 @@
 # scripts/analyze-<timestamp>.log. El bloque finally SIEMPRE intenta quitar la IP.
 
 $ErrorActionPreference = 'Stop'
-$repo    = 'c:\Users\tddir\Documents\GRUPO J&J\X PLATAFORMA\LGS2026Git\LGS2026'
+# Ruta del repo derivada de la ubicacion del script (scripts/ -> repo es la carpeta padre).
+# Relocatable: sobrevive a renombrar/mover la carpeta sin tocar este archivo.
+$repo    = Split-Path -Parent $PSScriptRoot
+if (-not $repo) { $repo = Split-Path -Parent $MyInvocation.MyCommand.Path }   # fallback si se invoca de forma no estandar
 $cluster = '08d65733-6811-420c-a0a1-a71d6b3b9c6d'   # lgs-db
 $log     = Join-Path $repo ('scripts\analyze-{0}.log' -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
 

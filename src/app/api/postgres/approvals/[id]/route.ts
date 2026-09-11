@@ -2,6 +2,7 @@ import 'server-only';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { query } from '@/lib/postgres';
 import { NotFoundError, ValidationError } from '@/lib/errors';
+import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 
 export const GET = handlerWithAuth(async (request, { params }) => {
   const result = await query(
@@ -22,7 +23,7 @@ const APROBACION_TO_ESTADO: Record<string, string> = {
   'Rechazado':      'ANULADO',
 };
 
-export const PUT = handlerWithAuth(async (request, { params }) => {
+export const PUT = handlerWithAuth(async (request, { params }, session) => {
   const { estado } = await request.json();
   if (!estado) throw new ValidationError('estado is required');
 
@@ -40,16 +41,27 @@ export const PUT = handlerWithAuth(async (request, { params }) => {
     throw new ValidationError(`estado must be one of: ${validEstados.join(', ')}`);
   }
 
-  const check = await query(`SELECT "_id" FROM "PEOPLE" WHERE "_id" = $1`, [params.id]);
+  const check = await query(`SELECT "_id", "contrato" FROM "PEOPLE" WHERE "_id" = $1`, [params.id]);
   if (check.rowCount === 0) throw new NotFoundError('Person');
 
+  // Contratos de prueba (PRB-): NADIE puede aprobarlos (tampoco SUPER_ADMIN).
+  if (estadoFinal === 'Aprobado') {
+    assertNoEsContratoPrueba(check.rows[0].contrato, 'aprobar el contrato');
+  }
+
   const estadoOperativo = APROBACION_TO_ESTADO[estadoFinal] ?? null;
+
+  // Al aprobar, sella fechaIngreso con el día de hoy — pero solo la primera vez
+  // (COALESCE no pisa una fecha existente). Consistente con /people/[id]/approve.
+  const sealFecha = estadoFinal === 'Aprobado'
+    ? `, "fechaIngreso" = COALESCE("fechaIngreso", NOW())`
+    : '';
 
   const result = await query(
     `UPDATE "PEOPLE"
      SET "aprobacion" = $1,
          "estado" = COALESCE($2, "estado"),
-         "_updatedDate" = NOW()
+         "_updatedDate" = NOW()${sealFecha}
      WHERE "_id" = $3 RETURNING *`,
     [estadoFinal, estadoOperativo, params.id]
   );

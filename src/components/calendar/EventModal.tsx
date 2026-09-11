@@ -91,6 +91,10 @@ export default function EventModal({
   // Cada entrada del array es un nivel adicional con su propio step.
   const [compartidoActivo, setCompartidoActivo] = useState(false)
   const [compartidoCon, setCompartidoCon] = useState<Array<{ nivel: string; step: string; options: StepOption[] }>>([])
+  // Edición: composición actual del grupo compartido del evento (para "agregar niveles").
+  const [grupoNiveles, setGrupoNiveles] = useState<string[]>([])
+  const [grupoSize, setGrupoSize] = useState(1)
+  const [addingLevels, setAddingLevels] = useState(false)
 
   // Cargar códigos únicos al montar el componente
   useEffect(() => {
@@ -150,8 +154,6 @@ export default function EventModal({
   // Inicializar formulario cuando hay un evento para editar o cuando se abre el modal
   useEffect(() => {
     if (editingEvent) {
-      const eventDate = new Date(editingEvent.dia)
-
       // Extraer advisor ID si viene como objeto
       let advisorId = editingEvent.advisor
       if (typeof editingEvent.advisor === 'object' && editingEvent.advisor !== null) {
@@ -169,8 +171,9 @@ export default function EventModal({
         || editingEvent.tituloONivel
 
       setFormData({
-        fecha: format(eventDate, 'yyyy-MM-dd'),
-        hora: format(eventDate, 'HH:mm'),
+        // Poblar el picker con la fecha/hora del evento en la hora LOCAL del cliente.
+        fecha: format(new Date(editingEvent.dia), 'yyyy-MM-dd'),
+        hora: format(new Date(editingEvent.dia), 'HH:mm'),
         evento: (editingEvent.evento || editingEvent.tipo || 'SESSION') as 'SESSION' | 'CLUB',
         tituloONivel: resolvedNivel,
         nombreEvento: nombreEventoValue,
@@ -423,6 +426,33 @@ export default function EventModal({
     ? reasonNotCompartible(formData.evento, formData.nombreEvento)
     : 'Para compartir entre niveles crea un evento nuevo desde 0 — al editar uno existente sólo cambian sus campos.'
 
+  // Al editar: cargar la composición actual del grupo compartido (niveles + tamaño)
+  // para el flujo "Agregar niveles al grupo".
+  useEffect(() => {
+    if (!isOpen || !editingEvent?._id) { setGrupoNiveles([]); setGrupoSize(1); return }
+    setCompartidoCon([])  // picker de "agregar niveles" arranca vacío en cada edición
+    fetch(`/api/postgres/events/${editingEvent._id}/group`)
+      .then(r => r.json())
+      .then(j => {
+        const sibs = j?.siblings || []
+        setGrupoSize(sibs.length || 1)
+        setGrupoNiveles(sibs
+          .map((s: any) => (s.nivel || (s.tituloONivel || '').split(' - ')[0] || '').trim().toUpperCase())
+          .filter(Boolean))
+      })
+      .catch(() => { setGrupoSize(1); setGrupoNiveles([]) })
+  }, [isOpen, editingEvent?._id])
+
+  // Restricciones para "Agregar niveles" en EDICIÓN: evento futuro, no cerrado,
+  // tipo compartible, y cupo disponible (< MAX niveles en el grupo).
+  const editEsFuturo = !!editingEvent && new Date(editingEvent.dia).getTime() > Date.now()
+  const editNoCerrado = !!editingEvent && !(editingEvent as any).sesionCerrada
+  const editCompartible = isEventoCompartible(formData.evento, formData.nombreEvento)
+  const slotsRestantes = Math.max(0, MAX_NIVELES_COMPARTIDOS - grupoSize)
+  const puedeAgregarNiveles = isEditMode && editEsFuturo && editNoCerrado && editCompartible && slotsRestantes > 0
+  // Máximo de entradas nuevas en el picker (create: MAX-1; edit: cupo restante).
+  const maxNuevosNiveles = isEditMode ? slotsRestantes : (MAX_NIVELES_COMPARTIDOS - 1)
+
   // Si el toggle queda activo pero el step deja de ser compartible (ej. admin
   // cambió de SESSION Step 5 a Step 6), apagamos el toggle automáticamente.
   useEffect(() => {
@@ -434,7 +464,11 @@ export default function EventModal({
 
   // Niveles disponibles para agregar al grupo: cualquiera distinto al base y
   // que no esté ya elegido por otra entrada del array.
-  const nivelesUsados = new Set<string>([formData.tituloONivel, ...compartidoCon.map(c => c.nivel)])
+  const nivelesUsados = new Set<string>([
+    formData.tituloONivel,
+    ...(isEditMode ? grupoNiveles : []),
+    ...compartidoCon.map(c => c.nivel),
+  ])
 
   // Prefijo de club del evento BASE (ej. "KARAOKE" si nombreEvento = "KARAOKE - Step 16").
   // Para SESSION devuelve null. Se usa para filtrar las opciones de step de
@@ -444,8 +478,35 @@ export default function EventModal({
     : null
 
   const agregarNivelCompartido = () => {
-    if (compartidoCon.length >= MAX_NIVELES_COMPARTIDOS - 1) return
+    if (compartidoCon.length >= maxNuevosNiveles) return
     setCompartidoCon([...compartidoCon, { nivel: '', step: '', options: [] }])
+  }
+
+  // Envía los niveles nuevos al backend (convierte en compartido o amplía el grupo).
+  const handleAddLevels = async () => {
+    if (!editingEvent?._id) return
+    const incompletos = compartidoCon.filter(c => !c.nivel || !c.step)
+    if (compartidoCon.length === 0 || incompletos.length > 0) {
+      setError('Completa nivel y step en cada nivel a agregar.')
+      return
+    }
+    setAddingLevels(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/postgres/events/${editingEvent._id}/add-levels`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ niveles: compartidoCon.map(c => ({ nivel: c.nivel, step: c.step })) }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) { setError(j?.error || j?.message || 'No se pudieron agregar los niveles.'); return }
+      // Avisar al padre para refrescar la lista (marcador __levelsAdded).
+      onSave({ __levelsAdded: true, dia: editingEvent.dia })
+    } catch {
+      setError('Error al agregar los niveles. Intenta de nuevo.')
+    } finally {
+      setAddingLevels(false)
+    }
   }
   const quitarNivelCompartido = (idx: number) => {
     setCompartidoCon(compartidoCon.filter((_, i) => i !== idx))
@@ -589,9 +650,9 @@ export default function EventModal({
         return
       }
 
-      // Combinar fecha y hora para crear la fecha completa
-      const dateTimeString = `${formData.fecha}T${formData.hora}:00`
-      const eventDateTime = new Date(dateTimeString)
+      // Combinar fecha y hora en la zona LOCAL del cliente → instante UTC. La
+      // hora digitada se interpreta en la TZ del navegador de quien crea el evento.
+      const diaISO = new Date(`${formData.fecha}T${formData.hora}:00`).toISOString()
 
       // Si el toggle "Evento compartido" está activo, validamos que cada
       // entrada tenga nivel y step elegidos. La validación de compartibilidad
@@ -608,7 +669,8 @@ export default function EventModal({
 
       // Preparar datos para enviar
       const eventData: Record<string, any> = {
-        dia: eventDateTime.toISOString(),
+        dia: diaISO,
+        fecha: formData.fecha,
         evento: formData.evento,
         tituloONivel: formData.tituloONivel,
         nombreEvento: formData.nombreEvento || undefined,
@@ -729,20 +791,33 @@ export default function EventModal({
 
     // Manejar cambios específicos
     if (field === 'advisor' && value) {
-      // Auto-llenar zoom del advisor
+      // Auto-llenar zoom del advisor — SALVO en WELCOME, donde el link es fijo
+      // (zoom del ADVISOR WELCOME) y no depende del advisor asignado.
+      const nivelIsWelcome = (formData.tituloONivel || '').trim().toUpperCase() === 'WELCOME'
       const selectedAdvisor = advisors.find(advisor => advisor._id === value)
       const advisorZoom = selectedAdvisor?.zoom || ''
-
-      console.log('📹 Advisor seleccionado:', selectedAdvisor?.primerNombre, selectedAdvisor?.primerApellido)
-      console.log('📹 Zoom link encontrado:', advisorZoom)
 
       setFormData(prev => ({
         ...prev,
         advisor: value,
-        linkZoom: advisorZoom
+        linkZoom: nivelIsWelcome ? prev.linkZoom : advisorZoom
       }))
     }
+
+    // Al seleccionar nivel WELCOME, forzar el link al zoom del ADVISOR WELCOME.
+    if (field === 'tituloONivel' && String(value).trim().toUpperCase() === 'WELCOME') {
+      setFormData(prev => ({ ...prev, tituloONivel: value, linkZoom: getWelcomeAdvisorZoom() }))
+    }
   }
+
+  // Zoom del ADVISOR WELCOME desde la lista de advisors (match por nombre; el
+  // backend lo resuelve por email, que es la autoridad).
+  function getWelcomeAdvisorZoom(): string {
+    const w = advisors.find(a => `${a.primerNombre || ''} ${a.primerApellido || ''}`.trim().toUpperCase() === 'ADVISOR WELCOME')
+    return w?.zoom || ''
+  }
+  const isWelcome = (formData.tituloONivel || '').trim().toUpperCase() === 'WELCOME'
+  const welcomeAdvisorZoom = getWelcomeAdvisorZoom()
 
   if (!isOpen) return null
 
@@ -949,11 +1024,17 @@ export default function EventModal({
               </label>
               <input
                 type="url"
-                value={formData.linkZoom}
+                value={isWelcome ? (welcomeAdvisorZoom || formData.linkZoom) : formData.linkZoom}
                 onChange={(e) => handleInputChange('linkZoom', e.target.value)}
-                className="input w-full"
+                readOnly={isWelcome}
+                className={`input w-full ${isWelcome ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''}`}
                 placeholder="https://zoom.us/..."
               />
+              {isWelcome && (
+                <p className="mt-1 text-xs text-gray-500">
+                  🔒 En sesiones WELCOME el link es fijo (Zoom del ADVISOR WELCOME), sin importar el advisor asignado.
+                </p>
+              )}
             </div>
 
             {/* Evento compartido entre niveles — sólo en CREAR */}
@@ -1045,6 +1126,78 @@ export default function EventModal({
                 <strong>🔗 Evento compartido entre niveles.</strong> Los cambios en
                 advisor, hora, link de Zoom u observaciones se propagarán a los demás
                 eventos del grupo. Nivel y step se mantienen por evento.
+              </div>
+            )}
+
+            {/* EDIT: agregar niveles / convertir en compartido (evento futuro, no cerrado, compartible, con cupo) */}
+            {puedeAgregarNiveles && (
+              <div className="border border-indigo-200 bg-indigo-50/40 rounded-lg p-4">
+                <p className="text-sm font-medium text-gray-800">
+                  {(editingEvent as any)?.eventoCompartidoId ? 'Agregar más niveles al grupo' : 'Convertir en evento compartido'}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Crea el mismo evento (misma hora/advisor/zoom) en otros niveles. Para el advisor cuenta como 1 sola hora. Cupo disponible: <strong>{slotsRestantes}</strong>.
+                </p>
+                <div className="mt-3 space-y-2">
+                  {compartidoCon.map((c, idx) => (
+                    <div key={idx} className="flex items-end gap-2 flex-wrap">
+                      <div className="flex-1 min-w-[140px]">
+                        <label className="block text-xs text-gray-600 mb-1">Nivel a agregar #{idx + 1}</label>
+                        <select
+                          aria-label="Nivel a agregar"
+                          value={c.nivel}
+                          onChange={e => actualizarNivelCompartido(idx, e.target.value)}
+                          className="input w-full"
+                        >
+                          <option value="">— Seleccionar nivel —</option>
+                          {codigosNivel
+                            .filter(code => !nivelesUsados.has(code) || code === c.nivel)
+                            .map(code => (<option key={code} value={code}>{code}</option>))}
+                        </select>
+                      </div>
+                      <div className="flex-1 min-w-[160px]">
+                        <label className="block text-xs text-gray-600 mb-1">Step / Club</label>
+                        <select
+                          aria-label="Step o club"
+                          value={c.step}
+                          onChange={e => actualizarStepCompartido(idx, e.target.value)}
+                          className="input w-full"
+                          disabled={!c.nivel}
+                        >
+                          <option value="">— Seleccionar —</option>
+                          {c.options.map(opt => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
+                        </select>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => quitarNivelCompartido(idx)}
+                        className="text-xs text-red-600 hover:text-red-800 px-2 py-1.5"
+                        title="Quitar"
+                      >✕</button>
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-3">
+                    {compartidoCon.length < maxNuevosNiveles && (
+                      <button
+                        type="button"
+                        onClick={agregarNivelCompartido}
+                        className="text-xs text-indigo-700 hover:text-indigo-900 font-medium"
+                      >
+                        + Agregar nivel ({compartidoCon.length + 1} de {maxNuevosNiveles})
+                      </button>
+                    )}
+                    {compartidoCon.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleAddLevels}
+                        disabled={addingLevels}
+                        className="ml-auto px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50"
+                      >
+                        {addingLevels ? 'Agregando...' : `Agregar ${compartidoCon.length} nivel(es)`}
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 

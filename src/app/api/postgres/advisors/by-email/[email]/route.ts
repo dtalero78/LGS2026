@@ -18,7 +18,7 @@ export const GET = handlerWithAuth(async (_req, ctx) => {
   // resolver isMyEvent.
   const result = await query(
     `SELECT "_id", "email", "primerNombre", "primerApellido", "nombreCompleto",
-            "zoom", "activo", "fotoAdvisor", "domicilioadvisor"
+            "zoom", "activo", "fotoAdvisor", "domicilioadvisor", "esPlanta"
      FROM "ADVISORS"
      WHERE LOWER(TRIM("email")) = LOWER(TRIM($1))
      LIMIT 1`,

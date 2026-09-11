@@ -21,6 +21,11 @@ export async function GET(request: NextRequest) {
   const email = searchParams.get('email')
   const ts = searchParams.get('ts')
   const token = searchParams.get('token')
+  // Advisor name forwarded by the CRM. NOT part of the HMAC (the signature
+  // stays `${email}:${ts}`); these only prefill the contract form and land in
+  // PEOPLE.asesorCreadorContrato, so they don't need to be signed.
+  const nombre = searchParams.get('nombre') || ''
+  const apellido = searchParams.get('apellido') || ''
   const redirect = searchParams.get('redirect') || '/dashboard/comercial/crear-contrato'
 
   if (!email || !ts || !token) {
@@ -52,6 +57,8 @@ export async function GET(request: NextRequest) {
   // Build redirect URL with email param using the public base URL
   const redirectUrl = new URL(redirect, BASE_URL)
   redirectUrl.searchParams.set('email', email)
+  if (nombre) redirectUrl.searchParams.set('nombre', nombre)
+  if (apellido) redirectUrl.searchParams.set('apellido', apellido)
 
   const response = NextResponse.redirect(redirectUrl)
 

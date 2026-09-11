@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
@@ -45,7 +45,7 @@ interface HistoricoRow {
   tituloEvento: string | null
   timeout: string | null
   notasadvisor: string | null
-  estado: 'Canceled' | 'Suspended'
+  estado: 'Canceled' | 'Suspended' | 'NoAsistio'
   canceladoPor: string
   fechaTransicion: string
   motivoTransicion: string | null
@@ -58,6 +58,7 @@ interface AdvisorOption {
   primerNombre?: string
   primerApellido?: string
   fotoAdvisor?: string | null
+  esPlanta?: boolean
 }
 
 type EventCard =
@@ -72,11 +73,11 @@ const WEEKDAYS_ES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
  * legacy que en datos históricos quedó guardado como hora UTC (no local) y
  * NO se debe usar para mostrar.
  */
+// Hora del evento en la zona LOCAL del cliente (cada advisor ve su hora).
 function formatHoraLocal(iso: string | null | undefined): string {
   if (!iso) return '--:--'
   try {
-    const d = new Date(iso)
-    return d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', hour12: false })
+    return new Date(iso).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', hour12: false })
   } catch {
     return '--:--'
   }
@@ -121,6 +122,10 @@ function ControlHorasContent() {
 
   const [selectedCard, setSelectedCard] = useState<EventCard | null>(null)
 
+  // "Advisor Planta": si está marcado, Total Hours NO descuenta la media hora por
+  // sesión conducida sin asistentes (un advisor de planta cobra por disponibilidad).
+  const [advisorPlanta, setAdvisorPlanta] = useState(false)
+
   // Caché client por (advisor, año, mes). Evita refetch al navegar adelante/atrás
   // entre meses ya consultados en la misma sesión. Se invalida sólo en:
   //   - botón Recargar (fetchMonth(true))
@@ -147,6 +152,7 @@ function ControlHorasContent() {
             primerNombre: a.primerNombre,
             primerApellido: a.primerApellido,
             fotoAdvisor: a.fotoAdvisor ?? null,
+            esPlanta: a.esPlanta === true,
           }))
           setAdvisors(list)
           if (list[0]) setAdvisorId(list[0]._id)
@@ -166,6 +172,7 @@ function ControlHorasContent() {
               primerNombre: a.primerNombre,
               primerApellido: a.primerApellido,
               fotoAdvisor: a.fotoAdvisor ?? null,
+              esPlanta: a.esPlanta === true,
             })
           } else {
             setError('Tu usuario no está registrado como advisor')
@@ -182,6 +189,12 @@ function ControlHorasContent() {
     const found = advisors.find(a => a._id === advisorId)
     if (found) setCurrentAdvisor(found)
   }, [advisorId, advisors, canPickAdvisor])
+
+  // La casilla "Advisor Planta" arranca según el atributo persistido del advisor
+  // (ADVISORS.esPlanta). Sigue siendo editable en la vista como override puntual.
+  useEffect(() => {
+    setAdvisorPlanta(currentAdvisor?.esPlanta === true)
+  }, [currentAdvisor?._id, currentAdvisor?.esPlanta])
 
   // Cargar presigned URL de la foto cuando cambia el advisor seleccionado.
   useEffect(() => {
@@ -251,7 +264,9 @@ function ControlHorasContent() {
     setMonth(m); setYear(y)
   }
 
-  // Agrupar cards por día del mes (key = "YYYY-MM-DD" en TZ del cliente)
+  // Agrupar cards por día del mes en la hora LOCAL del cliente (cada advisor ve
+  // su hora). El CONTEO mensual (a qué mes pertenece cada evento) lo fija el
+  // servidor en hora de Colombia — ver monthRangeLocal en advisor-event-log.service.
   const cardsByDay = useMemo(() => {
     const m = new Map<string, EventCard[]>()
     if (!data) return m
@@ -271,6 +286,24 @@ function ControlHorasContent() {
     return m
   }, [data])
 
+  // Eventos administrativos por día (bloques violeta, solo display — el KPI
+  // "Administrative Hours" ya los suma). Agrupados en la hora LOCAL del cliente.
+  const adminByDay = useMemo(() => {
+    const m = new Map<string, any[]>()
+    for (const ae of adminEventsList) {
+      if (!ae?.fechaInicio) continue
+      const d = new Date(ae.fechaInicio)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      const arr = m.get(key) ?? []
+      arr.push(ae)
+      m.set(key, arr)
+    }
+    m.forEach(arr => arr.sort((a, b) =>
+      formatHoraLocal(a.fechaInicio).localeCompare(formatHoraLocal(b.fechaInicio))
+    ))
+    return m
+  }, [adminEventsList])
+
   // Totales del mes — por tipo (vigentes + históricos), por estado, y registro.
   //
   // Effective Hours = sesiones académicas cerradas (1h c/u) + admin events
@@ -281,9 +314,9 @@ function ControlHorasContent() {
   const totales = useMemo(() => {
     const t = {
       sessions: 0, clubs: 0, welcome: 0,
-      conducted: 0, canceled: 0, suspended: 0,
+      conducted: 0, sinAsistentes: 0, canceled: 0, suspended: 0, noAsistio: 0,
       effective: 0, sinRegistrar: 0,
-      administrative: 0,
+      administrative: 0, totalHours: 0,
     }
     if (!data) return t
     // KPIs solo cuentan eventos que YA ocurrieron (fechaEvento <= NOW).
@@ -305,21 +338,26 @@ function ControlHorasContent() {
     // cierra P1 pero abandona antes de P2/P3 igual suma 1 Effective (no 3
     // sin registrar). Los hermanos sin cerrar siguen visibles en el
     // calendario para que el Coordinador pueda terminarlos si quiere.
-    type GroupState = { tipo: string | null; sesionCerrada: boolean }
+    // asistieron se acumula entre hermanos del grupo (evento compartido): el
+    // grupo cuenta como "sin asistentes" si NINGÚN nivel tuvo asistentes.
+    type GroupState = { tipo: string | null; sesionCerrada: boolean; asistieron: number; compartido: boolean }
     const groups = new Map<string, GroupState>()
     data.vigentes.forEach(v => {
       if (!isPast(v.fechaEvento)) return
       const key = v.eventoCompartidoId || v.eventoId
       const existing = groups.get(key)
       if (!existing) {
-        groups.set(key, { tipo: v.tipo, sesionCerrada: v.sesionCerrada === true })
-      } else if (v.sesionCerrada === true) {
-        existing.sesionCerrada = true
+        groups.set(key, { tipo: v.tipo, sesionCerrada: v.sesionCerrada === true, asistieron: v.asistieron || 0, compartido: !!v.eventoCompartidoId })
+      } else {
+        if (v.sesionCerrada === true) existing.sesionCerrada = true
+        existing.asistieron += (v.asistieron || 0)
       }
     })
     for (const g of groups.values()) {
       countByTipo(g.tipo)
       t.conducted++
+      // Without Assistants: conducido con 0 asistentes Y que NO sea compartido.
+      if (g.asistieron === 0 && !g.compartido) t.sinAsistentes++
       if (g.sesionCerrada) t.effective++
       else                 t.sinRegistrar++
     }
@@ -328,6 +366,7 @@ function ControlHorasContent() {
       countByTipo(h.tipo)
       if (h.estado === 'Canceled')  t.canceled++
       if (h.estado === 'Suspended') t.suspended++
+      if (h.estado === 'NoAsistio') t.noAsistio++
     })
     // Admin events:
     //   - Effective suma las registradas (horas ya "marcadas tarjeta").
@@ -338,8 +377,13 @@ function ControlHorasContent() {
     t.effective      += adminEventsAgg.registradas
     t.sinRegistrar   += adminEventsAgg.sinRegistrar
     t.administrative  = adminEventsAgg.registradas + adminEventsAgg.sinRegistrar
+    // Total Hours = Effective − (sin asistentes × 0.5). Las administrativas
+    // registradas ya están dentro de Effective. Cada sesión conducida sin
+    // asistentes descuenta media hora, SALVO advisor de planta → no descuenta.
+    // Canceladas/suspendidas NO se restan aquí (no forman parte de Effective).
+    t.totalHours = t.effective - (advisorPlanta ? 0 : t.sinAsistentes * 0.5)
     return t
-  }, [data, adminEventsAgg])
+  }, [data, adminEventsAgg, advisorPlanta])
 
   // Build calendar grid: filas x 7 columnas (Lun-Dom)
   const calendarCells = useMemo(() => {
@@ -356,6 +400,61 @@ function ControlHorasContent() {
     while (cells.length % 7 !== 0) cells.push({ day: null, key: `empty-end-${cells.length}` })
     return cells
   }, [year, month])
+
+  // Semanas (bloques de 7 celdas) para la columna "Week Hours".
+  const weeks = useMemo(() => {
+    const w: Array<Array<{ day: number | null; key: string }>> = []
+    for (let i = 0; i < calendarCells.length; i += 7) w.push(calendarCells.slice(i, i + 7))
+    return w
+  }, [calendarCells])
+
+  // Day-key local del instante (mismo formato que cardsByDay: YYYY-MM-DD navegador).
+  const dayKeyOf = (iso: string | null | undefined) => {
+    if (!iso) return ''
+    const d = new Date(iso)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+
+  // Horas EFECTIVAS de una semana: mismo criterio que la tarjeta "Effective Hours"
+  // acotado a los días de esa semana → sesiones/clubs conducidos y CERRADOS (ya
+  // ocurridos, deduplicando eventos compartidos por eventoCompartidoId) + eventos
+  // administrativos REGISTRADOS (suman sus `horas`). La suma de todas las semanas
+  // del mes cuadra con el KPI Effective Hours.
+  const weeklyEffective = (weekKeys: Set<string>): number => {
+    if (!data) return 0
+    const nowMs = Date.now()
+    // Por grupo (compartidos deduplicados): si está cerrado suma 1h si tuvo
+    // asistentes, o 0.5h si fue conducido SIN asistentes (no compartido).
+    // Suspendidas y canceladas NO aparecen aquí (salen del calendario vigente) → 0h.
+    const groups = new Map<string, { cerrada: boolean; asistieron: number; compartido: boolean }>()
+    for (const v of data.vigentes) {
+      if (new Date(v.fechaEvento).getTime() > nowMs) continue
+      if (!weekKeys.has(dayKeyOf(v.fechaEvento))) continue
+      const key = v.eventoCompartidoId || v.eventoId
+      const asis = Number((v as any).asistieron) || 0
+      const comp = v.eventoCompartidoId != null
+      const g = groups.get(key)
+      if (!g) groups.set(key, { cerrada: v.sesionCerrada === true, asistieron: asis, compartido: comp })
+      else {
+        if (v.sesionCerrada === true) g.cerrada = true
+        g.asistieron += asis
+        if (comp) g.compartido = true
+      }
+    }
+    let eff = 0
+    for (const g of groups.values()) {
+      if (!g.cerrada) continue
+      eff += (!g.compartido && g.asistieron === 0) ? 0.5 : 1
+    }
+    for (const ae of adminEventsList) {
+      if (!ae?.registrado || !ae.fechaInicio) continue
+      if (new Date(ae.fechaInicio).getTime() > nowMs) continue
+      if (weekKeys.has(dayKeyOf(ae.fechaInicio))) eff += Number(ae.horas) || 0
+    }
+    return eff
+  }
+
+  const fmtHoras = (n: number) => Number.isInteger(n) ? String(n) : n.toFixed(1)
 
   return (
     <div className="max-w-7xl mx-auto p-6">
@@ -432,29 +531,51 @@ function ControlHorasContent() {
           <LegendDot color="bg-blue-500"   label="SESSION" />
           <LegendDot color="bg-green-500"  label="CLUB" />
           <LegendDot color="bg-purple-500" label="WELCOME" />
+          <LegendDot color="bg-orange-500" label="Sin asistentes" />
+          <LegendDot color="bg-violet-600" label="Administrativo" />
           <LegendDot color="bg-yellow-500" label="Suspended" />
           <LegendDot color="bg-red-500"    label="Canceled" />
+          <LegendDot color="bg-fuchsia-600" label="No Asistió" />
         </div>
+
+        {/* Advisor Planta: si se marca, Total Hours NO descuenta la media hora por
+            sesión conducida sin asistentes (advisor de planta cobra disponibilidad).
+            SOLO editable por SUPER_ADMIN (Superusuario); el resto de roles la ve
+            en modo solo lectura. */}
+        <label htmlFor="advisor-planta" className={`flex items-center gap-2 select-none whitespace-nowrap ${role === 'SUPER_ADMIN' ? 'cursor-pointer' : 'cursor-not-allowed opacity-90'}`}>
+          <span className="text-sm font-medium text-gray-700">Advisor Planta</span>
+          <input
+            id="advisor-planta"
+            type="checkbox"
+            checked={advisorPlanta}
+            disabled={role !== 'SUPER_ADMIN'}
+            onChange={e => setAdvisorPlanta(e.target.checked)}
+            className={`h-4 w-4 rounded border-gray-300 text-slate-600 focus:ring-slate-500 ${role === 'SUPER_ADMIN' ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+          />
+        </label>
       </div>
 
       {/* Tarjetas destacadas: Effective | Sin registrar | Administrative (incluida en Effective) */}
       {data && !loading && !error && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-2">
           <TotalCard label="Effective Hours"        value={totales.effective}      color="bg-emerald-50 border-emerald-400 text-emerald-700" />
           <TotalCard label="Hours without recording" value={totales.sinRegistrar}   color="bg-amber-50   border-amber-400   text-amber-700" />
           <TotalCard label="Administrative Hours"   value={totales.administrative} color="bg-violet-50  border-violet-400  text-violet-700" />
+          <TotalCard label="Total Hours"            value={totales.totalHours}     color="bg-slate-100  border-slate-400   text-slate-700" />
         </div>
       )}
 
       {/* Tarjetas de totales del mes */}
       {data && !loading && !error && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-8 gap-2 mb-4">
           <TotalCard label="Sessions"  value={totales.sessions}  color="bg-blue-50  border-blue-300  text-blue-700" />
           <TotalCard label="Clubs"     value={totales.clubs}     color="bg-green-50 border-green-300 text-green-700" />
           <TotalCard label="Welcome"   value={totales.welcome}   color="bg-purple-50 border-purple-300 text-purple-700" />
           <TotalCard label="Conducted" value={totales.conducted} color="bg-sky-50   border-sky-300   text-sky-700" />
+          <TotalCard label="Without Assistants" value={totales.sinAsistentes} color="bg-orange-50 border-orange-300 text-orange-700" />
           <TotalCard label="Canceled"  value={totales.canceled}  color="bg-red-50   border-red-300   text-red-700" />
           <TotalCard label="Suspended" value={totales.suspended} color="bg-yellow-50 border-yellow-300 text-yellow-800" />
+          <TotalCard label="No Asistió" value={totales.noAsistio} color="bg-fuchsia-50 border-fuchsia-300 text-fuchsia-700" />
         </div>
       )}
 
@@ -469,42 +590,66 @@ function ControlHorasContent() {
       ) : (
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           {/* Header de días */}
-          <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
+          <div className="grid grid-cols-8 bg-gray-50 border-b border-gray-200">
             {WEEKDAYS_ES.map(d => (
               <div key={d} className="px-2 py-2 text-center text-xs font-semibold text-gray-700">{d}</div>
             ))}
+            <div className="px-2 py-2 text-center text-xs font-semibold text-emerald-700 bg-emerald-50 border-l border-gray-200">Week Hours</div>
           </div>
-          {/* Grid de celdas */}
-          <div className="grid grid-cols-7">
-            {calendarCells.map(cell => {
-              if (cell.day === null) {
-                return <div key={cell.key} className="min-h-[110px] bg-gray-50 border-r border-b border-gray-100" />
-              }
-              const cards = cardsByDay.get(cell.key) ?? []
-              const isToday = cell.key === `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
+          {/* Grid de celdas (7 días + 1 total semanal por fila) */}
+          <div className="grid grid-cols-8">
+            {weeks.map((week, wi) => {
+              const weekKeys = new Set(week.filter(c => c.day !== null).map(c => c.key))
+              const eff = weeklyEffective(weekKeys)
               return (
-                <div key={cell.key} className={`min-h-[110px] p-1.5 border-r border-b border-gray-100 ${isToday ? 'bg-blue-50/40' : 'bg-white'}`}>
-                  <div className={`text-xs font-semibold mb-1 ${isToday ? 'text-blue-700' : 'text-gray-700'}`}>{cell.day}</div>
-                  <div className="space-y-1">
-                    {cards.map(c => {
-                      const isShared = c.kind === 'vigente' && !!c.eventoCompartidoId
-                      return (
-                      <button
-                        key={c.kind === 'vigente' ? c.eventoId : `${c.eventoId}_${c.logId}`}
-                        type="button"
-                        onClick={() => setSelectedCard(c)}
-                        title={`${c.tipo ?? ''} ${c.nivel ?? ''} ${c.step ?? ''} · ${stateLabel(c)}${isShared ? ' · 🔗 compartido entre niveles' : ''}`}
-                        className={`block w-full text-left px-1.5 py-1 rounded text-[11px] font-medium ${colorClass(c)} hover:opacity-90 transition`}
-                      >
-                        <div className="truncate">
-                          {isShared && <span className="mr-0.5" aria-hidden>🔗</span>}
-                          {formatHoraLocal(c.fechaEvento)} - {c.nivel || ''} {c.step ? `· ${c.step}` : ''}
+                <Fragment key={`w-${wi}`}>
+                  {week.map(cell => {
+                    if (cell.day === null) {
+                      return <div key={cell.key} className="min-h-[110px] bg-gray-50 border-r border-b border-gray-100" />
+                    }
+                    const cards = cardsByDay.get(cell.key) ?? []
+                    const isToday = cell.key === `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
+                    return (
+                      <div key={cell.key} className={`min-h-[110px] p-1.5 border-r border-b border-gray-100 ${isToday ? 'bg-blue-50/40' : 'bg-white'}`}>
+                        <div className={`text-xs font-semibold mb-1 ${isToday ? 'text-blue-700' : 'text-gray-700'}`}>{cell.day}</div>
+                        <div className="space-y-1">
+                          {cards.map(c => {
+                            const isShared = c.kind === 'vigente' && !!c.eventoCompartidoId
+                            return (
+                            <button
+                              key={c.kind === 'vigente' ? c.eventoId : `${c.eventoId}_${c.logId}`}
+                              type="button"
+                              onClick={() => setSelectedCard(c)}
+                              title={`${c.tipo ?? ''} ${c.nivel ?? ''} ${c.step ?? ''} · ${stateLabel(c)}${isShared ? ' · 🔗 compartido entre niveles' : ''}`}
+                              className={`block w-full text-left px-1.5 py-1 rounded text-[11px] font-medium ${colorClass(c)} hover:opacity-90 transition`}
+                            >
+                              <div className="truncate">
+                                {isShared && <span className="mr-0.5" aria-hidden>🔗</span>}
+                                {formatHoraLocal(c.fechaEvento)} - {c.nivel || ''} {c.step ? `· ${c.step}` : ''}
+                              </div>
+                            </button>
+                            )
+                          })}
+                          {/* Eventos administrativos (solo display — cuentan en Administrative Hours) */}
+                          {(adminByDay.get(cell.key) ?? []).map(ae => (
+                            <div
+                              key={ae._id}
+                              title={`[ADMIN ${ae.tipo}] ${ae.titulo || ''} · ${ae.horas}h${ae.registrado ? ' (registrado)' : ' (sin registrar)'}`}
+                              className={`block w-full text-left px-1.5 py-1 rounded text-[11px] font-medium truncate ${ae.registrado ? 'bg-violet-600 text-white' : 'bg-violet-300 text-violet-900'}`}
+                            >
+                              {formatHoraLocal(ae.fechaInicio)} · {ae.titulo || ae.tipo}
+                            </div>
+                          ))}
                         </div>
-                      </button>
-                      )
-                    })}
+                      </div>
+                    )
+                  })}
+                  {/* Total semanal de horas efectivas */}
+                  <div className="min-h-[110px] p-2 border-b border-l border-gray-200 bg-emerald-50/50 flex flex-col items-center justify-center">
+                    <div className={`text-xl font-bold ${eff > 0 ? 'text-emerald-700' : 'text-gray-400'}`}>{fmtHoras(eff)} h</div>
+                    <div className="text-[10px] uppercase tracking-wide text-gray-500 mt-0.5">efectivas</div>
                   </div>
-                </div>
+                </Fragment>
               )
             })}
           </div>
@@ -515,11 +660,12 @@ function ControlHorasContent() {
       {selectedCard && (
         <EventDetailModal
           card={selectedCard}
-          // ADVISOR propio: puede editar sólo vigentes dentro de la ventana temporal.
+          // Rol ADVISOR: en Control de Horas el modal es SOLO LECTURA (el advisor
+          // registra sus sesiones desde /sesion/[id], no desde aquí).
           // ADMIN/SUPER_ADMIN: puede editar SIEMPRE eventos vigentes (vigente=Conducted),
           // pero si la sesión está cerrada se pedirá motivo en el modal de warning.
           // Históricos (Canceled/Suspended) siempre son read-only.
-          canEditNotes={selectedCard.kind === 'vigente' && (isAdmin || selectedCard.canEdit)}
+          canEditNotes={role !== 'ADVISOR' && selectedCard.kind === 'vigente' && (isAdmin || selectedCard.canEdit)}
           isAdminEditor={isAdmin}
           onClose={() => setSelectedCard(null)}
           // Optimistic update: en vez de refetch el mes entero (~150 eventos),
@@ -595,8 +741,17 @@ function colorClass(c: EventCard): string {
   if (c.kind === 'historico') {
     if (c.estado === 'Canceled') return 'bg-red-500 text-white'
     if (c.estado === 'Suspended') return 'bg-yellow-500 text-yellow-900'
+    if (c.estado === 'NoAsistio') return 'bg-fuchsia-600 text-white'
   }
-  switch ((c.tipo || '').toUpperCase()) {
+  const tipo = (c.tipo || '').toUpperCase()
+  // Sesión o Club ya ocurrido SIN asistentes y NO compartido → naranja.
+  if (c.kind === 'vigente' && (tipo === 'SESSION' || tipo === 'CLUB')
+      && !c.eventoCompartidoId
+      && new Date(c.fechaEvento).getTime() <= Date.now()
+      && (c.asistieron || 0) === 0) {
+    return 'bg-orange-500 text-white'
+  }
+  switch (tipo) {
     case 'SESSION': return 'bg-blue-500 text-white'
     case 'CLUB':    return 'bg-green-500 text-white'
     case 'WELCOME': return 'bg-purple-500 text-white'
@@ -605,7 +760,7 @@ function colorClass(c: EventCard): string {
 }
 
 function stateLabel(c: EventCard): string {
-  if (c.kind === 'historico') return c.estado
+  if (c.kind === 'historico') return c.estado === 'NoAsistio' ? 'No Asistió' : c.estado
   return c.sesionCerrada ? 'Cerrada' : 'Conducted'
 }
 
@@ -645,8 +800,10 @@ function EventDetailModal({
     setAdminMotivo('')
   }, [card])
 
-  const fecha = new Date(card.fechaEvento)
-  const fechaStr = fecha.toLocaleDateString('es', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
+  // Fecha del evento formateada en la zona LOCAL del cliente.
+  const fechaStr = new Date(card.fechaEvento).toLocaleDateString('es', {
+    weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
+  })
 
   const agend = card.kind === 'vigente' ? card.inscritos : 0
   const attend = card.kind === 'vigente' ? card.asistieron : 0
@@ -658,8 +815,15 @@ function EventDetailModal({
     if (isHistorical) {
       if (card.estado === 'Canceled') return 'bg-red-500 text-white'
       if (card.estado === 'Suspended') return 'bg-yellow-500 text-yellow-900'
+      if (card.estado === 'NoAsistio') return 'bg-fuchsia-600 text-white'
     }
-    switch ((card.tipo || '').toUpperCase()) {
+    const tipo = (card.tipo || '').toUpperCase()
+    if (card.kind === 'vigente' && (tipo === 'SESSION' || tipo === 'CLUB')
+        && !card.eventoCompartidoId
+        && new Date(card.fechaEvento).getTime() <= Date.now() && attend === 0) {
+      return 'bg-orange-500 text-white'
+    }
+    switch (tipo) {
       case 'SESSION': return 'bg-blue-500 text-white'
       case 'CLUB':    return 'bg-green-500 text-white'
       case 'WELCOME': return 'bg-purple-500 text-white'

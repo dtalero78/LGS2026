@@ -143,6 +143,66 @@ export async function createAdminEvents(opts: {
 }
 
 /**
+ * Agrega advisors a un evento administrativo YA creado (mismo eventGroupId).
+ * Útil para MEETINGs donde se suma gente sobre la hora. Copia tipo/título/
+ * descripción/fecha/horas del grupo existente. NO duplica advisors ya presentes
+ * y BLOQUEA si los nuevos tienen conflicto con la agenda académica u otro admin
+ * event. Los registros existentes (los ya cerrados) no se tocan.
+ */
+export async function addAdvisorsToGroup(opts: {
+  eventGroupId: string;
+  advisorIds: string[];
+  createdBy: string | null;
+}): Promise<{ eventGroupId: string; added: number; skipped: string[] }> {
+  if (opts.advisorIds.length === 0) {
+    throw new ValidationError('Debes seleccionar al menos un advisor');
+  }
+
+  const existing = await AdminEventsRepository.findByGroupId(opts.eventGroupId);
+  if (existing.length === 0) throw new NotFoundError('Admin Event Group', opts.eventGroupId);
+
+  // Detalles del evento (cualquier fila del grupo comparte tipo/fecha/horas/etc.)
+  const base = existing[0];
+  const yaEnGrupo = new Set(existing.map(r => r.advisorId));
+  const nuevos = Array.from(new Set(opts.advisorIds)).filter(a => !yaEnGrupo.has(a));
+  const skipped = Array.from(new Set(opts.advisorIds)).filter(a => yaEnGrupo.has(a));
+
+  if (nuevos.length === 0) {
+    // Todos los pedidos ya estaban en el grupo — nada que insertar.
+    return { eventGroupId: opts.eventGroupId, added: 0, skipped };
+  }
+
+  // Conflictos SOLO para los advisors nuevos (mismo rango horario del evento).
+  const conflicts = await checkConflicts({
+    advisorIds: nuevos,
+    fechaInicio: base.fechaInicio,
+    horas: base.horas,
+    excludeGroupId: opts.eventGroupId,
+  });
+  if (conflicts.length > 0) {
+    const err = new ConflictError(
+      `Hay ${conflicts.length} conflicto(s) para los advisors a agregar — resuélvelos primero. El agendamiento académico prima.`,
+    ) as any;
+    err.detail = conflicts;
+    throw err;
+  }
+
+  const rows = nuevos.map(advisorId => ({
+    _id: `ae_${crypto.randomUUID()}`,
+    eventGroupId: opts.eventGroupId,
+    advisorId,
+    tipo: base.tipo,
+    titulo: base.titulo,
+    descripcion: base.descripcion,
+    fechaInicio: base.fechaInicio,
+    horas: base.horas,
+    createdBy: opts.createdBy,
+  }));
+  const added = await AdminEventsRepository.bulkInsert(rows);
+  return { eventGroupId: opts.eventGroupId, added, skipped };
+}
+
+/**
  * Registra un admin event (advisor "marca tarjeta").
  * Reglas:
  *   - Advisor: solo si es el dueño AND está en ventana +40..+120

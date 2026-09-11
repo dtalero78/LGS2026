@@ -34,6 +34,7 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
   PencilSquareIcon,
+  ChevronDownIcon,
 } from '@heroicons/react/24/outline'
 
 /** Extrae un título sugerido de un nombre de archivo:
@@ -115,10 +116,16 @@ export default function ActualizarMaterialInteractivoPage() {
 function Content() {
   const [libros, setLibros] = useState<LibroAdmin[]>([])
   const [featureActive, setFeatureActive] = useState(false)
+  const [ejerciciosActive, setEjerciciosActive] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [expandedCodigo, setExpandedCodigo] = useState<string | null>(null)
   const [savingFlag, setSavingFlag] = useState(false)
+  const [savingEjercicios, setSavingEjercicios] = useState(false)
+  const [ejercicioSets, setEjercicioSets] = useState<{ nivel: string; step: string; count: number; updatedAt: string }[]>([])
+  const [genNivel, setGenNivel] = useState('')
+  const [genStep, setGenStep] = useState('')
+  const [regenBusy, setRegenBusy] = useState<string | null>(null)
 
   const load = async () => {
     setLoading(true)
@@ -127,6 +134,8 @@ function Content() {
       const j = await jsonFetchRetry('/api/admin/libros-interactivos')
       setLibros(j.libros || [])
       setFeatureActive(Boolean(j.featureActive))
+      setEjerciciosActive(Boolean(j.ejerciciosActive))
+      loadEjercicioSets()
     } catch (e: any) {
       setError(e?.message || 'Error')
     } finally {
@@ -152,6 +161,48 @@ function Content() {
     }
   }
 
+
+  const loadEjercicioSets = async () => {
+    try {
+      const j = await jsonFetchRetry('/api/admin/libros-interactivos/ejercicios')
+      setEjercicioSets(j.sets || [])
+    } catch { /* silencioso */ }
+  }
+
+  const regenerar = async (nivel: string, step: string) => {
+    const key = `${nivel}|${step}`
+    setRegenBusy(key)
+    try {
+      const j = await jsonFetchRetry('/api/admin/libros-interactivos/ejercicios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nivel, step }),
+      })
+      await loadEjercicioSets()
+      alert(`✅ ${j.count} ejercicios generados para ${j.nivel} · ${j.step}`)
+    } catch (e: any) {
+      alert(e?.message || 'Error al generar. Verifica que el step tenga contenido.')
+    } finally {
+      setRegenBusy(null)
+    }
+  }
+
+  const toggleEjercicios = async () => {
+    setSavingEjercicios(true)
+    try {
+      const j = await jsonFetchRetry('/api/admin/libros-interactivos/feature-flag', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: !ejerciciosActive, flag: 'ejercicios' }),
+      })
+      setEjerciciosActive(j.active)
+    } catch (e: any) {
+      alert(e?.message || 'Error')
+    } finally {
+      setSavingEjercicios(false)
+    }
+  }
+
   return (
     <div className="max-w-6xl mx-auto py-6 px-4">
       <div className="flex items-center gap-3 mb-2">
@@ -171,8 +222,8 @@ function Content() {
           <div className="flex-1">
             <p className={`text-sm font-semibold ${featureActive ? 'text-emerald-900' : 'text-amber-900'}`}>
               {featureActive
-                ? 'Feature ACTIVO — los estudiantes ven el botón nuevo (LGS) además del clásico (Wix).'
-                : 'Feature INACTIVO — los estudiantes solo ven el botón clásico (Wix).'}
+                ? 'Feature ACTIVO — los estudiantes ven el Material Interactivo (LGS).'
+                : 'Feature INACTIVO — los estudiantes no ven el Material Interactivo.'}
             </p>
             <p className="text-xs text-gray-700 mt-0.5">
               Recomendación: primero <strong>prueba las direcciones</strong> internas del visor (`/panel-estudiante/material-interactivo/[nivel]`) con tu cuenta, después actívalo para todos.
@@ -187,6 +238,93 @@ function Content() {
           </button>
         </div>
       </div>
+
+      {/* Fase 2 — ejercicios de práctica (auto-gradables, generados por IA) */}
+      <div className={`rounded-xl border-l-4 p-4 mb-6 ${ejerciciosActive ? 'bg-amber-50 border-amber-500' : 'bg-gray-50 border-gray-400'}`}>
+        <div className="flex items-start gap-3">
+          <PencilSquareIcon className={`h-6 w-6 flex-shrink-0 ${ejerciciosActive ? 'text-amber-600' : 'text-gray-500'}`} />
+          <div className="flex-1">
+            <p className={`text-sm font-semibold ${ejerciciosActive ? 'text-amber-900' : 'text-gray-700'}`}>
+              {ejerciciosActive
+                ? 'Fase 2 ACTIVA — los estudiantes ven la tarjeta "Ejercicios de práctica" de su step.'
+                : 'Fase 2 INACTIVA — los estudiantes no ven los ejercicios de práctica.'}
+            </p>
+            <p className="text-xs text-gray-700 mt-0.5">
+              Ejercicios de práctica auto-gradables (opción múltiple, verdadero/falso, completar), generados por IA desde el contenido del step. Es <strong>solo práctica</strong>: no afecta el step ni el diagnóstico del estudiante.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={toggleEjercicios}
+            disabled={savingEjercicios}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold shrink-0 ${ejerciciosActive ? 'bg-gray-600 hover:bg-gray-700 text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'} disabled:opacity-50`}
+          >
+            {savingEjercicios ? '...' : ejerciciosActive ? 'Desactivar' : 'Activar'}
+          </button>
+        </div>
+      </div>
+
+      {/* Fase 2 — generar / regenerar ejercicios por step */}
+      <details className="group bg-white border border-amber-200 rounded-xl p-4 mb-6" open>
+        <summary className="cursor-pointer font-semibold text-amber-900 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
+          <span className="flex items-center gap-2">
+            <PencilSquareIcon className="h-5 w-5 text-amber-600" /> Ejercicios de práctica — generar / regenerar
+          </span>
+          <ChevronDownIcon className="h-4 w-4 text-gray-500 transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="mt-3">
+          <p className="text-xs text-gray-600 mb-3">
+            Los ejercicios se generan con IA la primera vez que un estudiante entra a su step. Aquí puedes <strong>pre-generarlos</strong> o <strong>regenerarlos</strong> (ej. si quedaron con errores o cambió el contenido del step). El nivel se guarda en MAYÚSCULAS y el step tal cual (ej. <code>Step 2</code>).
+          </p>
+          {/* Formulario generar/regenerar puntual */}
+          <div className="flex flex-wrap items-end gap-2 mb-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Nivel</label>
+              <input value={genNivel} onChange={e => setGenNivel(e.target.value.toUpperCase())}
+                placeholder="BN1" className="px-3 py-2 border rounded-lg text-sm w-28" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Step</label>
+              <input value={genStep} onChange={e => setGenStep(e.target.value)}
+                placeholder="Step 2" className="px-3 py-2 border rounded-lg text-sm w-32" />
+            </div>
+            <button type="button"
+              onClick={() => regenerar(genNivel.toUpperCase().trim(), genStep.trim())}
+              disabled={!genNivel.trim() || !genStep.trim() || regenBusy === `${genNivel.toUpperCase().trim()}|${genStep.trim()}`}
+              className="px-4 py-2 rounded-lg text-sm font-semibold bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50">
+              {regenBusy === `${genNivel.toUpperCase().trim()}|${genStep.trim()}` ? 'Generando...' : 'Generar / Regenerar'}
+            </button>
+          </div>
+
+          {/* Sets ya generados */}
+          {ejercicioSets.length === 0 ? (
+            <p className="text-xs text-gray-400">Aún no hay ejercicios generados.</p>
+          ) : (
+            <div className="border border-gray-100 rounded-lg divide-y">
+              {ejercicioSets.map(s => {
+                const key = `${s.nivel}|${s.step}`
+                return (
+                  <div key={key} className="flex items-center justify-between px-3 py-2 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-800">{s.nivel} · {s.step}</span>
+                      <span className="text-xs text-gray-400 ml-2">{s.count} ejercicios · {s.updatedAt ? new Date(s.updatedAt).toLocaleDateString() : ''}</span>
+                    </div>
+                    <button type="button"
+                      onClick={() => regenerar(s.nivel, s.step)}
+                      disabled={regenBusy === key}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50">
+                      {regenBusy === key ? 'Generando...' : 'Regenerar'}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </details>
+
+      {/* Páginas de inicio por Step — alimenta el botón "Ir a mi Step de esta semana" del visor */}
+      <SeccionStepPaginas />
 
       {/* Instructivo subida PDF */}
       <details className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-6 text-sm">
@@ -249,7 +387,10 @@ function LibroCard({ libro, expanded, onToggle, onReload }: {
               : <>{libro.totalPaginas} páginas · {libro.audios.length} audios · {libro.niveles.length} nivel(es) vinculados</>}
           </p>
         </div>
-        <span className="text-xs text-gray-400">{expanded ? 'Cerrar' : 'Abrir'}</span>
+        <span className="flex items-center gap-1 text-xs text-gray-500 flex-shrink-0">
+          {expanded ? 'Cerrar' : 'Abrir'}
+          <ChevronDownIcon className={`h-4 w-4 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        </span>
       </button>
 
       {expanded && (
@@ -259,6 +400,98 @@ function LibroCard({ libro, expanded, onToggle, onReload }: {
         </div>
       )}
     </div>
+  )
+}
+
+function SeccionStepPaginas() {
+  const [nivel, setNivel] = useState('')
+  const [steps, setSteps] = useState<{ step: string; libroPaginaStep: number | null }[]>([])
+  const [loadedNivel, setLoadedNivel] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const load = async () => {
+    const n = nivel.toUpperCase().trim()
+    if (!n) return
+    setBusy(true)
+    try {
+      const r = await fetch(`/api/admin/libros-interactivos/step-paginas?nivel=${encodeURIComponent(n)}`)
+      const j = await r.json()
+      if (!r.ok || !j.success) throw new Error(j?.error || `Error ${r.status}`)
+      setSteps((j.steps || []).map((s: any) => ({ step: s.step, libroPaginaStep: s.libroPaginaStep ?? null })))
+      setLoadedNivel(n)
+    } catch (e: any) { alert(e?.message || 'Error') } finally { setBusy(false) }
+  }
+
+  const save = async (step: string, pagina: number | null) => {
+    if (!loadedNivel) return
+    setBusy(true)
+    try {
+      const r = await fetch('/api/admin/libros-interactivos/step-paginas', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nivelCode: loadedNivel, step, pagina }),
+      })
+      const j = await r.json()
+      if (!r.ok || !j.success) throw new Error(j?.error || `Error ${r.status}`)
+    } catch (e: any) { alert(e?.message || 'Error') } finally { setBusy(false) }
+  }
+
+  return (
+    <details className="group bg-white border border-indigo-200 rounded-xl p-4 mb-6">
+      <summary className="cursor-pointer font-semibold text-indigo-900 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center gap-2">📍 Página de inicio por Step (botón &ldquo;Ir a mi Step&rdquo;)</span>
+        <ChevronDownIcon className="h-4 w-4 text-gray-500 transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="mt-3">
+        <p className="text-xs text-gray-600 mb-3">
+          Define en qué <strong>página del visor</strong> (la que ve el estudiante, 1…N del nivel)
+          empieza cada Step. El botón &ldquo;Ir a mi Step de esta semana&rdquo; usa esta página.
+          Deja vacío para no configurar (el botón no aparecerá para ese step).
+        </p>
+        <div className="flex flex-wrap items-end gap-2 mb-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Nivel</label>
+            <input value={nivel} onChange={e => setNivel(e.target.value.toUpperCase())}
+              placeholder="BN1" className="px-3 py-2 border rounded-lg text-sm w-28" />
+          </div>
+          <button type="button" onClick={load} disabled={!nivel.trim() || busy}
+            className="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50">
+            {busy ? '...' : 'Cargar steps'}
+          </button>
+        </div>
+
+        {loadedNivel && (
+          steps.length === 0 ? (
+            <p className="text-xs text-gray-400">El nivel {loadedNivel} no tiene steps.</p>
+          ) : (
+            <div className="border border-gray-100 rounded-lg divide-y">
+              {steps.map((s, idx) => (
+                <div key={s.step} className="flex items-center justify-between px-3 py-2 text-sm gap-3">
+                  <span className="font-medium text-gray-800 w-28">{s.step}</span>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-gray-500">Página</label>
+                    <input
+                      type="number" min={1}
+                      value={s.libroPaginaStep ?? ''}
+                      onChange={e => {
+                        const v = e.target.value === '' ? null : (parseInt(e.target.value, 10) || null)
+                        const next = [...steps]; next[idx] = { ...s, libroPaginaStep: v }; setSteps(next)
+                      }}
+                      className="w-24 border border-gray-300 rounded px-2 py-1 text-right tabular-nums"
+                      placeholder="—"
+                    />
+                    <button type="button" onClick={() => save(s.step, s.libroPaginaStep)} disabled={busy}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-50">
+                      Guardar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        )}
+      </div>
+    </details>
   )
 }
 
@@ -364,8 +597,34 @@ function SeccionRangos({ libro, onReload }: { libro: LibroAdmin; onReload: () =>
   )
 }
 
+/**
+ * Mapea una página de LIBRO a su(s) nivel(es) + página local, usando los rangos
+ * (bindings). Un libro lo comparten varios niveles como rangos de páginas; el
+ * estudiante ve la "página local" del nivel, no la del libro. Normalmente una
+ * página de libro cae en un solo nivel (devuelve 1 elemento).
+ */
+function bookToNivelLocal(
+  bookPage: number,
+  niveles: NivelBinding[],
+  totalPaginas: number,
+): Array<{ code: string; local: number }> {
+  const out: Array<{ code: string; local: number }> = []
+  for (const n of niveles) {
+    const inicio = n.libroPaginaInicio ?? 1
+    const fin = n.libroPaginaFin ?? totalPaginas
+    if (bookPage >= inicio && bookPage <= fin) {
+      out.push({ code: n.code, local: bookPage - inicio + 1 })
+    }
+  }
+  return out
+}
+
 function SeccionAudios({ libro, onReload }: { libro: LibroAdmin; onReload: () => void }) {
   const [paginaNueva, setPaginaNueva] = useState<number | ''>('')
+  // Helper "asignar por nivel": el admin elige nivel + página local y se calcula
+  // la página de LIBRO (evita el error de confundir página local con la del libro).
+  const [selNivel, setSelNivel] = useState('')
+  const [selLocal, setSelLocal] = useState<number | ''>('')
   const [tituloNuevo, setTituloNuevo] = useState('')
   const [tituloTocado, setTituloTocado] = useState(false) // ¿el admin escribió en el input?
   const [file, setFile] = useState<File | null>(null)
@@ -381,6 +640,24 @@ function SeccionAudios({ libro, onReload }: { libro: LibroAdmin; onReload: () =>
       setTituloNuevo(titleFromFilename(f.name))
     }
   }
+
+  // Sincroniza el helper nivel+local → página de libro.
+  const syncNivelLocal = (code: string, local: number | '') => {
+    setSelNivel(code)
+    setSelLocal(local)
+    if (code && typeof local === 'number' && local >= 1) {
+      const n = libro.niveles.find(x => x.code === code)
+      if (n) {
+        const inicio = n.libroPaginaInicio ?? 1
+        setPaginaNueva(inicio + local - 1)
+      }
+    }
+  }
+
+  // Equivalencia de la página de libro actual → nivel(es) + página local.
+  const equivNueva = typeof paginaNueva === 'number'
+    ? bookToNivelLocal(paginaNueva, libro.niveles, libro.totalPaginas)
+    : []
 
   const startEdit = (key: string, tituloActual: string | null) => {
     setEditing(key)
@@ -471,19 +748,66 @@ function SeccionAudios({ libro, onReload }: { libro: LibroAdmin; onReload: () =>
       <p className="text-xs text-gray-500 mb-2">Una página puede tener varios audios. Usa el título para distinguirlos (ej: "Diálogo", "Maria", "John"). Si no pones título, se usa "Audio N".</p>
 
       <div className="bg-white border border-gray-200 rounded p-3 mb-3">
+        {/* Helper: asignar por nivel + página local → calcula la página de LIBRO.
+            Evita confundir la página local (la que ve el estudiante) con la del libro. */}
+        {libro.niveles.length > 0 && (
+          <div className="mb-3 pb-3 border-b border-gray-100">
+            <p className="text-[11px] text-gray-500 mb-1.5">
+              💡 La página del <strong>libro</strong> no es la que ve el estudiante. Elige el <strong>nivel</strong> y la
+              <strong> página local</strong> y se calcula la página de libro automáticamente.
+            </p>
+            <div className="flex items-end gap-2 flex-wrap">
+              <div>
+                <label htmlFor={`seln-${libro.codigo}`} className="block text-xs text-gray-600 mb-1">Nivel</label>
+                <select
+                  id={`seln-${libro.codigo}`}
+                  value={selNivel}
+                  onChange={e => syncNivelLocal(e.target.value, selLocal)}
+                  className="border border-gray-300 rounded px-2 py-1 text-sm"
+                >
+                  <option value="">—</option>
+                  {libro.niveles.map(n => <option key={n.code} value={n.code}>{n.code}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor={`sell-${libro.codigo}`} className="block text-xs text-gray-600 mb-1">Página local (la que ve el estudiante)</label>
+                <input
+                  id={`sell-${libro.codigo}`}
+                  type="number"
+                  min={1}
+                  value={selLocal}
+                  onChange={e => syncNivelLocal(selNivel, e.target.value === '' ? '' : parseInt(e.target.value, 10) || '')}
+                  className="w-24 border border-gray-300 rounded px-2 py-1 text-sm tabular-nums"
+                  placeholder="32"
+                  title="Página local del nivel"
+                />
+              </div>
+              {selNivel && typeof selLocal === 'number' && typeof paginaNueva === 'number' && (
+                <span className="text-xs text-emerald-700 pb-1.5">→ página de libro <strong>{paginaNueva}</strong></span>
+              )}
+            </div>
+          </div>
+        )}
         <div className="flex items-end gap-2 flex-wrap">
           <div>
-            <label htmlFor={`pag-${libro.codigo}`} className="block text-xs text-gray-600 mb-1">Página</label>
+            <label htmlFor={`pag-${libro.codigo}`} className="block text-xs text-gray-600 mb-1">Página (libro)</label>
             <input
               id={`pag-${libro.codigo}`}
               type="number"
               min={1}
               max={libro.totalPaginas || undefined}
               value={paginaNueva}
-              onChange={e => setPaginaNueva(e.target.value === '' ? '' : parseInt(e.target.value, 10) || '')}
+              onChange={e => { setPaginaNueva(e.target.value === '' ? '' : parseInt(e.target.value, 10) || ''); setSelNivel(''); setSelLocal('') }}
               className="w-20 border border-gray-300 rounded px-2 py-1 text-sm tabular-nums"
               placeholder="12"
             />
+            {typeof paginaNueva === 'number' && (
+              <p className="text-[10px] mt-0.5 leading-tight">
+                {equivNueva.length > 0
+                  ? <span className="text-emerald-600">= {equivNueva.map(e => `${e.code} local ${e.local}`).join(', ')}</span>
+                  : <span className="text-amber-600">⚠ fuera de los rangos por nivel</span>}
+              </p>
+            )}
           </div>
           <div className="w-44">
             <label htmlFor={`tit-${libro.codigo}`} className="block text-xs text-gray-600 mb-1">Título (opcional)</label>
@@ -530,7 +854,8 @@ function SeccionAudios({ libro, onReload }: { libro: LibroAdmin; onReload: () =>
             <thead className="bg-gray-50 text-xs text-gray-500">
               <tr>
                 <th className="text-right px-3 py-2 w-12">#</th>
-                <th className="text-right px-3 py-2 w-20">Página</th>
+                <th className="text-right px-3 py-2 w-20">Página (libro)</th>
+                <th className="text-left px-3 py-2 w-28">Nivel · local</th>
                 <th className="text-left px-3 py-2 w-56">Título</th>
                 <th className="text-left px-3 py-2">Key</th>
                 <th className="text-right px-3 py-2 w-20">Acciones</th>
@@ -548,6 +873,14 @@ function SeccionAudios({ libro, onReload }: { libro: LibroAdmin; onReload: () =>
                     <tr key={a.key} className="border-t border-gray-100">
                       <td className="px-3 py-2 text-right text-xs text-gray-400 tabular-nums">{idx + 1}</td>
                       <td className="px-3 py-2 text-right font-bold tabular-nums">{a.pagina}</td>
+                      <td className="px-3 py-2 text-left text-xs">
+                        {(() => {
+                          const eq = bookToNivelLocal(a.pagina, libro.niveles, libro.totalPaginas)
+                          return eq.length > 0
+                            ? <span className="text-gray-700">{eq.map(e => `${e.code} · ${e.local}`).join(', ')}</span>
+                            : <span className="text-amber-600">fuera de rango</span>
+                        })()}
+                      </td>
                       <td className="px-3 py-2 text-xs text-gray-700 truncate">
                         {enEdicion ? (
                           <div className="flex items-center gap-1">

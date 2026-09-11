@@ -1,7 +1,7 @@
 /**
  * API: /api/postgres/recaudos/asignaciones
  *
- * GET ?search=&estadoCartera=&gestorRecaudo=&fechaInicio=&fechaFin=&page=&pageSize=
+ * GET ?search=&estadoCartera=&gestorRecaudo=&plataforma=&fechaInicio=&fechaFin=&page=&pageSize=
  *   → lista paginada de titulares asignados a gestores de recaudo
  *     ("Usuarios Asignados"). Filtrada server-side según rol del usuario:
  *
@@ -41,6 +41,7 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
       search:        searchParams.get('search')        || null,
       estadoCartera,
       gestorRecaudo: searchParams.get('gestorRecaudo') || null,
+      plataforma:    searchParams.get('plataforma')    || null,
       fechaDesde:    searchParams.get('fechaInicio')   || null,
       fechaHasta:    searchParams.get('fechaFin')      || null,
       page:          parseInt(searchParams.get('page') || '1', 10) || 1,

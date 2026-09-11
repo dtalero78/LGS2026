@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { ArrowPathIcon, ArrowDownTrayIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { exportToExcel } from '@/lib/export-excel'
@@ -61,8 +61,9 @@ export default function HoldVigenciasPage() {
   const [startDate, setStartDate] = useState(monthAgo)
   const [endDate, setEndDate]     = useState(today)
   const [data, setData] = useState<Data | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [consultado, setConsultado] = useState(false)
 
   const fetchData = useCallback(async (sd: string, ed: string) => {
     setLoading(true); setError(null)
@@ -76,10 +77,12 @@ export default function HoldVigenciasPage() {
     finally { setLoading(false) }
   }, [])
 
-  useEffect(() => { fetchData(monthAgo, today) }, [fetchData])
-
-  const handleApply = () => fetchData(startDate, endDate)
-  const handleClear = () => { setStartDate(monthAgo); setEndDate(today); fetchData(monthAgo, today) }
+  const handleApply = () => {
+    if (!window.confirm('Esta consulta recorre muchos registros y puede ser pesada. ¿Deseas continuar?')) return
+    setConsultado(true)
+    fetchData(startDate, endDate)
+  }
+  const handleClear = () => { setStartDate(monthAgo); setEndDate(today); setData(null); setConsultado(false) }
 
   const handleCSV = () => {
     if (!data) return
@@ -126,7 +129,7 @@ export default function HoldVigenciasPage() {
               className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium">Aplicar</button>
             <button type="button" onClick={handleClear} disabled={loading}
               className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">Limpiar</button>
-            <button type="button" onClick={() => fetchData(startDate, endDate)}
+            <button type="button" onClick={() => { setConsultado(true); fetchData(startDate, endDate) }}
               className="inline-flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"><ArrowPathIcon className="h-4 w-4" />Recargar</button>
             <PermissionGuard permission={InformesPermission.ACAD_HOLD_VIGENCIAS_EXP}>
               <button type="button" onClick={handleCSV} disabled={loading || !data}
@@ -139,6 +142,15 @@ export default function HoldVigenciasPage() {
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">{error}
             <button type="button" onClick={handleApply} className="ml-4 text-xs underline">Reintentar</button></div>
         )}
+
+        {/* Estado vacío */}
+        {!consultado && !loading && !error && (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center text-sm text-indigo-900">
+            Configura los filtros y pulsa <b>Consultar</b> para ver el informe.
+          </div>
+        )}
+
+        {consultado && (<>
 
         {/* Salud de los crons */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -216,6 +228,8 @@ export default function HoldVigenciasPage() {
           <AccionTable title="Desbloqueos (OnHold) realizados" subtitle={`${t?.desbloqueosOk ?? 0} OK · ${t?.desbloqueosFail ?? 0} fallidos · ${startDate} → ${endDate}`} rows={data?.desbloqueos ?? []} loading={loading} extraCol="diasExtendidos" extraLabel="Días ext." />
           <AccionTable title="Bloqueos (Vigencia) realizados" subtitle={`${t?.bloqueosOk ?? 0} OK · ${t?.bloqueosFail ?? 0} fallidos · ${startDate} → ${endDate}`} rows={data?.bloqueos ?? []} loading={loading} extraCol="finalContrato" extraLabel="Fin contrato" />
         </div>
+
+        </>)}
       </div>
     </DashboardLayout>
   )

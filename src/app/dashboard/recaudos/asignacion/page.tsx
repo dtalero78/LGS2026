@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
-import { UsersIcon, ArrowPathIcon, ArrowDownTrayIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
+import { UsersIcon, ArrowPathIcon, ArrowDownTrayIcon, MagnifyingGlassIcon, ArrowsRightLeftIcon } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
 import { RecaudosPermission } from '@/types/permissions'
@@ -42,6 +42,8 @@ interface AsignacionRow {
    * regla ANT (eliminado en mayo 2026).
    */
   marcaOpcional: string | null
+  /** Solo viene con fecha si la marca es TEMPORAL y sigue vigente. */
+  marcaOpcionalHasta?: string | null
 }
 
 interface DisplayUser {
@@ -49,9 +51,14 @@ interface DisplayUser {
   email: string
   nombre: string
   rol: string
+  /** Un gestor INACTIVO no puede recibir cartera, pero sí es el candidato
+   *  natural a migrarla (es el que se retiró). */
+  activo?: boolean
 }
 
 const GESTOR_ROLES_FILTRO = ['RECAUDO_ASIST', 'RECAUDOS_JEFE']
+// Plataformas existentes en PEOPLE.plataforma (titulares).
+const PLATAFORMAS = ['Chile', 'Colombia', 'Ecuador', 'Perú']
 const ROLE_LABEL: Record<string, string> = {
   RECAUDO_ASIST: 'Asistente',
   RECAUDOS_JEFE: 'Jefe',
@@ -95,6 +102,7 @@ export default function AsignacionRecaudosPage() {
   const [search, setSearch] = useState('')
   const [estadoCartera, setEstadoCartera] = useState<'' | 'normal' | 'prejuridico' | 'ultimopago' | 'penalidad'>('')
   const [gestorFiltro, setGestorFiltro] = useState('')
+  const [plataformaFiltro, setPlataformaFiltro] = useState('')
   const [fechaInicio, setFechaInicio] = useState('')
   const [fechaFin, setFechaFin] = useState('')
 
@@ -104,6 +112,19 @@ export default function AsignacionRecaudosPage() {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [displayUsers, setDisplayUsers] = useState<DisplayUser[]>([])
+  // Gestores INCLUYENDO inactivos — el origen de una migración suele ser
+  // justamente un gestor dado de baja.
+  const [gestoresTodos, setGestoresTodos] = useState<DisplayUser[]>([])
+
+  // ── Migrar Cuentas ──
+  const [showMigrar, setShowMigrar] = useState(false)
+  const [migrarOrigen, setMigrarOrigen] = useState('')
+  const [migrarDestino, setMigrarDestino] = useState('')
+  const [migrarPagos, setMigrarPagos] = useState(true)
+  const [migrarConfirmado, setMigrarConfirmado] = useState(false)
+  const [migrarPreview, setMigrarPreview] = useState<{ titulares: number; pagosPendientes: number; pagosValidados: number } | null>(null)
+  const [migrarLoading, setMigrarLoading] = useState(false)
+  const [migrando, setMigrando] = useState(false)
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -115,6 +136,7 @@ export default function AsignacionRecaudosPage() {
       if (search.trim()) qs.set('search', search.trim())
       if (estadoCartera) qs.set('estadoCartera', estadoCartera)
       if (canFiltrarGestor && gestorFiltro) qs.set('gestorRecaudo', gestorFiltro)
+      if (plataformaFiltro) qs.set('plataforma', plataformaFiltro)
       if (fechaInicio) qs.set('fechaInicio', fechaInicio)
       if (fechaFin) qs.set('fechaFin', fechaFin)
       qs.set('page', String(pageToUse))
@@ -130,7 +152,7 @@ export default function AsignacionRecaudosPage() {
     } finally {
       setLoading(false)
     }
-  }, [search, estadoCartera, gestorFiltro, fechaInicio, fechaFin, page, canFiltrarGestor])
+  }, [search, estadoCartera, gestorFiltro, plataformaFiltro, fechaInicio, fechaFin, page, canFiltrarGestor])
 
   // Carga de gestores (solo si el rol los puede filtrar)
   useEffect(() => {
@@ -138,7 +160,49 @@ export default function AsignacionRecaudosPage() {
     api.get<{ users: DisplayUser[] }>(`/api/postgres/users/by-role?roles=${GESTOR_ROLES_FILTRO.join(',')}&activeOnly=true`)
       .then(d => setDisplayUsers(d.users || []))
       .catch(() => {})
+    // Lista completa (con inactivos) para el modal de migración.
+    api.get<{ users: DisplayUser[] }>(`/api/postgres/users/by-role?roles=${GESTOR_ROLES_FILTRO.join(',')}&activeOnly=false`)
+      .then(d => setGestoresTodos(d.users || []))
+      .catch(() => {})
   }, [canFiltrarGestor])
+
+  /** Preview de lo que se migraría al elegir el gestor de origen. */
+  useEffect(() => {
+    if (!migrarOrigen) { setMigrarPreview(null); return }
+    setMigrarLoading(true)
+    api.get<{ titulares: number; pagosPendientes: number; pagosValidados: number }>(
+      `/api/postgres/recaudos/migrar-cuentas?origen=${encodeURIComponent(migrarOrigen)}`,
+    )
+      .then(d => setMigrarPreview({ titulares: d.titulares, pagosPendientes: d.pagosPendientes, pagosValidados: d.pagosValidados }))
+      .catch(() => setMigrarPreview(null))
+      .finally(() => setMigrarLoading(false))
+  }, [migrarOrigen])
+
+  const abrirMigrar = () => {
+    setMigrarOrigen(''); setMigrarDestino('')
+    setMigrarPagos(true); setMigrarConfirmado(false)
+    setMigrarPreview(null); setShowMigrar(true)
+  }
+
+  const ejecutarMigracion = async () => {
+    setMigrando(true)
+    try {
+      const d = await api.post<{ titularesMigrados: number; pagosMigrados: number; origenNombre: string; destinoNombre: string }>(
+        '/api/postgres/recaudos/migrar-cuentas',
+        { origen: migrarOrigen, destino: migrarDestino, migrarPagosPendientes: migrarPagos },
+      )
+      toast.success(
+        `${d.titularesMigrados} titular(es) migrados de ${d.origenNombre} a ${d.destinoNombre}` +
+        (d.pagosMigrados ? ` · ${d.pagosMigrados} pago(s) pendientes` : ''),
+      )
+      setShowMigrar(false)
+      fetchTitulares()
+    } catch (err) {
+      handleApiError(err, 'Error al migrar las cuentas')
+    } finally {
+      setMigrando(false)
+    }
+  }
 
   useEffect(() => { fetchTitulares() // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page])
@@ -147,7 +211,7 @@ export default function AsignacionRecaudosPage() {
 
   const handleAplicar = () => fetchTitulares(true)
   const handleLimpiar = () => {
-    setSearch(''); setEstadoCartera(''); setGestorFiltro(''); setFechaInicio(''); setFechaFin('')
+    setSearch(''); setEstadoCartera(''); setGestorFiltro(''); setPlataformaFiltro(''); setFechaInicio(''); setFechaFin('')
     setTimeout(() => fetchTitulares(true), 0)
   }
 
@@ -203,6 +267,16 @@ export default function AsignacionRecaudosPage() {
                   <ArrowDownTrayIcon className="h-4 w-4" /> Exportar Excel
                 </button>
               </PermissionGuard>
+              <PermissionGuard permission={RecaudosPermission.ASIGNACION_MIGRAR}>
+                <button
+                  type="button"
+                  onClick={abrirMigrar}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700"
+                  title="Pasar toda la cartera de un gestor a otro (retiro o reemplazo)"
+                >
+                  <ArrowsRightLeftIcon className="h-4 w-4" /> Migrar Cuentas
+                </button>
+              </PermissionGuard>
               <button
                 type="button"
                 onClick={() => fetchTitulares()}
@@ -215,7 +289,7 @@ export default function AsignacionRecaudosPage() {
           </div>
 
           {/* Filtros */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4 grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+          <div className="bg-white border border-gray-200 rounded-lg p-4 grid grid-cols-1 md:grid-cols-7 gap-3 items-end">
             <div className="md:col-span-2">
               <label htmlFor="search" className="block text-xs font-medium text-gray-700">Buscar (titular, ID, contrato)</label>
               <div className="mt-1 relative">
@@ -262,6 +336,19 @@ export default function AsignacionRecaudosPage() {
               </select>
             </div>
             <div>
+              <label htmlFor="plataformaFiltro" className="block text-xs font-medium text-gray-700">Plataforma</label>
+              <select
+                id="plataformaFiltro" value={plataformaFiltro}
+                onChange={e => setPlataformaFiltro(e.target.value)}
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              >
+                <option value="">Todas</option>
+                {PLATAFORMAS.map(pf => (
+                  <option key={pf} value={pf}>{pf}</option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label htmlFor="fechaInicio" className="block text-xs font-medium text-gray-700">Contrato desde</label>
               <input
                 id="fechaInicio" type="date" value={fechaInicio}
@@ -277,7 +364,7 @@ export default function AsignacionRecaudosPage() {
                 className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
               />
             </div>
-            <div className="md:col-span-6 flex items-center justify-end gap-2 pt-2">
+            <div className="md:col-span-7 flex items-center justify-end gap-2 pt-2">
               <button type="button" onClick={handleLimpiar}
                 className="px-3 py-1.5 text-xs text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50">
                 Limpiar filtros
@@ -410,6 +497,113 @@ export default function AsignacionRecaudosPage() {
             )}
           </div>
         </div>
+        {/* ── Modal: Migrar Cuentas ─────────────────────────────────────── */}
+        {showMigrar && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-5 max-h-[90vh] overflow-y-auto">
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">Migrar cuentas entre gestores</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Pasa <strong>toda la cartera</strong> de un gestor a otro. Pensado para cuando el gestor anterior se retira.
+              </p>
+
+              {/* Origen */}
+              <label className="block mb-3">
+                <span className="block text-sm font-medium text-gray-700 mb-1">Gestor actual (origen)</span>
+                <select
+                  value={migrarOrigen}
+                  onChange={e => { setMigrarOrigen(e.target.value); setMigrarConfirmado(false) }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                >
+                  <option value="">Selecciona…</option>
+                  {gestoresTodos.map(u => (
+                    <option key={u._id} value={u._id}>
+                      {u.nombre}{u.activo === false ? ' — INACTIVO' : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {/* Preview de lo que se va a mover */}
+              {migrarLoading && <p className="text-sm text-gray-500 mb-3">Consultando cartera…</p>}
+              {migrarPreview && !migrarLoading && (
+                <div className="mb-3 rounded-lg bg-gray-50 border border-gray-200 p-3 text-sm">
+                  <div className="flex justify-between"><span className="text-gray-600">Titulares a migrar</span><span className="font-semibold tabular-nums">{migrarPreview.titulares}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-600">Pagos pendientes</span><span className="font-semibold tabular-nums">{migrarPreview.pagosPendientes}</span></div>
+                  <div className="flex justify-between text-gray-400"><span>Pagos ya validados (no se tocan)</span><span className="tabular-nums">{migrarPreview.pagosValidados}</span></div>
+                  {migrarPreview.titulares === 0 && (
+                    <p className="text-xs text-amber-700 mt-2">Este gestor no tiene titulares asignados dentro de tu alcance.</p>
+                  )}
+                </div>
+              )}
+
+              {/* Destino */}
+              <label className="block mb-3">
+                <span className="block text-sm font-medium text-gray-700 mb-1">Nuevo gestor (destino)</span>
+                <select
+                  value={migrarDestino}
+                  onChange={e => { setMigrarDestino(e.target.value); setMigrarConfirmado(false) }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                >
+                  <option value="">Selecciona…</option>
+                  {gestoresTodos.filter(u => u.activo !== false && u._id !== migrarOrigen).map(u => (
+                    <option key={u._id} value={u._id}>{u.nombre}</option>
+                  ))}
+                </select>
+                <span className="block text-xs text-gray-500 mt-1">Solo aparecen gestores activos.</span>
+              </label>
+
+              {/* Pagos pendientes */}
+              <label className="flex items-start gap-2 mb-3 cursor-pointer">
+                <input type="checkbox" checked={migrarPagos} onChange={e => setMigrarPagos(e.target.checked)} className="mt-1" />
+                <span className="text-sm text-gray-700">
+                  Migrar también sus <strong>pagos pendientes</strong>
+                  <span className="block text-xs text-gray-500">
+                    Los pagos <strong>ya validados</strong> nunca se migran: dejan constancia de quién los gestionó.
+                  </span>
+                </span>
+              </label>
+
+              {/* Confirmación */}
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 mb-4">
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={migrarConfirmado}
+                    onChange={e => setMigrarConfirmado(e.target.checked)}
+                    disabled={!migrarOrigen || !migrarDestino || !migrarPreview?.titulares}
+                    className="mt-1"
+                  />
+                  <span className="text-sm text-amber-900">
+                    Confirmo la migración de <strong>{migrarPreview?.titulares ?? 0} titular(es)</strong>
+                    {migrarPagos && migrarPreview?.pagosPendientes ? <> y <strong>{migrarPreview.pagosPendientes} pago(s) pendientes</strong></> : null}.
+                    <span className="block text-xs text-amber-700 mt-0.5">
+                      No se puede deshacer desde la pantalla: revertirlo exige migrar de vuelta.
+                    </span>
+                  </span>
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowMigrar(false)}
+                  disabled={migrando}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={ejecutarMigracion}
+                  disabled={migrando || !migrarConfirmado || !migrarOrigen || !migrarDestino || !migrarPreview?.titulares}
+                  className="px-5 py-2 text-sm font-semibold text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                >
+                  {migrando ? 'Migrando…' : 'Migrar cuentas'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </PermissionGuard>
     </DashboardLayout>
   )

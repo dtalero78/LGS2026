@@ -158,6 +158,11 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
     'SERVICIO.USUARIOS.EXPORTAR_CSV' as Permission,
   ],
 
+  // Servicio - Cancelación sin reemplazo
+  '/dashboard/servicio/cancelacion-sin-reemplazo': [
+    'SERVICIO.CANCELACION_SIN_REEMPLAZO.VER' as Permission,
+  ],
+
   // Servicio - Exam. Intern. > IELTS / B2 First / TOEFL
   '/dashboard/servicio/exam-intern/ielts': [
     'SERVICIO.EXAM_INTERN.IELTS_VER' as Permission,
@@ -180,6 +185,9 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   // Comercial - Prospectos
   '/dashboard/comercial/prospectos': [
     'COMERCIAL.PROSPECTOS.VER' as Permission,
+  ],
+  '/dashboard/comercial/matriculas': [
+    'COMERCIAL.MATRICULAS.VER' as Permission,
   ],
 
   // Informes — rutas específicas por grupo
@@ -220,6 +228,12 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/admin/bloqueo-contrato': [
     'MANTENIMIENTO.CONTRATOS.BLOQUEAR' as Permission,
   ],
+  '/admin/drive-config': [
+    'MANTENIMIENTO.CONTRATOS.DRIVE_CONFIG' as Permission,
+  ],
+  '/admin/kids-config': [
+    'MANTENIMIENTO.CONTRATOS.KIDS_CONFIG' as Permission,
+  ],
   '/admin/clear-historic': [
     'MANTENIMIENTO.USUARIOS.CLEAR_HISTORIC' as Permission,
   ],
@@ -228,6 +242,12 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   ],
   '/admin/generar-contrato': [
     'MANTENIMIENTO.USUARIOS.GENERAR_CONTRATO' as Permission,
+  ],
+  '/admin/cargar-beneficiarios': [
+    'MANTENIMIENTO.CONTRATOS.CARGAR_BENEFICIARIOS' as Permission,
+  ],
+  '/admin/contingencia/whatsapp': [
+    'MANTENIMIENTO.CONTINGENCIA.WHATSAPP' as Permission,
   ],
   '/admin/contratos-prueba': [
     'MANTENIMIENTO.USUARIOS.CONTRATOS_PRUEBA' as Permission,
@@ -238,6 +258,9 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/admin/roles/create': [
     'MANTENIMIENTO.USUARIOS.CREAR_ROL' as Permission,
   ],
+  '/admin/roles/consulta': [
+    'MANTENIMIENTO.USUARIOS.CREAR_ROL' as Permission,
+  ],
   '/admin/ticker': [
     'MANTENIMIENTO.AVISOS.TICKER' as Permission,
   ],
@@ -245,6 +268,9 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
     'MANTENIMIENTO.AVISOS.BANNER' as Permission,
   ],
   '/admin/actualizar-videos': [
+    // Se accede como 4ª caja del hub Académico → Actualizar Material, así que
+    // acepta el permiso del hub; se conserva el legacy de Mantenimiento.
+    'ACADEMICO.MATERIAL.ACTUALIZAR' as Permission,
     'MANTENIMIENTO.MATERIAL.ACTUALIZAR_VIDEOS' as Permission,
   ],
   '/admin/plantillas/gestion': [
@@ -259,23 +285,41 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/admin/diagnostico': [
     'MANTENIMIENTO.DIAGNOSTICO.VER' as Permission,
   ],
+  '/admin/lgs-buckets': [
+    'MANTENIMIENTO.LGS_BUCKETS.VER' as Permission,
+  ],
 
   // Recaudos - Gestión
   '/dashboard/recaudos/gestion': [
     'RECAUDOS.GESTION.VER' as Permission,
   ],
+  '/dashboard/recaudos/bancos': [
+    'RECAUDOS.BANCOS.VER' as Permission,
+  ],
   '/dashboard/recaudos/asignacion': [
     'RECAUDOS.ASIGNACION.VER' as Permission,
   ],
+  '/dashboard/recaudos/aprobaciones': [
+    'RECAUDOS.APROBACIONES.VER' as Permission,
+  ],
 
-  // Aprobación
+  // Aprobación → Centro de Aprobaciones (CENTRO_VER + acción para roles ya configurados)
   '/dashboard/aprobacion': [
+    'APROBACION.CENTRO.VER' as Permission,
     'APROBACION.MODIFICAR.ACTUALIZAR' as Permission,
     'APROBACION.MODIFICAR.EXPORTAR_CSV' as Permission,
     'APROBACION.MODIFICAR.CONTRATO' as Permission,
     'APROBACION.MODIFICAR.ENVIAR_PDF' as Permission,
     'APROBACION.MODIFICAR.DESCARGAR' as Permission,
     'APROBACION.MODIFICAR.APROBACION_AUTONOMA' as Permission,
+  ],
+  // Aprobación → Conversión Titular (su propio permiso)
+  '/dashboard/aprobacion/conversion-titular': [
+    'APROBACION.CONVERSION_TITULAR.VER' as Permission,
+  ],
+  // Aprobación → Contratos aprobados (su propio permiso)
+  '/dashboard/aprobacion/contratos-aprobados': [
+    'APROBACION.CONTRATOS_APROBADOS.VER' as Permission,
   ],
 };
 
@@ -319,6 +363,7 @@ export const GENERIC_ROUTE_ACCESS: Record<string, Permission[]> = {
     'SERVICIO.EXAM_INTERN.IELTS_VER' as Permission,
     'SERVICIO.EXAM_INTERN.B2F_VER' as Permission,
     'SERVICIO.EXAM_INTERN.TOEFL_VER' as Permission,
+    'SERVICIO.CANCELACION_SIN_REEMPLAZO.VER' as Permission,
   ],
 
   '/dashboard/comercial': [

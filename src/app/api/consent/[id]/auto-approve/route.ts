@@ -1,13 +1,19 @@
 import 'server-only';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
+import { requirePermission } from '@/lib/api-permissions';
+import { ComercialPermission } from '@/types/permissions';
 import { autoApproveConsent } from '@/services/consent.service';
 import { query, queryOne, queryMany } from '@/lib/postgres';
 import { generateId } from '@/lib/id-generator';
 import { fillContractTemplate } from '@/lib/contract-template-filler';
+import { buildContractPdfHtml } from '@/lib/contract-pdf-html';
+import { generarYArchivarAnexoPdf } from '@/lib/anexo-pdf';
+import { esContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { getAsesorInfo } from '@/lib/asesor';
+import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
+import { archivarContratoEnDrive, buildContractFilename } from '@/lib/contract-drive';
 
 const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
-const BSL_UPLOAD_URL = 'https://bsl-utilidades-yp78a.ondigitalocean.app/subir-pdf-directo';
 
 // One-time migration: ensure auditautoaprov table exists
 let auditTableReady = false;
@@ -30,6 +36,10 @@ async function ensureAuditTable() {
 }
 
 export const POST = handlerWithAuth(async (request, { params }, session) => {
+  // Gate: solo roles con el permiso "Auto-aprobar Consentimiento"
+  // (SUPER_ADMIN/ADMIN bypasean). Defensa en profundidad del botón del frontend.
+  await requirePermission(session, ComercialPermission.APROBACION_AUTONOMA);
+
   const ip =
     request.headers.get('x-forwarded-for') ||
     request.headers.get('x-real-ip') ||
@@ -78,6 +88,8 @@ export const POST = handlerWithAuth(async (request, { params }, session) => {
         `SELECT * FROM "PEOPLE" WHERE "contrato" = $1 AND "_id" != $2 ORDER BY "_createdDate" ASC`,
         [titular.contrato, params.id]
       );
+      // Adjunta el detalle de KIDS_INSCRIPCIONES a los beneficiarios kids (para la plantilla).
+      await attachKidsInscripciones(titular.contrato, beneficiarios);
 
       // FINANCIEROS se busca por "contrato" (mismo bug que send-pdf — la tabla no
       // tiene titularId / esa columna legacy quedó NULL en la migración).
@@ -105,7 +117,7 @@ export const POST = handlerWithAuth(async (request, { params }, session) => {
           hash: result.hash,
         };
 
-        const asesorInfo = await getAsesorInfo((titular as any).asesor);
+        const asesorInfo = await getAsesorInfo((titular as any).asesor, (titular as any).asesorCreadorContrato);
         const contractText = fillContractTemplate(
           templateRow.template,
           titular,
@@ -115,26 +127,11 @@ export const POST = handlerWithAuth(async (request, { params }, session) => {
           asesorInfo,
         );
 
-        const htmlContent = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Contrato ${titular.contrato}</title>
-  <style>
-    @page { margin: 15mm 15mm 15mm 20mm; }
-    body {
-      font-family: Georgia, 'Times New Roman', serif;
-      font-size: 10.5pt;
-      line-height: 1.5;
-      color: #111;
-      margin: 0; padding: 0;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
-  </style>
-</head>
-<body>${contractText}</body>
-</html>`;
+        const htmlContent = buildContractPdfHtml(contractText, {
+          esPrueba: esContratoPrueba(titular?.contrato),
+          contrato: titular.contrato,
+          fecha: new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' }),
+        });
 
         const pdfRes = await fetch('https://v2018.api2pdf.com/chrome/html', {
           method: 'POST',
@@ -153,16 +150,12 @@ export const POST = handlerWithAuth(async (request, { params }, session) => {
           if (pdfData.success && pdfData.pdf) {
             pdfUrl = pdfData.pdf;
 
-            // Upload to Drive — no WhatsApp
-            driveUpload = await fetch(BSL_UPLOAD_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                pdfUrl,
-                documento: params.id,
-                empresa: 'LGS',
-              }),
-            }).then(r => r.json()).catch(() => ({ error: 'Drive upload failed' }));
+            // Archivar en Drive (según el interruptor: bsl o LGS) — sin WhatsApp
+            driveUpload = await archivarContratoEnDrive({
+              pdfUrl: pdfData.pdf,
+              titularId: params.id,
+              filename: buildContractFilename(titular as any),
+            });
           }
         }
       }
@@ -170,6 +163,12 @@ export const POST = handlerWithAuth(async (request, { params }, session) => {
   } catch (pdfErr: any) {
     console.warn('⚠️ [auto-approve] PDF/Drive upload failed (non-critical):', pdfErr.message);
   }
+
+  // Anexo de constancia (ANEX-) — best-effort, no bloquea la respuesta.
+  generarYArchivarAnexoPdf(params.id).then(
+    (r) => console.log(`📎 [AutoApprove] Anexo: ${params.id} → ${r.ok ? 'archivado' : (r.skipped || r.error)}`),
+    (e) => console.error(`⚠️ [AutoApprove] No se pudo archivar el anexo (${params.id}):`, e?.message || e),
+  );
 
   return successResponse({
     message: 'Consentimiento automático registrado exitosamente',

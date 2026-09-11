@@ -19,6 +19,8 @@
 import { useState } from 'react'
 import { MagnifyingGlassIcon, ArrowPathIcon, DocumentTextIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
+import { PermissionGuard } from '@/components/permissions'
+import { MantenimientoPermission } from '@/types/permissions'
 
 interface ContractResult {
   contrato: string
@@ -126,6 +128,7 @@ export default function GenerarContratoPage() {
   const titular = result?.titular
 
   return (
+    <PermissionGuard permission={MantenimientoPermission.GENERAR_CONTRATO} showDefaultMessage>
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-3">
@@ -296,5 +299,6 @@ export default function GenerarContratoPage() {
         )}
       </div>
     </div>
+    </PermissionGuard>
   )
 }

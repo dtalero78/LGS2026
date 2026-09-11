@@ -1,5 +1,6 @@
 import 'server-only'
-import { handlerWithAuth, successResponse } from '@/lib/api-helpers'
+import { successResponse } from '@/lib/api-helpers'
+import { handlerReport } from '@/lib/report-guard'
 import { queryMany, queryOne } from '@/lib/postgres'
 import { NotFoundError, ValidationError } from '@/lib/errors'
 
@@ -14,7 +15,7 @@ function safeQ<T>(fn: () => Promise<T>, fb: T): Promise<T> {
  * Full academic report for a student: KPIs, weekly distribution,
  * program progress, heatmap, level timing, and booking detail.
  */
-export const GET = handlerWithAuth(async (req, _ctx, session) => {
+export const GET = handlerReport(async (req, _ctx, session) => {
   const { searchParams } = new URL(req.url)
   const numeroId  = searchParams.get('numeroId')?.trim()
   const startDate = searchParams.get('startDate')

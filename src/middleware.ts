@@ -24,8 +24,10 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon.ico') ||
     pathname.startsWith('/contrato') ||
+    pathname.startsWith('/bienvenida') ||
     pathname.startsWith('/nuevo-usuario') ||
     pathname.startsWith('/nuevo-advisor') ||
+    pathname.startsWith('/reagendar-welcome') ||
     pathname.includes('.')
   ) {
     return NextResponse.next()

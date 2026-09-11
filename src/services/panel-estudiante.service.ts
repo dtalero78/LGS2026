@@ -22,18 +22,16 @@ import { ForbiddenError, NotFoundError } from '@/lib/errors';
 import { generateReport } from '@/services/progress.service';
 import { getEffectiveStepNumber } from '@/services/student-booking.service';
 import { isContractExpired } from '@/lib/contract-expiry';
+import { ensureOnce } from '@/lib/ensure-once';
 
-// One-time migration: ensure fechaInicioESS column exists in ACADEMICA and PEOPLE
-let essMigrationDone = false;
-async function ensureESSColumns() {
-  if (essMigrationDone) return;
-  try {
+// Ensure fechaInicioESS en ACADEMICA y PEOPLE. Una sola vez por proceso, sin
+// reintento (ver lib/ensure-once). El esquema se garantiza de verdad con
+// scripts/add-ess-columns.js, no desde el request path.
+function ensureESSColumns() {
+  return ensureOnce('fechaInicioESS', async () => {
     await query(`ALTER TABLE "ACADEMICA" ADD COLUMN IF NOT EXISTS "fechaInicioESS" TIMESTAMPTZ`, []);
     await query(`ALTER TABLE "PEOPLE" ADD COLUMN IF NOT EXISTS "fechaInicioESS" TIMESTAMPTZ`, []);
-    essMigrationDone = true;
-  } catch (err: any) {
-    console.error('⚠️ [ESS] Error ensuring fechaInicioESS columns:', err.message);
-  }
+  });
 }
 
 /** Days a student stays in ESS (Essential) before auto-promoting to BN1 Step 1 */
@@ -362,6 +360,7 @@ export async function resolveStudentFromSession(session: Session) {
     nivelParalelo,
     stepParalelo,
     foto: academica?.foto ?? (base as any).foto ?? null, // photo from ACADEMICA
+    senceCode: (base as any).senceCode ?? academica?.senceCode ?? null,
   };
 }
 

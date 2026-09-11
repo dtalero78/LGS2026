@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -127,8 +127,9 @@ export default function AdvisorResumenReportPage() {
   const [advisorId,   setAdvisorId]   = useState('')
   const [tipoFiltro,  setTipoFiltro]  = useState<TipoFiltro>('all')
   const [data,        setData]        = useState<ReportData | null>(null)
-  const [loading,     setLoading]     = useState(true)
+  const [loading,     setLoading]     = useState(false)
   const [error,       setError]       = useState<string | null>(null)
+  const [consultado,  setConsultado]  = useState(false)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
 
   const fetchData = useCallback(async (fi: string, ff: string, aid: string, tipo: TipoFiltro) => {
@@ -144,13 +145,19 @@ export default function AdvisorResumenReportPage() {
     finally { setLoading(false) }
   }, [])
 
-  useEffect(() => { fetchData(firstOfYear, today, '', 'all') }, [fetchData])
-
-  const handleApply = () => fetchData(fechaInicio, fechaFin, advisorId, tipoFiltro)
+  const handleApply = () => {
+    if (!fechaInicio || !fechaFin) {
+      alert('Selecciona el rango de fechas (Desde y Hasta) antes de consultar.')
+      return
+    }
+    setConsultado(true)
+    fetchData(fechaInicio, fechaFin, advisorId, tipoFiltro)
+  }
   const handleClear = () => {
     setFechaInicio(firstOfYear); setFechaFin(today)
     setAdvisorId(''); setTipoFiltro('all')
-    fetchData(firstOfYear, today, '', 'all')
+    setData(null)
+    setConsultado(false)
   }
 
   const handleExport = () => {
@@ -222,7 +229,7 @@ export default function AdvisorResumenReportPage() {
             <div className="flex gap-2 ml-auto flex-wrap">
               <button type="button" onClick={handleApply} disabled={loading}
                 className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium">
-                Aplicar filtros
+                Consultar
               </button>
               <button type="button" onClick={handleClear} disabled={loading}
                 className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
@@ -248,6 +255,15 @@ export default function AdvisorResumenReportPage() {
             <button type="button" onClick={handleApply} className="ml-4 text-xs underline">Reintentar</button>
           </div>
         )}
+
+        {/* Estado vacío */}
+        {!consultado && !loading && !error && (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center text-sm text-indigo-900">
+            Configura los filtros y pulsa <b>Consultar</b> para ver el informe.
+          </div>
+        )}
+
+        {consultado && (<>
 
         {/* KPIs */}
         {loading ? (
@@ -375,6 +391,8 @@ export default function AdvisorResumenReportPage() {
             )}
           </div>
         )}
+
+        </>)}
 
       </div>
 

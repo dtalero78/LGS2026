@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { ArrowPathIcon, ArrowDownTrayIcon, CheckCircleIcon, ExclamationTriangleIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { exportToExcel } from '@/lib/export-excel'
@@ -38,8 +38,9 @@ export default function ConciliacionStepsPage() {
   const [startDate, setStartDate] = useState(monthAgo)
   const [endDate, setEndDate]     = useState(today)
   const [data, setData] = useState<Data | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [consultado, setConsultado] = useState(false)
 
   const fetchData = useCallback(async (sd: string, ed: string) => {
     setLoading(true); setError(null)
@@ -53,10 +54,12 @@ export default function ConciliacionStepsPage() {
     finally { setLoading(false) }
   }, [])
 
-  useEffect(() => { fetchData(monthAgo, today) }, [fetchData])
-
-  const handleApply = () => fetchData(startDate, endDate)
-  const handleClear = () => { setStartDate(monthAgo); setEndDate(today); fetchData(monthAgo, today) }
+  const handleApply = () => {
+    if (!window.confirm('Esta consulta recorre muchos registros y puede ser pesada. ¿Deseas continuar?')) return
+    setConsultado(true)
+    fetchData(startDate, endDate)
+  }
+  const handleClear = () => { setStartDate(monthAgo); setEndDate(today); setData(null); setConsultado(false) }
 
   const handleCSV = () => {
     if (!data) return
@@ -116,7 +119,7 @@ export default function ConciliacionStepsPage() {
             </div>
             <button type="button" onClick={handleApply} disabled={loading} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium">Aplicar</button>
             <button type="button" onClick={handleClear} disabled={loading} className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">Limpiar</button>
-            <button type="button" onClick={() => fetchData(startDate, endDate)} className="inline-flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"><ArrowPathIcon className="h-4 w-4" />Recargar</button>
+            <button type="button" onClick={() => { setConsultado(true); fetchData(startDate, endDate) }} className="inline-flex items-center gap-1 px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"><ArrowPathIcon className="h-4 w-4" />Recargar</button>
             <PermissionGuard permission={InformesPermission.ACAD_CONCILIACION_STEPS_EXP}>
               <button type="button" onClick={handleCSV} disabled={loading || !data} className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"><ArrowDownTrayIcon className="h-4 w-4" />CSV</button>
             </PermissionGuard>
@@ -127,6 +130,15 @@ export default function ConciliacionStepsPage() {
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">{error}
             <button type="button" onClick={handleApply} className="ml-4 text-xs underline">Reintentar</button></div>
         )}
+
+        {/* Estado vacío */}
+        {!consultado && !loading && !error && (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-8 text-center text-sm text-indigo-900">
+            Configura los filtros y pulsa <b>Consultar</b> para ver el informe.
+          </div>
+        )}
+
+        {consultado && (<>
 
         {/* Salud del cron */}
         <div className={`bg-white rounded-xl border shadow-sm p-4 ${cron?.stale ? 'border-red-300' : 'border-gray-200'}`}>
@@ -275,6 +287,8 @@ export default function ConciliacionStepsPage() {
               </div>
             )}
         </div>
+
+        </>)}
       </div>
     </DashboardLayout>
   )
