@@ -71,6 +71,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
           { name: 'IELTS',    href: '/dashboard/servicio/exam-intern/ielts',    newTab: true },
           { name: 'B2 First', href: '/dashboard/servicio/exam-intern/b2first', newTab: true },
           { name: 'TOEFL',    href: '/dashboard/servicio/exam-intern/toefl',    newTab: true },
+          { name: 'SetUp Ciclo y Agrupación', href: '/dashboard/servicio/exam-intern/setup-ciclo', newTab: true },
         ],
       },
     ],
@@ -347,6 +348,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/dashboard/servicio/exam-intern/ielts':   [ServicioPermission.EXAM_INTERN_IELTS_VER],
     '/dashboard/servicio/exam-intern/b2first': [ServicioPermission.EXAM_INTERN_B2F_VER],
     '/dashboard/servicio/exam-intern/toefl':   [ServicioPermission.EXAM_INTERN_TOEFL_VER],
+    '/dashboard/servicio/exam-intern/setup-ciclo': [ServicioPermission.EXAM_INTERN_SETUP_VER],
 
     // Comercial
     '/dashboard/comercial/crear-contrato': [

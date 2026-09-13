@@ -822,6 +822,29 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Columna CONFIRMADO + botón rojo que extiende 100 días desde fecha base a los marcados y bloquea (DONE Step 50) a los no marcados. Acción irreversible.',
   },
 
+  // -- Página: Exam. Intern. > SetUp Ciclo y Agrupación (/dashboard/servicio/exam-intern/setup-ciclo) --
+  {
+    code: ServicioPermission.EXAM_INTERN_SETUP_VER,
+    module: Module.SERVICIO,
+    section: 'Exam. Intern. > SetUp Ciclo y Agrupación',
+    name: 'Página "SetUp Ciclo y Agrupación"',
+    description: 'Acceso a configurar ciclos de exámenes internacionales (IELTS/TOEFL/B2 First) y a la agrupación/inscripción de estudiantes confirmados.',
+  },
+  {
+    code: ServicioPermission.EXAM_INTERN_SETUP_GENERAR,
+    module: Module.SERVICIO,
+    section: 'Exam. Intern. > SetUp Ciclo y Agrupación',
+    name: 'Crear ciclo + "Generar eventos"',
+    description: 'Crear/editar el ciclo (franjas por examen) y generar los eventos de examen en el calendario para el rango de fechas del ciclo.',
+  },
+  {
+    code: ServicioPermission.EXAM_INTERN_AGRUPACION_AGENDAR,
+    module: Module.SERVICIO,
+    section: 'Exam. Intern. > SetUp Ciclo y Agrupación',
+    name: 'Agendar + estado (Confirmado/Cancelado)',
+    description: 'Agendamiento masivo de estudiantes confirmados a un evento de examen y marcar cada inscripción como Confirmado / Pendiente / Cancelado (Cancelado libera el cupo).',
+  },
+
   // -- Página: Cancelación sin reemplazo (/dashboard/servicio/cancelacion-sin-reemplazo) --
   {
     code: ServicioPermission.CANCELACION_SIN_REEMPLAZO_VER,
