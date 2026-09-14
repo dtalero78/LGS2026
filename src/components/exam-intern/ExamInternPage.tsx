@@ -376,7 +376,7 @@ export default function ExamInternPage({
                   <span className="text-green-600 font-bold">✅</span>
                   <div>
                     <strong>{counts.confirmados}</strong> CONFIRMADO{counts.confirmados !== 1 ? 'S' : ''}:
-                    extensión 100 días, {displayName} Step activo, WhatsApp enviado.
+                    ampliación de fecha de final de contrato en 100 días, {displayName} Step activo, WhatsApp enviado.
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
