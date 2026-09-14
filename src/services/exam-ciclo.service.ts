@@ -456,3 +456,200 @@ export async function setEstadoInscripcion(opts: SetEstadoOpts): Promise<{ estad
   );
   return { estado };
 }
+
+// ── Agrupación por CURSO (serie de eventos del mismo examen) ────────────────
+//
+// Un "curso" = todos los eventos de un mismo examen (nivel) dentro del ciclo —
+// las N franjas y todas las fechas. Al agendar/confirmar/cancelar se aplica a
+// TODA la serie, no a una sola sesión.
+
+export interface CursoCicloRow {
+  examen: string;          // nivel (IELTS/TOEFL/B2FIRST)
+  advisores: string;       // nombres distintos de advisor (join ', ')
+  totalEventos: number;    // sesiones de la serie
+  franjas: number;         // horas distintas
+  inscritos: number;       // estudiantes distintos con inscripción activa
+}
+
+export async function listCursosCiclo(cicloId: string): Promise<CursoCicloRow[]> {
+  const rows = await queryMany<any>(
+    `SELECT c."nivel" AS examen,
+            COUNT(*)::int AS "totalEventos",
+            COUNT(DISTINCT c."hora")::int AS franjas,
+            STRING_AGG(DISTINCT COALESCE(ad."nombreCompleto", c."advisor"), ', ') AS advisores
+       FROM "CALENDARIO" c
+       LEFT JOIN "ADVISORS" ad ON c."advisor" = ad."_id"
+      WHERE c."cicloId" = $1
+      GROUP BY c."nivel"
+      ORDER BY c."nivel" ASC`,
+    [cicloId]
+  );
+  const insc = await queryMany<{ examen: string; n: number }>(
+    `SELECT c."nivel" AS examen,
+            COUNT(DISTINCT COALESCE(b."studentId", b."idEstudiante"))::int AS n
+       FROM "CALENDARIO" c
+       JOIN "ACADEMICA_BOOKINGS" b
+         ON (b."eventoId" = c."_id" OR b."idEvento" = c."_id") AND b."cancelo" = false
+      WHERE c."cicloId" = $1
+      GROUP BY c."nivel"`,
+    [cicloId]
+  );
+  const map = new Map(insc.map((r) => [r.examen, Number(r.n)]));
+  return rows.map((r) => ({
+    examen: r.examen,
+    advisores: r.advisores || '',
+    totalEventos: Number(r.totalEventos) || 0,
+    franjas: Number(r.franjas) || 0,
+    inscritos: map.get(r.examen) || 0,
+  }));
+}
+
+/** Ids de los eventos de un curso (ciclo + examen), ordenados por fecha. */
+async function eventoIdsDeCurso(cicloId: string, examen: string): Promise<string[]> {
+  const rows = await queryMany<{ _id: string }>(
+    `SELECT "_id" FROM "CALENDARIO" WHERE "cicloId" = $1 AND "nivel" = $2 ORDER BY "dia" ASC`,
+    [cicloId, examen]
+  );
+  return rows.map((r) => r._id);
+}
+
+export interface AgendarSerieOpts {
+  cicloId: string;
+  examen: string;
+  studentIds: string[];
+  agendadoPor?: string;
+  agendadoPorEmail?: string;
+  agendadoPorRol?: string;
+  sessionRole?: string;
+}
+
+/** Inscribe a los estudiantes en TODA la serie de eventos del curso. */
+export async function agendarSerieCurso(opts: AgendarSerieOpts): Promise<{ eventos: number; enrolled: number }> {
+  const cicloId = String(opts.cicloId || '');
+  const examen = String(opts.examen || '');
+  const studentIds = Array.isArray(opts.studentIds) ? opts.studentIds.map(String).filter(Boolean) : [];
+  if (!cicloId || !examen) throw new ValidationError('cicloId y examen son requeridos');
+  if (studentIds.length === 0) throw new ValidationError('Selecciona al menos un estudiante');
+
+  const eventoIds = await eventoIdsDeCurso(cicloId, examen);
+  if (eventoIds.length === 0) throw new ValidationError('El curso no tiene eventos generados.');
+
+  let enrolled = 0;
+  for (const eventoId of eventoIds) {
+    const r = await agendarMasivo({
+      eventoId,
+      studentIds,
+      agendadoPor: opts.agendadoPor,
+      agendadoPorEmail: opts.agendadoPorEmail,
+      agendadoPorRol: opts.agendadoPorRol,
+      sessionRole: opts.sessionRole,
+    });
+    enrolled += r.enrolled;
+  }
+  return { eventos: eventoIds.length, enrolled };
+}
+
+/** Roster del curso: 1 fila por estudiante con su estado en la serie. */
+export async function listRosterCurso(cicloId: string, examen: string): Promise<RosterRow[]> {
+  const rows = await queryMany<any>(
+    `SELECT COALESCE(b."studentId", b."idEstudiante") AS "studentId",
+            MAX(b."primerNombre")   AS "primerNombre",
+            MAX(b."primerApellido") AS "primerApellido",
+            MAX(b."numeroId")       AS "numeroId",
+            MAX(b."celular")        AS "celular",
+            MAX(b."nivel")          AS "nivel",
+            bool_or(b."cancelo" = false) AS "tieneActivo",
+            bool_or(b."cancelo" = false AND (b."confirmadoExamen" IS DISTINCT FROM true)) AS "algunPendiente"
+       FROM "CALENDARIO" c
+       JOIN "ACADEMICA_BOOKINGS" b ON (b."eventoId" = c."_id" OR b."idEvento" = c."_id")
+      WHERE c."cicloId" = $1 AND c."nivel" = $2
+      GROUP BY COALESCE(b."studentId", b."idEstudiante")
+      ORDER BY MAX(b."primerApellido") ASC NULLS LAST, MAX(b."primerNombre") ASC NULLS LAST`,
+    [cicloId, examen]
+  );
+  return rows.map((r) => ({
+    studentId: r.studentId,
+    bookingId: '',
+    primerNombre: r.primerNombre,
+    primerApellido: r.primerApellido,
+    numeroId: r.numeroId,
+    celular: r.celular,
+    nivel: r.nivel,
+    estado: (!r.tieneActivo
+      ? 'CANCELADO'
+      : r.algunPendiente
+        ? 'PENDIENTE'
+        : 'CONFIRMADO') as EstadoInscripcion,
+  }));
+}
+
+export interface SetEstadoSerieOpts {
+  cicloId: string;
+  examen: string;
+  studentId: string;
+  estado: string;
+  agendadoPor?: string;
+  agendadoPorEmail?: string;
+  agendadoPorRol?: string;
+  sessionRole?: string;
+}
+
+/** Marca el estado de un estudiante en TODA la serie del curso. */
+export async function setEstadoInscripcionSerie(opts: SetEstadoSerieOpts): Promise<{ estado: EstadoInscripcion }> {
+  const cicloId = String(opts.cicloId || '');
+  const examen = String(opts.examen || '');
+  const studentId = String(opts.studentId || '');
+  const estado = String(opts.estado || '').toUpperCase() as EstadoInscripcion;
+  if (!cicloId || !examen || !studentId) throw new ValidationError('cicloId, examen y studentId son requeridos');
+  if (!['CONFIRMADO', 'PENDIENTE', 'CANCELADO'].includes(estado)) {
+    throw new ValidationError(`estado inválido: ${estado}`);
+  }
+
+  const eventoIds = await eventoIdsDeCurso(cicloId, examen);
+  if (eventoIds.length === 0) throw new ValidationError('El curso no tiene eventos.');
+
+  if (estado === 'CANCELADO') {
+    // Soft-cancel de TODAS las inscripciones activas del estudiante en la serie.
+    await withTransaction(async (client) => {
+      const active = await client.query(
+        `SELECT "_id", COALESCE("eventoId", "idEvento") AS eid
+           FROM "ACADEMICA_BOOKINGS"
+          WHERE COALESCE("eventoId", "idEvento") = ANY($1::text[])
+            AND ("studentId" = $2 OR "idEstudiante" = $2)
+            AND "cancelo" = false`,
+        [eventoIds, studentId]
+      );
+      for (const row of active.rows) {
+        await client.query(
+          `UPDATE "ACADEMICA_BOOKINGS" SET "cancelo" = true, "confirmadoExamen" = false, "_updatedDate" = NOW() WHERE "_id" = $1`,
+          [row._id]
+        );
+        await client.query(
+          `UPDATE "CALENDARIO" SET "inscritos" = GREATEST("inscritos" - 1, 0), "_updatedDate" = NOW() WHERE "_id" = $1`,
+          [row.eid]
+        );
+      }
+    });
+    return { estado };
+  }
+
+  // CONFIRMADO / PENDIENTE — asegurar inscripción en toda la serie, luego marcar el flag.
+  const flag = estado === 'CONFIRMADO';
+  await agendarSerieCurso({
+    cicloId,
+    examen,
+    studentIds: [studentId],
+    agendadoPor: opts.agendadoPor,
+    agendadoPorEmail: opts.agendadoPorEmail,
+    agendadoPorRol: opts.agendadoPorRol,
+    sessionRole: opts.sessionRole,
+  });
+  await query(
+    `UPDATE "ACADEMICA_BOOKINGS" SET "confirmadoExamen" = $1, "_updatedDate" = NOW()
+      WHERE COALESCE("eventoId", "idEvento") = ANY($2::text[])
+        AND ("studentId" = $3 OR "idEstudiante" = $3)
+        AND "cancelo" = false`,
+    [flag, eventoIds, studentId]
+  );
+  return { estado };
+}

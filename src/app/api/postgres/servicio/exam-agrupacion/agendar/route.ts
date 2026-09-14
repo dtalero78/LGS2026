@@ -2,29 +2,30 @@ import { NextRequest } from 'next/server';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { requirePermission } from '@/lib/api-permissions';
 import { ServicioPermission } from '@/types/permissions';
-import { agendarMasivo } from '@/services/exam-ciclo.service';
+import { agendarSerieCurso } from '@/services/exam-ciclo.service';
 
 /**
  * POST /api/postgres/servicio/exam-agrupacion/agendar
- * Body: { eventoId, studentIds: string[] (ACADEMICA._id) }
+ * Body: { cicloId, examen ('IELTS'|'TOEFL'|'B2FIRST'), studentIds: string[] }
  *
- * Agendamiento masivo: inscribe a los estudiantes seleccionados en el evento de
- * examen. Excluye los que ya están inscritos ACTIVOS (no aborta el lote).
+ * Agendamiento masivo a un CURSO: inscribe a los estudiantes seleccionados en
+ * TODA la serie de eventos de ese examen dentro del ciclo (todas las franjas y
+ * fechas). Excluye, evento por evento, a los que ya estén inscritos.
  */
 export const POST = handlerWithAuth(async (req: NextRequest, _ctx, session) => {
   await requirePermission(session, ServicioPermission.EXAM_INTERN_AGRUPACION_AGENDAR);
   const body = await req.json();
-  const result = await agendarMasivo({
-    eventoId: String(body?.eventoId || ''),
+  const result = await agendarSerieCurso({
+    cicloId: String(body?.cicloId || ''),
+    examen: String(body?.examen || ''),
     studentIds: Array.isArray(body?.studentIds) ? body.studentIds : [],
     agendadoPor: session?.user?.name || undefined,
     agendadoPorEmail: session?.user?.email || undefined,
     agendadoPorRol: (session?.user as any)?.role || undefined,
     sessionRole: (session?.user as any)?.role || undefined,
   });
-  const extra = result.yaInscritos > 0 ? ` (${result.yaInscritos} ya estaban inscritos)` : '';
   return successResponse({
     ...result,
-    message: `${result.enrolled} estudiante(s) agendado(s)${extra}.`,
+    message: `${result.enrolled} inscripción(es) en ${result.eventos} sesión(es) del curso.`,
   });
 });

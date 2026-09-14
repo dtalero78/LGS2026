@@ -3,21 +3,20 @@ import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { requirePermission } from '@/lib/api-permissions';
 import { ServicioPermission } from '@/types/permissions';
 import { ValidationError } from '@/lib/errors';
-import { listRosterCurso } from '@/services/exam-ciclo.service';
+import { listCursosCiclo } from '@/services/exam-ciclo.service';
 
 /**
- * GET /api/postgres/servicio/exam-agrupacion/roster?cicloId=&examen=
+ * GET /api/postgres/servicio/exam-agrupacion/cursos?cicloId=
  *
- * Roster del CURSO (serie de eventos del examen dentro del ciclo): 1 fila por
- * estudiante con su estado agregado en la serie (CONFIRMADO / PENDIENTE /
- * CANCELADO).
+ * Lista los "cursos" del ciclo = un grupo por examen (IELTS/TOEFL/B2FIRST) con
+ * su advisor, nº de sesiones, franjas e inscritos. Agendar a un curso inscribe
+ * en TODA su serie de eventos.
  */
 export const GET = handlerWithAuth(async (req: NextRequest, _ctx, session) => {
   await requirePermission(session, ServicioPermission.EXAM_INTERN_SETUP_VER);
   const { searchParams } = new URL(req.url);
   const cicloId = (searchParams.get('cicloId') || '').trim();
-  const examen = (searchParams.get('examen') || '').trim();
-  if (!cicloId || !examen) throw new ValidationError('cicloId y examen son requeridos');
-  const inscritos = await listRosterCurso(cicloId, examen);
-  return successResponse({ inscritos });
+  if (!cicloId) throw new ValidationError('cicloId es requerido');
+  const cursos = await listCursosCiclo(cicloId);
+  return successResponse({ cursos });
 });

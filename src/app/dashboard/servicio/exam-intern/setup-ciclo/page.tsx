@@ -33,9 +33,8 @@ interface AgrupacionRow {
   studentId: string; numeroId: string | null; primerNombre: string | null; primerApellido: string | null
   email: string | null; celular: string | null; plataforma: string | null; programas: string[]
 }
-interface EventoRow {
-  _id: string; nivel: string | null; step: string | null; fecha: string | null; hora: string | null
-  limiteUsuarios: number | null; inscritos: number | null; advisorNombre: string | null
+interface CursoRow {
+  examen: string; advisores: string; totalEventos: number; franjas: number; inscritos: number
 }
 type Estado = 'CONFIRMADO' | 'PENDIENTE' | 'CANCELADO'
 interface RosterRow {
@@ -367,8 +366,8 @@ function SetupTab({ ciclos, advisors, canGenerar, reload }: {
 function AgrupacionTab({ ciclos, canAgendar }: { ciclos: CicloRow[]; canAgendar: boolean }) {
   const generados = useMemo(() => ciclos.filter(c => c.estado === 'GENERADO'), [ciclos])
   const [cicloId, setCicloId] = useState('')
-  const [eventos, setEventos] = useState<EventoRow[]>([])
-  const [eventoId, setEventoId] = useState('')
+  const [cursos, setCursos] = useState<CursoRow[]>([])
+  const [examen, setExamen] = useState('')   // curso seleccionado = examen (IELTS/TOEFL/B2FIRST)
 
   const [search, setSearch] = useState('')
   const [pool, setPool] = useState<AgrupacionRow[]>([])
@@ -383,13 +382,16 @@ function AgrupacionTab({ ciclos, canAgendar }: { ciclos: CicloRow[]; canAgendar:
     if (!cicloId && generados.length > 0) setCicloId(generados[0]._id)
   }, [generados, cicloId])
 
-  // Cargar eventos del ciclo.
-  useEffect(() => {
-    if (!cicloId) { setEventos([]); setEventoId(''); return }
-    api.get<{ eventos: EventoRow[] }>(`/api/postgres/servicio/exam-agrupacion/eventos?cicloId=${encodeURIComponent(cicloId)}`)
-      .then(d => setEventos(Array.isArray(d.eventos) ? d.eventos : []))
-      .catch(e => handleApiError(e, 'Error al cargar eventos'))
+  const loadCursos = useCallback(async () => {
+    if (!cicloId) { setCursos([]); return }
+    try {
+      const d = await api.get<{ cursos: CursoRow[] }>(`/api/postgres/servicio/exam-agrupacion/cursos?cicloId=${encodeURIComponent(cicloId)}`)
+      setCursos(Array.isArray(d.cursos) ? d.cursos : [])
+    } catch (e) { handleApiError(e, 'Error al cargar cursos') }
   }, [cicloId])
+
+  // Cargar cursos del ciclo (y resetear el curso elegido al cambiar de ciclo).
+  useEffect(() => { setExamen(''); loadCursos() }, [cicloId, loadCursos])
 
   const loadPool = useCallback(async () => {
     setLoadingPool(true)
@@ -405,22 +407,16 @@ function AgrupacionTab({ ciclos, canAgendar }: { ciclos: CicloRow[]; canAgendar:
   useEffect(() => { loadPool() }, [loadPool])
 
   const loadRoster = useCallback(async () => {
-    if (!eventoId) { setRoster([]); return }
+    if (!cicloId || !examen) { setRoster([]); return }
     try {
-      const d = await api.get<{ inscritos: RosterRow[] }>(`/api/postgres/servicio/exam-agrupacion/roster?eventoId=${encodeURIComponent(eventoId)}`)
+      const d = await api.get<{ inscritos: RosterRow[] }>(
+        `/api/postgres/servicio/exam-agrupacion/roster?cicloId=${encodeURIComponent(cicloId)}&examen=${encodeURIComponent(examen)}`
+      )
       setRoster(Array.isArray(d.inscritos) ? d.inscritos : [])
     } catch (e) { handleApiError(e, 'Error al cargar inscritos') }
-  }, [eventoId])
+  }, [cicloId, examen])
 
   useEffect(() => { loadRoster() }, [loadRoster])
-
-  const refreshEventos = useCallback(async () => {
-    if (!cicloId) return
-    try {
-      const d = await api.get<{ eventos: EventoRow[] }>(`/api/postgres/servicio/exam-agrupacion/eventos?cicloId=${encodeURIComponent(cicloId)}`)
-      setEventos(Array.isArray(d.eventos) ? d.eventos : [])
-    } catch { /* silencioso */ }
-  }, [cicloId])
 
   const toggleOne = (id: string) => setSelected(prev => {
     const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next
@@ -428,30 +424,30 @@ function AgrupacionTab({ ciclos, canAgendar }: { ciclos: CicloRow[]; canAgendar:
   const allSelected = pool.length > 0 && pool.every(s => selected.has(s.studentId))
   const toggleAll = () => setSelected(allSelected ? new Set() : new Set(pool.map(s => s.studentId)))
 
-  const eventoLabel = (e: EventoRow) =>
-    `${e.nivel} · ${e.fecha || ''} ${e.hora || ''} · ${e.inscritos ?? 0}/${e.limiteUsuarios ?? '∞'}${e.advisorNombre ? ` · ${e.advisorNombre}` : ''}`
+  const cursoLabel = (c: CursoRow) =>
+    `${c.examen}${c.advisores ? ` — ${c.advisores}` : ''} · ${c.totalEventos} sesiones · ${c.franjas} franja${c.franjas !== 1 ? 's' : ''} · ${c.inscritos} inscritos`
 
   const handleAgendar = async () => {
-    if (!eventoId) { toast.error('Selecciona el evento de examen al que agendar'); return }
+    if (!examen) { toast.error('Selecciona el curso al que agendar'); return }
     if (selected.size === 0) { toast.error('Selecciona al menos un estudiante'); return }
     setBusy(true)
     try {
-      const d = await api.post<{ enrolled: number; message: string }>('/api/postgres/servicio/exam-agrupacion/agendar', {
-        eventoId, studentIds: Array.from(selected),
+      const d = await api.post<{ enrolled: number; eventos: number; message: string }>('/api/postgres/servicio/exam-agrupacion/agendar', {
+        cicloId, examen, studentIds: Array.from(selected),
       })
       toast.success(d.message || `${d.enrolled} agendado(s)`)
       setSelected(new Set())
-      await Promise.all([loadRoster(), refreshEventos()])
+      await Promise.all([loadRoster(), loadCursos()])
     } catch (e) { handleApiError(e, 'Error al agendar') }
     finally { setBusy(false) }
   }
 
   const handleEstado = async (studentId: string, estado: Estado) => {
-    if (!eventoId) return
+    if (!examen) return
     setBusy(true)
     try {
-      await api.post('/api/postgres/servicio/exam-agrupacion/estado', { eventoId, studentId, estado })
-      await Promise.all([loadRoster(), refreshEventos()])
+      await api.post('/api/postgres/servicio/exam-agrupacion/estado', { cicloId, examen, studentId, estado })
+      await Promise.all([loadRoster(), loadCursos()])
     } catch (e) { handleApiError(e, 'Error al cambiar estado') }
     finally { setBusy(false) }
   }
@@ -473,7 +469,7 @@ function AgrupacionTab({ ciclos, canAgendar }: { ciclos: CicloRow[]; canAgendar:
         <div className="card-content grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Ciclo</label>
-            <select value={cicloId} onChange={e => { setCicloId(e.target.value); setEventoId('') }}
+            <select value={cicloId} onChange={e => setCicloId(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
               <option value="">Selecciona un ciclo…</option>
               {generados.map(c => <option key={c._id} value={c._id}>{c.nombre} ({c.fechaInicial} → {c.fechaFinal})</option>)}
@@ -483,12 +479,13 @@ function AgrupacionTab({ ciclos, canAgendar }: { ciclos: CicloRow[]; canAgendar:
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Evento de examen</label>
-            <select value={eventoId} onChange={e => setEventoId(e.target.value)} disabled={!cicloId}
+            <label className="block text-sm font-medium text-gray-700 mb-1">Curso (examen)</label>
+            <select value={examen} onChange={e => setExamen(e.target.value)} disabled={!cicloId}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm disabled:bg-gray-100">
-              <option value="">Selecciona un evento…</option>
-              {eventos.map(e => <option key={e._id} value={e._id}>{eventoLabel(e)}</option>)}
+              <option value="">Selecciona un curso…</option>
+              {cursos.map(c => <option key={c.examen} value={c.examen}>{cursoLabel(c)}</option>)}
             </select>
+            <p className="text-xs text-gray-400 mt-1">Agendar inscribe al estudiante en TODA la serie del curso (todas las franjas y fechas).</p>
           </div>
         </div>
       </div>
@@ -502,9 +499,9 @@ function AgrupacionTab({ ciclos, canAgendar }: { ciclos: CicloRow[]; canAgendar:
               placeholder="Buscar apellido o ID…"
               className="px-3 py-1.5 border border-gray-300 rounded-md text-sm" />
             {canAgendar && (
-              <button type="button" onClick={handleAgendar} disabled={busy || selected.size === 0 || !eventoId}
+              <button type="button" onClick={handleAgendar} disabled={busy || selected.size === 0 || !examen}
                 className="px-4 py-1.5 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50">
-                Agendar seleccionados ({selected.size})
+                Agendar al curso ({selected.size})
               </button>
             )}
           </div>
@@ -571,13 +568,13 @@ function AgrupacionTab({ ciclos, canAgendar }: { ciclos: CicloRow[]; canAgendar:
       {/* Roster del evento */}
       <div className="card">
         <div className="card-header">
-          <h2 className="text-lg font-semibold text-gray-900">Inscritos del evento</h2>
-          {eventoId ? (
+          <h2 className="text-lg font-semibold text-gray-900">Inscritos del curso</h2>
+          {examen ? (
             <p className="text-sm text-gray-500 mt-1">
               ✅ {counts.confirmados} confirmado(s) · ✗ {counts.cancelados} cancelado(s) · • {counts.pendientes} pendiente(s)
             </p>
           ) : (
-            <p className="text-sm text-gray-400 mt-1">Selecciona un evento para ver y gestionar sus inscritos.</p>
+            <p className="text-sm text-gray-400 mt-1">Selecciona un curso para ver y gestionar sus inscritos.</p>
           )}
         </div>
         <div className="card-content">
@@ -615,7 +612,7 @@ function AgrupacionTab({ ciclos, canAgendar }: { ciclos: CicloRow[]; canAgendar:
                   </tr>
                 )) : (
                   <tr><td colSpan={canAgendar ? 4 : 3} className="text-center py-6 text-sm text-gray-500">
-                    {eventoId ? 'Sin inscritos en este evento.' : '—'}
+                    {examen ? 'Sin inscritos en este curso.' : '—'}
                   </td></tr>
                 )}
               </tbody>
