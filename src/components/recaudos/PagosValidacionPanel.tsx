@@ -528,7 +528,7 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                   <th className="px-2 py-2 text-left font-medium text-gray-600">Contrato</th>
                   <th className="px-2 py-2 text-left font-medium text-gray-600">Fecha</th>
                   <th className="px-2 py-2 text-right font-medium text-gray-600">Valor</th>
-                  <th className="px-2 py-2 text-center font-medium text-gray-600">Cuota</th>
+                  <th className="px-2 py-2 text-center font-medium text-gray-600">{tab === 'inscripcion' && isGestor ? 'Medio de pago' : 'Cuota'}</th>
                   <th className="px-2 py-2 text-left font-medium text-gray-600"># Ref.</th>
                   <th className="px-2 py-2 text-left font-medium text-gray-600">{lateralLabel}</th>
                   <th className="px-2 py-2 text-right font-medium text-gray-600">Acciones</th>
@@ -568,7 +568,7 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                       </td>
                       <td className="px-2 py-2 text-gray-900 align-top whitespace-nowrap">{fmtDate(p.fechaPago)}</td>
                       <td className="px-2 py-2 text-right text-gray-900 font-medium align-top whitespace-nowrap">{p.valorPagado ? formatCurrency(p.valorPagado) : '—'}</td>
-                      <td className="px-2 py-2 text-center text-gray-900 font-medium align-top whitespace-nowrap">{p.numCuota === 0 ? 'Insc.' : (p.numCuota ?? '—')}</td>
+                      <td className="px-2 py-2 text-center text-gray-900 font-medium align-top whitespace-nowrap">{tab === 'inscripcion' && isGestor ? (p.medioPago || '—') : (p.numCuota === 0 ? 'Insc.' : (p.numCuota ?? '—'))}</td>
                       <td className="px-2 py-2 text-gray-700 text-xs align-top">
                         <span className="block max-w-[90px] truncate" title={p.numeroReferencia || ''}>{p.numeroReferencia || '—'}</span>
                       </td>
@@ -593,12 +593,19 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                       </td>
                       <td className="px-2 py-2 text-right align-top">
                         <div className="flex items-center justify-end gap-1 whitespace-nowrap">
-                          {canVerDocs && Array.isArray(p.documentosAdjuntos) && p.documentosAdjuntos.length > 0 && (
-                            <button type="button" onClick={() => setDocsModal({ titular: titularNombre, numCuota: p.numCuota, docs: p.documentosAdjuntos as DocAdjunto[] })}
-                              title={`Ver ${p.documentosAdjuntos.length} documento(s) del pago`} className="inline-flex items-center gap-0.5 px-1.5 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200">
-                              <PaperClipIcon className="h-3.5 w-3.5" /> {p.documentosAdjuntos.length}
-                            </button>
-                          )}
+                          {/* Documentos: en Inscripción el botón va SIEMPRE (aunque no haya
+                              docs) para poder consultar lo anexado a la inscripción del contrato;
+                              en las demás pestañas solo si hay documentos. */}
+                          {canVerDocs && (tab === 'inscripcion' || (Array.isArray(p.documentosAdjuntos) && p.documentosAdjuntos.length > 0)) && (() => {
+                            const nDocs = Array.isArray(p.documentosAdjuntos) ? p.documentosAdjuntos.length : 0
+                            return (
+                              <button type="button" onClick={() => setDocsModal({ titular: titularNombre, numCuota: p.numCuota, docs: (Array.isArray(p.documentosAdjuntos) ? p.documentosAdjuntos : []) as DocAdjunto[] })}
+                                title={tab === 'inscripcion' ? `Ver documentación de la inscripción (${nDocs})` : `Ver ${nDocs} documento(s) del pago`}
+                                className="inline-flex items-center gap-0.5 px-1.5 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200">
+                                <PaperClipIcon className="h-3.5 w-3.5" /> {nDocs > 0 ? nDocs : 'Docs'}
+                              </button>
+                            )
+                          })()}
                           {/* Verificación: Editar + Validar (pendientes) */}
                           {!isFacturacion && !p.validado && canEditar && (
                             <button type="button" onClick={() => openEditar(p)} title="Editar pago" className="inline-flex items-center gap-0.5 px-1.5 py-1 text-xs font-medium text-white bg-amber-500 rounded hover:bg-amber-600">
@@ -781,10 +788,15 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-900">📎 Documentos del pago</h3>
+              <h3 className="text-lg font-bold text-gray-900">📎 {docsModal.numCuota === 0 ? 'Documentos de la inscripción' : 'Documentos del pago'}</h3>
               <button type="button" onClick={() => setDocsModal(null)} title="Cerrar" className="text-gray-400 hover:text-gray-600"><XMarkIcon className="h-5 w-5" /></button>
             </div>
             <p className="text-sm text-gray-600">{docsModal.titular}{docsModal.numCuota != null ? ` · ${docsModal.numCuota === 0 ? 'inscripción' : `cuota ${docsModal.numCuota}`}` : ''} — {docsModal.docs.length} documento(s).</p>
+            {docsModal.docs.length === 0 ? (
+              <div className="text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+                No hay documentación anexada a esta {docsModal.numCuota === 0 ? 'inscripción' : 'cuota'} todavía.
+              </div>
+            ) : (
             <ul className="space-y-2 max-h-[60vh] overflow-y-auto">
               {docsModal.docs.map((d, idx) => (
                 <li key={idx} className="border border-gray-200 rounded-lg p-2">
@@ -801,6 +813,7 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                 </li>
               ))}
             </ul>
+            )}
           </div>
         </div>
       )}
