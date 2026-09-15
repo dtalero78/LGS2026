@@ -946,7 +946,7 @@ export default function ContratoDetailPage() {
                         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
                       </div>
                     ) : (
-                      <div className="prose prose-sm max-w-none whitespace-pre-wrap font-serif text-gray-800 leading-relaxed">
+                      <div className="prose prose-sm max-w-none whitespace-pre-wrap font-serif text-gray-800 leading-relaxed text-justify">
                         {contractHtml}
                       </div>
                     )}

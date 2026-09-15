@@ -282,7 +282,7 @@ export default function ContratoPublicoPage() {
 
       {/* Contract text */}
       <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 mb-6 max-h-[50vh] overflow-y-auto">
-        <div className="prose prose-sm max-w-none whitespace-pre-wrap font-serif text-gray-800 leading-relaxed text-sm">
+        <div className="prose prose-sm max-w-none whitespace-pre-wrap font-serif text-gray-800 leading-relaxed text-sm text-justify">
           {contractText}
         </div>
       </div>
