@@ -646,6 +646,7 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                       <tr>
                         <th className="px-3 py-2 text-center font-medium text-gray-700"># Cuota</th>
                         <th className="px-3 py-2 text-left font-medium text-gray-700">Fecha</th>
+                        <th className="px-3 py-2 text-left font-medium text-gray-700">Banco</th>
                         <th className="px-3 py-2 text-left font-medium text-gray-700">Gestor</th>
                         <th className="px-3 py-2 text-left font-medium text-gray-700">Realizado por</th>
                         <th className="px-3 py-2 text-right font-medium text-gray-700">Valor Pagado</th>
@@ -715,6 +716,7 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                               )}
                             </td>
                             <td className="px-3 py-2 text-gray-900">{fechaPago}</td>
+                            <td className="px-3 py-2 text-gray-700 text-xs">{p.banco || '—'}</td>
                             <td className="px-3 py-2 text-gray-700">
                               {gestor ? (
                                 <div className="flex items-center gap-1.5">

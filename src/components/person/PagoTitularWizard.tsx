@@ -77,6 +77,7 @@ interface DraftState {
   valorPagado: string
   descuento: string
   medioPago: string
+  banco: string
   numeroReferencia: string
   pagoTercero: string
   idTercero: string
@@ -131,6 +132,7 @@ const empty = (): DraftState => ({
   valorPagado: '',
   descuento: '',
   medioPago: '',
+  banco: '',
   numeroReferencia: '',
   pagoTercero: '',
   idTercero: '',
@@ -242,6 +244,9 @@ export default function PagoTitularWizard({
   const [confirmAnomalia, setConfirmAnomalia] = useState(false)
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([])
   const [showDraftBanner, setShowDraftBanner] = useState(false)
+  // Leer recibo (extracción IA que prellena el formulario)
+  const [reciboActivo, setReciboActivo] = useState(false)
+  const [reciboLeyendo, setReciboLeyendo] = useState(false)
   const draftRestored = useRef(false)
   const saveTimer = useRef<NodeJS.Timeout | null>(null)
 
@@ -450,6 +455,47 @@ export default function PagoTitularWizard({
     input.click()
   }
 
+  // ── Leer recibo: sube el comprobante, lo extrae con IA y prellena el form ──
+  useEffect(() => {
+    api.get('/api/postgres/recaudos/inscripcion-recibo/config')
+      .then((d: any) => setReciboActivo(!!d?.active)).catch(() => {})
+  }, [])
+
+  const leerReciboArchivo = async (file: File) => {
+    setReciboLeyendo(true)
+    try {
+      const fd = new FormData(); fd.append('file', file)
+      const up = await fetch(`/api/contracts/${titular._id}/upload-url`, { method: 'POST', body: fd })
+      if (!up.ok) { const e = await up.json().catch(() => ({} as any)); throw new Error(e.details || e.error || `Error ${up.status}`) }
+      const { publicUrl } = await up.json()
+      // Adjunta el recibo a los documentos del pago.
+      setForm(f => ({ ...f, documentosAdjuntos: [...f.documentosAdjuntos, { url: publicUrl, nombre: file.name, tipo: file.type, fechaSubida: new Date().toISOString() }] }))
+      // Extrae y prellena (sin pisar lo que ya tenga valor).
+      const d = await api.post<{ extraido: any }>('/api/postgres/recaudos/inscripcion-recibo/extraer', { url: publicUrl })
+      const e = d.extraido || {}
+      setForm(f => ({
+        ...f,
+        fechaPago: (typeof e.fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(e.fecha)) ? e.fecha : f.fechaPago,
+        valorPagado: (e.monto != null && f.valorPagado === '') ? String(e.monto) : f.valorPagado,
+        medioPago: e.medioPago || f.medioPago,
+        banco: e.banco || f.banco,
+        numeroReferencia: e.referencia || f.numeroReferencia,
+      }))
+      toast.success('Recibo leído — revisa los datos')
+    } catch (err: any) {
+      toast.error(err?.message || 'Error leyendo el recibo')
+    } finally { setReciboLeyendo(false) }
+  }
+  const pickReciboWizard = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/jpeg,image/jpg,image/png,image/webp,application/pdf'
+    input.style.display = 'none'
+    document.body.appendChild(input)
+    input.addEventListener('change', () => { const fl = input.files?.[0]; if (fl) leerReciboArchivo(fl); document.body.removeChild(input) })
+    input.click()
+  }
+
   const removeDoc = (idx: number) => {
     setForm(f => ({ ...f, documentosAdjuntos: f.documentosAdjuntos.filter((_, i) => i !== idx) }))
   }
@@ -516,6 +562,7 @@ export default function PagoTitularWizard({
         valorPagado: form.valorPagado ? toNum(form.valorPagado) : null,
         descuento: form.descuento ? toNum(form.descuento) : 0,
         medioPago: form.medioPago || null,
+        banco: form.banco || null,
         numeroReferencia: form.numeroReferencia || null,
         documentosAdjuntos: form.documentosAdjuntos,
         // Penalidad: el backend guarda el valorCuota en vlrpenalidad y marca penalidad=true.
@@ -782,8 +829,8 @@ export default function PagoTitularWizard({
             </div>
           </div>
 
-          {/* Fila 5 — Medio de Pago / Referencia */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Fila 5 — Medio de Pago / Banco / Referencia (3 cajas en la misma fila) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label htmlFor="medioPago" className="block text-sm font-medium text-gray-700">Medio de Pago</label>
               <select
@@ -798,6 +845,15 @@ export default function PagoTitularWizard({
                   <option value={form.medioPago}>{form.medioPago}</option>
                 )}
               </select>
+            </div>
+            <div>
+              <label htmlFor="banco" className="block text-sm font-medium text-gray-700">Banco</label>
+              <input
+                id="banco" type="text" value={form.banco}
+                onChange={e => setForm(f => ({ ...f, banco: e.target.value }))}
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                placeholder="Banco del pago"
+              />
             </div>
             <div>
               <label htmlFor="numeroReferencia" className="block text-sm font-medium text-gray-700"># Referencia</label>
@@ -958,15 +1014,29 @@ export default function PagoTitularWizard({
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-gray-700">Documentos Adjuntos</label>
-              <button
-                type="button"
-                onClick={openFileChooser}
-                disabled={uploadingFiles.length > 0}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50"
-              >
-                <ArrowUpTrayIcon className="h-3.5 w-3.5" />
-                {uploadingFiles.length > 0 ? `Subiendo (${uploadingFiles.length})...` : 'Adjuntar'}
-              </button>
+              <div className="flex items-center gap-2">
+                {reciboActivo && (
+                  <button
+                    type="button"
+                    onClick={pickReciboWizard}
+                    disabled={reciboLeyendo || uploadingFiles.length > 0}
+                    title="Sube el comprobante y prellena medio de pago, banco, referencia, fecha y valor"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-teal-600 text-white rounded-md hover:bg-teal-700 disabled:opacity-50"
+                  >
+                    <ArrowUpTrayIcon className="h-3.5 w-3.5" />
+                    {reciboLeyendo ? 'Leyendo…' : 'Leer recibo'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={openFileChooser}
+                  disabled={uploadingFiles.length > 0}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <ArrowUpTrayIcon className="h-3.5 w-3.5" />
+                  {uploadingFiles.length > 0 ? `Subiendo (${uploadingFiles.length})...` : 'Adjuntar'}
+                </button>
+              </div>
             </div>
             {form.documentosAdjuntos.length === 0 ? (
               <p className="text-xs text-gray-400 italic">Sin documentos adjuntos</p>

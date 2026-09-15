@@ -69,6 +69,7 @@ export interface PagoTitular {
   /** 'normal' | 'prejuridico' | 'juridico' | 'castigada'. Default 'normal'. */
   tipoCartera: string | null;
   medioPago: string | null;
+  banco: string | null;
   numeroReferencia: string | null;
   numeroFactura: string | null;
   documentosAdjuntos: any[];
@@ -110,7 +111,7 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
          "saldo", "descuento", "valorAplicado", "inscripcion", "medioPago", "numeroReferencia",
          "numeroFactura", "documentosAdjuntos", "validado", "createdBy",
          "vlrpenalidad", "penalidad", "cambioContado", "realizadopor", "pagoDoble",
-         "nota"
+         "nota", "banco"
        ) VALUES (
          $1, $2, $3, $4, $5,
          $6, $7, $8, $9, $10,
@@ -118,7 +119,7 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
          $17, $18, $19, $20, $21, $22,
          $23, $24::jsonb, $25, $26,
          $27, $28, $29, $30, $31,
-         $32
+         $32, $33
        )
        RETURNING *`,
       [
@@ -154,6 +155,7 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
         data.realizadopor ?? null,
         data.pagoDoble ?? false,
         data.nota ?? null,
+        data.banco ?? null,
       ]
     );
     return this.parse(row)!;

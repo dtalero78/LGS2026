@@ -41,6 +41,7 @@ const UPDATABLE_FIELDS = [
   'descuento',
   'inscripcion',
   'medioPago',
+  'banco',
   'numeroReferencia',
   'numeroFactura',
   'documentosAdjuntos',
@@ -429,6 +430,7 @@ export const pagosTitularesService = {
       valorAplicado: valorPagadoNum, // "Valor a Aplicar" = Valor a Pagar (lo que reduce el saldo)
       inscripcion: input.inscripcion ?? null,
       medioPago: input.medioPago ?? null,
+      banco: input.banco ?? null,
       numeroReferencia: input.numeroReferencia ?? null,
       numeroFactura: input.numeroFactura ?? null,
       documentosAdjuntos: Array.isArray(input.documentosAdjuntos) ? input.documentosAdjuntos : [],

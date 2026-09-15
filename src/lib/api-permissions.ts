@@ -41,3 +41,14 @@ export async function requirePermission(session: Session | null, permission: Per
     throw new ForbiddenError(`Permiso requerido: ${permission}`);
   }
 }
+
+/** Pasa si el usuario tiene AL MENOS UNO de los permisos (SUPER_ADMIN/ADMIN bypass). */
+export async function requireAnyPermission(session: Session | null, permissions: Permission[]): Promise<void> {
+  const role = ((session?.user as any)?.role ?? '') as string;
+  if (role === Role.SUPER_ADMIN || role === Role.ADMIN || role === 'admin') return;
+
+  const perms = await loadPermissions(role);
+  if (!permissions.some(p => perms.includes(p))) {
+    throw new ForbiddenError(`Se requiere alguno de: ${permissions.join(', ')}`);
+  }
+}
