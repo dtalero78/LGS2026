@@ -15,6 +15,8 @@ interface CalendarEvent {
   dia: Date
   evento?: 'SESSION' | 'CLUB' | 'WELCOME'
   tipo?: string
+  nivel?: string
+  step?: string
   tituloONivel: string
   nombreEvento?: string
   advisor: string | Advisor
@@ -37,6 +39,17 @@ interface Advisor {
   zoom?: string
 }
 
+// Orden pedagógico para el dropdown de nivel (los no listados van al final).
+const NIVEL_ORDER = ['WELCOME', 'ESS', 'BN1', 'BN2', 'BN3', 'P1', 'P2', 'P3', 'F1', 'F2', 'F3', 'MASTER', 'IELTS', 'B2FIRST', 'TOEFL', 'DONE']
+const nivelRank = (n: string) => { const i = NIVEL_ORDER.indexOf(n); return i >= 0 ? i : 999 }
+
+/** Nivel del evento: usa `nivel` y si no, lo deriva de `tituloONivel` ("BN1 - Step 1" → "BN1"). */
+const getEventNivel = (e: CalendarEvent): string => {
+  const n = (e.nivel || '').toString().trim()
+  if (n) return n
+  return ((e.tituloONivel || '').split(' - ')[0] || '').trim()
+}
+
 export default function AgendaAcademicaPage() {
   // Estados principales
   const [events, setEvents] = useState<CalendarEvent[]>([])
@@ -53,6 +66,7 @@ export default function AgendaAcademicaPage() {
   const [filterDateFrom, setFilterDateFrom] = useState('')
   const [filterDateTo, setFilterDateTo] = useState('')
   const [filterAdvisor, setFilterAdvisor] = useState('')
+  const [filterNivel, setFilterNivel] = useState('')
 
   // Estados de navegación
   const [currentWeek, setCurrentWeek] = useState(() => {
@@ -325,14 +339,27 @@ export default function AgendaAcademicaPage() {
       })
     }
 
+    // Filter by nivel
+    if (filterNivel) {
+      filtered = filtered.filter(event => getEventNivel(event) === filterNivel)
+    }
+
     setFilteredEvents(filtered)
-  }, [events, filterDateFrom, filterDateTo, filterAdvisor])
+  }, [events, filterDateFrom, filterDateTo, filterAdvisor, filterNivel])
+
+  // Niveles disponibles en los eventos cargados (orden pedagógico)
+  const nivelesDisponibles = useMemo(() => {
+    const set = new Set<string>()
+    for (const e of events) { const n = getEventNivel(e); if (n) set.add(n) }
+    return Array.from(set).sort((a, b) => nivelRank(a) - nivelRank(b) || a.localeCompare(b))
+  }, [events])
 
   // Clear filters function
   const clearFilters = () => {
     setFilterDateFrom('')
     setFilterDateTo('')
     setFilterAdvisor('')
+    setFilterNivel('')
   }
 
   // Helper functions
@@ -459,7 +486,7 @@ export default function AgendaAcademicaPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             {/* Filter by date from */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -501,6 +528,23 @@ export default function AgendaAcademicaPage() {
                   <option key={advisor._id} value={advisor._id}>
                     {advisor.primerNombre} {advisor.primerApellido}
                   </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filter by nivel */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nivel
+              </label>
+              <select
+                value={filterNivel}
+                onChange={(e) => setFilterNivel(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Todos los niveles</option>
+                {nivelesDisponibles.map((nivel) => (
+                  <option key={nivel} value={nivel}>{nivel}</option>
                 ))}
               </select>
             </div>
@@ -597,7 +641,7 @@ export default function AgendaAcademicaPage() {
 
         {/* Summary */}
         <div className="mt-6 bg-gray-50 rounded-lg p-4">
-          <h3 className="text-lg font-medium mb-2">Resumen {filterDateFrom || filterDateTo || filterAdvisor ? '(Filtrado)' : 'de la semana'}</h3>
+          <h3 className="text-lg font-medium mb-2">Resumen {filterDateFrom || filterDateTo || filterAdvisor || filterNivel ? '(Filtrado)' : 'de la semana'}</h3>
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">
