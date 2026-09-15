@@ -104,8 +104,8 @@ function formatBogotaDate(d: Date | string): string {
 /**
  * Build the WhatsApp message sent to CONFIRMED students.
  * Sample:
- *   "Francisca, te felicitamos. Estás inscrita en la preparación para el
- *    examen IELTS. Tus sesiones comienzan el 15 de mayo de 2026. Te esperamos.
+ *   "¡Felicitaciones Francisca! Quedaste inscrito/a en la preparación para el
+ *    examen IELTS. Tus sesiones inician el 15 de mayo de 2026. Te esperamos.
  *    Gracias por confiar en Let's Go Speak."
  */
 function buildConfirmadoMessage(
@@ -117,8 +117,8 @@ function buildConfirmadoMessage(
   const examen = PRUEBA_DISPLAY_NAME[prueba];
   const fecha  = formatBogotaDate(fechaBase);
   return (
-    `${nombre}, te felicitamos. Estás inscrito en la preparación para el examen ${examen}. ` +
-    `Tus sesiones comienzan el ${fecha}. Te esperamos. ` +
+    `¡Felicitaciones ${nombre}! Quedaste inscrito/a en la preparación para el examen ${examen}. ` +
+    `Tus sesiones inician el ${fecha}. Te esperamos. ` +
     `Gracias por confiar en Let's Go Speak.`
   );
 }
