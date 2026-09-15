@@ -284,11 +284,12 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
          p."plataforma"      AS "titular_plataforma",
          p."asesorCreadorContrato" AS "titular_asesorNombre",
          fin."reciboMedioPago"  AS "reciboMedioPago",
-         fin."reciboReferencia" AS "reciboReferencia"
+         fin."reciboReferencia" AS "reciboReferencia",
+         fin."reciboBanco"      AS "reciboBanco"
        FROM "PAGOS_TITULARES" pt
        JOIN "PEOPLE" p ON p."_id" = pt."idPeople"
        LEFT JOIN LATERAL (
-         SELECT f."reciboMedioPago", f."reciboReferencia"
+         SELECT f."reciboMedioPago", f."reciboReferencia", f."reciboBanco"
            FROM "FINANCIEROS" f
           WHERE f."contrato" = p."contrato"
           LIMIT 1
