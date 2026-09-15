@@ -47,6 +47,8 @@ interface PagoRow {
   idTercero: string | null
   gestorRecaudo: string | null
   medioPago: string | null
+  reciboMedioPago: string | null
+  reciboReferencia: string | null
   titular_primerNombre: string
   titular_primerApellido: string
   titular_segundoApellido: string | null
@@ -657,9 +659,12 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                       </td>
                       <td className="px-2 py-2 text-gray-900 align-top whitespace-nowrap">{fmtDate(p.fechaPago)}</td>
                       <td className="px-2 py-2 text-right text-gray-900 font-medium align-top whitespace-nowrap">{p.valorPagado ? formatCurrency(p.valorPagado) : '—'}</td>
-                      <td className="px-2 py-2 text-center text-gray-900 font-medium align-top whitespace-nowrap">{tab === 'inscripcion' && isGestor ? (p.medioPago || '—') : (p.numCuota === 0 ? 'Insc.' : (p.numCuota ?? '—'))}</td>
+                      <td className="px-2 py-2 text-center text-gray-900 font-medium align-top whitespace-nowrap">{tab === 'inscripcion' && isGestor ? (p.reciboMedioPago || p.medioPago || '—') : (p.numCuota === 0 ? 'Insc.' : (p.numCuota ?? '—'))}</td>
                       <td className="px-2 py-2 text-gray-700 text-xs align-top">
-                        <span className="block max-w-[90px] truncate" title={p.numeroReferencia || ''}>{p.numeroReferencia || '—'}</span>
+                        {(() => {
+                          const ref = tab === 'inscripcion' ? (p.reciboReferencia || p.numeroReferencia) : p.numeroReferencia
+                          return <span className="block max-w-[90px] truncate" title={ref || ''}>{ref || '—'}</span>
+                        })()}
                       </td>
                       <td className="px-2 py-2 text-gray-700 align-top">
                         {isGestor ? (

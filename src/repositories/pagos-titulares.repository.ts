@@ -282,9 +282,17 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
          p."numeroId"        AS "titular_numeroId",
          p."contrato"        AS "titular_contrato",
          p."plataforma"      AS "titular_plataforma",
-         p."asesorCreadorContrato" AS "titular_asesorNombre"
+         p."asesorCreadorContrato" AS "titular_asesorNombre",
+         fin."reciboMedioPago"  AS "reciboMedioPago",
+         fin."reciboReferencia" AS "reciboReferencia"
        FROM "PAGOS_TITULARES" pt
        JOIN "PEOPLE" p ON p."_id" = pt."idPeople"
+       LEFT JOIN LATERAL (
+         SELECT f."reciboMedioPago", f."reciboReferencia"
+           FROM "FINANCIEROS" f
+          WHERE f."contrato" = p."contrato"
+          LIMIT 1
+       ) fin ON true
        ${whereClause}
        ORDER BY pt."fechaPago" DESC, pt."_createdDate" DESC
        LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
