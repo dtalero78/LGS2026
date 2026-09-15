@@ -1,10 +1,10 @@
 /**
  * Recibo Extract Service — "Leer recibo" de inscripciones.
  *
- * Extrae los datos de un comprobante de pago (imagen o PDF) usando Anthropic
- * Claude (mismo patrón vía fetch que las gráficas del dashboard — soporta PDF e
- * imagen nativo). Los campos se guardan en FINANCIEROS (columnas recibo*), de
- * donde los leen las demás consultas.
+ * Extrae los datos de un comprobante de pago (imagen o PDF) usando OpenAI
+ * gpt-4o-mini (visión), la misma llave OPENAI_API_KEY que ya usan las
+ * actividades complementarias. Los campos se guardan en FINANCIEROS (columnas
+ * recibo*), de donde los leen las demás consultas.
  *
  * Gateado por el flag APP_CONFIG.leer_recibo_activo (default OFF); SUPER_ADMIN/
  * ADMIN pueden usarlo aunque el flag esté apagado (para probar).
@@ -15,7 +15,7 @@ import { query, queryOne } from '@/lib/postgres';
 import { ValidationError, NotFoundError } from '@/lib/errors';
 
 const FLAG_KEY = 'leer_recibo_activo';
-const CLAUDE_MODEL = 'claude-sonnet-4-20250514'; // el mismo que usan las gráficas del dashboard
+const OPENAI_MODEL = 'gpt-4o-mini';
 
 // ── Flag (cache 60s) ─────────────────────────────────────────────────────────
 let flagCache: { v: boolean; exp: number } | null = null;
@@ -62,32 +62,29 @@ Analiza el comprobante adjunto y devuelve EXCLUSIVAMENTE un objeto JSON válido 
 Reglas ESTRICTAS:
 - Si un campo no aparece en el comprobante, usa null. NUNCA inventes datos.
 - Si el archivo NO es un comprobante de pago, pon "confianza": 0 y todo lo demás null.
-- Responde ÚNICAMENTE el JSON.`;
+- Responde ÚNICAMENTE el objeto JSON.`;
 
-async function callClaude(fileBlock: any): Promise<ReciboExtraido> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new ValidationError('ANTHROPIC_API_KEY no está configurada en el entorno.');
+async function callOpenAI(fileContent: any): Promise<ReciboExtraido> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new ValidationError('OPENAI_API_KEY no está configurada en el entorno.');
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: CLAUDE_MODEL,
+  const OpenAI = (await import('openai')).default;
+  const client = new OpenAI({ apiKey });
+
+  let response: any;
+  try {
+    const params: any = {
+      model: OPENAI_MODEL,
       max_tokens: 1024,
-      messages: [{ role: 'user', content: [fileBlock, { type: 'text', text: PROMPT }] }],
-    }),
-  });
-
-  if (!res.ok) {
-    const t = await res.text().catch(() => '');
-    throw new ValidationError(`El extractor de recibos falló (${res.status}): ${t.slice(0, 300)}`);
+      response_format: { type: 'json_object' },
+      messages: [{ role: 'user', content: [{ type: 'text', text: PROMPT }, fileContent] }],
+    };
+    response = await client.chat.completions.create(params);
+  } catch (e: any) {
+    throw new ValidationError(`El extractor de recibos falló: ${e?.message || e}`);
   }
-  const data: any = await res.json();
-  const text = String(data?.content?.[0]?.text ?? '').trim();
+
+  const text = String(response?.choices?.[0]?.message?.content ?? '').trim();
   const jsonStr = text
     .replace(/^```json\s*/i, '')
     .replace(/^```\s*/, '')
@@ -111,7 +108,7 @@ async function callClaude(fileBlock: any): Promise<ReciboExtraido> {
   };
 }
 
-/** Descarga el recibo desde su URL (DO Spaces) y lo manda a Claude. */
+/** Descarga el recibo desde su URL (DO Spaces) y lo manda a OpenAI. */
 export async function extraerReciboDesdeUrl(url: string): Promise<ReciboExtraido> {
   if (!url || !/^https?:\/\//i.test(url)) throw new ValidationError('URL del recibo inválida.');
 
@@ -130,15 +127,16 @@ export async function extraerReciboDesdeUrl(url: string): Promise<ReciboExtraido
     else mediaType = 'image/jpeg';
   }
 
-  let fileBlock: any;
+  let fileContent: any;
   if (mediaType === 'application/pdf') {
-    fileBlock = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } };
+    // OpenAI acepta PDFs como content part de tipo "file" (base64 data URL).
+    fileContent = { type: 'file', file: { filename: 'recibo.pdf', file_data: `data:application/pdf;base64,${b64}` } };
   } else {
     const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     const mt = allowed.includes(mediaType) ? mediaType : 'image/jpeg';
-    fileBlock = { type: 'image', source: { type: 'base64', media_type: mt, data: b64 } };
+    fileContent = { type: 'image_url', image_url: { url: `data:${mt};base64,${b64}` } };
   }
-  return callClaude(fileBlock);
+  return callOpenAI(fileContent);
 }
 
 // ── Guardado en FINANCIEROS ──────────────────────────────────────────────────
