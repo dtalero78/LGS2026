@@ -494,6 +494,15 @@ export async function cancelBooking(studentId: string, bookingId: string) {
     throw new ConflictError('Este booking ya fue cancelado');
   }
 
+  // 3b. Las sesiones de examen internacional (IELTS/TOEFL/B2 First) NO se pueden
+  //     cancelar desde el panel del estudiante.
+  const EXAM_NIVELES = ['IELTS', 'TOEFL', 'B2FIRST'];
+  const bookingNivel = String(booking.nivel ?? '').toUpperCase();
+  const bookingTitulo = String(booking.tituloONivel ?? '').toUpperCase();
+  if (EXAM_NIVELES.includes(bookingNivel) || EXAM_NIVELES.some(n => bookingTitulo.startsWith(n))) {
+    throw new ValidationError('Las sesiones de examen internacional (IELTS/TOEFL/B2 First) no se pueden cancelar.');
+  }
+
   // 4. Check cancellation deadline (60 min before event)
   const eventDate = new Date(booking.fechaEvento);
   const now = new Date();

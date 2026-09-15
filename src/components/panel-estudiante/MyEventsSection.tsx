@@ -1,10 +1,14 @@
 'use client'
 
-import { XMarkIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, LockClosedIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 const CANCEL_DEADLINE_MINUTES = 60
+
+// Las sesiones de examen internacional no se pueden cancelar desde el panel.
+const EXAM_NIVELES = ['IELTS', 'TOEFL', 'B2FIRST']
+const esNivelExamen = (nivel?: string | null) => EXAM_NIVELES.includes(String(nivel ?? '').toUpperCase())
 
 interface MyEventsSectionProps {
   events: any[]
@@ -55,7 +59,8 @@ export default function MyEventsSection({
                 const eventDate = new Date(evt.fechaEvento)
                 const now = new Date()
                 const minutesUntil = (eventDate.getTime() - now.getTime()) / (1000 * 60)
-                const canCancel = minutesUntil >= CANCEL_DEADLINE_MINUTES
+                const isExamen = esNivelExamen(evt.nivel)
+                const canCancel = minutesUntil >= CANCEL_DEADLINE_MINUTES && !isExamen
 
                 return (
                   <tr key={evt._id} className="border-b border-gray-100 hover:bg-gray-50">
@@ -83,6 +88,10 @@ export default function MyEventsSection({
                         >
                           <XMarkIcon className="h-5 w-5" />
                         </button>
+                      ) : isExamen ? (
+                        <span className="inline-flex items-center justify-center text-gray-400" title="Las sesiones de examen internacional no se pueden cancelar">
+                          <LockClosedIcon className="h-4 w-4" />
+                        </span>
                       ) : (
                         <span className="text-gray-300">-</span>
                       )}
