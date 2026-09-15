@@ -134,6 +134,17 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
   const [bulkModal, setBulkModal] = useState(false)
   const [bulkValidating, setBulkValidating] = useState(false)
 
+  // Leer recibo de inscripción (extracción IA → FINANCIEROS)
+  const [reciboActivo, setReciboActivo] = useState(false)
+  const [reciboModal, setReciboModal] = useState<{ contrato: string; idPeople: string; titular: string } | null>(null)
+  const [reciboUrl, setReciboUrl] = useState<string | null>(null)
+  const [reciboFileName, setReciboFileName] = useState('')
+  const [reciboSubiendo, setReciboSubiendo] = useState(false)
+  const [reciboLeyendo, setReciboLeyendo] = useState(false)
+  const [reciboGuardando, setReciboGuardando] = useState(false)
+  const [reciboForm, setReciboForm] = useState({ medioPago: '', fecha: '', monto: '', referencia: '', banco: '' })
+  const [reciboConfianza, setReciboConfianza] = useState<number | null>(null)
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const fetchPagos = useCallback(async (resetPage = false) => {
@@ -176,6 +187,13 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
       api.get<{ medios: string[] }>(`/api/postgres/recaudos/medios-pago`)
         .then(d => setMedios(d.medios || [])).catch(() => {})
     }
+  }, [isGestor])
+
+  // ¿Mostrar "Leer recibo"? (flag ON o admin) — solo en el Centro de Validación (gestor)
+  useEffect(() => {
+    if (!isGestor) return
+    api.get<{ active: boolean }>(`/api/postgres/recaudos/inscripcion-recibo/config`)
+      .then(d => setReciboActivo(!!d.active)).catch(() => {})
   }, [isGestor])
 
   useEffect(() => { fetchPagos() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [page])
@@ -351,6 +369,77 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
     } catch (err) {
       toast.dismiss(tid); handleApiError(err, 'Error generando recibo')
     }
+  }
+
+  // ── Leer recibo de inscripción (extracción IA → FINANCIEROS) ────────────
+  const openRecibo = (p: PagoRow) => {
+    setReciboUrl(null); setReciboFileName(''); setReciboConfianza(null)
+    setReciboForm({ medioPago: '', fecha: '', monto: '', referencia: '', banco: '' })
+    setReciboModal({
+      contrato: p.titular_contrato || '',
+      idPeople: p.idPeople,
+      titular: `${p.titular_primerNombre} ${p.titular_primerApellido}`.trim(),
+    })
+  }
+  const subirReciboArchivo = async (file: File) => {
+    if (!reciboModal) return
+    setReciboSubiendo(true)
+    try {
+      const fd = new FormData(); fd.append('file', file)
+      const res = await fetch(`/api/contracts/${reciboModal.idPeople}/upload-url`, { method: 'POST', body: fd })
+      if (!res.ok) { const e = await res.json().catch(() => ({} as any)); throw new Error(e.details || e.error || `Error ${res.status}`) }
+      const { publicUrl } = await res.json()
+      setReciboUrl(publicUrl); setReciboFileName(file.name)
+      toast.success('Recibo adjuntado')
+    } catch (e: any) {
+      toast.error(`Error subiendo el recibo: ${e?.message || ''}`)
+    } finally { setReciboSubiendo(false) }
+  }
+  const pickReciboArchivo = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/jpeg,image/jpg,image/png,image/webp,application/pdf'
+    input.style.display = 'none'
+    document.body.appendChild(input)
+    input.addEventListener('change', () => { const f = input.files?.[0]; if (f) subirReciboArchivo(f); document.body.removeChild(input) })
+    input.click()
+  }
+  const handleLeerRecibo = async () => {
+    if (!reciboUrl) { toast.error('Primero adjunta el recibo'); return }
+    setReciboLeyendo(true)
+    try {
+      const d = await api.post<{ extraido: any }>(`/api/postgres/recaudos/inscripcion-recibo/extraer`, { url: reciboUrl })
+      const e = d.extraido || {}
+      setReciboForm({
+        medioPago: e.medioPago || '', fecha: e.fecha || '',
+        monto: e.monto != null ? String(e.monto) : '',
+        referencia: e.referencia || '', banco: e.banco || '',
+      })
+      setReciboConfianza(e.confianza ?? null)
+      toast.success('Recibo leído — revisa y confirma los datos')
+    } catch (err) { handleApiError(err, 'Error leyendo el recibo') }
+    finally { setReciboLeyendo(false) }
+  }
+  const handleGuardarRecibo = async () => {
+    if (!reciboModal?.contrato) { toast.error('Este pago no tiene contrato asociado'); return }
+    setReciboGuardando(true)
+    try {
+      await api.post(`/api/postgres/recaudos/inscripcion-recibo/guardar`, {
+        contrato: reciboModal.contrato,
+        url: reciboUrl,
+        campos: {
+          medioPago: reciboForm.medioPago.trim() || null,
+          fecha: reciboForm.fecha || null,
+          monto: reciboForm.monto !== '' ? Number(reciboForm.monto) : null,
+          referencia: reciboForm.referencia.trim() || null,
+          banco: reciboForm.banco.trim() || null,
+          confianza: reciboConfianza,
+        },
+      })
+      toast.success('Datos del recibo guardados en el financiero')
+      setReciboModal(null)
+    } catch (err) { handleApiError(err, 'Error guardando el recibo') }
+    finally { setReciboGuardando(false) }
   }
 
   const gestorNombre = (p: PagoRow) => {
@@ -606,6 +695,13 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                               </button>
                             )
                           })()}
+                          {/* Inscripción: Leer recibo (extracción IA → FINANCIEROS) */}
+                          {tab === 'inscripcion' && isGestor && reciboActivo && (
+                            <button type="button" onClick={() => openRecibo(p)} title="Adjuntar y leer el recibo de la inscripción"
+                              className="inline-flex items-center gap-0.5 px-1.5 py-1 text-xs font-medium text-white bg-teal-600 rounded hover:bg-teal-700">
+                              <PaperClipIcon className="h-3.5 w-3.5" /> Recibo
+                            </button>
+                          )}
                           {/* Verificación: Editar + Validar (pendientes) */}
                           {!isFacturacion && !p.validado && canEditar && (
                             <button type="button" onClick={() => openEditar(p)} title="Editar pago" className="inline-flex items-center gap-0.5 px-1.5 py-1 text-xs font-medium text-white bg-amber-500 rounded hover:bg-amber-600">
@@ -814,6 +910,83 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
               ))}
             </ul>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal leer recibo de inscripción */}
+      {reciboModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900">📄 Recibo de inscripción</h3>
+              <button type="button" onClick={() => setReciboModal(null)} title="Cerrar" className="text-gray-400 hover:text-gray-600"><XMarkIcon className="h-5 w-5" /></button>
+            </div>
+            <p className="text-sm text-gray-600">
+              <strong>{reciboModal.titular}</strong>{reciboModal.contrato ? <> · contrato {reciboModal.contrato}</> : ''}.
+              Adjunta el comprobante (imagen o PDF), léelo y guarda los datos en el financiero.
+            </p>
+
+            {/* Paso 1: adjuntar */}
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={pickReciboArchivo} disabled={reciboSubiendo || reciboLeyendo || reciboGuardando}
+                className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700 disabled:opacity-50">
+                <PaperClipIcon className="h-4 w-4" /> {reciboSubiendo ? 'Subiendo…' : (reciboUrl ? 'Cambiar archivo' : 'Adjuntar recibo')}
+              </button>
+              {reciboUrl && (
+                <button type="button" onClick={handleLeerRecibo} disabled={reciboLeyendo || reciboGuardando}
+                  className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-white bg-teal-600 rounded-md hover:bg-teal-700 disabled:opacity-50">
+                  {reciboLeyendo ? 'Leyendo…' : '🔍 Leer recibo'}
+                </button>
+              )}
+            </div>
+            {reciboFileName && (
+              <p className="text-xs text-gray-500 truncate">📎 {reciboFileName}{reciboUrl ? ' — adjuntado' : ''}</p>
+            )}
+
+            {/* Confianza */}
+            {reciboConfianza != null && (
+              <p className={`text-xs font-semibold inline-flex px-2 py-0.5 rounded-full ${reciboConfianza >= 0.8 ? 'bg-emerald-100 text-emerald-800' : reciboConfianza >= 0.5 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'}`}>
+                Confianza de lectura: {Math.round(reciboConfianza * 100)}%
+              </p>
+            )}
+
+            {/* Paso 2: datos extraídos (editables) */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <label className="block text-xs font-medium text-gray-500 mb-1">Medio de pago</label>
+                <input type="text" value={reciboForm.medioPago} onChange={e => setReciboForm(f => ({ ...f, medioPago: e.target.value }))}
+                  placeholder="WebPay / Nequi / Transferencia…" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Fecha</label>
+                <input type="date" value={reciboForm.fecha} onChange={e => setReciboForm(f => ({ ...f, fecha: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Monto</label>
+                <input type="number" min={0} value={reciboForm.monto} onChange={e => setReciboForm(f => ({ ...f, monto: e.target.value.replace(/[^0-9.]/g, '') }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Referencia</label>
+                <input type="text" value={reciboForm.referencia} onChange={e => setReciboForm(f => ({ ...f, referencia: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Banco</label>
+                <input type="text" value={reciboForm.banco} onChange={e => setReciboForm(f => ({ ...f, banco: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+              </div>
+            </div>
+
+            <p className="text-[11px] text-gray-400">La lectura es un apoyo — revisa los datos antes de guardar. Se guardan en FINANCIEROS del contrato.</p>
+
+            <div className="flex items-center justify-end gap-3 pt-1">
+              <button type="button" onClick={() => setReciboModal(null)} disabled={reciboGuardando} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
+              <button type="button" onClick={handleGuardarRecibo} disabled={reciboGuardando || reciboSubiendo || reciboLeyendo}
+                className="px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 disabled:opacity-50">{reciboGuardando ? 'Guardando…' : 'Guardar en financiero'}</button>
+            </div>
           </div>
         </div>
       )}
