@@ -10,6 +10,9 @@ const CANCEL_DEADLINE_MINUTES = 60
 const EXAM_NIVELES = ['IELTS', 'TOEFL', 'B2FIRST']
 const esNivelExamen = (nivel?: string | null) => EXAM_NIVELES.includes(String(nivel ?? '').toUpperCase())
 
+// Solo se muestran los eventos programados de las próximas 2 semanas desde hoy.
+const HORIZON_DIAS = 14
+
 interface MyEventsSectionProps {
   events: any[]
   isLoading: boolean
@@ -34,7 +37,15 @@ export default function MyEventsSection({
     )
   }
 
-  const upcomingEvents = events || []
+  // Horizonte: hasta el final del día (hoy + 14 días). Eventos más lejanos se ocultan.
+  const horizonte = new Date()
+  horizonte.setHours(0, 0, 0, 0)
+  horizonte.setDate(horizonte.getDate() + HORIZON_DIAS)
+  horizonte.setHours(23, 59, 59, 999)
+  const upcomingEvents = (events || []).filter((evt: any) => {
+    const d = new Date(evt.fechaEvento)
+    return isNaN(d.getTime()) || d <= horizonte
+  })
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
@@ -102,6 +113,9 @@ export default function MyEventsSection({
             </tbody>
           </table>
         </div>
+      )}
+      {upcomingEvents.length > 0 && (
+        <p className="text-[11px] text-gray-400 mt-3">Solo se muestran los eventos de las próximas 2 semanas.</p>
       )}
     </div>
   )
