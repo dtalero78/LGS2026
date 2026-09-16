@@ -42,12 +42,28 @@ export interface Franja {
 }
 export type CicloConfig = Partial<Record<ExamPrueba, Franja[]>>;
 
+/**
+ * Decisión sobre una fecha con festivo o día off manual del ciclo. Solo se
+ * guardan fechas con acción distinta de "generar" (lo default). Aplica al DÍA
+ * completo: afecta todas las sesiones (todos los exámenes/franjas) de esa fecha.
+ */
+export type DiaEspecialTipo = 'FESTIVO' | 'OFF';
+export type DiaEspecialAccion = 'OMITIR' | 'MOVER';
+export interface DiaEspecial {
+  fecha: string;                     // YYYY-MM-DD afectada
+  tipo: DiaEspecialTipo;             // FESTIVO (nacional) | OFF (manual)
+  accion: DiaEspecialAccion;         // OMITIR = no generar | MOVER = generar en otra fecha
+  fechaReemplazo?: string | null;    // YYYY-MM-DD (solo accion='MOVER')
+  motivo?: string | null;
+}
+
 export interface CicloRow {
   _id: string;
   nombre: string;
   fechaInicial: string;         // YYYY-MM-DD
   fechaFinal: string;           // YYYY-MM-DD
   config: CicloConfig;
+  diasEspeciales: DiaEspecial[];
   estado: string;               // BORRADOR | GENERADO
   eventosGenerados: number;
   creadoPor: string | null;
@@ -107,8 +123,30 @@ function sanitizeConfig(raw: any): CicloConfig {
   return out;
 }
 
+/** Normaliza las decisiones de festivos/días off (descarta entradas inválidas). */
+function sanitizeDiasEspeciales(raw: any): DiaEspecial[] {
+  if (!Array.isArray(raw)) return [];
+  const map = new Map<string, DiaEspecial>();
+  for (const d of raw) {
+    const fecha = String(d?.fecha ?? '').slice(0, 10);
+    if (!YMD.test(fecha)) continue;
+    const tipo: DiaEspecialTipo = d?.tipo === 'OFF' ? 'OFF' : 'FESTIVO';
+    const accion: DiaEspecialAccion = d?.accion === 'MOVER' ? 'MOVER' : 'OMITIR';
+    let fechaReemplazo: string | null = null;
+    if (accion === 'MOVER') {
+      const fr = String(d?.fechaReemplazo ?? '').slice(0, 10);
+      if (!YMD.test(fr) || fr === fecha) continue; // mover sin destino válido → se ignora
+      fechaReemplazo = fr;
+    }
+    const motivo = d?.motivo ? String(d.motivo).slice(0, 200) : null;
+    map.set(fecha, { fecha, tipo, accion, fechaReemplazo, motivo }); // dedupe por fecha (última gana)
+  }
+  return Array.from(map.values());
+}
+
 const CICLO_COLS = `"_id", "nombre", "fechaInicial"::text AS "fechaInicial",
-  "fechaFinal"::text AS "fechaFinal", "config", "estado",
+  "fechaFinal"::text AS "fechaFinal", "config",
+  COALESCE("diasEspeciales", '[]'::jsonb) AS "diasEspeciales", "estado",
   "eventosGenerados", "creadoPor", "_createdDate"`;
 
 // ── SetUp Ciclo: CRUD ──────────────────────────────────────────────────────
@@ -139,6 +177,7 @@ export async function saveCiclo(input: any, actor: string): Promise<CicloRow> {
     throw new ValidationError('La fecha final no puede ser anterior a la inicial');
   }
   const config = sanitizeConfig(input?.config);
+  const diasEspeciales = sanitizeDiasEspeciales(input?.diasEspeciales);
 
   const id = input?._id ? String(input._id) : null;
   if (id) {
@@ -150,20 +189,20 @@ export async function saveCiclo(input: any, actor: string): Promise<CicloRow> {
     const updated = await queryOne<CicloRow>(
       `UPDATE "EXAM_CICLOS"
           SET "nombre" = $1, "fechaInicial" = $2::date, "fechaFinal" = $3::date,
-              "config" = $4::jsonb, "_updatedDate" = NOW()
-        WHERE "_id" = $5
+              "config" = $4::jsonb, "diasEspeciales" = $5::jsonb, "_updatedDate" = NOW()
+        WHERE "_id" = $6
         RETURNING ${CICLO_COLS}`,
-      [nombre, fechaInicial, fechaFinal, JSON.stringify(config), id]
+      [nombre, fechaInicial, fechaFinal, JSON.stringify(config), JSON.stringify(diasEspeciales), id]
     );
     return updated!;
   }
 
   const created = await queryOne<CicloRow>(
     `INSERT INTO "EXAM_CICLOS"
-       ("_id", "nombre", "fechaInicial", "fechaFinal", "config", "estado", "eventosGenerados", "creadoPor")
-     VALUES ($1, $2, $3::date, $4::date, $5::jsonb, 'BORRADOR', 0, $6)
+       ("_id", "nombre", "fechaInicial", "fechaFinal", "config", "diasEspeciales", "estado", "eventosGenerados", "creadoPor")
+     VALUES ($1, $2, $3::date, $4::date, $5::jsonb, $6::jsonb, 'BORRADOR', 0, $7)
      RETURNING ${CICLO_COLS}`,
-    [generateId('exc'), nombre, fechaInicial, fechaFinal, JSON.stringify(config), actor]
+    [generateId('exc'), nombre, fechaInicial, fechaFinal, JSON.stringify(config), JSON.stringify(diasEspeciales), actor]
   );
   return created!;
 }
@@ -178,6 +217,16 @@ export async function generarEventos(cicloId: string): Promise<{ generados: numb
   }
 
   const config = ciclo.config || {};
+
+  // Decisiones por fecha (festivos / días off). Aplican al día completo.
+  const especiales = Array.isArray(ciclo.diasEspeciales) ? ciclo.diasEspeciales : [];
+  const skip = new Set<string>();          // fechas a OMITIR (no se generan)
+  const move = new Map<string, string>();  // fecha -> fechaReemplazo (MOVER)
+  for (const d of especiales) {
+    if (d.accion === 'OMITIR') skip.add(d.fecha);
+    else if (d.accion === 'MOVER' && d.fechaReemplazo) move.set(d.fecha, d.fechaReemplazo);
+  }
+
   const rows: Record<string, any>[] = [];
   let seq = 0;
 
@@ -187,11 +236,13 @@ export async function generarEventos(cicloId: string): Promise<{ generados: numb
     for (const f of franjas) {
       for (const { ymd, dow } of eachDate(ciclo.fechaInicial, ciclo.fechaFinal)) {
         if (!f.dias.includes(dow)) continue;
+        if (skip.has(ymd)) continue;              // día omitido
+        const targetYmd = move.get(ymd) || ymd;   // día movido a su reemplazo
         rows.push({
           _id: `${generateId('evt')}${(seq++).toString(36)}`,
           cicloId,
-          dia: bogotaToUTC(ymd, f.hora),
-          fecha: ymd,
+          dia: bogotaToUTC(targetYmd, f.hora),
+          fecha: targetYmd,
           hora: f.hora,
           advisor: f.advisor,
           nivel: prueba,

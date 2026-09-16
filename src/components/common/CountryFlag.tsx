@@ -1,12 +1,13 @@
 'use client'
 
 /**
- * SVG inline de banderas de Chile/Colombia/Ecuador.
- * Reemplaza los emoji 🇨🇱 🇨🇴 🇪🇨 porque Windows los renderiza como texto
- * "CL"/"CO"/"EC" en lugar de banderas (limitación del SO).
+ * SVG inline de banderas de Chile/Colombia/Ecuador/Perú.
+ * Reemplaza los emoji 🇨🇱 🇨🇴 🇪🇨 🇵🇪 porque Windows los renderiza como texto
+ * "CL"/"CO"/"EC"/"PE" en lugar de banderas (limitación del SO).
  *
  * Ecuador y Colombia tienen los mismos colores horizontales; se distinguen
  * con un pequeño círculo central (simplificación del escudo de Ecuador).
+ * Perú es rojo-blanco-rojo en bandas verticales.
  */
 
 import type { CountryCode } from '@/lib/festivos'
@@ -39,6 +40,16 @@ export default function CountryFlag({ country, width = 14, className = '' }: Cou
         <rect width="30" height="10" fill="#FCD116"/>
         <rect y="10" width="30" height="5" fill="#003893"/>
         <rect y="15" width="30" height="5" fill="#CE1126"/>
+      </svg>
+    )
+  }
+
+  if (country === 'PE') {
+    return (
+      <svg {...common} xmlns="http://www.w3.org/2000/svg" aria-label="Perú">
+        <rect width="30" height="20" fill="#ffffff"/>
+        <rect width="10" height="20" fill="#D91023"/>
+        <rect x="20" width="10" height="20" fill="#D91023"/>
       </svg>
     )
   }

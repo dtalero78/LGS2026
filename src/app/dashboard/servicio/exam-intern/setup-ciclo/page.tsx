@@ -7,6 +7,8 @@ import { PermissionGuard } from '@/components/permissions'
 import { ServicioPermission } from '@/types/permissions'
 import { usePermissions } from '@/hooks/usePermissions'
 import { api, handleApiError } from '@/hooks/use-api'
+import { getHolidays, getCountryLabel, type Holiday } from '@/lib/festivos'
+import CountryFlag from '@/components/common/CountryFlag'
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -19,14 +21,55 @@ const DIAS: { n: number; label: string }[] = [
   { n: 1, label: 'Lun' }, { n: 2, label: 'Mar' }, { n: 3, label: 'Mié' },
   { n: 4, label: 'Jue' }, { n: 5, label: 'Vie' }, { n: 6, label: 'Sáb' }, { n: 0, label: 'Dom' },
 ]
+const DOW_LABEL = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+
+type Accion = 'GENERAR' | 'OMITIR' | 'MOVER'
+interface DiaEspecialForm { fecha: string; tipo: 'FESTIVO' | 'OFF'; accion: Accion; fechaReemplazo: string }
 
 interface FranjaForm { dias: number[]; hora: string; advisor: string; linkZoom: string; cupo: string }
 type ConfigForm = Record<Prueba, FranjaForm[]>
-interface CicloForm { _id?: string; nombre: string; fechaInicial: string; fechaFinal: string; config: ConfigForm }
+interface CicloForm {
+  _id?: string; nombre: string; fechaInicial: string; fechaFinal: string
+  config: ConfigForm; diasEspeciales: DiaEspecialForm[]
+}
 
 interface CicloRow {
   _id: string; nombre: string; fechaInicial: string; fechaFinal: string
-  config: Partial<Record<Prueba, FranjaForm[]>>; estado: string; eventosGenerados: number
+  config: Partial<Record<Prueba, FranjaForm[]>>; diasEspeciales?: DiaEspecialForm[]
+  estado: string; eventosGenerados: number
+}
+
+// Itera fechas [start,end] (YYYY-MM-DD) con su día de semana — mismo cálculo UTC
+// que el servicio (exam-ciclo.service.ts) para que el preview coincida 1:1.
+const pad2 = (n: number) => String(n).padStart(2, '0')
+function* eachDateClient(start: string, end: string): Generator<{ ymd: string; dow: number }> {
+  const [ys, ms, ds] = start.split('-').map(Number)
+  const [ye, me, de] = end.split('-').map(Number)
+  let cur = Date.UTC(ys, ms - 1, ds); const last = Date.UTC(ye, me - 1, de); let g = 0
+  while (cur <= last && g < 2000) {
+    const d = new Date(cur)
+    yield { ymd: `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`, dow: d.getUTCDay() }
+    cur += 86400000; g++
+  }
+}
+
+interface ConflictoFestivo { fecha: string; dow: number; holidays: Holiday[] }
+/** Fechas que generarían sesión (rango ∩ días de franja) + cuáles caen en festivo. */
+function analizarFechas(form: CicloForm): { conflictos: ConflictoFestivo[]; fechasConSesion: Set<string> } {
+  const fechasConSesion = new Set<string>()
+  const { fechaInicial, fechaFinal, config } = form
+  if (!fechaInicial || !fechaFinal || fechaFinal < fechaInicial) return { conflictos: [], fechasConSesion }
+  const diasSet = new Set<number>()
+  for (const p of PRUEBAS) for (const fr of config[p]) for (const d of fr.dias) diasSet.add(d)
+  if (diasSet.size === 0) return { conflictos: [], fechasConSesion }
+  const conflictos: ConflictoFestivo[] = []
+  for (const { ymd, dow } of eachDateClient(fechaInicial, fechaFinal)) {
+    if (!diasSet.has(dow)) continue
+    fechasConSesion.add(ymd)
+    const holidays = getHolidays(ymd)
+    if (holidays.length > 0) conflictos.push({ fecha: ymd, dow, holidays })
+  }
+  return { conflictos, fechasConSesion }
 }
 interface Advisor { _id: string; nombreCompleto?: string; primerNombre?: string; primerApellido?: string; zoom?: string; activo?: boolean }
 interface AgrupacionRow {
@@ -44,7 +87,7 @@ interface RosterRow {
 
 const emptyFranja = (): FranjaForm => ({ dias: [], hora: '', advisor: '', linkZoom: '', cupo: '30' })
 const emptyConfig = (): ConfigForm => ({ IELTS: [], TOEFL: [], B2FIRST: [] })
-const emptyForm = (): CicloForm => ({ nombre: '', fechaInicial: '', fechaFinal: '', config: emptyConfig() })
+const emptyForm = (): CicloForm => ({ nombre: '', fechaInicial: '', fechaFinal: '', config: emptyConfig(), diasEspeciales: [] })
 
 function advisorName(a: Advisor): string {
   return (a.nombreCompleto || `${a.primerNombre || ''} ${a.primerApellido || ''}`).trim() || a._id
@@ -147,7 +190,13 @@ function SetupTab({ ciclos, advisors, canGenerar, reload }: {
         cupo: String((f as any).cupo ?? 30),
       }))
     }
-    setForm({ _id: c._id, nombre: c.nombre, fechaInicial: c.fechaInicial, fechaFinal: c.fechaFinal, config: cfg })
+    const diasEspeciales: DiaEspecialForm[] = (c.diasEspeciales || []).map(d => ({
+      fecha: d.fecha,
+      tipo: d.tipo === 'OFF' ? 'OFF' : 'FESTIVO',
+      accion: d.accion === 'MOVER' ? 'MOVER' : 'OMITIR',
+      fechaReemplazo: (d as any).fechaReemplazo || '',
+    }))
+    setForm({ _id: c._id, nombre: c.nombre, fechaInicial: c.fechaInicial, fechaFinal: c.fechaFinal, config: cfg, diasEspeciales })
   }
 
   const setFranjas = (p: Prueba, franjas: FranjaForm[]) =>
@@ -163,10 +212,44 @@ function SetupTab({ ciclos, advisors, canGenerar, reload }: {
     updateFranja(p, idx, { dias })
   }
 
+  // ── Festivos / días off ──────────────────────────────────────────────────
+  const { conflictos, fechasConSesion } = useMemo(() => analizarFechas(form), [form])
+
+  const festivoDecision = (fecha: string): DiaEspecialForm | undefined =>
+    form.diasEspeciales.find(d => d.tipo === 'FESTIVO' && d.fecha === fecha)
+
+  const setFestivoDecision = (fecha: string, accion: Accion) =>
+    setForm(f => {
+      const otras = f.diasEspeciales.filter(d => !(d.tipo === 'FESTIVO' && d.fecha === fecha))
+      if (accion === 'GENERAR') return { ...f, diasEspeciales: otras }
+      const prev = f.diasEspeciales.find(d => d.tipo === 'FESTIVO' && d.fecha === fecha)
+      return { ...f, diasEspeciales: [...otras, { fecha, tipo: 'FESTIVO', accion, fechaReemplazo: prev?.fechaReemplazo || '' }] }
+    })
+  const setFestivoReemplazo = (fecha: string, fechaReemplazo: string) =>
+    setForm(f => ({ ...f, diasEspeciales: f.diasEspeciales.map(d =>
+      (d.tipo === 'FESTIVO' && d.fecha === fecha) ? { ...d, fechaReemplazo } : d) }))
+
+  const offDays = form.diasEspeciales.filter(d => d.tipo === 'OFF')
+  const addOffDay = () => setForm(f => ({ ...f, diasEspeciales: [...f.diasEspeciales, { fecha: '', tipo: 'OFF', accion: 'OMITIR', fechaReemplazo: '' }] }))
+  const updateOffDay = (idx: number, patch: Partial<DiaEspecialForm>) => setForm(f => {
+    let seen = -1
+    return { ...f, diasEspeciales: f.diasEspeciales.map(d => { if (d.tipo !== 'OFF') return d; seen++; return seen === idx ? { ...d, ...patch } : d }) }
+  })
+  const removeOffDay = (idx: number) => setForm(f => {
+    let seen = -1
+    return { ...f, diasEspeciales: f.diasEspeciales.filter(d => { if (d.tipo !== 'OFF') return true; seen++; return seen !== idx }) }
+  })
+
   const handleSave = async () => {
     if (!form.nombre.trim()) { toast.error('El nombre del ciclo es requerido'); return }
     if (!form.fechaInicial || !form.fechaFinal) { toast.error('Selecciona el rango de fechas'); return }
     if (form.fechaFinal < form.fechaInicial) { toast.error('La fecha final no puede ser anterior a la inicial'); return }
+    for (const d of form.diasEspeciales) {
+      if (d.tipo === 'OFF' && !d.fecha) { toast.error('Hay un día off sin fecha'); return }
+      if (d.accion === 'MOVER' && (!d.fechaReemplazo || d.fechaReemplazo === d.fecha)) {
+        toast.error(`Falta la fecha de reemplazo para mover ${d.fecha || 'el día off'}`); return
+      }
+    }
     setSaving(true)
     try {
       await api.post('/api/postgres/servicio/exam-ciclo', form)
@@ -178,8 +261,14 @@ function SetupTab({ ciclos, advisors, canGenerar, reload }: {
   }
 
   const handleGenerar = async (c: CicloRow) => {
+    const esp = c.diasEspeciales || []
+    const omitidos = esp.filter(d => d.accion === 'OMITIR').length
+    const movidos = esp.filter(d => d.accion === 'MOVER').length
+    const extra = (omitidos || movidos)
+      ? `\n\nFestivos/días off: ${omitidos} día(s) se omitirán y ${movidos} se moverán a otra fecha.`
+      : ''
     if (!window.confirm(
-      `Vas a generar los eventos de examen del ciclo "${c.nombre}" (${c.fechaInicial} → ${c.fechaFinal}).\n\n` +
+      `Vas a generar los eventos de examen del ciclo "${c.nombre}" (${c.fechaInicial} → ${c.fechaFinal}).${extra}\n\n` +
       `Esta acción crea las sesiones en el calendario y no se puede repetir. ¿Continuar?`
     )) return
     setGenerando(c._id)
@@ -338,6 +427,118 @@ function SetupTab({ ciclos, advisors, canGenerar, reload }: {
               </div>
             </div>
           ))}
+
+          {/* Festivos y días off */}
+          <div className="rounded-lg border border-gray-200 overflow-hidden">
+            <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+              <span className="text-sm font-bold text-gray-700">Festivos y días off</span>
+              <button type="button" onClick={addOffDay} className="text-xs font-medium text-purple-700 hover:text-purple-900">+ Agregar día off</button>
+            </div>
+            <div className="p-3 space-y-4">
+              <div>
+                <p className="text-xs font-semibold text-gray-600 mb-2">
+                  Festivos que coinciden con sesiones <span className="font-normal text-gray-400">(Chile · Colombia · Ecuador · Perú)</span>
+                </p>
+                {(!form.fechaInicial || !form.fechaFinal) ? (
+                  <p className="text-xs text-gray-400">Define el rango y al menos una franja para revisar los festivos.</p>
+                ) : conflictos.length === 0 ? (
+                  <p className="text-xs text-emerald-600">✅ Ninguna sesión del ciclo cae en día festivo.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {conflictos.map(c => {
+                      const dec = festivoDecision(c.fecha)
+                      const accion: Accion = dec?.accion || 'GENERAR'
+                      const reemplazoWarn = accion === 'MOVER' && dec?.fechaReemplazo
+                        ? (fechasConSesion.has(dec.fechaReemplazo)
+                            ? 'Esa fecha ya tiene sesión (se duplicará).'
+                            : (getHolidays(dec.fechaReemplazo).length ? 'La fecha de reemplazo también es festivo.' : ''))
+                        : ''
+                      return (
+                        <div key={c.fecha} className="rounded-md border border-gray-200 p-2.5 bg-white">
+                          <div className="flex flex-wrap items-center gap-2 justify-between">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-medium text-gray-900">{c.fecha}</span>
+                              <span className="text-xs text-gray-500">{DOW_LABEL[c.dow]}</span>
+                              <span className="flex items-center gap-1 flex-wrap">
+                                {c.holidays.map((h, i) => (
+                                  <span key={i} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-[11px] text-amber-800"
+                                    title={`${getCountryLabel(h.country)}: ${h.name}`}>
+                                    <CountryFlag country={h.country} width={14} /> {h.name}
+                                  </span>
+                                ))}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {(['GENERAR', 'OMITIR', 'MOVER'] as Accion[]).map(a => (
+                                <button key={a} type="button" onClick={() => setFestivoDecision(c.fecha, a)}
+                                  className={`px-2 py-1 text-xs font-medium rounded border ${
+                                    accion === a ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                                  }`}>
+                                  {a === 'GENERAR' ? 'Generar igual' : a === 'OMITIR' ? 'Omitir' : 'Mover'}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          {accion === 'MOVER' && (
+                            <div className="mt-2 flex items-center gap-2 flex-wrap">
+                              <label className="text-xs text-gray-500">Nueva fecha:</label>
+                              <input type="date" value={dec?.fechaReemplazo || ''} onChange={e => setFestivoReemplazo(c.fecha, e.target.value)}
+                                className="px-2 py-1 border border-gray-300 rounded text-sm" />
+                              {reemplazoWarn && <span className="text-[11px] text-amber-600">⚠ {reemplazoWarn}</span>}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {offDays.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-600 mb-2">Días off (manuales)</p>
+                  <div className="space-y-2">
+                    {offDays.map((o, idx) => {
+                      const noSesion = !!o.fecha && !fechasConSesion.has(o.fecha)
+                      const reemplazoWarn = o.accion === 'MOVER' && o.fechaReemplazo && fechasConSesion.has(o.fechaReemplazo)
+                        ? 'Esa fecha ya tiene sesión (se duplicará).' : ''
+                      return (
+                        <div key={idx} className="rounded-md border border-gray-200 p-2.5 bg-white flex flex-wrap items-center gap-2">
+                          <input type="date" value={o.fecha} onChange={e => updateOffDay(idx, { fecha: e.target.value })}
+                            className="px-2 py-1 border border-gray-300 rounded text-sm" />
+                          <div className="flex items-center gap-1">
+                            {(['OMITIR', 'MOVER'] as Accion[]).map(a => (
+                              <button key={a} type="button" onClick={() => updateOffDay(idx, { accion: a })}
+                                className={`px-2 py-1 text-xs font-medium rounded border ${
+                                  o.accion === a ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                                }`}>
+                                {a === 'OMITIR' ? 'Omitir' : 'Mover'}
+                              </button>
+                            ))}
+                          </div>
+                          {o.accion === 'MOVER' && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-gray-500">→</span>
+                              <input type="date" value={o.fechaReemplazo} onChange={e => updateOffDay(idx, { fechaReemplazo: e.target.value })}
+                                className="px-2 py-1 border border-gray-300 rounded text-sm" />
+                            </div>
+                          )}
+                          {noSesion && <span className="text-[11px] text-gray-400">sin sesión ese día</span>}
+                          {reemplazoWarn && <span className="text-[11px] text-amber-600">⚠ {reemplazoWarn}</span>}
+                          <button type="button" onClick={() => removeOffDay(idx)} className="ml-auto px-2 py-1 text-xs text-red-600 hover:text-red-800">Quitar</button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <p className="text-[11px] text-gray-400">
+                Las decisiones se aplican al <strong>día completo</strong> (todas las franjas y exámenes de esa fecha) al pulsar <strong>Generar eventos</strong>.
+                Por defecto un festivo se <strong>genera igual</strong>.
+              </p>
+            </div>
+          </div>
 
           <div className="flex items-center justify-end gap-3">
             {isEditing && (

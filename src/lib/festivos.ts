@@ -1,15 +1,15 @@
 /**
- * Festivos Chile / Colombia / Ecuador.
+ * Festivos Chile / Colombia / Ecuador / Perú.
  *
  * Lookup O(1) sobre un diccionario estático en `src/data/festivos.json`.
  * Para agregar el año siguiente, edita ese archivo (estructura:
- *   "YYYY-MM-DD": [{ "c": "CL"|"CO"|"EC", "n": "Nombre del festivo" }, ...]
+ *   "YYYY-MM-DD": [{ "c": "CL"|"CO"|"EC"|"PE", "n": "Nombre del festivo" }, ...]
  * ).
  */
 
 import festivosData from '@/data/festivos.json'
 
-export type CountryCode = 'CL' | 'CO' | 'EC'
+export type CountryCode = 'CL' | 'CO' | 'EC' | 'PE'
 
 export interface Holiday {
   country: CountryCode
@@ -21,12 +21,14 @@ const COUNTRY_LABEL: Record<CountryCode, string> = {
   CL: 'Chile',
   CO: 'Colombia',
   EC: 'Ecuador',
+  PE: 'Perú',
 }
 
 const COUNTRY_FLAG: Record<CountryCode, string> = {
   CL: '🇨🇱',
   CO: '🇨🇴',
   EC: '🇪🇨',
+  PE: '🇵🇪',
 }
 
 interface RawEntry { c: string; n: string }
@@ -49,7 +51,7 @@ export function getHolidays(date: Date | string): Holiday[] {
   const raw = DATA[key]
   if (!raw || raw.length === 0) return []
   return raw
-    .filter((r) => r.c === 'CL' || r.c === 'CO' || r.c === 'EC')
+    .filter((r) => r.c === 'CL' || r.c === 'CO' || r.c === 'EC' || r.c === 'PE')
     .map((r) => ({ country: r.c as CountryCode, name: r.n }))
 }
 
