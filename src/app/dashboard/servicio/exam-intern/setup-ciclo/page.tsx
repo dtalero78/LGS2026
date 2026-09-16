@@ -175,6 +175,7 @@ function SetupTab({ ciclos, advisors, canGenerar, reload }: {
   const [form, setForm] = useState<CicloForm>(emptyForm())
   const [saving, setSaving] = useState(false)
   const [generando, setGenerando] = useState<string | null>(null)
+  const [borrando, setBorrando] = useState<string | null>(null)
 
   const isEditing = !!form._id
 
@@ -280,6 +281,40 @@ function SetupTab({ ciclos, advisors, canGenerar, reload }: {
     finally { setGenerando(null) }
   }
 
+  const handleEditar = async (c: CicloRow) => {
+    if (c.estado === 'GENERADO') {
+      if (!window.confirm(
+        `El ciclo "${c.nombre}" ya generó ${c.eventosGenerados || 0} evento(s).\n\n` +
+        `Para editarlo hay que reabrirlo, lo que BORRA esos eventos del calendario ` +
+        `(luego deberás volver a "Generar eventos"). Solo es posible si no hay inscritos.\n\n¿Continuar?`
+      )) return
+      try {
+        const d = await api.post<{ ciclo: CicloRow }>(`/api/postgres/servicio/exam-ciclo/${c._id}/reabrir`)
+        toast.success('Ciclo reabierto para edición')
+        await reload()
+        startEdit(d.ciclo)
+      } catch (e) { handleApiError(e, 'No se pudo reabrir el ciclo') }
+    } else {
+      startEdit(c)
+    }
+  }
+
+  const handleBorrar = async (c: CicloRow) => {
+    if (!window.confirm(
+      `¿Borrar el ciclo "${c.nombre}" (${c.fechaInicial} → ${c.fechaFinal})?\n\n` +
+      (c.estado === 'GENERADO' ? `Se eliminarán también sus ${c.eventosGenerados || 0} evento(s) del calendario.\n\n` : '') +
+      `Esta acción no se puede deshacer.`
+    )) return
+    setBorrando(c._id)
+    try {
+      const d = await api.delete<{ message: string }>(`/api/postgres/servicio/exam-ciclo/${c._id}`)
+      toast.success(d.message || 'Ciclo borrado')
+      if (form._id === c._id) setForm(emptyForm())
+      await reload()
+    } catch (e) { handleApiError(e, 'Error al borrar el ciclo') }
+    finally { setBorrando(null) }
+  }
+
   return (
     <div className="space-y-6">
       {/* Lista de ciclos */}
@@ -315,8 +350,8 @@ function SetupTab({ ciclos, advisors, canGenerar, reload }: {
                     </td>
                     <td className="table-cell text-center text-sm">{c.eventosGenerados || 0}</td>
                     <td className="table-cell text-right space-x-2">
-                      {c.estado !== 'GENERADO' && (
-                        <button type="button" onClick={() => startEdit(c)}
+                      {(c.estado !== 'GENERADO' || canGenerar) && (
+                        <button type="button" onClick={() => handleEditar(c)}
                           className="px-2 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50">
                           Editar
                         </button>
@@ -325,6 +360,12 @@ function SetupTab({ ciclos, advisors, canGenerar, reload }: {
                         <button type="button" onClick={() => handleGenerar(c)} disabled={generando === c._id}
                           className="px-2 py-1 text-xs font-medium text-white bg-emerald-600 rounded hover:bg-emerald-700 disabled:opacity-50">
                           {generando === c._id ? 'Generando…' : 'Generar eventos'}
+                        </button>
+                      )}
+                      {canGenerar && (
+                        <button type="button" onClick={() => handleBorrar(c)} disabled={borrando === c._id}
+                          className="px-2 py-1 text-xs font-medium text-red-700 bg-white border border-red-300 rounded hover:bg-red-50 disabled:opacity-50">
+                          {borrando === c._id ? 'Borrando…' : 'Borrar'}
                         </button>
                       )}
                     </td>

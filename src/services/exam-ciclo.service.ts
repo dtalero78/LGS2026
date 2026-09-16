@@ -275,6 +275,75 @@ export async function generarEventos(cicloId: string): Promise<{ generados: numb
   return { generados: rows.length };
 }
 
+// ── SetUp Ciclo: reabrir / borrar ──────────────────────────────────────────
+
+/** Nº de estudiantes con inscripción ACTIVA (cancelo=false) en los eventos del ciclo. */
+export async function countInscritosCiclo(cicloId: string): Promise<number> {
+  const r = await queryOne<{ n: number }>(
+    `SELECT COUNT(DISTINCT COALESCE(b."studentId", b."idEstudiante"))::int AS n
+       FROM "CALENDARIO" c
+       JOIN "ACADEMICA_BOOKINGS" b
+         ON (b."eventoId" = c."_id" OR b."idEvento" = c."_id") AND b."cancelo" = false
+      WHERE c."cicloId" = $1`,
+    [cicloId]
+  );
+  return r?.n || 0;
+}
+
+/**
+ * Reabre un ciclo GENERADO para poder editarlo: borra TODOS sus eventos del
+ * calendario (y sus bookings) y lo vuelve a BORRADOR. Bloquea si hay inscritos
+ * activos (deben cancelarse en Agrupación primero). Idempotente si ya es BORRADOR.
+ */
+export async function reabrirCiclo(cicloId: string): Promise<CicloRow> {
+  const ciclo = await getCiclo(cicloId);
+  if (!ciclo) throw new NotFoundError('EXAM_CICLOS', cicloId);
+  if (ciclo.estado !== 'GENERADO') return ciclo;
+  const inscritos = await countInscritosCiclo(cicloId);
+  if (inscritos > 0) {
+    throw new ConflictError(`No se puede reabrir: el ciclo tiene ${inscritos} inscrito(s) activo(s). Cancélalos en Agrupación primero.`);
+  }
+  await withTransaction(async (client) => {
+    const ev = await client.query(`SELECT "_id" FROM "CALENDARIO" WHERE "cicloId" = $1`, [cicloId]);
+    const ids = ev.rows.map((r: any) => r._id);
+    if (ids.length) {
+      await client.query(`DELETE FROM "ACADEMICA_BOOKINGS" WHERE COALESCE("eventoId", "idEvento") = ANY($1::text[])`, [ids]);
+      await client.query(`DELETE FROM "CALENDARIO" WHERE "cicloId" = $1`, [cicloId]);
+    }
+    await client.query(
+      `UPDATE "EXAM_CICLOS" SET "estado" = 'BORRADOR', "eventosGenerados" = 0, "_updatedDate" = NOW() WHERE "_id" = $1`,
+      [cicloId]
+    );
+  });
+  const updated = await getCiclo(cicloId);
+  return updated!;
+}
+
+/**
+ * Borra un ciclo y TODOS sus eventos generados (y sus bookings). Bloquea si hay
+ * inscritos activos.
+ */
+export async function deleteCiclo(cicloId: string): Promise<{ eventosBorrados: number }> {
+  const ciclo = await getCiclo(cicloId);
+  if (!ciclo) throw new NotFoundError('EXAM_CICLOS', cicloId);
+  const inscritos = await countInscritosCiclo(cicloId);
+  if (inscritos > 0) {
+    throw new ConflictError(`No se puede borrar: el ciclo tiene ${inscritos} inscrito(s) activo(s). Cancélalos en Agrupación primero.`);
+  }
+  let eventosBorrados = 0;
+  await withTransaction(async (client) => {
+    const ev = await client.query(`SELECT "_id" FROM "CALENDARIO" WHERE "cicloId" = $1`, [cicloId]);
+    const ids = ev.rows.map((r: any) => r._id);
+    if (ids.length) {
+      await client.query(`DELETE FROM "ACADEMICA_BOOKINGS" WHERE COALESCE("eventoId", "idEvento") = ANY($1::text[])`, [ids]);
+      await client.query(`DELETE FROM "CALENDARIO" WHERE "cicloId" = $1`, [cicloId]);
+    }
+    eventosBorrados = ids.length;
+    await client.query(`DELETE FROM "EXAM_CICLOS" WHERE "_id" = $1`, [cicloId]);
+  });
+  return { eventosBorrados };
+}
+
 // ── Agrupación: pool de confirmados ────────────────────────────────────────
 
 export interface AgrupacionRow {
