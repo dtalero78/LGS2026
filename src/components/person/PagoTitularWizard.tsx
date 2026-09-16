@@ -654,6 +654,25 @@ export default function PagoTitularWizard({
             </div>
           </div>
 
+          {/* Leer recibo — arriba, para alimentar el formulario primero */}
+          {reciboActivo && (
+            <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-sm text-teal-900">
+                <strong>¿Tienes el comprobante?</strong> Léelo y se autocompletan fecha, valor, medio de pago, banco y referencia.
+              </p>
+              <button
+                type="button"
+                onClick={pickReciboWizard}
+                disabled={reciboLeyendo || uploadingFiles.length > 0}
+                title="Sube el comprobante (imagen o PDF) y prellena el formulario"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-md hover:bg-teal-700 disabled:opacity-50 shrink-0"
+              >
+                <ArrowUpTrayIcon className="h-4 w-4" />
+                {reciboLeyendo ? 'Leyendo…' : 'Leer recibo'}
+              </button>
+            </div>
+          )}
+
           {/* Fila 1 — Fechas: pago (edit), reporte (edit, default hoy),
               primer pago (read-only, del contrato) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1014,29 +1033,15 @@ export default function PagoTitularWizard({
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-gray-700">Documentos Adjuntos</label>
-              <div className="flex items-center gap-2">
-                {reciboActivo && (
-                  <button
-                    type="button"
-                    onClick={pickReciboWizard}
-                    disabled={reciboLeyendo || uploadingFiles.length > 0}
-                    title="Sube el comprobante y prellena medio de pago, banco, referencia, fecha y valor"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-teal-600 text-white rounded-md hover:bg-teal-700 disabled:opacity-50"
-                  >
-                    <ArrowUpTrayIcon className="h-3.5 w-3.5" />
-                    {reciboLeyendo ? 'Leyendo…' : 'Leer recibo'}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={openFileChooser}
-                  disabled={uploadingFiles.length > 0}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50"
-                >
-                  <ArrowUpTrayIcon className="h-3.5 w-3.5" />
-                  {uploadingFiles.length > 0 ? `Subiendo (${uploadingFiles.length})...` : 'Adjuntar'}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={openFileChooser}
+                disabled={uploadingFiles.length > 0}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50"
+              >
+                <ArrowUpTrayIcon className="h-3.5 w-3.5" />
+                {uploadingFiles.length > 0 ? `Subiendo (${uploadingFiles.length})...` : 'Adjuntar'}
+              </button>
             </div>
             {form.documentosAdjuntos.length === 0 ? (
               <p className="text-xs text-gray-400 italic">Sin documentos adjuntos</p>
