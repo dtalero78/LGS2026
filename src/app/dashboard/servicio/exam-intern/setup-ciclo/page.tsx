@@ -26,7 +26,7 @@ const DOW_LABEL = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 type Accion = 'GENERAR' | 'OMITIR' | 'MOVER'
 interface DiaEspecialForm { fecha: string; tipo: 'FESTIVO' | 'OFF'; accion: Accion; fechaReemplazo: string }
 
-interface FranjaForm { dias: number[]; hora: string; advisor: string; linkZoom: string; cupo: string }
+interface FranjaForm { dias: number[]; hora: string; advisor: string; linkZoom: string; cupo: string; duracion: string }
 type ConfigForm = Record<Prueba, FranjaForm[]>
 interface CicloForm {
   _id?: string; nombre: string; fechaInicial: string; fechaFinal: string
@@ -42,6 +42,13 @@ interface CicloRow {
 // Itera fechas [start,end] (YYYY-MM-DD) con su día de semana — mismo cálculo UTC
 // que el servicio (exam-ciclo.service.ts) para que el preview coincida 1:1.
 const pad2 = (n: number) => String(n).padStart(2, '0')
+/** Hora fin "HH:mm" a partir de la hora inicio y la duración en horas ('1'|'2'). */
+const endHora = (hora: string, dur: string): string => {
+  if (!/^\d{2}:\d{2}$/.test(hora)) return ''
+  const [h, m] = hora.split(':').map(Number)
+  const t = Math.min(h * 60 + m + (Number(dur) === 2 ? 120 : 60), 23 * 60 + 59)
+  return `${pad2(Math.floor(t / 60))}:${pad2(t % 60)}`
+}
 function* eachDateClient(start: string, end: string): Generator<{ ymd: string; dow: number }> {
   const [ys, ms, ds] = start.split('-').map(Number)
   const [ye, me, de] = end.split('-').map(Number)
@@ -85,7 +92,7 @@ interface RosterRow {
   numeroId: string | null; celular: string | null; estado: Estado
 }
 
-const emptyFranja = (): FranjaForm => ({ dias: [], hora: '', advisor: '', linkZoom: '', cupo: '30' })
+const emptyFranja = (): FranjaForm => ({ dias: [], hora: '', advisor: '', linkZoom: '', cupo: '30', duracion: '1' })
 const emptyConfig = (): ConfigForm => ({ IELTS: [], TOEFL: [], B2FIRST: [] })
 const emptyForm = (): CicloForm => ({ nombre: '', fechaInicial: '', fechaFinal: '', config: emptyConfig(), diasEspeciales: [] })
 
@@ -198,6 +205,7 @@ function SetupTab({ ciclos, advisors, canGenerar, reload }: {
         advisor: (f as any).advisor || '',
         linkZoom: (f as any).linkZoom || '',
         cupo: String((f as any).cupo ?? 30),
+        duracion: String((f as any).duracion ?? 1),
       }))
     }
     const diasEspeciales: DiaEspecialForm[] = (c.diasEspeciales || []).map(d => ({
@@ -438,11 +446,20 @@ function SetupTab({ ciclos, advisors, canGenerar, reload }: {
                           }`}>{d.label}</button>
                       ))}
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Hora</label>
+                        <label className="block text-xs text-gray-500 mb-1">Hora inicio</label>
                         <input type="time" value={fr.hora} onChange={e => updateFranja(p, idx, { hora: e.target.value })}
                           className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm" />
+                        {fr.hora && <p className="text-[10px] text-gray-400 mt-0.5">termina {endHora(fr.hora, fr.duracion)}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Duración</label>
+                        <select value={fr.duracion} onChange={e => updateFranja(p, idx, { duracion: e.target.value })}
+                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm">
+                          <option value="1">1 hora</option>
+                          <option value="2">2 horas</option>
+                        </select>
                       </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Advisor</label>

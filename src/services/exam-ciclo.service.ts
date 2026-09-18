@@ -32,13 +32,14 @@ const PRUEBA_DISPLAY: Record<ExamPrueba, string> = { IELTS: 'IELTS', TOEFL: 'TOE
 const YMD = /^\d{4}-\d{2}-\d{2}$/;
 const HHMM = /^\d{2}:\d{2}$/;
 
-/** Franja de un examen: días de semana (0=Dom..6=Sáb) + hora + advisor + Zoom + cupo. */
+/** Franja de un examen: días de semana (0=Dom..6=Sáb) + hora + advisor + Zoom + cupo + duración. */
 export interface Franja {
   dias: number[];
   hora: string;                 // "HH:mm"
   advisor: string | null;       // ADVISORS._id
   linkZoom: string | null;
   cupo: number;
+  duracion: number;             // horas de la sesión: 1 o 2
 }
 export type CicloConfig = Partial<Record<ExamPrueba, Franja[]>>;
 
@@ -98,6 +99,13 @@ function bogotaToUTC(ymd: string, hora: string): string {
   return new Date(`${ymd}T${hora}:00-05:00`).toISOString();
 }
 
+/** Suma `horas` a una hora "HH:mm" y devuelve "HH:mm" (clamp a 23:59 si se pasa del día). */
+function addHoras(hora: string, horas: number): string {
+  const [h, m] = hora.split(':').map(Number);
+  const total = Math.min(h * 60 + m + horas * 60, 23 * 60 + 59);
+  return `${pad2(Math.floor(total / 60))}:${pad2(total % 60)}`;
+}
+
 /** Normaliza y valida la config entrante (descarta franjas inválidas). */
 function sanitizeConfig(raw: any): CicloConfig {
   const out: CicloConfig = {};
@@ -116,6 +124,7 @@ function sanitizeConfig(raw: any): CicloConfig {
         advisor: f?.advisor ? String(f.advisor) : null,
         linkZoom: f?.linkZoom ? String(f.linkZoom).trim() : null,
         cupo: Number(f?.cupo) > 0 ? Math.floor(Number(f.cupo)) : 30,
+        duracion: Number(f?.duracion) === 2 ? 2 : 1,   // horas: solo 1 o 2 (default 1)
       });
     }
     if (franjas.length) out[p] = franjas;
@@ -253,6 +262,8 @@ export async function generarEventos(cicloId: string): Promise<{ generados: numb
           tituloONivel: `${prueba} - ${step}`,
           linkZoom: f.linkZoom,
           limiteUsuarios: f.cupo,
+          horaFin: addHoras(f.hora, f.duracion || 1),
+          duracionMin: (f.duracion || 1) * 60,
         });
       }
     }
