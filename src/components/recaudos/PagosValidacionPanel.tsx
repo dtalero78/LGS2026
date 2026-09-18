@@ -50,6 +50,7 @@ interface PagoRow {
   reciboMedioPago: string | null
   reciboReferencia: string | null
   reciboBanco: string | null
+  reciboInscripcion: { url?: string | null; nombre?: string | null; extraido?: any } | null
   titular_primerNombre: string
   titular_primerApellido: string
   titular_segundoApellido: string | null
@@ -622,6 +623,9 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                   <th className="px-2 py-2 text-right font-medium text-gray-600">Valor</th>
                   <th className="px-2 py-2 text-center font-medium text-gray-600">{tab === 'inscripcion' && isGestor ? 'Medio de pago' : 'Cuota'}</th>
                   <th className="px-2 py-2 text-left font-medium text-gray-600"># Ref.</th>
+                  {tab === 'inscripcion' && isGestor && (
+                    <th className="px-2 py-2 text-center font-medium text-gray-600">Recibo insc.</th>
+                  )}
                   <th className="px-2 py-2 text-left font-medium text-gray-600">{lateralLabel}</th>
                   <th className="px-2 py-2 text-right font-medium text-gray-600">Acciones</th>
                 </tr>
@@ -676,6 +680,18 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                           return <span className="block max-w-[90px] truncate" title={ref || ''}>{ref || '—'}</span>
                         })()}
                       </td>
+                      {tab === 'inscripcion' && isGestor && (
+                        <td className="px-2 py-2 text-center align-top">
+                          {p.reciboInscripcion?.url ? (
+                            <a href={p.reciboInscripcion.url} target="_blank" rel="noopener noreferrer" title="Ver recibo de inscripción subido en el contrato"
+                              className="inline-flex items-center gap-0.5 text-teal-700 hover:underline text-xs font-medium">
+                              <PaperClipIcon className="h-3.5 w-3.5" /> Ver
+                            </a>
+                          ) : (
+                            <span className="text-gray-300 text-xs">—</span>
+                          )}
+                        </td>
+                      )}
                       <td className="px-2 py-2 text-gray-700 align-top">
                         {isGestor ? (
                           g ? (

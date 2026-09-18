@@ -285,6 +285,7 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
          p."contrato"        AS "titular_contrato",
          p."plataforma"      AS "titular_plataforma",
          p."asesorCreadorContrato" AS "titular_asesorNombre",
+         p."reciboInscripcion"  AS "reciboInscripcion",
          fin."reciboMedioPago"  AS "reciboMedioPago",
          fin."reciboReferencia" AS "reciboReferencia",
          fin."reciboBanco"      AS "reciboBanco"

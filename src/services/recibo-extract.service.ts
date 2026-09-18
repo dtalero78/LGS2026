@@ -180,3 +180,57 @@ export async function guardarReciboEnFinanciero(opts: GuardarReciboOpts): Promis
     throw new NotFoundError('FINANCIEROS', `contrato ${contrato}`);
   }
 }
+
+// ── Recibo de inscripción del contrato (guardado en PEOPLE) ──────────────────
+
+export interface GuardarReciboInscripcionOpts {
+  peopleId: string;
+  contrato: string | null;
+  url: string | null;
+  nombre: string | null;
+  tipo: string | null;
+  campos: Partial<ReciboExtraido>;
+  actor: string;
+}
+
+/**
+ * Guarda el recibo de inscripción del contrato en PEOPLE."reciboInscripcion"
+ * (archivo + snapshot extraído), INDEPENDIENTE de PEOPLE."documentacion", y
+ * refleja los campos en FINANCIEROS.recibo* (best-effort: si no existe fila del
+ * contrato, se omite sin fallar — el dato ya quedó en PEOPLE).
+ */
+export async function guardarReciboInscripcionEnPeople(opts: GuardarReciboInscripcionOpts): Promise<any> {
+  const peopleId = String(opts.peopleId || '').trim();
+  if (!peopleId) throw new ValidationError('peopleId es requerido.');
+  const c = opts.campos || {};
+  const recibo = {
+    url: opts.url ?? null,
+    nombre: opts.nombre ?? null,
+    tipo: opts.tipo ?? null,
+    subidoPor: opts.actor,
+    subidoEn: new Date().toISOString(),
+    extraido: {
+      medioPago: c.medioPago ?? null,
+      fecha: (typeof c.fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(c.fecha)) ? c.fecha : null,
+      monto: (c.monto === null || c.monto === undefined || !Number.isFinite(Number(c.monto))) ? null : Number(c.monto),
+      referencia: c.referencia ?? null,
+      banco: c.banco ?? null,
+      confianza: (c as any).confianza ?? null,
+    },
+  };
+
+  await query(
+    `UPDATE "PEOPLE" SET "reciboInscripcion" = $1::jsonb, "_updatedDate" = NOW() WHERE "_id" = $2`,
+    [JSON.stringify(recibo), peopleId]
+  );
+
+  const contrato = String(opts.contrato || '').trim();
+  if (contrato) {
+    try {
+      await guardarReciboEnFinanciero({ contrato, url: opts.url ?? null, campos: c, actor: opts.actor });
+    } catch (e: any) {
+      if (!(e instanceof NotFoundError)) throw e; // solo ignoramos "no hay fila en FINANCIEROS"
+    }
+  }
+  return recibo;
+}
