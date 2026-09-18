@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
@@ -176,10 +176,19 @@ function SetupTab({ ciclos, advisors, canGenerar, reload }: {
   const [saving, setSaving] = useState(false)
   const [generando, setGenerando] = useState<string | null>(null)
   const [borrando, setBorrando] = useState<string | null>(null)
+  const nombreRef = useRef<HTMLInputElement>(null)
 
   const isEditing = !!form._id
 
-  const startNew = () => setForm(emptyForm())
+  // El formulario "Nuevo ciclo" ya está siempre visible abajo, así que además de
+  // limpiarlo llevamos al usuario hasta él y enfocamos el nombre (feedback claro).
+  const startNew = () => {
+    setForm(emptyForm())
+    setTimeout(() => {
+      nombreRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      nombreRef.current?.focus()
+    }, 50)
+  }
   const startEdit = (c: CicloRow) => {
     const cfg = emptyConfig()
     for (const p of PRUEBAS) {
@@ -390,7 +399,7 @@ function SetupTab({ ciclos, advisors, canGenerar, reload }: {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del ciclo *</label>
-              <input type="text" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
+              <input ref={nombreRef} type="text" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
                 placeholder="Octubre2026"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-purple-500 focus:border-purple-500" />
             </div>
