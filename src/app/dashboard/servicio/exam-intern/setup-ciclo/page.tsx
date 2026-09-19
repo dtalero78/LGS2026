@@ -851,6 +851,7 @@ function AgrupacionTab({ ciclos, canAgendar }: { ciclos: CicloRow[]; canAgendar:
               <thead className="table-header">
                 <tr>
                   <th className="table-header-cell">Nombre</th>
+                  <th className="table-header-cell">Programa</th>
                   <th className="table-header-cell">Celular</th>
                   <th className="table-header-cell text-center">Estado</th>
                   {canAgendar && <th className="table-header-cell text-right">Acciones</th>}
@@ -864,6 +865,13 @@ function AgrupacionTab({ ciclos, canAgendar }: { ciclos: CicloRow[]; canAgendar:
                         {[r.primerNombre, r.primerApellido].filter(Boolean).join(' ') || 'Sin nombre'}
                       </div>
                       {r.numeroId && <div className="text-xs text-gray-500">ID: {r.numeroId}</div>}
+                    </td>
+                    <td className="table-cell">
+                      {examen && (
+                        <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                          {PRUEBA_LABEL[examen as Prueba] || examen}
+                        </span>
+                      )}
                     </td>
                     <td className="table-cell text-sm text-gray-500">{r.celular || 'N/A'}</td>
                     <td className="table-cell text-center">
@@ -879,7 +887,7 @@ function AgrupacionTab({ ciclos, canAgendar }: { ciclos: CicloRow[]; canAgendar:
                     )}
                   </tr>
                 )) : (
-                  <tr><td colSpan={canAgendar ? 4 : 3} className="text-center py-6 text-sm text-gray-500">
+                  <tr><td colSpan={canAgendar ? 5 : 4} className="text-center py-6 text-sm text-gray-500">
                     {examen ? 'Sin inscritos en este curso.' : '—'}
                   </td></tr>
                 )}
