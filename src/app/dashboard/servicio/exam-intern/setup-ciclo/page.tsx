@@ -9,6 +9,7 @@ import { usePermissions } from '@/hooks/usePermissions'
 import { api, handleApiError } from '@/hooks/use-api'
 import { getHolidays, getCountryLabel, type Holiday } from '@/lib/festivos'
 import CountryFlag from '@/components/common/CountryFlag'
+import { exportToExcel } from '@/lib/export-excel'
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -89,7 +90,7 @@ interface CursoRow {
 type Estado = 'CONFIRMADO' | 'PENDIENTE' | 'CANCELADO'
 interface RosterRow {
   studentId: string; primerNombre: string | null; primerApellido: string | null
-  numeroId: string | null; celular: string | null; estado: Estado
+  numeroId: string | null; celular: string | null; estado: Estado; nivel: string | null
 }
 
 const emptyFranja = (): FranjaForm => ({ dias: [], hora: '', advisor: '', linkZoom: '', cupo: '30', duracion: '1' })
@@ -674,15 +675,25 @@ function AgrupacionTab({ ciclos, canAgendar }: { ciclos: CicloRow[]; canAgendar:
 
   useEffect(() => { loadPool() }, [loadPool])
 
+  const fetchRoster = (ex: string) =>
+    api.get<{ inscritos: RosterRow[] }>(
+      `/api/postgres/servicio/exam-agrupacion/roster?cicloId=${encodeURIComponent(cicloId)}&examen=${encodeURIComponent(ex)}`
+    ).then(d => (Array.isArray(d.inscritos) ? d.inscritos : []).map(r => ({ ...r, nivel: r.nivel || ex })))
+
   const loadRoster = useCallback(async () => {
     if (!cicloId || !examen) { setRoster([]); return }
     try {
-      const d = await api.get<{ inscritos: RosterRow[] }>(
-        `/api/postgres/servicio/exam-agrupacion/roster?cicloId=${encodeURIComponent(cicloId)}&examen=${encodeURIComponent(examen)}`
-      )
-      setRoster(Array.isArray(d.inscritos) ? d.inscritos : [])
+      if (examen === 'TODOS') {
+        // Todos: `cursos` ya viene ordenado por examen; cada roster viene alfabético
+        // → resultado por curso y, dentro de cada curso, alfabético.
+        const listas = await Promise.all(cursos.map(c => fetchRoster(c.examen).catch(() => [])))
+        setRoster(listas.flat())
+      } else {
+        setRoster(await fetchRoster(examen))
+      }
     } catch (e) { handleApiError(e, 'Error al cargar inscritos') }
-  }, [cicloId, examen])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cicloId, examen, cursos])
 
   useEffect(() => { loadRoster() }, [loadRoster])
 
@@ -710,14 +721,33 @@ function AgrupacionTab({ ciclos, canAgendar }: { ciclos: CicloRow[]; canAgendar:
     finally { setBusy(false) }
   }
 
-  const handleEstado = async (studentId: string, estado: Estado) => {
-    if (!examen) return
+  const handleEstado = async (studentId: string, estado: Estado, cursoExamen?: string) => {
+    // En "Todos" el examen viene por fila (r.nivel); en un curso concreto = examen.
+    const ex = cursoExamen || (examen !== 'TODOS' ? examen : '')
+    if (!ex) return
     setBusy(true)
     try {
-      await api.post('/api/postgres/servicio/exam-agrupacion/estado', { cicloId, examen, studentId, estado })
+      await api.post('/api/postgres/servicio/exam-agrupacion/estado', { cicloId, examen: ex, studentId, estado })
       await Promise.all([loadRoster(), loadCursos()])
     } catch (e) { handleApiError(e, 'Error al cambiar estado') }
     finally { setBusy(false) }
+  }
+
+  const exportRoster = () => {
+    if (roster.length === 0) { toast.error('No hay inscritos para exportar'); return }
+    const cicloNombre = generados.find(c => c._id === cicloId)?.nombre || 'ciclo'
+    const suf = examen === 'TODOS' ? 'todos' : examen
+    exportToExcel(
+      roster,
+      [
+        { header: 'Nombre', accessor: (r: RosterRow) => [r.primerNombre, r.primerApellido].filter(Boolean).join(' ') },
+        { header: 'ID', accessor: (r: RosterRow) => r.numeroId || '' },
+        { header: 'Programa', accessor: (r: RosterRow) => PRUEBA_LABEL[(r.nivel || '') as Prueba] || r.nivel || '' },
+        { header: 'Celular', accessor: (r: RosterRow) => r.celular || '' },
+        { header: 'Estado', accessor: (r: RosterRow) => r.estado },
+      ],
+      `inscritos-${cicloNombre}-${suf}`.replace(/\s+/g, '_')
+    )
   }
 
   const counts = useMemo(() => ({
@@ -751,9 +781,12 @@ function AgrupacionTab({ ciclos, canAgendar }: { ciclos: CicloRow[]; canAgendar:
             <select value={examen} onChange={e => setExamen(e.target.value)} disabled={!cicloId}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm disabled:bg-gray-100">
               <option value="">Selecciona un curso…</option>
+              {cursos.length > 0 && (
+                <option value="TODOS">Todos los cursos ({cursos.reduce((a, c) => a + (c.inscritos || 0), 0)} inscritos)</option>
+              )}
               {cursos.map(c => <option key={c.examen} value={c.examen}>{cursoLabel(c)}</option>)}
             </select>
-            <p className="text-xs text-gray-400 mt-1">Agendar inscribe al estudiante en TODA la serie del curso (todas las franjas y fechas).</p>
+            <p className="text-xs text-gray-400 mt-1">Agendar inscribe al estudiante en TODA la serie del curso (todas las franjas y fechas). En «Todos los cursos» solo se consulta/exporta.</p>
           </div>
         </div>
       </div>
@@ -767,8 +800,9 @@ function AgrupacionTab({ ciclos, canAgendar }: { ciclos: CicloRow[]; canAgendar:
               placeholder="Buscar apellido o ID…"
               className="px-3 py-1.5 border border-gray-300 rounded-md text-sm" />
             {canAgendar && (
-              <button type="button" onClick={handleAgendar} disabled={busy || selected.size === 0 || !examen}
-                className="px-4 py-1.5 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50">
+              <button type="button" onClick={handleAgendar} disabled={busy || selected.size === 0 || !examen || examen === 'TODOS'}
+                className="px-4 py-1.5 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50"
+                title={examen === 'TODOS' ? 'Selecciona un curso concreto para agendar' : ''}>
                 Agendar al curso ({selected.size})
               </button>
             )}
@@ -835,14 +869,22 @@ function AgrupacionTab({ ciclos, canAgendar }: { ciclos: CicloRow[]; canAgendar:
 
       {/* Roster del evento */}
       <div className="card">
-        <div className="card-header">
-          <h2 className="text-lg font-semibold text-gray-900">Inscritos del curso</h2>
-          {examen ? (
-            <p className="text-sm text-gray-500 mt-1">
-              ✅ {counts.confirmados} confirmado(s) · ✗ {counts.cancelados} cancelado(s) · • {counts.pendientes} pendiente(s)
-            </p>
-          ) : (
-            <p className="text-sm text-gray-400 mt-1">Selecciona un curso para ver y gestionar sus inscritos.</p>
+        <div className="card-header flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Inscritos del curso{examen === 'TODOS' ? ' (todos)' : ''}</h2>
+            {examen ? (
+              <p className="text-sm text-gray-500 mt-1">
+                ✅ {counts.confirmados} confirmado(s) · ✗ {counts.cancelados} cancelado(s) · • {counts.pendientes} pendiente(s)
+              </p>
+            ) : (
+              <p className="text-sm text-gray-400 mt-1">Selecciona un curso (o «Todos los cursos») para ver y gestionar sus inscritos.</p>
+            )}
+          </div>
+          {examen && roster.length > 0 && (
+            <button type="button" onClick={exportRoster}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700">
+              ⬇ Descargar CSV
+            </button>
           )}
         </div>
         <div className="card-content">
@@ -867,9 +909,9 @@ function AgrupacionTab({ ciclos, canAgendar }: { ciclos: CicloRow[]; canAgendar:
                       {r.numeroId && <div className="text-xs text-gray-500">ID: {r.numeroId}</div>}
                     </td>
                     <td className="table-cell">
-                      {examen && (
+                      {r.nivel && (
                         <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                          {PRUEBA_LABEL[examen as Prueba] || examen}
+                          {PRUEBA_LABEL[r.nivel as Prueba] || r.nivel}
                         </span>
                       )}
                     </td>
@@ -879,9 +921,9 @@ function AgrupacionTab({ ciclos, canAgendar }: { ciclos: CicloRow[]; canAgendar:
                     </td>
                     {canAgendar && (
                       <td className="table-cell text-right space-x-1">
-                        <button type="button" disabled={busy || r.estado === 'CONFIRMADO'} onClick={() => handleEstado(r.studentId, 'CONFIRMADO')}
+                        <button type="button" disabled={busy || r.estado === 'CONFIRMADO'} onClick={() => handleEstado(r.studentId, 'CONFIRMADO', r.nivel || undefined)}
                           className="px-2 py-1 text-xs font-medium text-white bg-emerald-600 rounded hover:bg-emerald-700 disabled:opacity-40">Confirmar</button>
-                        <button type="button" disabled={busy || r.estado === 'CANCELADO'} onClick={() => handleEstado(r.studentId, 'CANCELADO')}
+                        <button type="button" disabled={busy || r.estado === 'CANCELADO'} onClick={() => handleEstado(r.studentId, 'CANCELADO', r.nivel || undefined)}
                           className="px-2 py-1 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700 disabled:opacity-40">Cancelar</button>
                       </td>
                     )}
