@@ -220,6 +220,8 @@ export interface Beneficiary {
   existeEnAcademica?: boolean
   /** Nivel real en ACADEMICA. WELCOME = aún no es usuario académico (solo lo es en BN1+). */
   academicaNivel?: string | null
+  /** PEOPLE.kids = true → beneficiario del proceso Kids (no tiene ficha ACADEMICA). */
+  kids?: boolean
 }
 
 // Comment types

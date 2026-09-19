@@ -89,6 +89,7 @@ export const GET = handler(async (
           "aprobacion",
           "nivel",
           "step",
+          "kids",
           "_createdDate"
         FROM "PEOPLE"
         WHERE "contrato" = $1
@@ -125,6 +126,7 @@ export const GET = handler(async (
           // Nivel real en ACADEMICA (WELCOME = aún no es usuario académico; BN1+ sí).
           academicaNivel: academicCheck?.nivel ?? null,
           existeEnAcademica: !!academicCheck,
+          kids: (ben as any).kids === true,
           _createdDate: ben._createdDate,
         });
       }

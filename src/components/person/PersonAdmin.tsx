@@ -1025,7 +1025,11 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                     <span className={`badge ${getEstadoBadgeClass(beneficiary.estado)}`}>
                       {beneficiary.estado}
                     </span>
-                    {!beneficiary.existeEnAcademica ? (
+                    {beneficiary.kids ? (
+                      <span className="badge bg-purple-100 text-purple-700">
+                        USUARIO KIDS
+                      </span>
+                    ) : !beneficiary.existeEnAcademica ? (
                       <span className="badge bg-red-100 text-red-700">
                         SIN REGISTRO ACADÉMICO
                       </span>
