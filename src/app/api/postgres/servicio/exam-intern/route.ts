@@ -57,6 +57,18 @@ export const GET = handlerWithAuth(async (request: NextRequest) => {
 
   const where: string[] = [
     `("pruebainter" = $1 OR "step" = $2)`,
+    // Ocultar a quienes ya fueron CONFIRMADOS y AGRUPADOS: tienen al menos una
+    // inscripción ACTIVA (cancelo=false) en un evento del ciclo de este examen
+    // (CALENDARIO.cicloId IS NOT NULL AND nivel = prueba). Estar agrupado implica
+    // haber sido confirmado antes (el pool de Agrupación son los confirmados).
+    `NOT EXISTS (
+       SELECT 1 FROM "ACADEMICA_BOOKINGS" b
+         JOIN "CALENDARIO" c ON (b."eventoId" = c."_id" OR b."idEvento" = c."_id")
+        WHERE (b."studentId" = "ACADEMICA"."_id" OR b."idEstudiante" = "ACADEMICA"."_id")
+          AND b."cancelo" = false
+          AND c."cicloId" IS NOT NULL
+          AND c."nivel" = $1
+     )`,
   ];
   const params: any[] = [prueba, PRUEBA_TO_STEP[prueba]];
 
