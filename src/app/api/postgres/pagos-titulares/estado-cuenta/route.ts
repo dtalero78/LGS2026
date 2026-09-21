@@ -223,6 +223,14 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     if (fs.existsSync(p)) logoPath = p;
   } catch { logoPath = null; }
 
+  // Firma manuscrita del Jefe de Recaudos según país (Chile → Ernesto; resto → Nidian)
+  let firmaPath: string | null = null;
+  try {
+    const fname = esChile ? 'ernesto-rodriguez.png' : 'nidian-poveda.png';
+    const fp = path.join(process.cwd(), 'public', 'firmas', fname);
+    if (fs.existsSync(fp)) firmaPath = fp;
+  } catch { firmaPath = null; }
+
   const nombreTitular = [titular.primerNombre, titular.segundoNombre, titular.primerApellido, titular.segundoApellido].filter(Boolean).join(' ');
 
   const data: EstadoCuentaData = {
@@ -230,6 +238,7 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     mesLabel,
     empresa,
     logoPath,
+    firmaPath,
     contrato: titular.contrato || '—',
     corte: new Date().toISOString(),
     diaPago,

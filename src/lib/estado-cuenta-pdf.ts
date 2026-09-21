@@ -27,6 +27,7 @@ export interface EstadoCuentaData {
   mesLabel: string;
   empresa: { razon: string; nit: string };
   logoPath: string | null;
+  firmaPath: string | null;   // imagen de la firma del Jefe de Recaudos (por país)
   contrato: string;
   corte: string;             // ISO (hoy)
   diaPago: number | null;
@@ -383,7 +384,11 @@ function renderFirma(doc: any, data: EstadoCuentaData) {
   doc.strokeColor(C.line).lineWidth(1).moveTo(MARGIN, top).lineTo(MARGIN + CONTENT_W, top).stroke();
 
   const y = top + 24;
-  // Firma
+  // Firma manuscrita (imagen) apoyada sobre la línea, si está disponible
+  if (data.firmaPath) {
+    try { doc.image(data.firmaPath, MARGIN, top + 2, { fit: [190, 44] }); } catch { /* firma opcional */ }
+  }
+  // Línea de firma + datos del Jefe de Recaudos
   doc.strokeColor(C.ink).lineWidth(0.8).moveTo(MARGIN, y + 24).lineTo(MARGIN + 200, y + 24).stroke();
   doc.fillColor(C.ink).font('Helvetica-Bold').fontSize(10).text(data.cartera.nombre || '—', MARGIN, y + 28);
   doc.font('Helvetica').fontSize(8.5).fillColor(C.sub)
