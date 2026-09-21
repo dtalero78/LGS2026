@@ -96,12 +96,12 @@ const CONTENT_W = PAGE_W - MARGIN * 2;
 
 // Columnas de la tabla de movimientos (suman CONTENT_W = 515.28)
 const COLS = [
-  { key: 'n',        label: '#',        w: 30,  align: 'center' as const },
-  { key: 'concepto', label: 'Concepto', w: 150, align: 'left'   as const },
-  { key: 'vence',    label: 'Vence',    w: 62,  align: 'center' as const },
-  { key: 'pago',     label: 'Pago',     w: 62,  align: 'center' as const },
-  { key: 'valor',    label: 'Valor',    w: 80,  align: 'right'  as const },
-  { key: 'canal',    label: 'Canal',    w: 75,  align: 'left'   as const },
+  { key: 'n',        label: '#',        w: 22,  align: 'center' as const },
+  { key: 'concepto', label: 'Concepto', w: 116, align: 'left'   as const },
+  { key: 'vence',    label: 'Vence',    w: 54,  align: 'center' as const },
+  { key: 'pago',     label: 'Pago',     w: 54,  align: 'center' as const },
+  { key: 'valor',    label: 'Valor',    w: 64,  align: 'right'  as const },
+  { key: 'canal',    label: 'Canal',    w: 149, align: 'left'   as const },
   { key: 'estado',   label: 'Estado',   w: 56.28, align: 'center' as const },
 ];
 
@@ -332,7 +332,7 @@ function renderMovimientos(doc: any, data: EstadoCuentaData) {
 
   let y = tableHeader(doc);
   const bottomLimit = 780;
-  const rowH = 18;
+  const rowH = 19;
 
   if (!data.movimientos.length) {
     doc.font('Helvetica-Oblique').fontSize(9).fillColor(C.sub)
@@ -352,8 +352,16 @@ function renderMovimientos(doc: any, data: EstadoCuentaData) {
 
     let x = MARGIN;
     const cell = (txt: string, w: number, align: 'left' | 'center' | 'right', bold = false, color = C.ink) => {
-      doc.fillColor(color).font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(8)
-        .text(txt, x + 5, y + 5, { width: w - 10, align, lineBreak: false, ellipsis: true });
+      doc.fillColor(color).font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(8);
+      const maxW = w - 10;
+      // Recorte propio a UNA sola línea (el ellipsis de PDFKit con lineBreak:false
+      // no es fiable y dejaba envolver el texto largo del Canal, pisando la fila).
+      let s = (txt == null ? '' : String(txt)) || '—';
+      if (doc.widthOfString(s) > maxW) {
+        while (s.length > 1 && doc.widthOfString(s + '…') > maxW) s = s.slice(0, -1);
+        s = s.replace(/\s+$/, '') + '…';
+      }
+      doc.text(s, x + 5, y + 5.5, { width: maxW, align, lineBreak: false });
       x += w;
     };
     cell(m.n, COLS[0].w, 'center');
