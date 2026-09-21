@@ -11,12 +11,13 @@ interface Row { nombre: string; id: string; correo: string | null; nivel: string
 interface Data {
   rows: Row[]; total: number; capped: boolean; maxRows: number
   porNivel: { nivel: string; n: number }[]
-  meta: { niveles: string[]; stepsDisponibles: string[]; nivel: string; step: string; startDate: string; endDate: string }
+  meta: { niveles: string[]; stepsDisponibles: string[]; nivel: string; step: string; estado: string; startDate: string; endDate: string }
 }
 
 export default function XNivelesPage() {
   const [nivel, setNivel]         = useState('')
   const [step, setStep]           = useState('')
+  const [estado, setEstado]       = useState('')   // '' = todos | 'activo' | 'inactivo'
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate]     = useState('')
   const [data, setData]   = useState<Data | null>(null)
@@ -24,12 +25,13 @@ export default function XNivelesPage() {
   const [error, setError] = useState<string | null>(null)
   const [consultado, setConsultado] = useState(false)
 
-  const fetchData = useCallback(async (nv: string, st: string, sd: string, ed: string) => {
+  const fetchData = useCallback(async (nv: string, st: string, sd: string, ed: string, es: string) => {
     setLoading(true); setError(null)
     try {
       const qs = new URLSearchParams()
       if (nv) qs.set('nivel', nv)
       if (st) qs.set('step', st)
+      if (es) qs.set('estado', es)
       if (sd) qs.set('startDate', sd)
       if (ed) qs.set('endDate', ed)
       const res = await fetch(`/api/postgres/reports/academica/x-niveles?${qs}`, { cache: 'no-store' })
@@ -44,15 +46,16 @@ export default function XNivelesPage() {
   // repuebla y el conteo/chips quedan siempre en sync con lo mostrado).
   // Estos handlers solo son alcanzables tras la primera consulta (sus opciones
   // vienen de `data`), por eso refrescan directamente.
-  const onNivelChange = (v: string) => { setNivel(v); setStep(''); setConsultado(true); fetchData(v, '', startDate, endDate) }
-  const onStepChange  = (v: string) => { setStep(v); setConsultado(true); fetchData(nivel, v, startDate, endDate) }
-  const pickNivel     = (v: string) => { setNivel(v); setStep(''); setConsultado(true); fetchData(v, '', startDate, endDate) }
+  const onNivelChange  = (v: string) => { setNivel(v); setStep(''); setConsultado(true); fetchData(v, '', startDate, endDate, estado) }
+  const onStepChange   = (v: string) => { setStep(v); setConsultado(true); fetchData(nivel, v, startDate, endDate, estado) }
+  const onEstadoChange = (v: string) => { setEstado(v); setConsultado(true); fetchData(nivel, step, startDate, endDate, v) }
+  const pickNivel      = (v: string) => { setNivel(v); setStep(''); setConsultado(true); fetchData(v, '', startDate, endDate, estado) }
   const handleApply   = () => {
     if (!window.confirm('Esta consulta recorre muchos registros y puede ser pesada. ¿Deseas continuar?')) return
     setConsultado(true)
-    fetchData(nivel, step, startDate, endDate)
+    fetchData(nivel, step, startDate, endDate, estado)
   }
-  const handleClear   = () => { setNivel(''); setStep(''); setStartDate(''); setEndDate(''); setData(null); setConsultado(false) }
+  const handleClear   = () => { setNivel(''); setStep(''); setEstado(''); setStartDate(''); setEndDate(''); setData(null); setConsultado(false) }
 
   const handleCSV = () => {
     if (!data?.rows.length) return
@@ -99,6 +102,15 @@ export default function XNivelesPage() {
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[130px] disabled:bg-gray-100 disabled:text-gray-400">
                 <option value="">Todos</option>
                 {stepsDisponibles.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="xn-estado" className="block text-xs text-gray-500 mb-1">Estado</label>
+              <select id="xn-estado" value={estado} onChange={e => onEstadoChange(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[120px]">
+                <option value="">Todos</option>
+                <option value="activo">Activos</option>
+                <option value="inactivo">Inactivos</option>
               </select>
             </div>
             <div>

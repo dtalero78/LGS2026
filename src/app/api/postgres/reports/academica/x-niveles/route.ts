@@ -58,11 +58,17 @@ export const GET = handlerReport(async (req, _ctx, session) => {
   const step      = stepRaw && stepRaw.toLowerCase() !== 'todos' ? stepRaw : null
   const startDate = searchParams.get('startDate') || null
   const endDate   = searchParams.get('endDate') || null
+  // Estado: 'activo' | 'inactivo' | (vacío/'todos') = ambos. Cláusula fija desde
+  // whitelist (no interpola input del usuario).
+  const estadoRaw = (searchParams.get('estado') || '').trim().toLowerCase()
+  const estadoClause =
+    estadoRaw === 'activo'   ? 'AND "estadoInactivo" IS NOT TRUE' :
+    estadoRaw === 'inactivo' ? 'AND "estadoInactivo" IS TRUE'     : ''
 
   // $1 nivel, $2 startDate, $3 endDate, $4 step (todos opcionales)
-  // Incluye ACTIVOS e INACTIVOS (el estado se muestra en columna). Solo se
-  // excluyen contratos de prueba (prefijo PRB-) — el filtro se resuelve via NOT
-  // EXISTS contra PEOPLE por numeroId (ACADEMICA no guarda el contrato directamente).
+  // Incluye ACTIVOS e INACTIVOS (el estado se muestra en columna, y se puede
+  // filtrar). Solo se excluyen contratos de prueba (prefijo PRB-) — el filtro se
+  // resuelve via NOT EXISTS contra PEOPLE por numeroId (ACADEMICA no guarda el contrato).
   const where = `
     "nivel" IS NOT NULL AND TRIM("nivel") <> ''
     AND NOT EXISTS (
@@ -70,6 +76,7 @@ export const GET = handlerReport(async (req, _ctx, session) => {
       WHERE pp."numeroId" = "ACADEMICA"."numeroId"
         AND COALESCE(pp."contrato",'') LIKE 'PRB-%'
     )
+    ${estadoClause}
     AND ($1::text IS NULL OR "nivel" = $1)
     AND ($2::date IS NULL OR ${CDATE} >= $2::date)
     AND ($3::date IS NULL OR ${CDATE} <= $3::date)
@@ -103,6 +110,7 @@ export const GET = handlerReport(async (req, _ctx, session) => {
         WHERE pp."numeroId" = "ACADEMICA"."numeroId"
           AND COALESCE(pp."contrato",'') LIKE 'PRB-%'
       )
+      ${estadoClause}
       AND ($1::date IS NULL OR ${CDATE} >= $1::date)
       AND ($2::date IS NULL OR ${CDATE} <= $2::date)
     GROUP BY "nivel" ORDER BY n DESC`, [startDate, endDate])
@@ -129,6 +137,6 @@ export const GET = handlerReport(async (req, _ctx, session) => {
       return Array.from(m, ([nivel, n]) => ({ nivel, n }))
         .sort((a, b) => nivelRank(a.nivel) - nivelRank(b.nivel) || a.nivel.localeCompare(b.nivel))
     })(),
-    meta: { niveles, stepsDisponibles, nivel: nivel ?? '', step: step ?? '', startDate: startDate ?? '', endDate: endDate ?? '' },
+    meta: { niveles, stepsDisponibles, nivel: nivel ?? '', step: step ?? '', estado: estadoRaw, startDate: startDate ?? '', endDate: endDate ?? '' },
   })
 })
