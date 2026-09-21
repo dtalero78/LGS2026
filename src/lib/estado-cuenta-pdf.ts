@@ -337,12 +337,17 @@ function renderFooters(doc: any, data: EstadoCuentaData) {
   const range = doc.bufferedPageRange();
   for (let i = range.start; i < range.start + range.count; i++) {
     doc.switchToPage(i);
+    // El pie va en y=818, por DEBAJO del margen inferior (alto − 40 = 801.89).
+    // PDFKit, al escribir texto más allá de `maxY`, "continúa" en una página
+    // nueva → generaba páginas en blanco. Anular el margen inferior de la página
+    // (maxY = alto) evita esa continuación. `lineBreak:false` como defensa extra.
+    doc.page.margins.bottom = 0;
     doc.strokeColor(C.line).lineWidth(0.5).moveTo(MARGIN, 812).lineTo(MARGIN + CONTENT_W, 812).stroke();
     doc.font('Helvetica').fontSize(7.5).fillColor(C.sub)
       .text(
         `${data.empresa.razon} · Estado de cuenta generado el ${fmtDate(data.corte)}`,
-        MARGIN, 818, { width: CONTENT_W - 60, align: 'left' },
+        MARGIN, 818, { width: CONTENT_W - 60, align: 'left', lineBreak: false },
       );
-    doc.text(`Página ${i - range.start + 1} de ${range.count}`, MARGIN + CONTENT_W - 60, 818, { width: 60, align: 'right' });
+    doc.text(`Página ${i - range.start + 1} de ${range.count}`, MARGIN + CONTENT_W - 60, 818, { width: 60, align: 'right', lineBreak: false });
   }
 }
