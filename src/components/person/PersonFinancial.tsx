@@ -448,6 +448,52 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
     ? new Date(fechaCorteRaw).getUTCDate()
     : null
 
+  // Estado del pago del corte actual (badge junto a "Corte de Pago"):
+  //   - Azul "En tiempo": el corte de este mes aún no pasa y la cuota no está pagada
+  //   - Verde "Pagado":   la cuota del período actual ya está pagada (registrada)
+  //   - Rojo "En mora":   el corte ya pasó y hay cuota(s) vencida(s) sin pagar
+  // Regla: se compara nº de cuotas REGISTRADAS (validadas o no) contra las
+  // vencidas hasta hoy y hasta el corte de este mes. El calendario de cuotas se
+  // deriva de FINANCIEROS.fechaPago (cuota k vence = fechaPago + (k-1) meses).
+  const corteEstado: { label: string; cls: string } | null = (() => {
+    if (!diaCorte || !fechaCorteRaw) return null
+    const base = new Date(fechaCorteRaw)
+    if (isNaN(base.getTime())) return null
+    const numeroCuotas = Number(financial?.cuotas) || 0
+    if (numeroCuotas <= 0) return null
+
+    const addMonths = (d: Date, n: number) => {
+      const day = d.getUTCDate()
+      const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1))
+      const ld = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate()
+      t.setUTCDate(Math.min(day, ld))
+      return t
+    }
+    const hoy = new Date()
+    const hoy0 = Date.UTC(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())
+    const lastDay = new Date(Date.UTC(hoy.getFullYear(), hoy.getMonth() + 1, 0)).getUTCDate()
+    const corteMes0 = Date.UTC(hoy.getFullYear(), hoy.getMonth(), Math.min(diaCorte, lastDay))
+
+    let vencidasHoy = 0
+    let vencidasEsteCorte = 0
+    for (let k = 1; k <= numeroCuotas; k++) {
+      const d = addMonths(base, k - 1)
+      const d0 = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+      if (d0 <= hoy0) vencidasHoy++
+      if (d0 <= corteMes0) vencidasEsteCorte++
+    }
+    // Nada vencido todavía (primer corte a futuro) → al día
+    if (vencidasEsteCorte === 0) return { label: 'En tiempo', cls: 'bg-blue-100 text-blue-800' }
+
+    const cuotasRegistradas = new Set(
+      pagos.filter((p: any) => Number(p.numCuota) > 0).map((p: any) => Number(p.numCuota)),
+    ).size
+
+    if (cuotasRegistradas >= vencidasEsteCorte) return { label: 'Pagado', cls: 'bg-green-100 text-green-800' }
+    if (cuotasRegistradas >= vencidasHoy)       return { label: 'En tiempo', cls: 'bg-blue-100 text-blue-800' }
+    return { label: 'En mora', cls: 'bg-red-100 text-red-800' }
+  })()
+
   return (
     <div className="space-y-6">
       {/* Financial Summary — gateado por PERSON.FINANCIERA.RESUMEN_VER */}
@@ -599,14 +645,28 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
               </span>
             </div>
 
-            {/* Corte de Pago (FINANCIEROS.fechaPago — día del mes) */}
+            {/* Corte de Pago (FINANCIEROS.fechaPago — día del mes) + estado del período */}
             {isTitular && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Corte de Pago</label>
                 {diaCorte ? (
-                  <span className="text-sm font-semibold text-gray-900">
-                    Día {diaCorte} de cada mes
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold text-gray-900">
+                      Día {diaCorte} de cada mes
+                    </span>
+                    {corteEstado && (
+                      <span
+                        title={
+                          corteEstado.label === 'Pagado' ? 'Cuota del período actual pagada'
+                          : corteEstado.label === 'En mora' ? 'El corte ya pasó y hay cuota(s) sin pagar'
+                          : 'El corte de este mes aún no vence'
+                        }
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${corteEstado.cls}`}
+                      >
+                        {corteEstado.label}
+                      </span>
+                    )}
+                  </div>
                 ) : (
                   <p className="text-sm text-gray-400 italic">—</p>
                 )}
