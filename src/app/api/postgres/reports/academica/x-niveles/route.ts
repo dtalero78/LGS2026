@@ -8,8 +8,9 @@ import { InformesPermission } from '@/types/permissions'
 /**
  * GET /api/postgres/reports/academica/x-niveles?nivel&startDate&endDate
  *
- * Listado de usuarios ACTIVOS en ACADEMICA por nivel (estadoInactivo IS NOT TRUE).
- * Columnas: nombre, id (numeroId), correo, nivel, step. Conteo total + desglose por nivel.
+ * Listado de usuarios en ACADEMICA por nivel (ACTIVOS e INACTIVOS; se excluyen
+ * solo los contratos de prueba PRB-). Columnas: nombre, id (numeroId), correo,
+ * nivel, step, estado (Activo/Inactivo). Conteo total + desglose por nivel.
  *
  * Filtros:
  *   - nivel: código exacto (BN1, BN2, …, DONE) o vacío/'todos' = todos.
@@ -59,12 +60,11 @@ export const GET = handlerReport(async (req, _ctx, session) => {
   const endDate   = searchParams.get('endDate') || null
 
   // $1 nivel, $2 startDate, $3 endDate, $4 step (todos opcionales)
-  // Solo usuarios ACTIVOS: "estadoInactivo" IS NOT TRUE (excluye true; false/NULL = activo).
-  // Excluye contratos de prueba (prefijo PRB-) — el filtro se resuelve via NOT EXISTS
-  // contra PEOPLE por numeroId (ACADEMICA no guarda el contrato directamente).
+  // Incluye ACTIVOS e INACTIVOS (el estado se muestra en columna). Solo se
+  // excluyen contratos de prueba (prefijo PRB-) — el filtro se resuelve via NOT
+  // EXISTS contra PEOPLE por numeroId (ACADEMICA no guarda el contrato directamente).
   const where = `
     "nivel" IS NOT NULL AND TRIM("nivel") <> ''
-    AND "estadoInactivo" IS NOT TRUE
     AND NOT EXISTS (
       SELECT 1 FROM "PEOPLE" pp
       WHERE pp."numeroId" = "ACADEMICA"."numeroId"
@@ -82,7 +82,8 @@ export const GET = handlerReport(async (req, _ctx, session) => {
       "numeroId" AS id,
       "email" AS correo,
       "nivel",
-      "step"
+      "step",
+      (CASE WHEN "estadoInactivo" IS TRUE THEN 'Inactivo' ELSE 'Activo' END) AS estado
     FROM "ACADEMICA"
     WHERE ${where}
     ORDER BY "nivel" ASC,
@@ -97,7 +98,6 @@ export const GET = handlerReport(async (req, _ctx, session) => {
   const porNivelRes = await query<{ nivel: string; n: number }>(`
     SELECT "nivel", COUNT(*)::int n FROM "ACADEMICA"
     WHERE "nivel" IS NOT NULL AND TRIM("nivel") <> ''
-      AND "estadoInactivo" IS NOT TRUE
       AND NOT EXISTS (
         SELECT 1 FROM "PEOPLE" pp
         WHERE pp."numeroId" = "ACADEMICA"."numeroId"
@@ -110,7 +110,7 @@ export const GET = handlerReport(async (req, _ctx, session) => {
   // Niveles disponibles para el dropdown (orden pedagógico, no alfabético)
   const nivelesRes = await query<{ nivel: string }>(`
     SELECT DISTINCT "nivel" FROM "ACADEMICA"
-    WHERE "nivel" IS NOT NULL AND TRIM("nivel") <> '' AND "estadoInactivo" IS NOT TRUE`)
+    WHERE "nivel" IS NOT NULL AND TRIM("nivel") <> ''`)
   const niveles = Array.from(new Set([...nivelesRes.rows.map(r => r.nivel), ...ALWAYS_SHOW_NIVELES]))
     .sort((a, b) => nivelRank(a) - nivelRank(b) || a.localeCompare(b))
 

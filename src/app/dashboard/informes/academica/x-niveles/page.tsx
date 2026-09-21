@@ -7,7 +7,7 @@ import { exportToExcel } from '@/lib/export-excel'
 import { PermissionGuard } from '@/components/permissions/PermissionGuard'
 import { InformesPermission } from '@/types/permissions'
 
-interface Row { nombre: string; id: string; correo: string | null; nivel: string; step: string | null }
+interface Row { nombre: string; id: string; correo: string | null; nivel: string; step: string | null; estado: string }
 interface Data {
   rows: Row[]; total: number; capped: boolean; maxRows: number
   porNivel: { nivel: string; n: number }[]
@@ -62,6 +62,7 @@ export default function XNivelesPage() {
       { header: 'Correo', accessor: r => r.correo ?? '' },
       { header: 'Nivel',  accessor: r => r.nivel },
       { header: 'Step',   accessor: r => r.step ?? '' },
+      { header: 'Estado', accessor: r => r.estado ?? '' },
     ], `x-niveles${nivel ? '_' + nivel : '_todos'}${step ? '_' + step.replace(/\s+/g, '') : ''}${startDate ? '_' + startDate : ''}`)
   }
 
@@ -76,7 +77,7 @@ export default function XNivelesPage() {
           <AcademicCapIcon className="h-7 w-7 text-indigo-600" />
           <div>
             <h1 className="text-2xl font-bold text-gray-900">X Niveles</h1>
-            <p className="text-sm text-gray-500">Usuarios académicos <span className="font-medium">activos</span> por nivel (BN1…DONE o todos), con conteo y exportación.</p>
+            <p className="text-sm text-gray-500">Usuarios académicos por nivel (BN1…DONE o todos), <span className="font-medium">activos e inactivos</span> con su estado, conteo y exportación.</p>
           </div>
         </div>
 
@@ -177,7 +178,7 @@ export default function XNivelesPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
                   <tr>
-                    {['#', 'Nombre', 'ID', 'Correo', 'Nivel', 'Step'].map(h => (
+                    {['#', 'Nombre', 'ID', 'Correo', 'Nivel', 'Step', 'Estado'].map(h => (
                       <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -191,6 +192,11 @@ export default function XNivelesPage() {
                       <td className="px-3 py-2 text-gray-600">{r.correo ?? '—'}</td>
                       <td className="px-3 py-2"><span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-xs font-medium">{r.nivel}</span></td>
                       <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{r.step ?? '—'}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${r.estado === 'Inactivo' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                          {r.estado}
+                        </span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
