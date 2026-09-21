@@ -32,6 +32,9 @@ interface CalendarioEvent {
   linkZoom?: string
   nivel?: string
   step?: string
+  // Hora fin programada (HH:mm) — bloques de 2h de Exam. Intern.; usada como
+  // default del Time Out para registrar la sesión en una sola selección.
+  horaFin?: string | null
   // Ctrl Horas
   timeout?: string | null
   notasadvisor?: string | null
@@ -491,13 +494,15 @@ function RegistrarSesionButton({
   // hermano del grupo, el sessionStorage trae los últimos valores para no
   // tener que reescribirlos. Se limpia tras leerse.
   const [timeoutVal, setTimeoutVal] = useState(() => {
-    if (typeof window === 'undefined') return evento.timeout || ''
+    // Default: el Time Out ya registrado; si no, la hora fin programada del
+    // evento (bloques de 2h) para registrar en una sola selección.
+    if (typeof window === 'undefined') return evento.timeout || evento.horaFin || ''
     const stored = window.sessionStorage.getItem('lgs-grupo-prefill-timeout')
     if (stored) {
       window.sessionStorage.removeItem('lgs-grupo-prefill-timeout')
       return stored
     }
-    return evento.timeout || ''
+    return evento.timeout || evento.horaFin || ''
   })
   const [notas, setNotas] = useState(() => {
     if (typeof window === 'undefined') return evento.notasadvisor || ''
