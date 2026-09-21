@@ -35,6 +35,17 @@ export interface EstadoCuentaData {
   estudiantes: { nombre: string; documento: string; cel: string; programa: string }[];
   cartera: { nombre: string; cargo: string; email: string };
   resumen: { pagado: number; mora: number; porVencer: number; saldo: number; avancePct: number };
+  progreso: {
+    valorPlan: number;
+    pagado: number;
+    saldo: number;
+    progresoPct: number;
+    cuotasPagadas: number;
+    enMora: number;
+    porVencer: number;
+    // Segmentos en orden: primero la inscripción, luego cada cuota.
+    segmentos: Array<'insPagada' | 'insPend' | 'pagada' | 'mora' | 'porvencer'>;
+  };
   movimientos: EstadoCuentaMov[];
   proximoPago: EstadoCuentaMov | null;
   ultimoPago: EstadoCuentaMov | null;
@@ -118,7 +129,7 @@ export async function buildEstadoCuentaPdf(data: EstadoCuentaData): Promise<Buff
 
       renderHeader(doc, data);
       renderInfoBlocks(doc, data);
-      renderResumen(doc, data);
+      renderProgreso(doc, data);
       if (data.modo === 'mes') renderProximoUltimo(doc, data);
       renderMovimientos(doc, data);
       renderFirma(doc, data);
@@ -198,25 +209,82 @@ function renderInfoBlocks(doc: any, data: EstadoCuentaData) {
   doc.fillColor(C.ink);
 }
 
-// ─── Tarjetas de resumen ───────────────────────────────────────────────────
-function renderResumen(doc: any, data: EstadoCuentaData) {
-  const cards = [
-    { label: 'Pagado',     val: money(data.resumen.pagado),    fg: C.green, bg: C.greenBg },
-    { label: 'En mora',    val: money(data.resumen.mora),      fg: C.red,   bg: C.redBg },
-    { label: 'Por vencer', val: money(data.resumen.porVencer), fg: C.amber, bg: C.amberBg },
-    { label: 'Saldo',      val: money(data.resumen.saldo),     fg: C.brandDark, bg: C.soft },
-    { label: 'Avance',     val: `${Math.round(data.resumen.avancePct)}%`, fg: C.brand, bg: C.grayBg },
+// ─── Indicador de pago (barra segmentada + leyenda + cifras) ───────────────
+const TEAL = '#14b8a6', TEAL_SOFT = '#ccfbf1';
+const NAVY = '#1e3a8a';
+const MORA_FILL = '#fee2e2', MORA_BORDER = '#dc2626';
+const PV_FILL = '#eef2f7', PV_BORDER = '#cbd5e1';
+
+// Estilo por tipo de segmento: fill sólido, o fill claro + borde.
+const SEG_STYLE: Record<string, { fill: string; border?: string }> = {
+  insPagada:  { fill: TEAL },
+  insPend:    { fill: TEAL_SOFT, border: TEAL },
+  pagada:     { fill: NAVY },
+  mora:       { fill: MORA_FILL, border: MORA_BORDER },
+  porvencer:  { fill: PV_FILL, border: PV_BORDER },
+};
+
+function drawChip(doc: any, x: number, y: number, w: number, h: number, r: number, style: { fill: string; border?: string }) {
+  if (style.border) {
+    doc.lineWidth(1).roundedRect(x, y, w, h, r).fillAndStroke(style.fill, style.border);
+  } else {
+    doc.roundedRect(x, y, w, h, r).fill(style.fill);
+  }
+}
+
+function renderProgreso(doc: any, data: EstadoCuentaData) {
+  const p = data.progreso;
+
+  doc.font('Helvetica-Bold').fontSize(9).fillColor(C.brandDark).text('PROGRESO DE PAGO', MARGIN, doc.y);
+  doc.moveDown(0.3);
+
+  // ── Barra de segmentos (inscripción + cada cuota) ──
+  const gap = 5, segH = 15;
+  const n = Math.max(1, p.segmentos.length);
+  let segW = (CONTENT_W - gap * (n - 1)) / n;
+  if (segW > 34) segW = 34;
+  if (segW < 9) segW = 9;
+  let x = MARGIN;
+  let y = doc.y;
+  for (const s of p.segmentos) {
+    if (x + segW > MARGIN + CONTENT_W + 0.5) { x = MARGIN; y += segH + 5; }
+    drawChip(doc, x, y, segW, segH, 3, SEG_STYLE[s] || SEG_STYLE.porvencer);
+    x += segW + gap;
+  }
+  y += segH + 10;
+  doc.fillColor(C.ink);
+
+  // ── Leyenda ──
+  const legend: Array<{ style: { fill: string; border?: string }; label: string }> = [
+    { style: SEG_STYLE.insPagada, label: 'Inscripción' },
+    { style: SEG_STYLE.pagada, label: `Cuotas pagadas (${p.cuotasPagadas})` },
   ];
-  const gap = 8;
-  const w = (CONTENT_W - gap * (cards.length - 1)) / cards.length;
-  const top = doc.y;
-  cards.forEach((c, i) => {
-    const x = MARGIN + i * (w + gap);
-    doc.roundedRect(x, top, w, 46, 5).fill(c.bg);
-    doc.fillColor(c.fg).font('Helvetica').fontSize(7.5).text(c.label.toUpperCase(), x + 8, top + 8, { width: w - 16 });
-    doc.fillColor(c.fg).font('Helvetica-Bold').fontSize(12).text(c.val, x + 8, top + 22, { width: w - 16 });
+  if (p.enMora > 0) legend.push({ style: SEG_STYLE.mora, label: `En mora (${p.enMora})` });
+  if (p.porVencer > 0) legend.push({ style: SEG_STYLE.porvencer, label: `Por vencer (${p.porVencer})` });
+
+  let lx = MARGIN;
+  doc.font('Helvetica').fontSize(8).fillColor(C.gray);
+  for (const item of legend) {
+    drawChip(doc, lx, y + 1, 11, 11, 2, item.style);
+    doc.fillColor(C.gray).text(item.label, lx + 15, y + 2, { lineBreak: false });
+    lx += 15 + doc.widthOfString(item.label) + 18;
+  }
+  y += 24;
+
+  // ── Cifras: Valor del plan · Pagado · Saldo · Progreso de Pago ──
+  const figs = [
+    { label: 'Valor del plan', val: money(p.valorPlan) },
+    { label: 'Pagado', val: money(p.pagado) },
+    { label: 'Saldo', val: money(p.saldo) },
+    { label: 'Progreso de Pago', val: `${Math.round(p.progresoPct)}%` },
+  ];
+  const fw = CONTENT_W / figs.length;
+  figs.forEach((f, i) => {
+    const fx = MARGIN + i * fw;
+    doc.font('Helvetica').fontSize(8).fillColor(C.sub).text(f.label, fx, y, { width: fw - 6 });
+    doc.font('Helvetica-Bold').fontSize(13).fillColor(C.brandDark).text(f.val, fx, y + 12, { width: fw - 6 });
   });
-  doc.y = top + 46 + 16;
+  doc.y = y + 34;
   doc.fillColor(C.ink);
 }
 

@@ -169,6 +169,19 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
   const porVencer = todos.filter(m => m.estado === 'Por vencer').reduce((s, m) => s + m.valor, 0);
   const avancePct = totalPlan > 0 ? (pagado / totalPlan) * 100 : 0;
 
+  // ── Indicador de progreso (barra segmentada sobre TODO el contrato) ─────
+  const insMov = todos.find(m => m.n === 'CI');
+  const cuotaMovs = todos.filter(m => m.n !== 'CI');
+  const segEstado = (m: EstadoCuentaMov): 'pagada' | 'mora' | 'porvencer' =>
+    m.estado === 'Pagado' ? 'pagada' : m.estado === 'En mora' ? 'mora' : 'porvencer';
+  const segmentos: Array<'insPagada' | 'insPend' | 'pagada' | 'mora' | 'porvencer'> = [
+    insMov && insMov.estado === 'Pagado' ? 'insPagada' : 'insPend',
+    ...cuotaMovs.map(segEstado),
+  ];
+  const cuotasPagadasCnt = cuotaMovs.filter(m => m.estado === 'Pagado').length;
+  const enMoraCnt = cuotaMovs.filter(m => m.estado === 'En mora').length;
+  const porVencerCnt = cuotaMovs.length - cuotasPagadasCnt - enMoraCnt;
+
   // ── Filtrado por modo ───────────────────────────────────────────────────
   let movimientos = todos;
   let mesLabel = 'Consolidado total';
@@ -241,6 +254,16 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     })),
     cartera,
     resumen: { pagado, mora, porVencer, saldo, avancePct },
+    progreso: {
+      valorPlan: totalPlan,
+      pagado,
+      saldo,
+      progresoPct: avancePct,
+      cuotasPagadas: cuotasPagadasCnt,
+      enMora: enMoraCnt,
+      porVencer: porVencerCnt,
+      segmentos,
+    },
     movimientos,
     proximoPago,
     ultimoPago,
