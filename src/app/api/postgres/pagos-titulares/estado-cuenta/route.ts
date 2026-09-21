@@ -22,11 +22,21 @@ export const dynamic = 'force-dynamic';
  * en PAGOS_TITULARES (validados o no).
  */
 
+// Parseo de importes. OJO: las columnas `numeric` de PAGOS_TITULARES
+// (valorPagado, descuento, saldo) las devuelve pg como STRING con decimales
+// ("214500.00"). Hay que respetar el punto decimal — NO quitarlo (eso convertía
+// "214500.00" en 21.450.000). Los importes de FINANCIEROS son enteros planos
+// como texto ("1540000"), sin separadores de miles, así que parseFloat sirve
+// para ambos. (Un eventual símbolo/espacio se limpia antes de parsear.)
 const num = (v: any): number => {
   if (v == null) return 0;
-  if (typeof v === 'number') return v;
-  const digits = String(v).replace(/[^\d]/g, '');
-  return digits ? parseInt(digits, 10) : 0;
+  if (typeof v === 'number') return isFinite(v) ? v : 0;
+  let s = String(v).replace(/[^\d.,-]/g, '');
+  // Varios puntos = separadores de miles ("1.540.000") → quitarlos.
+  if ((s.match(/\./g) || []).length > 1) s = s.replace(/\./g, '');
+  s = s.replace(',', '.');            // coma decimal → punto
+  const f = parseFloat(s);
+  return isFinite(f) ? Math.round(f) : 0;
 };
 
 const norm = (s: any): string =>
