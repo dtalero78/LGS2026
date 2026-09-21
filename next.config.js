@@ -104,7 +104,9 @@ const nextConfig = {
 
   // Experimental features for better deployment
   experimental: {
-    serverComponentsExternalPackages: ['mongoose', 'mongodb'],
+    // pdfkit lee sus fuentes AFM por __dirname en runtime; si webpack lo empaqueta
+    // esos paths se rompen (ENOENT). Externalizarlo lo carga desde node_modules.
+    serverComponentsExternalPackages: ['mongoose', 'mongodb', 'pdfkit'],
   },
 }
 

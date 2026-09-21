@@ -68,6 +68,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Botón en la pestaña Financiera del titular para cambiar el tipo de cartera (Normal / Prejuridico / Ultimo Pago / Penalidad). Pide motivo obligatorio y deja registro de auditoría en PAGOS_TITULARES.tipoCarteraHistory (JSONB) de la fila cuota#0. Sin este permiso el botón no aparece',
   },
   {
+    code: PersonPermission.ESTADO_CUENTA,
+    module: Module.PERSON,
+    section: 'Financiera',
+    name: 'Botón "Estado de Cuenta"',
+    description: 'Botón en el Resumen Financiero del titular que genera el Estado de Cuenta en PDF (por mes o consolidado total) con el logo de la plataforma, el detalle de movimientos/cuotas y la firma del Jefe de Recaudos según país (Chile → jefe Chile; resto → el otro jefe). El PDF sale protegido con contraseña = número de documento del titular. Sin este permiso el botón no aparece',
+  },
+  {
     code: PersonPermission.MARCAR_OPCIONAL,
     module: Module.PERSON,
     section: 'Financiera',
