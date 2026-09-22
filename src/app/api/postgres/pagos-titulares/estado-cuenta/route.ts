@@ -153,26 +153,44 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     const t = d.getTime();
     return isNaN(t) ? 0 : t;
   };
-  const pagosOrden = [...pagos].sort((a, b) => tsOf(a.fechaPago) - tsOf(b.fechaPago));
+  // Nº de cuota de un pago (0 = inscripción; los que no lo tienen caen a 0).
+  const cuotaDe = (p: any): number => {
+    let k = p.numCuota == null ? NaN : Number(p.numCuota);
+    if ((isNaN(k) || k < 0) && (p.inscripcion === true || num(p.inscripcion) > 0)) k = 0;
+    return isNaN(k) ? 0 : Math.max(0, k);
+  };
+
+  // Asignación: cada pago EMPIEZA a cubrir en SU cuota y DESBORDA hacia adelante
+  // (adelantos / cambio a contado). NUNCA rellena hacia atrás — así el estado por
+  // cuota coincide con el detalle de pagos: un abono parcial deja SU cuota parcial
+  // (no mueve el parcial a la última), y un pago de la cuota 9 no marca la 8.
+  const pagosOrden = [...pagos].sort((a, b) => {
+    const ka = cuotaDe(a), kb = cuotaDe(b);
+    return ka !== kb ? ka - kb : tsOf(a.fechaPago) - tsOf(b.fechaPago);
+  });
   const cubiertoItem = new Array(items.length).fill(0);
-  const pagoDeItem: (any | null)[] = new Array(items.length).fill(null);
-  let idx = 0;
+  const pagoDeItem: (any | null)[] = new Array(items.length).fill(null); // pago que tocó el ítem (propio o por desborde)
+  const pagoPropio: (any | null)[] = new Array(items.length).fill(null); // pago cuyo numCuota == ítem (fecha/canal reales)
   for (const p of pagosOrden) {
+    const start = Math.min(cuotaDe(p), items.length - 1);
+    pagoPropio[start] = p; // último pago con ese numCuota (por el orden, el más reciente)
     let restante = num(p.valorPagado) + num(p.descuento);
-    while (restante > 0.5 && idx < items.length) {
-      const falta = items[idx].valor - cubiertoItem[idx];
-      if (falta <= 0.5) { idx++; continue; }
+    let i = start;
+    while (restante > 0.5 && i < items.length) {
+      const falta = items[i].valor - cubiertoItem[i];
+      if (falta <= 0.5) { i++; continue; }
       const aplica = Math.min(restante, falta);
-      cubiertoItem[idx] += aplica;
+      cubiertoItem[i] += aplica;
       restante -= aplica;
-      if (cubiertoItem[idx] >= items[idx].valor - 0.5) { pagoDeItem[idx] = p; idx++; }
+      if (!pagoDeItem[i]) pagoDeItem[i] = p;
+      if (cubiertoItem[i] >= items[i].valor - 0.5) i++;
     }
   }
 
   const todos: EstadoCuentaMov[] = items.map((it, i) => {
     const completo = cubiertoItem[i] >= it.valor - 0.5;
     const parcial = !completo && cubiertoItem[i] > 0.5;
-    const p = pagoDeItem[i];
+    const p = pagoPropio[i] || pagoDeItem[i]; // preferir el pago propio de la cuota para fecha/canal
     let estado: EstadoCuentaMov['estado'];
     if (completo) estado = 'Pagado';
     else if (parcial) estado = 'Parcial';
@@ -187,7 +205,7 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
       n: it.n, concepto: it.concepto, vence: it.vence,
       pago: p?.fechaPago || null,
       valor: it.valor,
-      canal: p ? canalDe(p) : (parcial ? 'Abono parcial' : '—'),
+      canal: p ? canalDe(p) : '—',
       estado,
     };
   });
@@ -214,15 +232,18 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
   const mora = cuotaMovs.filter(m => m.estado === 'En mora').reduce((s, m) => s + m.valor, 0);
   const porVencer = cuotaMovs.filter(m => m.estado === 'Por vencer').reduce((s, m) => s + m.valor, 0);
 
-  const segEstado = (m: EstadoCuentaMov): 'pagada' | 'mora' | 'porvencer' =>
-    m.estado === 'Pagado' ? 'pagada' : m.estado === 'En mora' ? 'mora' : 'porvencer';
-  const segmentos: Array<'insPagada' | 'insPend' | 'pagada' | 'mora' | 'porvencer'> = [
-    insMov && insMov.estado === 'Pagado' ? 'insPagada' : 'insPend',
+  const segEstado = (m: EstadoCuentaMov): 'pagada' | 'parcial' | 'mora' | 'porvencer' =>
+    m.estado === 'Pagado' ? 'pagada' :
+    m.estado === 'Parcial' ? 'parcial' :
+    m.estado === 'En mora' ? 'mora' : 'porvencer';
+  const segmentos: Array<'insPagada' | 'insPend' | 'pagada' | 'parcial' | 'mora' | 'porvencer'> = [
+    insMov && insMov.estado === 'Pagado' ? 'insPagada' : insMov && insMov.estado === 'Parcial' ? 'parcial' : 'insPend',
     ...cuotaMovs.map(segEstado),
   ];
   const cuotasPagadasCnt = cuotaMovs.filter(m => m.estado === 'Pagado').length;
+  const parcialCnt = cuotaMovs.filter(m => m.estado === 'Parcial').length;
   const enMoraCnt = cuotaMovs.filter(m => m.estado === 'En mora').length;
-  const porVencerCnt = cuotaMovs.length - cuotasPagadasCnt - enMoraCnt;
+  const porVencerCnt = cuotaMovs.filter(m => m.estado === 'Por vencer' || m.estado === 'Pendiente').length;
 
   // ── Filtrado por modo ───────────────────────────────────────────────────
   let movimientos = todos;
@@ -312,6 +333,7 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
       saldo,
       progresoPct: avancePct,
       cuotasPagadas: cuotasPagadasCnt,
+      parcial: parcialCnt,
       enMora: enMoraCnt,
       porVencer: porVencerCnt,
       segmentos,

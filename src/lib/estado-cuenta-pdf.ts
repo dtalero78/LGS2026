@@ -43,10 +43,11 @@ export interface EstadoCuentaData {
     saldo: number;
     progresoPct: number;
     cuotasPagadas: number;
+    parcial: number;
     enMora: number;
     porVencer: number;
     // Segmentos en orden: primero la inscripción, luego cada cuota.
-    segmentos: Array<'insPagada' | 'insPend' | 'pagada' | 'mora' | 'porvencer'>;
+    segmentos: Array<'insPagada' | 'insPend' | 'pagada' | 'parcial' | 'mora' | 'porvencer'>;
   };
   movimientos: EstadoCuentaMov[];
   proximoPago: EstadoCuentaMov | null;
@@ -227,6 +228,7 @@ const SEG_STYLE: Record<string, { fill: string; border?: string }> = {
   insPagada:  { fill: TEAL },
   insPend:    { fill: TEAL_SOFT, border: TEAL },
   pagada:     { fill: NAVY },
+  parcial:    { fill: '#f59e0b' },   // ámbar = abono parcial (cuota no cubierta al 100%)
   mora:       { fill: MORA_FILL, border: MORA_BORDER },
   porvencer:  { fill: PV_FILL, border: PV_BORDER },
 };
@@ -266,6 +268,7 @@ function renderProgreso(doc: any, data: EstadoCuentaData) {
     { style: SEG_STYLE.insPagada, label: 'Inscripción' },
     { style: SEG_STYLE.pagada, label: `Cuotas pagadas (${p.cuotasPagadas})` },
   ];
+  if (p.parcial > 0) legend.push({ style: SEG_STYLE.parcial, label: `Parcial (${p.parcial})` });
   if (p.enMora > 0) legend.push({ style: SEG_STYLE.mora, label: `En mora (${p.enMora})` });
   if (p.porVencer > 0) legend.push({ style: SEG_STYLE.porvencer, label: `Por vencer (${p.porVencer})` });
 
