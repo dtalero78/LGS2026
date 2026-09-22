@@ -147,8 +147,13 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     });
   }
 
-  const pagosOrden = [...pagos].sort((a, b) =>
-    ((a.fechaPago || '').slice(0, 10)).localeCompare((b.fechaPago || '').slice(0, 10)));
+  // OJO: pg devuelve las columnas timestamptz como objetos Date, no string.
+  const tsOf = (v: any): number => {
+    const d = v instanceof Date ? v : new Date(v || 0);
+    const t = d.getTime();
+    return isNaN(t) ? 0 : t;
+  };
+  const pagosOrden = [...pagos].sort((a, b) => tsOf(a.fechaPago) - tsOf(b.fechaPago));
   const cubiertoItem = new Array(items.length).fill(0);
   const pagoDeItem: (any | null)[] = new Array(items.length).fill(null);
   let idx = 0;
