@@ -19,6 +19,17 @@ import { RolPermisosRepository } from '@/repositories/roles.repository';
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const cache = new Map<string, { perms: string[]; expires: number }>();
 
+/**
+ * Limpia el caché de permisos que usa `requirePermission`/`requireAnyPermission`.
+ * DEBE llamarse tras editar los permisos de un rol (PUT roles/[rol]/permissions),
+ * de lo contrario el gate de las rutas API sigue con la lista vieja hasta 5 min.
+ * Sin argumento limpia todo; con `role` limpia solo ese rol.
+ */
+export function invalidateApiPermissionsCache(role?: string): void {
+  if (role) cache.delete(role);
+  else cache.clear();
+}
+
 async function loadPermissions(role: string): Promise<string[]> {
   const cached = cache.get(role);
   if (cached && cached.expires > Date.now()) return cached.perms;
