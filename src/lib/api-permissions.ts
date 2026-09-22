@@ -53,6 +53,15 @@ export async function requirePermission(session: Session | null, permission: Per
   }
 }
 
+/** Devuelve `true` si el usuario tiene el permiso (SUPER_ADMIN/ADMIN → siempre true).
+ *  Versión booleana de `requirePermission` (no lanza) para gates condicionales. */
+export async function hasPermission(session: Session | null, permission: Permission): Promise<boolean> {
+  const role = ((session?.user as any)?.role ?? '') as string;
+  if (role === Role.SUPER_ADMIN || role === Role.ADMIN || role === 'admin') return true;
+  const perms = await loadPermissions(role);
+  return perms.includes(permission);
+}
+
 /** Pasa si el usuario tiene AL MENOS UNO de los permisos (SUPER_ADMIN/ADMIN bypass). */
 export async function requireAnyPermission(session: Session | null, permissions: Permission[]): Promise<void> {
   const role = ((session?.user as any)?.role ?? '') as string;

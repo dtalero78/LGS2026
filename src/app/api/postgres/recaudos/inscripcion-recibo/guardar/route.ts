@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
-import { requirePermission } from '@/lib/api-permissions';
-import { PersonPermission, Role } from '@/types/permissions';
+import { requirePermission, hasPermission } from '@/lib/api-permissions';
+import { PersonPermission } from '@/types/permissions';
 import { ForbiddenError, ValidationError } from '@/lib/errors';
 import { guardarReciboEnFinanciero, isLeerReciboActivo } from '@/services/recibo-extract.service';
 
@@ -9,13 +9,12 @@ import { guardarReciboEnFinanciero, isLeerReciboActivo } from '@/services/recibo
  * POST /api/postgres/recaudos/inscripcion-recibo/guardar
  * Body: { contrato, url, campos: {medioPago,fecha,monto,referencia,banco,confianza} }
  * Guarda en FINANCIEROS (columnas recibo*) los datos confirmados por el operador.
- * Gate: PAGOS_VALIDAR + flag (SUPER_ADMIN/ADMIN bypass).
+ * Gate: PAGOS_VALIDAR + permiso LEER_RECIBO (o flag; SUPER_ADMIN/ADMIN bypass).
  */
 export const POST = handlerWithAuth(async (req: NextRequest, _ctx, session) => {
   await requirePermission(session, PersonPermission.PAGOS_VALIDAR);
-  const role = ((session?.user as any)?.role ?? '') as string;
-  const isAdmin = role === Role.SUPER_ADMIN || role === Role.ADMIN || role === 'admin';
-  if (!(await isLeerReciboActivo()) && !isAdmin) {
+  const allowed = (await hasPermission(session, PersonPermission.LEER_RECIBO)) || (await isLeerReciboActivo());
+  if (!allowed) {
     throw new ForbiddenError('La lectura de recibos no está habilitada.');
   }
   const body = await req.json();

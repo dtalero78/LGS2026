@@ -75,6 +75,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Botón en el Resumen Financiero del titular que genera el Estado de Cuenta en PDF (por mes o consolidado total) con el logo de la plataforma, el detalle de movimientos/cuotas y la firma del Jefe de Recaudos según país (Chile → jefe Chile; resto → el otro jefe). El PDF sale protegido con contraseña = número de documento del titular. Sin este permiso el botón no aparece',
   },
   {
+    code: PersonPermission.LEER_RECIBO,
+    module: Module.PERSON,
+    section: 'Financiera',
+    name: 'Botón "Leer recibo" (lectura IA)',
+    description: 'Habilita el botón "Leer recibo" en el wizard de Registrar Pago y en el Centro de Validación (Inscripción): sube el comprobante, lo lee con IA (OpenAI) y autocompleta fecha, valor, medio de pago, banco y referencia. Sin este permiso el botón no aparece (SUPER_ADMIN/ADMIN siempre lo ven; el flag global leer_recibo_activo también lo activa para todos). No afecta el botón "Subir recibo inscripción" del proceso de contrato, que tiene su propio permiso',
+  },
+  {
     code: PersonPermission.MARCAR_OPCIONAL,
     module: Module.PERSON,
     section: 'Financiera',
