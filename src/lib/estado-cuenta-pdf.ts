@@ -19,7 +19,7 @@ export interface EstadoCuentaMov {
   pago: string | null;       // ISO (fecha en que pagó) o null
   valor: number;
   canal: string;
-  estado: 'Pagado' | 'En mora' | 'Por vencer' | 'Pendiente';
+  estado: 'Pagado' | 'Parcial' | 'En mora' | 'Por vencer' | 'Pendiente' | 'Descuento';
 }
 
 export interface EstadoCuentaData {
@@ -39,6 +39,7 @@ export interface EstadoCuentaData {
   progreso: {
     valorPlan: number;
     pagado: number;
+    descuento: number;
     saldo: number;
     progresoPct: number;
     cuotasPagadas: number;
@@ -53,14 +54,14 @@ export interface EstadoCuentaData {
   password: string;          // documento del titular
 }
 
-// Paleta (alineada con los morados del panel)
+// Paleta corporativa LGS (azul del logo).
 const C = {
-  brand: '#6d28d9',
-  brandDark: '#4c1d95',
+  brand: '#1c6fe0',       // azul LGS (banda header)
+  brandDark: '#123f7d',   // azul oscuro (encabezados, tabla, cifras)
   ink: '#111827',
   sub: '#6b7280',
   line: '#e5e7eb',
-  soft: '#f5f3ff',
+  soft: '#e9f2fd',        // azul muy claro (tarjetas)
   green: '#047857',
   greenBg: '#ecfdf5',
   red: '#b91c1c',
@@ -71,8 +72,11 @@ const C = {
   grayBg: '#f3f4f6',
 };
 
-const money = (n: number) =>
-  '$ ' + new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(Math.round(n || 0));
+const money = (n: number) => {
+  const r = Math.round(n || 0);
+  const abs = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(Math.abs(r));
+  return (r < 0 ? '-$ ' : '$ ') + abs;
+};
 
 const fmtDate = (iso: string | null): string => {
   if (!iso) return '—';
@@ -84,10 +88,12 @@ const fmtDate = (iso: string | null): string => {
 };
 
 const ESTADO_STYLE: Record<string, { fg: string; bg: string }> = {
-  Pagado:      { fg: C.green, bg: C.greenBg },
-  'En mora':   { fg: C.red,   bg: C.redBg },
-  'Por vencer':{ fg: C.amber, bg: C.amberBg },
-  Pendiente:   { fg: C.gray,  bg: C.grayBg },
+  Pagado:      { fg: C.green,     bg: C.greenBg },
+  Parcial:     { fg: C.brandDark, bg: C.soft },
+  'En mora':   { fg: C.red,       bg: C.redBg },
+  'Por vencer':{ fg: C.amber,     bg: C.amberBg },
+  Pendiente:   { fg: C.gray,      bg: C.grayBg },
+  Descuento:   { fg: C.gray,      bg: C.grayBg },
 };
 
 const MARGIN = 40;
@@ -198,7 +204,7 @@ function renderInfoBlocks(doc: any, data: EstadoCuentaData) {
 
   // Estudiantes (lista compacta)
   if (data.estudiantes.length) {
-    doc.fillColor(C.brandDark).font('Helvetica-Bold').fontSize(9).text('ESTUDIANTES', MARGIN, doc.y);
+    doc.fillColor(C.brandDark).font('Helvetica-Bold').fontSize(9).text('BENEFICIARIOS', MARGIN, doc.y);
     doc.moveDown(0.2);
     doc.font('Helvetica').fontSize(8.5).fillColor(C.gray);
     for (const e of data.estudiantes) {
@@ -276,6 +282,7 @@ function renderProgreso(doc: any, data: EstadoCuentaData) {
   const figs = [
     { label: 'Valor del plan', val: money(p.valorPlan) },
     { label: 'Pagado', val: money(p.pagado) },
+    ...(p.descuento > 0 ? [{ label: 'Descuento', val: money(p.descuento) }] : []),
     { label: 'Saldo', val: money(p.saldo) },
     { label: 'Progreso de Pago', val: `${Math.round(p.progresoPct)}%` },
   ];

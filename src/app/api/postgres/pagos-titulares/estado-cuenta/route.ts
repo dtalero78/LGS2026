@@ -119,69 +119,96 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
   const diaPago = isValidDate(base) ? base.getUTCDate() : null;
   const matricula: string | null = titular.inicioContrato || titular.fechaContrato || (fin?.fechaPago ?? null);
 
-  // ── Pagos por cuota (registrado = cualquier fila, validada o no) ─────────
-  const pagoDeCuota = new Map<number, any>();
-  for (const p of pagos) {
-    let k = p.numCuota == null ? NaN : Number(p.numCuota);
-    if ((isNaN(k) || k < 0) && (p.inscripcion === true || num(p.inscripcion) > 0)) k = 0;
-    if (isNaN(k)) continue;
-    if (!pagoDeCuota.has(k)) pagoDeCuota.set(k, p);
-  }
   const canalDe = (p: any) => [p?.medioPago, p?.banco].filter(Boolean).join(' · ') || '—';
 
   const todayUTC = new Date();
   const hoy0 = Date.UTC(todayUTC.getUTCFullYear(), todayUTC.getUTCMonth(), todayUTC.getUTCDate());
 
-  const estadoDe = (venceISO: string | null, pagada: boolean): EstadoCuentaMov['estado'] => {
-    if (pagada) return 'Pagado';
-    if (!venceISO) return 'Pendiente';
-    const v = new Date(venceISO);
-    if (!isValidDate(v)) return 'Pendiente';
-    const v0 = Date.UTC(v.getUTCFullYear(), v.getUTCMonth(), v.getUTCDate());
-    return v0 < hoy0 ? 'En mora' : 'Por vencer';
-  };
+  // ── Totales de PAGOS (efectivo + descuento) ─────────────────────────────
+  // Un pago único con descuento puede liquidar VARIAS cuotas (cambio a contado).
+  // La deuda se cubre con lo abonado en efectivo MÁS el descuento aplicado.
+  const abonado = pagos.reduce((s, p) => s + num(p.valorPagado), 0);
+  const descontado = pagos.reduce((s, p) => s + num(p.descuento), 0);
+  const cubiertoTotal = abonado + descontado;
 
-  // ── Construir movimientos (inscripción + cuotas) ────────────────────────
-  const todos: EstadoCuentaMov[] = [];
-
-  // Inscripción (CI)
-  const pIns = pagoDeCuota.get(0);
-  todos.push({
-    n: 'CI',
-    concepto: 'Inscripción',
-    vence: matricula,
-    pago: pIns?.fechaPago || null,
-    valor: inscripcion,
-    canal: pIns ? canalDe(pIns) : '—',
-    estado: estadoDe(matricula, !!pIns),
-  });
-
+  // ── Cronograma (inscripción + cuotas) y ASIGNACIÓN EN CASCADA ───────────
+  // La cobertura de cada pago (valorPagado + descuento) se reparte, en orden
+  // cronológico, sobre inscripción → cuota 1 → cuota 2 … hasta agotarse. Así
+  // un abono grande marca como pagadas todas las cuotas que alcanza a cubrir.
+  type Item = { n: string; concepto: string; vence: string | null; valor: number };
+  const items: Item[] = [{ n: 'CI', concepto: 'Inscripción', vence: matricula, valor: inscripcion }];
   for (let k = 1; k <= numeroCuotas; k++) {
     const venceD = isValidDate(base) ? addMonthsUTC(base, k - 1) : null;
-    const venceISO = venceD ? venceD.toISOString() : null;
-    const pk = pagoDeCuota.get(k);
-    todos.push({
+    items.push({
       n: String(k),
       concepto: `Cuota ${k}${venceD ? ' · ' + monthLabel(venceD) : ''}`,
-      vence: venceISO,
-      pago: pk?.fechaPago || null,
+      vence: venceD ? venceD.toISOString() : null,
       valor: valorCuota,
-      canal: pk ? canalDe(pk) : '—',
-      estado: estadoDe(venceISO, !!pk),
     });
   }
 
-  // ── Resumen (registrados cuentan como pagados) ──────────────────────────
-  const pagadoRegistrado = pagos.reduce((s, p) => s + num(p.valorPagado), 0);
-  const pagado = Math.min(totalPlan, pagadoRegistrado || 0);
-  const saldo = Math.max(0, totalPlan - pagado);
-  const mora = todos.filter(m => m.estado === 'En mora').reduce((s, m) => s + m.valor, 0);
-  const porVencer = todos.filter(m => m.estado === 'Por vencer').reduce((s, m) => s + m.valor, 0);
-  const avancePct = totalPlan > 0 ? (pagado / totalPlan) * 100 : 0;
+  const pagosOrden = [...pagos].sort((a, b) =>
+    ((a.fechaPago || '').slice(0, 10)).localeCompare((b.fechaPago || '').slice(0, 10)));
+  const cubiertoItem = new Array(items.length).fill(0);
+  const pagoDeItem: (any | null)[] = new Array(items.length).fill(null);
+  let idx = 0;
+  for (const p of pagosOrden) {
+    let restante = num(p.valorPagado) + num(p.descuento);
+    while (restante > 0.5 && idx < items.length) {
+      const falta = items[idx].valor - cubiertoItem[idx];
+      if (falta <= 0.5) { idx++; continue; }
+      const aplica = Math.min(restante, falta);
+      cubiertoItem[idx] += aplica;
+      restante -= aplica;
+      if (cubiertoItem[idx] >= items[idx].valor - 0.5) { pagoDeItem[idx] = p; idx++; }
+    }
+  }
 
-  // ── Indicador de progreso (barra segmentada sobre TODO el contrato) ─────
+  const todos: EstadoCuentaMov[] = items.map((it, i) => {
+    const completo = cubiertoItem[i] >= it.valor - 0.5;
+    const parcial = !completo && cubiertoItem[i] > 0.5;
+    const p = pagoDeItem[i];
+    let estado: EstadoCuentaMov['estado'];
+    if (completo) estado = 'Pagado';
+    else if (parcial) estado = 'Parcial';
+    else {
+      const v = it.vence ? new Date(it.vence) : null;
+      if (v && isValidDate(v)) {
+        const v0 = Date.UTC(v.getUTCFullYear(), v.getUTCMonth(), v.getUTCDate());
+        estado = v0 < hoy0 ? 'En mora' : 'Por vencer';
+      } else estado = 'Pendiente';
+    }
+    return {
+      n: it.n, concepto: it.concepto, vence: it.vence,
+      pago: p?.fechaPago || null,
+      valor: it.valor,
+      canal: p ? canalDe(p) : (parcial ? 'Abono parcial' : '—'),
+      estado,
+    };
+  });
+
+  // Fila adicional de DESCUENTO (solo si hay) para evidenciar descuento + pago total.
+  if (descontado > 0) {
+    const ultConDesc = pagosOrden.filter(p => num(p.descuento) > 0).slice(-1)[0];
+    todos.push({
+      n: 'DESC', concepto: 'Descuento aplicado', vence: null,
+      pago: ultConDesc?.fechaPago || null,
+      valor: -descontado,
+      canal: '—', estado: 'Descuento',
+    });
+  }
+
+  // ── Resumen: efectivo + descuento cubren la deuda ───────────────────────
+  const pagado = Math.min(totalPlan, abonado);
+  const descuento = Math.min(totalPlan, descontado);
+  const saldo = Math.max(0, totalPlan - abonado - descontado);
+  const avancePct = totalPlan > 0 ? Math.min(100, (cubiertoTotal / totalPlan) * 100) : 0;
+
   const insMov = todos.find(m => m.n === 'CI');
-  const cuotaMovs = todos.filter(m => m.n !== 'CI');
+  const cuotaMovs = todos.filter(m => m.n !== 'CI' && m.n !== 'DESC');
+  const mora = cuotaMovs.filter(m => m.estado === 'En mora').reduce((s, m) => s + m.valor, 0);
+  const porVencer = cuotaMovs.filter(m => m.estado === 'Por vencer').reduce((s, m) => s + m.valor, 0);
+
   const segEstado = (m: EstadoCuentaMov): 'pagada' | 'mora' | 'porvencer' =>
     m.estado === 'Pagado' ? 'pagada' : m.estado === 'En mora' ? 'mora' : 'porvencer';
   const segmentos: Array<'insPagada' | 'insPend' | 'pagada' | 'mora' | 'porvencer'> = [
@@ -214,11 +241,11 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     });
     // Próximo pago = primera cuota no pagada por fecha de vencimiento
     proximoPago = [...todos]
-      .filter(m => m.estado !== 'Pagado' && m.vence)
+      .filter(m => m.n !== 'DESC' && m.estado !== 'Pagado' && m.vence)
       .sort((a, b) => new Date(a.vence!).getTime() - new Date(b.vence!).getTime())[0] || null;
     // Último pago = movimiento pagado con la fecha de pago más reciente
     ultimoPago = [...todos]
-      .filter(m => m.pago)
+      .filter(m => m.n !== 'DESC' && m.pago)
       .sort((a, b) => new Date(b.pago!).getTime() - new Date(a.pago!).getTime())[0] || null;
   }
 
@@ -276,6 +303,7 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     progreso: {
       valorPlan: totalPlan,
       pagado,
+      descuento,
       saldo,
       progresoPct: avancePct,
       cuotasPagadas: cuotasPagadasCnt,
