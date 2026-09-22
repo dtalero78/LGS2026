@@ -657,6 +657,50 @@ export const pagosTitularesService = {
   },
 
   /**
+   * Facturación EN BLOQUE: aplica UN mismo número de factura (y, opcional, UN
+   * archivo) a todos los ids indicados. Omite los que no existen, no están
+   * verificados o ya tienen factura. Gateado en el endpoint por
+   * RECAUDOS.APROBACION_MASIVA + PERSON.FINANCIERA.PAGOS_FACTURAR.
+   */
+  async facturarMasivo(
+    ids: string[],
+    numeroFactura: string,
+    documento?: { url?: string; nombre?: string; tipo?: string } | null,
+  ): Promise<{ ok: number; fail: number; errores: { id: string; error: string }[] }> {
+    const factura = (numeroFactura || '').trim();
+    if (!factura) throw new ValidationError('El número de factura es obligatorio');
+
+    const errores: { id: string; error: string }[] = [];
+    let ok = 0;
+
+    for (const id of ids) {
+      try {
+        const existing = await PagosTitularesRepository.findById(id);
+        if (!existing) { errores.push({ id, error: 'no existe' }); continue; }
+        if (!existing.validado) { errores.push({ id, error: 'no verificado' }); continue; }
+        if (existing.numeroFactura && existing.numeroFactura.trim()) { errores.push({ id, error: 'ya facturado' }); continue; }
+
+        const updated = await PagosTitularesRepository.facturar(id, factura);
+        if (!updated) { errores.push({ id, error: 'no se pudo facturar' }); continue; }
+
+        if (documento && typeof documento.url === 'string' && documento.url.trim()) {
+          await PagosTitularesRepository.appendDocumentos(id, [{
+            url: documento.url.trim(),
+            nombre: documento.nombre ? String(documento.nombre) : `Factura ${factura}`,
+            tipo: documento.tipo ? String(documento.tipo) : null,
+            fechaSubida: new Date().toISOString(),
+          }]);
+        }
+        ok++;
+      } catch (e: any) {
+        errores.push({ id, error: e?.message || 'error' });
+      }
+    }
+
+    return { ok, fail: errores.length, errores };
+  },
+
+  /**
    * Validación EN BLOQUE de pagos/inscripciones. Valida cada id (omite los ya
    * validados o inexistentes) y recalcula el saldo UNA sola vez por titular
    * (dedup). Devuelve resumen ok/fail + errores por id. Gateado en el endpoint
