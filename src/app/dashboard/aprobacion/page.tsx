@@ -162,13 +162,18 @@ export default function AprobacionPage() {
   const getFilteredData = (source: Contrato[] = allContratos): Contrato[] => {
     let data = [...source]
 
-    // Filtrar por apellido/nombre (búsqueda local)
+    // Filtrar por nombre / apellido / número de documento / contrato (búsqueda local)
     if (searchApellido.trim()) {
       const searchTerm = searchApellido.toLowerCase().trim()
       data = data.filter(c => {
         const apellidoCompleto = `${c.primerApellido || ''} ${c.segundoApellido || ''}`.toLowerCase()
-        const nombreCompleto = `${c.primerNombre || ''} ${c.primerApellido || ''}`.toLowerCase()
-        return apellidoCompleto.includes(searchTerm) || nombreCompleto.includes(searchTerm)
+        const nombreCompleto = `${c.primerNombre || ''} ${c.primerApellido || ''} ${c.segundoApellido || ''}`.toLowerCase()
+        const numeroId = String(c.numeroId || '').toLowerCase()
+        const contrato = String(c.contrato || '').toLowerCase()
+        return apellidoCompleto.includes(searchTerm)
+          || nombreCompleto.includes(searchTerm)
+          || numeroId.includes(searchTerm)
+          || contrato.includes(searchTerm)
       })
     }
 
@@ -416,12 +421,12 @@ export default function AprobacionPage() {
             {/* Búsqueda por apellido/nombre */}
             <div className="lg:col-span-3">
               <label htmlFor="searchApellido" className="block text-sm font-medium text-gray-700 mb-1">
-                Buscar por apellido o nombre
+                Buscar por nombre, ID o contrato
               </label>
               <input
                 type="text"
                 id="searchApellido"
-                placeholder="Apellido o nombre..."
+                placeholder="Nombre, documento o Nº contrato..."
                 value={searchApellido}
                 onChange={(e) => setSearchApellido(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
