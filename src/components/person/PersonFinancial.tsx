@@ -603,8 +603,10 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">💰 Información de Pagos</h3>
         <div className="bg-white border border-gray-200 rounded-lg p-6">
-          {/* Asesor Comercial · Ejecutivo de Recaudos · Estado Cartera · Corte de Pago */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-4 pb-4 border-b border-gray-200">
+          {/* Asesor Comercial · Ejecutivo de Recaudos · Estado Cartera · Corte de Pago
+              Columnas proporcionales: más ancho a las de texto largo (Asesor,
+              Ejecutivo, Corte) y menos al badge corto (Estado Cartera). */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.3fr_1.6fr_0.7fr_1.2fr] gap-6 mb-4 pb-4 border-b border-gray-200">
             {/* Asesor Comercial (only for TITULAR) */}
             {isTitular && (
               <div>
