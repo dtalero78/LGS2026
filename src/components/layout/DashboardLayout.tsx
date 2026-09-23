@@ -54,7 +54,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
           { name: 'Performance Evaluation', href: '/dashboard/academic/performance-evaluation', newTab: true },
         ],
       },
-      { name: 'Actualizar Material', href: '/dashboard/academic/actualizar-material', newTab: true },
+      { name: 'Recursos Académicos', href: '/dashboard/academic/actualizar-material', newTab: true },
       { name: 'Evaluaciones Jump', href: '/dashboard/academic/jump-evaluaciones' },
     ],
   },
