@@ -26,12 +26,12 @@ const W = 792, H = 612;
 
 // Posiciones (fracción de la página) de cada texto sobre la plantilla.
 // Fáciles de ajustar si algún elemento queda corrido respecto al arte.
+// Las horas ("60 hours of instruction") vienen IMPRESAS en el arte de la plantilla,
+// así que ya NO se sobreimprimen: solo se overlaya el nombre y la fecha de aprobación.
 const POS = {
   nombre: { cx: 0.68, yTop: 0.470, boxW: 0.58, size: 26, color: '#1f2937' },
-  // "60" centrado en el blanco de "____ hours of instruction" (a la izquierda de "hours", sobre la línea).
-  horas:  { cx: 0.49, yTop: 0.640, size: 14, color: '#1f2937' },
-  // Fecha en el hueco entre la frase "To live..." (arriba) y las firmas (abajo), sin montarse en ninguna.
-  fecha:  { cx: 0.68, yTop: 0.710, boxW: 0.58, size: 12, color: '#374151' },
+  // Fecha en el pie, DEBAJO de los cargos (International Manager / Academic Program Coordinator).
+  fecha:  { cx: 0.68, yTop: 0.950, boxW: 0.58, size: 12, color: '#374151' },
 };
 
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -81,11 +81,7 @@ export async function buildCertificadoPdf(data: CertificadoData): Promise<Buffer
       while (fs1 > 12 && doc.widthOfString(data.nombre || '') > boxW - 8) { fs1 -= 1; doc.fontSize(fs1); }
       doc.fillColor(POS.nombre.color).text(data.nombre || '', xName, POS.nombre.yTop * H, { width: boxW, align: 'center', lineBreak: false });
 
-      // Horas (ej. "60") en el blanco de "____ hours of instruction"
-      doc.font('Helvetica-Bold').fontSize(POS.horas.size).fillColor(POS.horas.color)
-        .text(String(data.horas), POS.horas.cx * W - 30, POS.horas.yTop * H, { width: 60, align: 'center', lineBreak: false });
-
-      // Fecha de aprobación (debajo del quote, sobre las firmas)
+      // Fecha de aprobación (al pie, debajo de los cargos)
       const fBoxW = POS.fecha.boxW * W;
       doc.font('Helvetica').fontSize(POS.fecha.size).fillColor(POS.fecha.color)
         .text(`Fecha de aprobación: ${fmtFecha(data.fecha)}`, POS.fecha.cx * W - fBoxW / 2, POS.fecha.yTop * H, { width: fBoxW, align: 'center', lineBreak: false });
