@@ -382,7 +382,7 @@ export const pagosTitularesService = {
 
     // Cambio Contado: marca el pago como el cambio de plan a contado y registra
     // QUIÉN lo gestionó. La atribución la decide el SERVIDOR comparando la fecha
-    // del pago con la de aprobación del contrato (30 días → Comercial, después →
+    // del pago con la de CREACIÓN del contrato (30 días → Comercial, después →
     // Recaudos). Lo que mande el cliente en `realizadopor` se ignora.
     const esCambioContado = input.cambioContado === true;
 

@@ -95,8 +95,9 @@ export interface Person {
   numeroDocumentoVerificado?: string
   inicioContrato?: string
   /** Fecha de APROBACIÓN del contrato (se sella al aprobar). Solo la tienen los
-   *  contratos aprobados desde mayo 2026; en los anteriores es null y hay que
-   *  caer a inicioContrato/fechaContrato (ver src/lib/cambio-contado.ts). */
+   *  contratos aprobados desde mayo 2026; en los anteriores es null. La base del
+   *  Cambio Contado es la CREACIÓN del contrato (_createdDate), no este campo
+   *  (ver src/lib/cambio-contado.ts). */
   fechaIngreso?: string
   // Documents
   documentacion?: Array<string | { url: string; nombre: string; tipo?: string; fechaSubida?: string }>

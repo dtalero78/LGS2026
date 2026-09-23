@@ -7,7 +7,7 @@ import { api, handleApiError } from '@/hooks/use-api'
 import { PermissionGuard } from '@/components/permissions'
 import { PersonPermission } from '@/types/permissions'
 import { mediosPagoPara } from '@/lib/medios-pago'
-import { resolveRealizadoPor, diasDesdeAprobacion, VENTANA_COMERCIAL_DIAS } from '@/lib/cambio-contado'
+import { resolveRealizadoPor, diasDesdeBase, VENTANA_COMERCIAL_DIAS } from '@/lib/cambio-contado'
 
 interface PagoTitularWizardProps {
   isOpen: boolean
@@ -32,6 +32,8 @@ interface PagoTitularWizardProps {
    *  de confirmación. Sin esto el operador ve "Comercial" sin saber desde qué
    *  fecha se contaron los días. Solo display — el cálculo real es del servidor. */
   fechasContrato?: {
+    /** PEOPLE._createdDate — fecha de creación del contrato (base del cálculo). */
+    creacion?: string | null
     /** PEOPLE.fechaIngreso — fecha de aprobación del contrato. */
     aprobacion?: string | null
     /** COALESCE(inicioContrato, fechaContrato) — fecha de inicio del contrato. */
@@ -503,7 +505,7 @@ export default function PagoTitularWizard({
   // Cambio Contado — vista previa de a quién se atribuirá. El valor REAL lo
   // calcula el servidor con el mismo helper al guardar; esto solo evita que el
   // usuario marque la casilla sin saber qué va a quedar registrado.
-  const diasPreview = diasDesdeAprobacion(fechaBaseContrato, form.fechaPago)
+  const diasPreview = diasDesdeBase(fechaBaseContrato, form.fechaPago)
   const realizadoPorPreview = resolveRealizadoPor(fechaBaseContrato, form.fechaPago)
 
   // La nota es obligatoria en los dos casos donde el pago no es una cuota
@@ -511,14 +513,15 @@ export default function PagoTitularWizard({
   const requiereNota = form.cambioCartera === 'penalidad' || form.cambioContado
 
   // ¿Desde cuál fecha se contaron los días? fechaBaseContrato sale de una
-  // cascada (aprobación -> inicio -> contrato -> creación); comparándola con la
-  // de aprobación sabemos si esa fue la que ganó, para decirlo en el modal.
+  // cascada que arranca por la creación del contrato (_createdDate -> inicio ->
+  // contrato -> aprobación); comparándola con la creación sabemos si esa fue la
+  // que ganó, para decirlo en el modal.
   const soloFecha = (v?: string | null) => (v ? String(v).slice(0, 10) : '')
-  const baseEsAprobacion =
+  const baseEsCreacion =
     !!fechaBaseContrato &&
-    !!fechasContrato?.aprobacion &&
-    soloFecha(fechasContrato.aprobacion) === soloFecha(fechaBaseContrato)
-  const etiquetaBase = baseEsAprobacion ? 'aprobación' : 'fecha del contrato'
+    !!fechasContrato?.creacion &&
+    soloFecha(fechasContrato.creacion) === soloFecha(fechaBaseContrato)
+  const etiquetaBase = baseEsCreacion ? 'creación del contrato' : 'fecha del contrato'
 
   // Valida y abre el modal de confirmación (no registra todavía).
   const handleSubmit = () => {
@@ -956,15 +959,15 @@ export default function PagoTitularWizard({
                     {diasPreview !== null && (
                       <span className="block mt-1 text-teal-700">
                         {diasPreview < 0
-                          ? ' — el pago es anterior a la aprobación del contrato'
-                          : ' — el pago es del día ' + diasPreview + ' desde la aprobación del contrato'}
+                          ? ' — el pago es anterior a la creación del contrato'
+                          : ' — el pago es del día ' + diasPreview + ' desde la creación del contrato'}
                         {' '}(hasta {VENTANA_COMERCIAL_DIAS} días es Comercial; después, Recaudos).
                       </span>
                     )}
                   </>
                 ) : (
                   <span className="text-amber-800">
-                    El contrato no tiene fecha de aprobación registrada, así que el campo
+                    El contrato no tiene fecha de creación registrada, así que el campo
                     <em> Realizado por</em> quedará vacío. El pago se guarda igual.
                   </span>
                 )}
@@ -1221,21 +1224,25 @@ export default function PagoTitularWizard({
                 </div>
 
                 {/* Desglose de las fechas que producen la atribución. Sin esto el
-                    operador ve el resultado sin saber desde cuándo se contó, y
-                    asume que se mide desde el inicio del contrato cuando en
-                    realidad manda la fecha de aprobación. */}
+                    operador ve el resultado sin saber desde cuándo se contó: la
+                    base es la CREACIÓN del contrato (no la aprobación ni el
+                    inicio), y de ahí se cuentan los días. */}
                 <dl className="mt-2 pt-2 border-t border-teal-200 space-y-1">
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-teal-700">
+                      Fecha de creación
+                      {baseEsCreacion && (
+                        <span className="ml-1 text-xs font-semibold text-teal-900">(base del cálculo)</span>
+                      )}
+                    </dt>
+                    <dd className="tabular-nums font-medium">{fmtFecha(soloFecha(fechasContrato?.creacion))}</dd>
+                  </div>
                   <div className="flex justify-between gap-3">
                     <dt className="text-teal-700">Fecha del contrato</dt>
                     <dd className="tabular-nums font-medium">{fmtFecha(soloFecha(fechasContrato?.contrato))}</dd>
                   </div>
                   <div className="flex justify-between gap-3">
-                    <dt className="text-teal-700">
-                      Fecha de aprobación
-                      {baseEsAprobacion && (
-                        <span className="ml-1 text-xs font-semibold text-teal-900">(base del cálculo)</span>
-                      )}
-                    </dt>
+                    <dt className="text-teal-700">Fecha de aprobación</dt>
                     <dd className="tabular-nums font-medium">{fmtFecha(soloFecha(fechasContrato?.aprobacion))}</dd>
                   </div>
                   <div className="flex justify-between gap-3">
@@ -1253,7 +1260,7 @@ export default function PagoTitularWizard({
                   </div>
                 ) : (
                   <div className="mt-2 pt-2 border-t border-teal-200 text-amber-800">
-                    El contrato no tiene fecha de aprobación ni de contrato registrada, así que
+                    El contrato no tiene fecha de creación ni de contrato registrada, así que
                     <em> Realizado por</em> quedará vacío. El pago se guarda igual.
                   </div>
                 )}

@@ -954,8 +954,9 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
           }}
           fechaBaseContrato={calcFechaBaseContrato(person as any)}
           // Las fechas sueltas son SOLO para el desglose del modal (mostrar de
-          // dónde salen los días); la base del cálculo sigue siendo la cascada.
+          // dónde salen los días); la base del cálculo es la creación del contrato.
           fechasContrato={{
+            creacion: (person as any)._createdDate ?? null,
             aprobacion: (person as any).fechaIngreso ?? null,
             contrato: (person as any).inicioContrato ?? (person as any).fechaContrato ?? null,
           }}

@@ -3,10 +3,10 @@
  *
  * Cuando un pago se marca como **Cambio Contado**, se registra QUIÉN gestionó
  * ese cambio (`PAGOS_TITULARES.realizadopor`) según cuánto tiempo pasó entre la
- * aprobación del contrato y el pago:
+ * **creación del contrato** y el pago:
  *
- *   pago dentro de los 30 días de aprobado  → 'Comercial'  (venta original)
- *   pago después de los 30 días             → 'Recaudos'   (gestión de cobranza)
+ *   pago dentro de los 30 días de creado el contrato → 'Comercial'  (venta original)
+ *   pago después de los 30 días                      → 'Recaudos'   (gestión de cobranza)
  *
  * Un pago ANTERIOR a la fecha base también es 'Comercial' (sigue siendo la venta).
  *
@@ -16,7 +16,7 @@
  * cliente, que solo lo ve como vista previa.
  */
 
-/** Días desde la aprobación dentro de los cuales el cambio se atribuye a Comercial. */
+/** Días desde la creación del contrato dentro de los cuales el cambio se atribuye a Comercial. */
 export const VENTANA_COMERCIAL_DIAS = 30;
 
 export type RealizadoPor = 'Comercial' | 'Recaudos';
@@ -25,23 +25,25 @@ export type RealizadoPor = 'Comercial' | 'Recaudos';
 export const REALIZADO_POR_VALIDOS: readonly RealizadoPor[] = ['Comercial', 'Recaudos'];
 
 /**
- * Fecha base del contrato = fecha de aprobación, con respaldo en cascada.
+ * Fecha base del contrato = **fecha de creación del contrato** (`_createdDate`),
+ * con respaldo en cascada a las fechas del contrato si faltara.
  *
- * `fechaIngreso` es la fecha de aprobación real, pero solo la tienen ~60% de los
- * titulares aprobados (se empezó a sellar en mayo 2026). Para los anteriores se
- * usa la fecha de inicio del contrato, que sí está en el 100% de los registros.
+ * Se usa la creación del contrato (presente en el 100% de los registros) como
+ * ancla de la ventana Comercial/Recaudos. Los respaldos (inicio/fecha del
+ * contrato y, por último, la aprobación) solo aplican si `_createdDate` viniera
+ * vacío.
  */
 export function fechaBaseContrato(titular: {
-  fechaIngreso?: string | Date | null;
+  _createdDate?: string | Date | null;
   inicioContrato?: string | Date | null;
   fechaContrato?: string | Date | null;
-  _createdDate?: string | Date | null;
+  fechaIngreso?: string | Date | null;
 }): string | null {
   const candidatos = [
-    titular?.fechaIngreso,
+    titular?._createdDate,
     titular?.inicioContrato,
     titular?.fechaContrato,
-    titular?._createdDate,
+    titular?.fechaIngreso,
   ];
   for (const c of candidatos) {
     const d = toYMD(c);
@@ -69,10 +71,10 @@ function utcMs(ymd: string): number {
 }
 
 /**
- * Días calendario entre la fecha base del contrato y la del pago.
+ * Días calendario entre la fecha base del contrato (creación) y la del pago.
  * Negativo si el pago es anterior a la base. `null` si falta alguna fecha.
  */
-export function diasDesdeAprobacion(
+export function diasDesdeBase(
   fechaBase: string | Date | null | undefined,
   fechaPago: string | Date | null | undefined,
 ): number | null {
@@ -90,7 +92,7 @@ export function resolveRealizadoPor(
   fechaBase: string | Date | null | undefined,
   fechaPago: string | Date | null | undefined,
 ): RealizadoPor | null {
-  const dias = diasDesdeAprobacion(fechaBase, fechaPago);
+  const dias = diasDesdeBase(fechaBase, fechaPago);
   if (dias === null) return null;
   return dias <= VENTANA_COMERCIAL_DIAS ? 'Comercial' : 'Recaudos';
 }
