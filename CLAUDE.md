@@ -485,6 +485,12 @@ Cuenta **`ACee5675…` ("LGS")** — distinta de la de las env vars `TWILIO_*` d
 - **Flow**: Renders public contract page (`/contrato/[id]`) → API2PDF generates PDF → sends via WhatsApp
 - **Options**: `delay: 10000` (wait for page render), `scale: 0.75`, `printBackground: true`
 
+### Certificados de Nivel (PDF)
+- **Qué es**: Certificado de finalización de nivel descargable en PDF. Opción "Certificados" en el header del panel estudiante (entre Instructivos y Perfil) y en el dropdown Académica del detalle admin (`/student/[id]`). Modal compartido [CertificadosModal](src/components/common/CertificadosModal.tsx) con 3 botones **Beginner (amarillo) / Practical (rojo) / Functional (azul)**; habilita solo el nivel cuyo jump está aprobado.
+- **Mapeo nivel→jump**: Beginner=Jump 15, Practical=Jump 30, Functional=Jump 45. "Aprobado" = existe una sesión del jump (no club) que cumple la regla dura `aproboElJump` (asistió + participación + `noAprobo!==true` + `cancelo!==true`), mirando **todos** los bookings del estudiante (no solo el nivel actual).
+- **Contenido del PDF**: plantilla de arte por nivel (`public/certificados/{beginner,practical,functional}.png`) + nombre completo + **60 horas (fijo)** + fecha de aprobación del jump. Cifrado AES-128 con **clave = `ACADEMICA.numeroId`** del alumno (PDFKit, [src/lib/certificado-pdf.ts](src/lib/certificado-pdf.ts)).
+- **Backend**: [certificado.service.ts](src/services/certificado.service.ts). Endpoints `GET /api/postgres/panel-estudiante/certificado` (resuelve el alumno de la sesión, solo el suyo) y `GET /api/postgres/students/[id]/certificado` (staff; bloquea rol ESTUDIANTE). Sin query → estado por nivel; `?nivel=beginner|practical|functional` → PDF. Sin permiso dedicado (visible para todo estudiante/staff).
+
 ### OTP / Digital Consent System
 - **OTP Store**: In-memory Map in `src/lib/otp-store.ts` (10-minute TTL, one-time use)
 - **Service**: `src/services/consent.service.ts`
