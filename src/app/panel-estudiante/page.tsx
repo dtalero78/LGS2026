@@ -9,7 +9,6 @@ import {
   ChartBarIcon,
   VideoCameraIcon,
   XMarkIcon,
-  UserCircleIcon,
   SparklesIcon,
   LockClosedIcon,
   AcademicCapIcon,
@@ -297,8 +296,8 @@ function PanelEstudianteContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 1. Top Bar: WhatsApp + Greeting + Nivel */}
-      <StudentHeader profile={profile} isLoading={meQuery.isLoading} />
+      {/* 1. Top Bar: WhatsApp + Greeting + Nivel + Perfil */}
+      <StudentHeader profile={profile} isLoading={meQuery.isLoading} onPerfil={() => setShowPerfil(true)} />
 
       {/* 2. Booking Bar */}
       <div className="bg-white border-b border-gray-200 px-4 py-3">
@@ -363,13 +362,6 @@ function PanelEstudianteContent() {
           >
             <AcademicCapIcon className="h-4 w-4" />
             Certificados
-          </button>
-          <button
-            onClick={() => setShowPerfil(true)}
-            className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1.5"
-          >
-            <UserCircleIcon className="h-4 w-4" />
-            Perfil
           </button>
         </div>
       </div>

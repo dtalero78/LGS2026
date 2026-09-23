@@ -28,8 +28,10 @@ const W = 792, H = 612;
 // Fáciles de ajustar si algún elemento queda corrido respecto al arte.
 const POS = {
   nombre: { cx: 0.68, yTop: 0.470, boxW: 0.58, size: 26, color: '#1f2937' },
-  horas:  { cx: 0.585, yTop: 0.632, size: 14, color: '#1f2937' },
-  fecha:  { cx: 0.68, yTop: 0.735, boxW: 0.58, size: 12, color: '#374151' },
+  // "60" sobre el blanco de "____ hours of instruction" (a la izquierda de "hours", sobre la línea).
+  horas:  { cx: 0.55, yTop: 0.646, size: 14, color: '#1f2937' },
+  // Fecha en el espacio entre la frase "To live..." y las firmas (para no montarse sobre las rúbricas).
+  fecha:  { cx: 0.68, yTop: 0.660, boxW: 0.58, size: 12, color: '#374151' },
 };
 
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];

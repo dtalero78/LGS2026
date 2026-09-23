@@ -1,15 +1,17 @@
 'use client'
 
 import { signOut } from 'next-auth/react'
-import { ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline'
+import { ArrowRightOnRectangleIcon, UserCircleIcon } from '@heroicons/react/24/outline'
 import { formatEtapaNivel } from '@/lib/etapas'
 
 interface StudentHeaderProps {
   profile: any
   isLoading: boolean
+  /** Abre el modal de perfil. Se muestra en la fila superior si se provee. */
+  onPerfil?: () => void
 }
 
-export default function StudentHeader({ profile, isLoading }: StudentHeaderProps) {
+export default function StudentHeader({ profile, isLoading, onPerfil }: StudentHeaderProps) {
   if (isLoading) {
     return (
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between animate-pulse">
@@ -61,12 +63,23 @@ export default function StudentHeader({ profile, isLoading }: StudentHeaderProps
           </div>
         </div>
 
-        {/* Right: nivel badge + logout */}
+        {/* Right: nivel badge + perfil + logout */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {etapaLabel && (
             <span className="text-xs font-medium bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full whitespace-nowrap">
               {etapaLabel}
             </span>
+          )}
+          {onPerfil && (
+            <button
+              type="button"
+              onClick={onPerfil}
+              className="flex items-center gap-1 px-2 py-1 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Ver mi perfil"
+            >
+              <UserCircleIcon className="h-5 w-5" />
+              <span>Perfil</span>
+            </button>
           )}
           <button
             type="button"
