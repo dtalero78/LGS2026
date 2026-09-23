@@ -14,6 +14,7 @@ import StudentProgress from './StudentProgress'
 import StudentChangeStep from './StudentChangeStep'
 import StudentInicializarNivel from './StudentInicializarNivel'
 import StudentCambioStepAuditado from './StudentCambioStepAuditado'
+import CertificadosModal from '@/components/common/CertificadosModal'
 
 interface StudentTabsProps {
   student: Student
@@ -37,6 +38,7 @@ export default function StudentTabs({ student, classes, contratoFinalizado = fal
   const [showAcademicSubmenu, setShowAcademicSubmenu] = useState(false)
   const [closeTimeout, setCloseTimeout] = useState<NodeJS.Timeout | null>(null)
   const [showChangeStepModal, setShowChangeStepModal] = useState(false)
+  const [showCertificadosModal, setShowCertificadosModal] = useState(false)
   const [showInicializarModal, setShowInicializarModal] = useState(false)
   const [showCambioStepAuditadoModal, setShowCambioStepAuditadoModal] = useState(false)
   const { hasPermission, hasAnyPermission } = usePermissions()
@@ -68,6 +70,7 @@ export default function StudentTabs({ student, classes, contratoFinalizado = fal
     ...(canAccessSteps ? [{ id: 'steps', name: 'Gestión de Steps', icon: '📊' }] : []),
     ...(canChangeStep ? [{ id: 'change-step', name: 'Cambiar Step', icon: '👣' }] : []),
     ...(canInicializarNivel ? [{ id: 'inicializar-nivel', name: 'Reiniciar Nivel', icon: '🔄' }] : []),
+    { id: 'certificados', name: 'Certificados', icon: '🎓' },
   ]
 
   // Debug: Log student data
@@ -173,6 +176,13 @@ export default function StudentTabs({ student, classes, contratoFinalizado = fal
                                   clearTimeout(closeTimeout)
                                   setCloseTimeout(null)
                                 }
+                              } else if (item.id === 'certificados') {
+                                setShowCertificadosModal(true)
+                                setShowAcademicSubmenu(false)
+                                if (closeTimeout) {
+                                  clearTimeout(closeTimeout)
+                                  setCloseTimeout(null)
+                                }
                               } else {
                                 setActiveTab('academic')
                                 setAcademicView(item.id)
@@ -222,6 +232,14 @@ export default function StudentTabs({ student, classes, contratoFinalizado = fal
       <div className="mt-6">
         {renderTabContent()}
       </div>
+
+      {/* Modal Certificados */}
+      {showCertificadosModal && (
+        <CertificadosModal
+          baseUrl={`/api/postgres/students/${student._id}/certificado`}
+          onClose={() => setShowCertificadosModal(false)}
+        />
+      )}
 
       {/* Modal Cambiar Step */}
       {showChangeStepModal && (

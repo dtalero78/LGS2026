@@ -12,6 +12,7 @@ import {
   UserCircleIcon,
   SparklesIcon,
   LockClosedIcon,
+  AcademicCapIcon,
 } from '@heroicons/react/24/outline'
 import { useQuery, useQueryClient } from 'react-query'
 import {
@@ -38,6 +39,7 @@ import ProgressReport from '@/components/panel-estudiante/ProgressReport'
 import MaterialsList from '@/components/panel-estudiante/MaterialsList'
 import WhatsAppContacts from '@/components/panel-estudiante/WhatsAppContacts'
 import AdvisorComments from '@/components/panel-estudiante/AdvisorComments'
+import CertificadosModal from '@/components/common/CertificadosModal'
 import ClassHistory from '@/components/panel-estudiante/ClassHistory'
 import JumpExamBanner from '@/components/panel-estudiante/JumpExamBanner'
 import ZoomAccessButton from '@/components/panel-estudiante/ZoomAccessButton'
@@ -63,6 +65,8 @@ function PanelEstudianteContent() {
   const [showInstructivos, setShowInstructivos] = useState(false)
   const [showPerfil, setShowPerfil] = useState(false)
   const [showRecursos, setShowRecursos] = useState(false)
+  const [showCertificados, setShowCertificados] = useState(false)
+  const openCertificados = () => setShowCertificados(true)
   const [zoomTick, setZoomTick] = useState(0)
   const [sencePending, setSencePending] = useState(false)
   const [senceClosePending, setSenceClosePending] = useState(false)
@@ -352,6 +356,13 @@ function PanelEstudianteContent() {
           >
             <VideoCameraIcon className="h-4 w-4" />
             Instructivos
+          </button>
+          <button
+            onClick={() => openCertificados()}
+            className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1.5"
+          >
+            <AcademicCapIcon className="h-4 w-4" />
+            Certificados
           </button>
           <button
             onClick={() => setShowPerfil(true)}
@@ -761,6 +772,14 @@ function PanelEstudianteContent() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Certificados Modal */}
+      {showCertificados && (
+        <CertificadosModal
+          baseUrl="/api/postgres/panel-estudiante/certificado"
+          onClose={() => setShowCertificados(false)}
+        />
       )}
 
       {/* Perfil Modal */}
