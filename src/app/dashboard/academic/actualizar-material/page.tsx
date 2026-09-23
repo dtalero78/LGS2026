@@ -5,7 +5,7 @@ export default function ActualizarMaterialPage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Actualizar Material</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-2">Recursos Académicos</h1>
       <p className="text-gray-500 mb-8">Selecciona el tipo de material que deseas actualizar, esta acción genera registros de auditoría.</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -78,6 +78,24 @@ export default function ActualizarMaterialPage() {
           <div className="text-center">
             <div className="text-lg font-semibold text-gray-900 group-hover:text-violet-600 transition-colors">Videos</div>
             <div className="text-sm text-gray-500 mt-1">Instructivos y sesiones</div>
+          </div>
+        </button>
+
+        {/* Certificados */}
+        <button
+          type="button"
+          onClick={() => openTab('/dashboard/academic/actualizar-material/certificados')}
+          className="flex flex-col items-center justify-center gap-4 p-10 bg-white border-2 border-gray-200 rounded-2xl shadow-sm hover:border-amber-500 hover:shadow-md transition-all text-left group"
+        >
+          <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center group-hover:bg-amber-100 transition-colors">
+            <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <div className="text-center">
+            <div className="text-lg font-semibold text-gray-900 group-hover:text-amber-600 transition-colors">Certificados</div>
+            <div className="text-sm text-gray-500 mt-1">Plantillas de los certificados</div>
           </div>
         </button>
       </div>

@@ -2,6 +2,8 @@ import 'server-only';
 import fs from 'fs';
 import path from 'path';
 import PDFDocument from 'pdfkit';
+import { spacesClient, SPACES_BUCKET } from '@/lib/spaces';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
 
 /**
  * Genera el certificado de finalización de nivel (Beginner / Practical / Functional)
@@ -42,14 +44,43 @@ function fmtFecha(v: string | Date | null): string {
   return `${d.getUTCDate()} de ${MESES[d.getUTCMonth()]} de ${d.getUTCFullYear()}`;
 }
 
-function bgPath(nivel: NivelCertificado): string | null {
+/** Key en DO Spaces donde vive la plantilla personalizable de cada nivel. */
+export function certificadoSpacesKey(nivel: NivelCertificado): string {
+  return `certificados/${nivel}.png`;
+}
+
+/** Plantilla personalizada subida a Spaces (o null si no existe / falla). */
+async function bgFromSpaces(nivel: NivelCertificado): Promise<Buffer | null> {
   try {
-    const p = path.join(process.cwd(), 'public', 'certificados', `${nivel}.png`);
-    return fs.existsSync(p) ? p : null;
+    const res = await spacesClient.send(new GetObjectCommand({
+      Bucket: SPACES_BUCKET,
+      Key: certificadoSpacesKey(nivel),
+    }));
+    const body: any = res.Body;
+    if (!body?.transformToByteArray) return null;
+    const bytes: Uint8Array = await body.transformToByteArray();
+    return bytes?.length ? Buffer.from(bytes) : null;
   } catch { return null; }
 }
 
+/** Arte incluido en el repo (fallback si no hay plantilla personalizada en Spaces). */
+function bgFromRepo(nivel: NivelCertificado): Buffer | null {
+  try {
+    const p = path.join(process.cwd(), 'public', 'certificados', `${nivel}.png`);
+    return fs.existsSync(p) ? fs.readFileSync(p) : null;
+  } catch { return null; }
+}
+
+/**
+ * Fondo del certificado: primero la plantilla personalizada en Spaces (editable
+ * desde Recursos Académicos › Certificados); si no hay, el arte incluido en el repo.
+ */
+export async function loadCertificadoBg(nivel: NivelCertificado): Promise<Buffer | null> {
+  return (await bgFromSpaces(nivel)) ?? bgFromRepo(nivel);
+}
+
 export async function buildCertificadoPdf(data: CertificadoData): Promise<Buffer> {
+  const bg = await loadCertificadoBg(data.nivel);
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({
@@ -68,7 +99,6 @@ export async function buildCertificadoPdf(data: CertificadoData): Promise<Buffer
       doc.on('error', reject);
 
       // Fondo (plantilla de arte a página completa)
-      const bg = bgPath(data.nivel);
       if (bg) {
         try { doc.image(bg, 0, 0, { width: W, height: H }); } catch { /* fondo opcional */ }
       }
