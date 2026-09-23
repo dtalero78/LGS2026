@@ -237,6 +237,9 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/admin/clear-historic': [
     'MANTENIMIENTO.USUARIOS.CLEAR_HISTORIC' as Permission,
   ],
+  '/admin/crea-login': [
+    'MANTENIMIENTO.USUARIOS.CREAR_LOGIN' as Permission,
+  ],
   '/admin/edicion-contrato': [
     'MANTENIMIENTO.USUARIOS.EDICION_CONTRATO' as Permission,
   ],

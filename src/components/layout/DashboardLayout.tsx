@@ -198,6 +198,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
       },
       {
         name: 'Usuarios', isSubmenu: true, children: [
+          { name: 'Crea login',        href: '/admin/crea-login',       newTab: true },
           { name: 'Clear Historic',    href: '/admin/clear-historic',   newTab: true },
           { name: 'Gestión Usuarios',  href: '/admin/roles/create',     newTab: true },
         ],

@@ -1458,6 +1458,7 @@ interface ConsentData {
 | Prospectos | `/dashboard/comercial/prospectos` | COMERCIAL permissions |
 | Aprobación | `/dashboard/aprobacion` | APROBACION permissions |
 | Permisos Admin | `/admin/permissions` | SUPER_ADMIN/ADMIN only |
+| Crea login | `/admin/crea-login` | MANTENIMIENTO.USUARIOS.CREAR_LOGIN |
 | Consulta de Scripts | `/admin/scripts/consulta` | MANTENIMIENTO.SCRIPTS.CONSULTA |
 | Ticker Editor | `/admin/ticker` | SUPER_ADMIN only |
 | Banner Editor | `/admin/banner` | SUPER_ADMIN only |

@@ -1059,6 +1059,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Acceso a /admin/clear-historic. Elimina el historial académico (bookings, complementarias, step overrides) de un estudiante. Acción irreversible — solo una vez por estudiante',
   },
   {
+    code: MantenimientoPermission.CREAR_LOGIN,
+    module: Module.MANTENIMIENTO,
+    section: 'Usuarios',
+    name: 'Página "Crea login"',
+    description: 'Acceso a /admin/crea-login. Busca una persona por documento/nombre/contrato y crea (o reactiva) su registro en USUARIOS_ROLES para habilitarle el acceso al panel',
+  },
+  {
     code: MantenimientoPermission.EDICION_CONTRATO,
     module: Module.MANTENIMIENTO,
     section: 'Usuarios',
