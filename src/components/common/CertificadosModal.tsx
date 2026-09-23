@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { XMarkIcon, AcademicCapIcon, LockClosedIcon } from '@heroicons/react/24/outline'
 
 type Nivel = 'beginner' | 'practical' | 'functional'
-interface NivelInfo { aprobado: boolean; fecha: string | null }
+interface NivelInfo { aprobado: boolean; fecha: string | null; yaGenerado?: boolean }
 interface Estado { nombre: string; numeroId: string; niveles: Record<Nivel, NivelInfo> }
 
 const NIVELES: { key: Nivel; label: string; cls: string }[] = [
@@ -38,6 +38,11 @@ export default function CertificadosModal({ baseUrl, onClose }: { baseUrl: strin
 
   const descargar = (nivel: Nivel) => {
     window.open(`${baseUrl}${baseUrl.includes('?') ? '&' : '?'}nivel=${nivel}`, '_blank', 'noopener,noreferrer')
+    // El certificado se genera UNA sola vez: al descargarlo, deshabilita el botón.
+    // (El servidor es la autoridad; al reabrir el modal se refleja el estado real.)
+    setEstado(prev => prev
+      ? { ...prev, niveles: { ...prev.niveles, [nivel]: { ...prev.niveles[nivel], yaGenerado: true } } }
+      : prev)
   }
 
   return (
@@ -65,23 +70,29 @@ export default function CertificadosModal({ baseUrl, onClose }: { baseUrl: strin
           <div className="space-y-2">
             {NIVELES.map(({ key, label, cls }) => {
               const info = estado?.niveles?.[key]
-              const ok = !!info?.aprobado
+              const aprobado = !!info?.aprobado
+              const yaGenerado = !!info?.yaGenerado
+              const habilitado = aprobado && !yaGenerado
+              const leyenda = !aprobado
+                ? 'No ha aprobado el nivel, certificado no disponible'
+                : yaGenerado
+                  ? 'Ya generaste este certificado (solo se puede una vez)'
+                  : null
               return (
                 <div key={key}>
                   <button
                     type="button"
-                    disabled={!ok}
-                    onClick={() => ok && descargar(key)}
-                    title={ok ? `Descargar certificado ${label}` : 'No ha aprobado el nivel, certificado no disponible'}
-                    className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-semibold transition-colors ${ok ? cls : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                    disabled={!habilitado}
+                    onClick={() => habilitado && descargar(key)}
+                    title={habilitado ? `Descargar certificado ${label}` : (leyenda ?? label)}
+                    className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-semibold transition-colors ${habilitado ? cls : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
                   >
-                    {ok ? <AcademicCapIcon className="h-5 w-5" /> : <LockClosedIcon className="h-4 w-4" />}
+                    {habilitado ? <AcademicCapIcon className="h-5 w-5" /> : <LockClosedIcon className="h-4 w-4" />}
                     {label}
+                    {yaGenerado && aprobado && <span className="text-[11px] font-normal">· generado</span>}
                   </button>
-                  {!ok && (
-                    <p className="mt-0.5 text-[11px] text-gray-400 text-center">
-                      No ha aprobado el nivel, certificado no disponible
-                    </p>
+                  {leyenda && (
+                    <p className="mt-0.5 text-[11px] text-gray-400 text-center">{leyenda}</p>
                   )}
                 </div>
               )

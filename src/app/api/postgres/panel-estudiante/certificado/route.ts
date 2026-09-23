@@ -20,7 +20,8 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
 
   const nivel = new URL(req.url).searchParams.get('nivel') as NivelCertificado | null;
   if (nivel) {
-    const { pdf, nombre } = await certificadoService.generar(academicaId, nivel);
+    // Panel estudiante: cada certificado se genera UNA sola vez (soloUna).
+    const { pdf, nombre } = await certificadoService.generar(academicaId, nivel, { soloUna: true });
     const fname = `certificado-${nivel}-${(nombre || 'lgs').replace(/[^A-Za-z0-9]+/g, '-')}.pdf`;
     return new NextResponse(new Uint8Array(pdf), {
       status: 200,
@@ -32,6 +33,6 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     });
   }
 
-  const estado = await certificadoService.getEstado(academicaId);
+  const estado = await certificadoService.getEstado(academicaId, { incluirGenerado: true });
   return successResponse(estado);
 });
