@@ -263,7 +263,7 @@ export async function aplicarConfirmacion(
                "extensionCount"   = $2,
                "extensionHistory" = $3::jsonb,
                "estadoInactivo"   = false,
-               "aprobacion"       = 'APROBADA',
+               "aprobacion"       = 'Aprobado',
                "estado"           = 'EXAM. INTER.',
                "nivel"            = $4,
                "step"             = $5,
