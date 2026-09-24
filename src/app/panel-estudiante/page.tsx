@@ -54,9 +54,13 @@ import { estadoZoom, proximoCambioZoom, MENSAJE_ZOOM_LISTO, MENSAJE_ZOOM_ESPERA,
 // cambiaría hasta que el alumno recargue. Reevaluar cada ≤20 s lo cambia solo.
 const ZOOM_REEVAL_MS = 20 * 1000
 
-// Reglamento de Participantes (DI-010). Archivo estático en public/: para
-// publicar una versión nueva se reemplaza el PDF y se despliega.
-const REGLAMENTO_PDF = '/reglamentos/reglamento-participantes.pdf'
+// Reglamento de Participantes (DI-010). El endpoint decide qué servir: la
+// versión cargada desde Mantenimiento › Avisos › Reglamentos, o el PDF de
+// respaldo del repo si nadie ha subido ninguna.
+const REGLAMENTO_PDF = '/api/postgres/reglamento'
+// El `download` de un <a> no cruza a otro origen y el PDF personalizado vive en
+// Spaces, así que la descarga se pide explícitamente al endpoint.
+const REGLAMENTO_PDF_DESCARGA = '/api/postgres/reglamento?download=1'
 
 function PanelEstudianteContent() {
   const [showBookingFlow, setShowBookingFlow] = useState(false)
@@ -552,7 +556,7 @@ function PanelEstudianteContent() {
                   <ArrowTopRightOnSquareIcon className="h-5 w-5" />
                 </a>
                 <a
-                  href={REGLAMENTO_PDF}
+                  href={REGLAMENTO_PDF_DESCARGA}
                   download="Reglamento Participantes LGS.pdf"
                   className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                   title="Descargar"

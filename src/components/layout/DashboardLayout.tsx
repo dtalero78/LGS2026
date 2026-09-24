@@ -180,6 +180,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
         children: [
           { name: 'Ticker', href: '/admin/ticker' },
           { name: 'Banner', href: '/admin/banner' },
+          { name: 'Reglamentos', href: '/admin/reglamentos' },
         ],
       },
       {
@@ -408,6 +409,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ],
     '/admin/banner': [
       MantenimientoPermission.AVISOS_BANNER,
+    ],
+    '/admin/reglamentos': [
+      MantenimientoPermission.AVISOS_REGLAMENTOS,
     ],
     '/admin/actualizar-videos': [
       MantenimientoPermission.ACTUALIZAR_VIDEOS,
