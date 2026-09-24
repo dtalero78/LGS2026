@@ -270,6 +270,9 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/admin/banner': [
     'MANTENIMIENTO.AVISOS.BANNER' as Permission,
   ],
+  '/admin/reglamentos': [
+    'MANTENIMIENTO.AVISOS.REGLAMENTOS' as Permission,
+  ],
   '/admin/actualizar-videos': [
     // Se accede como 4ª caja del hub Académico → Actualizar Material, así que
     // acepta el permiso del hub; se conserva el legacy de Mantenimiento.

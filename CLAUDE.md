@@ -190,7 +190,11 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 
 ### Panel del Estudiante (Auto-Servicio)
 137. Portal de auto-servicio para estudiantes logueados (rol ESTUDIANTE). Header muestra: saludo con nombre + badge nivel/step + **Reglamentos** + Perfil + botón logout. El botón de ayuda WhatsApp fue eliminado del header.
-137b. **Reglamentos** — opción del header (a la izquierda de Perfil) que abre el **Reglamento de Participantes (DI-010)** en un visor modal, con botones de abrir en pestaña nueva y descargar. El PDF es un archivo estático en [public/reglamentos/reglamento-participantes.pdf](public/reglamentos/reglamento-participantes.pdf): para publicar una versión nueva se **reemplaza el archivo y se despliega** (no hay carga desde admin). Sin permiso dedicado: visible para todo estudiante.
+137b. **Reglamentos** — opción del header (a la izquierda de Perfil) que abre el **Reglamento de Participantes (DI-010)** en un visor modal, con botones de abrir en pestaña nueva y descargar. Sin permiso dedicado: visible para todo estudiante. El PDF se pide a `GET /api/postgres/reglamento` (requiere sesión; `?download=1` fuerza la descarga), que resuelve **dos fuentes** y prefiere la primera — misma mecánica que las plantillas de certificados ([src/lib/reglamento.ts](src/lib/reglamento.ts)):
+     1. `reglamentos/reglamento-participantes.pdf` en **DO Spaces** → la versión cargada desde **Mantenimiento › Avisos › Reglamentos** (`/admin/reglamentos`). Publica al instante, sin desplegar.
+     2. [public/reglamentos/reglamento-participantes.pdf](public/reglamentos/reglamento-participantes.pdf) → respaldo del repo; es lo que se sirve mientras nadie suba nada y a lo que se vuelve con "Restaurar original".
+
+     Admin: `GET/POST/DELETE /api/postgres/mantenimiento/reglamento` (POST = FormData `file`, solo PDF ≤20 MB validado por magic bytes `%PDF`; DELETE = borra el de Spaces). Permiso `MANTENIMIENTO.AVISOS.REGLAMENTOS`. Si Spaces falla, el endpoint cae al PDF del repo en vez de dejar al alumno sin documento. **No se conserva historial**: cada publicación pisa la anterior.
 138. Ver perfil propio (merge PEOPLE + ACADEMICA)
 139. Ver progreso académico ("¿Cómo voy?" con barra de progreso, steps, porcentaje)
 140. Ver eventos próximos y disponibles (filtrados por nivel/step del estudiante)
@@ -1465,6 +1469,7 @@ interface ConsentData {
 | Consulta de Scripts | `/admin/scripts/consulta` | MANTENIMIENTO.SCRIPTS.CONSULTA |
 | Ticker Editor | `/admin/ticker` | SUPER_ADMIN only |
 | Banner Editor | `/admin/banner` | SUPER_ADMIN only |
+| Reglamentos (Mantenimiento › Avisos) | `/admin/reglamentos` | MANTENIMIENTO.AVISOS.REGLAMENTOS |
 | Student Detail | `/student/[id]` | Authenticated |
 | Person Detail | `/person/[id]` | Authenticated |
 | Session Detail | `/sesion/[id]` | ACADEMICO.SESION permissions |

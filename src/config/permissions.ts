@@ -1115,6 +1115,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Acceso a /admin/banner. Sube/edita la imagen del banner mostrado en el login',
   },
   {
+    code: MantenimientoPermission.AVISOS_REGLAMENTOS,
+    module: Module.MANTENIMIENTO,
+    section: 'Avisos',
+    name: 'Página "Reglamentos"',
+    description: 'Acceso a /admin/reglamentos. Reemplaza el PDF del Reglamento de Participantes (DI-010) que ven los estudiantes desde el header de su panel. La versión nueva queda publicada al instante, sin desplegar',
+  },
+  {
     code: MantenimientoPermission.ACTUALIZAR_VIDEOS,
     module: Module.MANTENIMIENTO,
     section: 'Material',
