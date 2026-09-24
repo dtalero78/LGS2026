@@ -12,6 +12,9 @@ import {
   SparklesIcon,
   LockClosedIcon,
   AcademicCapIcon,
+  DocumentTextIcon,
+  ArrowTopRightOnSquareIcon,
+  ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline'
 import { useQuery, useQueryClient } from 'react-query'
 import {
@@ -51,6 +54,10 @@ import { estadoZoom, proximoCambioZoom, MENSAJE_ZOOM_LISTO, MENSAJE_ZOOM_ESPERA,
 // cambiaría hasta que el alumno recargue. Reevaluar cada ≤20 s lo cambia solo.
 const ZOOM_REEVAL_MS = 20 * 1000
 
+// Reglamento de Participantes (DI-010). Archivo estático en public/: para
+// publicar una versión nueva se reemplaza el PDF y se despliega.
+const REGLAMENTO_PDF = '/reglamentos/reglamento-participantes.pdf'
+
 function PanelEstudianteContent() {
   const [showBookingFlow, setShowBookingFlow] = useState(false)
   const [bookingTipo, setBookingTipo] = useState<string | undefined>(undefined)
@@ -66,6 +73,7 @@ function PanelEstudianteContent() {
   const [showRecursos, setShowRecursos] = useState(false)
   const [showCertificados, setShowCertificados] = useState(false)
   const openCertificados = () => setShowCertificados(true)
+  const [showReglamentos, setShowReglamentos] = useState(false)
   const [zoomTick, setZoomTick] = useState(0)
   const [sencePending, setSencePending] = useState(false)
   const [senceClosePending, setSenceClosePending] = useState(false)
@@ -297,7 +305,12 @@ function PanelEstudianteContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 1. Top Bar: WhatsApp + Greeting + Nivel + Perfil */}
-      <StudentHeader profile={profile} isLoading={meQuery.isLoading} onPerfil={() => setShowPerfil(true)} />
+      <StudentHeader
+        profile={profile}
+        isLoading={meQuery.isLoading}
+        onPerfil={() => setShowPerfil(true)}
+        onReglamentos={() => setShowReglamentos(true)}
+      />
 
       {/* 2. Booking Bar */}
       <div className="bg-white border-b border-gray-200 px-4 py-3">
@@ -516,6 +529,66 @@ function PanelEstudianteContent() {
         {/* 5. Let's Go assistance */}
         <WhatsAppContacts />
       </div>
+
+      {/* Reglamento de Participantes (PDF) */}
+      {showReglamentos && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-0 sm:p-4">
+          <div className="bg-white w-full h-full sm:h-[90vh] sm:max-w-4xl sm:rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+            <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-gray-200 bg-white">
+              <div className="flex items-center gap-2 min-w-0">
+                <DocumentTextIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />
+                <h2 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
+                  Reglamento de Participantes
+                </h2>
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <a
+                  href={REGLAMENTO_PDF}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Abrir en una pestaña nueva"
+                >
+                  <ArrowTopRightOnSquareIcon className="h-5 w-5" />
+                </a>
+                <a
+                  href={REGLAMENTO_PDF}
+                  download="Reglamento Participantes LGS.pdf"
+                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Descargar"
+                >
+                  <ArrowDownTrayIcon className="h-5 w-5" />
+                </a>
+                <button
+                  onClick={() => setShowReglamentos(false)}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Cerrar"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+            {/* El <object> deja un fallback real: varios navegadores móviles no
+                renderizan PDF embebido y mostrarían un marco en blanco. */}
+            <object data={REGLAMENTO_PDF} type="application/pdf" className="flex-1 w-full bg-gray-100">
+              <div className="h-full flex flex-col items-center justify-center text-center gap-3 p-8">
+                <DocumentTextIcon className="h-12 w-12 text-gray-400" />
+                <p className="text-sm text-gray-600">
+                  Tu navegador no puede mostrar el PDF aquí.
+                </p>
+                <a
+                  href={REGLAMENTO_PDF}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
+                >
+                  Abrir el reglamento
+                </a>
+              </div>
+            </object>
+          </div>
+        </div>
+      )}
 
       {/* Instructivos Selection Modal */}
       {showInstructivos && (

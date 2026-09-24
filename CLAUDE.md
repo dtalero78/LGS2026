@@ -189,7 +189,8 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 136. Autenticación de cron jobs con CRON_SECRET
 
 ### Panel del Estudiante (Auto-Servicio)
-137. Portal de auto-servicio para estudiantes logueados (rol ESTUDIANTE). Header muestra: saludo con nombre + badge nivel/step + botón logout. El botón de ayuda WhatsApp fue eliminado del header.
+137. Portal de auto-servicio para estudiantes logueados (rol ESTUDIANTE). Header muestra: saludo con nombre + badge nivel/step + **Reglamentos** + Perfil + botón logout. El botón de ayuda WhatsApp fue eliminado del header.
+137b. **Reglamentos** — opción del header (a la izquierda de Perfil) que abre el **Reglamento de Participantes (DI-010)** en un visor modal, con botones de abrir en pestaña nueva y descargar. El PDF es un archivo estático en [public/reglamentos/reglamento-participantes.pdf](public/reglamentos/reglamento-participantes.pdf): para publicar una versión nueva se **reemplaza el archivo y se despliega** (no hay carga desde admin). Sin permiso dedicado: visible para todo estudiante.
 138. Ver perfil propio (merge PEOPLE + ACADEMICA)
 139. Ver progreso académico ("¿Cómo voy?" con barra de progreso, steps, porcentaje)
 140. Ver eventos próximos y disponibles (filtrados por nivel/step del estudiante)
