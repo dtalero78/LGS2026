@@ -37,8 +37,10 @@ const PRUEBA_DISPLAY_NAME: Record<ExamPrueba, string> = {
   TOEFL:   'TOEFL',
 };
 
-/** Days added to fechaBase to compute the new finalContrato for confirmed students. */
+/** Fallback histórico: días sumados a fechaBase si NO se envía ciclo. */
 const EXTENSION_DAYS = 100;
+/** Regla actual: la vigencia llega hasta N días después del fin del ciclo. */
+const DIAS_POST_CICLO = 7;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // One-time table creation (idempotent)
@@ -129,7 +131,8 @@ function buildConfirmadoMessage(
 
 export interface AplicarConfirmacionParams {
   prueba: ExamPrueba;
-  fechaBase: string;             // YYYY-MM-DD
+  fechaBase: string;             // YYYY-MM-DD (solo para el mensaje de WhatsApp)
+  cicloId?: string;              // EXAM_CICLOS._id — la vigencia = fechaFinal + 7 días
   confirmados: string[];         // ACADEMICA._id list
   noConfirmados: string[];       // ACADEMICA._id list
   ejecutadoPor: string;          // admin email
@@ -146,7 +149,7 @@ export interface AplicarConfirmacionResult {
 export async function aplicarConfirmacion(
   params: AplicarConfirmacionParams
 ): Promise<AplicarConfirmacionResult> {
-  const { prueba, fechaBase, confirmados, noConfirmados, ejecutadoPor } = params;
+  const { prueba, fechaBase, cicloId, confirmados, noConfirmados, ejecutadoPor } = params;
 
   // Validaciones de entrada
   if (!PRUEBA_TO_STEP[prueba]) {
@@ -157,6 +160,21 @@ export async function aplicarConfirmacion(
   }
   if (confirmados.length === 0 && noConfirmados.length === 0) {
     throw new ValidationError('No se enviaron estudiantes para procesar');
+  }
+
+  // Vigencia de los confirmados = fin del ciclo + DIAS_POST_CICLO días (misma para
+  // todos). Si no llega cicloId, se cae al comportamiento histórico (fechaBase+100).
+  let cicloFinalContrato: string | null = null;
+  let cicloNombre: string | null = null;
+  if (cicloId) {
+    const ciclo = await queryOne<{ nombre: string; d: string }>(
+      `SELECT "nombre", ("fechaFinal"::date + INTERVAL '${DIAS_POST_CICLO} days')::date::text AS d
+         FROM "EXAM_CICLOS" WHERE "_id" = $1`,
+      [cicloId]
+    );
+    if (!ciclo?.d) throw new ValidationError(`Ciclo no encontrado o sin fecha final: ${cicloId}`);
+    cicloFinalContrato = ciclo.d;
+    cicloNombre = ciclo.nombre;
   }
 
   await ensureAuditTable();
@@ -199,14 +217,26 @@ export async function aplicarConfirmacion(
           ).catch(() => null)
         : null;
 
-      // Nueva fecha final = fechaBase + 100 días (DATE puro)
-      const nuevoFinal = await queryOne<{ d: string }>(
-        `SELECT ($1::date + INTERVAL '${EXTENSION_DAYS} days')::date::text AS d`,
-        [fechaBase]
-      );
-      const nuevoFinalContrato = nuevoFinal?.d || null;
+      // Nueva fecha final: fin del ciclo + 7 días (misma para todos) o, sin
+      // ciclo, el fallback histórico fechaBase + 100 días.
+      let nuevoFinalContrato: string | null;
+      let motivoExtension: string;
+      if (cicloFinalContrato) {
+        nuevoFinalContrato = cicloFinalContrato;
+        motivoExtension = `Confirmación ${PRUEBA_DISPLAY_NAME[prueba]} — vigencia hasta ${DIAS_POST_CICLO} días después del fin del ciclo ${cicloNombre} (${nuevoFinalContrato})`;
+      } else {
+        const nuevoFinal = await queryOne<{ d: string }>(
+          `SELECT ($1::date + INTERVAL '${EXTENSION_DAYS} days')::date::text AS d`,
+          [fechaBase]
+        );
+        nuevoFinalContrato = nuevoFinal?.d || null;
+        motivoExtension = `Confirmación ${PRUEBA_DISPLAY_NAME[prueba]} — extensión ${EXTENSION_DAYS} días desde ${fechaBase}`;
+      }
 
       const vigenciaAnterior = peopleRow?.finalContrato || null;
+      const diasExtendidos = (vigenciaAnterior && nuevoFinalContrato)
+        ? Math.round((new Date(nuevoFinalContrato).getTime() - new Date(vigenciaAnterior).getTime()) / 86_400_000)
+        : null;
       const currentExtHistory = Array.isArray(peopleRow?.extensionHistory)
         ? peopleRow!.extensionHistory
         : [];
@@ -218,8 +248,8 @@ export async function aplicarConfirmacion(
           fechaEjecucion: new Date().toISOString(),
           vigenciaAnterior,
           vigenciaNueva: nuevoFinalContrato,
-          diasExtendidos: EXTENSION_DAYS,
-          motivo: `Confirmación ${PRUEBA_DISPLAY_NAME[prueba]} — extensión ${EXTENSION_DAYS} días desde ${fechaBase}`,
+          diasExtendidos,
+          motivo: motivoExtension,
           ejecutadoPor,
         },
       ];

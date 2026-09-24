@@ -28,6 +28,7 @@ export const POST = handlerWithAuth(async (request: NextRequest, _ctx, session) 
 
   const prueba: ExamPrueba = (body?.prueba || '').toUpperCase();
   const fechaBase: string = body?.fechaBase || '';
+  const cicloId: string = String(body?.cicloId || '').trim();
   const confirmados: string[]   = Array.isArray(body?.confirmados)   ? body.confirmados   : [];
   const noConfirmados: string[] = Array.isArray(body?.noConfirmados) ? body.noConfirmados : [];
 
@@ -37,12 +38,17 @@ export const POST = handlerWithAuth(async (request: NextRequest, _ctx, session) 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaBase)) {
     throw new ValidationError(`fechaBase inválida (esperado YYYY-MM-DD): ${fechaBase}`);
   }
+  // El ciclo define la vigencia (fin de ciclo + 7 días). Obligatorio si hay confirmados.
+  if (confirmados.length > 0 && !cicloId) {
+    throw new ValidationError('Falta el ciclo del examen (la vigencia se calcula desde su fecha final).');
+  }
 
   const ejecutadoPor = (session?.user?.email as string) || 'desconocido';
 
   const result = await aplicarConfirmacion({
     prueba,
     fechaBase,
+    cicloId: cicloId || undefined,
     confirmados,
     noConfirmados,
     ejecutadoPor,

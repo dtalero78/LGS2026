@@ -69,6 +69,25 @@ export default function ExamInternPage({
   const [fechaBase, setFechaBase]   = useState(new Date().toISOString().split('T')[0])
   const [aplicando, setAplicando]   = useState(false)
 
+  // Ciclos GENERADO — la vigencia de los confirmados = fin del ciclo + 7 días.
+  const [ciclos, setCiclos]   = useState<Array<{ _id: string; nombre: string; fechaInicial: string; fechaFinal: string; estado: string }>>([])
+  const [cicloId, setCicloId] = useState('')
+
+  useEffect(() => {
+    fetch('/api/postgres/servicio/exam-ciclo')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d?.success && Array.isArray(d.ciclos)) setCiclos(d.ciclos.filter((c: any) => c.estado === 'GENERADO')) })
+      .catch(() => {})
+  }, [])
+
+  const addDaysYmd = (ymd: string, n: number): string => {
+    const d = new Date(`${String(ymd).slice(0, 10)}T00:00:00Z`)
+    d.setUTCDate(d.getUTCDate() + n)
+    return d.toISOString().slice(0, 10)
+  }
+  const cicloSel = ciclos.find(c => c._id === cicloId) || null
+  const finalContratoPreview = cicloSel ? addDaysYmd(cicloSel.fechaFinal, 7) : null
+
   const loadStudents = async () => {
     setLoading(true)
     setError(null)
@@ -145,10 +164,12 @@ export default function ExamInternPage({
       return
     }
     setFechaBase(new Date().toISOString().split('T')[0])
+    if (!cicloId && ciclos.length > 0) setCicloId(ciclos[0]._id)
     setShowModal(true)
   }
 
   const handleAplicar = async () => {
+    if (!cicloId) { toast.error('Selecciona el ciclo del examen'); return }
     setAplicando(true)
     try {
       const confirmados   = students.filter(s => confirmedIds.has(s._id)).map(s => s._id)
@@ -157,7 +178,7 @@ export default function ExamInternPage({
       const res = await fetch('/api/postgres/servicio/exam-intern/aplicar-confirmacion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prueba, fechaBase, confirmados, noConfirmados }),
+        body: JSON.stringify({ prueba, fechaBase, cicloId, confirmados, noConfirmados }),
       })
       const data = await res.json()
       if (!res.ok || !data.success) {
@@ -358,8 +379,32 @@ export default function ExamInternPage({
               <h3 className="text-lg font-bold text-gray-900">⚠️ Aplicar Confirmación {displayName}</h3>
 
               <div>
+                <label htmlFor="ciclo" className="block text-sm font-medium text-gray-700 mb-1">
+                  Ciclo del examen *
+                </label>
+                <select
+                  id="ciclo" value={cicloId}
+                  onChange={e => setCicloId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                >
+                  <option value="">Selecciona un ciclo…</option>
+                  {ciclos.map(c => (
+                    <option key={c._id} value={c._id}>{c.nombre} ({String(c.fechaInicial).slice(0,10)} → {String(c.fechaFinal).slice(0,10)})</option>
+                  ))}
+                </select>
+                {ciclos.length === 0 && (
+                  <p className="text-xs text-amber-600 mt-1">No hay ciclos generados. Genera uno en SetUp Ciclo.</p>
+                )}
+                {finalContratoPreview && (
+                  <p className="text-xs text-gray-600 mt-1">
+                    Los confirmados recibirán <strong>finalContrato = {finalContratoPreview}</strong> (fin del ciclo + 7 días).
+                  </p>
+                )}
+              </div>
+
+              <div>
                 <label htmlFor="fechaBase" className="block text-sm font-medium text-gray-700 mb-1">
-                  Fecha base del proceso *
+                  Fecha de inicio de sesiones (para el WhatsApp) *
                 </label>
                 <input
                   type="date" id="fechaBase" value={fechaBase}
@@ -367,7 +412,7 @@ export default function ExamInternPage({
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Los confirmados recibirán <strong>finalContrato = fecha base + 100 días</strong>.
+                  Es la fecha que se le anuncia al alumno por WhatsApp ("tus sesiones inician el…").
                 </p>
               </div>
 
@@ -376,7 +421,7 @@ export default function ExamInternPage({
                   <span className="text-green-600 font-bold">✅</span>
                   <div>
                     <strong>{counts.confirmados}</strong> CONFIRMADO{counts.confirmados !== 1 ? 'S' : ''}:
-                    ampliación de fecha de final de contrato en 100 días, {displayName} Step activo, WhatsApp enviado.
+                    vigencia extendida hasta 7 días después del fin del ciclo{finalContratoPreview ? ` (${finalContratoPreview})` : ''}, {displayName} Step activo, WhatsApp enviado.
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
@@ -404,7 +449,7 @@ export default function ExamInternPage({
                 <button
                   type="button"
                   onClick={handleAplicar}
-                  disabled={aplicando || !fechaBase}
+                  disabled={aplicando || !fechaBase || !cicloId}
                   className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
                 >
                   {aplicando ? 'Aplicando...' : 'Confirmar Aplicación'}
