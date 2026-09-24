@@ -1226,6 +1226,8 @@ Questions are generated from `NIVELES.contenido` field (TEXT, markdown format wi
 - Steps normales: verifica `isCurrentStepComplete()` antes de avanzar
 - ESS: ignorado (nunca avanza)
 - Overrides manuales tienen prioridad absoluta
+- **F3 Step 45 (último Jump)**: no avanza a "Step 46"; enruta al nivel especial según `ACADEMICA.pruebainter` (NULL→MASTER 46, IELTS→47, B2FIRST→48, TOEFL→49) vía `resolvePruebaInterTarget`
+- **Fin de programa (sin step siguiente en NIVELES)**: promueve a **DONE · Step 50** + bloqueo vía `promoteToDoneAndBlock` (`estado='FINALIZADA'`, `estadoInactivo=true`, `USUARIOS_ROLES.activo=false`). **Nunca se borra la fila de `USUARIOS_ROLES`** — el login siempre se desactiva, jamás se elimina (invariante: es recuperable)
 
 ### Endpoints que disparan autoAdvanceStep
 | Endpoint | Dispara auto-advance |

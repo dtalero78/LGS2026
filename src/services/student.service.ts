@@ -464,19 +464,27 @@ export async function autoAdvanceStep(bookingId: string) {
   const { NivelesRepository } = await import('@/repositories/niveles.repository');
   const nextNivelInfo = await NivelesRepository.findByStepName(targetStepName);
   if (!nextNivelInfo) {
-    // No next step — student has completed the entire program (e.g., Step 45).
-    // Block platform access by removing their login credentials from USUARIOS_ROLES.
-    if (student.email) {
-      await queryOne(
-        `DELETE FROM "USUARIOS_ROLES" WHERE "email" = $1 RETURNING "email"`,
-        [student.email]
-      );
-    }
+    // No next step — student completed the program. Se promueve a DONE Step 50 y
+    // se BLOQUEA el acceso (USUARIOS_ROLES.activo=false), NUNCA se borra la cuenta
+    // (borrarla es irreversible y deja al alumno "sin login"). El último step es
+    // Step 50: mismo comportamiento que promoteToDoneAndBlock (nivel/step + block).
+    const { promoteToDoneAndBlock } = await import('@/services/special-nivel.service');
+    const res = await promoteToDoneAndBlock(
+      {
+        _id: student._id,
+        numeroId: student.numeroId,
+        email: (student as any).email,
+        nivel: bookingNivel,
+        step: bookingStep,
+      },
+      'Programa completado (sin step siguiente en NIVELES)'
+    );
     return {
-      advanced: false,
+      advanced: true,
       graduated: true,
       from: { nivel: bookingNivel, step: bookingStep },
-      message: 'Programa completado. Acceso a la plataforma bloqueado.',
+      to: res.to ?? { nivel: 'DONE', step: 'Step 50' },
+      message: res.message,
     };
   }
 
