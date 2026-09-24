@@ -22,9 +22,10 @@ interface Persona {
   tieneLogin: boolean
   loginActivo: boolean | null
   loginEmail: string | null
+  tieneAcademica: boolean
 }
 
-interface Creado { email: string; password: string; nombre: string; numeroId: string; contrato: string | null }
+interface Creado { email: string; password: string; nombre: string; numeroId: string; contrato: string | null; academicaCreada?: boolean }
 
 export default function CreaLoginPage() {
   const [q, setQ] = useState('')
@@ -68,8 +69,8 @@ export default function CreaLoginPage() {
       const d = await r.json()
       if (!r.ok || d?.success === false) throw new Error(d?.error || 'No se pudo crear el login')
       const data = (d.data ?? d)
-      setCreado({ email: data.email, password: data.password, nombre: data.nombre, numeroId: data.numeroId, contrato: data.contrato })
-      toast.success('Login creado/activado')
+      setCreado({ email: data.email, password: data.password, nombre: data.nombre, numeroId: data.numeroId, contrato: data.contrato, academicaCreada: data.academicaCreada === true })
+      toast.success(data.academicaCreada ? 'Login + registro académico creados' : 'Login creado/activado')
       setOpenId(null)
       buscar() // refresca el estado de la fila
     } catch (e: any) {
@@ -127,6 +128,9 @@ export default function CreaLoginPage() {
                 <div><span className="text-green-700">Documento:</span> {creado.numeroId}</div>
                 <div><span className="text-green-700">Contrato:</span> {creado.contrato || '—'}</div>
               </div>
+              {creado.academicaCreada && (
+                <p className="mt-2 text-xs text-green-800">✔ También se creó su <strong>registro académico</strong> (nivel WELCOME), necesario para el panel del estudiante.</p>
+              )}
               <p className="mt-2 text-xs text-green-700">Sugerencia: pídele al usuario que cambie la contraseña al ingresar.</p>
             </div>
           )}
@@ -145,6 +149,7 @@ export default function CreaLoginPage() {
                       <span className="font-semibold text-gray-900">{p.nombre || '(sin nombre)'}</span>
                       <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{p.tipoUsuario || '—'}</span>
                       {badgeLogin(p)}
+                      {!p.tieneAcademica && <span className="text-xs px-1.5 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">Sin registro académico</span>}
                       {p.estadoInactivo && <span className="text-xs px-1.5 py-0.5 rounded bg-red-50 text-red-600">Inactivo</span>}
                     </div>
                     <div className="text-sm text-gray-500 mt-0.5">
@@ -174,6 +179,11 @@ export default function CreaLoginPage() {
                 {/* Form inline */}
                 {openId === p.peopleId && (
                   <div className="border-t border-gray-100 bg-gray-50 p-4 rounded-b-xl">
+                    {!p.tieneAcademica && (
+                      <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                        ⚠️ Este usuario <strong>no tiene registro académico</strong>. Al confirmar se creará el <strong>login</strong> y además un <strong>registro académico</strong> (nivel WELCOME) para que pueda usar el panel del estudiante.
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <label className="text-sm">
                         <span className="block text-gray-600 mb-1">Usuario (email)</span>

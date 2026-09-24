@@ -61,6 +61,12 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     if (l.email) byEmail.set(String(l.email).toLowerCase(), l);
   }
 
+  // ¿Tiene registro en ACADEMICA? (el panel del estudiante resuelve por ACADEMICA).
+  const acadRows = nums.length
+    ? await queryMany<any>(`SELECT DISTINCT "numeroId" FROM "ACADEMICA" WHERE "numeroId" = ANY($1)`, [nums])
+    : [];
+  const acadSet = new Set(acadRows.map(r => String(r.numeroId)));
+
   const resultados = people.map(p => {
     const email = normEmail(p.email);
     const login = byNum.get(String(p.numeroId)) || (email && byEmail.get(email)) || null;
@@ -79,6 +85,7 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
       tieneLogin: !!login,
       loginActivo: login ? login.activo === true : null,
       loginEmail: login?.email || null,
+      tieneAcademica: acadSet.has(String(p.numeroId)),
     };
   });
 
@@ -125,6 +132,29 @@ export const POST = handlerWithAuth(async (req, _ctx, session) => {
       person.numeroId || null, person.contrato || null, person.celular || null,
     ]);
 
+  // Si NO tiene registro en ACADEMICA, se crea uno (nivel WELCOME) — sin él, el
+  // panel del estudiante no encuentra su ficha académica y queda inservible.
+  // Mismo INSERT que /people/[id]/approve.
+  let academicaCreada = false;
+  if (person.numeroId) {
+    const existeAcad = await queryOne<any>(`SELECT "_id" FROM "ACADEMICA" WHERE "numeroId" = $1 LIMIT 1`, [person.numeroId]);
+    if (!existeAcad) {
+      await query(
+        `INSERT INTO "ACADEMICA" (
+           "_id","numeroId","primerNombre","segundoNombre","primerApellido","segundoApellido",
+           "email","celular","nivel","step","plataforma","estadoInactivo",
+           "contrato","usuarioId","sence","senceCode","_createdDate","_updatedDate"
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'WELCOME','WELCOME',$9,false,$10,$11,$12,$13,NOW(),NOW())`,
+        [
+          ids.academic(), person.numeroId, person.primerNombre, person.segundoNombre || null,
+          person.primerApellido, person.segundoApellido || null,
+          email, person.celular || null, person.plataforma || null,
+          person.contrato || null, person._id, person.sence === true, person.senceCode || null,
+        ]);
+      academicaCreada = true;
+    }
+  }
+
   return successResponse({
     ok: true,
     email,
@@ -132,6 +162,9 @@ export const POST = handlerWithAuth(async (req, _ctx, session) => {
     nombre,
     numeroId: person.numeroId,
     contrato: person.contrato,
-    message: 'Login creado/activado correctamente',
+    academicaCreada,
+    message: academicaCreada
+      ? 'Login creado + registro académico (WELCOME) creado'
+      : 'Login creado/activado correctamente',
   });
 });
