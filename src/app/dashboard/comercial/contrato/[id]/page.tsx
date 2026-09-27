@@ -204,6 +204,49 @@ function SectionCard({ title, icon: Icon, color, children }: {
   )
 }
 
+/**
+ * Panel de detalle del programa Kids de un beneficiario (curso + apoderado),
+ * leído de KIDS_INSCRIPCIONES (adjuntado como `ben.kidsInscripcion` por el API).
+ * Solo lectura — estos datos se editan en el proceso de contrato / app Kids.
+ */
+function KidsInscripcionPanel({ insc }: { insc: any }) {
+  if (!insc) {
+    return (
+      <p className="mt-3 text-xs text-fuchsia-700/70 italic">
+        Beneficiario Kids — sin detalle de inscripción registrado.
+      </p>
+    )
+  }
+  const apoderado = [insc.apoderado, insc.apoderadoApellidos].filter(Boolean).join(' ')
+  const filas: { label: string; value: any }[] = [
+    { label: 'Campaña', value: insc.campaign },
+    { label: 'Tipo de curso', value: insc.tipoCurso },
+    { label: 'Salón', value: insc.salonNombre },
+    { label: 'Horario', value: insc.horario },
+    { label: 'Apoderado', value: apoderado },
+    { label: 'Documento apoderado', value: insc.apoderadoDoc },
+    { label: 'Parentesco', value: insc.parentesco },
+    { label: 'Teléfono apoderado', value: insc.apoderadoTelefono },
+    { label: 'Correo apoderado', value: insc.apoderadoMail },
+  ].filter(f => f.value != null && String(f.value).trim() !== '')
+
+  return (
+    <div className="mt-3 rounded-lg border border-fuchsia-200 bg-fuchsia-50 p-3">
+      <p className="text-[11px] font-bold uppercase tracking-wide text-fuchsia-700 mb-2">
+        🧒 Programa Kids
+      </p>
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
+        {filas.map(f => (
+          <div key={f.label}>
+            <dt className="text-[10px] uppercase tracking-wide text-fuchsia-700/70">{f.label}</dt>
+            <dd className="text-sm text-gray-800 break-words">{String(f.value)}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  )
+}
+
 // ── Main Page ──
 
 export default function ContratoDetailPage() {
@@ -898,8 +941,13 @@ export default function ContratoDetailPage() {
                 <div className="space-y-4">
                   {beneficiarios.map((ben: any, idx: number) => (
                     <div key={ben._id} className={idx > 0 ? 'pt-4 border-t border-gray-100' : ''}>
-                      <p className="text-xs font-semibold text-green-700 mb-2">
-                        Beneficiario {idx + 1}: {fullName(ben)}
+                      <p className="text-xs font-semibold text-green-700 mb-2 flex items-center gap-2">
+                        <span>Beneficiario {idx + 1}: {fullName(ben)}</span>
+                        {ben.kids && (
+                          <span className="inline-block bg-fuchsia-100 text-fuchsia-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                            🧒 KIDS
+                          </span>
+                        )}
                       </p>
                       <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
                         {CAMPOS_BENEFICIARIO.map((field) => (
@@ -918,6 +966,7 @@ export default function ContratoDetailPage() {
                           />
                         ))}
                       </dl>
+                      {ben.kids && <KidsInscripcionPanel insc={ben.kidsInscripcion} />}
                     </div>
                   ))}
                 </div>
