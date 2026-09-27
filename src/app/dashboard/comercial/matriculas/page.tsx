@@ -6,7 +6,7 @@ import { PermissionGuard } from '@/components/permissions'
 import { usePermissions } from '@/hooks/usePermissions'
 import { ComercialPermission } from '@/types/permissions'
 import { exportToExcel } from '@/lib/export-excel'
-import { User, Filter, Download, ChevronLeft, ChevronRight, AlertCircle, Trash2, X } from 'lucide-react'
+import { User, Filter, Download, ChevronLeft, ChevronRight, AlertCircle, Trash2, X, Pencil, EyeOff, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface Matricula {
@@ -52,6 +52,28 @@ const ESTADOS = [
 
 const RECORDS_PER_PAGE = 10
 
+// ── Pestaña "En Gestión" ──
+// Contratos recién creados (≤8h) que aún no están aprobados. Categorías incluidas
+// (whitelist explícita: no aprobados ni rechazados).
+const EN_GESTION_CATS = ['Sin firmar', 'Firmado sin aprobar', 'En revisión', 'Pendiente']
+const OCHO_HORAS_MS = 8 * 60 * 60 * 1000
+// Ocultos "quitados de la lista": solo este navegador (localStorage), auto-purgado a 8h.
+const LS_GESTION_OCULTOS = 'matriculas_gestion_ocultos_v1'
+
+function loadGestionOcultos(): Record<string, number> {
+  try {
+    const raw = typeof window !== 'undefined' ? window.localStorage.getItem(LS_GESTION_OCULTOS) : null
+    const obj = raw ? JSON.parse(raw) : {}
+    const now = Date.now()
+    const out: Record<string, number> = {}
+    for (const [k, v] of Object.entries(obj)) {
+      // Se purga lo quitado hace más de 8h (el contrato ya no aparece de todos modos).
+      if (typeof v === 'number' && now - v < OCHO_HORAS_MS) out[k] = v
+    }
+    return out
+  } catch { return {} }
+}
+
 function categoriaBadge(cat?: string) {
   switch (cat) {
     case 'Aprobados': return 'bg-green-100 text-green-800'
@@ -65,6 +87,7 @@ function categoriaBadge(cat?: string) {
 }
 
 const fmtDate = (v: any) => v ? new Date(v).toLocaleDateString() : ''
+const fmtDateTime = (v: any) => v ? new Date(v).toLocaleString() : ''
 const puedeBorrar = (m: Matricula) => m.categoria === 'Sin firmar'
 
 export default function MatriculasPage() {
@@ -82,6 +105,20 @@ export default function MatriculasPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [showModal, setShowModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  // Pestaña activa + ocultos de "En Gestión" (localStorage)
+  const [activeTab, setActiveTab] = useState<'consulta' | 'gestion'>('consulta')
+  const [gestionOcultos, setGestionOcultos] = useState<Record<string, number>>({})
+  useEffect(() => { setGestionOcultos(loadGestionOcultos()) }, [])
+
+  const quitarDeGestion = (contrato: string) => {
+    if (!contrato) return
+    setGestionOcultos(prev => {
+      const next = { ...prev, [contrato]: Date.now() }
+      try { window.localStorage.setItem(LS_GESTION_OCULTOS, JSON.stringify(next)) } catch { /* noop */ }
+      return next
+    })
+  }
 
   const load = async () => {
     setLoading(true)
@@ -117,6 +154,16 @@ export default function MatriculasPage() {
   const plataformaOptions = useMemo(() => Array.from(new Set(all.map(c => (c.plataforma || '').trim()).filter(Boolean))).sort(), [all])
   const selectedRows = filtered.filter(c => selected.has(c.contrato) && puedeBorrar(c))
 
+  // "En Gestión": creados ≤8h, no aprobados/rechazados, no quitados a mano.
+  const enGestion = useMemo(() => {
+    const now = Date.now()
+    return all
+      .filter(c => EN_GESTION_CATS.includes(c.categoria || ''))
+      .filter(c => c._createdDate && (now - new Date(c._createdDate).getTime()) < OCHO_HORAS_MS)
+      .filter(c => !gestionOcultos[c.contrato])
+      .sort((a, b) => new Date(b._createdDate).getTime() - new Date(a._createdDate).getTime())
+  }, [all, gestionOcultos])
+
   const toggle = (contrato: string) => setSelected(prev => { const n = new Set(prev); n.has(contrato) ? n.delete(contrato) : n.add(contrato); return n })
 
   const doDelete = async () => {
@@ -140,11 +187,28 @@ export default function MatriculasPage() {
       <PermissionGuard permission={ComercialPermission.MATRICULAS_VER} showDefaultMessage>
         <div className="space-y-6">
           {/* Header */}
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">📋 Matrículas</h1>
-              <p className="mt-2 text-sm text-gray-700">Consulta de contratos y borrado de matrículas sin firmar</p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">📋 Matrículas</h1>
+            <p className="mt-2 text-sm text-gray-700">Consulta de contratos y borrado de matrículas sin firmar</p>
+          </div>
+
+          {/* Pestañas */}
+          <div className="flex gap-6 border-b border-gray-200">
+            <button type="button" onClick={() => setActiveTab('consulta')}
+              className={`px-1 pb-2 text-sm font-medium border-b-2 -mb-px ${activeTab === 'consulta' ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+              Consulta
+            </button>
+            <button type="button" onClick={() => setActiveTab('gestion')}
+              className={`px-1 pb-2 text-sm font-medium border-b-2 -mb-px flex items-center gap-1.5 ${activeTab === 'gestion' ? 'border-fuchsia-600 text-fuchsia-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+              En Gestión
+              {enGestion.length > 0 && (
+                <span className="inline-flex items-center justify-center bg-fuchsia-100 text-fuchsia-700 text-xs font-bold rounded-full px-2 py-0.5">{enGestion.length}</span>
+              )}
+            </button>
+          </div>
+
+          {activeTab === 'consulta' && (<>
+          <div className="flex justify-end items-start">
             <div className="flex gap-3">
               <button type="button" onClick={() => exportToExcel(filtered, [
                 { header: 'Titular', accessor: (c) => `${c.primerNombre} ${c.primerApellido}`.trim() },
@@ -289,6 +353,80 @@ export default function MatriculasPage() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+          </>)}
+
+          {/* ── Pestaña En Gestión ── */}
+          {activeTab === 'gestion' && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-start gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold">Contratos en gestión ({enGestion.length})</h2>
+                  <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5" />
+                    Contratos creados en las últimas 8 horas que aún no están aprobados. Salen al aprobarse, al quitarlos de la lista, o al cumplir 8 horas desde su creación.
+                  </p>
+                </div>
+                <button type="button" onClick={() => load()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 flex-shrink-0">
+                  <Filter className="w-4 h-4" /> Actualizar
+                </button>
+              </div>
+
+              {loading ? (
+                <div className="card p-12 text-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" /><p className="mt-4 text-gray-600">Cargando...</p></div>
+              ) : enGestion.length === 0 ? (
+                <div className="card p-12 text-center"><AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" /><h3 className="text-lg font-medium text-gray-900 mb-2">No hay contratos en gestión</h3><p className="text-gray-500">Los contratos creados en las últimas 8 horas y sin aprobar aparecerán aquí.</p></div>
+              ) : (
+                <div className="card overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Titular</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contrato</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha creación</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Asesor</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {enGestion.map(c => (
+                          <tr key={c._id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center"><User className="h-5 w-5 text-blue-600" /></div>
+                                <div className="ml-4">
+                                  <div className="text-sm font-medium text-gray-900">{c.primerNombre} {c.primerApellido}</div>
+                                  <div className="text-sm text-gray-500">{c.numeroId}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900">{c.contrato}</div><div className="text-sm text-gray-500">{c.plataforma}</div></td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{fmtDateTime(c._createdDate)}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{c.asesorAsignado || '—'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap"><span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${categoriaBadge(c.categoria)}`}>{c.categoria || '—'}</span></td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                              <div className="flex items-center justify-end gap-2">
+                                <a href={`/dashboard/comercial/contrato/${c._id}`} target="_blank" rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium">
+                                  <Pencil className="w-3.5 h-3.5" /> Editar contrato
+                                </a>
+                                <button type="button" onClick={() => quitarDeGestion(c.contrato)} title="Quitar de la lista (solo en este navegador)"
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 text-xs font-medium">
+                                  <EyeOff className="w-3.5 h-3.5" /> Quitar
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
