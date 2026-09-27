@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
+import { plataformaToCountryCode } from '@/lib/kids-mapping'
 
 /**
  * Datos "kids" adicionales de un beneficiario (curso + apoderado). Cuando la
@@ -39,7 +40,7 @@ export interface KidsBeneficiarioValue {
 
 // Tipos del catálogo (espejo de /api/postgres/kids-intake/availability).
 interface Slot { tipo: string; diaSemana: number; horaLocal: string; duracionMin: number }
-interface Salon { id: string; nombre: string; courseId: string; cupo: number; ocupados: number; cupoDisponible: number; guia: string | null; horario: Slot[] }
+interface Salon { id: string; nombre: string; courseId: string; pais?: string | null; cupo: number; ocupados: number; cupoDisponible: number; guia: string | null; horario: Slot[] }
 interface Curso { tipo: string; salones: Salon[] }
 interface Campania { id: string; nombre: string; inicio: string; fin: string; cursos: Curso[] }
 
@@ -57,6 +58,8 @@ interface Props {
   titularNombre?: string
   titularCelular?: string
   titularEmail?: string
+  /** Plataforma/país del contrato (Chile/Colombia/Ecuador/Perú) — filtra los salones por país. */
+  plataforma?: string
   onSave: (value: KidsBeneficiarioValue) => void
   onCancel: () => void
 }
@@ -64,7 +67,7 @@ interface Props {
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500'
 
 export default function KidsBeneficiarioModal({
-  open, initial, titularNombre, titularCelular, titularEmail, onSave, onCancel,
+  open, initial, titularNombre, titularCelular, titularEmail, plataforma, onSave, onCancel,
 }: Props) {
   const [form, setForm] = useState<KidsBeneficiarioValue>({})
   const [kids, setKids] = useState<KidsData>({})
@@ -98,10 +101,16 @@ export default function KidsBeneficiarioModal({
   const setK = (k: keyof KidsData, v: any) => setKids(d => ({ ...d, [k]: v }))
 
   // ── Cascada del catálogo ──
+  // Los salones de KIDS se agrupan por país de forma binaria: grupo 01 = "CL",
+  // grupo 02/resto = "CO". El contrato de Chile ve solo salones "CL"; cualquier
+  // otro país (Colombia/Ecuador/Perú) ve solo los "CO".
+  const grupoPaisContrato = plataformaToCountryCode(plataforma) === 'CL' ? 'CL' : 'CO'
   const campaniaSel = campanias.find(c => c.id === kids.campaignId)
   const cursosDeCampania = campaniaSel?.cursos ?? []
   const cursoSel = cursosDeCampania.find(c => c.tipo === kids.tipoCurso)
-  const salonesDeCurso = cursoSel?.salones ?? []
+  // Fallback: si el salón no trae `pais` (KIDS aún sin desplegar el campo) se muestra,
+  // para no dejar el selector vacío durante la transición.
+  const salonesDeCurso = (cursoSel?.salones ?? []).filter(s => !s.pais || s.pais === grupoPaisContrato)
 
   const onSelectCampania = (id: string) => {
     const c = campanias.find(x => x.id === id)
@@ -208,7 +217,7 @@ export default function KidsBeneficiarioModal({
                       </select>
                     </Field>
                     {cursoSel && salonesDeCurso.length === 0 && (
-                      <p className="text-xs text-amber-600 mt-1">No hay salones con cupo para este curso.</p>
+                      <p className="text-xs text-amber-600 mt-1">No hay salones con cupo para este curso en {grupoPaisContrato === 'CL' ? 'Chile' : 'este país'}.</p>
                     )}
                   </div>
                 </div>

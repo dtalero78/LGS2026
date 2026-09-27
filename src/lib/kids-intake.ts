@@ -26,6 +26,8 @@ export function isKidsIntakeConfigured(): boolean {
 export interface KidsSlot { tipo: string; diaSemana: number; horaLocal: string; duracionMin: number }
 export interface KidsSalon {
   id: string; nombre: string; courseId: string;
+  /** País/grupo del salón ("CL" grupo 01, "CO" grupo 02/resto). Para filtrar por país del contrato. */
+  pais?: string | null;
   cupo: number; ocupados: number; cupoDisponible: number;
   guia: string | null; horario: KidsSlot[];
 }

@@ -2027,6 +2027,7 @@ function CrearContratoContent() {
           titularNombre={`${titular.primerNombre || ''} ${titular.primerApellido || ''}`.trim()}
           titularCelular={titular.celular}
           titularEmail={titular.email}
+          plataforma={titular.plataforma}
           onSave={saveKidsModal}
           onCancel={cancelKidsModal}
         />
