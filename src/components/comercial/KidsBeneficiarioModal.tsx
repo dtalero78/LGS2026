@@ -56,6 +56,9 @@ interface Props {
   open: boolean
   initial?: KidsBeneficiarioValue
   titularNombre?: string
+  titularApellidos?: string
+  titularDocumento?: string
+  /** Celular del titular YA con indicativo (el padre lo arma con getPhonePrefix()). */
   titularCelular?: string
   titularEmail?: string
   /** Plataforma/país del contrato (Chile/Colombia/Ecuador/Perú) — filtra los salones por país. */
@@ -67,7 +70,7 @@ interface Props {
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500'
 
 export default function KidsBeneficiarioModal({
-  open, initial, titularNombre, titularCelular, titularEmail, plataforma, onSave, onCancel,
+  open, initial, titularNombre, titularApellidos, titularDocumento, titularCelular, titularEmail, plataforma, onSave, onCancel,
 }: Props) {
   const [form, setForm] = useState<KidsBeneficiarioValue>({})
   const [kids, setKids] = useState<KidsData>({})
@@ -127,6 +130,8 @@ export default function KidsBeneficiarioModal({
       setKids(d => ({
         ...d, titularEsApoderado: true,
         apoderado: titularNombre || d.apoderado || '',
+        apoderadoApellidos: titularApellidos || d.apoderadoApellidos || '',
+        apoderadoDoc: titularDocumento || d.apoderadoDoc || '',
         apoderadoTelefono: titularCelular || d.apoderadoTelefono || '',
         apoderadoMail: titularEmail || d.apoderadoMail || '',
       }))

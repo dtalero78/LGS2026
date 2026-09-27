@@ -2024,8 +2024,10 @@ function CrearContratoContent() {
         <KidsBeneficiarioModal
           open={kidsModalIndex !== null}
           initial={kidsModalIndex !== null ? beneficiarios[kidsModalIndex] : undefined}
-          titularNombre={`${titular.primerNombre || ''} ${titular.primerApellido || ''}`.trim()}
-          titularCelular={titular.celular}
+          titularNombre={`${titular.primerNombre || ''} ${titular.segundoNombre || ''}`.trim()}
+          titularApellidos={`${titular.primerApellido || ''} ${titular.segundoApellido || ''}`.trim()}
+          titularDocumento={titular.numeroId}
+          titularCelular={titular.celular ? getPhonePrefix() + titular.celular : ''}
           titularEmail={titular.email}
           plataforma={titular.plataforma}
           onSave={saveKidsModal}
