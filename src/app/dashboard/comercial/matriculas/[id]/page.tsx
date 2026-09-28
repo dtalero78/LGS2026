@@ -22,6 +22,13 @@ interface Beneficiario {
   numeroId: string; celular: string; email: string; plataforma: string; fechaNacimiento?: string
   academicaId?: string | null; nivel?: string; step?: string; academicaInactivo?: boolean
   tienePerfilAcademico?: boolean
+  kids?: boolean
+  kidsInscripcion?: KidsInscripcion | null
+}
+interface KidsInscripcion {
+  campaign?: string; tipoCurso?: string; salonNombre?: string; horario?: string
+  apoderado?: string; apoderadoApellidos?: string; apoderadoDoc?: string
+  parentesco?: string; apoderadoTelefono?: string; apoderadoMail?: string
 }
 
 const nombre = (p: any) => `${p.primerNombre || ''} ${p.primerApellido || ''}`.trim()
@@ -142,6 +149,11 @@ export default function MatriculaDetallePage() {
                               <div className="font-bold leading-tight truncate">{nombre(b)}</div>
                               <div className="text-[11px] opacity-90">ID {b.numeroId}</div>
                             </div>
+                            {b.kids && (
+                              <span className="ml-auto shrink-0 inline-flex items-center bg-fuchsia-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full ring-1 ring-white/40">
+                                🧒 KIDS
+                              </span>
+                            )}
                           </div>
                           <div className="p-4 text-sm space-y-1.5 flex-1">
                             <Field label="Celular" value={b.celular || '—'} />
@@ -177,6 +189,23 @@ export default function MatriculaDetallePage() {
                                   className="inline-flex items-center gap-1 mt-2 text-xs text-blue-600 hover:text-blue-800">
                                   <ExternalLink className="h-3.5 w-3.5" /> Ver ficha
                                 </a>
+                              </div>
+                            )}
+
+                            {b.kids && b.kidsInscripcion && (
+                              <div className="mt-3 pt-3 border-t border-gray-100">
+                                <div className="text-xs font-semibold text-fuchsia-700 mb-1.5">🧒 Programa Kids</div>
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                                  {b.kidsInscripcion.campaign && <Field label="Campaña" value={b.kidsInscripcion.campaign} />}
+                                  {b.kidsInscripcion.tipoCurso && <Field label="Curso" value={b.kidsInscripcion.tipoCurso} />}
+                                  {b.kidsInscripcion.salonNombre && <Field label="Salón" value={b.kidsInscripcion.salonNombre} />}
+                                  {b.kidsInscripcion.horario && <Field label="Horario" value={b.kidsInscripcion.horario} />}
+                                  {(b.kidsInscripcion.apoderado || b.kidsInscripcion.apoderadoApellidos) && (
+                                    <div className="col-span-2"><Field label="Apoderado" value={[b.kidsInscripcion.apoderado, b.kidsInscripcion.apoderadoApellidos].filter(Boolean).join(' ')} /></div>
+                                  )}
+                                  {b.kidsInscripcion.apoderadoTelefono && <Field label="Tel. apoderado" value={b.kidsInscripcion.apoderadoTelefono} />}
+                                  {b.kidsInscripcion.parentesco && <Field label="Parentesco" value={b.kidsInscripcion.parentesco} />}
+                                </div>
                               </div>
                             )}
                           </div>

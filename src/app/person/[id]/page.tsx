@@ -123,6 +123,11 @@ async function PersonContent({ personId, initialTab }: { personId: string; initi
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              {personData.person.kids === true && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-fuchsia-100 text-fuchsia-700">
+                  🧒 KIDS
+                </span>
+              )}
               <span className="badge badge-info">
                 {personData.person.tipoUsuario}
               </span>

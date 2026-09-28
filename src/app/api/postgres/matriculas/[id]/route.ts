@@ -4,6 +4,7 @@ import { requirePermission } from '@/lib/api-permissions';
 import { ComercialPermission } from '@/types/permissions';
 import { query, queryOne } from '@/lib/postgres';
 import { NotFoundError } from '@/lib/errors';
+import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
 
 /**
  * GET /api/postgres/matriculas/[id]
@@ -37,6 +38,7 @@ export const GET = handlerWithAuth(async (_req, { params }, session) => {
   const benef = (await query(
     `SELECT p."_id", p."primerNombre", p."segundoNombre", p."primerApellido", p."segundoApellido",
             p."numeroId", p."celular", p."email", p."plataforma", p."fechaNacimiento", p."tipoUsuario",
+            p."kids", p."contrato",
             a."_id" AS "academicaId", a."nivel", a."step", a."foto",
             a."estadoInactivo" AS "academicaInactivo"
        FROM "PEOPLE" p
@@ -51,8 +53,13 @@ export const GET = handlerWithAuth(async (_req, { params }, session) => {
     [titular.contrato]
   )).rows.map((b: any) => ({
     ...b,
+    kids: b.kids === true,
     tienePerfilAcademico: !!b.academicaId,
   }));
+
+  // Adjunta el detalle de KIDS_INSCRIPCIONES (campaña/curso/salón/horario + apoderado)
+  // a los beneficiarios kids, para mostrarlo en la tarjeta.
+  await attachKidsInscripciones(titular.contrato, benef);
 
   return successResponse({
     titular: { ...titular, estadoMatricula },

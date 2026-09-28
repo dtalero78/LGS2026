@@ -96,6 +96,26 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
     input.click()
   }
 
+  // ── Programa Kids (solo beneficiarios Kids) ──
+  // `kidsInscripcion` lo adjunta el API de people/[id] desde KIDS_INSCRIPCIONES.
+  const esKids = (person as any).kids === true
+  const ki = (person as any).kidsInscripcion || null
+  const kidsFilas: { label: string; value: string }[] = ki
+    ? ([
+        ['Campaña', ki.campaign],
+        ['Curso', ki.tipoCurso],
+        ['Salón', ki.salonNombre],
+        ['Horario', ki.horario],
+        ['Apoderado', [ki.apoderado, ki.apoderadoApellidos].filter(Boolean).join(' ').trim()],
+        ['Documento apoderado', ki.apoderadoDoc],
+        ['Parentesco', ki.parentesco],
+        ['Teléfono apoderado', ki.apoderadoTelefono],
+        ['Correo apoderado', ki.apoderadoMail],
+      ] as Array<[string, any]>)
+        .filter(([, v]) => v != null && String(v).trim() !== '')
+        .map(([label, value]) => ({ label, value: String(value) }))
+    : []
+
   return (
     <div className="space-y-8">
       {/* Action Buttons + Suspendida badge */}
@@ -217,7 +237,28 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
         </div>
       </div>
 
-
+      {/* Programa Kids (beneficiarios Kids) */}
+      {esKids && (
+        <div>
+          <h3 className="text-lg font-medium text-fuchsia-700 mb-4 flex items-center gap-2">
+            🧒 Programa Kids
+          </h3>
+          {kidsFilas.length > 0 ? (
+            <div className="rounded-lg border border-fuchsia-200 bg-fuchsia-50 p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                {kidsFilas.map(f => (
+                  <div key={f.label}>
+                    <label className="block text-sm font-medium text-gray-700">{f.label}</label>
+                    <p className="mt-1 text-sm text-gray-900 break-words">{f.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 italic">Beneficiario Kids — sin detalle de inscripción registrado.</p>
+          )}
+        </div>
+      )}
 
       {/* System Details */}
       <div className="bg-gray-50 rounded-lg p-4">

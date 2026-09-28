@@ -6,6 +6,7 @@ import { PersonPermission } from '@/types/permissions';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { buildDynamicUpdate } from '@/lib/query-builder';
+import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
 
 /**
  * GET /api/postgres/people/[id]
@@ -179,6 +180,12 @@ export const GET = handler(async (
   } catch (error) {
     console.error('⚠️ [PostgreSQL People] Error fetching related persons:', error);
     // Don't fail the whole request, just return empty related persons
+  }
+
+  // Si es un beneficiario Kids, adjunta su inscripción (campaña/curso/salón/horario
+  // + apoderado) como `person.kidsInscripcion` para mostrarla en la ficha.
+  if ((parsedPerson as any)?.kids === true && parsedPerson?.contrato) {
+    await attachKidsInscripciones(parsedPerson.contrato, [parsedPerson as any]);
   }
 
   return successResponse({
