@@ -108,11 +108,18 @@ export const GET = handlerWithAuth(async (request: NextRequest, _ctx, session) =
 });
 
 /**
- * PATCH /api/postgres/users/consulta — activa/desactiva la cuenta de acceso.
- *   body { id: USUARIOS_ROLES._id, activo: boolean }
- * `activo=false` BLOQUEA el login de esa cuenta y ADEMÁS le cambia la clave por
- * una nueva (invalida la anterior). `activo=true` solo reactiva (no toca la clave).
- * La nueva clave se devuelve para mostrarla en la consulta. Gateado por CREAR_ROL.
+ * PATCH /api/postgres/users/consulta — dos acciones sobre la cuenta de acceso:
+ *
+ *   (a) Cambiar la clave     → body { id, password, motivo? }
+ *       Fija la clave elegida (texto plano, como el resto del sistema). Mínimo 4
+ *       caracteres. Queda en la auditoría (sin registrar el valor). Devuelve la
+ *       nueva clave para mostrarla en la consulta.
+ *
+ *   (b) Activar / desactivar → body { id, activo: boolean }
+ *       `activo=false` BLOQUEA el login y ADEMÁS regenera la clave (invalida la
+ *       anterior). `activo=true` solo reactiva (no toca la clave).
+ *
+ * Gateado por CREAR_ROL.
  */
 export const PATCH = handlerWithAuth(async (request: NextRequest, _ctx, session) => {
   await requirePermission(session, MantenimientoPermission.CREAR_ROL);
@@ -120,6 +127,35 @@ export const PATCH = handlerWithAuth(async (request: NextRequest, _ctx, session)
   const body = await request.json().catch(() => ({}));
   const id = typeof body?.id === 'string' ? body.id.trim() : '';
   if (!id) throw new ValidationError('id requerido');
+
+  // ── (a) Cambio de clave manual ──
+  if (typeof body?.password === 'string') {
+    const nueva = body.password.trim();
+    if (nueva.length < 4) throw new ValidationError('La clave debe tener al menos 4 caracteres');
+    const before = await queryOne<{ email: string; rol: string }>(
+      `SELECT "email","rol" FROM "USUARIOS_ROLES" WHERE "_id" = $1`, [id],
+    );
+    if (!before) throw new NotFoundError('Usuario', id);
+    const res = await query<{ email: string; password: string; activo: boolean }>(
+      `UPDATE "USUARIOS_ROLES" SET "password" = $1, "_updatedDate" = NOW() WHERE "_id" = $2
+       RETURNING "email","password","activo"`,
+      [nueva, id],
+    );
+    await writeAudit({
+      accion: 'EDITAR',
+      usuarioRolId: id,
+      email: before.email ?? null,
+      rol: before.rol ?? null,
+      // No se guarda el valor de la clave en la auditoría, solo que cambió.
+      cambios: { password: { from: '(anterior oculta)', to: '(clave cambiada manualmente)' } },
+      motivo: typeof body?.motivo === 'string' ? body.motivo.trim() || null : null,
+      realizadoPor: (session?.user as any)?.email ?? null,
+      realizadoPorNombre: (session?.user as any)?.name ?? null,
+    });
+    return successResponse({ email: res.rows[0].email, password: res.rows[0].password, activo: res.rows[0].activo });
+  }
+
+  // ── (b) Activar / desactivar ──
   if (typeof body?.activo !== 'boolean') throw new ValidationError('activo debe ser booleano');
 
   // Al DESACTIVAR: además de activo=false, se genera una clave nueva (la anterior

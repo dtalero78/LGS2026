@@ -5,7 +5,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions/PermissionGuard'
 import { MantenimientoPermission } from '@/types/permissions'
 import { exportToExcel } from '@/lib/export-excel'
-import { ArrowDownTrayIcon, EyeIcon, EyeSlashIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { ArrowDownTrayIcon, EyeIcon, EyeSlashIcon, PencilSquareIcon, TrashIcon, KeyIcon } from '@heroicons/react/24/outline'
 
 const PLATAFORMAS = ['Chile', 'Colombia', 'Ecuador', 'Perú', 'Internacional']
 
@@ -44,6 +44,13 @@ function ConsultaUserRol() {
   const [deleteMotivo, setDeleteMotivo] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  // Modal Cambiar clave
+  const [pwdUser, setPwdUser] = useState<UserRow | null>(null)
+  const [pwdValue, setPwdValue] = useState('')
+  const [pwdShow, setPwdShow] = useState(true)
+  const [pwdMotivo, setPwdMotivo] = useState('')
+  const [isPwdSaving, setIsPwdSaving] = useState(false)
 
   // Cargar roles (para el dropdown) al montar.
   useEffect(() => {
@@ -143,6 +150,38 @@ function ConsultaUserRol() {
       alert(e?.message || 'No se pudo guardar')
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  // ── Cambiar clave (fija una clave elegida, texto plano como el resto) ──
+  const openPwd = (u: UserRow) => { setPwdUser(u); setPwdValue(''); setPwdMotivo(''); setPwdShow(true) }
+  const generarClave = () => {
+    // 10 chars alfanuméricos (sin caracteres ambiguos) — sugerencia editable.
+    const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
+    let s = ''
+    for (let i = 0; i < 10; i++) s += abc[Math.floor(Math.random() * abc.length)]
+    setPwdValue(s); setPwdShow(true)
+  }
+  const savePwd = async () => {
+    if (!pwdUser) return
+    if (pwdValue.trim().length < 4) { alert('La clave debe tener al menos 4 caracteres.'); return }
+    setIsPwdSaving(true)
+    try {
+      const res = await fetch('/api/postgres/users/consulta', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: pwdUser._id, password: pwdValue.trim(), motivo: pwdMotivo }),
+      })
+      const d = await res.json()
+      if (!res.ok || !d?.success) throw new Error(d?.error || `Error ${res.status}`)
+      const nueva = d.password ?? pwdValue.trim()
+      setUsers(prev => prev.map(x => (x._id === pwdUser._id ? { ...x, password: nueva } : x)))
+      setShowClaves(true)
+      setPwdUser(null); setPwdValue(''); setPwdMotivo('')
+    } catch (e: any) {
+      alert(e?.message || 'No se pudo cambiar la clave')
+    } finally {
+      setIsPwdSaving(false)
     }
   }
 
@@ -306,6 +345,14 @@ function ConsultaUserRol() {
                         </button>
                         <button
                           type="button"
+                          onClick={() => openPwd(u)}
+                          title="Cambiar clave"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                        >
+                          <KeyIcon className="h-3.5 w-3.5" /> Clave
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => { setDeleteUser(u); setDeleteMotivo(''); setDeleteConfirm(false) }}
                           title="Eliminar cuenta"
                           className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
@@ -394,6 +441,61 @@ function ConsultaUserRol() {
               <button type="button" onClick={saveEdit} disabled={isSaving}
                 className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50">
                 {isSaving ? 'Guardando…' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Cambiar clave ── */}
+      {pwdUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-amber-500 px-6 py-4">
+              <h2 className="text-lg font-bold text-white">Cambiar clave</h2>
+              <p className="text-amber-50 text-xs mt-0.5 break-all">{pwdUser.email} · {pwdUser.rol}</p>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+                🔑 Fija una clave nueva para esta cuenta de acceso. Reemplaza la anterior de inmediato y queda registrada en la auditoría (sin guardar el valor).
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nueva clave <span className="text-xs text-gray-400">(mínimo 4 caracteres)</span></label>
+                <div className="flex gap-2">
+                  <input
+                    type={pwdShow ? 'text' : 'password'}
+                    value={pwdValue}
+                    onChange={e => setPwdValue(e.target.value)}
+                    placeholder="Escribe o genera una clave"
+                    autoComplete="new-password"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <button type="button" onClick={() => setPwdShow(v => !v)} title={pwdShow ? 'Ocultar' : 'Mostrar'}
+                    className="px-2 py-2 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50">
+                    {pwdShow ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                  </button>
+                  <button type="button" onClick={generarClave} title="Generar clave aleatoria"
+                    className="px-3 py-2 border border-amber-200 bg-amber-50 text-amber-700 rounded-md text-sm font-medium hover:bg-amber-100 whitespace-nowrap">
+                    Generar
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Motivo <span className="text-xs text-gray-400">(opcional, queda en la auditoría)</span></label>
+                <input type="text" value={pwdMotivo}
+                  onChange={e => setPwdMotivo(e.target.value)}
+                  placeholder="Ej: el usuario olvidó su clave"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 border-t flex justify-end gap-2">
+              <button type="button" onClick={() => setPwdUser(null)} disabled={isPwdSaving}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50">
+                Cancelar
+              </button>
+              <button type="button" onClick={savePwd} disabled={isPwdSaving || pwdValue.trim().length < 4}
+                className="px-4 py-2 text-sm font-semibold text-white bg-amber-600 rounded-md hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                {isPwdSaving ? 'Guardando…' : 'Guardar clave'}
               </button>
             </div>
           </div>
