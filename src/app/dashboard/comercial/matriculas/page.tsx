@@ -227,6 +227,9 @@ export default function MatriculasPage() {
   useEffect(() => { paginate(getFiltered()); setSelected(new Set()) /* eslint-disable-next-line */ }, [all, searchApellido, filters.categoria, filters.plataforma, filters.asesor, filters.contrato, filters.fechaInicio, filters.fechaFin])
 
   const filtered = getFiltered()
+  // La columna "Documentos" (documentación + recibo) aparece si hay algún contrato
+  // Firmado sin aprobar en el resultado — así también funciona con "Todos los contratos".
+  const showDocsCol = filtered.some(c => c.categoria === 'Firmado sin aprobar')
   const plataformaOptions = useMemo(() => Array.from(new Set(all.map(c => (c.plataforma || '').trim()).filter(Boolean))).sort(), [all])
   const selectedRows = filtered.filter(c => selected.has(c.contrato) && puedeBorrar(c))
 
@@ -393,7 +396,7 @@ export default function MatriculasPage() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Aprobación</th>
-                      {filters.categoria === 'Firmado sin aprobar' && (
+                      {showDocsCol && (
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Documentos</th>
                       )}
                     </tr>
@@ -426,12 +429,16 @@ export default function MatriculasPage() {
                           <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900">{c.celular}</div><div className="text-sm text-gray-500">{c.email}</div></td>
                           <td className="px-6 py-4 whitespace-nowrap"><span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${categoriaBadge(c.categoria)}`}>{c.categoria || '—'}</span></td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{fmtDate(c.fechaIngreso)}</td>
-                          {filters.categoria === 'Firmado sin aprobar' && (
+                          {showDocsCol && (
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <button type="button" onClick={() => openDocModal(c)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
-                                <FileText className="w-3.5 h-3.5" /> Documentos y recibo
-                              </button>
+                              {c.categoria === 'Firmado sin aprobar' ? (
+                                <button type="button" onClick={() => openDocModal(c)}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
+                                  <FileText className="w-3.5 h-3.5" /> Documentos y recibo
+                                </button>
+                              ) : (
+                                <span className="text-gray-300">—</span>
+                              )}
                             </td>
                           )}
                         </tr>
