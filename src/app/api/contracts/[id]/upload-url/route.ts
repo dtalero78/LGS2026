@@ -1,5 +1,5 @@
 import 'server-only';
-import { handler, successResponse } from '@/lib/api-helpers';
+import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { ValidationError } from '@/lib/errors';
 import { spacesClient, SPACES_BUCKET, SPACES_CDN } from '@/lib/spaces';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
@@ -10,8 +10,10 @@ const ALLOWED_TYPES = [
 ];
 const MAX_SIZE_MB = 20;
 
-// POST — Upload file to DO Spaces (proxied through API to avoid CORS)
-export const POST = handler(async (request, { params }) => {
+// POST — Upload file to DO Spaces (proxied through API to avoid CORS).
+// Solo requiere SESIÓN válida; la persistencia (documents / recibo-inscripcion)
+// aplica el permiso fino de cada tipo.
+export const POST = handlerWithAuth(async (request, { params }) => {
   const titularId = params.id;
   const formData = await request.formData();
   const file = formData.get('file') as File | null;

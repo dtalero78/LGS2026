@@ -162,8 +162,15 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     code: PersonPermission.ADICION_DOCUMENTACION,
     module: Module.PERSON,
     section: 'Información General',
-    name: 'Botón "Agregar Documentación"',
-    description: 'Subir nueva documentación al perfil del titular',
+    name: 'Botón "Subir documentos"',
+    description: 'Subir nueva documentación al perfil del titular (modal Documentación y recibo)',
+  },
+  {
+    code: PersonPermission.ELIMINAR_DOCUMENTACION,
+    module: Module.PERSON,
+    section: 'Información General',
+    name: 'Botón "Eliminar" documento',
+    description: 'Eliminar documentos adjuntos del titular (modal Documentación y recibo)',
   },
   {
     code: PersonPermission.ACTIVAR_DESACTIVAR,

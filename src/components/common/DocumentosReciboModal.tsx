@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { FileText, Upload, Receipt, Trash2, X, Eye } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { usePermissions } from '@/hooks/usePermissions'
+import { PersonPermission } from '@/types/permissions'
 
 // Detecta si un archivo es imagen (por su mime o su extensión en la URL).
 function esImagen(tipo?: string, url?: string): boolean {
@@ -30,6 +32,9 @@ interface Props {
 }
 
 export default function DocumentosReciboModal({ open, personId, subtitulo, onClose }: Props) {
+  const { hasPermission } = usePermissions()
+  const puedeSubirDoc = hasPermission(PersonPermission.ADICION_DOCUMENTACION)
+  const puedeEliminarDoc = hasPermission(PersonPermission.ELIMINAR_DOCUMENTACION)
   const [docsList, setDocsList] = useState<any[]>([])
   const [reciboData, setReciboData] = useState<any | null>(null)
   const [reciboActive, setReciboActive] = useState(false)
@@ -123,10 +128,12 @@ export default function DocumentosReciboModal({ open, personId, subtitulo, onClo
               <section>
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5"><FileText className="w-4 h-4 text-indigo-600" /> Documentación</h4>
-                  <button type="button" onClick={() => pickFiles(true, uploadDocs)} disabled={uploadingDoc}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
-                    <Upload className="w-3.5 h-3.5" /> {uploadingDoc ? 'Subiendo…' : 'Subir documentos'}
-                  </button>
+                  {puedeSubirDoc && (
+                    <button type="button" onClick={() => pickFiles(true, uploadDocs)} disabled={uploadingDoc}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
+                      <Upload className="w-3.5 h-3.5" /> {uploadingDoc ? 'Subiendo…' : 'Subir documentos'}
+                    </button>
+                  )}
                 </div>
                 <p className="text-xs text-gray-500 mb-2">Documentos requeridos para la aprobación (imágenes o PDF). El recibo de pago va en la sección de abajo.</p>
                 {docsList.length === 0 ? (
@@ -150,7 +157,9 @@ export default function DocumentosReciboModal({ open, personId, subtitulo, onClo
                               <Eye className="w-3.5 h-3.5" /> Ver {img ? 'imagen' : 'documento'}
                             </a>
                           </div>
-                          <button type="button" onClick={() => deleteDoc(d.url, d.nombre || 'documento')} title="Eliminar" className="text-red-400 hover:text-red-600 shrink-0"><Trash2 className="w-4 h-4" /></button>
+                          {puedeEliminarDoc && (
+                            <button type="button" onClick={() => deleteDoc(d.url, d.nombre || 'documento')} title="Eliminar" className="text-red-400 hover:text-red-600 shrink-0"><Trash2 className="w-4 h-4" /></button>
+                          )}
                         </li>
                       )
                     })}

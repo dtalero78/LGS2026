@@ -1,12 +1,15 @@
 import 'server-only';
-import { handler, successResponse } from '@/lib/api-helpers';
+import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
+import { requirePermission } from '@/lib/api-permissions';
+import { PersonPermission } from '@/types/permissions';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { queryOne, queryMany } from '@/lib/postgres';
 import { spacesClient, SPACES_BUCKET } from '@/lib/spaces';
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 
-// POST — append a document to PEOPLE.documentacion
-export const POST = handler(async (request, { params }) => {
+// POST — append a document to PEOPLE.documentacion (requiere permiso de subir)
+export const POST = handlerWithAuth(async (request, { params }, session) => {
+  await requirePermission(session, PersonPermission.ADICION_DOCUMENTACION);
   const titularId = params.id;
   const { url, nombre, tipo } = await request.json();
 
@@ -30,7 +33,8 @@ export const POST = handler(async (request, { params }) => {
 });
 
 // DELETE — remove a document by URL from PEOPLE.documentacion and from Spaces
-export const DELETE = handler(async (request, { params }) => {
+export const DELETE = handlerWithAuth(async (request, { params }, session) => {
+  await requirePermission(session, PersonPermission.ELIMINAR_DOCUMENTACION);
   const titularId = params.id;
   const { url } = await request.json();
   if (!url) throw new ValidationError('url requerida');
@@ -59,8 +63,9 @@ export const DELETE = handler(async (request, { params }) => {
   return successResponse({ documentacion: filtered });
 });
 
-// GET — fetch current documentacion list
-export const GET = handler(async (_request, { params }) => {
+// GET — fetch current documentacion list (solo requiere sesión; se usa en varios
+// contextos con distintos permisos de página, así que no se gatea por permiso fino)
+export const GET = handlerWithAuth(async (_request, { params }) => {
   const titularId = params.id;
   const row = await queryOne(`SELECT "documentacion" FROM "PEOPLE" WHERE "_id" = $1`, [titularId]);
   if (!row) throw new NotFoundError('Titular', titularId);
