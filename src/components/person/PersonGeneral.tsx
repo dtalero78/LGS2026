@@ -145,30 +145,12 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
         </PermissionGuard>
         <PermissionGuard permission={PersonPermission.VER_DOCUMENTACION}>
           <button
-            onClick={viewDocuments}
-            className="btn-secondary flex items-center space-x-2"
-          >
-            <DocumentTextIcon className="h-4 w-4" />
-            <span>Ver Documentación</span>
-          </button>
-        </PermissionGuard>
-        <PermissionGuard permission={PersonPermission.VER_DOCUMENTACION}>
-          <button
-            onClick={() => setShowRecibo(true)}
-            className="btn-secondary flex items-center space-x-2"
-            title={reciboInsc ? 'Ver recibo de inscripción' : 'Sin recibo de inscripción cargado'}
-          >
-            <BanknotesIcon className="h-4 w-4" />
-            <span>Ver Recibo Inscripción{reciboInsc ? '' : ' (sin recibo)'}</span>
-          </button>
-        </PermissionGuard>
-        <PermissionGuard permission={PersonPermission.VER_DOCUMENTACION}>
-          <button
             onClick={() => setShowDocReciboModal(true)}
             className="btn-secondary flex items-center space-x-2"
+            title="Ver, subir documentación y recibo"
           >
-            <ArrowUpTrayIcon className="h-4 w-4" />
-            <span>Agregar Documentación</span>
+            <DocumentTextIcon className="h-4 w-4" />
+            <span>Documentación y recibo</span>
           </button>
         </PermissionGuard>
         <SuspendidaBadge
@@ -289,102 +271,6 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
           <p>• Última Actualización: {formatDate(person.fechaCreacion)}</p>
         </div>
       </div>
-
-      {/* Documents Modal */}
-      {showDocuments && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-96 overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Documentación del Contrato</h3>
-              <button
-                onClick={() => setShowDocuments(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {docs.map((doc, index) => (
-                <div key={index} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
-                  <div className="flex items-center space-x-3">
-                    {doc.tipo?.startsWith('image/') ? (
-                      <img src={doc.url} alt={doc.nombre} className="h-12 w-12 rounded object-cover flex-shrink-0 border border-gray-200" />
-                    ) : (
-                      <DocumentTextIcon className="h-8 w-8 text-red-400 flex-shrink-0" />
-                    )}
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{doc.nombre}</p>
-                      <p className="text-xs text-gray-500">{doc.tipo?.startsWith('image/') ? 'Imagen' : 'PDF'}</p>
-                    </div>
-                  </div>
-                  <a
-                    href={doc.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 text-sm text-primary-600 hover:text-primary-800 block"
-                  >
-                    Ver documento
-                  </a>
-                </div>
-              ))}
-            </div>
-            {docs.length === 0 && (
-              <p className="text-sm text-gray-500 text-center py-8">
-                No hay documentos disponibles
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Recibo de Inscripción Modal */}
-      {showRecibo && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
-                <BanknotesIcon className="h-5 w-5 text-emerald-600" /> Recibo de Inscripción
-              </h3>
-              <button onClick={() => setShowRecibo(false)} className="text-gray-400 hover:text-gray-600">✕</button>
-            </div>
-            {reciboInsc ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 border border-gray-200 rounded-lg p-3">
-                  {String(reciboInsc.tipo || '').startsWith('image/') ? (
-                    <img src={reciboInsc.url} alt={reciboInsc.nombre || 'Recibo'} className="h-14 w-14 rounded object-cover flex-shrink-0 border border-gray-200" />
-                  ) : (
-                    <DocumentTextIcon className="h-9 w-9 text-red-400 flex-shrink-0" />
-                  )}
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{reciboInsc.nombre || 'Recibo de inscripción'}</p>
-                    <a href={reciboInsc.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary-600 hover:text-primary-800">
-                      Ver / descargar recibo
-                    </a>
-                  </div>
-                </div>
-                {reciboInsc.extraido && (
-                  <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 space-y-1">
-                    <p className="font-medium text-gray-800 mb-1">Datos leídos del recibo:</p>
-                    {reciboInsc.extraido.medioPago && <p>Medio de pago: <b>{reciboInsc.extraido.medioPago}</b></p>}
-                    {reciboInsc.extraido.monto && <p>Monto: <b>${Number(reciboInsc.extraido.monto).toLocaleString('es-CO')}</b></p>}
-                    {reciboInsc.extraido.fecha && <p>Fecha: <b>{reciboInsc.extraido.fecha}</b></p>}
-                    {reciboInsc.extraido.banco && <p>Banco: <b>{reciboInsc.extraido.banco}</b></p>}
-                    {reciboInsc.extraido.referencia && <p>Referencia: <b>{reciboInsc.extraido.referencia}</b></p>}
-                  </div>
-                )}
-                {(reciboInsc.subidoPor || reciboInsc.subidoEn) && (
-                  <p className="text-xs text-gray-400">
-                    {reciboInsc.subidoPor ? `Subido por ${reciboInsc.subidoPor}` : ''}
-                    {reciboInsc.subidoEn ? ` · ${new Date(reciboInsc.subidoEn).toLocaleDateString('es-CO')}` : ''}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500 text-center py-8">No hay recibo de inscripción cargado.</p>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Modal unificado Documentación + Recibo (mismo de Matrículas) */}
       <DocumentosReciboModal

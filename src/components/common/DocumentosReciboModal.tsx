@@ -1,8 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { FileText, Upload, Receipt, Trash2, X } from 'lucide-react'
+import { FileText, Upload, Receipt, Trash2, X, Eye } from 'lucide-react'
 import toast from 'react-hot-toast'
+
+// Detecta si un archivo es imagen (por su mime o su extensión en la URL).
+function esImagen(tipo?: string, url?: string): boolean {
+  if (String(tipo || '').startsWith('image/')) return true
+  return /\.(jpe?g|png|webp|heic|gif|bmp)(\?|#|$)/i.test(String(url || ''))
+}
 
 /**
  * Modal unificado para gestionar la DOCUMENTACIÓN y el RECIBO de inscripción de un
@@ -127,12 +133,27 @@ export default function DocumentosReciboModal({ open, personId, subtitulo, onClo
                   <div className="text-sm text-gray-400 italic border border-dashed border-gray-200 rounded-lg p-4 text-center">Sin documentos aún.</div>
                 ) : (
                   <ul className="divide-y divide-gray-100 border border-gray-100 rounded-lg">
-                    {docsList.map((d: any, i: number) => (
-                      <li key={i} className="flex items-center justify-between px-3 py-2 text-sm">
-                        <a href={d.url} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline truncate max-w-[75%]">{d.nombre || 'Documento'}</a>
-                        <button type="button" onClick={() => deleteDoc(d.url, d.nombre || 'documento')} title="Eliminar" className="text-red-500 hover:text-red-700"><Trash2 className="w-4 h-4" /></button>
-                      </li>
-                    ))}
+                    {docsList.map((d: any, i: number) => {
+                      const img = esImagen(d.tipo, d.url)
+                      return (
+                        <li key={i} className="flex items-center gap-3 px-3 py-2">
+                          <a href={d.url} target="_blank" rel="noopener noreferrer" title="Ver" className="shrink-0">
+                            {img ? (
+                              <img src={d.url} alt={d.nombre || 'documento'} className="h-12 w-12 rounded object-cover border border-gray-200 hover:ring-2 hover:ring-indigo-300" />
+                            ) : (
+                              <span className="h-12 w-12 rounded bg-red-50 border border-red-100 flex items-center justify-center"><FileText className="w-6 h-6 text-red-400" /></span>
+                            )}
+                          </a>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-gray-900 truncate">{d.nombre || 'Documento'}</p>
+                            <a href={d.url} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline inline-flex items-center gap-1">
+                              <Eye className="w-3.5 h-3.5" /> Ver {img ? 'imagen' : 'documento'}
+                            </a>
+                          </div>
+                          <button type="button" onClick={() => deleteDoc(d.url, d.nombre || 'documento')} title="Eliminar" className="text-red-400 hover:text-red-600 shrink-0"><Trash2 className="w-4 h-4" /></button>
+                        </li>
+                      )
+                    })}
                   </ul>
                 )}
               </section>
@@ -152,15 +173,25 @@ export default function DocumentosReciboModal({ open, personId, subtitulo, onClo
                   <p className="text-xs text-amber-600 mb-2">La subida del recibo no está habilitada para tu usuario (requiere el permiso «Subir recibo» o que la lectura de recibos esté activa).</p>
                 )}
                 {reciboData ? (
-                  <div className="text-sm border border-emerald-100 bg-emerald-50 rounded-lg p-3">
-                    <a href={reciboData.url} target="_blank" rel="noopener noreferrer" className="text-emerald-700 font-medium hover:underline break-all">{reciboData.nombre || 'Recibo'}</a>
-                    {reciboData.extraido && (
-                      <div className="text-xs text-gray-600 mt-1">
-                        {reciboData.extraido.medioPago && <span>{reciboData.extraido.medioPago} · </span>}
-                        {reciboData.extraido.monto && <span>${Number(reciboData.extraido.monto).toLocaleString('es-CO')} · </span>}
-                        {reciboData.extraido.fecha && <span>{reciboData.extraido.fecha}</span>}
-                      </div>
-                    )}
+                  <div className="flex items-center gap-3 border border-emerald-100 bg-emerald-50 rounded-lg p-3">
+                    <a href={reciboData.url} target="_blank" rel="noopener noreferrer" title="Ver recibo" className="shrink-0">
+                      {esImagen(reciboData.tipo, reciboData.url) ? (
+                        <img src={reciboData.url} alt={reciboData.nombre || 'recibo'} className="h-14 w-14 rounded object-cover border border-emerald-200 hover:ring-2 hover:ring-emerald-300" />
+                      ) : (
+                        <span className="h-14 w-14 rounded bg-white border border-emerald-200 flex items-center justify-center"><Receipt className="w-6 h-6 text-emerald-500" /></span>
+                      )}
+                    </a>
+                    <div className="min-w-0 text-sm">
+                      <a href={reciboData.url} target="_blank" rel="noopener noreferrer" className="text-emerald-700 font-medium hover:underline break-all">{reciboData.nombre || 'Recibo'}</a>
+                      <div className="mt-0.5"><a href={reciboData.url} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline inline-flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> Ver recibo</a></div>
+                      {reciboData.extraido && (
+                        <div className="text-xs text-gray-600 mt-1">
+                          {reciboData.extraido.medioPago && <span>{reciboData.extraido.medioPago} · </span>}
+                          {reciboData.extraido.monto && <span>${Number(reciboData.extraido.monto).toLocaleString('es-CO')} · </span>}
+                          {reciboData.extraido.fecha && <span>{reciboData.extraido.fecha}</span>}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <div className="text-sm text-gray-400 italic border border-dashed border-gray-200 rounded-lg p-4 text-center">Sin recibo aún.</div>
