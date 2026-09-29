@@ -10,6 +10,7 @@ import { api, handleApiError } from '@/hooks/use-api'
 import toast from 'react-hot-toast'
 import PersonContractViewer from './PersonContractViewer'
 import SuspendidaBadge from '@/components/common/SuspendidaBadge'
+import DocumentosReciboModal from '@/components/common/DocumentosReciboModal'
 
 interface PersonGeneralProps {
   person: Person
@@ -20,6 +21,7 @@ interface PersonGeneralProps {
 export default function PersonGeneral({ person, isSuspendida }: PersonGeneralProps) {
   const [showDocuments, setShowDocuments] = useState(false)
   const [showRecibo, setShowRecibo] = useState(false)
+  const [showDocReciboModal, setShowDocReciboModal] = useState(false)
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([])
 
   // Recibo de inscripción (PEOPLE.reciboInscripcion, INDEPENDIENTE de la documentación).
@@ -162,12 +164,11 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
         </PermissionGuard>
         <PermissionGuard permission={PersonPermission.VER_DOCUMENTACION}>
           <button
-            onClick={openFileChooser}
-            disabled={uploadingFiles.length > 0}
+            onClick={() => setShowDocReciboModal(true)}
             className="btn-secondary flex items-center space-x-2"
           >
             <ArrowUpTrayIcon className="h-4 w-4" />
-            <span>{uploadingFiles.length > 0 ? `Subiendo (${uploadingFiles.length})...` : 'Agregar Documentación'}</span>
+            <span>Agregar Documentación</span>
           </button>
         </PermissionGuard>
         <SuspendidaBadge
@@ -384,6 +385,14 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
           </div>
         </div>
       )}
+
+      {/* Modal unificado Documentación + Recibo (mismo de Matrículas) */}
+      <DocumentosReciboModal
+        open={showDocReciboModal}
+        personId={person._id ?? null}
+        subtitulo={`${[person.primerNombre, person.primerApellido].filter(Boolean).join(' ')}${person.contrato ? ` · Contrato ${person.contrato}` : ''}`}
+        onClose={() => setShowDocReciboModal(false)}
+      />
     </div>
   )
 }
