@@ -1302,7 +1302,8 @@ When a student with role ESTUDIANTE loads the panel (`resolveStudentFromSession`
 ### By Cron Job
 - Daily at 04:00 UTC (11:00 PM Colombia), the cron job checks all contracts and marks expired ones as FINALIZADA + inactive
 - Reactivation of OnHold runs daily at 03:00 UTC (10:00 PM Colombia)
-- **Schedule source of truth**: `scripts/cron-worker.js` (node-cron daemon desplegado como Worker en Digital Ocean vía `.do/app.yaml`). Los horarios reales son 03:00 UTC (`reactivate-onhold`) y 04:00 UTC (`expire-contracts`)
+- **Schedule source of truth**: `scripts/cron-worker.js` (node-cron daemon desplegado como Worker en Digital Ocean vía `.do/app.yaml`). Horarios: 01:00 UTC (`revertir-marca-opcional`), 02:00 UTC (`reconcile-pegados`), 03:00 UTC (`reactivate-onhold`), 04:00 UTC (`expire-contracts`), **05:00 UTC (`sync-nombrecompleto`)**, 23:00 Chile (`sence-envio-avance`)
+- **`sync-nombrecompleto`** (05:00 UTC = 00:00 Colombia): genera/normaliza `PEOPLE.nombreCompleto` (campo de **presentación**: `primerNombre + segundoNombre + primerApellido + segundoApellido`, colapsando espacios → sin dobles ni bordes si falta el 2º nombre/apellido). Un solo `UPDATE` en lote (`/api/cron/sync-nombrecompleto`): re-normaliza las filas con valor que se desincronicen + llena los contratos nuevos (vacíos creados ≤3 días); **NO rellena** las vacías legacy (>3 días). `nombreCompleto` **no se lee** en rutas críticas (búsqueda/informes arman el nombre al vuelo desde los 4 campos)
 - Implementation: `src/app/api/cron/expire-contracts/route.ts`
 
 ## Consent System (Consentimiento Declarativo - Firma Digital)

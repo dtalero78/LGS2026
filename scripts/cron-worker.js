@@ -11,6 +11,8 @@
  * - reconcile-pegados: Diariamente a las 9:00 PM Colombia (02:00 UTC)
  * - reactivate-onhold: Diariamente a las 10:00 PM Colombia (03:00 UTC)
  * - expire-contracts: Diariamente a las 11:00 PM Colombia (04:00 UTC)
+ * - sync-nombrecompleto: Diariamente a las 00:00 Colombia (05:00 UTC) — genera/
+ *   normaliza PEOPLE.nombreCompleto (contratos nuevos + desincronizados)
  * - sence-envio-avance: Diariamente a las 23:00 hora Chile (America/Santiago),
  *   dentro de la ventana 22:00-00:00 que exige el instructivo de SENCE
  */
@@ -162,6 +164,35 @@ async function executeExpireContracts() {
 }
 
 /**
+ * Ejecuta el cron de generacion/normalizacion de PEOPLE.nombreCompleto
+ * (contratos nuevos + re-normalizar los desincronizados). Presentacion.
+ */
+async function executeSyncNombreCompleto() {
+  const timestamp = getLocalTimestamp();
+  console.log(`\n[${timestamp}] Ejecutando sync-nombrecompleto...`);
+
+  try {
+    const response = await fetch(`${NEXTAUTH_URL}/api/cron/sync-nombrecompleto`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${CRON_SECRET}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      console.log(`[${timestamp}] Completado: ${data.message}`);
+    } else {
+      console.error(`[${timestamp}] Error: ${data.error || 'Unknown error'}`);
+    }
+  } catch (error) {
+    console.error(`[${timestamp}] Error de conexion:`, error.message);
+  }
+}
+
+/**
  * Ejecuta el cron de envio nocturno de avance de alumnos SENCE a SIC
  */
 async function executeSenceEnvioAvance() {
@@ -217,6 +248,12 @@ cron.schedule('0 4 * * *', executeExpireContracts, {
   timezone: 'UTC'
 });
 
+// Generar/normalizar nombreCompleto: Diariamente a las 05:00 UTC (00:00 Colombia)
+cron.schedule('0 5 * * *', executeSyncNombreCompleto, {
+  scheduled: true,
+  timezone: 'UTC'
+});
+
 // Envio de avance SENCE: Diariamente a las 23:00 hora Chile (dentro de la
 // ventana 22:00-00:00 que exige el instructivo). Unica tarea con timezone
 // distinta a UTC porque el requisito de SENCE esta expresado en hora Chile.
@@ -235,6 +272,7 @@ console.log('Tareas programadas:');
 console.log('   - reconcile-pegados: Diariamente a las 02:00 UTC (9:00 PM Colombia)');
 console.log('   - reactivate-onhold: Diariamente a las 03:00 UTC (10:00 PM Colombia)');
 console.log('   - expire-contracts: Diariamente a las 04:00 UTC (11:00 PM Colombia)');
+console.log('   - sync-nombrecompleto: Diariamente a las 05:00 UTC (00:00 Colombia)');
 console.log(`   - sence-envio-avance: Diariamente a las 23:00 hora Chile (America/Santiago) [${SENCE_CRON_ENABLED ? 'ACTIVO' : 'SILENCIADO via SENCE_CRON_ENABLED=false'}]`);
 
 // Ejecutar inmediatamente si se pasa el argumento --run-now
@@ -268,6 +306,12 @@ if (process.argv.includes('--reactivate-onhold')) {
 if (process.argv.includes('--sence-envio-avance')) {
   console.log('\nEjecutando sence-envio-avance...');
   executeSenceEnvioAvance();
+}
+
+// Ejecutar solo sync-nombrecompleto si se pasa --sync-nombrecompleto
+if (process.argv.includes('--sync-nombrecompleto')) {
+  console.log('\nEjecutando sync-nombrecompleto...');
+  executeSyncNombreCompleto();
 }
 
 // Mantener el proceso vivo
