@@ -178,7 +178,10 @@ export default function SesionPage() {
             primerApellido: booking.primerApellido,
             email: booking.email,
             plataforma: booking.plataforma,
-            edad: calcularEdad(booking.studentFechaNacimiento, booking.studentEdad ?? booking.edad) ?? undefined,
+            edad: calcularEdad(
+              booking.studentFechaNacimiento,
+              booking.studentEdad != null ? Number(booking.studentEdad) : undefined
+            ) ?? undefined,
             pais: booking.pais,
             hobbies: booking.hobbies || '',
             pruebainter: booking.studentPruebaInter ?? null,

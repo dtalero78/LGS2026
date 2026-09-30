@@ -90,8 +90,10 @@ class BookingRepositoryClass extends BaseRepository {
               p."estadoInactivo" as "studentInactivo", p."vigencia" as "studentVigencia",
               p."finalContrato" as "studentFinalContrato",
               a."pruebainter" as "studentPruebaInter",
-              COALESCE(a."edad", p."edad") as "studentEdad",
-              COALESCE(a."fechaNacimiento", p."fechaNacimiento") as "studentFechaNacimiento"
+              -- edad: ACADEMICA es integer y PEOPLE es text (legacy Wix) → cast a texto
+              -- para que COALESCE no falle con "types integer and text cannot be matched".
+              COALESCE(a."edad"::text, p."edad"::text) as "studentEdad",
+              COALESCE(a."fechaNacimiento"::text, p."fechaNacimiento"::text) as "studentFechaNacimiento"
        FROM "ACADEMICA_BOOKINGS" b
        LEFT JOIN "ACADEMICA" a ON b."idEstudiante" = a."_id"
        LEFT JOIN "PEOPLE" p ON a."numeroId" = p."numeroId"

@@ -398,7 +398,8 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
               </div>
             )}
             {(() => {
-              const edad = calcularEdad(student.fechaNacimiento, (student as any).edad)
+              const edadRaw = (student as any).edad
+              const edad = calcularEdad(student.fechaNacimiento, edadRaw != null ? Number(edadRaw) : undefined)
               return edad != null ? (
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Edad</label>
