@@ -13,6 +13,7 @@ import 'server-only';
  *   GET  /api/kids-intake/availability
  *   POST /api/kids-intake/reservations
  *   POST /api/kids-intake/reservations/{externalRef}/approve
+ *   GET  /api/kids-intake/reservations/{externalRef}          (estado: situacion/activo/detalle)
  */
 
 const BASE = (process.env.KIDS_API_URL || '').replace(/\/+$/, '');
@@ -57,6 +58,20 @@ export interface KidsReservationInput {
 export interface KidsReservationResult { contractId: string; externalRef: string; enrollmentId: string }
 export interface KidsCredenciales { userId: string; username: string; correo: string; passwordInicial: string }
 export interface KidsApproveResult { credenciales: KidsCredenciales | null; enrollmentId: string | null }
+
+/** Estado del niño en KIDS. `situacion` es la fuente de verdad para mostrar en LGS. */
+export type KidsSituacion = 'CURSANDO' | 'SUSPENDIDO' | 'NO_CURSANDO';
+export interface KidsReservationStatus {
+  activo: boolean;
+  estado: string | null;
+  situacion: KidsSituacion | null;
+  motivo: string | null;
+  detalle: string | null;
+  externalRef: string;
+  nino?: { nombres?: string; username?: string; [k: string]: any } | null;
+  contrato?: { estado?: string; tipoCurso?: string; [k: string]: any } | null;
+  programa?: { campania?: string; salon?: string; inicioPrograma?: string; matricula?: string; [k: string]: any } | null;
+}
 
 /** Error tipado de la puerta KIDS (lleva status HTTP y code del cuerpo). */
 export class KidsIntakeError extends Error {
@@ -103,4 +118,12 @@ export const kidsIntake = {
   /** Aprueba la reserva por externalRef (RESERVADA→ACTIVA). Devuelve credenciales del alumno (1 sola vez). */
   approveReservation: (externalRef: string) =>
     call<KidsApproveResult>('POST', `/api/kids-intake/reservations/${encodeURIComponent(externalRef)}/approve`),
+  /**
+   * Estado actual del niño en KIDS (situacion CURSANDO/SUSPENDIDO/NO_CURSANDO + detalle).
+   * `externalRef` lleva el documento del niño tras un `#` ("02-10764-26#121290"): el
+   * encodeURIComponent convierte el `#` en %23 — sin eso KIDS recibe solo el contrato y
+   * responde 404. 404 = sin registro en KIDS; 401 = llave faltante/incorrecta.
+   */
+  getReservation: (externalRef: string) =>
+    call<KidsReservationStatus>('GET', `/api/kids-intake/reservations/${encodeURIComponent(externalRef)}`),
 };

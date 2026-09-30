@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Person } from '@/types'
 import { formatDate } from '@/lib/utils'
 import { ArrowDownTrayIcon, ArrowUpTrayIcon, DocumentTextIcon, PhotoIcon, BanknotesIcon } from '@heroicons/react/24/outline'
@@ -111,6 +111,28 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
   // `kidsInscripcion` lo adjunta el API de people/[id] desde KIDS_INSCRIPCIONES.
   const esKids = (person as any).kids === true
   const ki = (person as any).kidsInscripcion || null
+
+  // Estado real del niño en KIDS2026 (situacion CURSANDO/SUSPENDIDO/NO_CURSANDO).
+  // Se consulta aparte para que KIDS lento/caído no frene la ficha.
+  const [kidsEstado, setKidsEstado] = useState<any | null>(null)
+  const [kidsEstadoLoading, setKidsEstadoLoading] = useState(false)
+  useEffect(() => {
+    if (!esKids || !person._id) return
+    let cancel = false
+    setKidsEstadoLoading(true)
+    fetch(`/api/postgres/people/${person._id}/kids-estado`)
+      .then(r => r.json())
+      .then(d => { if (!cancel) setKidsEstado(d) })
+      .catch(() => { if (!cancel) setKidsEstado({ estado: 'ERROR', mensaje: 'No se pudo consultar KIDS' }) })
+      .finally(() => { if (!cancel) setKidsEstadoLoading(false) })
+    return () => { cancel = true }
+  }, [esKids, person._id])
+
+  const KIDS_SITUACION: Record<string, { label: string; cls: string }> = {
+    CURSANDO: { label: 'KIDS: Cursando', cls: 'bg-green-100 text-green-800 border-green-200' },
+    SUSPENDIDO: { label: 'KIDS: Suspendido (contrato en pausa)', cls: 'bg-amber-100 text-amber-800 border-amber-200' },
+    NO_CURSANDO: { label: 'KIDS: No cursando', cls: 'bg-red-100 text-red-800 border-red-200' },
+  }
   const kidsFilas: { label: string; value: string }[] = ki
     ? ([
         ['Campaña', ki.campaign],
@@ -245,6 +267,27 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
           <h3 className="text-lg font-medium text-fuchsia-700 mb-4 flex items-center gap-2">
             🧒 Programa Kids
           </h3>
+          {/* Estado en KIDS2026 (situacion) */}
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            {kidsEstadoLoading ? (
+              <span className="text-sm text-gray-500 italic">Consultando estado en KIDS…</span>
+            ) : kidsEstado?.estado === 'OK' && kidsEstado.situacion && KIDS_SITUACION[kidsEstado.situacion] ? (
+              <>
+                <span className={`inline-flex items-center px-3 py-1 rounded-full border text-sm font-semibold ${KIDS_SITUACION[kidsEstado.situacion].cls}`}>
+                  {KIDS_SITUACION[kidsEstado.situacion].label}
+                </span>
+                {kidsEstado.detalle && <span className="text-sm text-gray-600">{kidsEstado.detalle}</span>}
+              </>
+            ) : kidsEstado?.estado === 'SIN_REGISTRO' ? (
+              <span className="inline-flex items-center px-3 py-1 rounded-full border text-sm font-semibold bg-gray-100 text-gray-700 border-gray-200">
+                Sin registro en KIDS
+              </span>
+            ) : kidsEstado ? (
+              <span className="text-sm text-gray-500 italic">
+                Estado KIDS no disponible{kidsEstado.mensaje ? ` — ${kidsEstado.mensaje}` : ''}
+              </span>
+            ) : null}
+          </div>
           {kidsFilas.length > 0 ? (
             <div className="rounded-lg border border-fuchsia-200 bg-fuchsia-50 p-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
