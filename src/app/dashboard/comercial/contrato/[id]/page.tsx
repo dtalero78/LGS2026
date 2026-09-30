@@ -22,12 +22,11 @@ import {
   IdentificationIcon,
   CalendarIcon,
   ShieldCheckIcon,
-  ArrowUpTrayIcon,
-  TrashIcon,
   PaperClipIcon,
 } from '@heroicons/react/24/outline'
 import { fillContractTemplate, type ConsentDisplay } from '@/lib/contract-template-filler'
 import { isContratoPrueba } from '@/components/common/ContratoPruebaBadge'
+import DocumentosReciboModal from '@/components/common/DocumentosReciboModal'
 
 // ── Field definitions ──
 
@@ -285,17 +284,9 @@ export default function ContratoDetailPage() {
   const [sendingPdf, setSendingPdf] = useState(false)
   const [pdfStatus, setPdfStatus] = useState<'idle' | 'sent' | 'error'>('idle')
 
-  // Documentación
-  const [showDocsModal, setShowDocsModal] = useState(false)
-  const [docs, setDocs] = useState<any[]>([])
-  const [loadingDocs, setLoadingDocs] = useState(false)
-  const [uploadingFiles, setUploadingFiles] = useState<string[]>([]) // filenames in progress
-
-  // Recibo de inscripción (independiente de la documentación)
-  const [reciboInscActivo, setReciboInscActivo] = useState(false)
-  const [reciboInscData, setReciboInscData] = useState<any>(null)
-  const [showReciboModal, setShowReciboModal] = useState(false)
-  const [reciboProcesando, setReciboProcesando] = useState(false)
+  // Documentación + Recibo de inscripción — modal unificado compartido
+  // (mismo componente que /person/[id] y Matrículas)
+  const [showDocReciboModal, setShowDocReciboModal] = useState(false)
 
   // Consent status
   const [consentStatus, setConsentStatus] = useState<ConsentDisplay | null>(null)
@@ -328,21 +319,10 @@ export default function ContratoDetailPage() {
     }
   }, [titularId])
 
-  const loadReciboInsc = useCallback(async () => {
-    try {
-      const d = await api.get(`/api/contracts/${titularId}/recibo-inscripcion`)
-      setReciboInscActivo(!!d.active)
-      setReciboInscData(d.recibo || null)
-    } catch {
-      setReciboInscActivo(false) // sin permiso / no habilitado → no mostrar el botón
-    }
-  }, [titularId])
-
   useEffect(() => {
     loadData()
     loadConsentStatus()
-    loadReciboInsc()
-  }, [loadData, loadConsentStatus, loadReciboInsc])
+  }, [loadData, loadConsentStatus])
 
   // Refetch silencioso del titular al abrir la confirmación de cierre — el
   // indicador "PDF archivado en Drive" lee PEOPLE.driveFileId, que puede haber
@@ -479,106 +459,9 @@ export default function ContratoDetailPage() {
     }
   }
 
-  // ── Documentación ──
-  const loadDocs = useCallback(async () => {
-    try {
-      setLoadingDocs(true)
-      const data = await api.get(`/api/contracts/${titularId}/documents`)
-      setDocs(data.documentacion || [])
-    } catch (err) {
-      handleApiError(err, 'Error cargando documentos')
-    } finally {
-      setLoadingDocs(false)
-    }
-  }, [titularId])
-
-  const openDocsModal = () => {
-    setShowDocsModal(true)
-    loadDocs()
-  }
-
-  const handleFileUpload = async (files: File[]) => {
-    if (!files.length) return
-
-    for (const file of files) {
-      setUploadingFiles(prev => [...prev, file.name])
-      try {
-        // 1. Upload file through our API (avoids CORS with DO Spaces)
-        const formData = new FormData()
-        formData.append('file', file)
-        const uploadRes = await fetch(`/api/contracts/${titularId}/upload-url`, {
-          method: 'POST',
-          body: formData,
-        })
-        if (!uploadRes.ok) {
-          const err = await uploadRes.json().catch(() => ({}))
-          throw new Error(err.error || `Upload failed: ${uploadRes.status}`)
-        }
-        const { publicUrl } = await uploadRes.json()
-
-        // 2. Save URL to PEOPLE.documentacion
-        const saved = await api.post(`/api/contracts/${titularId}/documents`, {
-          url: publicUrl,
-          nombre: file.name,
-          tipo: file.type,
-        })
-        setDocs(saved.documentacion || [])
-        toast.success(`${file.name} subido`)
-      } catch (err) {
-        handleApiError(err, `Error subiendo ${file.name}`)
-      } finally {
-        setUploadingFiles(prev => prev.filter(n => n !== file.name))
-      }
-    }
-  }
-
-  const deleteDoc = async (url: string, nombre: string) => {
-    if (!confirm(`¿Eliminar "${nombre}"?`)) return
-    try {
-      const data = await api.delete(`/api/contracts/${titularId}/documents`, { url })
-      setDocs(data.documentacion || [])
-      toast.success('Documento eliminado')
-    } catch (err) {
-      handleApiError(err, 'Error eliminando documento')
-    }
-  }
-
-  // Subir recibo de inscripción: sube a Spaces → lee con IA → guarda (PEOPLE + FINANCIEROS)
-  const handleReciboUpload = async (file: File) => {
-    setReciboProcesando(true)
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const uploadRes = await fetch(`/api/contracts/${titularId}/upload-url`, { method: 'POST', body: formData })
-      if (!uploadRes.ok) {
-        const e = await uploadRes.json().catch(() => ({}))
-        throw new Error(e.error || `Upload failed: ${uploadRes.status}`)
-      }
-      const { publicUrl } = await uploadRes.json()
-      const saved = await api.post(`/api/contracts/${titularId}/recibo-inscripcion`, { url: publicUrl, nombre: file.name, tipo: file.type })
-      setReciboInscData(saved.recibo || null)
-      const ex = saved.extraido || {}
-      toast.success(`Recibo leído: ${ex.medioPago || '—'}${ex.monto ? ' · $' + Number(ex.monto).toLocaleString('es-CO') : ''}`)
-    } catch (err) {
-      handleApiError(err, 'Error subiendo/leyendo el recibo')
-    } finally {
-      setReciboProcesando(false)
-    }
-  }
-
-  const pickReciboFile = () => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = 'image/jpeg,image/jpg,image/png,image/webp,image/heic,application/pdf'
-    input.style.display = 'none'
-    document.body.appendChild(input)
-    input.addEventListener('change', () => {
-      const f = input.files?.[0]
-      if (f) handleReciboUpload(f)
-      document.body.removeChild(input)
-    })
-    input.click()
-  }
+  // Documentación + Recibo: el modal compartido (DocumentosReciboModal) maneja
+  // internamente la carga/subida/borrado de documentos y del recibo (con su IA
+  // y sus gates de permiso). Aquí solo abrimos/cerramos el modal.
 
   // Auto-approve consent — shows warning modal first
   const autoApproveConsent = () => setShowAutoApproveModal(true)
@@ -770,23 +653,13 @@ export default function ContratoDetailPage() {
                 {loadingTemplate ? 'Cargando...' : 'Ver Contrato'}
               </button>
               <button
-                onClick={openDocsModal}
+                onClick={() => setShowDocReciboModal(true)}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-md hover:bg-emerald-200 text-sm font-medium"
+                title="Documentación del contrato y recibo de inscripción"
               >
                 <PaperClipIcon className="h-4 w-4" />
-                Subir documentación
+                Documentación y recibo
               </button>
-              {reciboInscActivo && !isContratoPrueba(titular.contrato) && (
-                <button
-                  onClick={() => setShowReciboModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600 text-sm font-medium"
-                  title="Sube el recibo de pago de la inscripción; se lee automáticamente"
-                >
-                  <ArrowUpTrayIcon className="h-4 w-4" />
-                  Subir recibo inscripción
-                  {reciboInscData?.url && <span className="ml-1 h-2 w-2 rounded-full bg-white/90" />}
-                </button>
-              )}
               {!editing ? (
                 <button
                   onClick={startEditing}
@@ -1187,179 +1060,13 @@ export default function ContratoDetailPage() {
           )}
         </div>
 
-        {/* ── Documentación Modal ── */}
-        {showDocsModal && (
-          <div className="fixed inset-0 z-50 overflow-y-auto">
-            <div className="flex min-h-screen items-center justify-center p-4">
-              <div className="fixed inset-0 bg-black/50" onClick={() => setShowDocsModal(false)} />
-              <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl">
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-                  <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                    <PaperClipIcon className="h-5 w-5 text-gray-500" />
-                    Documentación del contrato
-                  </h2>
-                  <button type="button" title="Cerrar" onClick={() => setShowDocsModal(false)} className="text-gray-400 hover:text-gray-600">
-                    <XMarkIcon className="h-5 w-5" />
-                  </button>
-                </div>
-
-                {/* Body */}
-                <div className="px-6 py-5 space-y-4">
-                  <p className="text-sm text-gray-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                    Suba la documentación requerida para la <b>aprobación del contrato</b>, <b>con excepción del recibo de pago de la inscripción</b> — para eso use el botón <b>«Subir recibo inscripción»</b>.
-                  </p>
-                  {/* Upload zone */}
-                  <div
-                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-400 transition-colors cursor-pointer"
-                    onClick={() => {
-                      const input = document.createElement('input')
-                      input.type = 'file'
-                      input.multiple = true
-                      input.accept = 'image/jpeg,image/jpg,image/png,image/webp,image/heic,application/pdf'
-                      input.style.display = 'none'
-                      document.body.appendChild(input)
-                      input.addEventListener('change', () => {
-                        handleFileUpload(Array.from(input.files || []))
-                        document.body.removeChild(input)
-                      })
-                      input.click()
-                    }}
-                  >
-                    <ArrowUpTrayIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm font-medium text-gray-700">Haz clic para subir archivos</p>
-                    <p className="text-xs text-gray-400 mt-1">JPG, PNG, WEBP, HEIC, PDF · Máx 20 MB por archivo</p>
-                  </div>
-
-                  {/* Uploading progress */}
-                  {uploadingFiles.length > 0 && (
-                    <div className="space-y-1">
-                      {uploadingFiles.map(name => (
-                        <div key={name} className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 rounded px-3 py-2">
-                          <div className="animate-spin h-3 w-3 border-2 border-blue-400 border-t-transparent rounded-full flex-shrink-0" />
-                          Subiendo {name}…
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Document list */}
-                  {loadingDocs ? (
-                    <div className="flex justify-center py-6">
-                      <div className="animate-spin h-6 w-6 border-2 border-primary-500 border-t-transparent rounded-full" />
-                    </div>
-                  ) : docs.length === 0 ? (
-                    <p className="text-center text-sm text-gray-400 py-4">Sin documentos aún</p>
-                  ) : (
-                    <ul className="divide-y divide-gray-100">
-                      {docs.map((doc: any, i: number) => (
-                        <li key={i} className="flex items-center gap-3 py-2.5">
-                          {doc.tipo?.startsWith('image/') ? (
-                            <img src={doc.url} alt={doc.nombre} className="h-10 w-10 rounded object-cover flex-shrink-0 border border-gray-200" />
-                          ) : (
-                            <div className="h-10 w-10 rounded bg-red-50 flex items-center justify-center flex-shrink-0 border border-red-100">
-                              <DocumentTextIcon className="h-5 w-5 text-red-400" />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-gray-800 hover:text-primary-600 truncate block">
-                              {doc.nombre}
-                            </a>
-                            <p className="text-xs text-gray-400">{new Date(doc.fechaSubida).toLocaleString('es-CO')}</p>
-                          </div>
-                          <button
-                            onClick={() => deleteDoc(doc.url, doc.nombre)}
-                            className="text-gray-300 hover:text-red-500 flex-shrink-0"
-                            title="Eliminar"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
-                  <button onClick={() => setShowDocsModal(false)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm font-medium">
-                    Cerrar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── Recibo de inscripción Modal ── */}
-        {showReciboModal && (
-          <div className="fixed inset-0 z-50 overflow-y-auto">
-            <div className="flex min-h-screen items-center justify-center p-4">
-              <div className="fixed inset-0 bg-black/50" onClick={() => setShowReciboModal(false)} />
-              <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-                  <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                    <ArrowUpTrayIcon className="h-5 w-5 text-amber-500" />
-                    Recibo de inscripción
-                  </h2>
-                  <button type="button" title="Cerrar" onClick={() => setShowReciboModal(false)} className="text-gray-400 hover:text-gray-600">
-                    <XMarkIcon className="h-5 w-5" />
-                  </button>
-                </div>
-
-                <div className="px-6 py-5 space-y-4">
-                  <p className="text-sm text-gray-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                    Suba <b>únicamente</b> el recibo de pago de la <b>inscripción</b>. Se <b>lee automáticamente</b> y llena los datos del pago (medio, banco, referencia, fecha, monto).
-                  </p>
-
-                  <div
-                    className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${reciboProcesando ? 'border-amber-300 bg-amber-50 cursor-wait' : 'border-gray-300 hover:border-amber-400 cursor-pointer'}`}
-                    onClick={() => { if (!reciboProcesando) pickReciboFile() }}
-                  >
-                    {reciboProcesando ? (
-                      <div className="flex items-center justify-center gap-2 text-sm text-amber-700">
-                        <div className="animate-spin h-4 w-4 border-2 border-amber-400 border-t-transparent rounded-full" />
-                        Subiendo y leyendo el recibo…
-                      </div>
-                    ) : (
-                      <>
-                        <ArrowUpTrayIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm font-medium text-gray-700">Haz clic para subir el recibo</p>
-                        <p className="text-xs text-gray-400 mt-1">JPG, PNG, WEBP, HEIC, PDF · Máx 20 MB</p>
-                      </>
-                    )}
-                  </div>
-
-                  {reciboInscData?.url && (
-                    <div className="rounded-lg border border-gray-200 p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <a href={reciboInscData.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary-600 hover:underline truncate">
-                          {reciboInscData.nombre || 'Ver recibo'}
-                        </a>
-                        <span className="text-xs text-gray-400">
-                          {reciboInscData.subidoEn ? new Date(reciboInscData.subidoEn).toLocaleString('es-CO') : ''}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                        <div><span className="text-gray-400">Medio de pago:</span> <b>{reciboInscData.extraido?.medioPago || '—'}</b></div>
-                        <div><span className="text-gray-400">Banco:</span> <b>{reciboInscData.extraido?.banco || '—'}</b></div>
-                        <div><span className="text-gray-400">Referencia:</span> <b>{reciboInscData.extraido?.referencia || '—'}</b></div>
-                        <div><span className="text-gray-400">Fecha:</span> <b>{reciboInscData.extraido?.fecha || '—'}</b></div>
-                        <div><span className="text-gray-400">Monto:</span> <b>{reciboInscData.extraido?.monto != null ? '$' + Number(reciboInscData.extraido.monto).toLocaleString('es-CO') : '—'}</b></div>
-                      </div>
-                      <p className="text-xs text-gray-400">Los datos quedaron guardados en el financiero del contrato. Puede reemplazar el recibo subiendo otro.</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
-                  <button onClick={() => setShowReciboModal(false)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm font-medium">
-                    Cerrar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* ── Documentación y recibo — modal unificado compartido ── */}
+        <DocumentosReciboModal
+          open={showDocReciboModal}
+          personId={titularId}
+          subtitulo={`${fullName(titular)} · Contrato ${titular.contrato || '—'}`}
+          onClose={() => setShowDocReciboModal(false)}
+        />
       </PermissionGuard>
 
       {/* ── Auto-Aprobar Consentimiento — Modal de advertencia ── */}
