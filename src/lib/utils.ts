@@ -57,6 +57,37 @@ export function formatDateTimeColombia(date: string | Date): string {
   return d.toLocaleString('es-CO', options).replace(/,/g, '')
 }
 
+// Edad a partir de la fecha de nacimiento. Prefiere calcularla de la fecha (siempre
+// vigente); si no hay fecha válida, cae a la `edad` guardada (puede estar desactualizada).
+// Maneja formatos ISO (YYYY-MM-DD / timestamp) y DD/MM/YYYY. Devuelve null si no es
+// razonable (>0 y <120).
+export function calcularEdad(
+  fechaNacimiento?: string | Date | null,
+  edadGuardada?: number | null
+): number | null {
+  let d: Date | null = null
+  if (fechaNacimiento instanceof Date) {
+    d = fechaNacimiento
+  } else if (fechaNacimiento) {
+    const s = String(fechaNacimiento).trim()
+    const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/) // DD/MM/YYYY
+    d = dmy
+      ? new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]))
+      : new Date(s)
+  }
+  if (d && !isNaN(d.getTime())) {
+    const now = new Date()
+    let age = now.getFullYear() - d.getFullYear()
+    const m = now.getMonth() - d.getMonth()
+    if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--
+    if (age > 0 && age < 120) return age
+  }
+  if (typeof edadGuardada === 'number' && edadGuardada > 0 && edadGuardada < 120) {
+    return Math.floor(edadGuardada)
+  }
+  return null
+}
+
 // Currency formatting
 export function formatCurrency(amount: number, currency: string = 'COP'): string {
   return new Intl.NumberFormat('es-CO', {

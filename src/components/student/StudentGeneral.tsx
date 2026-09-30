@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Student } from '@/types'
-import { formatDate } from '@/lib/utils'
+import { formatDate, calcularEdad } from '@/lib/utils'
 import { MessageCircle, Loader2, Check, AlertCircle } from 'lucide-react'
 import { ArrowUpTrayIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import { PermissionGuard } from '@/components/permissions'
@@ -397,6 +397,15 @@ export default function StudentGeneral({ student, isSuspendida }: StudentGeneral
                 <p className="mt-1 text-sm text-gray-900">{formatDate(student.fechaNacimiento)}</p>
               </div>
             )}
+            {(() => {
+              const edad = calcularEdad(student.fechaNacimiento, (student as any).edad)
+              return edad != null ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Edad</label>
+                  <p className="mt-1 text-sm text-gray-900">{edad} años</p>
+                </div>
+              ) : null
+            })()}
           </div>
 
           {/* Columna 3: Franquicia SENCE, Tipo de Usuario, Plataforma */}

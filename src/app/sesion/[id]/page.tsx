@@ -10,6 +10,7 @@ import { es } from 'date-fns/locale'
 import toast from 'react-hot-toast'
 import { PermissionGuard } from '@/components/permissions'
 import { AcademicoPermission } from '@/types/permissions'
+import { calcularEdad } from '@/lib/utils'
 import SessionTabs from '@/components/session/SessionTabs'
 import SessionGeneralTab from '@/components/session/SessionGeneralTab'
 import SessionStudentsTab from '@/components/session/SessionStudentsTab'
@@ -177,7 +178,7 @@ export default function SesionPage() {
             primerApellido: booking.primerApellido,
             email: booking.email,
             plataforma: booking.plataforma,
-            edad: booking.edad,
+            edad: calcularEdad(booking.studentFechaNacimiento, booking.studentEdad ?? booking.edad) ?? undefined,
             pais: booking.pais,
             hobbies: booking.hobbies || '',
             pruebainter: booking.studentPruebaInter ?? null,
