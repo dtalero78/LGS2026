@@ -1005,6 +1005,14 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                     <button
                       type="button"
                       onClick={() => {
+                        // Beneficiario Kids: NO es usuario del programa de adultos — no tiene
+                        // (ni necesita) registro ACADEMICA. Su información vive en su propia
+                        // ficha (badge KIDS + panel "Programa Kids"), así que la abrimos en vez
+                        // de mostrar el aviso "Aún no es usuario académico".
+                        if (beneficiary.kids) {
+                          window.open(`/person/${beneficiary._id}`, '_blank', 'noopener,noreferrer')
+                          return
+                        }
                         const nivelAcad = String(beneficiary.academicaNivel || '').toUpperCase()
                         // Es usuario académico solo si tiene ficha Y ya pasó a un nivel real (no WELCOME).
                         const esAcademico = !!beneficiary.existeEnAcademica && !!beneficiary.academicaId && !!nivelAcad && nivelAcad !== 'WELCOME'
@@ -1017,7 +1025,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                           })
                         }
                       }}
-                      title="Ver perfil académico del beneficiario"
+                      title={beneficiary.kids ? 'Ver ficha del beneficiario Kids' : 'Ver perfil académico del beneficiario'}
                       className="font-medium text-gray-900 hover:text-blue-600 hover:underline text-left"
                     >
                       {beneficiary.nombre} {beneficiary.apellido}
