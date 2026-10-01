@@ -398,6 +398,7 @@ src/
 - **SQL parametrizado**: Todo el SQL usa placeholders `$1, $2, ...` (nunca interpolación de strings)
 - **React Query v3**: Se importa de `'react-query'` (NO de `@tanstack/react-query`)
 - **handler() wrapper**: Todas las rutas API de postgres/ usan `handler()` o `handlerWithAuth()` de `@/lib/api-helpers` para estandarizar try/catch y respuestas de error. Rutas legacy (auth, cron, wix) son excepciones legítimas que manejan su propio error handling
+- **⚠️ `handler()` = PÚBLICO y `handlerWithAuth()` = cualquier sesión (incluye ~5.000 cuentas ESTUDIANTE)**. El middleware NO protege `/api` (su matcher lo excluye). Para endpoints internos que exponen datos de terceros usar **`handlerWithStaffAuth()`** (sesión + 403 a ESTUDIANTE) y, si la acción es sensible, además `requirePermission(session, …)`
 - **JSONB**: Campos como `onHoldHistory`, `extensionHistory`, `evaluacion` se almacenan como JSONB en PostgreSQL. Los repositorios usan `parseJsonb()` de la clase base para deserializarlos
 
 ## Development Commands
@@ -1419,6 +1420,14 @@ interface ConsentData {
 - 🟠 **`POST /api/wix/sendWhatsApp` acepta `toNumber` + `messageBody` arbitrarios** validando solo sesión — cualquier usuario autenticado puede enviar cualquier texto a cualquier número desde el WhatsApp corporativo.
 - 🟠 **Credenciales de Twilio en texto plano** en el spec de DO (no como `SECRET`).
 - 🟡 `POST /api/auth/forgot-password/check-email` permite **enumerar usuarios** (dice si un email existe).
+
+**⚠️ Auditoría Crear Contrato (sep-2026)** — corregidos: `search`, `GET contracts/[id]` y `send-pdf` (ahora `handlerWithStaffAuth`). **Siguen abiertos**:
+- 🔴 Documentos de contrato en Spaces con **ACL `public-read`** ([upload-url](src/app/api/contracts/[id]/upload-url/route.ts)) — cédulas/recibos accesibles con la URL sin login. Arreglo: ACL privada + URL firmada temporal + script para los objetos existentes.
+- 🟠 `POST /api/postgres/contracts` y `PUT /api/postgres/contracts/[id]` sin permiso (cualquier sesión, incl. ESTUDIANTE). El POST además anula borradores ajenos (`anularBeneficiariosViejos`) y reserva cupos KIDS; el PUT permite editar contratos **ya firmados** (el hash del consentimiento deja de corresponder).
+- 🟠 `DELETE /api/contracts/[id]/documents` borra **cualquier objeto del bucket** (no verifica que la URL esté en la lista de ese titular). `upload-url` solo pide sesión.
+- 🟡 `documents`/`recibo-inscripcion` aceptan `url` arbitraria (`javascript:` en "Ver" → XSS a staff; el recibo hace `fetch` server-side → SSRF).
+- 🟡 OTP de firma sin límite de intentos ni cooldown server-side; `Math.random`.
+- 🟡 Asesor/gestorRecaudo del contrato vienen del cliente (`titular.asesor`); número de contrato `MAX+1` sin lock ni transacción (duplicados en concurrencia).
 
 ### Pages and Routes Summary (25 pages)
 | Page | Route | Access |

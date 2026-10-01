@@ -1,13 +1,15 @@
-import { handler, successResponse } from '@/lib/api-helpers';
+import { handlerWithStaffAuth, successResponse } from '@/lib/api-helpers';
 import { unifiedSearch } from '@/services/search.service';
 import { ValidationError } from '@/lib/errors';
 
 /**
  * GET /api/postgres/search
  *
- * Unified search across PEOPLE and ACADEMICA tables
+ * Unified search across PEOPLE and ACADEMICA tables.
+ * Solo STAFF con sesión: antes era público y devolvía _id/email/contrato de
+ * cualquier persona a un anónimo (puerta de entrada para leer contratos completos).
  */
-export const GET = handler(async (request) => {
+export const GET = handlerWithStaffAuth(async (request) => {
   const { searchParams } = new URL(request.url);
   const searchTerm = searchParams.get('searchTerm') || searchParams.get('q');
 

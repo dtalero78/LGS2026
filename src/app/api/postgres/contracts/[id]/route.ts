@@ -1,5 +1,5 @@
 import 'server-only';
-import { handler, handlerWithAuth, successResponse } from '@/lib/api-helpers';
+import { handlerWithAuth, handlerWithStaffAuth, successResponse } from '@/lib/api-helpers';
 import { queryOne, queryMany, parseJsonbFields } from '@/lib/postgres';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { PeopleRepository } from '@/repositories/people.repository';
@@ -57,8 +57,12 @@ const FINANCIAL_EDIT_FIELDS = [
  * Load full contract data for editing.
  * [id] = titular's _id in PEOPLE table.
  * Returns: titular, beneficiarios, financial data.
+ *
+ * Solo STAFF con sesión: devuelve el registro COMPLETO (comentarios internos,
+ * documentación, financiero). La página pública del cliente (/contrato/[id]) NO
+ * usa este endpoint — usa /api/consent/[id]/contract-data (campos públicos).
  */
-export const GET = handler(async (
+export const GET = handlerWithStaffAuth(async (
   _request: Request,
   { params }: { params: Record<string, string> }
 ) => {

@@ -24,7 +24,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession, Session } from 'next-auth';
 import { authOptions } from '@/lib/auth-postgres';
-import { AppError, UnauthorizedError } from './errors';
+import { AppError, UnauthorizedError, ForbiddenError } from './errors';
 
 // Route context type matching Next.js App Router.
 // Aceptamos `NextRequest` (lo que Next.js pasa en runtime). Es asignable a
@@ -104,6 +104,20 @@ export function handlerWithAuth(fn: AuthHandlerFn) {
     if (!session) {
       throw new UnauthorizedError();
     }
+    return fn(request, context, session);
+  });
+}
+
+/**
+ * Igual que handlerWithAuth pero solo para STAFF: rechaza (403) las sesiones con
+ * rol ESTUDIANTE. Para endpoints internos que exponen datos de terceros
+ * (búsqueda global, contratos completos, envío de PDF) — un estudiante logueado
+ * nunca debe poder consultarlos.
+ */
+export function handlerWithStaffAuth(fn: AuthHandlerFn) {
+  return handlerWithAuth(async (request, context, session) => {
+    const role = String((session?.user as any)?.role ?? '').toUpperCase();
+    if (role === 'ESTUDIANTE') throw new ForbiddenError('No autorizado');
     return fn(request, context, session);
   });
 }

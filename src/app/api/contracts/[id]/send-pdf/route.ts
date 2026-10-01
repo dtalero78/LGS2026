@@ -1,5 +1,5 @@
 import 'server-only';
-import { handler, successResponse } from '@/lib/api-helpers';
+import { handlerWithStaffAuth, successResponse } from '@/lib/api-helpers';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { queryOne, queryMany } from '@/lib/postgres';
 import { fillContractTemplate } from '@/lib/contract-template-filler';
@@ -12,7 +12,9 @@ import { whatsappConfigService } from '@/services/whatsapp-config.service';
 
 const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
 
-export const POST = handler(async (_request, { params }) => {
+// Solo STAFF con sesión: antes era público y cualquiera con un _id podía disparar
+// el PDF (costo API2PDF) + WhatsApp al cliente + archivo en Drive, sin límite.
+export const POST = handlerWithStaffAuth(async (_request, { params }) => {
   const titularId = params.id;
 
   // 1. Load full contract data
