@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react'
 import { Person } from '@/types'
 import { formatDate } from '@/lib/utils'
-import { ArrowDownTrayIcon, ArrowUpTrayIcon, DocumentTextIcon, PhotoIcon, BanknotesIcon } from '@heroicons/react/24/outline'
+import { ArrowDownTrayIcon, ArrowUpTrayIcon, DocumentTextIcon, PhotoIcon, BanknotesIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
 import { PermissionGuard } from '@/components/permissions'
-import { PersonPermission } from '@/types/permissions'
+import { PersonPermission, ComercialPermission } from '@/types/permissions'
 import { api, handleApiError } from '@/hooks/use-api'
 import toast from 'react-hot-toast'
 import PersonContractViewer from './PersonContractViewer'
@@ -153,6 +153,20 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
     <div className="space-y-8">
       {/* Action Buttons + Suspendida badge */}
       <div className="flex items-center flex-wrap gap-3">
+        {/* Resumen de la matrícula (misma vista de Comercial › Matrículas, con
+            "Ver ficha" / "Ver usuario"). Acepta el _id del titular o de un beneficiario. */}
+        <PermissionGuard allPermissions={[ComercialPermission.MATRICULAS_VER, ComercialPermission.MATRICULAS_DETALLE]}>
+          <a
+            href={`/dashboard/comercial/matriculas/${person._id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-sm font-medium"
+            title="Ver el resumen de la matrícula"
+          >
+            <ClipboardDocumentListIcon className="h-4 w-4" />
+            Resumen
+          </a>
+        </PermissionGuard>
         <PermissionGuard permission={PersonPermission.VER_CONTRATO}>
           <PersonContractViewer person={person as any} />
         </PermissionGuard>

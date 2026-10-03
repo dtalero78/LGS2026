@@ -17,7 +17,20 @@ import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
  */
 export const GET = handlerWithAuth(async (_req, { params }, session) => {
   await requirePermission(session, ComercialPermission.MATRICULAS_DETALLE);
-  const id = params.id;
+  let id = params.id;
+
+  // Si el id es de un BENEFICIARIO (botón "Resumen" de su ficha), se resuelve
+  // el titular de su mismo contrato.
+  const persona = await queryOne<{ tipoUsuario: string | null; contrato: string | null }>(
+    `SELECT "tipoUsuario", "contrato" FROM "PEOPLE" WHERE "_id" = $1 LIMIT 1`, [id]
+  );
+  if (persona && persona.tipoUsuario !== 'TITULAR' && persona.contrato) {
+    const tit = await queryOne<{ _id: string }>(
+      `SELECT "_id" FROM "PEOPLE" WHERE "contrato" = $1 AND "tipoUsuario" = 'TITULAR'
+        ORDER BY "_createdDate" ASC LIMIT 1`, [persona.contrato]
+    );
+    if (tit) id = tit._id;
+  }
 
   const titular = await queryOne<any>(
     `SELECT p."_id", p."primerNombre", p."segundoNombre", p."primerApellido", p."segundoApellido",
