@@ -138,6 +138,13 @@ function CrearContratoContent() {
   }, []);
   // En modo Empresa el país del titular se toma de la plataforma (no se pregunta).
   const [titularEsBeneficiario, setTitularEsBeneficiario] = useState(false);
+  // Respuesta explícita SÍ/NO a "¿El titular será beneficiario?" — OBLIGATORIA
+  // (null = sin responder). SÍ equivale a la antigua casilla marcada.
+  const [titularBenefRespuesta, setTitularBenefRespuesta] = useState<'SI' | 'NO' | null>(null);
+  const elegirTitularBenef = (v: 'SI' | 'NO' | null) => {
+    setTitularBenefRespuesta(v);
+    setTitularEsBeneficiario(v === 'SI');
+  };
   // SENCE: marca a nivel del titular (empresa) — solo se activa si es
   // Empresa y de Chile. El código SENCE NO se captura aquí; se captura por
   // beneficiario en el paso 7.
@@ -175,13 +182,13 @@ function CrearContratoContent() {
     saveTimer.current = setTimeout(() => {
       try {
         localStorage.setItem(DRAFT_KEY, JSON.stringify({
-          titular, financial, beneficiarios, titularEsBeneficiario, senceUsuario, currentStep, contrato, esContratoPrueba,
+          titular, financial, beneficiarios, titularEsBeneficiario, titularBenefRespuesta, senceUsuario, currentStep, contrato, esContratoPrueba,
           savedAt: Date.now()
         }))
       } catch {}
     }, 500)
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
-  }, [titular, financial, beneficiarios, titularEsBeneficiario, senceUsuario, currentStep, contrato, esContratoPrueba])
+  }, [titular, financial, beneficiarios, titularEsBeneficiario, titularBenefRespuesta, senceUsuario, currentStep, contrato, esContratoPrueba])
 
   // Restore draft on mount
   useEffect(() => {
@@ -212,7 +219,12 @@ function CrearContratoContent() {
       if (draft.titular) setTitular(draft.titular)
       if (draft.financial) setFinancial(draft.financial)
       if (draft.beneficiarios) setBeneficiarios(draft.beneficiarios)
-      if (draft.titularEsBeneficiario !== undefined) setTitularEsBeneficiario(draft.titularEsBeneficiario)
+      if (draft.titularBenefRespuesta === 'SI' || draft.titularBenefRespuesta === 'NO') {
+        elegirTitularBenef(draft.titularBenefRespuesta)
+      } else if (draft.titularEsBeneficiario === true) {
+        // Borrador de la versión con casilla: marcada = SÍ; sin marcar = sin responder.
+        elegirTitularBenef('SI')
+      }
       if (draft.senceUsuario !== undefined) setSenceUsuario(draft.senceUsuario)
       if (draft.currentStep) setCurrentStep(draft.currentStep)
       if (draft.contrato) setContrato(draft.contrato)
@@ -411,7 +423,8 @@ function CrearContratoContent() {
                titular.primerApellido !== '' &&
                titular.numeroId !== '' &&
                titular.plataforma !== '' &&
-               contrato !== '';
+               contrato !== '' &&
+               titularBenefRespuesta !== null; // SÍ/NO obligatorio
       case 3:
         if (esEmpresa) {
           // Empresa: sin fecha de nacimiento, país = plataforma, se pide el correo.
@@ -469,6 +482,8 @@ function CrearContratoContent() {
         (currentStep === 3 && esEmpresa && titular.email !== '' && !isValidEmail(titular.email));
       if (emailStepMalo) {
         setError('El correo no es válido. Debe contener @ (correo@dominio.com) y no llevar espacios.');
+      } else if (currentStep === 2 && !esEmpresa && titularBenefRespuesta === null) {
+        setError('Indica si el titular será beneficiario: marca SÍ o NO (campo obligatorio).');
       } else {
         setError('Por favor complete todos los campos requeridos');
       }
@@ -477,10 +492,10 @@ function CrearContratoContent() {
 
     setError('');
 
-    // Guard paso 2: si el titular NO está marcado como beneficiario, confirmar
-    // (error común — olvidar marcar que el titular también toma clases). No aplica
-    // a Empresa (una empresa nunca toma el programa).
-    if (currentStep === 2 && !titularEsBeneficiario && !esEmpresa) {
+    // Guard paso 2: verificación del titular según la respuesta SÍ/NO (se muestra
+    // en ambos casos para que el comercial confirme). No aplica a Empresa (una
+    // empresa nunca toma el programa).
+    if (currentStep === 2 && !esEmpresa) {
       setShowBenefConfirm(true);
       return;
     }
@@ -488,7 +503,7 @@ function CrearContratoContent() {
     advanceStep();
   };
 
-  // Confirmación del modal: continuar sin que el titular sea beneficiario.
+  // Confirmación del modal: continuar con la respuesta elegida (SÍ o NO).
   const confirmTitularNoBeneficiario = () => {
     setShowBenefConfirm(false);
     advanceStep();
@@ -946,14 +961,14 @@ function CrearContratoContent() {
                 <div className="inline-flex rounded-full border border-gray-300 bg-gray-100 p-1" role="group" aria-label="Tipo de persona">
                   <button
                     type="button"
-                    onClick={() => { setTitular({...titular, tipoPersona: 'Persona Natural'}); setSenceUsuario(false); }}
+                    onClick={() => { if (esEmpresa) elegirTitularBenef(null); setTitular({...titular, tipoPersona: 'Persona Natural'}); setSenceUsuario(false); }}
                     className={`px-4 py-1.5 text-sm font-semibold rounded-full transition-colors ${!esEmpresa ? 'bg-primary-600 text-white shadow' : 'text-gray-600 hover:text-gray-900'}`}
                   >
                     Persona Natural
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setTitular({...titular, tipoPersona: 'Empresa'}); setTitularEsBeneficiario(false); }}
+                    onClick={() => { setTitular({...titular, tipoPersona: 'Empresa'}); elegirTitularBenef('NO'); }}
                     className={`px-4 py-1.5 text-sm font-semibold rounded-full transition-colors ${esEmpresa ? 'bg-purple-600 text-white shadow' : 'text-gray-600 hover:text-gray-900'}`}
                   >
                     Empresa
@@ -1068,26 +1083,45 @@ function CrearContratoContent() {
                     <option value="Perú">Perú</option>
                   </select>
                 </div>
-                {/* ¿El titular será beneficiario? — fila completa, justo antes del número de contrato */}
+                {/* ¿El titular será beneficiario? SÍ / NO — obligatorio (fila completa, antes del número de contrato).
+                    SÍ = la antigua casilla marcada. En Empresa no aplica (queda en NO). */}
                 <div className="col-span-2">
-                  <div className="relative group flex items-center">
-                    <input
-                      type="checkbox"
-                      id="titularEsBeneficiario"
-                      checked={titularEsBeneficiario && !esEmpresa}
-                      disabled={esEmpresa}
-                      onChange={(e) => {
-                        setTitularEsBeneficiario(e.target.checked)
-                      }}
-                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded disabled:opacity-40 disabled:cursor-not-allowed"
-                    />
-                    <label htmlFor="titularEsBeneficiario" className={`ml-2 block text-lg font-bold cursor-pointer ${esEmpresa ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}`}>
-                      ¿Este titular será beneficiario? (tomará el programa)
-                    </label>
-                    <span className="invisible group-hover:visible absolute left-0 top-full mt-1 bg-gray-800 text-white text-sm rounded px-3 py-1.5 whitespace-nowrap z-10">
-                      {esEmpresa ? 'No aplica: una empresa no toma el programa' : 'Marque esta opción si el titular también tomará clases de inglés'}
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className={`text-lg font-bold ${esEmpresa ? 'text-gray-400' : 'text-gray-900'}`}>
+                      ¿Este titular será beneficiario SÍ / NO? (tomará el programa) {!esEmpresa && <span className="text-red-600">*</span>}
                     </span>
+                    <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden" role="radiogroup" aria-label="¿El titular será beneficiario?">
+                      {(['SI', 'NO'] as const).map(op => {
+                        const activo = !esEmpresa && titularBenefRespuesta === op
+                        return (
+                          <button
+                            key={op}
+                            type="button"
+                            role="radio"
+                            aria-checked={activo}
+                            disabled={esEmpresa}
+                            onClick={() => elegirTitularBenef(op)}
+                            className={`px-5 py-1.5 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                              activo
+                                ? (op === 'SI' ? 'bg-green-600 text-white' : 'bg-gray-700 text-white')
+                                : 'bg-white text-gray-700 hover:bg-gray-50'
+                            } ${op === 'NO' ? 'border-l border-gray-300' : ''}`}
+                          >
+                            {op === 'SI' ? 'SÍ' : 'NO'}
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
+                  <p className={`mt-1 text-xs ${esEmpresa ? 'text-gray-400' : titularBenefRespuesta === null ? 'text-red-600' : 'text-gray-500'}`}>
+                    {esEmpresa
+                      ? 'No aplica: una empresa no toma el programa.'
+                      : titularBenefRespuesta === null
+                        ? 'Campo obligatorio: debe marcar SÍ o NO.'
+                        : titularBenefRespuesta === 'SI'
+                          ? 'El titular también tomará clases de inglés (se crea como beneficiario).'
+                          : 'El titular solo será responsable del contrato (no tomará el programa).'}
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1953,30 +1987,66 @@ function CrearContratoContent() {
         </div>
         </div>
 
-        {/* Modal: confirmar que el titular NO será beneficiario (guard del paso 2) */}
-        {showBenefConfirm && (
+        {/* Modal: verificación del titular según la respuesta SÍ/NO (guard del paso 2) */}
+        {showBenefConfirm && titularBenefRespuesta === 'SI' && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
+              <h3 className="text-lg font-bold text-gray-900">✅ Verifica el titular</h3>
+              <p className="text-sm text-gray-700">
+                Marcaste que el titular <strong>SÍ será beneficiario</strong>:{' '}
+                <strong>{[titular.primerNombre, titular.segundoNombre, titular.primerApellido, titular.segundoApellido].filter(Boolean).join(' ')}</strong>
+                {' '}(documento <strong>{titular.numeroId}</strong>) <strong>tomará clases</strong> y se creará
+                también como beneficiario del contrato. Verifica que el nombre y el documento sean correctos.
+              </p>
+              <div className="flex flex-col gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => { setShowBenefConfirm(false); advanceStep(); }}
+                  className="w-full px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
+                >
+                  Confirmar y seguir
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { elegirTitularBenef('NO'); setShowBenefConfirm(false); }}
+                  className="w-full px-4 py-2 text-sm font-medium text-gray-800 bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  Cambiar a NO
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowBenefConfirm(false)}
+                  className="w-full px-2 py-1 text-xs text-gray-400 hover:text-gray-600"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {showBenefConfirm && titularBenefRespuesta !== 'SI' && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
               <h3 className="text-lg font-bold text-gray-900">⚠️ El titular no tomará el programa</h3>
               <p className="text-sm text-gray-700">
-                Recuerda: el titular <strong>no está marcado como beneficiario</strong>, por lo que
+                Marcaste que el titular <strong>NO será beneficiario</strong>, por lo que
                 <strong> no tomará clases ni el programa</strong> — solo quedará como responsable del
                 contrato. ¿Qué deseas hacer?
               </p>
               <div className="flex flex-col gap-2 pt-1">
                 <button
                   type="button"
-                  onClick={() => { setTitularEsBeneficiario(true); setShowBenefConfirm(false); advanceStep(); }}
+                  onClick={() => { elegirTitularBenef('SI'); setShowBenefConfirm(false); advanceStep(); }}
                   className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
                 >
-                  Marcar al titular como beneficiario
+                  Cambiar a SÍ (será beneficiario)
                 </button>
                 <button
                   type="button"
                   onClick={confirmTitularNoBeneficiario}
                   className="w-full px-4 py-2 text-sm font-medium text-gray-800 bg-gray-100 rounded-lg hover:bg-gray-200"
                 >
-                  Aceptar y seguir
+                  Confirmar NO y seguir
                 </button>
                 <button
                   type="button"
