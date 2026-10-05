@@ -1068,6 +1068,27 @@ function CrearContratoContent() {
                     <option value="Perú">Perú</option>
                   </select>
                 </div>
+                {/* ¿El titular será beneficiario? — fila completa, justo antes del número de contrato */}
+                <div className="col-span-2">
+                  <div className="relative group flex items-center">
+                    <input
+                      type="checkbox"
+                      id="titularEsBeneficiario"
+                      checked={titularEsBeneficiario && !esEmpresa}
+                      disabled={esEmpresa}
+                      onChange={(e) => {
+                        setTitularEsBeneficiario(e.target.checked)
+                      }}
+                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded disabled:opacity-40 disabled:cursor-not-allowed"
+                    />
+                    <label htmlFor="titularEsBeneficiario" className={`ml-2 block text-lg font-bold cursor-pointer ${esEmpresa ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}`}>
+                      ¿Este titular será beneficiario? (tomará el programa)
+                    </label>
+                    <span className="invisible group-hover:visible absolute left-0 top-full mt-1 bg-gray-800 text-white text-sm rounded px-3 py-1.5 whitespace-nowrap z-10">
+                      {esEmpresa ? 'No aplica: una empresa no toma el programa' : 'Marque esta opción si el titular también tomará clases de inglés'}
+                    </span>
+                  </div>
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Número de contrato *
@@ -1137,24 +1158,6 @@ function CrearContratoContent() {
                 )}
                 <div className="col-span-2">
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-                    <div className="relative group flex items-center">
-                      <input
-                        type="checkbox"
-                        id="titularEsBeneficiario"
-                        checked={titularEsBeneficiario && !esEmpresa}
-                        disabled={esEmpresa}
-                        onChange={(e) => {
-                          setTitularEsBeneficiario(e.target.checked)
-                        }}
-                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded disabled:opacity-40 disabled:cursor-not-allowed"
-                      />
-                      <label htmlFor="titularEsBeneficiario" className={`ml-2 block text-lg font-bold cursor-pointer ${esEmpresa ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}`}>
-                        ¿Este titular será beneficiario? (tomará el programa)
-                      </label>
-                      <span className="invisible group-hover:visible absolute left-0 top-full mt-1 bg-gray-800 text-white text-sm rounded px-3 py-1.5 whitespace-nowrap z-10">
-                        {esEmpresa ? 'No aplica: una empresa no toma el programa' : 'Marque esta opción si el titular también tomará clases de inglés'}
-                      </span>
-                    </div>
                     {(() => {
                       const senceHabilitado = titular.tipoPersona === 'Empresa' && titular.plataforma === 'Chile'
                       const senceHint = senceHabilitado
