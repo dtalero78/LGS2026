@@ -68,7 +68,9 @@ export async function resolveStudentFromSession(session: Session) {
   if (academica) {
     // Found academic record — find the matching PEOPLE (BENEFICIARIO) via numeroId
     if (academica.numeroId) {
-      person = await PeopleRepository.findBeneficiarioByNumeroId(academica.numeroId);
+      // Prefiere la fila a la que apunta la ficha (usuarioId): si la persona tiene
+      // un borrador colgado además del contrato aprobado, nunca carga el borrador.
+      person = await PeopleRepository.findBeneficiarioByNumeroId(academica.numeroId, (academica as any).usuarioId);
       if (!person) {
         // Fallback: any PEOPLE with that numeroId
         person = await PeopleRepository.findByIdOrNumeroId(academica.numeroId);

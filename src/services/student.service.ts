@@ -679,7 +679,7 @@ export async function inicializarNivel(
     );
 
     // 4. Agregar comentario a PEOPLE.comentarios (Académico → General)
-    const person = await PeopleRepository.findBeneficiarioByNumeroId(academic.numeroId).catch(() => null);
+    const person = await PeopleRepository.findBeneficiarioByNumeroId(academic.numeroId, (academic as any).usuarioId).catch(() => null);
     if (person) {
       const commentObj = {
         id: `comment_${Date.now()}`,

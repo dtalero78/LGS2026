@@ -403,10 +403,28 @@ class PeopleRepositoryClass extends BaseRepository {
     );
   }
 
-  async findBeneficiarioByNumeroId(numeroId: string) {
+  /**
+   * Fila BENEFICIARIO de un documento. Una persona puede tener varias (contrato
+   * rehecho, re-matrícula, borrador colgado), así que el orden es DETERMINÍSTICO
+   * (antes era `LIMIT 1` sin ORDER BY → Postgres devolvía cualquiera y el panel
+   * del estudiante podía cargar el contrato equivocado):
+   *   1. la fila `preferId` (p. ej. ACADEMICA.usuarioId, el vínculo directo)
+   *   2. la aprobada
+   *   3. la viva (no anulada / finalizada / inactiva salvo OnHold)
+   *   4. la más reciente
+   */
+  async findBeneficiarioByNumeroId(numeroId: string, preferId?: string | null) {
     return this.rawQueryOne(
-      `SELECT * FROM "PEOPLE" WHERE "numeroId" = $1 AND "tipoUsuario" = 'BENEFICIARIO' LIMIT 1`,
-      [numeroId]
+      `SELECT * FROM "PEOPLE"
+        WHERE "numeroId" = $1 AND "tipoUsuario" = 'BENEFICIARIO'
+        ORDER BY ("_id" = $2) DESC NULLS LAST,
+                 (UPPER(COALESCE("aprobacion",'')) IN ('APROBADO','APROBADA')) DESC,
+                 (UPPER(COALESCE("estado",'')) NOT IN ('FINALIZADA','ANULADO')
+                   AND UPPER(COALESCE("aprobacion",'')) NOT IN ('CONTRATO NULO','DEVUELTO','RECHAZADO','RETRACTADO')
+                   AND ("estadoInactivo" IS NOT TRUE OR "fechaOnHold" IS NOT NULL)) DESC,
+                 "_createdDate" DESC NULLS LAST
+        LIMIT 1`,
+      [numeroId, preferId ?? null]
     );
   }
 
