@@ -6,6 +6,7 @@ import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { ids } from '@/lib/id-generator';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
 import { kidsIntake } from '@/lib/kids-intake';
+import { registrarCambioAprobacion, nombreDe, type OrigenAprobacion } from '@/lib/aprobacion-audit';
 
 interface KidsCredenciales { numeroId: string; nombre: string; username: string | null; password: string | null }
 interface ApproveResult {
@@ -26,7 +27,8 @@ interface ApproveResult {
 async function approveOnePerson(
   personId: string,
   contrato: string | null,
-  inicioContrato: string | null = null
+  inicioContrato: string | null = null,
+  audit: { session: any; origen: OrigenAprobacion } | null = null
 ): Promise<ApproveResult> {
   const person = await queryOne(
     `SELECT * FROM "PEOPLE" WHERE "_id" = $1`,
@@ -98,6 +100,19 @@ async function approveOnePerson(
     );
   }
   console.log(`✅ [Approve] PEOPLE.aprobacion='Aprobado' + estado='ACTIVA'`);
+
+  if (audit) {
+    await registrarCambioAprobacion({
+      personId,
+      contrato: contrato || person.contrato,
+      tipoUsuario: person.tipoUsuario,
+      nombre: nombreDe(person),
+      estadoAnterior: person.aprobacion,
+      estadoNuevo: 'Aprobado',
+      origen: audit.origen,
+      session: audit.session,
+    });
+  }
 
   // Check/Create ACADEMICA record — SÓLO para BENEFICIARIO.
   // Los TITULARES no son estudiantes (no toman clases); su rol es contractual.
@@ -302,7 +317,7 @@ export const POST = handlerWithAuth(async (
   const contrato = person.contrato;
 
   // Approve the person themselves
-  const mainResult = await approveOnePerson(personId, contrato);
+  const mainResult = await approveOnePerson(personId, contrato, null, { session, origen: 'APROBAR' });
 
   // ─── TITULAR: also approve all pending beneficiaries ───
   if (person.tipoUsuario === 'TITULAR' && contrato) {
@@ -323,7 +338,7 @@ export const POST = handlerWithAuth(async (
       const ben = pendingBeneficiaries[i];
       console.log(`👤 [Approve] Procesando beneficiario ${i + 1}/${pendingBeneficiaries.length}: ${ben._id}`);
       try {
-        const result = await approveOnePerson(ben._id, contrato, titularInicioContrato);
+        const result = await approveOnePerson(ben._id, contrato, titularInicioContrato, { session, origen: 'APROBAR_CASCADA' });
         console.log(`👤 [Approve] Beneficiario ${i + 1} resultado: aprobado=${result.academicCreated}, whatsapp=${result.whatsappSent}, error=${result.whatsappError}`);
         beneficiaryResults.push(result);
       } catch (err: any) {
@@ -404,6 +419,16 @@ export const POST = handlerWithAuth(async (
         );
         titularAutoApproved = true;
         console.log(`✅ [Approve] Titular auto-aprobado: ${titular._id}`);
+        await registrarCambioAprobacion({
+          personId: titular._id,
+          contrato,
+          tipoUsuario: 'TITULAR',
+          estadoAnterior: titular.aprobacion,
+          estadoNuevo: 'Aprobado',
+          origen: 'APROBAR_CASCADA',
+          motivo: 'Titular auto-aprobado al aprobar un beneficiario',
+          session,
+        });
       }
     }
   }

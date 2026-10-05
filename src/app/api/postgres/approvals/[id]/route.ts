@@ -3,6 +3,7 @@ import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { query } from '@/lib/postgres';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
+import { registrarCambioAprobacion, nombreDe } from '@/lib/aprobacion-audit';
 
 export const GET = handlerWithAuth(async (request, { params }) => {
   const result = await query(
@@ -41,8 +42,21 @@ export const PUT = handlerWithAuth(async (request, { params }, session) => {
     throw new ValidationError(`estado must be one of: ${validEstados.join(', ')}`);
   }
 
-  const check = await query(`SELECT "_id", "contrato" FROM "PEOPLE" WHERE "_id" = $1`, [params.id]);
+  const check = await query(
+    `SELECT "_id", "contrato", "aprobacion", "tipoUsuario", "primerNombre", "primerApellido"
+       FROM "PEOPLE" WHERE "_id" = $1`, [params.id]);
   if (check.rowCount === 0) throw new NotFoundError('Person');
+  const actual = check.rows[0];
+
+  // Un contrato YA APROBADO solo cambia de estado desde la ficha del titular
+  // (Estado del Titular): ahí hay modal de advertencia, motivo obligatorio y las
+  // reglas de reversión. Este endpoint (pantalla de Aprobación) solo opera sobre
+  // contratos aún no aprobados.
+  if (actual.aprobacion === 'Aprobado' && estadoFinal !== 'Aprobado') {
+    throw new ValidationError(
+      'Este contrato ya está aprobado. Para cambiar su estado usa la ficha del titular (Estado del Titular), donde se registra el motivo.'
+    );
+  }
 
   // Contratos de prueba (PRB-): NADIE puede aprobarlos (tampoco SUPER_ADMIN).
   if (estadoFinal === 'Aprobado') {
@@ -65,6 +79,17 @@ export const PUT = handlerWithAuth(async (request, { params }, session) => {
      WHERE "_id" = $3 RETURNING *`,
     [estadoFinal, estadoOperativo, params.id]
   );
+
+  await registrarCambioAprobacion({
+    personId: params.id,
+    contrato: actual.contrato,
+    tipoUsuario: actual.tipoUsuario,
+    nombre: nombreDe(actual),
+    estadoAnterior: actual.aprobacion,
+    estadoNuevo: estadoFinal,
+    origen: 'PANTALLA_APROBACION',
+    session,
+  });
 
   return successResponse({ message: `Aprobación actualizada a: ${estadoFinal}`, approval: result.rows[0] });
 });

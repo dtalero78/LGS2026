@@ -7,6 +7,7 @@ import { NotFoundError, ValidationError } from '@/lib/errors';
 import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { buildDynamicUpdate } from '@/lib/query-builder';
 import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
+import { registrarCambioAprobacion, assertPuedeRevertirAPendiente, nombreDe } from '@/lib/aprobacion-audit';
 
 /**
  * GET /api/postgres/people/[id]
@@ -292,8 +293,11 @@ export const PATCH = handlerWithAuth(async (
     contrato: string | null;
     inicioContrato: string | null;
     fechaContrato: string | null;
+    primerNombre: string | null;
+    primerApellido: string | null;
   }>(
-    `SELECT "email", "numeroId", "tipoUsuario", "aprobacion", "estado", "contrato", "inicioContrato", "fechaContrato" FROM "PEOPLE" WHERE "_id" = $1`,
+    `SELECT "email", "numeroId", "tipoUsuario", "aprobacion", "estado", "contrato", "inicioContrato", "fechaContrato",
+            "primerNombre", "primerApellido" FROM "PEOPLE" WHERE "_id" = $1`,
     [personId]
   );
   if (!currentPerson) throw new NotFoundError('Person', personId);
@@ -313,35 +317,18 @@ export const PATCH = handlerWithAuth(async (
   // Base de la ventana: `inicioContrato` (firma) con fallback a `fechaContrato`
   // (contratos POSTGRES aprobados por admin sin firma OTP no tienen inicioContrato).
   if (body.aprobacion === 'Pendiente' && currentPerson.aprobacion === 'Aprobado' && currentPerson.tipoUsuario === 'TITULAR') {
-    const baseFecha = currentPerson.inicioContrato || currentPerson.fechaContrato;
-    const inicio = baseFecha ? new Date(baseFecha) : null;
-    let dentroDelMes = false;
-    if (inicio && !Number.isNaN(inicio.getTime())) {
-      const limite = new Date(inicio.getTime());
-      limite.setMonth(limite.getMonth() + 1);
-      dentroDelMes = Date.now() < limite.getTime();
-    }
-    let benefProgreso = 0;
-    if (currentPerson.contrato) {
-      const row = await queryOne<{ count: string }>(
-        `SELECT COUNT(*)::text AS count
-           FROM "ACADEMICA" a
-           JOIN "PEOPLE" p ON p."numeroId" = a."numeroId" AND p."tipoUsuario" = 'BENEFICIARIO'
-          WHERE p."contrato" = $1
-            AND a."nivel" IS NOT NULL AND TRIM(a."nivel") <> '' AND UPPER(TRIM(a."nivel")) <> 'WELCOME'`,
-        [currentPerson.contrato]
-      );
-      benefProgreso = parseInt(row?.count ?? '0', 10) || 0;
-    }
-    if (!dentroDelMes || benefProgreso > 0) {
-      const motivos: string[] = [];
-      if (!dentroDelMes) motivos.push('ya pasó un mes desde el inicio del contrato');
-      if (benefProgreso > 0) motivos.push(`${benefProgreso} beneficiario(s) ya avanzaron de WELCOME`);
-      throw new ValidationError(
-        `No se puede pasar a "Pendiente": ${motivos.join(' y ')}. ` +
-        `Solo se puede revertir mientras el contrato esté dentro del mes de inicio y los beneficiarios sigan en WELCOME o sin nivel.`
-      );
-    }
+    await assertPuedeRevertirAPendiente(currentPerson);
+  }
+
+  // ── Cambio de aprobación de un contrato YA APROBADO: motivo obligatorio ──
+  // Queda en APROBACION_AUDIT (quién/cuándo/de→a/motivo). `aprobacionMotivo` no es
+  // columna de PEOPLE: se saca del body antes del UPDATE dinámico.
+  const aprobacionMotivo = String(body.aprobacionMotivo ?? '').trim();
+  delete body.aprobacionMotivo;
+  const cambiaAprobacion =
+    body.aprobacion !== undefined && (body.aprobacion || null) !== (currentPerson.aprobacion || null);
+  if (cambiaAprobacion && currentPerson.aprobacion === 'Aprobado' && aprobacionMotivo.length < 10) {
+    throw new ValidationError('Para cambiar el estado de un contrato aprobado debes indicar el motivo (mínimo 10 caracteres).');
   }
 
   // ── Validación de cambio de aprobación ──
@@ -637,6 +624,21 @@ export const PATCH = handlerWithAuth(async (
       [parsedPerson.contrato]
     );
     console.log(`🔒 [PostgreSQL People] Aprobado→Pendiente: login bloqueado de ${r.rowCount || 0} beneficiario(s)`);
+  }
+
+  // Auditoría del cambio de aprobación (best-effort; el UPDATE ya quedó hecho).
+  if (cambiaAprobacion) {
+    await registrarCambioAprobacion({
+      personId,
+      contrato: currentPerson.contrato,
+      tipoUsuario: currentPerson.tipoUsuario,
+      nombre: nombreDe(currentPerson),
+      estadoAnterior: currentPerson.aprobacion,
+      estadoNuevo: body.aprobacion,
+      origen: 'FICHA_ESTADO_TITULAR',
+      motivo: aprobacionMotivo,
+      session,
+    });
   }
 
   console.log('✅ [PostgreSQL People] Person updated successfully');

@@ -85,6 +85,22 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
   const [pendingEstado, setPendingEstado] = useState<string | null>(null)
   const [originalEstado, setOriginalEstado] = useState<string>(person.aprobacion || 'Pendiente')
   const [isUpdatingEstado, setIsUpdatingEstado] = useState(false)
+  // Cambio de estado de un contrato YA APROBADO: motivo obligatorio + confirmación.
+  const [estadoMotivo, setEstadoMotivo] = useState('')
+  const [estadoAck, setEstadoAck] = useState(false)
+  // Historial de cambios de aprobación del contrato (APROBACION_AUDIT).
+  const [auditRegistros, setAuditRegistros] = useState<any[]>([])
+  const [auditLoading, setAuditLoading] = useState(false)
+  const loadAudit = () => {
+    if (!person._id) return
+    setAuditLoading(true)
+    fetch(`/api/postgres/people/${person._id}/aprobacion-audit`)
+      .then(r => r.json())
+      .then(d => setAuditRegistros(d?.success ? (d.registros || []) : []))
+      .catch(() => setAuditRegistros([]))
+      .finally(() => setAuditLoading(false))
+  }
+  useEffect(() => { loadAudit() }, [person._id]) // eslint-disable-line react-hooks/exhaustive-deps
   const [isEditMode, setIsEditMode] = useState(false)
   const [editingBeneficiaryId, setEditingBeneficiaryId] = useState<string | null>(null)
   const [isTogglingContract, setIsTogglingContract] = useState(false)
@@ -216,6 +232,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         }
 
         setProcessStatus(prev => ({ ...prev, [beneficiaryId]: parts.join(' ') }))
+        loadAudit()
 
         // If titular was auto-approved, update the titular estado in the UI
         if (data.titularAutoApproved) {
@@ -277,6 +294,8 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
 
     // Guardar el estado pendiente y mostrar modal de confirmación
     setPendingEstado(newEstado)
+    setEstadoMotivo('')
+    setEstadoAck(false)
     setShowEstadoModal(true)
   }
 
@@ -336,6 +355,8 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
 
   const confirmEstadoChange = async () => {
     if (!pendingEstado) return
+    // Contrato ya aprobado: exige motivo (≥10) + confirmación explícita.
+    if (originalEstado === 'Aprobado' && (estadoMotivo.trim().length < 10 || !estadoAck)) return
 
     console.log('=== CONFIRMACIÓN DE CAMBIO DE ESTADO INICIADA ===')
     console.log('Estado a aplicar:', pendingEstado)
@@ -359,7 +380,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         response = await fetch(`/api/postgres/people/${person._id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ aprobacion: pendingEstado })
+          body: JSON.stringify({ aprobacion: pendingEstado, aprobacionMotivo: estadoMotivo.trim() || undefined })
         })
         data = await response.json()
       }
@@ -369,6 +390,9 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         setOriginalEstado(pendingEstado as any)
         setShowEstadoModal(false)
         setPendingEstado(null)
+        setEstadoMotivo('')
+        setEstadoAck(false)
+        loadAudit()
 
         // Show WhatsApp feedback for approve action
         if (pendingEstado === 'Aprobado') {
@@ -432,6 +456,8 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     // Cerrar modal
     setShowEstadoModal(false)
     setPendingEstado(null)
+    setEstadoMotivo('')
+    setEstadoAck(false)
 
     console.log('✓ Cambio de estado cancelado')
   }
@@ -984,6 +1010,63 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Historial de cambios de aprobación (APROBACION_AUDIT) */}
+            <div className="mt-6 border-t border-gray-200 pt-4">
+              <h4 className="text-sm font-semibold text-gray-800 mb-2">Historial de cambios de estado</h4>
+              {auditLoading ? (
+                <p className="text-xs text-gray-400 italic">Cargando historial…</p>
+              ) : auditRegistros.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">
+                  Sin cambios registrados. (El registro de auditoría comenzó el 5-oct-2026; los cambios anteriores no quedaron guardados.)
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-xs">
+                    <thead>
+                      <tr className="text-left text-gray-500">
+                        <th className="py-1 pr-3 font-medium">Fecha</th>
+                        <th className="py-1 pr-3 font-medium">Persona</th>
+                        <th className="py-1 pr-3 font-medium">Cambio</th>
+                        <th className="py-1 pr-3 font-medium">Por</th>
+                        <th className="py-1 pr-3 font-medium">Vía</th>
+                        <th className="py-1 font-medium">Motivo</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {auditRegistros.map((r: any) => (
+                        <tr key={r._id} className="align-top">
+                          <td className="py-1.5 pr-3 whitespace-nowrap text-gray-600">
+                            {new Date(r._createdDate).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}
+                          </td>
+                          <td className="py-1.5 pr-3 text-gray-700">
+                            {r.nombre || '—'}
+                            <span className="ml-1 text-[10px] text-gray-400">{r.tipoUsuario === 'TITULAR' ? 'Titular' : r.tipoUsuario === 'BENEFICIARIO' ? 'Benef.' : ''}</span>
+                          </td>
+                          <td className="py-1.5 pr-3 whitespace-nowrap">
+                            <span className="text-gray-500">{r.estadoAnterior || 'Sin estado'}</span>
+                            <span className="mx-1 text-gray-400">→</span>
+                            <span className="font-semibold text-gray-800">{r.estadoNuevo || 'Sin estado'}</span>
+                          </td>
+                          <td className="py-1.5 pr-3 text-gray-700">{r.usuarioNombre || r.usuarioEmail || '—'}</td>
+                          <td className="py-1.5 pr-3 whitespace-nowrap text-gray-500">
+                            {({
+                              FICHA_ESTADO_TITULAR: 'Ficha · Estado',
+                              APROBAR: 'Botón Aprobar',
+                              APROBAR_CASCADA: 'Aprobación en cascada',
+                              PANTALLA_APROBACION: 'Pantalla Aprobación',
+                              WIX_LEGACY: 'Integración legacy',
+                              SISTEMA: 'Sistema',
+                            } as Record<string, string>)[r.origen] || r.origen}
+                          </td>
+                          <td className="py-1.5 text-gray-700 break-words max-w-xs">{r.motivo || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         </PermissionGuard>
@@ -1814,13 +1897,13 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <div className="flex items-center mb-4">
               <div className="flex-shrink-0">
-                <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center">
-                  <span className="text-blue-600 text-sm font-medium">!</span>
+                <div className={`h-8 w-8 rounded-full flex items-center justify-center ${originalEstado === 'Aprobado' ? 'bg-red-100' : 'bg-blue-100'}`}>
+                  <span className={`text-sm font-bold ${originalEstado === 'Aprobado' ? 'text-red-600' : 'text-blue-600'}`}>!</span>
                 </div>
               </div>
               <div className="ml-3">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Confirmar Cambio de Estado
+                <h3 className={`text-lg font-medium ${originalEstado === 'Aprobado' ? 'text-red-700' : 'text-gray-900'}`}>
+                  {originalEstado === 'Aprobado' ? 'Advertencia: el contrato ya está APROBADO' : 'Confirmar Cambio de Estado'}
                 </h3>
               </div>
             </div>
@@ -1853,6 +1936,34 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                   que el contrato no tenga OnHold o extensión en curso antes de confirmar.
                 </div>
               )}
+              {originalEstado === 'Aprobado' && (
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Motivo del cambio <span className="text-red-600">*</span>
+                    </label>
+                    <textarea
+                      value={estadoMotivo}
+                      onChange={(e) => setEstadoMotivo(e.target.value)}
+                      rows={3}
+                      placeholder="Explica por qué se cambia el estado de un contrato aprobado (mínimo 10 caracteres)"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-red-400 focus:border-red-400"
+                    />
+                    <p className={`text-[11px] mt-0.5 ${estadoMotivo.trim().length >= 10 ? 'text-gray-400' : 'text-red-500'}`}>
+                      {estadoMotivo.trim().length}/10 caracteres mínimos · queda en el historial de cambios con tu usuario.
+                    </p>
+                  </div>
+                  <label className="flex items-start gap-2 text-xs text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={estadoAck}
+                      onChange={(e) => setEstadoAck(e.target.checked)}
+                      className="mt-0.5"
+                    />
+                    <span>Entiendo que estoy cambiando un contrato <strong>aprobado</strong> y que el cambio queda registrado a mi nombre.</span>
+                  </label>
+                </div>
+              )}
               <p className="text-sm text-gray-500 mt-2">
                 Este cambio se aplicará en la base de datos y será visible inmediatamente.
               </p>
@@ -1868,8 +1979,8 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
               </button>
               <button
                 onClick={confirmEstadoChange}
-                disabled={isUpdatingEstado}
-                className="flex-1 bg-blue-600 border border-transparent rounded-md px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                disabled={isUpdatingEstado || (originalEstado === 'Aprobado' && (estadoMotivo.trim().length < 10 || !estadoAck))}
+                className={`flex-1 border border-transparent rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center ${originalEstado === 'Aprobado' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}
               >
                 {isUpdatingEstado ? (
                   <>
