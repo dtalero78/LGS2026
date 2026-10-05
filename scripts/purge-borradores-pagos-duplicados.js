@@ -14,6 +14,8 @@ require('dotenv').config({ path: '.env.local' });
 const { Client } = require('pg');
 const fs = require('fs');
 const APPLY = process.argv.includes('--apply');
+// --incluir-pagos-persona: borra también los que tienen pagos validados por una persona (autorización explícita).
+const INCLUIR_PERSONA = process.argv.includes('--incluir-pagos-persona');
 const MOTIVO = 'Contrato borrador rehecho: el titular tiene un contrato aprobado posterior con los mismos beneficiarios. Autorizado 2026-10-05.';
 const fmt = v => Number(v || 0).toLocaleString('es-CO');
 
@@ -52,7 +54,7 @@ const fmt = v => Number(v || 0).toLocaleString('es-CO');
       if (ac) problemas.push(`${ac} ficha(s) académica(s) apuntan a él`);
       const pagos = (await c.query(`SELECT * FROM "PAGOS_TITULARES" WHERE "idPeople" = ANY($1::text[])`, [ids])).rows;
       const persona = pagos.filter(p => p.validado === true && p.validadoPor && !String(p.validadoPor).toLowerCase().startsWith('migracion'));
-      if (persona.length) problemas.push(`${persona.length} pago(s) validado(s) por persona`);
+      if (persona.length && !INCLUIR_PERSONA) problemas.push(`${persona.length} pago(s) validado(s) por persona`);
       const fin = (await c.query(`SELECT * FROM "FINANCIEROS" WHERE "contrato" = $1`, [contrato])).rows;
       const kids = (await c.query(`SELECT * FROM "KIDS_INSCRIPCIONES" WHERE "contrato" = $1`, [contrato]).catch(() => ({ rows: [] }))).rows;
       const firmado = people.some(p => String(p.hashConsentimiento || '') !== '');
