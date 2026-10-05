@@ -22,10 +22,15 @@ const fmt = v => Number(v || 0).toLocaleString('es-CO');
   await c.connect();
   try {
     await c.query('BEGIN');
-    const log = (await c.query(
-      `SELECT DISTINCT "contrato", "snapshot"->>'contratoAprobado' AS aprobado FROM "PURGE_LOG"
-        WHERE "tipoPurga" = 'PAGOS_BORRADOR_DUPLICADO' ORDER BY "contrato"`)).rows;
-    console.log(`Contratos borrador (de PURGE_LOG PAGOS_BORRADOR_DUPLICADO): ${log.length}\n`);
+    // --pares=BORRADOR:APROBADO,... ; sin él, los de PURGE_LOG PAGOS_BORRADOR_DUPLICADO (lote del 2026-10-05).
+    const arg = process.argv.find(a => a.startsWith('--pares='));
+    const log = arg
+      ? arg.slice(8).split(',').filter(Boolean).map(p => { const [contrato, aprobado] = p.split(':'); return { contrato, aprobado }; })
+      : (await c.query(
+          `SELECT DISTINCT "contrato", "snapshot"->>'contratoAprobado' AS aprobado FROM "PURGE_LOG"
+            WHERE "tipoPurga" = 'PAGOS_BORRADOR_DUPLICADO' ORDER BY "contrato"`)).rows;
+    if (log.some(p => !p.contrato || !p.aprobado)) throw new Error('--pares mal formado (BORRADOR:APROBADO,...)');
+    console.log(`Contratos borrador a evaluar: ${log.length}\n`);
 
     const resumen = [], backup = [];
     let abortados = 0;
@@ -78,9 +83,9 @@ const fmt = v => Number(v || 0).toLocaleString('es-CO');
     console.log(`A borrar: ${backup.length} · bloqueados: ${abortados}`);
 
     if (APPLY) {
-      fs.writeFileSync('docs/backup-borradores-rehechos-2026-10-05.json', JSON.stringify(backup, null, 2));
+      fs.writeFileSync(`docs/backup-borradores-rehechos-${Date.now()}.json`, JSON.stringify(backup, null, 2));
       await c.query('COMMIT');
-      console.log(`\n✅ APLICADO: ${backup.length} contrato(s) borrado(s). Snapshot en PURGE_LOG (BORRADOR_REHECHO) y docs/backup-borradores-rehechos-2026-10-05.json`);
+      console.log(`\n✅ APLICADO: ${backup.length} contrato(s) borrado(s). Snapshot en PURGE_LOG (BORRADOR_REHECHO) y docs/backup-borradores-rehechos-*.json`);
     } else { await c.query('ROLLBACK'); console.log('\nDRY-RUN: ROLLBACK, no se borró nada. Use --apply para aplicar.'); }
   } catch (e) {
     await c.query('ROLLBACK').catch(() => {});
