@@ -16,6 +16,9 @@ const fs = require('fs');
 const APPLY = process.argv.includes('--apply');
 // --incluir-pagos-persona: borra también los que tienen pagos validados por una persona (autorización explícita).
 const INCLUIR_PERSONA = process.argv.includes('--incluir-pagos-persona');
+// --permitir-aprobado: borra aunque el contrato esté Aprobado (caso puntual autorizado). --motivo="...": motivo propio.
+const PERMITIR_APROBADO = process.argv.includes('--permitir-aprobado');
+const MOTIVO_ARG = (process.argv.find(a => a.startsWith('--motivo=')) || '').slice(9).trim();
 const MOTIVO = 'Contrato borrador rehecho: el titular tiene un contrato aprobado posterior con los mismos beneficiarios. Autorizado 2026-10-05.';
 const fmt = v => Number(v || 0).toLocaleString('es-CO');
 
@@ -42,7 +45,7 @@ const fmt = v => Number(v || 0).toLocaleString('es-CO');
       const tit = people.find(p => p.tipoUsuario === 'TITULAR');
       const problemas = [];
       if (!people.length) { resumen.push({ contrato, aprobado, estado: 'ya no existe' }); continue; }
-      if (people.some(p => String(p.aprobacion || '').toUpperCase().startsWith('APROBAD'))) problemas.push('fila aprobada');
+      if (!PERMITIR_APROBADO && people.some(p => String(p.aprobacion || '').toUpperCase().startsWith('APROBAD'))) problemas.push('fila aprobada');
       const aprobadoVivo = (await c.query(
         `SELECT COUNT(*)::int n FROM "PEOPLE" WHERE "contrato" = $1 AND "tipoUsuario" = 'TITULAR' AND "aprobacion" ILIKE 'aprobad%'`, [aprobado])).rows[0].n;
       if (!aprobadoVivo) problemas.push(`el aprobado ${aprobado} no está aprobado`);
@@ -74,7 +77,7 @@ const fmt = v => Number(v || 0).toLocaleString('es-CO');
         `INSERT INTO "PURGE_LOG" ("_id","tipoPurga","contrato","titularId","titularNombre","snapshot","motivo","realizadoPor","realizadoPorNombre","filasBorradas")
          VALUES ($1,'BORRADOR_REHECHO',$2,$3,$4,$5::jsonb,$6,'script:purge-borradores-pagos-duplicados','Claude (autorizado por plataformalgsdigital)',$7::jsonb)`,
         [`aud_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`, contrato, tit?._id || null,
-         tit ? `${tit.primerNombre || ''} ${tit.primerApellido || ''}`.trim() : null, JSON.stringify(snapshot), MOTIVO,
+         tit ? `${tit.primerNombre || ''} ${tit.primerApellido || ''}`.trim() : null, JSON.stringify(snapshot), MOTIVO_ARG || MOTIVO,
          JSON.stringify({ people: people.length, financieros: fin.length, pagos: pagos.length, kidsInscripciones: kids.length })]);
       await c.query(`DELETE FROM "PAGOS_TITULARES" WHERE "idPeople" = ANY($1::text[])`, [ids]);
       await c.query(`DELETE FROM "FINANCIEROS" WHERE "contrato" = $1`, [contrato]);

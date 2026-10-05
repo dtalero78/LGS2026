@@ -1011,63 +1011,6 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                 </div>
               </div>
             </div>
-
-            {/* Historial de cambios de aprobación (APROBACION_AUDIT) */}
-            <div className="mt-6 border-t border-gray-200 pt-4">
-              <h4 className="text-sm font-semibold text-gray-800 mb-2">Historial de cambios de estado</h4>
-              {auditLoading ? (
-                <p className="text-xs text-gray-400 italic">Cargando historial…</p>
-              ) : auditRegistros.length === 0 ? (
-                <p className="text-xs text-gray-400 italic">
-                  Sin cambios registrados. (El registro de auditoría comenzó el 5-oct-2026; los cambios anteriores no quedaron guardados.)
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-xs">
-                    <thead>
-                      <tr className="text-left text-gray-500">
-                        <th className="py-1 pr-3 font-medium">Fecha</th>
-                        <th className="py-1 pr-3 font-medium">Persona</th>
-                        <th className="py-1 pr-3 font-medium">Cambio</th>
-                        <th className="py-1 pr-3 font-medium">Por</th>
-                        <th className="py-1 pr-3 font-medium">Vía</th>
-                        <th className="py-1 font-medium">Motivo</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {auditRegistros.map((r: any) => (
-                        <tr key={r._id} className="align-top">
-                          <td className="py-1.5 pr-3 whitespace-nowrap text-gray-600">
-                            {new Date(r._createdDate).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}
-                          </td>
-                          <td className="py-1.5 pr-3 text-gray-700">
-                            {r.nombre || '—'}
-                            <span className="ml-1 text-[10px] text-gray-400">{r.tipoUsuario === 'TITULAR' ? 'Titular' : r.tipoUsuario === 'BENEFICIARIO' ? 'Benef.' : ''}</span>
-                          </td>
-                          <td className="py-1.5 pr-3 whitespace-nowrap">
-                            <span className="text-gray-500">{r.estadoAnterior || 'Sin estado'}</span>
-                            <span className="mx-1 text-gray-400">→</span>
-                            <span className="font-semibold text-gray-800">{r.estadoNuevo || 'Sin estado'}</span>
-                          </td>
-                          <td className="py-1.5 pr-3 text-gray-700">{r.usuarioNombre || r.usuarioEmail || '—'}</td>
-                          <td className="py-1.5 pr-3 whitespace-nowrap text-gray-500">
-                            {({
-                              FICHA_ESTADO_TITULAR: 'Ficha · Estado',
-                              APROBAR: 'Botón Aprobar',
-                              APROBAR_CASCADA: 'Aprobación en cascada',
-                              PANTALLA_APROBACION: 'Pantalla Aprobación',
-                              WIX_LEGACY: 'Integración legacy',
-                              SISTEMA: 'Sistema',
-                            } as Record<string, string>)[r.origen] || r.origen}
-                          </td>
-                          <td className="py-1.5 text-gray-700 break-words max-w-xs">{r.motivo || '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
           </div>
         </PermissionGuard>
       </div>
@@ -1217,40 +1160,66 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         </div>
       </div>
 
-      {/* WhatsApp Administrative */}
-      <div>
-        <h3 className="text-lg font-medium text-gray-900 mb-4">📱 WhatsApp Administrativo</h3>
-        <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-medium text-green-800 mb-3">Mensajería Masiva</h4>
-              <div className="space-y-2">
-                <button className="w-full text-left p-3 bg-white border border-green-200 rounded hover:bg-green-50">
-                  <div className="font-medium text-green-900">Recordatorio de Pago</div>
-                  <div className="text-sm text-green-700">Enviar recordatorio de cuota mensual</div>
-                </button>
-                <button className="w-full text-left p-3 bg-white border border-green-200 rounded hover:bg-green-50">
-                  <div className="font-medium text-green-900">Actualización de Contrato</div>
-                  <div className="text-sm text-green-700">Notificar cambios en el contrato</div>
-                </button>
-              </div>
-            </div>
-            <div>
-              <h4 className="font-medium text-green-800 mb-3">Automatizaciones</h4>
-              <div className="space-y-2">
-                <button className="w-full text-left p-3 bg-white border border-green-200 rounded hover:bg-green-50">
-                  <div className="font-medium text-green-900">Bienvenida Nuevo Beneficiario</div>
-                  <div className="text-sm text-green-700">Mensaje automático para nuevos estudiantes</div>
-                </button>
-                <button className="w-full text-left p-3 bg-white border border-green-200 rounded hover:bg-green-50">
-                  <div className="font-medium text-green-900">Seguimiento Progreso</div>
-                  <div className="text-sm text-green-700">Actualizaciones de progreso académico</div>
-                </button>
-              </div>
-            </div>
+      {/* Historial de cambios de aprobación (APROBACION_AUDIT) — debajo de los beneficiarios */}
+      <PermissionGuard permission={PersonPermission.CAMBIAR_ESTADO}>
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Historial de cambios de estado</h3>
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+              {auditLoading ? (
+                <p className="text-xs text-gray-400 italic">Cargando historial…</p>
+              ) : auditRegistros.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">
+                  Sin cambios registrados. (El registro de auditoría comenzó el 5-oct-2026; los cambios anteriores no quedaron guardados.)
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-xs">
+                    <thead>
+                      <tr className="text-left text-gray-500">
+                        <th className="py-1 pr-3 font-medium">Fecha</th>
+                        <th className="py-1 pr-3 font-medium">Persona</th>
+                        <th className="py-1 pr-3 font-medium">Cambio</th>
+                        <th className="py-1 pr-3 font-medium">Por</th>
+                        <th className="py-1 pr-3 font-medium">Vía</th>
+                        <th className="py-1 font-medium">Motivo</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {auditRegistros.map((r: any) => (
+                        <tr key={r._id} className="align-top">
+                          <td className="py-1.5 pr-3 whitespace-nowrap text-gray-600">
+                            {new Date(r._createdDate).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}
+                          </td>
+                          <td className="py-1.5 pr-3 text-gray-700">
+                            {r.nombre || '—'}
+                            <span className="ml-1 text-[10px] text-gray-400">{r.tipoUsuario === 'TITULAR' ? 'Titular' : r.tipoUsuario === 'BENEFICIARIO' ? 'Benef.' : ''}</span>
+                          </td>
+                          <td className="py-1.5 pr-3 whitespace-nowrap">
+                            <span className="text-gray-500">{r.estadoAnterior || 'Sin estado'}</span>
+                            <span className="mx-1 text-gray-400">→</span>
+                            <span className="font-semibold text-gray-800">{r.estadoNuevo || 'Sin estado'}</span>
+                          </td>
+                          <td className="py-1.5 pr-3 text-gray-700">{r.usuarioNombre || r.usuarioEmail || '—'}</td>
+                          <td className="py-1.5 pr-3 whitespace-nowrap text-gray-500">
+                            {({
+                              FICHA_ESTADO_TITULAR: 'Ficha · Estado',
+                              APROBAR: 'Botón Aprobar',
+                              APROBAR_CASCADA: 'Aprobación en cascada',
+                              PANTALLA_APROBACION: 'Pantalla Aprobación',
+                              WIX_LEGACY: 'Integración legacy',
+                              SISTEMA: 'Sistema',
+                            } as Record<string, string>)[r.origen] || r.origen}
+                          </td>
+                          <td className="py-1.5 text-gray-700 break-words max-w-xs">{r.motivo || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
           </div>
         </div>
-      </div>
+      </PermissionGuard>
 
       {/* Beneficiary Form Modal */}
       {showBeneficiaryForm && newBeneficiaryId && (
