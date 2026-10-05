@@ -231,6 +231,9 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/admin/drive-config': [
     'MANTENIMIENTO.CONTRATOS.DRIVE_CONFIG' as Permission,
   ],
+  '/admin/limpieza-anulados': [
+    'MANTENIMIENTO.CONTRATOS.LIMPIEZA_ANULADOS' as Permission,
+  ],
   '/admin/kids-config': [
     'MANTENIMIENTO.CONTRATOS.KIDS_CONFIG' as Permission,
   ],

@@ -1031,6 +1031,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Acceso a /admin/drive-config. Interruptor de dónde se archivan los PDF de contrato: bsl-utilidades (externo) o LGS directo a la Unidad compartida.',
   },
   {
+    code: MantenimientoPermission.LIMPIEZA_ANULADOS,
+    module: Module.MANTENIMIENTO,
+    section: 'Contratos',
+    name: 'Página "Limpieza de Anulados"',
+    description: 'Acceso a /admin/limpieza-anulados. Lista los contratos ANULADOS (Contrato nulo / Devuelto / Rechazado) y permite borrarlos masivamente. Solo borra lo que NO comparte con otro contrato (ficha académica, clases y login de la persona se conservan si tiene otro contrato). Omite contratos con pagos validados. Cada borrado deja copia completa en PURGE_LOG, consultable en la pestaña "Histórico de borrados". Acción destructiva — recomendado SUPER_ADMIN/ADMIN',
+  },
+  {
     code: MantenimientoPermission.KIDS_CONFIG,
     module: Module.MANTENIMIENTO,
     section: 'Usuarios',

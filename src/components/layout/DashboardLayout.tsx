@@ -208,6 +208,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
         name: 'Contratos', isSubmenu: true, children: [
           { name: 'Bloqueo Contrato', href: '/admin/bloqueo-contrato', newTab: true },
           { name: 'Contratos Prueba', href: '/admin/contratos-prueba', newTab: true },
+          { name: 'Limpieza de Anulados', href: '/admin/limpieza-anulados', newTab: true },
           { name: 'Drive de Contratos', href: '/admin/drive-config', newTab: true },
           { name: 'Proceso Kids', href: '/admin/kids-config', newTab: true },
           { name: 'Página de Bienvenida', href: '/admin/bienvenida-config', newTab: true },
@@ -394,6 +395,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ],
     '/admin/contratos-prueba': [
       MantenimientoPermission.CONTRATOS_PRUEBA,
+    ],
+    '/admin/limpieza-anulados': [
+      MantenimientoPermission.LIMPIEZA_ANULADOS,
     ],
     '/admin/envio-mensajes': [
       MantenimientoPermission.ENVIO_MENSAJES,

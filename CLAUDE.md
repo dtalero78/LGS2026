@@ -72,6 +72,8 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 51. Numeración automática secuencial de contratos (next-number)
 52. Smart polling - Auto-actualización del contrato admin cuando el cliente firma consentimiento (timeout 10 min)
 52b. Auto-guardado de borrador en Crear Contrato — guarda estado del formulario en localStorage con TTL de 72h; al volver muestra banner para continuar o descartar
+52c. **Verificación de documentos al crear contrato** ([src/lib/verificacion-documento.ts](src/lib/verificacion-documento.ts), `GET /api/postgres/contracts/verificar-documento`): paso 2 (titular, según respuesta SÍ/NO obligatoria) y antes de crear (beneficiarios). Busca el documento (normalizado) en otros contratos **vivos** — ignora FINALIZADA/ANULADO, Contrato nulo/Devuelto/Rechazado/Retractado, inactivos salvo OnHold, y PRB-. "Aprobado" = `aprobacion='Aprobado'` con o sin firma. Matriz: beneficiario en contrato aprobado + será beneficiario → **bloquea**; beneficiario o titular en contrato pendiente → **resolver** (ir al contrato anterior, o anularlo con `POST /api/postgres/contracts/anular-registro` — nunca borra; prohibido con pagos validados); titular de contrato aprobado → informa + "Traer sus datos". Muestra además antecedentes informativos (contratos anulados con pagos validados, ficha académica previa)
+52d. **Número de contrato asignado por el servidor**: el formulario no lo pre-asigna; `POST /api/postgres/contracts` lo genera dentro de una transacción con `pg_advisory_xact_lock(hashtext('contrato-seq:<pais>:<año>'))` junto con el INSERT del titular (sin duplicados en concurrencia)
 
 ### Consentimiento Declarativo (Firma Digital)
 53. Página pública de contrato para el cliente (`/contrato/[id]`)
@@ -1428,7 +1430,8 @@ interface ConsentData {
 - 🟠 `DELETE /api/contracts/[id]/documents` borra **cualquier objeto del bucket** (no verifica que la URL esté en la lista de ese titular). `upload-url` solo pide sesión.
 - 🟡 `documents`/`recibo-inscripcion` aceptan `url` arbitraria (`javascript:` en "Ver" → XSS a staff; el recibo hace `fetch` server-side → SSRF).
 - 🟡 OTP de firma sin límite de intentos ni cooldown server-side; `Math.random`.
-- 🟡 Asesor/gestorRecaudo del contrato vienen del cliente (`titular.asesor`); número de contrato `MAX+1` sin lock ni transacción (duplicados en concurrencia).
+- 🟡 Asesor/gestorRecaudo del contrato vienen del cliente (`titular.asesor`). (El número de contrato duplicado en concurrencia quedó **resuelto** con advisory lock — ver ítem 52d.)
+- 🟡 `checkBeneficiarioUnico` (servidor, al crear) aún anula en silencio los beneficiarios de borradores previos y no considera vivos a los OnHold; la verificación del formulario ya lo resuelve antes, pero el servidor conserva esa regla como respaldo.
 
 ### Pages and Routes Summary (25 pages)
 | Page | Route | Access |
@@ -1479,6 +1482,7 @@ interface ConsentData {
 | Permisos Admin | `/admin/permissions` | SUPER_ADMIN/ADMIN only |
 | Crea login | `/admin/crea-login` | MANTENIMIENTO.USUARIOS.CREAR_LOGIN |
 | Consulta de Scripts | `/admin/scripts/consulta` | MANTENIMIENTO.SCRIPTS.CONSULTA |
+| Limpieza de Anulados (Mantenimiento › Contratos) | `/admin/limpieza-anulados` | MANTENIMIENTO.CONTRATOS.LIMPIEZA_ANULADOS — borra contratos Contrato nulo/Devuelto/Rechazado; conserva ficha académica/clases/login compartidos con otro contrato; pagos validados solo con casilla + 2ª confirmación; snapshot en `PURGE_LOG` (`tipoPurga='LIMPIEZA_ANULADOS'`), pestaña Histórico |
 | Ticker Editor | `/admin/ticker` | SUPER_ADMIN only |
 | Banner Editor | `/admin/banner` | SUPER_ADMIN only |
 | Reglamentos (Mantenimiento › Avisos) | `/admin/reglamentos` | MANTENIMIENTO.AVISOS.REGLAMENTOS |

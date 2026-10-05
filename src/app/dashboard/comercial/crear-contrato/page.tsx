@@ -39,6 +39,60 @@ const PAYMENT_OPTIONS: Record<string, { label: string; value: string }[]> = {
 };
 
 const DRAFT_KEY = 'crear-contrato-draft'
+
+// ── Verificación de documentos (ver /api/postgres/contracts/verificar-documento) ──
+type SituacionDoc = 'APROBADO' | 'FIRMADO_SIN_APROBAR' | 'SIN_FIRMAR'
+interface RegDoc {
+  personId: string; tipoUsuario: string; contrato: string; nombre: string
+  situacion: SituacionDoc; firmado: boolean; titularId: string | null
+  titularNombre: string | null; pagosValidados: number; creado: string | null
+}
+type RolVerif = 'TITULAR_SI' | 'TITULAR_NO' | 'BENEFICIARIO'
+interface VerifItem { quien: string; numeroId: string; registros: RegDoc[] }
+interface VerifState {
+  kind: 'titular' | 'beneficiarios'
+  items: VerifItem[]
+  datosPrevios?: any
+  // Antecedentes INFORMATIVOS del titular (no bloquean): contratos anulados/
+  // rechazados/devueltos con sus pagos validados, y ficha académica previa.
+  previos?: { contrato: string; tipoUsuario: string; estado: string; pagosValidados: number }[]
+  academica?: { nivel: string | null; step: string | null; clases: number } | null
+  lista?: any[]          // beneficiarios a confirmar (kind='beneficiarios')
+  error?: string
+}
+
+/**
+ * Matriz acordada (2026-10-05). Firmado/sin firmar solo cambia el texto:
+ *  - Beneficiario en contrato APROBADO: SÍ/beneficiario → BLOQUEO · NO → info
+ *  - Beneficiario en contrato PENDIENTE: SÍ/beneficiario → RESOLVER · NO → info
+ *  - Titular en contrato APROBADO → info (+ "Traer sus datos")
+ *  - Titular en contrato PENDIENTE → RESOLVER (ir al anterior / anular el anterior)
+ *  - Para un BENEFICIARIO del paso 7 solo cuentan sus filas de beneficiario.
+ */
+function clasificar(registros: RegDoc[], rol: RolVerif) {
+  const esBenef = (r: RegDoc) => r.tipoUsuario !== 'TITULAR'
+  const aprob = (r: RegDoc) => r.situacion === 'APROBADO'
+  const bloqueos: RegDoc[] = []
+  const porResolver: RegDoc[] = []
+  const info: RegDoc[] = []
+  for (const r of registros) {
+    if (esBenef(r)) {
+      if (rol === 'TITULAR_NO') info.push(r)
+      else if (aprob(r)) bloqueos.push(r)
+      else porResolver.push(r)
+    } else if (rol !== 'BENEFICIARIO') {
+      if (aprob(r)) info.push(r)
+      else porResolver.push(r)
+    }
+  }
+  return { bloqueos, porResolver, info }
+}
+
+const SITUACION_TXT: Record<SituacionDoc, string> = {
+  APROBADO: 'aprobado',
+  FIRMADO_SIN_APROBAR: 'firmado y no aprobado',
+  SIN_FIRMAR: 'sin firmar y no aprobado',
+}
 const DRAFT_TTL_MS = 72 * 60 * 60 * 1000 // 72 horas
 
 interface Beneficiario {
@@ -150,13 +204,19 @@ function CrearContratoContent() {
   // beneficiario en el paso 7.
   const [senceUsuario, setSenceUsuario] = useState(false);
   const [contrato, setContrato] = useState('');
-  const [loadingContrato, setLoadingContrato] = useState(false);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
   // Contrato de prueba: prefijo PRB- en el número, no afecta el consecutivo
   // real, queda visible con badge naranja y se descarta de informes.
   const [esContratoPrueba, setEsContratoPrueba] = useState(false);
   // Confirmación al salir del paso 2 si el titular NO está marcado como beneficiario
-  const [showBenefConfirm, setShowBenefConfirm] = useState(false);
+  // ── Verificación de documentos (titular en el paso 2, beneficiarios al crear) ──
+  // Consulta en qué OTROS contratos vivos aparece cada documento y obliga a
+  // resolver los conflictos ANTES de seguir. El número de contrato se asigna
+  // en el servidor DESPUÉS de esta verificación.
+  const [verif, setVerif] = useState<VerifState | null>(null);
+  const [verifLoading, setVerifLoading] = useState(false);
+  const [anulandoId, setAnulandoId] = useState<string | null>(null);
+  const [traerDatosMsg, setTraerDatosMsg] = useState('');
   // Confirmación al CREAR si nadie tomará clases (sin beneficiarios y titular no beneficiario)
   const [showNoBenefConfirm, setShowNoBenefConfirm] = useState(false);
   // Protección de historial: beneficiarios (o el titular-beneficiario) del contrato
@@ -227,7 +287,7 @@ function CrearContratoContent() {
       }
       if (draft.senceUsuario !== undefined) setSenceUsuario(draft.senceUsuario)
       if (draft.currentStep) setCurrentStep(draft.currentStep)
-      if (draft.contrato) setContrato(draft.contrato)
+      // draft.contrato se ignora: el número lo asigna el servidor al crear.
       if (draft.esContratoPrueba !== undefined) setEsContratoPrueba(draft.esContratoPrueba)
       delete (window as any).__contractDraft
     }
@@ -242,31 +302,10 @@ function CrearContratoContent() {
     draftRestored.current = true
   }
 
-  // Auto-generate contract number when plataforma or "es prueba" change.
-  // Si es prueba → genera PRB-NNNNN-YY (consecutivo independiente).
-  // Si no → consecutivo normal del país (sin contaminarse por los PRB-).
-  const fetchNextContractNumber = useCallback(async (plataforma: string, prueba: boolean) => {
-    if (!prueba && !plataforma) { setContrato(''); return; }
-    setLoadingContrato(true);
-    try {
-      const qs = prueba
-        ? `prueba=true`
-        : `plataforma=${encodeURIComponent(plataforma)}`;
-      const res = await fetch(`/api/postgres/contracts/next-number?${qs}`);
-      if (res.ok) {
-        const data = await res.json();
-        setContrato(data.contrato);
-      }
-    } catch (err) {
-      console.error('Error fetching contract number:', err);
-    } finally {
-      setLoadingContrato(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchNextContractNumber(titular.plataforma, esContratoPrueba);
-  }, [titular.plataforma, esContratoPrueba, fetchNextContractNumber]);
+  // El NÚMERO DE CONTRATO ya no se pre-asigna en el formulario: lo asigna el
+  // servidor al crear (después de las verificaciones), dentro de una transacción
+  // con bloqueo por país/año — así no se muestra un número que pueda quedar
+  // desactualizado ni se repiten números entre comerciales simultáneos.
 
   // Get phone prefix based on selected country (without '+')
   const getPhonePrefix = () => {
@@ -413,7 +452,6 @@ function CrearContratoContent() {
           return titular.primerNombre !== '' &&
                  titular.numeroId !== '' &&
                  titular.plataforma !== '' &&
-                 contrato !== '' &&
                  titular.replegal.trim() !== '' &&
                  titular.replegalcargo.trim() !== '' &&
                  titular.replegalid.trim() !== '' &&
@@ -423,7 +461,6 @@ function CrearContratoContent() {
                titular.primerApellido !== '' &&
                titular.numeroId !== '' &&
                titular.plataforma !== '' &&
-               contrato !== '' &&
                titularBenefRespuesta !== null; // SÍ/NO obligatorio
       case 3:
         if (esEmpresa) {
@@ -492,21 +529,140 @@ function CrearContratoContent() {
 
     setError('');
 
-    // Guard paso 2: verificación del titular según la respuesta SÍ/NO (se muestra
-    // en ambos casos para que el comercial confirme). No aplica a Empresa (una
-    // empresa nunca toma el programa).
-    if (currentStep === 2 && !esEmpresa) {
-      setShowBenefConfirm(true);
+    // Guard paso 2: VERIFICACIÓN DEL TITULAR (consulta la BD con su documento y
+    // la respuesta SÍ/NO). Aplica también a Empresa (como titular).
+    if (currentStep === 2) {
+      abrirVerificacionTitular();
       return;
     }
 
     advanceStep();
   };
 
-  // Confirmación del modal: continuar con la respuesta elegida (SÍ o NO).
-  const confirmTitularNoBeneficiario = () => {
-    setShowBenefConfirm(false);
-    advanceStep();
+  const fetchVerificacion = async (numeroId: string, traerDatos = false) => {
+    const qs = new URLSearchParams({ numeroId });
+    if (traerDatos) qs.set('traerDatos', '1');
+    const res = await fetch(`/api/postgres/contracts/verificar-documento?${qs}`, { cache: 'no-store' });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json.success) throw new Error(json.error || `Error ${res.status} al verificar`);
+    return json as { registros: RegDoc[]; datosPrevios?: any; previos?: VerifState['previos']; academica?: VerifState['academica'] };
+  };
+
+  const abrirVerificacionTitular = async () => {
+    setVerifLoading(true);
+    setTraerDatosMsg('');
+    try {
+      const r = await fetchVerificacion(titular.numeroId, true);
+      setVerif({
+        kind: 'titular',
+        items: [{ quien: nombreCompletoTitular(), numeroId: titular.numeroId, registros: r.registros }],
+        datosPrevios: r.datosPrevios || null,
+        previos: r.previos || [],
+        academica: r.academica || null,
+      });
+    } catch (e: any) {
+      setVerif({ kind: 'titular', items: [], error: e?.message || 'No se pudo verificar' });
+    } finally {
+      setVerifLoading(false);
+    }
+  };
+
+  const nombreCompletoTitular = () =>
+    [titular.primerNombre, titular.segundoNombre, titular.primerApellido, titular.segundoApellido].filter(Boolean).join(' ');
+
+  // Rol con que se evalúa cada documento: el titular según SÍ/NO; los beneficiarios como beneficiarios.
+  const rolDeItem = (kind: VerifState['kind']): RolVerif =>
+    kind === 'beneficiarios' ? 'BENEFICIARIO' : (titularEsBeneficiario && !esEmpresa ? 'TITULAR_SI' : 'TITULAR_NO');
+
+  // Re-consulta un ítem (tras anular algo) para refrescar el modal.
+  const refrescarItem = async (idx: number) => {
+    if (!verif) return;
+    const item = verif.items[idx];
+    const r = await fetchVerificacion(item.numeroId);
+    setVerif(v => v ? { ...v, items: v.items.map((it, i) => i === idx ? { ...it, registros: r.registros } : it) } : v);
+  };
+
+  const anularAnterior = async (idx: number, reg: RegDoc) => {
+    const alcance = reg.tipoUsuario === 'TITULAR' ? 'CONTRATO' : 'REGISTRO';
+    const txt = alcance === 'CONTRATO'
+      ? `Se ANULARÁ el contrato ${reg.contrato} completo (titular y beneficiarios). Quedará como "Contrato nulo" y se depurará en la limpieza semanal. ¿Continuar?`
+      : `Se ANULARÁ el registro de ${reg.nombre} en el contrato ${reg.contrato}. Quedará como "Contrato nulo" y se depurará en la limpieza semanal. ¿Continuar?`;
+    if (!window.confirm(txt)) return;
+    setAnulandoId(reg.personId);
+    try {
+      const res = await fetch('/api/postgres/contracts/anular-registro', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ personId: reg.personId, alcance }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) throw new Error(json.error || `Error ${res.status}`);
+      await refrescarItem(idx);
+    } catch (e: any) {
+      alert(`No se pudo anular: ${e?.message || 'error'}`);
+    } finally {
+      setAnulandoId(null);
+    }
+  };
+
+  const irAlContratoAnterior = (reg: RegDoc) => {
+    if (!reg.titularId) return;
+    if (!window.confirm(`Se descartará este formulario y se abrirá el contrato ${reg.contrato} para continuar gestionándolo. ¿Continuar?`)) return;
+    try { localStorage.removeItem(DRAFT_KEY) } catch {}
+    window.location.href = `/dashboard/comercial/contrato/${reg.titularId}`;
+  };
+
+  // "Traer sus datos": completa SOLO los campos vacíos del titular con los del
+  // contrato anterior (nunca pisa lo que ya se escribió).
+  const traerDatosPrevios = () => {
+    const d = verif?.datosPrevios;
+    if (!d) return;
+    const prefijo = getPhonePrefix();
+    const sinPrefijo = (v: string) => { const s = String(v || '').replace(/\D/g, ''); return prefijo && s.startsWith(prefijo) ? s.slice(prefijo.length) : s; };
+    const fecha = (v: any) => { if (!v) return ''; const s = String(v); return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : (new Date(s).toISOString?.().slice(0, 10) || ''); };
+    const mapa: Array<[keyof typeof titular, any]> = [
+      ['segundoNombre', d.segundoNombre], ['segundoApellido', d.segundoApellido],
+      ['email', d.email], ['celular', d.celular ? sinPrefijo(d.celular) : ''], ['telefono', d.telefono],
+      ['fechaNacimiento', fecha(d.fechaNacimiento)], ['domicilio', d.domicilio], ['ciudad', d.ciudad],
+      ['genero', d.genero], ['empresa', d.empresa], ['cargo', d.cargo], ['ingresos', d.ingresos],
+      ['referenciaUno', d.referenciaUno], ['parentezcoRefUno', d.parentezcoRefUno], ['telRefUno', d.telefonoRefUno],
+      ['referenciaDos', d.referenciaDos], ['parentezcoRefDos', d.parentezcoRefDos], ['telRefDos', d.telefonoRefDos],
+    ];
+    let n = 0;
+    const nuevo: any = { ...titular };
+    for (const [k, v] of mapa) {
+      if (v !== null && v !== undefined && String(v).trim() !== '' && String(nuevo[k] ?? '').trim() === '') {
+        nuevo[k] = String(v).trim(); n++;
+      }
+    }
+    setTitular(nuevo);
+    setTraerDatosMsg(n > 0 ? `Se completaron ${n} campo(s) vacíos con los datos del contrato ${d.contrato}.` : 'No había campos vacíos por completar.');
+  };
+
+  // Verifica a los beneficiarios (paso 7) antes de la confirmación final.
+  // Devuelve true si no hay conflictos; si los hay, abre el modal y devuelve false.
+  const verificarBeneficiarios = async (lista: Beneficiario[]): Promise<boolean> => {
+    const titularNid = (titular.numeroId || '').trim().toUpperCase();
+    const aVerificar = lista.filter(b => (b.numeroId || '').trim() && (b.numeroId || '').trim().toUpperCase() !== titularNid);
+    if (!aVerificar.length) return true;
+    setVerifLoading(true);
+    try {
+      const items = await Promise.all(aVerificar.map(async b => {
+        const r = await fetchVerificacion(b.numeroId);
+        return { quien: `${b.primerNombre || ''} ${b.primerApellido || ''}`.trim() || b.numeroId, numeroId: b.numeroId, registros: r.registros };
+      }));
+      const conConflicto = items.filter(it => {
+        const c = clasificar(it.registros, 'BENEFICIARIO');
+        return c.bloqueos.length || c.porResolver.length;
+      });
+      if (!conConflicto.length) return true;
+      setVerif({ kind: 'beneficiarios', items: conConflicto, lista });
+      return false;
+    } catch (e: any) {
+      setVerif({ kind: 'beneficiarios', items: [], lista, error: e?.message || 'No se pudo verificar' });
+      return false;
+    } finally {
+      setVerifLoading(false);
+    }
   };
 
   // Handle previous button
@@ -559,10 +715,16 @@ function CrearContratoContent() {
   };
 
   // Continúa al flujo normal de confirmación con la lista dada de beneficiarios.
-  const continuarConfirmacion = (lista: Beneficiario[]) => {
+  const continuarConfirmacion = async (lista: Beneficiario[]) => {
     // Correos duplicados (titular o entre beneficiarios) → bloquea.
     const errCorreo = validarCorreosBeneficiarios(lista);
     if (errCorreo) { setError(errCorreo); return; }
+    // Verificación de beneficiarios contra otros contratos vivos (bloquea si hay conflictos).
+    if (!(await verificarBeneficiarios(lista))) return;
+    abrirConfirmacionCreacion(lista);
+  };
+
+  const abrirConfirmacionCreacion = (lista: Beneficiario[]) => {
     if (lista.length === 0 && !titularEsBeneficiario) {
       setShowNoBenefConfirm(true);
     } else {
@@ -776,7 +938,7 @@ function CrearContratoContent() {
         {/* Banner persistente cuando está marcado, para que el comercial no lo olvide */}
         {esContratoPrueba && (
           <div className="mb-4 bg-orange-50 border-l-4 border-orange-500 rounded-lg p-3 text-sm text-orange-800">
-            <strong>Modo prueba activo.</strong> Este contrato se creará con número <code className="px-1 py-0.5 bg-orange-100 rounded text-orange-900">{contrato || 'PRB-...'}</code>, NO aparecerá en informes y podrá ser purgado en <em>Mantenimiento › Usuarios › Contratos Prueba</em>. Desmarca el checkbox si es real.
+            <strong>Modo prueba activo.</strong> Este contrato se creará con número <code className="px-1 py-0.5 bg-orange-100 rounded text-orange-900">PRB-NNNNN-YY</code> (el número se asigna al crear), NO aparecerá en informes y podrá ser purgado en <em>Mantenimiento › Usuarios › Contratos Prueba</em>. Desmarca el checkbox si es real.
           </div>
         )}
 
@@ -858,7 +1020,7 @@ function CrearContratoContent() {
               Titular: <span className="font-bold text-gray-900">{nombreTitular || '—'}</span>
             </div>
             <div className="text-sm text-gray-600">
-              Contrato: <span className="font-bold text-gray-900">{contrato || '—'}</span>
+              Contrato: <span className="font-bold text-gray-900">{contrato || 'se asigna al crear'}</span>
             </div>
             {titular.plataforma && (
               <div className="text-sm text-gray-600">
@@ -1125,22 +1287,10 @@ function CrearContratoContent() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Número de contrato *
+                    Número de contrato
                   </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={contrato}
-                      onChange={(e) => setContrato(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                      placeholder={loadingContrato ? 'Generando...' : 'Seleccione plataforma para generar'}
-                    />
-                    {loadingContrato && (
-                      <svg className="animate-spin h-5 w-5 text-gray-400 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                      </svg>
-                    )}
+                  <div className="w-full px-3 py-2 border border-dashed border-gray-300 rounded-md bg-gray-50 text-sm text-gray-500 italic">
+                    Se asignará al crear el contrato (después de la verificación)
                   </div>
                 </div>
                 {/* Representante legal — solo modo Empresa (el Tipo de Persona ahora es el switch del encabezado) */}
@@ -1987,78 +2137,191 @@ function CrearContratoContent() {
         </div>
         </div>
 
-        {/* Modal: verificación del titular según la respuesta SÍ/NO (guard del paso 2) */}
-        {showBenefConfirm && titularBenefRespuesta === 'SI' && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
-              <h3 className="text-lg font-bold text-gray-900">✅ Verifica el titular</h3>
-              <p className="text-sm text-gray-700">
-                Marcaste que el titular <strong>SÍ será beneficiario</strong>:{' '}
-                <strong>{[titular.primerNombre, titular.segundoNombre, titular.primerApellido, titular.segundoApellido].filter(Boolean).join(' ')}</strong>
-                {' '}(documento <strong>{titular.numeroId}</strong>) <strong>tomará clases</strong> y se creará
-                también como beneficiario del contrato. Verifica que el nombre y el documento sean correctos.
-              </p>
-              <div className="flex flex-col gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => { setShowBenefConfirm(false); advanceStep(); }}
-                  className="w-full px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
-                >
-                  Confirmar y seguir
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { elegirTitularBenef('NO'); setShowBenefConfirm(false); }}
-                  className="w-full px-4 py-2 text-sm font-medium text-gray-800 bg-gray-100 rounded-lg hover:bg-gray-200"
-                >
-                  Cambiar a NO
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowBenefConfirm(false)}
-                  className="w-full px-2 py-1 text-xs text-gray-400 hover:text-gray-600"
-                >
-                  Cancelar
-                </button>
-              </div>
+        {/* Overlay mientras se verifica (paso 2 o al crear) */}
+        {verifLoading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+            <div className="bg-white rounded-xl shadow-xl px-6 py-4 text-sm text-gray-700 flex items-center gap-3">
+              <span className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full" />
+              Verificando documento(s) en otros contratos…
             </div>
           </div>
         )}
-        {showBenefConfirm && titularBenefRespuesta !== 'SI' && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
-              <h3 className="text-lg font-bold text-gray-900">⚠️ El titular no tomará el programa</h3>
-              <p className="text-sm text-gray-700">
-                Marcaste que el titular <strong>NO será beneficiario</strong>, por lo que
-                <strong> no tomará clases ni el programa</strong> — solo quedará como responsable del
-                contrato. ¿Qué deseas hacer?
-              </p>
-              <div className="flex flex-col gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => { elegirTitularBenef('SI'); setShowBenefConfirm(false); advanceStep(); }}
-                  className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-                >
-                  Cambiar a SÍ (será beneficiario)
-                </button>
-                <button
-                  type="button"
-                  onClick={confirmTitularNoBeneficiario}
-                  className="w-full px-4 py-2 text-sm font-medium text-gray-800 bg-gray-100 rounded-lg hover:bg-gray-200"
-                >
-                  Confirmar NO y seguir
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowBenefConfirm(false)}
-                  className="w-full px-2 py-1 text-xs text-gray-400 hover:text-gray-600"
-                >
-                  Cancelar
-                </button>
+
+        {/* Modal: VERIFICACIÓN (titular en el paso 2 · beneficiarios al crear) */}
+        {verif && (() => {
+          const rol = rolDeItem(verif.kind)
+          const clasif = verif.items.map(it => clasificar(it.registros, rol))
+          const hayBloqueo = clasif.some(c => c.bloqueos.length > 0)
+          const hayPendiente = clasif.some(c => c.porResolver.length > 0)
+          const puedeContinuar = !verif.error && !hayBloqueo && !hayPendiente
+          const sinHallazgos = !verif.error && clasif.every(c => !c.bloqueos.length && !c.porResolver.length && !c.info.length)
+          const esTitular = verif.kind === 'titular'
+          const siBenef = titularEsBeneficiario && !esEmpresa
+          const continuar = () => {
+            const v = verif
+            setVerif(null)
+            setTraerDatosMsg('')
+            if (v.kind === 'titular') advanceStep()
+            else abrirConfirmacionCreacion((v.lista || []) as Beneficiario[])
+          }
+          const firmaTxt = (r: RegDoc) => SITUACION_TXT[r.situacion]
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+              <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-4">
+                <h3 className="text-lg font-bold text-gray-900">
+                  {esTitular ? '🔎 Verificación del titular' : '🔎 Verificación de beneficiarios'}
+                </h3>
+
+                {esTitular && (
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+                    <div>
+                      <strong>{nombreCompletoTitular() || '—'}</strong> · documento <strong>{titular.numeroId}</strong>
+                    </div>
+                    {esEmpresa ? (
+                      <div className="mt-1">Titular <strong>Empresa</strong> (no toma el programa).</div>
+                    ) : (
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        <span>¿Será beneficiario?</span>
+                        <span className={`px-2 py-0.5 rounded font-bold text-white ${siBenef ? 'bg-green-600' : 'bg-gray-700'}`}>{siBenef ? 'SÍ' : 'NO'}</span>
+                        <span className="text-gray-500">{siBenef ? 'tomará clases y se crea también como beneficiario' : 'solo será responsable del contrato'}</span>
+                        <button type="button" onClick={() => elegirTitularBenef(siBenef ? 'NO' : 'SI')}
+                          className="ml-auto text-xs underline text-blue-700">Cambiar a {siBenef ? 'NO' : 'SÍ'}</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {verif.error && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                    No se pudo completar la verificación: {verif.error}.
+                    <button type="button" onClick={() => (esTitular ? abrirVerificacionTitular() : continuarConfirmacion((verif.lista || []) as Beneficiario[]))}
+                      className="ml-2 underline">Reintentar</button>
+                  </div>
+                )}
+
+                {sinHallazgos && (
+                  <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                    ✓ Sin coincidencias en otros contratos activos.
+                  </div>
+                )}
+
+                {verif.items.map((it, idx) => {
+                  const c = clasif[idx]
+                  if (!c.bloqueos.length && !c.porResolver.length && !c.info.length) return null
+                  return (
+                    <div key={it.numeroId} className="space-y-2">
+                      {!esTitular && <div className="text-sm font-semibold text-gray-800">{it.quien} · {it.numeroId}</div>}
+
+                      {c.bloqueos.map(r => (
+                        <div key={r.personId} className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-900">
+                          <div className="font-bold">⛔ Una persona no puede ser beneficiaria en dos contratos</div>
+                          <div className="mt-1">Ya es <strong>beneficiaria</strong> del contrato <strong>{r.contrato}</strong> ({firmaTxt(r)}).</div>
+                          <div className="mt-2 text-xs">
+                            {esTitular
+                              ? <>Debe <strong>desmarcarlo</strong>: cambie la respuesta a <strong>NO</strong> o cancele.</>
+                              : <>Quite o corrija este beneficiario en el paso <strong>Beneficiarios</strong> antes de crear el contrato.</>}
+                          </div>
+                          {esTitular && (
+                            <button type="button" onClick={() => elegirTitularBenef('NO')}
+                              className="mt-2 px-3 py-1.5 text-xs font-semibold rounded bg-red-600 text-white hover:bg-red-700">Cambiar a NO</button>
+                          )}
+                        </div>
+                      ))}
+
+                      {c.porResolver.map(r => {
+                        const esContratoTitular = r.tipoUsuario === 'TITULAR'
+                        const bloqueadoPorPagos = esContratoTitular && r.pagosValidados > 0
+                        return (
+                          <div key={r.personId} className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                            <div className="font-bold">
+                              ⚠️ {esContratoTitular
+                                ? `Existe un contrato previo sin gestionar (${firmaTxt(r)})`
+                                : 'Una persona no puede ser beneficiaria en dos contratos'}
+                            </div>
+                            <div className="mt-1">
+                              {esContratoTitular
+                                ? <>Este documento es <strong>titular</strong> del contrato <strong>{r.contrato}</strong> ({firmaTxt(r)}).</>
+                                : <>Ya es <strong>beneficiaria</strong> del contrato <strong>{r.contrato}</strong> ({firmaTxt(r)}).</>}
+                              {' '}Debe definir uno de los dos: continuar gestionando el contrato anterior, o anularlo y continuar con este.
+                            </div>
+                            {bloqueadoPorPagos && (
+                              <div className="mt-1 text-xs text-red-700">
+                                El contrato {r.contrato} tiene <strong>{r.pagosValidados} pago(s) validado(s)</strong>: no se puede anular desde aquí; gestiónelo desde su ficha.
+                              </div>
+                            )}
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <button type="button" onClick={() => irAlContratoAnterior(r)} disabled={!r.titularId}
+                                className="px-3 py-1.5 text-xs font-semibold rounded border border-amber-400 bg-white text-amber-900 hover:bg-amber-100 disabled:opacity-50">
+                                Continuar con el contrato {r.contrato}
+                              </button>
+                              <button type="button" onClick={() => anularAnterior(idx, r)} disabled={bloqueadoPorPagos || anulandoId === r.personId}
+                                className="px-3 py-1.5 text-xs font-semibold rounded bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                {anulandoId === r.personId ? 'Anulando…' : esContratoTitular ? `Anular el contrato ${r.contrato} y continuar` : `Anular su registro en ${r.contrato} y continuar`}
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+
+                      {c.info.map(r => (
+                        <div key={r.personId} className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+                          <div>
+                            ℹ️ {r.tipoUsuario === 'TITULAR'
+                              ? <>Ya es <strong>titular</strong> de otro contrato: <strong>{r.contrato}</strong> ({firmaTxt(r)}). Puede continuar.</>
+                              : <>Es <strong>beneficiaria</strong> del contrato <strong>{r.contrato}</strong> ({firmaTxt(r)}). Como aquí solo será titular, puede continuar.</>}
+                          </div>
+                          {esTitular && r.tipoUsuario === 'TITULAR' && verif.datosPrevios && (
+                            <button type="button" onClick={traerDatosPrevios}
+                              className="mt-2 px-3 py-1.5 text-xs font-semibold rounded bg-blue-600 text-white hover:bg-blue-700">
+                              Traer sus datos
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })}
+
+                {/* Antecedentes del titular — solo informativos, no bloquean */}
+                {esTitular && ((verif.previos?.length ?? 0) > 0 || verif.academica) && (
+                  <div className="rounded-lg border border-gray-300 bg-gray-50 p-3 text-sm text-gray-800 space-y-1.5">
+                    <div className="font-semibold text-gray-700">ℹ️ Antecedentes (informativo, no impide continuar)</div>
+                    {(verif.previos || []).map(p => (
+                      <div key={`${p.contrato}-${p.tipoUsuario}`}>
+                        Tuvo el contrato <strong>{p.contrato}</strong> ({p.estado}) como {p.tipoUsuario.toLowerCase()}.
+                        {p.pagosValidados > 0 && (
+                          <span className="text-red-700"> Tiene <strong>{p.pagosValidados} pago(s) validado(s)</strong>: el contrato nuevo <strong>no</strong> los hereda — coordine con Recaudos su aplicación o devolución.</span>
+                        )}
+                      </div>
+                    ))}
+                    {verif.academica && (
+                      <div>
+                        Ya tomó clases: ficha académica en <strong>{[verif.academica.nivel, verif.academica.step].filter(Boolean).join(' · ') || '—'}</strong>
+                        {verif.academica.clases > 0 && <> ({verif.academica.clases} clase(s) registradas)</>}.
+                        {' '}Si será beneficiario, al crear el contrato su historial se archivará y la ficha quedará limpia.
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {traerDatosMsg && <div className="text-xs text-blue-700">{traerDatosMsg}</div>}
+
+                {!puedeContinuar && !verif.error && (
+                  <p className="text-xs text-gray-500">Resuelva los avisos en rojo o ámbar para poder continuar.</p>
+                )}
+
+                <div className="flex justify-end gap-2 pt-1">
+                  <button type="button" onClick={() => { setVerif(null); setTraerDatosMsg('') }}
+                    className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</button>
+                  <button type="button" onClick={continuar} disabled={!puedeContinuar}
+                    className="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    {esTitular ? 'Confirmar y seguir' : 'Continuar a crear el contrato'}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
 
         {/* Modal: confirmar que el contrato es para un usuario SENCE (guard del botón) */}
         {showSenceConfirm && (

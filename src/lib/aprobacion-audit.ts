@@ -17,6 +17,7 @@ export type OrigenAprobacion =
   | 'APROBAR_CASCADA'        // beneficiarios aprobados al aprobar el titular, o titular auto-aprobado
   | 'PANTALLA_APROBACION'    // PUT /approvals/[id] (/dashboard/aprobacion)
   | 'WIX_LEGACY'             // POST /wix/updateTitularEstado
+  | 'VERIFICACION_CREAR_CONTRATO' // anulación del registro/contrato anterior al crear uno nuevo
   | 'SISTEMA';               // procesos automáticos
 
 export interface CambioAprobacion {

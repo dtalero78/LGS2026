@@ -1936,6 +1936,13 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                   que el contrato no tenga OnHold o extensión en curso antes de confirmar.
                 </div>
               )}
+              {['Contrato nulo', 'Devuelto', 'Rechazado'].includes(pendingEstado) && (
+                <div className="mt-3 p-3 bg-gray-100 border border-gray-300 rounded text-xs text-gray-800">
+                  <strong>🗑️ Depuración semanal:</strong> los contratos anulados (<em>{pendingEstado}</em>) se
+                  <strong> borran definitivamente cada semana</strong> desde <em>Mantenimiento › Contratos › Limpieza de Anulados</em>.
+                  Queda solo un registro de referencia para consulta. Si el contrato podría reactivarse, no lo anule.
+                </div>
+              )}
               {originalEstado === 'Aprobado' && (
                 <div className="mt-4 space-y-3">
                   <div>

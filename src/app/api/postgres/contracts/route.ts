@@ -1,6 +1,6 @@
 import 'server-only';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
-import { query } from '@/lib/postgres';
+import { query, withTransaction } from '@/lib/postgres';
 import { ValidationError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 import { syncFinancieroSaldo } from '@/services/pagos-titulares.service';
@@ -83,12 +83,14 @@ const CODIGOS_PAIS: Record<string, string> = {
  * - esPrueba=true  → `PRB-NNNNN-YY` (consecutivo INDEPENDIENTE para pruebas,
  *                    NO contamina el secuencial real, plataforma ignorada para el número).
  */
-async function generateContractNumber(plataforma: string, esPrueba: boolean): Promise<string> {
+type SqlRunner = (sql: string, params?: any[]) => Promise<{ rows: any[] }>;
+
+async function generateContractNumber(plataforma: string, esPrueba: boolean, run: SqlRunner = query): Promise<string> {
   const anoActual = new Date().getFullYear().toString().slice(-2);
 
   if (esPrueba) {
     const patron = `PRB-%-${anoActual}`;
-    const result = await query(
+    const result = await run(
       `SELECT MAX(CAST(SPLIT_PART("contrato", '-', 2) AS INTEGER)) AS max_num
        FROM "PEOPLE"
        WHERE "contrato" LIKE $1
@@ -105,7 +107,7 @@ async function generateContractNumber(plataforma: string, esPrueba: boolean): Pr
 
   const patron = `${codigoPais}-%-${anoActual}`;
 
-  const result = await query(
+  const result = await run(
     `SELECT MAX(CAST(SPLIT_PART("contrato", '-', 2) AS INTEGER)) AS max_num
      FROM "PEOPLE"
      WHERE "contrato" LIKE $1
@@ -167,10 +169,6 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
     if (anular.length) await anularBeneficiariosViejos(anular.map(r => r._id));
   }
 
-  // Generate contract number server-side to avoid race conditions.
-  // Si es prueba → PRB-NNNNN-YY (consecutivo independiente, no afecta el real).
-  const contrato = await generateContractNumber(titular.plataforma, esPrueba);
-
   // Calculate finalContrato = today + vigencia months
   const vigenciaMeses = parseInt(financial?.vigencia || '0', 10);
   const fechaInicio = new Date();
@@ -180,11 +178,19 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   }
   const finalContrato = vigenciaMeses > 0 ? fechaFinal.toISOString().split('T')[0] : null;
 
-  const created: any = { contrato, titular: null, beneficiarios: [] };
-
-  // 1. Create TITULAR in PEOPLE
+  // 1. Número de contrato + TITULAR en UNA transacción con bloqueo por país/año.
+  // El número se asigna AQUÍ (después de las verificaciones), nunca en el
+  // formulario. El advisory lock serializa a dos creaciones simultáneas del mismo
+  // país: la segunda espera, ve el MAX ya actualizado y toma el siguiente — así
+  // no se repiten números. pg_advisory_xact_lock se libera solo al COMMIT/ROLLBACK
+  // (compatible con PgBouncer en modo transaction).
+  // Si es prueba → PRB-NNNNN-YY (consecutivo independiente, no afecta el real).
   const titularId = ids.person();
-  const titularResult = await query(
+  const lockKey = `contrato-seq:${esPrueba ? 'PRB' : (CODIGOS_PAIS[titular.plataforma] ?? titular.plataforma)}:${new Date().getFullYear()}`;
+  const { contrato, titularResult } = await withTransaction(async (client) => {
+  await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [lockKey]);
+  const contrato = await generateContractNumber(titular.plataforma, esPrueba, (sql, params) => client.query(sql, params));
+  const titularResult = await client.query(
     `INSERT INTO "PEOPLE" ("_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
       "email", "celular", "telefono", "fechaNacimiento", "domicilio", "ciudad",
       "plataforma", "ingresos", "empresa", "cargo", "genero",
@@ -203,7 +209,10 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
      titular.replegal || null, titular.replegalid || null, titular.replegalcel || null,
      titular.rubro || null, titular.replegalcargo || null]  // $29 asesorCreadorContrato, $30 sence, $31 tipoPersona, $32-34 rep. legal, $35 rubro, $36 cargo del representante
   );
-  created.titular = titularResult.rows[0];
+  return { contrato, titularResult };
+  });
+
+  const created: any = { contrato, titular: titularResult.rows[0], beneficiarios: [] };
 
   // 2. Build beneficiarios list (include titular if titularEsBeneficiario)
   const allBeneficiarios: any[] = [];
