@@ -58,8 +58,9 @@ export default function CertificadosModal({ baseUrl, onClose }: { baseUrl: strin
         </div>
         <p className="text-sm text-gray-600">
           Certificado de finalización de nivel. Solo se habilitan los niveles ya aprobados
-          (Beginner = Jump 15, Practical = Jump 30, Functional = Jump 45). El PDF sale
-          protegido con el <strong>número de documento</strong>.
+          (Beginner: Jump 15, Practical: Jump 30, Functional: Jump 45). El certificado se
+          expide únicamente si se encuentra al día en los pagos. El PDF está protegido con el{' '}
+          <strong>número de documento</strong>.
         </p>
 
         {loading ? (
