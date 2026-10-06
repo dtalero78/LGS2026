@@ -90,6 +90,20 @@ async function getGenerados(studentId: string): Promise<Map<NivelCertificado, st
   return m;
 }
 
+// Historial de CADA generación (estudiante y admin) → informe Académica › Certificados.
+// Tabla creada por scripts/create-certificados-log.js. Best-effort: nunca rompe la descarga.
+async function registrarLog(studentId: string, numeroId: string, nivel: NivelCertificado, nombre: string,
+                            origen: 'ESTUDIANTE' | 'ADMIN', generadoPor: string | null): Promise<void> {
+  try {
+    await query(
+      `INSERT INTO "CERTIFICADOS_LOG" ("_id","studentId","numeroId","nivel","nombre","origen","generadoPor","generadoEn")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())`,
+      [generateId('clog'), studentId, numeroId || null, nivel, nombre || null, origen, generadoPor]);
+  } catch (e: any) {
+    console.error('[certificado] no se pudo registrar CERTIFICADOS_LOG:', e?.message || e);
+  }
+}
+
 async function marcarGenerado(studentId: string, numeroId: string, nivel: NivelCertificado, nombre: string): Promise<void> {
   await ensureTablaGenerados();
   await query(
@@ -164,7 +178,7 @@ export const certificadoService = {
    * registra que ya se generó. Sin `soloUna` (panel admin): sin límite, no
    * registra — el staff puede regenerar cuantas veces necesite.
    */
-  async generar(id: string, nivel: NivelCertificado, opts?: { soloUna?: boolean }): Promise<{ pdf: Buffer; nombre: string; numeroId: string }> {
+  async generar(id: string, nivel: NivelCertificado, opts?: { soloUna?: boolean; actor?: string | null }): Promise<{ pdf: Buffer; nombre: string; numeroId: string }> {
     if (!NIVELES_CERT.includes(nivel)) throw new ValidationError('Nivel inválido');
     const info = await loadInfo(id);
     const n = info.niveles[nivel];
@@ -183,6 +197,7 @@ export const certificadoService = {
     }
     const pdf = await buildCertificadoPdf({ nivel, nombre: info.nombre, horas: HORAS, fecha: n.fecha, password: info.numeroId });
     if (opts?.soloUna) await marcarGenerado(info.academicaId, info.numeroId, nivel, info.nombre);
+    await registrarLog(info.academicaId, info.numeroId, nivel, info.nombre, opts?.soloUna ? 'ESTUDIANTE' : 'ADMIN', opts?.actor ?? null);
     return { pdf, nombre: info.nombre, numeroId: info.numeroId };
   },
 };

@@ -22,7 +22,7 @@ export const GET = handlerWithAuth(async (req, { params }, session) => {
   const id = params.id as string;
   const nivel = new URL(req.url).searchParams.get('nivel') as NivelCertificado | null;
   if (nivel) {
-    const { pdf, nombre } = await certificadoService.generar(id, nivel);
+    const { pdf, nombre } = await certificadoService.generar(id, nivel, { actor: (session?.user as any)?.email ?? null });
     const fname = `certificado-${nivel}-${(nombre || 'lgs').replace(/[^A-Za-z0-9]+/g, '-')}.pdf`;
     return new NextResponse(new Uint8Array(pdf), {
       status: 200,

@@ -143,6 +143,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
           { name: 'Conciliación Steps', href: '/dashboard/informes/academica/conciliacion-steps', newTab: true },
           { name: 'Por Vencer', href: '/dashboard/informes/academica/por-vencer', newTab: true },
           { name: 'X Niveles', href: '/dashboard/informes/academica/x-niveles', newTab: true },
+          { name: 'Certificados', href: '/dashboard/informes/academica/certificados', newTab: true },
           { name: 'Usuarios', href: '/dashboard/informes/usuarios', newTab: true },
           { name: 'InfoAcademic User', href: '/dashboard/informes/infoacademic-user', newTab: true },
         ]
@@ -323,6 +324,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/dashboard/informes/academica/horas-advisor': [InformesPermission.ACAD_HORAS_ADVISOR],
     '/dashboard/informes/academica/hold-vigencias': [InformesPermission.ACAD_HOLD_VIGENCIAS],
     '/dashboard/informes/academica/x-niveles': [InformesPermission.ACAD_X_NIVELES],
+    '/dashboard/informes/academica/certificados': [InformesPermission.ACAD_CERTIFICADOS],
     '/dashboard/informes/academica/conciliacion-steps': [InformesPermission.ACAD_CONCILIACION_STEPS],
     '/dashboard/informes/academica/por-vencer': [InformesPermission.ACAD_POR_VENCER],
     '/dashboard/informes/usuarios':           [InformesPermission.USUARIOS],
