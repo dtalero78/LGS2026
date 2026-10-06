@@ -80,6 +80,8 @@ export default function KidsBeneficiarioModal({
   const [campanias, setCampanias] = useState<Campania[]>([])
   const [catalogConfigured, setCatalogConfigured] = useState(false)
   const [catalogLoading, setCatalogLoading] = useState(false)
+  // Error real de KIDS (integración configurada pero la consulta falló). NO es "no configurado".
+  const [catalogError, setCatalogError] = useState<string | null>(null)
 
   useEffect(() => {
     if (open) {
@@ -87,13 +89,23 @@ export default function KidsBeneficiarioModal({
       setKids({ ...(initial?.kidsData || {}) })
       setError(null)
       setCatalogLoading(true)
+      setCatalogError(null)
       fetch('/api/postgres/kids-intake/availability')
         .then(r => r.json())
         .then(d => {
+          if (d?.success === false) {
+            // Error de LGS (sesión, servidor): no se puede saber si KIDS está conectado →
+            // se trata como error, nunca como "captura provisional".
+            setCatalogConfigured(true)
+            setCatalogError(d.error || 'No se pudo consultar el catálogo de KIDS2026')
+            setCampanias([])
+            return
+          }
           setCatalogConfigured(!!d.configured)
+          setCatalogError(d.error || null)
           setCampanias(Array.isArray(d.campanias) ? d.campanias : [])
         })
-        .catch(() => { setCatalogConfigured(false); setCampanias([]) })
+        .catch(() => { setCatalogConfigured(true); setCatalogError('No se pudo consultar el catálogo de KIDS2026 (sin conexión)'); setCampanias([]) })
         .finally(() => setCatalogLoading(false))
     }
   }, [open, initial])
@@ -108,15 +120,22 @@ export default function KidsBeneficiarioModal({
   // grupo 02/resto = "CO". El contrato de Chile ve solo salones "CL"; cualquier
   // otro país (Colombia/Ecuador/Perú) ve solo los "CO".
   const grupoPaisContrato = plataformaToCountryCode(plataforma) === 'CL' ? 'CL' : 'CO'
-  const campaniaSel = campanias.find(c => c.id === kids.campaignId)
-  const cursosDeCampania = campaniaSel?.cursos ?? []
-  const cursoSel = cursosDeCampania.find(c => c.tipo === kids.tipoCurso)
   // Fallback: si el salón no trae `pais` (KIDS aún sin desplegar el campo) se muestra,
   // para no dejar el selector vacío durante la transición.
-  const salonesDeCurso = (cursoSel?.salones ?? []).filter(s => !s.pais || s.pais === grupoPaisContrato)
+  const salonDelPais = (s: Salon) => !s.pais || s.pais === grupoPaisContrato
+  // Solo se ofrecen campañas (y cursos) que tengan AL MENOS un salón con cupo del
+  // país del contrato: una campaña en matrícula sin salones para este país no
+  // sirve para inscribir y antes aparecía igual (selector de cursos vacío).
+  const campaniasUtiles = campanias
+    .map(c => ({ ...c, cursos: c.cursos.map(cu => ({ ...cu, salones: cu.salones.filter(salonDelPais) })).filter(cu => cu.salones.length > 0) }))
+    .filter(c => c.cursos.length > 0)
+  const campaniaSel = campaniasUtiles.find(c => c.id === kids.campaignId)
+  const cursosDeCampania = campaniaSel?.cursos ?? []
+  const cursoSel = cursosDeCampania.find(c => c.tipo === kids.tipoCurso)
+  const salonesDeCurso = cursoSel?.salones ?? []
 
   const onSelectCampania = (id: string) => {
-    const c = campanias.find(x => x.id === id)
+    const c = campaniasUtiles.find(x => x.id === id)
     setKids(d => ({ ...d, campaignId: id, campaign: c?.nombre || '', tipoCurso: '', classroomId: '', salonNombre: '', horario: '' }))
   }
   const onSelectTipo = (t: string) => setKids(d => ({ ...d, tipoCurso: t, classroomId: '', salonNombre: '', horario: '' }))
@@ -151,7 +170,8 @@ export default function KidsBeneficiarioModal({
     }
     // La fecha de nacimiento del niño es obligatoria para KIDS (valida la edad).
     if (!form.fechaNacimiento?.trim()) { setError('La fecha de nacimiento es obligatoria para el proceso Kids'); return }
-    // Si el catálogo está disponible, hay que elegir un salón real.
+    // Si KIDS está conectado, hay que elegir un salón real (sin él la reserva no se envía).
+    if (catalogConfigured && catalogError) { setError(`${catalogError} No se puede inscribir el kid hasta resolverlo.`); return }
     if (catalogConfigured && !kids.classroomId) { setError('Selecciona campaña, tipo de curso y salón'); return }
     onSave({ ...form, kidsData: kids })
   }
@@ -194,14 +214,27 @@ export default function KidsBeneficiarioModal({
             <h3 className="text-xs font-bold uppercase tracking-wide text-gray-700 mb-1"><span className="text-primary-600">＋</span> Curso <span className="normal-case font-normal text-gray-400">(adicional Kids)</span></h3>
             {catalogLoading ? (
               <p className="text-xs text-gray-400 mb-3">Cargando catálogo…</p>
+            ) : catalogConfigured && catalogError ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
+                <strong>No se pudo verificar la campaña en KIDS2026.</strong> {catalogError}
+                <p className="text-xs mt-1">Sin el catálogo no se puede elegir salón y la inscripción no llegaría a KIDS. Intente de nuevo o avise a Tecnología.</p>
+              </div>
             ) : catalogConfigured ? (
               <>
-                <p className="text-xs text-gray-400 mb-3">Catálogo de KIDS2026 (campañas en matrícula con cupo).</p>
+                <p className="text-xs text-gray-400 mb-3">
+                  Catálogo de KIDS2026: campañas en matrícula con cupo en {grupoPaisContrato === 'CL' ? 'Chile' : 'este país'}.
+                </p>
+                {campaniasUtiles.length === 0 && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2 mb-3">
+                    No hay campañas en matrícula con salones disponibles para {grupoPaisContrato === 'CL' ? 'Chile' : 'este país'}
+                    {campanias.length > 0 ? ` (hay ${campanias.length} campaña(s) en matrícula, pero sin cupo para este país)` : ''}.
+                  </p>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Field label="Campaña" required>
                     <select value={kids.campaignId || ''} onChange={e => onSelectCampania(e.target.value)} className={`${inputCls} bg-white`}>
                       <option value="">— Selecciona —</option>
-                      {campanias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                      {campaniasUtiles.map(c => <option key={c.id} value={c.id}>{c.nombre}{c.inicio ? ` (${String(c.inicio).slice(0, 10)} → ${String(c.fin).slice(0, 10)})` : ''}</option>)}
                     </select>
                   </Field>
                   <Field label="Tipo de curso" required>

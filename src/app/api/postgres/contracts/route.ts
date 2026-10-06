@@ -155,6 +155,17 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
     throw new ValidationError(`tipoPlan debe ser uno de: ${VALID_TIPO_PLAN.join(', ')}`);
   }
 
+  // Kids (2026-10-06): con KIDS2026 conectado, cada beneficiario kid debe traer un
+  // salón (classroomId) elegido del catálogo; sin él la reserva no se enviaba y el
+  // kid quedaba solo en LGS. Se valida ANTES de crear nada.
+  if (!esPrueba && kidsIntake.isConfigured() && Array.isArray(beneficiarios)) {
+    const sinSalon = beneficiarios.filter((b: any) => b?.kids === true && !b?.kidsData?.classroomId);
+    if (sinSalon.length) {
+      throw new ValidationError(
+        `Falta elegir campaña, curso y salón de KIDS para: ${sinSalon.map((b: any) => `${b.primerNombre || ''} ${b.primerApellido || ''}`.trim()).join(', ')}.`);
+    }
+  }
+
   // Invariante: un documento solo puede ser BENEFICIARIO en un contrato vivo.
   // Los que serán beneficiarios en ESTE contrato: los listados + el titular si
   // titularEsBeneficiario. Si ya es beneficiario en un contrato APROBADO vivo →

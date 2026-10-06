@@ -152,7 +152,11 @@ Ejemplo: `01-10738-25`.
 - El interruptor "Kids" aparece por beneficiario **solo si el Proceso Kids está activado** en Mantenimiento.
 - Al marcarlo se registran el curso y los datos del apoderado. Si se cierra sin guardar, el beneficiario deja de ser Kids.
 - Un beneficiario Kids **no es alumno del programa de adultos**: al aprobarse **no** se le crea ficha académica ni recibe mensaje de bienvenida.
-- Su inscripción se envía al sistema Kids tanto al **crear el contrato** como al **agregar el beneficiario** desde la ficha. Hace falta haber elegido salón.
+- **Campaña, curso y salón** se eligen del catálogo del sistema Kids:
+  - solo aparecen campañas **en matrícula** que tengan salones **con cupo** para el país del contrato. Chile ve los salones de Chile; los demás países, los del grupo general;
+  - el **salón es obligatorio**: sin él no se crea el beneficiario Kids;
+  - si el catálogo no responde, el formulario muestra el error y no deja inscribir al niño, para que no quede registrado solo en LGS.
+- Su inscripción se envía al sistema Kids tanto al **crear el contrato** como al **agregar el beneficiario** desde la ficha.
 - La ficha de la persona muestra su estado real en el sistema Kids: **Cursando, Suspendido o No cursando**.
 - Si el envío falla, el beneficiario igual se crea y el error queda registrado en su inscripción.
 

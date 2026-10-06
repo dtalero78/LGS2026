@@ -33,6 +33,11 @@ export const POST = handlerWithStaffAuth(async (request) => {
   }
   assertNoEsContratoPrueba(contratoTarget, 'agregar un beneficiario/titular');
 
+  // Kids con KIDS2026 conectado: el salón es obligatorio (sin él no se envía la reserva).
+  if (body.kids === true && kidsIntake.isConfigured() && !body.kidsData?.classroomId && !/^PRB-/i.test(String(contratoTarget || ''))) {
+    throw new ValidationError('Falta elegir campaña, curso y salón de KIDS para este beneficiario.');
+  }
+
   if (body.tipoUsuario === 'BENEFICIARIO') {
     // Regla (2026-10-06): no se agrega un beneficiario si el documento ya es
     // BENEFICIARIO ACTIVO en un contrato vivo (incluido este). Un documento que
