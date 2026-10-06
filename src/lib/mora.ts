@@ -58,6 +58,9 @@ export function calcularMora(input: {
   if (!input.fechaPago) return null
   const base = new Date(input.fechaPago)
   if (isNaN(base.getTime())) return null
+  // Fechas de corte mal digitadas (ej. año 0206, 1991, 8888): sin cálculo posible.
+  const anio = base.getUTCFullYear()
+  if (anio < 2015 || anio > 2100) return null
   const numeroCuotas = Number(input.numeroCuotas) || 0
   if (numeroCuotas <= 0) return null
 

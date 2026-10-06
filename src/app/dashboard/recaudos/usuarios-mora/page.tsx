@@ -28,6 +28,8 @@ interface UsuarioMora {
   estadoContrato: 'VIGENTE' | 'ONHOLD' | 'FINALIZADO' | 'INACTIVO'
   celular: string | null
   email: string | null
+  gestorRecaudo: string | null
+  gestorNombre: string | null
   mora: Mora
   valorCuota: number | null
   valorAtrasado: number | null
@@ -136,6 +138,7 @@ export default function UsuariosMoraPage() {
   const [plataforma, setPlataforma] = useState('')
   const [estado, setEstado] = useState('')
   const [cert, setCert] = useState('')
+  const [gestor, setGestor] = useState('')
   const [page, setPage] = useState(1)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [desbloquear, setDesbloquear] = useState<UsuarioMora | null>(null)
@@ -159,15 +162,22 @@ export default function UsuariosMoraPage() {
   useEffect(() => { load() }, [])
 
   const plataformas = useMemo(() => Array.from(new Set(usuarios.map(u => u.plataforma).filter(Boolean))).sort() as string[], [usuarios])
+  // Gestores presentes en el informe (id → nombre), ordenados por nombre.
+  const gestores = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const u of usuarios) if (u.gestorRecaudo) m.set(u.gestorRecaudo, u.gestorNombre || 'Gestor sin nombre')
+    return Array.from(m.entries()).sort((a, b) => a[1].localeCompare(b[1], 'es'))
+  }, [usuarios])
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return usuarios.filter(u =>
       (!q || u.titular.toLowerCase().includes(q) || String(u.numeroId || '').toLowerCase().includes(q) || u.contrato.toLowerCase().includes(q)) &&
       (!plataforma || u.plataforma === plataforma) &&
       (!estado || u.estadoContrato === estado) &&
+      (!gestor || (gestor === '__SIN__' ? !u.gestorRecaudo : u.gestorRecaudo === gestor)) &&
       (!cert || (cert === 'DESBLOQUEADO' ? !!u.desbloqueo : !u.desbloqueo)))
-  }, [usuarios, search, plataforma, estado, cert])
-  useEffect(() => { setPage(1) }, [search, plataforma, estado, cert])
+  }, [usuarios, search, plataforma, estado, gestor, cert])
+  useEffect(() => { setPage(1) }, [search, plataforma, estado, gestor, cert])
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE))
   const pageRows = filtered.slice((page - 1) * PAGE, page * PAGE)
   const totalAtrasado = filtered.reduce((s, u) => s + (u.valorAtrasado || 0), 0)
@@ -230,6 +240,7 @@ export default function UsuariosMoraPage() {
                   { header: 'Plataforma', accessor: (u) => u.plataforma || '' },
                   { header: 'Final Contrato', accessor: (u) => fmtFecha(u.finalContrato) },
                   { header: 'Estado Contrato', accessor: (u) => ESTADO_META[u.estadoContrato].label },
+                  { header: 'Gestor de Recaudo', accessor: (u) => u.gestorNombre || 'Sin asignar' },
                   { header: 'Celular', accessor: (u) => u.celular || '' },
                   { header: 'Email', accessor: (u) => u.email || '' },
                   { header: 'Día de corte', accessor: (u) => u.mora.diaCorte },
@@ -263,12 +274,21 @@ export default function UsuariosMoraPage() {
 
           <div className="card p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
-              <div className="lg:col-span-4">
+              <div className="lg:col-span-3">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
                 <input type="text" placeholder="Nombre, documento o contrato..." value={search} onChange={(e) => setSearch(e.target.value)}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
               </div>
               <div className="lg:col-span-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Gestor de recaudo</label>
+                <select value={gestor} onChange={(e) => setGestor(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  <option value="">Todos</option>
+                  <option value="__SIN__">Sin asignar</option>
+                  {gestores.map(([id, nombre]) => <option key={id} value={id}>{nombre}</option>)}
+                </select>
+              </div>
+              <div className="lg:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Plataforma</label>
                 <select value={plataforma} onChange={(e) => setPlataforma(e.target.value)}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
@@ -276,7 +296,7 @@ export default function UsuariosMoraPage() {
                   {plataformas.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
-              <div className="lg:col-span-3">
+              <div className="lg:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Estado del contrato</label>
                 <select value={estado} onChange={(e) => setEstado(e.target.value)}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
@@ -327,6 +347,7 @@ export default function UsuariosMoraPage() {
                     <th className="px-3 py-3">Contrato</th>
                     <th className="px-3 py-3">Final contrato</th>
                     <th className="px-3 py-3">Estado</th>
+                    <th className="px-3 py-3">Gestor</th>
                     <th className="px-3 py-3 text-center">Cuotas atrasadas</th>
                     <th className="px-3 py-3 text-center">Días mora</th>
                     <th className="px-3 py-3 text-right">Valor aprox.</th>
@@ -353,6 +374,7 @@ export default function UsuariosMoraPage() {
                           <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{u.contrato}</td>
                           <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{fmtFecha(u.finalContrato)}</td>
                           <td className="px-3 py-2"><span className={`badge ${ESTADO_META[u.estadoContrato].cls}`}>{ESTADO_META[u.estadoContrato].label}</span></td>
+                          <td className="px-3 py-2 text-gray-700">{u.gestorNombre || <span className="text-gray-400 italic">Sin asignar</span>}</td>
                           <td className="px-3 py-2 text-center" title={`Vencidas ${u.mora.cuotasVencidas} · registradas ${u.mora.cuotasRegistradas} · corte día ${u.mora.diaCorte}`}>
                             <span className="font-semibold text-red-700">{u.mora.cuotasAtrasadas}</span>
                             <span className="text-xs text-gray-400"> / {u.mora.cuotasVencidas}</span>
@@ -385,7 +407,7 @@ export default function UsuariosMoraPage() {
                         {open && (
                           <tr>
                             <td></td>
-                            <td colSpan={9} className="bg-gray-50 border-l-4 border-blue-300">
+                            <td colSpan={10} className="bg-gray-50 border-l-4 border-blue-300">
                               <Beneficiarios contrato={u.contrato} />
                             </td>
                           </tr>

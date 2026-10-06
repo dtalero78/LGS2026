@@ -51,6 +51,9 @@ export interface UsuarioEnMora {
   estadoContrato: 'VIGENTE' | 'ONHOLD' | 'FINALIZADO' | 'INACTIVO';
   celular: string | null;
   email: string | null;
+  /** USUARIOS_ROLES._id del ejecutivo de recaudo asignado (PEOPLE.gestorRecaudo). */
+  gestorRecaudo: string | null;
+  gestorNombre: string | null;
   mora: MoraCalculo;
   valorCuota: number | null;
   valorAtrasado: number | null;
@@ -140,7 +143,7 @@ export const moraService = {
   async listarEnMora(): Promise<UsuarioEnMora[]> {
     const rows = await queryMany<any>(`
       WITH tit AS (
-        SELECT DISTINCT ON (p."contrato") p."_id", p."contrato", p."numeroId", p."plataforma", p."celular", p."email",
+        SELECT DISTINCT ON (p."contrato") p."_id", p."contrato", p."numeroId", p."plataforma", p."celular", p."email", p."gestorRecaudo",
                p."finalContrato"::text AS "finalContrato", p."estado", p."estadoInactivo", p."fechaOnHold",
                TRIM(REGEXP_REPLACE(CONCAT_WS(' ', p."primerNombre", p."segundoNombre", p."primerApellido", p."segundoApellido"), '\\s+', ' ', 'g')) AS titular
           FROM "PEOPLE" p
@@ -154,10 +157,12 @@ export const moraService = {
           FROM "PAGOS_TITULARES" pt WHERE pt."numCuota" > 0 GROUP BY pt."idPeople"
       )
       SELECT tit.*, fin."fechaPago", fin."numeroCuotas", fin."valorCuota", fin."saldo", COALESCE(pag.registradas, 0) AS registradas,
-             d."_id" d_id, d."motivo" d_motivo, d."desbloqueadoPor" d_por, d."desbloqueadoPorNombre" d_por_nombre, d."_createdDate" d_fecha
+             d."_id" d_id, d."motivo" d_motivo, d."desbloqueadoPor" d_por, d."desbloqueadoPorNombre" d_por_nombre, d."_createdDate" d_fecha,
+             COALESCE(NULLIF(TRIM(u."nombre"), ''), u."email") AS "gestorNombre"
         FROM tit
         JOIN fin ON fin."contrato" = tit."contrato"
         LEFT JOIN pag ON pag."idPeople" = tit."_id"
+        LEFT JOIN "USUARIOS_ROLES" u ON u."_id" = tit."gestorRecaudo"
         LEFT JOIN "CERTIFICADO_DESBLOQUEOS" d ON d."contrato" = tit."contrato" AND d."activo"`);
 
     const out: UsuarioEnMora[] = [];
@@ -168,6 +173,7 @@ export const moraService = {
       out.push({
         titularId: r._id, titular: r.titular, numeroId: r.numeroId, contrato: r.contrato, plataforma: r.plataforma,
         finalContrato: r.finalContrato, estadoContrato: estadoContrato(r), celular: r.celular, email: r.email,
+        gestorRecaudo: r.gestorRecaudo || null, gestorNombre: r.gestorRecaudo ? (r.gestorNombre || 'Gestor sin nombre') : null,
         mora, valorCuota, valorAtrasado: valorCuota != null ? valorCuota * mora.cuotasAtrasadas : null,
         desbloqueo: toDesbloqueo(r),
       });
