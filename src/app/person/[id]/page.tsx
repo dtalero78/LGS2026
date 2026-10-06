@@ -112,9 +112,21 @@ async function PersonContent({ personId, initialTab }: { personId: string; initi
                   {personData.person.fechaContrato && (
                     <span>Inicio Contrato: {new Date(personData.person.fechaContrato).toLocaleDateString('es-ES', { timeZone: 'UTC' })}</span>
                   )}
-                  {personData.person.finalContrato && (
-                    <span>Final Contrato: {new Date(personData.person.finalContrato).toLocaleDateString('es-ES', { timeZone: 'UTC' })}</span>
-                  )}
+                  {personData.person.finalContrato && (() => {
+                    const fmt = (d: string) => new Date(d).toLocaleDateString('es-ES', { timeZone: 'UTC' })
+                    const vigente = fmt(personData.person.finalContrato)
+                    const orig = (personData.person as any).finalContratoOriginal
+                    // Opción A: si la fecha vigente se movió (extensión / OnHold del beneficiario),
+                    // se muestra también la fecha final con la que nació el contrato.
+                    const original = orig ? fmt(orig) : null
+                    return original && original !== vigente ? (
+                      <span title="La fecha final vigente se movió por extensiones u OnHold; la original es la del contrato al crearse">
+                        Final Contrato: {vigente} <span className="text-gray-400">(original: {original})</span>
+                      </span>
+                    ) : (
+                      <span>Final Contrato: {vigente}</span>
+                    )
+                  })()}
                   {personData.person.vigencia && (
                     <span>Vigencia: {personData.person.vigencia}</span>
                   )}

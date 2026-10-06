@@ -1,4 +1,6 @@
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
+import { requirePermission } from '@/lib/api-permissions';
+import { StudentPermission } from '@/types/permissions';
 import { extendByDays, extendToDate } from '@/services/contract.service';
 import { ValidationError } from '@/lib/errors';
 
@@ -6,8 +8,10 @@ import { ValidationError } from '@/lib/errors';
  * PUT /api/postgres/students/contract
  *
  * Manually extend student contract by days or to a specific date.
+ * Exige STUDENT.CONTRATO.EXTENDER_VIGENCIA (antes solo pedía sesión).
  */
 export const PUT = handlerWithAuth(async (request, _ctx, session) => {
+  await requirePermission(session, StudentPermission.EXTENDER_VIGENCIA);
   const body = await request.json();
 
   if (!body.studentId) throw new ValidationError('studentId is required');

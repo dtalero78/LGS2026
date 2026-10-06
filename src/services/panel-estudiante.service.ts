@@ -23,6 +23,7 @@ import { generateReport } from '@/services/progress.service';
 import { getEffectiveStepNumber } from '@/services/student-booking.service';
 import { isContractExpired } from '@/lib/contract-expiry';
 import { ensureOnce } from '@/lib/ensure-once';
+import { sincronizarFinalTitular } from '@/lib/sync-final-titular';
 
 // Ensure fechaInicioESS en ACADEMICA y PEOPLE. Una sola vez por proceso, sin
 // reintento (ver lib/ensure-once). El esquema se garantiza de verdad con
@@ -169,6 +170,8 @@ export async function resolveStudentFromSession(session: Session) {
       if (newFinalStr) {
         (base as any).finalContrato = newFinalStr;
         (base as any).vigencia = newVigencia;
+        // Opción A: el titular refleja la fecha final vigente de sus beneficiarios.
+        await sincronizarFinalTitular((base as any).contrato, 'Fin de OnHold del beneficiario (reactivación al iniciar sesión)');
       }
 
       // Restore login access in USUARIOS_ROLES

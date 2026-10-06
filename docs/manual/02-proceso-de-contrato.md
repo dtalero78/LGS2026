@@ -341,10 +341,12 @@ Pantalla: ficha del titular › **Administración › Gestión de Beneficiarios*
   - **automáticamente** cada noche, cuando vence la fecha de fin de la pausa;
   - al iniciar sesión el alumno, si su pausa ya terminó.
 
-**RC-45 — Extensiones del beneficiario y del titular.**
-- Las extensiones y las pausas se aplican al **alumno**, es decir, al beneficiario.
-- La fecha de fin que muestra la ficha del **titular** no se actualiza sola. Por eso puede verse vencida aunque su beneficiario siga estudiando con una extensión.
-- Para saber hasta cuándo estudia un alumno, la referencia es la **fecha de fin del beneficiario**.
+**RC-45 — Fecha final original y fecha final vigente.**
+- Las extensiones, las pausas y los exámenes internacionales se aplican al **alumno**, es decir, al beneficiario.
+- Cada vez que cambia la fecha de fin de un beneficiario, el **titular** toma automáticamente la fecha del beneficiario **más extendido**. Si estaba FINALIZADA y esa fecha sigue vigente, vuelve a **ACTIVA**.
+- El cambio queda en el **historial de extensiones** del titular como "sincronización". No cuenta como una extensión del titular.
+- La **fecha final original**, la del contrato al crearse, **se conserva siempre** y nunca se modifica.
+- La ficha muestra ambas: "Final Contrato: 10/10/2026 (original: 21/05/2026)".
 
 **RC-46 — Exámenes internacionales (IELTS, B2 First, TOEFL).**
 - Si el alumno **confirma** su inscripción:

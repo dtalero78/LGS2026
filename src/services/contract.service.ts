@@ -8,6 +8,7 @@ import 'server-only';
 import { PeopleRepository } from '@/repositories/people.repository';
 import { ValidationError, NotFoundError } from '@/lib/errors';
 import { query } from '@/lib/postgres';
+import { sincronizarFinalTitularDe } from '@/lib/sync-final-titular';
 
 // ── Contract Extension ──
 
@@ -82,6 +83,9 @@ export async function extendByDays(input: ExtendByDaysInput) {
       [person.email]
     );
   }
+
+  // Opción A: el titular refleja la fecha final vigente de sus beneficiarios.
+  await sincronizarFinalTitularDe(input.studentId, 'Extensión manual del beneficiario', input.ejecutadoPor);
 
   return {
     student,
@@ -269,6 +273,8 @@ export async function deactivateOnHold(studentId: string) {
       console.warn('⚠️ Could not sync USUARIOS_ROLES.activo on OnHold deactivate for', person.email, err);
     }
   }
+
+  await sincronizarFinalTitularDe(studentId, `Fin de OnHold del beneficiario (${daysPaused} días pausados)`);
 
   return {
     student,

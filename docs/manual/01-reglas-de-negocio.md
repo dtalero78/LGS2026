@@ -182,7 +182,10 @@ Así se evita que la use para no asistir a la segunda sesión.
 - Un contrato vence cuando la fecha actual supera en **2 días** su fecha de fin. Es un día de gracia para alumnos de otros husos horarios.
 - Cada noche, a las 11:00 p. m. de Colombia, los contratos vencidos pasan a **FINALIZADA** y sus alumnos quedan sin acceso.
 
-**RN-27 — Extensión.** Se puede extender el contrato por días o hasta una fecha, con motivo. La extensión **reactiva** al alumno y queda en su historial.
+**RN-27 — Extensión.**
+- Se puede extender el contrato por días o hasta una fecha, con motivo y con el permiso de extender vigencia.
+- La extensión **reactiva** al alumno y queda en su historial.
+- El titular toma la fecha final vigente de su beneficiario más extendido. La **fecha final original** del contrato se conserva siempre. Ver RC-45.
 
 **RN-28 — OnHold (pausa).**
 - Máximo **2 pausas** por contrato, y ninguna si ya tuvo extensión manual.
@@ -249,5 +252,6 @@ Así se evita que la use para no asistir a la segunda sesión.
 
 | Fecha | Cambio |
 |---|---|
+| 06-10-2026 (3) | **Fecha final original y vigente:** el titular se sincroniza con su beneficiario más extendido y se conserva la fecha original (RN-27, RC-45). |
 | 06-10-2026 (2) | **Retractado** inhabilita a titular y beneficiarios y tiene pestaña propia en la Limpieza (RN-07b). La Limpieza sigue siendo manual. Al **agregar beneficiario** se bloquea solo si ya es beneficiario activo, con aviso (RN-06). **Contrato aprobado** solo lo edita un Super Administrador; un beneficiario aprobado no se elimina (RN-08). |
 | 06-10-2026 | Primera versión. Incluye los cambios del 05-10-2026: verificación de documentos y número asignado al crear, historial de cambios de estado, Limpieza de Anulados, regla única de mora, bloqueo de certificados por mora con desbloqueo, informe de Usuarios en mora, informe de Certificados y registro de generaciones por el personal. |

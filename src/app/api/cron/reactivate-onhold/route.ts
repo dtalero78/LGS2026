@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/postgres'
 import { recordCronRun } from '@/lib/cron-runs'
+import { sincronizarFinalTitularDe } from '@/lib/sync-final-titular'
 
 const CRON_SECRET = process.env.CRON_SECRET
 
@@ -95,6 +96,9 @@ export async function GET(request: NextRequest) {
             WHERE "_id" = $1`,
             [student._id, newFinalContrato, newVigencia]
           )
+
+          // Opción A: el titular refleja la fecha final vigente de sus beneficiarios.
+          await sincronizarFinalTitularDe(student._id, `Fin de OnHold del beneficiario (${diasPausados} días pausados)`, 'cron reactivate-onhold')
 
           // Sync ACADEMICA.estadoInactivo (por numeroId).
           if (student.numeroId) {

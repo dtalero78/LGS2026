@@ -22,6 +22,7 @@ import { ValidationError } from '@/lib/errors';
 import { sendWhatsAppMessage, formatPhoneNumber } from '@/lib/whatsapp';
 import { promoteToDoneAndBlock } from '@/services/special-nivel.service';
 import { ensureOnce } from '@/lib/ensure-once';
+import { sincronizarFinalTitularDe } from '@/lib/sync-final-titular';
 
 export type ExamPrueba = 'IELTS' | 'B2FIRST' | 'TOEFL';
 
@@ -278,6 +279,8 @@ export async function aplicarConfirmacion(
             peopleRow._id,
           ]
         );
+        // Opción A: el titular refleja la fecha final vigente de sus beneficiarios.
+        await sincronizarFinalTitularDe(peopleRow._id, `Extensión por examen internacional ${prueba}`, ejecutadoPor);
       }
 
       // ACADEMICA: nivel/step + estado activo
