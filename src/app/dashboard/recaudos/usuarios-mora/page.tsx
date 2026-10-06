@@ -30,6 +30,7 @@ interface UsuarioMora {
   email: string | null
   gestorRecaudo: string | null
   gestorNombre: string | null
+  niveles: string[]
   mora: Mora
   valorCuota: number | null
   valorAtrasado: number | null
@@ -61,7 +62,16 @@ const ESTADO_META: Record<UsuarioMora['estadoContrato'], { label: string; cls: s
   FINALIZADO: { label: 'Finalizado', cls: 'bg-gray-200 text-gray-700' },
   INACTIVO:   { label: 'Inactivo',   cls: 'bg-red-100 text-red-800' },
 }
-const NIVELES_CERT: { key: 'beginner' | 'practical' | 'functional'; label: string; cls: string }[] = [
+// Filtro por nivel: el contrato entra si ALGÚN beneficiario está hoy en uno de estos niveles.
+const GRUPOS_NIVEL: Record<string, { label: string; niveles: string[] }> = {
+  BEGINNER:   { label: 'Beginner (BN1, BN2, BN3)',  niveles: ['BN1', 'BN2', 'BN3'] },
+  PRACTICAL:  { label: 'Practical (P1, P2, P3)',    niveles: ['P1', 'P2', 'P3'] },
+  FUNCTIONAL: { label: 'Functional (F1, F2, F3)',   niveles: ['F1', 'F2', 'F3'] },
+}
+const NIVEL_CLS = (n: string) =>
+  /^BN/.test(n) ? 'bg-yellow-100 text-yellow-900' : /^P\d/.test(n) ? 'bg-red-100 text-red-800' : /^F\d/.test(n) ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-700'
+
+const NIVELES_CERT:{ key: 'beginner' | 'practical' | 'functional'; label: string; cls: string }[] = [
   { key: 'beginner',   label: 'Beginner',   cls: 'bg-yellow-100 text-yellow-900' },
   { key: 'practical',  label: 'Practical',  cls: 'bg-red-100 text-red-800' },
   { key: 'functional', label: 'Functional', cls: 'bg-blue-100 text-blue-800' },
@@ -139,6 +149,7 @@ export default function UsuariosMoraPage() {
   const [estado, setEstado] = useState('')
   const [cert, setCert] = useState('')
   const [gestor, setGestor] = useState('')
+  const [nivel, setNivel] = useState('')
   const [page, setPage] = useState(1)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [desbloquear, setDesbloquear] = useState<UsuarioMora | null>(null)
@@ -175,9 +186,10 @@ export default function UsuariosMoraPage() {
       (!plataforma || u.plataforma === plataforma) &&
       (!estado || u.estadoContrato === estado) &&
       (!gestor || (gestor === '__SIN__' ? !u.gestorRecaudo : u.gestorRecaudo === gestor)) &&
+      (!nivel || (u.niveles || []).some(n => GRUPOS_NIVEL[nivel]?.niveles.includes(String(n).toUpperCase()))) &&
       (!cert || (cert === 'DESBLOQUEADO' ? !!u.desbloqueo : !u.desbloqueo)))
-  }, [usuarios, search, plataforma, estado, gestor, cert])
-  useEffect(() => { setPage(1) }, [search, plataforma, estado, gestor, cert])
+  }, [usuarios, search, plataforma, estado, gestor, nivel, cert])
+  useEffect(() => { setPage(1) }, [search, plataforma, estado, gestor, nivel, cert])
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE))
   const pageRows = filtered.slice((page - 1) * PAGE, page * PAGE)
   const totalAtrasado = filtered.reduce((s, u) => s + (u.valorAtrasado || 0), 0)
@@ -241,6 +253,7 @@ export default function UsuariosMoraPage() {
                   { header: 'Final Contrato', accessor: (u) => fmtFecha(u.finalContrato) },
                   { header: 'Estado Contrato', accessor: (u) => ESTADO_META[u.estadoContrato].label },
                   { header: 'Gestor de Recaudo', accessor: (u) => u.gestorNombre || 'Sin asignar' },
+                  { header: 'Nivel beneficiarios', accessor: (u) => (u.niveles || []).join(', ') },
                   { header: 'Celular', accessor: (u) => u.celular || '' },
                   { header: 'Email', accessor: (u) => u.email || '' },
                   { header: 'Día de corte', accessor: (u) => u.mora.diaCorte },
@@ -274,7 +287,7 @@ export default function UsuariosMoraPage() {
 
           <div className="card p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
-              <div className="lg:col-span-3">
+              <div className="lg:col-span-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
                 <input type="text" placeholder="Nombre, documento o contrato..." value={search} onChange={(e) => setSearch(e.target.value)}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
@@ -288,6 +301,14 @@ export default function UsuariosMoraPage() {
                   {gestores.map(([id, nombre]) => <option key={id} value={id}>{nombre}</option>)}
                 </select>
               </div>
+              <div className="lg:col-span-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nivel</label>
+                <select value={nivel} onChange={(e) => setNivel(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  <option value="">Todos</option>
+                  {Object.entries(GRUPOS_NIVEL).map(([k, g]) => <option key={k} value={k}>{g.label}</option>)}
+                </select>
+              </div>
               <div className="lg:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Plataforma</label>
                 <select value={plataforma} onChange={(e) => setPlataforma(e.target.value)}
@@ -296,7 +317,7 @@ export default function UsuariosMoraPage() {
                   {plataformas.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
-              <div className="lg:col-span-2">
+              <div className="lg:col-span-3">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Estado del contrato</label>
                 <select value={estado} onChange={(e) => setEstado(e.target.value)}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
@@ -304,7 +325,7 @@ export default function UsuariosMoraPage() {
                   {Object.entries(ESTADO_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                 </select>
               </div>
-              <div className="lg:col-span-2">
+              <div className="lg:col-span-3">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Certificado</label>
                 <select value={cert} onChange={(e) => setCert(e.target.value)}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
@@ -348,6 +369,7 @@ export default function UsuariosMoraPage() {
                     <th className="px-3 py-3">Final contrato</th>
                     <th className="px-3 py-3">Estado</th>
                     <th className="px-3 py-3">Gestor</th>
+                    <th className="px-3 py-3">Nivel</th>
                     <th className="px-3 py-3 text-center">Cuotas atrasadas</th>
                     <th className="px-3 py-3 text-center">Días mora</th>
                     <th className="px-3 py-3 text-right">Valor aprox.</th>
@@ -375,6 +397,13 @@ export default function UsuariosMoraPage() {
                           <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{fmtFecha(u.finalContrato)}</td>
                           <td className="px-3 py-2"><span className={`badge ${ESTADO_META[u.estadoContrato].cls}`}>{ESTADO_META[u.estadoContrato].label}</span></td>
                           <td className="px-3 py-2 text-gray-700">{u.gestorNombre || <span className="text-gray-400 italic">Sin asignar</span>}</td>
+                          <td className="px-3 py-2">
+                            {(u.niveles || []).length === 0 ? <span className="text-gray-400">—</span> : (
+                              <div className="flex flex-wrap gap-1">
+                                {u.niveles.map(n => <span key={n} className={`badge ${NIVEL_CLS(n)}`}>{n}</span>)}
+                              </div>
+                            )}
+                          </td>
                           <td className="px-3 py-2 text-center" title={`Vencidas ${u.mora.cuotasVencidas} · registradas ${u.mora.cuotasRegistradas} · corte día ${u.mora.diaCorte}`}>
                             <span className="font-semibold text-red-700">{u.mora.cuotasAtrasadas}</span>
                             <span className="text-xs text-gray-400"> / {u.mora.cuotasVencidas}</span>
@@ -407,7 +436,7 @@ export default function UsuariosMoraPage() {
                         {open && (
                           <tr>
                             <td></td>
-                            <td colSpan={10} className="bg-gray-50 border-l-4 border-blue-300">
+                            <td colSpan={11} className="bg-gray-50 border-l-4 border-blue-300">
                               <Beneficiarios contrato={u.contrato} />
                             </td>
                           </tr>

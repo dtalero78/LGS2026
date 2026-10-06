@@ -54,11 +54,16 @@ export interface UsuarioEnMora {
   /** USUARIOS_ROLES._id del ejecutivo de recaudo asignado (PEOPLE.gestorRecaudo). */
   gestorRecaudo: string | null;
   gestorNombre: string | null;
+  /** Niveles actuales (ACADEMICA.nivel) de los beneficiarios del contrato. */
+  niveles: string[];
   mora: MoraCalculo;
   valorCuota: number | null;
   valorAtrasado: number | null;
   desbloqueo: DesbloqueoInfo | null;
 }
+
+// Documento normalizado (sin puntos/espacios/guiones, mayúsculas) — mismo criterio del resto de la plataforma.
+const NID = (col: string) => `UPPER(REGEXP_REPLACE(COALESCE(${col},''), '[.[:space:]_-]', '', 'g'))`;
 
 const SQL_FIN = `SELECT DISTINCT ON (f."contrato") f."contrato", f."fechaPago", f."numeroCuotas", f."valorCuota", f."saldo"
                    FROM "FINANCIEROS" f`;
@@ -155,13 +160,27 @@ export const moraService = {
       ), pag AS (
         SELECT pt."idPeople", COUNT(DISTINCT pt."numCuota")::int AS registradas
           FROM "PAGOS_TITULARES" pt WHERE pt."numCuota" > 0 GROUP BY pt."idPeople"
+      ), acad AS (
+        -- Ficha académica más reciente por documento normalizado (join en bloque, sin subconsultas por fila).
+        SELECT DISTINCT ON (${NID('a."numeroId"')}) ${NID('a."numeroId"')} AS nid, a."nivel"
+          FROM "ACADEMICA" a WHERE COALESCE(a."numeroId",'') <> ''
+         ORDER BY ${NID('a."numeroId"')}, a."_createdDate" DESC
+      ), niv AS (
+        SELECT x."contrato", array_agg(DISTINCT acad."nivel") FILTER (WHERE acad."nivel" IS NOT NULL) AS niveles
+          FROM "PEOPLE" x
+          JOIN tit ON tit."contrato" = x."contrato"
+          JOIN acad ON acad.nid = ${NID('x."numeroId"')}
+         WHERE x."tipoUsuario" <> 'TITULAR'
+         GROUP BY x."contrato"
       )
       SELECT tit.*, fin."fechaPago", fin."numeroCuotas", fin."valorCuota", fin."saldo", COALESCE(pag.registradas, 0) AS registradas,
+             COALESCE(niv.niveles, '{}') AS niveles,
              d."_id" d_id, d."motivo" d_motivo, d."desbloqueadoPor" d_por, d."desbloqueadoPorNombre" d_por_nombre, d."_createdDate" d_fecha,
              COALESCE(NULLIF(TRIM(u."nombre"), ''), u."email") AS "gestorNombre"
         FROM tit
         JOIN fin ON fin."contrato" = tit."contrato"
         LEFT JOIN pag ON pag."idPeople" = tit."_id"
+        LEFT JOIN niv ON niv."contrato" = tit."contrato"
         LEFT JOIN "USUARIOS_ROLES" u ON u."_id" = tit."gestorRecaudo"
         LEFT JOIN "CERTIFICADO_DESBLOQUEOS" d ON d."contrato" = tit."contrato" AND d."activo"`);
 
@@ -174,6 +193,7 @@ export const moraService = {
         titularId: r._id, titular: r.titular, numeroId: r.numeroId, contrato: r.contrato, plataforma: r.plataforma,
         finalContrato: r.finalContrato, estadoContrato: estadoContrato(r), celular: r.celular, email: r.email,
         gestorRecaudo: r.gestorRecaudo || null, gestorNombre: r.gestorRecaudo ? (r.gestorNombre || 'Gestor sin nombre') : null,
+        niveles: Array.isArray(r.niveles) ? r.niveles.filter(Boolean) : [],
         mora, valorCuota, valorAtrasado: valorCuota != null ? valorCuota * mora.cuotasAtrasadas : null,
         desbloqueo: toDesbloqueo(r),
       });
