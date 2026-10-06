@@ -17,6 +17,7 @@ En manos equivocadas es un mapa para atacar la aplicación, por eso vive **fuera
 ## Contenido
 
 - [`01-auditoria-gates.md`](01-auditoria-gates.md) — auditoría de gates de los handlers de escritura bajo `src/app/api/` (wrapper de auth, permiso exigido, pantalla que los invoca y banderas de gaps).
+- [`02-hallazgos-proceso-contrato.md`](02-hallazgos-proceso-contrato.md) — controles que la pantalla aplica y el servidor no (proceso del contrato) e inconsistencias de reglas a decidir (06-10-2026).
 
 ## Nota sobre el historial de git
 
