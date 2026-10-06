@@ -937,6 +937,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     name: '↳ Ver detalle de matrícula (tarjetas)',
     description: 'Acceso a la vista de resumen de una matrícula (/dashboard/comercial/matriculas/[id]): tarjeta del titular con el estado de la matrícula + tarjetas de beneficiarios con su estado de perfil académico (nivel/step o "sin perfil").',
   },
+  {
+    code: ComercialPermission.CURSOS_KIDS_VER,
+    module: Module.COMERCIAL,
+    section: 'Cursos Kids',
+    name: 'Sub-ítem "Cursos Kids" (sidebar Comercial)',
+    description: 'Acceso a /dashboard/comercial/cursos-kids: campañas de KIDS2026 en matrícula con sus cursos (Junior/Youngster), país, horario, guía y cupos disponibles; los salones llenos se marcan en rojo. Solo lectura.',
+  },
 
   // ========== APROBACION MODULE (/dashboard/aprobacion) ==========
   {

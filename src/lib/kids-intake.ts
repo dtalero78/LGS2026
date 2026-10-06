@@ -30,6 +30,8 @@ export interface KidsSalon {
   /** País/grupo del salón ("CL" grupo 01, "CO" grupo 02/resto). Para filtrar por país del contrato. */
   pais?: string | null;
   cupo: number; ocupados: number; cupoDisponible: number;
+  /** true si no tiene cupo (solo llega con `availability({ incluirLlenos: true })`). */
+  lleno?: boolean;
   guia: string | null; horario: KidsSlot[];
 }
 export interface KidsCurso { tipo: string; salones: KidsSalon[] }
@@ -110,8 +112,13 @@ async function call<T>(method: string, path: string, body?: any): Promise<T> {
 
 export const kidsIntake = {
   isConfigured: isKidsIntakeConfigured,
-  /** Catálogo: campañas EN_MATRICULA con salones que tienen cupo (cascada Campaña→Curso→Salón). */
-  availability: () => call<KidsAvailability>('GET', '/api/kids-intake/availability'),
+  /**
+   * Catálogo: campañas EN_MATRICULA con salones que tienen cupo (cascada Campaña→Curso→Salón).
+   * `incluirLlenos` agrega también los salones sin cupo (`lleno: true`) — para la
+   * consulta Comercial › Cursos Kids, no para inscribir.
+   */
+  availability: (opts?: { incluirLlenos?: boolean }) =>
+    call<KidsAvailability>('GET', `/api/kids-intake/availability${opts?.incluirLlenos ? '?incluirLlenos=1' : ''}`),
   /** Crea la reserva (RESERVADA, retiene cupo). Idempotente por externalRef → 409 si ya existe. */
   createReservation: (input: KidsReservationInput) =>
     call<KidsReservationResult>('POST', '/api/kids-intake/reservations', input),

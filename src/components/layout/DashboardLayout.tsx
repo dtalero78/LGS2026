@@ -82,6 +82,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
     children: [
       { name: 'Crear Contrato', href: '/dashboard/comercial/crear-contrato' },
       { name: 'Matrículas', href: '/dashboard/comercial/matriculas' },
+      { name: 'Cursos Kids', href: '/dashboard/comercial/cursos-kids' },
       { name: 'Subir Lote', href: '/subir-lote', superAdminOnly: true },
     ],
   },
@@ -367,6 +368,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/dashboard/comercial/matriculas': [
       ComercialPermission.MATRICULAS_VER,
     ],
+    '/dashboard/comercial/cursos-kids': [
+      ComercialPermission.CURSOS_KIDS_VER,
+    ],
     '/subir-lote': [
       ComercialPermission.MODIFICAR_CONTRATO,
     ],
@@ -533,6 +537,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       ComercialPermission.APROBACION_AUTONOMA,
       // COMERCIAL.PROSPECTOS.*
       ComercialPermission.VER_PROSPECTOS,
+      ComercialPermission.MATRICULAS_VER,
+      ComercialPermission.CURSOS_KIDS_VER,
     ],
     'Aprobación': [
       // Items del menú + APROBACION.MODIFICAR.*

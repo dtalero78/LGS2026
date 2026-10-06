@@ -73,6 +73,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 52. Smart polling - Auto-actualización del contrato admin cuando el cliente firma consentimiento (timeout 10 min)
 52b. Auto-guardado de borrador en Crear Contrato — guarda estado del formulario en localStorage con TTL de 72h; al volver muestra banner para continuar o descartar
 52c. **Verificación de documentos al crear contrato** ([src/lib/verificacion-documento.ts](src/lib/verificacion-documento.ts), `GET /api/postgres/contracts/verificar-documento`): paso 2 (titular, según respuesta SÍ/NO obligatoria) y antes de crear (beneficiarios). Busca el documento (normalizado) en otros contratos **vivos** — ignora FINALIZADA/ANULADO, Contrato nulo/Devuelto/Rechazado/Retractado, inactivos salvo OnHold, y PRB-. "Aprobado" = `aprobacion='Aprobado'` con o sin firma. Matriz: beneficiario en contrato aprobado + será beneficiario → **bloquea**; beneficiario o titular en contrato pendiente → **resolver** (ir al contrato anterior, o anularlo con `POST /api/postgres/contracts/anular-registro` — nunca borra; prohibido con pagos validados); titular de contrato aprobado → informa + "Traer sus datos". Muestra además antecedentes informativos (contratos anulados con pagos validados, ficha académica previa)
+52e. **Cursos Kids** (`/dashboard/comercial/cursos-kids`, permiso `COMERCIAL.CURSOS_KIDS.VER`): consulta de solo lectura del catálogo de KIDS2026 vía `GET /api/postgres/kids-intake/cursos` → `kidsIntake.availability({ incluirLlenos: true })` (KIDS `?incluirLlenos=1`, agregado en KIDS v10): campañas EN_MATRICULA con curso, salón, país (CL = Chile, CO = Colombia/otros), horario, guía e inscritos/cupo; los salones llenos (`lleno`) en rojo con badge LLENO. Filtros país / curso / solo con cupo. El modal de inscripción sigue pidiendo solo salones con cupo
 52d. **Número de contrato asignado por el servidor**: el formulario no lo pre-asigna; `POST /api/postgres/contracts` lo genera dentro de una transacción con `pg_advisory_xact_lock(hashtext('contrato-seq:<pais>:<año>'))` junto con el INSERT del titular (sin duplicados en concurrencia)
 
 ### Consentimiento Declarativo (Firma Digital)
@@ -1497,6 +1498,7 @@ interface ConsentData {
 | Crear Contrato | `/dashboard/comercial/crear-contrato` | COMERCIAL permissions |
 | Contrato Detail (admin) | `/dashboard/comercial/contrato/[id]` | COMERCIAL permissions |
 | Prospectos | `/dashboard/comercial/prospectos` | COMERCIAL permissions |
+| Cursos Kids | `/dashboard/comercial/cursos-kids` | COMERCIAL.CURSOS_KIDS.VER |
 | Aprobación | `/dashboard/aprobacion` | APROBACION permissions |
 | Permisos Admin | `/admin/permissions` | SUPER_ADMIN/ADMIN only |
 | Crea login | `/admin/crea-login` | MANTENIMIENTO.USUARIOS.CREAR_LOGIN |
