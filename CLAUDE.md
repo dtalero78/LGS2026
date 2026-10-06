@@ -104,7 +104,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 
 ### Detalle de Estudiante
 74. Tabs: General | Académica (con submenú) | Contrato | WhatsApp | Comentarios
-75. Información general (datos personales, contacto, plataforma, info del sistema)
+75. Información general (datos personales, contacto, plataforma, info del sistema). Incluye **Edad**, calculada con `calcularEdad(fechaNacimiento, edadGuardada?)` de [src/lib/utils.ts](src/lib/utils.ts) (prefiere la fecha de nacimiento; acepta ISO y DD/MM/YYYY)
 76. Envío de mensaje WhatsApp de bienvenida desde pestaña General
 77. Tabla de asistencia académica con filtros (fecha desde/hasta, estado asistencia, advisor)
 78. Columnas de tabla: Fecha, Tipo, Advisor (link clickeable), Nivel, Step, Zoom, Asistió, Participó, Canceló, No Aprobó
@@ -141,13 +141,16 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 103. Información general del titular (nombres, ID, fecha nacimiento, tipo usuario, estado)
 104. Contacto y referencias (teléfonos, emails, dirección, emergencia, referencias personales/comerciales)
 105. Información financiera (número de contrato, estado de pago, resumen financiero)
+105b. Botón **"Resumen"** (a la izquierda de "Ver Contrato", en Información General) → abre el resumen de la matrícula con los enlaces Ver ficha / Ver usuario. Requiere `MATRICULAS_VER` + `MATRICULAS_DETALLE`; `GET /api/postgres/matriculas/[id]` acepta también el `_id` de un beneficiario (resuelve el titular)
+105c. **Estado Kids real**: en la ficha de un beneficiario `kids=true` se muestra la `situacion` que reporta KIDS2026 (CURSANDO / SUSPENDIDO / NO_CURSANDO), consultada aparte por `GET /api/postgres/people/[id]/kids-estado` → `kidsIntake.getReservation('contrato#numeroId')` ([src/lib/kids-intake.ts](src/lib/kids-intake.ts)); una caída de KIDS nunca frena la carga de la ficha
 106. Administración de beneficiarios:
-     - Lista de beneficiarios con nombre (link clickeable → `/student/[id]`), ID, estado (badge)
+     - Lista de beneficiarios con nombre (link clickeable → `/student/[id]`), ID, estado (badge). Los beneficiarios **Kids** muestran badge "USUARIO KIDS", no generan ACADEMICA al aprobar y su clic abre su ficha `/person/[id]`
      - Botón Aprobar con seguimiento de estado (Aprobando → Enviando WhatsApp → Completado)
      - Botón Editar (protegido por permisos)
      - Botón Eliminar con confirmación modal (solo tipo BENEFICIARIO)
 107. Agregar beneficiario - Formulario multi-paso: datos básicos → contacto (con selector de país) → dirección
-108. Control de estado de titular (dropdown: Aprobado, Contrato nulo, Devuelto, Pendiente, Rechazado) con confirmación. Estados Contrato nulo/Devuelto/Rechazado inactivan automáticamente al titular y todos sus beneficiarios
+108. Control de estado de titular (dropdown: Aprobado, Contrato nulo, Devuelto, Pendiente, Rechazado) con confirmación. Estados Contrato nulo/Devuelto/Rechazado inactivan automáticamente al titular y todos sus beneficiarios. Cambiar un contrato **Aprobado** abre un modal de advertencia rojo (motivo ≥10 + casilla) y al anularlo se avisa que los anulados se depuran semanalmente
+108b. **Historial de cambios de estado** (tabla `APROBACION_AUDIT`): sección propia en la pestaña Administración, **debajo de Gestión de Beneficiarios** (permiso `PERSON.CAMBIAR_ESTADO`). La caja "WhatsApp Administrativo" (botones sin acción) se retiró de esa pestaña
 109. Comentarios internos con tipo, prioridad, autor y fecha
 
 ### Detalle de Advisor
@@ -158,7 +161,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 ### Detalle de Sesión
 113. Tabs: Información General | Estudiantes | Material
 114. Información general de la sesión (fecha, hora, advisor, Zoom, tipo, título, descripción)
-115. Roster de estudiantes con marcado de asistencia (toggle individual)
+115. Roster de estudiantes con marcado de asistencia (toggle individual) y **edad** de cada alumno (`findByEventIdWithStudentDetails` devuelve `studentEdad`/`studentFechaNacimiento` con `COALESCE(a.x::text, p.x::text)` — ⚠️ el cast a text es obligatorio: ACADEMICA y PEOPLE tienen tipos distintos y sin él la query revienta)
 116. Marcado masivo de asistencia (bulk update)
 117. Calificación y participación por estudiante
 118. Material y recursos de enseñanza por nivel/step
@@ -505,7 +508,7 @@ Cuenta **`ACee5675…` ("LGS")** — distinta de la de las env vars `TWILIO_*` d
 
 ### Mora de contratos (regla única)
 - **[src/lib/mora.ts](src/lib/mora.ts) → `calcularMora()`** (client-safe) es la fuente única: badge "En mora/En tiempo/Pagado" de la pestaña Financiera, bloqueo de certificados e informe de Recaudos. Calendario = `FINANCIEROS.fechaPago` + `numeroCuotas` (cuota k vence `fechaPago + (k-1)` meses); se compara contra el nº de cuotas **registradas** en `PAGOS_TITULARES` (`numCuota > 0`, validadas o no) del titular. `saldo ≤ 0` ⇒ PAGADO.
-- **Recaudos › Usuarios en mora** (`/dashboard/recaudos/usuarios-mora`, permiso `RECAUDOS.USUARIOS_MORA.VER`): titulares aprobados en mora (cuotas atrasadas, días, valor aprox., estado del contrato) con cascada por contrato de beneficiarios (niveles aprobados Beginner/Practical/Functional, nivel actual, activo). Botón **Desbloquear/Revocar** certificado con motivo ≥10, permiso `RECAUDOS.USUARIOS_MORA.DESBLOQUEAR`. API `GET /api/postgres/recaudos/usuarios-mora`, `GET …/[contrato]`, `POST|DELETE …/[contrato]/desbloqueo`.
+- **Recaudos › Usuarios en mora** (`/dashboard/recaudos/usuarios-mora`, permiso `RECAUDOS.USUARIOS_MORA.VER`): titulares aprobados en mora (cuotas atrasadas, días, valor aprox., estado del contrato, gestor de recaudo `PEOPLE.gestorRecaudo`, niveles actuales de sus beneficiarios) con filtros búsqueda / **gestor** (incl. "Sin asignar") / **nivel** (Beginner = BN1-3, Practical = P1-3, Functional = F1-3; el contrato entra si algún beneficiario está en ese nivel) / plataforma / estado / certificado, exportación Excel, y cascada por contrato de beneficiarios (niveles aprobados Beginner/Practical/Functional, nivel actual, activo). Botón **Desbloquear/Revocar** certificado con motivo ≥10, permiso `RECAUDOS.USUARIOS_MORA.DESBLOQUEAR`. API `GET /api/postgres/recaudos/usuarios-mora`, `GET …/[contrato]`, `POST|DELETE …/[contrato]/desbloqueo`.
 
 ### OTP / Digital Consent System
 - **OTP Store**: In-memory Map in `src/lib/otp-store.ts` (10-minute TTL, one-time use)
@@ -609,6 +612,7 @@ SENCE_AMBIENTE=test_o_produccion
 ### Duplicate PEOPLE Records y Login
 - Algunos estudiantes tienen registros duplicados en PEOPLE (uno como BENEFICIARIO, otro como TITULAR) con el mismo `numeroId`
 - **Login**: `resolveStudentFromSession()` en `panel-estudiante.service.ts` prioriza BENEFICIARIO sobre TITULAR cuando comparten email, ya que el panel estudiante es para beneficiarios
+- **Beneficiario en varios contratos (borradores rehechos)**: `people.repository.findBeneficiarioByNumeroId(numeroId, preferId)` se llama con `ACADEMICA.usuarioId` y ordena: esa fila exacta → aprobada → viva → más reciente. Así el agendamiento y el login quedan en la fila del contrato al que está ligada la ficha académica (antes era un `LIMIT 1` no determinista). Lo usan `resolveStudentFromSession` y `inicializarNivel`
 - **ACADEMICA-PEOPLE JOIN**: `student.service.ts` prioriza BENEFICIARIO sobre TITULAR cuando hay duplicados con el mismo `numeroId` (ORDER BY tipoUsuario, BENEFICIARIO primero)
 - **Bookings duplicados**: `student-booking.service.ts` valida contra TODOS los `_id` del estudiante en PEOPLE para evitar bookings duplicados cuando hay registros duplicados
 
@@ -707,7 +711,7 @@ La plataforma opera 100% sobre PostgreSQL. Los datos migrados de Wix (marzo 2026
   - `ContractTemplates`: Plantillas de contrato por plataforma (texto con {{placeholders}}). **Ojo con el nombre**: la tabla es `"ContractTemplates"` (CamelCase, legacy Wix) y la columna del contenido es **`template`** — NO `CONTRACT_TEMPLATES`/`contenido`. El lookup se hace por `plataforma` con fallback case-insensitive (`LOWER(plataforma) = LOWER($1)`)
   - `COMPLEMENTARIA_ATTEMPTS`: Intentos de actividades complementarias (AI quiz). Campos: studentId, nivel, step, attemptNumber, questions (JSONB), answers (JSONB), score, passed, bookingId, status (IN_PROGRESS/PASSED/FAILED), plataforma (VARCHAR 50, nullable — se llena al generar el quiz desde el panel estudiante)
   - `APP_CONFIG`: Configuración de la aplicación (clave/valor). Campos: key (PK), value (TEXT), color (VARCHAR 20, default '#ffffff'), updatedBy, _updatedDate. Registros: `ticker_message` (banner animado panel estudiante), `banner_image` (base64 imagen banner login), `banner_active` ('true'/'false' visibilidad banner login), `kids_feature_activo` ('true'/'false' — proceso Kids en Crear Contrato, togglable en Mantenimiento › Proceso Kids), `bloqueo_certificado_mora_activo` ('true'/'false', default false — bloqueo de certificados por mora), flags de material interactivo (`material_interactivo_v2_activo`, `material_interactivo_clasico_activo`, `material_interactivo_ejercicios_activo`)
-  - `APROBACION_AUDIT`: Auditoría inmutable (solo INSERT) de **cada cambio de `PEOPLE.aprobacion`**: `personId`, `contrato`, `tipoUsuario`, `nombre`, `estadoAnterior`, `estadoNuevo`, `origen` (`FICHA_ESTADO_TITULAR` | `APROBAR` | `APROBAR_CASCADA` | `PANTALLA_APROBACION` | `WIX_LEGACY` | `SISTEMA`), `motivo`, `usuarioEmail/Nombre/Rol`, `_createdDate`. Creada por [scripts/create-aprobacion-audit.js](scripts/create-aprobacion-audit.js); se escribe con `registrarCambioAprobacion()` de [src/lib/aprobacion-audit.ts](src/lib/aprobacion-audit.ts) (best-effort). **Todo código nuevo que escriba `aprobacion` debe llamarlo.** Se muestra en la ficha › Administración › Estado del Titular. Regla: un contrato **Aprobado** solo cambia de estado desde la ficha (modal de advertencia + motivo ≥10 obligatorio, validado también en el backend); `PUT /approvals/[id]` y `wix/updateTitularEstado` lo rechazan
+  - `APROBACION_AUDIT`: Auditoría inmutable (solo INSERT) de **cada cambio de `PEOPLE.aprobacion`**: `personId`, `contrato`, `tipoUsuario`, `nombre`, `estadoAnterior`, `estadoNuevo`, `origen` (`FICHA_ESTADO_TITULAR` | `APROBAR` | `APROBAR_CASCADA` | `PANTALLA_APROBACION` | `WIX_LEGACY` | `SISTEMA`), `motivo`, `usuarioEmail/Nombre/Rol`, `_createdDate`. Creada por [scripts/create-aprobacion-audit.js](scripts/create-aprobacion-audit.js); se escribe con `registrarCambioAprobacion()` de [src/lib/aprobacion-audit.ts](src/lib/aprobacion-audit.ts) (best-effort). **Todo código nuevo que escriba `aprobacion` debe llamarlo.** Se muestra en la ficha › Administración › "Historial de cambios de estado" (debajo de Gestión de Beneficiarios). Regla: un contrato **Aprobado** solo cambia de estado desde la ficha (modal de advertencia + motivo ≥10 obligatorio, validado también en el backend); `PUT /approvals/[id]` y `wix/updateTitularEstado` lo rechazan
   - `CERTIFICADOS_LOG`: Historial de cada generación de certificado de nivel (solo INSERT). Campos: `_id`, `studentId` (ACADEMICA._id), `numeroId`, `nivel` (beginner/practical/functional), `nombre`, `origen` (`ESTUDIANTE`|`ADMIN`), `generadoPor` (email), `generadoEn`. Distinta de `CERTIFICADOS_GENERADOS` (esa es el candado de 1 vez del panel estudiante)
   - `CERTIFICADO_DESBLOQUEOS`: Desbloqueos manuales del certificado por mora, hechos por Recaudos. Unidad = **contrato** (habilita a todos sus beneficiarios). Campos: `_id`, `contrato`, `titularId`, `titularNombre`, `motivo`, `activo` (único activo por contrato), `desbloqueadoPor/Nombre`, `revocadoPor`, `revocadoEn`, `_createdDate`. Revocar = `activo=false` (nunca se borra). Creada por [scripts/create-certificado-desbloqueos.js](scripts/create-certificado-desbloqueos.js)
   - `auditautoaprov`: Auditoría de auto-aprobaciones de consentimiento. Auto-creada (`CREATE TABLE IF NOT EXISTS`) al primer uso. Campos: `_id` (PK), `contrato`, `titularId`, `usuarioEmail`, `usuarioNombre`, `ip`, `userAgent`, `_createdDate`. Se inserta un registro cada vez que un usuario ejecuta "Auto-Aprobar Consentimiento" en `/dashboard/comercial/contrato/[id]`
@@ -1439,6 +1443,7 @@ interface ConsentData {
 - 🟡 `documents`/`recibo-inscripcion` aceptan `url` arbitraria (`javascript:` en "Ver" → XSS a staff; el recibo hace `fetch` server-side → SSRF).
 - 🟡 OTP de firma sin límite de intentos ni cooldown server-side; `Math.random`.
 - 🟡 Asesor/gestorRecaudo del contrato vienen del cliente (`titular.asesor`). (El número de contrato duplicado en concurrencia quedó **resuelto** con advisory lock — ver ítem 52d.)
+- 🟠 **Limpieza de Anulados — regla de logins**: conserva el login `ESTUDIANTE` solo si su **correo** aparece en otro contrato. Si el correo existe únicamente en el contrato anulado (p. ej. por un error de digitación en el contrato vigente, caso 145255171) se **borra el login de alguien que sigue estudiando**. Pendiente: conservar también por documento con contrato vivo o ficha ACADEMICA conservada. Los borrados masivos de borradores del 2026-10-05 usaron [purge-borradores-pagos-duplicados.js](scripts/purge-borradores-pagos-duplicados.js), que nunca toca logins
 - 🟡 `checkBeneficiarioUnico` (servidor, al crear) aún anula en silencio los beneficiarios de borradores previos y no considera vivos a los OnHold; la verificación del formulario ya lo resuelve antes, pero el servidor conserva esa regla como respaldo.
 
 ### Pages and Routes Summary (25 pages)
