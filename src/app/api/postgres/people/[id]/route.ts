@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { query, queryOne, queryMany, parseJsonbFields, withTransaction } from '@/lib/postgres';
-import { handlerWithStaffAuth, successResponse } from '@/lib/api-helpers';
+import { handler, handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { requirePermission } from '@/lib/api-permissions';
 import { PersonPermission } from '@/types/permissions';
 import { NotFoundError, ValidationError } from '@/lib/errors';
@@ -15,11 +15,8 @@ import { inhabilitarContratoRetractado } from '@/lib/retractado';
  *
  * Get a person by ID with all their data
  * Returns person data, financial data (if contract exists), and related persons
- *
- * Solo STAFF (2026-10-06): antes era handler() PÚBLICO — sin sesión devolvía la
- * ficha completa (datos personales + financiero). Solo lo usan pantallas internas.
  */
-export const GET = handlerWithStaffAuth(async (
+export const GET = handler(async (
   request: Request,
   { params }: { params: Record<string, string> }
 ) => {
@@ -239,7 +236,7 @@ const PEOPLE_UPDATE_FIELDS = [
  *
  * Update a person's data
  */
-export const PATCH = handlerWithStaffAuth(async (
+export const PATCH = handlerWithAuth(async (
   request: Request,
   { params }: { params: Record<string, string> },
   session
@@ -668,7 +665,7 @@ export const PATCH = handlerWithStaffAuth(async (
  * Delete a BENEFICIARIO from PEOPLE (and their ACADEMICA record if exists).
  * Only BENEFICIARIO type persons can be deleted via this endpoint.
  */
-export const DELETE = handlerWithStaffAuth(async (
+export const DELETE = handlerWithAuth(async (
   _request: Request,
   { params }: { params: Record<string, string> },
   session
