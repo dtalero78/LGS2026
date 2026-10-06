@@ -4,6 +4,7 @@ import { generateId } from '@/lib/id-generator';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { BookingRepository } from '@/repositories/booking.repository';
 import { buildCertificadoPdf, type NivelCertificado } from '@/lib/certificado-pdf';
+import { moraService, type BloqueoMora } from '@/services/mora.service';
 
 /**
  * Certificados de finalización de nivel del estudiante.
@@ -43,6 +44,8 @@ export interface CertificadoEstado {
   // `yaGenerado` = el alumno ya generó ese certificado desde el panel estudiante
   // (límite de UNA sola vez). En el panel admin siempre viene false (sin límite).
   niveles: Record<NivelCertificado, { aprobado: boolean; fecha: string | null; yaGenerado: boolean }>;
+  // Causa del bloqueo por mora (null = puede generar). Ver moraService.getBloqueoCertificado.
+  bloqueoMora?: BloqueoMora | null;
 }
 
 // ── Registro "certificado ya generado por el alumno" (límite de una vez) ──────
@@ -89,8 +92,8 @@ async function marcarGenerado(studentId: string, numeroId: string, nivel: NivelC
     [generateId('cert'), studentId, numeroId || null, nivel, nombre || null]);
 }
 
-async function loadInfo(id: string): Promise<{ academicaId: string; nombre: string; numeroId: string; niveles: CertificadoEstado['niveles'] }> {
-  const SEL = `SELECT "_id","numeroId","primerNombre","segundoNombre","primerApellido","segundoApellido"`;
+async function loadInfo(id: string): Promise<{ academicaId: string; contrato: string | null; nombre: string; numeroId: string; niveles: CertificadoEstado['niveles'] }> {
+  const SEL = `SELECT "_id","numeroId","contrato","primerNombre","segundoNombre","primerApellido","segundoApellido"`;
   let acad = await queryOne<any>(`${SEL} FROM "ACADEMICA" WHERE "_id" = $1`, [id]);
   if (!acad) {
     // El id puede venir como PEOPLE._id (detalle admin) → resolver por numeroId.
@@ -116,18 +119,34 @@ async function loadInfo(id: string): Promise<{ academicaId: string; nombre: stri
       .sort((a: Date, b: Date) => a.getTime() - b.getTime());
     niveles[nivel] = { aprobado: fechas.length > 0, fecha: fechas[0] ? fechas[0].toISOString() : null, yaGenerado: false };
   }
-  return { academicaId, nombre, numeroId: String(acad.numeroId ?? ''), niveles };
+  return { academicaId, contrato: acad.contrato || null, nombre, numeroId: String(acad.numeroId ?? ''), niveles };
+}
+
+// Contrato del alumno para evaluar la mora: el de su ficha académica y, si no
+// lo tiene, el de su fila de beneficiario más reciente en PEOPLE.
+async function contratoDelAlumno(info: { contrato: string | null; numeroId: string }): Promise<string | null> {
+  if (info.contrato) return info.contrato;
+  if (!info.numeroId) return null;
+  const p = await queryOne<any>(
+    `SELECT "contrato" FROM "PEOPLE" WHERE "numeroId" = $1 AND "tipoUsuario" <> 'TITULAR' AND COALESCE("contrato",'') <> ''
+      ORDER BY ("aprobacion" = 'Aprobado') DESC, "_createdDate" DESC LIMIT 1`, [info.numeroId]);
+  return p?.contrato || null;
 }
 
 export const certificadoService = {
-  /** `incluirGenerado` (solo panel estudiante) agrega el flag `yaGenerado` por nivel. */
-  async getEstado(id: string, opts?: { incluirGenerado?: boolean }): Promise<CertificadoEstado> {
+  /**
+   * `incluirGenerado` (solo panel estudiante) agrega el flag `yaGenerado` por nivel.
+   * `sinMora` omite el cálculo del bloqueo por mora (lo usa el informe de Recaudos,
+   * que solo necesita los niveles aprobados).
+   */
+  async getEstado(id: string, opts?: { incluirGenerado?: boolean; sinMora?: boolean }): Promise<CertificadoEstado> {
     const info = await loadInfo(id);
     if (opts?.incluirGenerado) {
       const gen = await getGenerados(info.academicaId);
       for (const nivel of NIVELES_CERT) info.niveles[nivel].yaGenerado = gen.has(nivel);
     }
-    return { nombre: info.nombre, numeroId: info.numeroId, niveles: info.niveles };
+    const bloqueoMora = opts?.sinMora ? null : await moraService.getBloqueoCertificado(await contratoDelAlumno(info));
+    return { nombre: info.nombre, numeroId: info.numeroId, niveles: info.niveles, bloqueoMora };
   },
 
   /**
@@ -141,6 +160,13 @@ export const certificadoService = {
     const n = info.niveles[nivel];
     if (!n?.aprobado) throw new ValidationError('El estudiante no ha aprobado el nivel; certificado no disponible.');
     if (!info.numeroId) throw new ValidationError('El estudiante no tiene número de documento; no se puede proteger el PDF.');
+    // Bloqueo por mora (solo si el interruptor está encendido y Recaudos no lo desbloqueó).
+    const bloqueo = await moraService.getBloqueoCertificado(await contratoDelAlumno(info));
+    if (bloqueo) {
+      throw new ValidationError(
+        `Certificado bloqueado: el contrato ${bloqueo.contrato} tiene ${bloqueo.cuotasAtrasadas} cuota(s) vencida(s) sin pagar. ` +
+        'Debe ponerse al día con los pagos o comunicarse con Recaudos.');
+    }
     if (opts?.soloUna) {
       const gen = await getGenerados(info.academicaId);
       if (gen.has(nivel)) throw new ValidationError('Este certificado ya fue generado. Solo puedes generarlo una vez.');

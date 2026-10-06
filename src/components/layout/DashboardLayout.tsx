@@ -102,6 +102,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
       { name: 'Bancos',       href: '/dashboard/recaudos/bancos',       newTab: true },
       { name: 'Asignación',   href: '/dashboard/recaudos/asignacion',   newTab: true },
       { name: 'Aprobaciones', href: '/dashboard/recaudos/aprobaciones', newTab: true },
+      { name: 'Usuarios en mora', href: '/dashboard/recaudos/usuarios-mora', newTab: true },
     ],
   },
   {
@@ -211,6 +212,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
           { name: 'Limpieza de Anulados', href: '/admin/limpieza-anulados', newTab: true },
           { name: 'Drive de Contratos', href: '/admin/drive-config', newTab: true },
           { name: 'Proceso Kids', href: '/admin/kids-config', newTab: true },
+          { name: 'Bloqueo Certificados por Mora', href: '/admin/bloqueo-certificado-mora', newTab: true },
           { name: 'Página de Bienvenida', href: '/admin/bienvenida-config', newTab: true },
           { name: 'Edición Contrato', href: '/admin/edicion-contrato', newTab: true },
           { name: 'Generar Contrato', href: '/admin/generar-contrato', newTab: true },
@@ -378,6 +380,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/admin/kids-config': [
       MantenimientoPermission.KIDS_CONFIG,
     ],
+    '/admin/bloqueo-certificado-mora': [
+      MantenimientoPermission.BLOQUEO_CERT_MORA,
+    ],
     '/admin/clear-historic': [
       MantenimientoPermission.CLEAR_HISTORIC,
     ],
@@ -447,6 +452,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ],
     '/dashboard/recaudos/aprobaciones': [
       RecaudosPermission.APROBACIONES_VER,
+    ],
+    '/dashboard/recaudos/usuarios-mora': [
+      RecaudosPermission.USUARIOS_MORA_VER,
     ],
     // Aprobación → Centro de Aprobaciones. CENTRO_VER es el permiso del ítem;
     // se conservan los de acción para no romper roles ya configurados.
@@ -541,6 +549,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       RecaudosPermission.BANCOS_VER,
       RecaudosPermission.ASIGNACION_VER,
       RecaudosPermission.APROBACIONES_VER,
+      RecaudosPermission.USUARIOS_MORA_VER,
     ],
   }
 

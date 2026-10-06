@@ -237,6 +237,9 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/admin/kids-config': [
     'MANTENIMIENTO.CONTRATOS.KIDS_CONFIG' as Permission,
   ],
+  '/admin/bloqueo-certificado-mora': [
+    'MANTENIMIENTO.CONTRATOS.BLOQUEO_CERT_MORA' as Permission,
+  ],
   '/admin/clear-historic': [
     'MANTENIMIENTO.USUARIOS.CLEAR_HISTORIC' as Permission,
   ],
@@ -310,6 +313,9 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   ],
   '/dashboard/recaudos/aprobaciones': [
     'RECAUDOS.APROBACIONES.VER' as Permission,
+  ],
+  '/dashboard/recaudos/usuarios-mora': [
+    'RECAUDOS.USUARIOS_MORA.VER' as Permission,
   ],
 
   // Aprobación → Centro de Aprobaciones (CENTRO_VER + acción para roles ya configurados)

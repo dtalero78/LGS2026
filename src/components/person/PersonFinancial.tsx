@@ -11,6 +11,7 @@ import { usePermissions } from '@/hooks/usePermissions'
 import { api, handleApiError } from '@/hooks/use-api'
 import PagoTitularWizard from './PagoTitularWizard'
 import { fechaBaseContrato as calcFechaBaseContrato } from '@/lib/cambio-contado'
+import { calcularMora } from '@/lib/mora'
 
 interface PersonFinancialProps {
   person: Person
@@ -450,47 +451,22 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
 
   // Estado del pago del corte actual (badge junto a "Corte de Pago"):
   //   - Azul "En tiempo": el corte de este mes aún no pasa y la cuota no está pagada
-  //   - Verde "Pagado":   la cuota del período actual ya está pagada (registrada)
+  //   - Verde "Pagado":   la cuota del período actual ya está pagada (registrada) o saldo ≤ 0
   //   - Rojo "En mora":   el corte ya pasó y hay cuota(s) vencida(s) sin pagar
-  // Regla: se compara nº de cuotas REGISTRADAS (validadas o no) contra las
-  // vencidas hasta hoy y hasta el corte de este mes. El calendario de cuotas se
-  // deriva de FINANCIEROS.fechaPago (cuota k vence = fechaPago + (k-1) meses).
+  // Regla compartida con el bloqueo de certificados y Recaudos › Usuarios en mora:
+  // ver calcularMora() en src/lib/mora.ts.
   const corteEstado: { label: string; cls: string } | null = (() => {
-    if (!diaCorte || !fechaCorteRaw) return null
-    const base = new Date(fechaCorteRaw)
-    if (isNaN(base.getTime())) return null
-    const numeroCuotas = Number(financial?.cuotas) || 0
-    if (numeroCuotas <= 0) return null
-
-    const addMonths = (d: Date, n: number) => {
-      const day = d.getUTCDate()
-      const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1))
-      const ld = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate()
-      t.setUTCDate(Math.min(day, ld))
-      return t
-    }
-    const hoy = new Date()
-    const hoy0 = Date.UTC(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())
-    const lastDay = new Date(Date.UTC(hoy.getFullYear(), hoy.getMonth() + 1, 0)).getUTCDate()
-    const corteMes0 = Date.UTC(hoy.getFullYear(), hoy.getMonth(), Math.min(diaCorte, lastDay))
-
-    let vencidasHoy = 0
-    let vencidasEsteCorte = 0
-    for (let k = 1; k <= numeroCuotas; k++) {
-      const d = addMonths(base, k - 1)
-      const d0 = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
-      if (d0 <= hoy0) vencidasHoy++
-      if (d0 <= corteMes0) vencidasEsteCorte++
-    }
-    // Nada vencido todavía (primer corte a futuro) → al día
-    if (vencidasEsteCorte === 0) return { label: 'En tiempo', cls: 'bg-blue-100 text-blue-800' }
-
-    const cuotasRegistradas = new Set(
-      pagos.filter((p: any) => Number(p.numCuota) > 0).map((p: any) => Number(p.numCuota)),
-    ).size
-
-    if (cuotasRegistradas >= vencidasEsteCorte) return { label: 'Pagado', cls: 'bg-green-100 text-green-800' }
-    if (cuotasRegistradas >= vencidasHoy)       return { label: 'En tiempo', cls: 'bg-blue-100 text-blue-800' }
+    const mora = calcularMora({
+      fechaPago: fechaCorteRaw,
+      numeroCuotas: financial?.cuotas,
+      cuotasRegistradas: new Set(
+        pagos.filter((p: any) => Number(p.numCuota) > 0).map((p: any) => Number(p.numCuota)),
+      ).size,
+      saldo: (financialData as any)?.saldo,
+    })
+    if (!mora) return null
+    if (mora.estado === 'PAGADO') return { label: 'Pagado', cls: 'bg-green-100 text-green-800' }
+    if (mora.estado === 'EN_TIEMPO') return { label: 'En tiempo', cls: 'bg-blue-100 text-blue-800' }
     return { label: 'En mora', cls: 'bg-red-100 text-red-800' }
   })()
 

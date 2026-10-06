@@ -1038,6 +1038,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Acceso a /admin/limpieza-anulados. Lista los contratos ANULADOS (Contrato nulo / Devuelto / Rechazado) y permite borrarlos masivamente. Solo borra lo que NO comparte con otro contrato (ficha académica, clases y login de la persona se conservan si tiene otro contrato). Omite contratos con pagos validados. Cada borrado deja copia completa en PURGE_LOG, consultable en la pestaña "Histórico de borrados". Acción destructiva — recomendado SUPER_ADMIN/ADMIN',
   },
   {
+    code: MantenimientoPermission.BLOQUEO_CERT_MORA,
+    module: Module.MANTENIMIENTO,
+    section: 'Contratos',
+    name: 'Página "Bloqueo de Certificados por Mora"',
+    description: 'Acceso a /admin/bloqueo-certificado-mora. Interruptor que bloquea la generación de certificados de nivel cuando el contrato está en mora (cuotas vencidas sin registrar). Nace APAGADO porque muchos contratos anteriores a mayo-2026 no tienen sus cuotas registradas.',
+  },
+  {
     code: MantenimientoPermission.KIDS_CONFIG,
     module: Module.MANTENIMIENTO,
     section: 'Usuarios',
@@ -1227,6 +1234,20 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     section: 'Aprobaciones',
     name: 'Sub-ítem "Aprobaciones" (sidebar Recaudos)',
     description: 'Acceso a /dashboard/recaudos/aprobaciones — lista de titulares aprobados activos para asignar gestor de recaudo',
+  },
+  {
+    code: RecaudosPermission.USUARIOS_MORA_VER,
+    module: Module.RECAUDOS,
+    section: 'Usuarios en mora',
+    name: 'Sub-ítem "Usuarios en mora" (sidebar Recaudos)',
+    description: 'Acceso a /dashboard/recaudos/usuarios-mora — titulares aprobados con cuotas vencidas sin registrar, con sus beneficiarios (niveles aprobados, nivel actual y si está activo)',
+  },
+  {
+    code: RecaudosPermission.USUARIOS_MORA_DESBLOQUEAR,
+    module: Module.RECAUDOS,
+    section: 'Usuarios en mora',
+    name: 'Botón "Desbloquear certificado" en Usuarios en mora',
+    description: 'Permite desbloquear (y revocar el desbloqueo) del certificado de nivel de un contrato en mora, con motivo obligatorio. Aplica a todos los beneficiarios del contrato. Queda auditado en CERTIFICADO_DESBLOQUEOS',
   },
   {
     code: RecaudosPermission.APROBACIONES_ASIGNAR,

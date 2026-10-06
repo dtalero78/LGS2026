@@ -1,11 +1,28 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { XMarkIcon, AcademicCapIcon, LockClosedIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, AcademicCapIcon, LockClosedIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 
 type Nivel = 'beginner' | 'practical' | 'functional'
 interface NivelInfo { aprobado: boolean; fecha: string | null; yaGenerado?: boolean }
-interface Estado { nombre: string; numeroId: string; niveles: Record<Nivel, NivelInfo> }
+interface BloqueoMora {
+  contrato: string
+  diaCorte: number
+  cuotasVencidas: number
+  cuotasRegistradas: number
+  cuotasAtrasadas: number
+  fechaPrimeraImpaga: string | null
+  diasMora: number
+  valorAtrasado: number | null
+}
+interface Estado { nombre: string; numeroId: string; niveles: Record<Nivel, NivelInfo>; bloqueoMora?: BloqueoMora | null }
+
+const fmtFecha = (iso: string | null) => {
+  if (!iso) return ''
+  const [y, m, d] = iso.slice(0, 10).split('-')
+  return `${d}/${m}/${y}`
+}
+const fmtValor = (n: number) => `$${Math.round(n).toLocaleString('es-CO')}`
 
 const NIVELES: { key: Nivel; label: string; cls: string }[] = [
   { key: 'beginner',   label: 'Beginner',   cls: 'bg-yellow-400 hover:bg-yellow-500 text-yellow-950' },
@@ -24,6 +41,8 @@ export default function CertificadosModal({ baseUrl, onClose }: { baseUrl: strin
   const [estado, setEstado] = useState<Estado | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [verBloqueo, setVerBloqueo] = useState(false)
+  const bloqueo = estado?.bloqueoMora ?? null
 
   useEffect(() => {
     let alive = true
@@ -37,6 +56,8 @@ export default function CertificadosModal({ baseUrl, onClose }: { baseUrl: strin
   }, [baseUrl])
 
   const descargar = (nivel: Nivel) => {
+    // Bloqueo por mora: se explica la causa ANTES de generar (no se llama al servidor).
+    if (bloqueo) { setVerBloqueo(true); return }
     window.open(`${baseUrl}${baseUrl.includes('?') ? '&' : '?'}nivel=${nivel}`, '_blank', 'noopener,noreferrer')
     // El certificado se genera UNA sola vez: al descargarlo, deshabilita el botón.
     // (El servidor es la autoridad; al reabrir el modal se refleja el estado real.)
@@ -95,12 +116,64 @@ export default function CertificadosModal({ baseUrl, onClose }: { baseUrl: strin
                   {leyenda && (
                     <p className="mt-0.5 text-[11px] text-gray-400 text-center">{leyenda}</p>
                   )}
+                  {!leyenda && bloqueo && (
+                    <p className="mt-0.5 text-[11px] text-red-600 text-center">Requiere estar al día en los pagos</p>
+                  )}
                 </div>
               )
             })}
           </div>
         )}
       </div>
+
+      {verBloqueo && bloqueo && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-red-700 flex items-center gap-2">
+                <ExclamationTriangleIcon className="h-5 w-5" /> Certificado bloqueado
+              </h3>
+              <button type="button" onClick={() => setVerBloqueo(false)} title="Cerrar" className="text-gray-400 hover:text-gray-600">
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-700">
+              El certificado no se puede generar porque el contrato <strong>{bloqueo.contrato}</strong> registra{' '}
+              <strong>{bloqueo.cuotasAtrasadas} cuota{bloqueo.cuotasAtrasadas === 1 ? '' : 's'} vencida{bloqueo.cuotasAtrasadas === 1 ? '' : 's'} sin pagar</strong>.
+            </p>
+            <dl className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm grid grid-cols-2 gap-x-3 gap-y-1">
+              <dt className="text-gray-600">Corte de pago</dt>
+              <dd className="font-medium text-gray-900">Día {bloqueo.diaCorte} de cada mes</dd>
+              <dt className="text-gray-600">Cuotas vencidas a la fecha</dt>
+              <dd className="font-medium text-gray-900">{bloqueo.cuotasVencidas}</dd>
+              <dt className="text-gray-600">Cuotas registradas</dt>
+              <dd className="font-medium text-gray-900">{bloqueo.cuotasRegistradas}</dd>
+              {bloqueo.fechaPrimeraImpaga && (
+                <>
+                  <dt className="text-gray-600">En mora desde</dt>
+                  <dd className="font-medium text-gray-900">{fmtFecha(bloqueo.fechaPrimeraImpaga)} ({bloqueo.diasMora} días)</dd>
+                </>
+              )}
+              {bloqueo.valorAtrasado != null && bloqueo.valorAtrasado > 0 && (
+                <>
+                  <dt className="text-gray-600">Valor aproximado</dt>
+                  <dd className="font-medium text-gray-900">{fmtValor(bloqueo.valorAtrasado)}</dd>
+                </>
+              )}
+            </dl>
+            <p className="text-sm text-gray-600">
+              Para habilitar el certificado debe ponerse al día con los pagos. Si ya pagó, comuníquese con el área de
+              Recaudos para que registre el pago.
+            </p>
+            <div className="flex justify-end">
+              <button type="button" onClick={() => setVerBloqueo(false)}
+                className="px-4 py-2 rounded-lg bg-gray-800 text-white text-sm font-medium hover:bg-gray-900">
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
