@@ -1,5 +1,6 @@
-import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
+import { handlerWithStaffAuth, successResponse } from '@/lib/api-helpers';
 import { AcademicaRepository } from '@/repositories/academica.repository';
+import { verificarDocumento } from '@/lib/verificacion-documento';
 import { ValidationError, ConflictError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 import { queryOne, query } from '@/lib/postgres';
@@ -10,7 +11,8 @@ import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
  *
  * Create a new person (TITULAR or BENEFICIARIO).
  */
-export const POST = handlerWithAuth(async (request) => {
+// Solo staff: un ESTUDIANTE no crea personas.
+export const POST = handlerWithStaffAuth(async (request) => {
   const body = await request.json();
 
   if (!body.numeroId || !body.primerNombre || !body.primerApellido || !body.tipoUsuario) {
@@ -29,18 +31,33 @@ export const POST = handlerWithAuth(async (request) => {
   }
   assertNoEsContratoPrueba(contratoTarget, 'agregar un beneficiario/titular');
 
-  // El numeroId debe ser único acá. La ÚNICA excepción permitida en el sistema
-  // es la creación de contrato (titular que además es su propio beneficiario),
-  // que inserta directo en /api/postgres/contracts y no pasa por esta ruta.
-  const existing = await queryOne<{ _id: string; tipoUsuario: string | null; contrato: string | null }>(
-    `SELECT "_id", "tipoUsuario", "contrato" FROM "PEOPLE" WHERE "numeroId" = $1`, [body.numeroId]
-  );
-  if (existing) {
-    throw new ConflictError(
-      `Ya existe una persona con el número de identificación ${body.numeroId}` +
-      `${existing.tipoUsuario ? ` (${existing.tipoUsuario}` : ''}` +
-      `${existing.contrato ? ` — contrato ${existing.contrato})` : existing.tipoUsuario ? ')' : ''}.`
+  if (body.tipoUsuario === 'BENEFICIARIO') {
+    // Regla (2026-10-06): no se agrega un beneficiario si el documento ya es
+    // BENEFICIARIO ACTIVO en un contrato vivo (incluido este). Un documento que
+    // solo aparece en contratos muertos (finalizados, anulados, retractados,
+    // inactivos sin OnHold) o como titular SÍ se puede agregar (re-matrícula).
+    // Mismo criterio "vivo" de la verificación de Crear Contrato.
+    const activo = (await verificarDocumento(String(body.numeroId))).find(r => r.tipoUsuario !== 'TITULAR');
+    if (activo) {
+      throw new ConflictError(
+        `Ya hay un beneficiario activo con el número de identificación ${body.numeroId}: ` +
+        `${activo.nombre || 'sin nombre'} — contrato ${activo.contrato}` +
+        `${activo.situacion === 'APROBADO' ? ' (aprobado)' : ' (pendiente de aprobación)'}.`
+      );
+    }
+  } else {
+    // TITULAR (u otro tipo) por esta ruta: el numeroId debe ser único. La creación
+    // normal de contratos entra por /api/postgres/contracts, no por aquí.
+    const existing = await queryOne<{ _id: string; tipoUsuario: string | null; contrato: string | null }>(
+      `SELECT "_id", "tipoUsuario", "contrato" FROM "PEOPLE" WHERE "numeroId" = $1`, [body.numeroId]
     );
+    if (existing) {
+      throw new ConflictError(
+        `Ya existe una persona con el número de identificación ${body.numeroId}` +
+        `${existing.tipoUsuario ? ` (${existing.tipoUsuario}` : ''}` +
+        `${existing.contrato ? ` — contrato ${existing.contrato})` : existing.tipoUsuario ? ')' : ''}.`
+      );
+    }
   }
 
   const personId = ids.person();

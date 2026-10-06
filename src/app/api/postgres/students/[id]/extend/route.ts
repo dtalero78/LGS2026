@@ -1,13 +1,17 @@
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
+import { requirePermission } from '@/lib/api-permissions';
+import { StudentPermission } from '@/types/permissions';
 import { extendByDays } from '@/services/contract.service';
 import { ValidationError } from '@/lib/errors';
 
 /**
  * POST /api/postgres/students/[id]/extend
  *
- * Extend student's contract vigencia (finalContrato)
+ * Extend student's contract vigencia (finalContrato).
+ * Exige STUDENT.CONTRATO.EXTENDER_VIGENCIA (antes solo pedía sesión).
  */
 export const POST = handlerWithAuth(async (request, { params }, session) => {
+  await requirePermission(session, StudentPermission.EXTENDER_VIGENCIA);
   const body = await request.json();
   const { diasExtension, motivo } = body;
 

@@ -5,6 +5,7 @@ import { normalizeNumeroId } from '@/lib/numeroid-normalize';
 import { useParams, useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
+import { usePermissions } from '@/hooks/usePermissions'
 import { ComercialPermission } from '@/types/permissions'
 import { api, handleApiError } from '@/hooks/use-api'
 import toast from 'react-hot-toast'
@@ -257,9 +258,14 @@ export default function ContratoDetailPage() {
   const [saving, setSaving] = useState(false)
   const [editing, setEditing] = useState(false)
   const [error, setError] = useState('')
+  const { isRole } = usePermissions()
 
   // Data
   const [titular, setTitular] = useState<any>(null)
+  // Regla 2026-10-06: un contrato APROBADO solo lo edita SUPER_ADMIN (el servidor
+  // también lo valida); el resto del staff solo edita contratos sin aprobar.
+  const contratoAprobado = String(titular?.aprobacion || '').toUpperCase().startsWith('APROBAD')
+  const puedeEditarContrato = !contratoAprobado || isRole('SUPER_ADMIN')
   const [beneficiarios, setBeneficiarios] = useState<any[]>([])
   const [financial, setFinancial] = useState<any>(null)
   const [asesorInfo, setAsesorInfo] = useState<{ nombre?: string; email?: string } | null>(null)
@@ -661,13 +667,23 @@ export default function ContratoDetailPage() {
                 Documentación y recibo
               </button>
               {!editing ? (
-                <button
-                  onClick={startEditing}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 text-sm font-medium"
-                >
-                  <PencilIcon className="h-4 w-4" />
-                  Editar Contrato
-                </button>
+                puedeEditarContrato ? (
+                  <button
+                    onClick={startEditing}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 text-sm font-medium"
+                  >
+                    <PencilIcon className="h-4 w-4" />
+                    Editar Contrato
+                  </button>
+                ) : (
+                  <span
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-500 rounded-md text-sm font-medium cursor-not-allowed"
+                    title="Contrato aprobado: solo un Super Administrador puede modificarlo"
+                  >
+                    <PencilIcon className="h-4 w-4" />
+                    Aprobado · solo Super Admin edita
+                  </span>
+                )
               ) : (
                 <>
                   <button

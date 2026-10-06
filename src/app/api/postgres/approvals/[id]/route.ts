@@ -4,6 +4,7 @@ import { query } from '@/lib/postgres';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { registrarCambioAprobacion, nombreDe } from '@/lib/aprobacion-audit';
+import { inhabilitarContratoRetractado } from '@/lib/retractado';
 
 export const GET = handlerWithAuth(async (request, { params }) => {
   const result = await query(
@@ -79,6 +80,11 @@ export const PUT = handlerWithAuth(async (request, { params }, session) => {
      WHERE "_id" = $3 RETURNING *`,
     [estadoFinal, estadoOperativo, params.id]
   );
+
+  // Retractado: inhabilita a todo el contrato (misma regla que la ficha del titular).
+  if (estadoFinal === 'Retractado' && actual.contrato) {
+    await inhabilitarContratoRetractado(actual.contrato);
+  }
 
   await registrarCambioAprobacion({
     personId: params.id,

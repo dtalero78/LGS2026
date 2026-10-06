@@ -76,6 +76,11 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
   // Beneficiario que aún no es usuario académico (para el modal informativo).
   // enWelcome = tiene ficha pero está en WELCOME (aún no pasa a BN1).
   const [sinAcademico, setSinAcademico] = useState<{ nombre: string; enWelcome: boolean } | null>(null)
+  // Aviso "ya hay un beneficiario activo con ese documento" al AGREGAR beneficiario.
+  const [beneficiarioDuplicado, setBeneficiarioDuplicado] = useState<
+    { numeroId: string; nombre?: string; contrato?: string; titularId?: string | null; aprobado?: boolean; mensaje?: string } | null
+  >(null)
+  const [verificandoDoc, setVerificandoDoc] = useState(false)
   const [approvingBeneficiaries, setApprovingBeneficiaries] = useState<Set<string>>(new Set())
   const [processStatus, setProcessStatus] = useState<Record<string, string>>({})
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -648,9 +653,34 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     return true
   }
 
-  const handleFormNext = () => {
+  // Regla 2026-10-06: no se agrega un beneficiario si su documento ya es
+  // beneficiario ACTIVO en un contrato vivo (el servidor también lo valida).
+  // Devuelve true si se puede seguir.
+  const verificarBeneficiarioActivo = async (): Promise<boolean> => {
+    const numeroId = beneficiaryData.numeroId.trim()
+    if (!numeroId) return true
+    setVerificandoDoc(true)
+    try {
+      const res = await fetch(`/api/postgres/contracts/verificar-documento?numeroId=${encodeURIComponent(numeroId)}`)
+      const json = await res.json()
+      const activo = (json?.registros || []).find((r: any) => r.tipoUsuario !== 'TITULAR')
+      if (activo) {
+        setBeneficiarioDuplicado({ numeroId, nombre: activo.nombre, contrato: activo.contrato, titularId: activo.titularId, aprobado: activo.situacion === 'APROBADO' })
+        return false
+      }
+      return true
+    } catch {
+      return true // si la verificación falla, el servidor sigue bloqueando el duplicado
+    } finally {
+      setVerificandoDoc(false)
+    }
+  }
+
+  const handleFormNext = async () => {
     // Validar campos obligatorios antes de avanzar
     if (validateRequiredFields(currentFormStep)) {
+      // Al salir de los datos básicos de un beneficiario NUEVO: verificar el documento.
+      if (currentFormStep === 1 && !isEditMode && !(await verificarBeneficiarioActivo())) return
       if (currentFormStep < 2) {
         setCurrentFormStep(currentFormStep + 1)
       }
@@ -822,6 +852,9 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
           ciudad: '', celularPrefijo: '+57', celular: '', email: '', genero: ''
         })
         setCurrentFormStep(1)
+      } else if (!isEdit && response.status === 409) {
+        // Beneficiario activo con el mismo documento (validación del servidor).
+        setBeneficiarioDuplicado({ numeroId: beneficiaryData.numeroId.trim(), mensaje: result.error })
       } else {
         console.error('❌ Error guardando beneficiario:', result.error, result.details)
         alert(`Error: ${result.error || 'No se pudo guardar el beneficiario'}\n${result.details || ''}`)
@@ -1587,9 +1620,10 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                     {currentFormStep < 2 ? (
                       <button
                         onClick={handleFormNext}
-                        className="btn-primary"
+                        disabled={verificandoDoc}
+                        className="btn-primary disabled:opacity-50"
                       >
-                        Siguiente
+                        {verificandoDoc ? 'Verificando…' : 'Siguiente'}
                       </button>
                     ) : (
                       <button
@@ -2050,6 +2084,46 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
       })()}
 
       {/* Modal: beneficiario que aún no es usuario académico */}
+      {beneficiarioDuplicado && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-bold text-red-700">Ya hay un beneficiario activo con ese documento</h3>
+            {beneficiarioDuplicado.mensaje ? (
+              <p className="text-sm text-gray-700">{beneficiarioDuplicado.mensaje}</p>
+            ) : (
+              <p className="text-sm text-gray-700">
+                El número de identificación <strong>{beneficiarioDuplicado.numeroId}</strong> ya es beneficiario activo:
+                {' '}<strong>{beneficiarioDuplicado.nombre || 'sin nombre'}</strong>, contrato{' '}
+                <strong>{beneficiarioDuplicado.contrato}</strong>
+                {beneficiarioDuplicado.aprobado ? ' (aprobado)' : ' (pendiente de aprobación)'}.
+              </p>
+            )}
+            <p className="text-sm text-gray-600">
+              Una persona solo puede ser beneficiaria de un contrato vigente. Para agregarla aquí, el otro contrato debe
+              estar finalizado, anulado o retractado.
+            </p>
+            <div className="flex justify-end gap-2">
+              {beneficiarioDuplicado.titularId && (
+                <a
+                  href={`/person/${encodeURIComponent(beneficiarioDuplicado.titularId)}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Ver ese contrato
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={() => setBeneficiarioDuplicado(null)}
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700"
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {sinAcademico && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 text-center space-y-4">

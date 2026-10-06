@@ -5,7 +5,7 @@ import { withTransaction } from '@/lib/postgres'
 import { ValidationError } from '@/lib/errors'
 import { MantenimientoPermission } from '@/types/permissions'
 import { ids } from '@/lib/id-generator'
-import { ANULADO_WHERE, sqlNorm, TIPO_PURGA_ANULADOS } from '@/lib/limpieza-anulados'
+import { sqlNorm, categoriaDe, whereCategoria, tipoPurgaDe } from '@/lib/limpieza-anulados'
 
 /**
  * POST /api/admin/limpieza-anulados/purge
@@ -48,6 +48,10 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   // Borrar contratos con pagos VALIDADOS exige confirmación explícita (casilla en
   // la página + segunda confirmación en el modal). Sin ella se omiten.
   const incluirPagosValidados = body?.incluirPagosValidados === true
+  // Pestaña de origen: anulados (Contrato nulo/Devuelto/Rechazado) o retractados.
+  const categoria = categoriaDe(body?.categoria)
+  const ANULADO_WHERE = whereCategoria(categoria)
+  const TIPO_PURGA = tipoPurgaDe(categoria)
   if (!contratos.length) throw new ValidationError('contratos requerido')
   if (contratos.length > 100) throw new ValidationError('Máximo 100 contratos por operación')
   if (motivo.length < 5) throw new ValidationError('El motivo es obligatorio')
@@ -137,7 +141,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
              ("_id","tipoPurga","contrato","titularId","titularNombre","snapshot","motivo",
               "realizadoPor","realizadoPorNombre","ip","userAgent","filasBorradas")
            VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12::jsonb)`,
-          [ids.audit(), TIPO_PURGA_ANULADOS, contrato, titular._id, titularNombre, JSON.stringify(snapshot), motivo,
+          [ids.audit(), TIPO_PURGA, contrato, titular._id, titularNombre, JSON.stringify(snapshot), motivo,
            actorEmail, actorNombre, ip, userAgent, JSON.stringify(borrados)])
 
         if (academicaIds.length) {
@@ -161,7 +165,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
         ok: '',
         error: '',
         sin_titular: 'No se encontró el titular del contrato',
-        no_anulado: 'El contrato ya no está anulado (pudo reactivarse); no se borró',
+        no_anulado: categoria === 'retractados' ? 'El contrato ya no está retractado; no se borró' : 'El contrato ya no está anulado (pudo reactivarse); no se borró',
         con_pagos_validados: 'Tiene pagos validados; no se borra desde aquí',
       }
       results.push({ contrato, status: out.status, ...(out.status !== 'ok' ? { error: msg[out.status] } : {}),

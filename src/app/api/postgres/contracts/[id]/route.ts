@@ -1,7 +1,7 @@
 import 'server-only';
 import { handlerWithAuth, handlerWithStaffAuth, successResponse } from '@/lib/api-helpers';
 import { queryOne, queryMany, parseJsonbFields } from '@/lib/postgres';
-import { NotFoundError, ValidationError } from '@/lib/errors';
+import { NotFoundError, ValidationError, ForbiddenError } from '@/lib/errors';
 import { PeopleRepository } from '@/repositories/people.repository';
 import { FinancialRepository } from '@/repositories/financial.repository';
 import { getAsesorInfo } from '@/lib/asesor';
@@ -121,9 +121,10 @@ export const GET = handlerWithStaffAuth(async (
  *   financial?: { field: value, ... }
  * }
  */
-export const PUT = handlerWithAuth(async (
+export const PUT = handlerWithStaffAuth(async (
   request: Request,
-  { params }: { params: Record<string, string> }
+  { params }: { params: Record<string, string> },
+  session
 ) => {
   const titularId = params.id;
   const body = await request.json();
@@ -131,10 +132,19 @@ export const PUT = handlerWithAuth(async (
 
   // Verify the titular exists
   const existingTitular = await queryOne(
-    `SELECT "_id", "contrato" FROM "PEOPLE" WHERE "_id" = $1`,
+    `SELECT "_id", "contrato", "aprobacion" FROM "PEOPLE" WHERE "_id" = $1`,
     [titularId]
   );
   if (!existingTitular) throw new NotFoundError('Titular', titularId);
+
+  // Regla (2026-10-06): un contrato APROBADO solo lo modifica SUPER_ADMIN; el resto
+  // del staff solo edita contratos sin aprobar. (Antes cualquier sesión editaba
+  // incluso contratos firmados/aprobados.)
+  const aprobado = String(existingTitular.aprobacion || '').toUpperCase().startsWith('APROBAD');
+  const rol = String((session?.user as any)?.role || '').toUpperCase();
+  if (aprobado && rol !== 'SUPER_ADMIN') {
+    throw new ForbiddenError('Este contrato ya está aprobado: solo un Super Administrador puede modificarlo.');
+  }
 
   const results: any = { titular: null, beneficiarios: [], financial: null };
 

@@ -25,6 +25,7 @@ interface Row {
 interface HistRow {
   _id: string
   contrato: string
+  categoria?: 'Anulado' | 'Retractado'
   titularNombre: string | null
   motivo: string
   realizadoPor: string
@@ -43,7 +44,10 @@ const fmtFecha = (v?: string | null) =>
   v ? new Date(v).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'
 
 export default function LimpiezaAnuladosPage() {
-  const [tab, setTab] = useState<'anulados' | 'historico'>('anulados')
+  const [tab, setTab] = useState<'anulados' | 'retractados' | 'historico'>('anulados')
+  // Las pestañas Anulados y Retractados comparten la misma tabla/acciones; cambia la categoría.
+  const esLista = tab === 'anulados' || tab === 'retractados'
+  const etiqueta = tab === 'retractados' ? 'retractado' : 'anulado'
 
   // ── Anulados ──
   const [search, setSearch] = useState('')
@@ -70,6 +74,7 @@ export default function LimpiezaAnuladosPage() {
       if (plataforma) qs.set('plataforma', plataforma)
       if (minDias !== '0') qs.set('minDias', minDias)
       if (estado) qs.set('estado', estado)
+      qs.set('categoria', tab === 'retractados' ? 'retractados' : 'anulados')
       const res = await fetch(`/api/admin/limpieza-anulados/list?${qs}`, { cache: 'no-store' })
       const json = await res.json()
       if (!res.ok || !json.success) throw new Error(json.error || 'Error al cargar')
@@ -79,9 +84,11 @@ export default function LimpiezaAnuladosPage() {
       setSelected(prev => new Set([...prev].filter(c => json.rows.some((r: Row) => r.contrato === c))))
     } catch (e: any) { setError(e.message || 'Error inesperado') }
     finally { setLoading(false) }
-  }, [search, plataforma, minDias, estado])
+  }, [search, plataforma, minDias, estado, tab])
 
-  useEffect(() => { if (tab === 'anulados') fetchData() }, [fetchData, tab])
+  useEffect(() => { if (esLista) fetchData() }, [fetchData, esLista])
+  // Al cambiar de pestaña se limpia la selección y el filtro de estado (son listas distintas).
+  useEffect(() => { setSelected(new Set()); setEstado(''); setResult(null) }, [tab])
 
   const seleccionables = rows.filter(r => r.pagosValidados === 0 || permitirValidados)
   // Al desmarcar la casilla, se quitan de la selección los que tienen pagos validados.
@@ -111,7 +118,7 @@ export default function LimpiezaAnuladosPage() {
       { header: 'Docs con otro contrato', accessor: r => r.docsCompartidos },
       { header: 'País', accessor: r => r.plataforma ?? '' },
       { header: 'Anulado (última modificación)', accessor: r => fmtFecha(r.anuladoEl) },
-    ], 'contratos-anulados')
+    ], tab === 'retractados' ? 'contratos-retractados' : 'contratos-anulados')
   }
 
   const handleBorrar = async () => {
@@ -122,6 +129,7 @@ export default function LimpiezaAnuladosPage() {
         body: JSON.stringify({
           contratos: [...selected],
           motivo: modal.motivo.trim(),
+          categoria: tab === 'retractados' ? 'retractados' : 'anulados',
           incluirPagosValidados: selConValidados.length > 0 && modal.confirmValidados,
         }),
       })
@@ -180,25 +188,28 @@ export default function LimpiezaAnuladosPage() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Limpieza de Anulados</h1>
               <p className="text-sm text-gray-500">
-                Contratos anulados (<em>Contrato nulo</em>, <em>Devuelto</em>, <em>Rechazado</em>). Se depuran <strong>semanalmente</strong> desde aquí.
+                Contratos anulados (<em>Contrato nulo</em>, <em>Devuelto</em>, <em>Rechazado</em>) y, en su propia pestaña, los <em>Retractados</em>
+                (el cliente se retractó en el plazo legal: quedan inhabilitados y aquí se decide si se borran o se conservan como histórico).
+                La depuración es <strong>manual</strong> desde aquí.
                 Cada borrado queda registrado en el <strong>Histórico</strong> como referencia.
               </p>
             </div>
           </div>
 
           <div className="flex gap-2 border-b border-gray-200">
-            {(['anulados', 'historico'] as const).map(t => (
+            {(['anulados', 'retractados', 'historico'] as const).map(t => (
               <button key={t} type="button" onClick={() => setTab(t)}
                 className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${tab === t ? 'border-red-600 text-red-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-                {t === 'anulados' ? 'Anulados' : 'Histórico de borrados'}
+                {t === 'anulados' ? 'Anulados' : t === 'retractados' ? 'Retractados' : 'Histórico de borrados'}
               </button>
             ))}
           </div>
 
-          {tab === 'anulados' && (
+          {esLista && (
             <>
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-900">
-                <strong>Qué se borra:</strong> el contrato anulado completo (titular, beneficiarios, financiero, pagos no validados, inscripción Kids).
+                {tab === 'retractados' && (<><strong>Retractados:</strong> sus personas ya están inhabilitadas (sin acceso). Los que no borre quedan aquí como histórico. </>)}
+                <strong>Qué se borra:</strong> el contrato {etiqueta} completo (titular, beneficiarios, financiero, pagos no validados, inscripción Kids).
                 <strong> Qué se conserva:</strong> la ficha académica, las clases y el login de quien tenga <strong>otro contrato</strong> (columna “Otro contrato”).
                 Los contratos con <strong>pagos validados</strong> solo se pueden seleccionar activando la casilla
                 <em> “Permitir borrar contratos con pagos validados”</em>, y piden una confirmación adicional.
@@ -358,7 +369,7 @@ export default function LimpiezaAnuladosPage() {
 
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
                 {hLoading ? <div className="p-8 text-center text-sm text-gray-400">Cargando…</div>
-                  : !hRows.length ? <p className="p-8 text-center text-sm text-gray-400">Aún no hay contratos anulados borrados.</p>
+                  : !hRows.length ? <p className="p-8 text-center text-sm text-gray-400">Aún no hay contratos anulados ni retractados borrados.</p>
                   : (
                     <div className="overflow-x-auto max-h-[65vh] overflow-y-auto">
                       <table className="w-full text-sm">
@@ -366,6 +377,7 @@ export default function LimpiezaAnuladosPage() {
                           <tr>
                             <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase">Fecha</th>
                             <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase">Contrato</th>
+                            <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase">Tipo</th>
                             <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase">Titular</th>
                             <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase">Borrado por</th>
                             <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase">Motivo</th>
@@ -377,6 +389,9 @@ export default function LimpiezaAnuladosPage() {
                             <tr key={h._id} className="hover:bg-gray-50">
                               <td className="px-3 py-2 text-xs whitespace-nowrap">{new Date(h.fecha).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}</td>
                               <td className="px-3 py-2 font-mono text-xs font-bold">{h.contrato}</td>
+                              <td className="px-3 py-2 text-xs">
+                                <span className={`px-2 py-0.5 rounded ${h.categoria === 'Retractado' ? 'bg-gray-200 text-gray-800' : 'bg-red-100 text-red-800'}`}>{h.categoria || 'Anulado'}</span>
+                              </td>
                               <td className="px-3 py-2">{h.titularNombre || '—'}</td>
                               <td className="px-3 py-2 text-xs">{h.realizadoPorNombre || h.realizadoPor}</td>
                               <td className="px-3 py-2 text-xs text-gray-600 max-w-xs break-words">{h.motivo}</td>
@@ -402,7 +417,7 @@ export default function LimpiezaAnuladosPage() {
                   <div className="flex items-start gap-3 mb-3">
                     <ExclamationTriangleIcon className="h-6 w-6 text-red-600 mt-0.5" />
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Borrar {selected.size} contrato(s) anulado(s)</h3>
+                      <h3 className="text-lg font-semibold text-gray-900">Borrar {selected.size} contrato(s) {etiqueta}(s)</h3>
                       <p className="text-sm text-gray-600">
                         Se borran definitivamente el titular, los beneficiarios, el financiero, los pagos no validados y la inscripción Kids de cada contrato.
                         Se <strong>conserva</strong> la ficha académica, las clases y el login de quien tenga otro contrato.

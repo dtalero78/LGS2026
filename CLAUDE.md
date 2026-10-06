@@ -147,8 +147,8 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
      - Lista de beneficiarios con nombre (link clickeable → `/student/[id]`), ID, estado (badge). Los beneficiarios **Kids** muestran badge "USUARIO KIDS", no generan ACADEMICA al aprobar y su clic abre su ficha `/person/[id]`
      - Botón Aprobar con seguimiento de estado (Aprobando → Enviando WhatsApp → Completado)
      - Botón Editar (protegido por permisos)
-     - Botón Eliminar con confirmación modal (solo tipo BENEFICIARIO)
-107. Agregar beneficiario - Formulario multi-paso: datos básicos → contacto (con selector de país) → dirección
+     - Botón Eliminar con confirmación modal (solo tipo BENEFICIARIO no aprobado; el servidor exige `PERSON.INFO.ELIMINAR`, rechaza aprobados y solo borra la ACADEMICA de ese contrato sin clases)
+107. Agregar beneficiario - Formulario multi-paso: datos básicos → contacto (con selector de país) → dirección. **Regla**: bloquea solo si el documento ya es **beneficiario activo** en un contrato vivo (modal al salir del paso 1 vía `verificar-documento` + 409 en `POST /api/postgres/people`); la re-matrícula (documento solo en contratos muertos o como titular) sí se permite y al aprobar, `approve` re-liga la ficha ACADEMICA existente al contrato nuevo y reactiva su login
 108. Control de estado de titular (dropdown: Aprobado, Contrato nulo, Devuelto, Pendiente, Rechazado) con confirmación. Estados Contrato nulo/Devuelto/Rechazado inactivan automáticamente al titular y todos sus beneficiarios. Cambiar un contrato **Aprobado** abre un modal de advertencia rojo (motivo ≥10 + casilla) y al anularlo se avisa que los anulados se depuran semanalmente
 108b. **Historial de cambios de estado** (tabla `APROBACION_AUDIT`): sección propia en la pestaña Administración, **debajo de Gestión de Beneficiarios** (permiso `PERSON.CAMBIAR_ESTADO`). La caja "WhatsApp Administrativo" (botones sin acción) se retiró de esa pestaña
 109. Comentarios internos con tipo, prioridad, autor y fecha
@@ -1286,6 +1286,9 @@ When a titular's estado is changed to **Contrato nulo**, **Devuelto**, or **Rech
 - All beneficiaries of the same contract are marked as `estadoInactivo = true`
 - Implementation: `src/app/api/postgres/people/[id]/route.ts` (PATCH handler)
 
+### By Retracto (Retractado)
+- `aprobacion = 'Retractado'` (cliente que se retracta en el plazo legal; **no** es Contrato nulo) → `inhabilitarContratoRetractado()` de [src/lib/retractado.ts](src/lib/retractado.ts): titular + beneficiarios `estadoInactivo=true` y `estado='RETRACTADO'`, sus fichas ACADEMICA inactivas y su login ESTUDIANTE `activo=false` (salvo correo de un beneficiario vivo de otro contrato). Se aplica desde la ficha (`PATCH people/[id]`, permitido aun sobre Aprobado con motivo) y desde `PUT approvals/[id]`. Los retractados tienen **pestaña propia** en la Limpieza de Anulados (`categoria=retractados`, `tipoPurga='LIMPIEZA_RETRACTADOS'`)
+
 ### By OnHold Activation/Deactivation
 - **Activate OnHold**: Sets `USUARIOS_ROLES.activo = false` (blocks login)
 - **Deactivate OnHold**: Sets `USUARIOS_ROLES.activo = true` (restores login)
@@ -1438,7 +1441,8 @@ interface ConsentData {
 
 **⚠️ Auditoría Crear Contrato (sep-2026)** — corregidos: `search`, `GET contracts/[id]` y `send-pdf` (ahora `handlerWithStaffAuth`). **Siguen abiertos**:
 - 🔴 Documentos de contrato en Spaces con **ACL `public-read`** ([upload-url](src/app/api/contracts/[id]/upload-url/route.ts)) — cédulas/recibos accesibles con la URL sin login. Arreglo: ACL privada + URL firmada temporal + script para los objetos existentes.
-- 🟠 `POST /api/postgres/contracts` y `PUT /api/postgres/contracts/[id]` sin permiso (cualquier sesión, incl. ESTUDIANTE). El POST además anula borradores ajenos (`anularBeneficiariosViejos`) y reserva cupos KIDS; el PUT permite editar contratos **ya firmados** (el hash del consentimiento deja de corresponder).
+- 🟠 `POST /api/postgres/contracts` sin permiso (cualquier sesión, incl. ESTUDIANTE); además anula borradores ajenos (`anularBeneficiariosViejos`) y reserva cupos KIDS. `PUT /api/postgres/contracts/[id]` quedó **corregido el 2026-10-06**: solo staff, y un contrato **aprobado** solo lo edita `SUPER_ADMIN` (servidor + botón). Sigue abierto que un contrato firmado **sin aprobar** se puede editar (el hash deja de corresponder) y que el PUT no recalcula el fin ni propaga a ACADEMICA/USUARIOS_ROLES.
+- 🔴 **`GET /api/postgres/people/[id]` es PÚBLICO** (`handler()`): sin sesión devuelve la ficha completa (datos personales + financiero). Verificado en producción el 2026-10-06 (`200`). Solo lo usan pantallas internas; pendiente pasarlo a `handlerWithStaffAuth` (a la espera de autorización). Ver [docs/security/02-hallazgos-proceso-contrato.md](docs/security/02-hallazgos-proceso-contrato.md).
 - 🟠 `DELETE /api/contracts/[id]/documents` borra **cualquier objeto del bucket** (no verifica que la URL esté en la lista de ese titular). `upload-url` solo pide sesión.
 - 🟡 `documents`/`recibo-inscripcion` aceptan `url` arbitraria (`javascript:` en "Ver" → XSS a staff; el recibo hace `fetch` server-side → SSRF).
 - 🟡 OTP de firma sin límite de intentos ni cooldown server-side; `Math.random`.
@@ -1496,7 +1500,7 @@ interface ConsentData {
 | Permisos Admin | `/admin/permissions` | SUPER_ADMIN/ADMIN only |
 | Crea login | `/admin/crea-login` | MANTENIMIENTO.USUARIOS.CREAR_LOGIN |
 | Consulta de Scripts | `/admin/scripts/consulta` | MANTENIMIENTO.SCRIPTS.CONSULTA |
-| Limpieza de Anulados (Mantenimiento › Contratos) | `/admin/limpieza-anulados` | MANTENIMIENTO.CONTRATOS.LIMPIEZA_ANULADOS — borra contratos Contrato nulo/Devuelto/Rechazado; conserva ficha académica/clases/login compartidos con otro contrato; pagos validados solo con casilla + 2ª confirmación; snapshot en `PURGE_LOG` (`tipoPurga='LIMPIEZA_ANULADOS'`), pestaña Histórico |
+| Limpieza de Anulados (Mantenimiento › Contratos) | `/admin/limpieza-anulados` | MANTENIMIENTO.CONTRATOS.LIMPIEZA_ANULADOS — pestañas **Anulados** (Contrato nulo/Devuelto/Rechazado), **Retractados** (aparte, para decidir borrar o conservar como histórico) e Histórico; depuración **manual** (la automática queda pendiente de autorización); borra contratos de la pestaña elegida; conserva ficha académica/clases/login compartidos con otro contrato; pagos validados solo con casilla + 2ª confirmación; snapshot en `PURGE_LOG` (`tipoPurga='LIMPIEZA_ANULADOS'`), pestaña Histórico |
 | Bloqueo Certificados por Mora (Mantenimiento › Contratos) | `/admin/bloqueo-certificado-mora` | MANTENIMIENTO.CONTRATOS.BLOQUEO_CERT_MORA |
 | Usuarios en mora (Recaudos) | `/dashboard/recaudos/usuarios-mora` | RECAUDOS.USUARIOS_MORA.VER (botón Desbloquear: RECAUDOS.USUARIOS_MORA.DESBLOQUEAR) |
 | Ticker Editor | `/admin/ticker` | SUPER_ADMIN only |

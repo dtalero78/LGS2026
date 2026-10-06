@@ -4,6 +4,8 @@ import { query, queryOne } from '@/lib/postgres';
 import { ValidationError, ConflictError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 import { syncFinancieroSaldo } from '@/services/pagos-titulares.service';
+import { requirePermission } from '@/lib/api-permissions';
+import { MantenimientoPermission } from '@/types/permissions';
 
 const VALID_PLAN = ['Contado', 'Credito', 'Colaborador'] as const;
 type Plan = typeof VALID_PLAN[number];
@@ -23,6 +25,8 @@ function parseMoney(v: any): number {
 }
 
 export const POST = handlerWithAuth(async (request, _ctx, session) => {
+  // Mismo permiso que la página Mantenimiento › Migrar contrato (antes solo pedía sesión).
+  await requirePermission(session, MantenimientoPermission.MIGRAR_CONTRATO);
   const { contrato, titular, financial, beneficiarios, titularEsBeneficiario } = await request.json();
 
   // Plan (Contado/Credito/Colaborador) — se valida y propaga a PEOPLE (titular +

@@ -43,15 +43,23 @@ Detalle completo en [02 — Proceso del contrato](02-proceso-de-contrato.md).
 **RN-06 — Verificación de personas.**
 - Al crear un contrato el sistema revisa si el titular o los beneficiarios ya están en otro contrato vivo.
 - **Una persona solo puede ser beneficiaria de un contrato vigente.** Ver RC-06 a RC-11.
+- La misma regla aplica al **agregar un beneficiario** a un contrato existente: si el documento ya es beneficiario activo, aparece un aviso y no se agrega. Ver RC-37.
 
 **RN-07 — Anular, nunca borrar.** Al crear un contrato nuevo, el contrato anterior se **anula**, no se borra.
 - No se puede anular un contrato **aprobado** ni uno con **pagos validados**.
-- El borrado definitivo solo ocurre en la **Limpieza de Anulados**, con copia de respaldo. Ver RC-54.
+- El borrado definitivo solo ocurre en la **Limpieza de Anulados**, con copia de respaldo. Es **manual**: la depuración automática queda pendiente de autorización. Ver RC-54.
+
+**RN-07b — Retracto.**
+- Un cliente que se **retracta dentro del plazo legal** deja el contrato en **Retractado**, que no es lo mismo que Contrato nulo.
+- El titular y todos los beneficiarios quedan **inhabilitados y sin acceso**.
+- Los retractados tienen su propia pestaña en la Limpieza, donde se decide si se borran o se conservan como histórico. Ver RC-55.
 
 **RN-08 — Aprobación.**
 - Al aprobar, los beneficiarios adultos reciben su ficha académica en **WELCOME** y el mensaje de bienvenida. Ver RC-32.
 - Un contrato aprobado solo cambia de estado desde la ficha del titular, con **motivo obligatorio**. Ver RC-35.
 - Todo cambio de estado queda en el **historial de cambios de estado**.
+- Los datos de un contrato **aprobado** solo los edita un **Super Administrador**. Ver RC-59.
+- Un beneficiario **aprobado** no se elimina: se inactiva. Ver RC-40.
 
 **RN-09 — Firma.**
 - El cliente firma con un **código de 6 dígitos** enviado por WhatsApp, que vale 10 minutos.
@@ -241,4 +249,5 @@ Así se evita que la use para no asistir a la segunda sesión.
 
 | Fecha | Cambio |
 |---|---|
+| 06-10-2026 (2) | **Retractado** inhabilita a titular y beneficiarios y tiene pestaña propia en la Limpieza (RN-07b). La Limpieza sigue siendo manual. Al **agregar beneficiario** se bloquea solo si ya es beneficiario activo, con aviso (RN-06). **Contrato aprobado** solo lo edita un Super Administrador; un beneficiario aprobado no se elimina (RN-08). |
 | 06-10-2026 | Primera versión. Incluye los cambios del 05-10-2026: verificación de documentos y número asignado al crear, historial de cambios de estado, Limpieza de Anulados, regla única de mora, bloqueo de certificados por mora con desbloqueo, informe de Usuarios en mora, informe de Certificados y registro de generaciones por el personal. |

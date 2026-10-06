@@ -4,7 +4,7 @@ import { requirePermission } from '@/lib/api-permissions'
 import { query, queryOne } from '@/lib/postgres'
 import { NotFoundError } from '@/lib/errors'
 import { MantenimientoPermission } from '@/types/permissions'
-import { TIPO_PURGA_ANULADOS } from '@/lib/limpieza-anulados'
+import { TIPOS_PURGA_LIMPIEZA, TIPO_PURGA_RETRACTADOS } from '@/lib/limpieza-anulados'
 
 /**
  * GET /api/admin/limpieza-anulados/historico?search=      → lista (sin snapshot)
@@ -21,13 +21,13 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
 
   if (id) {
     const row = await queryOne<any>(
-      `SELECT * FROM "PURGE_LOG" WHERE "_id" = $1 AND "tipoPurga" = $2`, [id, TIPO_PURGA_ANULADOS])
+      `SELECT * FROM "PURGE_LOG" WHERE "_id" = $1 AND "tipoPurga" = ANY($2::text[])`, [id, TIPOS_PURGA_LIMPIEZA])
     if (!row) throw new NotFoundError('Registro', id)
     const snap = typeof row.snapshot === 'string' ? JSON.parse(row.snapshot) : (row.snapshot || {})
     const fin = (snap.financieros || [])[0] || null
     return successResponse({
       registro: {
-        _id: row._id, contrato: row.contrato, titularNombre: row.titularNombre, motivo: row.motivo,
+        _id: row._id, contrato: row.contrato, categoria: row.tipoPurga === TIPO_PURGA_RETRACTADOS ? 'Retractado' : 'Anulado', titularNombre: row.titularNombre, motivo: row.motivo,
         realizadoPor: row.realizadoPorNombre || row.realizadoPor, fecha: row._createdDate,
         filasBorradas: row.filasBorradas,
       },
@@ -45,12 +45,13 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
   }
 
   const search = (searchParams.get('search') || '').trim()
-  const params: any[] = [TIPO_PURGA_ANULADOS]
-  let where = `"tipoPurga" = $1`
+  const params: any[] = [TIPOS_PURGA_LIMPIEZA]
+  let where = `"tipoPurga" = ANY($1::text[])`
   if (search) { where += ` AND ("contrato" ILIKE $2 OR "titularNombre" ILIKE $2 OR "realizadoPor" ILIKE $2)`; params.push(`%${search}%`) }
   const r = await query<any>(
     `SELECT "_id","contrato","titularNombre","motivo","realizadoPor","realizadoPorNombre","filasBorradas",
-            "_createdDate" AS "fecha"
+            "_createdDate" AS "fecha",
+            CASE WHEN "tipoPurga" = 'LIMPIEZA_RETRACTADOS' THEN 'Retractado' ELSE 'Anulado' END AS "categoria"
        FROM "PURGE_LOG" WHERE ${where}
       ORDER BY "_createdDate" DESC LIMIT 1000`, params)
   return successResponse({ rows: r.rows, total: r.rowCount || 0 })

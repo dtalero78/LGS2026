@@ -3,7 +3,7 @@ import { handlerWithAuth, successResponse } from '@/lib/api-helpers'
 import { requirePermission } from '@/lib/api-permissions'
 import { query } from '@/lib/postgres'
 import { MantenimientoPermission } from '@/types/permissions'
-import { ANULADO_WHERE } from '@/lib/limpieza-anulados'
+import { categoriaDe, whereCategoria } from '@/lib/limpieza-anulados'
 
 /**
  * GET /api/admin/limpieza-anulados/list?search=&plataforma=&minDias=
@@ -25,6 +25,8 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
   const plataforma = (searchParams.get('plataforma') || '').trim()
   const minDias = Math.max(0, parseInt(searchParams.get('minDias') || '0', 10) || 0)
   const estado = (searchParams.get('estado') || '').trim()
+  // categoria=retractados → pestaña "Retractados" (aparte de los nulos/devueltos/rechazados).
+  const ANULADO_WHERE = whereCategoria(categoriaDe(searchParams.get('categoria')))
 
   const conds: string[] = [`p."tipoUsuario" = 'TITULAR'`, ANULADO_WHERE]
   const params: any[] = []

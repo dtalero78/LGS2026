@@ -249,6 +249,7 @@ Un contrato **no se puede firmar dos veces**.
   - recibe el **WhatsApp de bienvenida** con su enlace de registro.
 - El **usuario de acceso** lo crea el propio alumno desde ese enlace. Aprobar no lo crea.
 - Los titulares no reciben ficha académica, salvo que también sean beneficiarios.
+- Si el beneficiario **ya tenía ficha académica** de un contrato anterior (re-matrícula), esa ficha pasa a este contrato y su acceso se reactiva, salvo que la ficha pertenezca a un beneficiario activo de otro contrato.
 - Los beneficiarios **Kids** quedan aprobados y su inscripción se activa en el sistema Kids.
 - Los **contratos de prueba no se pueden aprobar.**
 
@@ -261,7 +262,7 @@ Un contrato **no se puede firmar dos veces**.
 | **Pendiente** | PENDIENTE | — |
 | **Aprobado** | ACTIVA | Beneficiarios con ficha académica y bienvenida (RC-32) |
 | **Contrato nulo / Devuelto / Rechazado** | ANULADO | **Inactiva al titular y a todos sus beneficiarios.** El contrato queda listo para la Limpieza de Anulados |
-| **Retractado** | RETRACTADO | No inactiva a nadie (ver RC-55) |
+| **Retractado** | RETRACTADO | **Inhabilita al titular y a todos sus beneficiarios**, incluidos su ficha académica y su acceso. No es un Contrato nulo: tiene su propia pestaña en la Limpieza (ver RC-55) |
 
 **RC-35 — Cambiar un contrato ya aprobado.**
 - Solo se hace desde la **ficha del titular**: Administración › Estado del Titular.
@@ -288,7 +289,10 @@ Pantalla: ficha del titular › **Administración › Gestión de Beneficiarios*
 **RC-37 — Agregar beneficiario.**
 - Datos obligatorios: nombre, apellido, documento, país, fecha de nacimiento, género, ciudad, domicilio, celular y email.
 - Hereda del titular el contrato, las fechas y la vigencia, y nace **Pendiente**.
-- No se puede agregar si el documento ya está registrado en la plataforma.
+- **No se puede agregar si el documento ya es beneficiario activo** en un contrato vivo, sea este u otro. Al salir de los datos básicos aparece un aviso con el nombre y el contrato donde ya está activo.
+- Si el documento solo aparece en contratos **finalizados, anulados o retractados**, o como titular, **sí se puede agregar** (re-matrícula):
+  - si tenía clases, su historial se archiva en PDF;
+  - al aprobarlo, su ficha académica pasa a este contrato y su acceso se reactiva.
 
 **RC-38 — Modificar beneficiario.**
 - Se pueden cambiar nombres, documento, fecha de nacimiento, celular, domicilio y email.
@@ -300,11 +304,18 @@ Pantalla: ficha del titular › **Administración › Gestión de Beneficiarios*
 - Solo si está **aprobado**, y con **motivo obligatorio**.
 - Se sincroniza con la ficha académica y el acceso: inactivo = no puede iniciar sesión.
 
-**RC-40 — Eliminar beneficiario.** Solo se ofrece para beneficiarios **no aprobados** y **no inactivos**. Borra su registro y su ficha académica.
+**RC-40 — Eliminar beneficiario.**
+- Solo se ofrece para beneficiarios **no aprobados** y **no inactivos**, y exige el permiso de eliminar.
+- Un beneficiario **aprobado nunca se elimina**: se inactiva (RC-39).
+- Borra su registro. Su ficha académica solo se borra si pertenece a este contrato y **no tiene clases**.
 
 **RC-41 — Convertir titular en beneficiario.**
 - Duplica al titular como beneficiario **Pendiente**. La ficha académica y el acceso llegan al aprobarlo.
 - Se bloquea si ya existe un beneficiario con el mismo documento, email o celular.
+
+**RC-59 — Editar el contrato** (botón "Editar Contrato" del detalle del contrato).
+- Un contrato **sin aprobar** lo puede editar el personal con acceso a Comercial.
+- Un contrato **aprobado** solo lo edita un **Super Administrador**. Para los demás, el botón aparece bloqueado con la leyenda "Aprobado · solo Super Admin edita".
 
 ---
 
@@ -316,7 +327,7 @@ Pantalla: ficha del titular › **Administración › Gestión de Beneficiarios*
 - Un contrato se considera **vencido** cuando la fecha actual supera en **al menos 2 días** su fecha de fin. Ese día extra de gracia evita bloquear a alumnos de otros husos horarios mientras su último día sigue en curso.
 
 **RC-43 — Extensión manual.**
-- Por un número de días o hasta una fecha, siempre con **motivo**.
+- Por un número de días o hasta una fecha, siempre con **motivo**, y solo con el permiso de **extender vigencia**.
 - Suma al contador de extensiones, queda en el **historial de extensiones** y el estado pasa a **CON EXTENSIÓN**.
 - **Reactiva** al alumno, su ficha académica y su acceso.
 
@@ -390,9 +401,14 @@ Pantalla: ficha del titular › **Administración › Gestión de Beneficiarios*
 ## 8. Anulación y depuración
 
 **RC-54 — Limpieza de Anulados** (Mantenimiento › Contratos).
-- **Qué contratos entran:** los anulados, es decir, Contrato nulo, Devuelto o Rechazado, que no estén aprobados ni sean de prueba. **Retractado no entra.**
+- **Pestañas:**
+  - **Anulados:** Contrato nulo, Devuelto o Rechazado.
+  - **Retractados:** contratos retractados (RC-55).
+  - **Histórico de borrados:** indica si cada contrato borrado era anulado o retractado.
+
+  Nunca entran contratos aprobados ni de prueba.
 - **Cómo se hace:**
-  - es una tarea **manual** de Mantenimiento;
+  - es una tarea **manual** de Mantenimiento. Una depuración automática queda pendiente de autorización;
   - se pueden seleccionar varios contratos a la vez, hasta 100 por operación;
   - se exige un motivo.
 - **Antes de borrar**, cada contrato se respalda **completo**. El respaldo se consulta en la pestaña **Histórico**.
@@ -406,7 +422,10 @@ Pantalla: ficha del titular › **Administración › Gestión de Beneficiarios*
   - si el documento o el correo también aparecen en otro contrato, esa ficha y ese acceso **no se borran**.
 - **Contratos con pagos validados:** se omiten, salvo que se marque una casilla específica y se confirme dos veces.
 
-**RC-55 — Retractado.** Un contrato retractado **no** inactiva a sus personas ni entra en la Limpieza de Anulados. Hay que gestionarlo aparte.
+**RC-55 — Retractado.** Es el cliente que **se retracta dentro del plazo legal**. No es un Contrato nulo.
+- Al marcarlo se **inhabilitan** el titular y todos los beneficiarios: quedan inactivos y **sin acceso**, incluidas sus fichas académicas.
+- Se puede marcar incluso sobre un contrato **aprobado**, desde la ficha del titular y con motivo (RC-35).
+- En la Limpieza tiene su **propia pestaña**, para decidir caso a caso si se borra, con respaldo, o se conserva como histórico. Los que no se borran permanecen en esa pestaña.
 
 ---
 

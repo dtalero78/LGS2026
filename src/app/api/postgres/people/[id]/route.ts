@@ -8,6 +8,7 @@ import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { buildDynamicUpdate } from '@/lib/query-builder';
 import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
 import { registrarCambioAprobacion, assertPuedeRevertirAPendiente, nombreDe } from '@/lib/aprobacion-audit';
+import { inhabilitarContratoRetractado } from '@/lib/retractado';
 
 /**
  * GET /api/postgres/people/[id]
@@ -611,6 +612,18 @@ export const PATCH = handlerWithAuth(async (
     console.log(`🔴 [PostgreSQL People] Estado "${body.aprobacion}" → ANULADO: titular + ${beneficiariesInactivated} beneficiarios`);
   }
 
+  // Retractado (2026-10-06): el cliente se retracta dentro del plazo legal. NO es
+  // un contrato nulo: conserva su estado RETRACTADO (y su pestaña propia en la
+  // Limpieza de Anulados), pero inhabilita a TODOS: titular + beneficiarios en
+  // PEOPLE, sus fichas ACADEMICA y su acceso (USUARIOS_ROLES ESTUDIANTE).
+  if (body.aprobacion === 'Retractado' && parsedPerson.contrato) {
+    const r = await inhabilitarContratoRetractado(parsedPerson.contrato);
+    parsedPerson.estadoInactivo = true;
+    parsedPerson.estado = 'RETRACTADO';
+    beneficiariesInactivated = r.beneficiarios;
+    console.log(`↩️ [PostgreSQL People] Retractado: titular + ${r.beneficiarios} beneficiarios, ${r.fichas} fichas, ${r.logins} accesos inhabilitados`);
+  }
+
   // Aprobado → Pendiente: BLOQUEA SOLO el login de los beneficiarios (activo=false
   // en USUARIOS_ROLES). El titular NO se toca y NADIE se inactiva en PEOPLE/ACADEMICA.
   // Es reversible: al re-aprobar (/approve) se reactiva el login de los beneficiarios.
@@ -654,12 +667,15 @@ export const PATCH = handlerWithAuth(async (
  */
 export const DELETE = handlerWithAuth(async (
   _request: Request,
-  { params }: { params: Record<string, string> }
+  { params }: { params: Record<string, string> },
+  session
 ) => {
+  // Mismo permiso que el botón "Eliminar" de la ficha (antes solo pedía sesión).
+  await requirePermission(session, PersonPermission.ELIMINAR);
   const personId = params.id;
 
   const person = await queryOne(
-    `SELECT "_id", "numeroId", "tipoUsuario" FROM "PEOPLE" WHERE "_id" = $1`,
+    `SELECT "_id", "numeroId", "tipoUsuario", "aprobacion", "contrato" FROM "PEOPLE" WHERE "_id" = $1`,
     [personId]
   );
 
@@ -667,9 +683,21 @@ export const DELETE = handlerWithAuth(async (
   if (person.tipoUsuario !== 'BENEFICIARIO') {
     throw new ValidationError('Solo se pueden eliminar registros de tipo BENEFICIARIO');
   }
+  // Un beneficiario APROBADO no se elimina (está o estuvo estudiando): se inactiva.
+  // Antes solo lo impedía la pantalla.
+  if (String(person.aprobacion || '').toUpperCase().startsWith('APROBAD')) {
+    throw new ValidationError('No se puede eliminar un beneficiario aprobado. Use "Inactivar".');
+  }
 
-  // Delete from ACADEMICA if exists
-  await query(`DELETE FROM "ACADEMICA" WHERE "numeroId" = $1`, [person.numeroId]);
+  // Ficha ACADEMICA: solo la de ESTE beneficiario (ligada a su fila o a su contrato)
+  // y sin clases. Antes se borraba cualquier ficha con el mismo documento, aunque
+  // fuera de otro contrato y con historial.
+  await query(
+    `DELETE FROM "ACADEMICA" a
+      WHERE a."numeroId" = $1
+        AND (a."usuarioId" = $2 OR a."contrato" = $3)
+        AND NOT EXISTS (SELECT 1 FROM "ACADEMICA_BOOKINGS" b WHERE b."studentId" = a."_id" OR b."idEstudiante" = a."_id")`,
+    [person.numeroId, personId, person.contrato]);
 
   // Delete from PEOPLE
   await query(`DELETE FROM "PEOPLE" WHERE "_id" = $1`, [personId]);

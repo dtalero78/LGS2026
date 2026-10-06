@@ -165,6 +165,35 @@ async function approveOnePerson(
       console.log(`✅ [Approve] Registro ACADEMICA creado: ${academicId}`);
     } else {
       console.log(`ℹ️ [Approve] Registro ACADEMICA ya existía: ${academicId}`);
+      // Re-matrícula (2026-10-06): la ficha viene de un contrato anterior. Se liga a
+      // ESTE beneficiario/contrato y se reactiva (mismo criterio que Crear Contrato:
+      // el historial sigue con el alumno), salvo que pertenezca a un beneficiario
+      // VIVO de otro contrato — en ese caso no se toca.
+      const acad = await queryOne<{ usuarioId: string | null }>(
+        `SELECT "usuarioId" FROM "ACADEMICA" WHERE "_id" = $1`, [academicId]);
+      const duenoVivo = acad?.usuarioId && acad.usuarioId !== personId
+        ? await queryOne(
+            `SELECT 1 FROM "PEOPLE"
+              WHERE "_id" = $1 AND "tipoUsuario" <> 'TITULAR' AND "contrato" IS DISTINCT FROM $2
+                AND UPPER(COALESCE("estado",'')) NOT IN ('FINALIZADA','ANULADO','RETRACTADO')
+                AND UPPER(COALESCE("aprobacion",'')) NOT IN ('CONTRATO NULO','DEVUELTO','RECHAZADO','RETRACTADO')
+                AND ("estadoInactivo" IS NOT TRUE OR "fechaOnHold" IS NOT NULL)`,
+            [acad.usuarioId, effectiveContrato])
+        : null;
+      if (!duenoVivo) {
+        await query(
+          `UPDATE "ACADEMICA" SET "usuarioId" = $2, "contrato" = COALESCE($3, "contrato"),
+                  "estadoInactivo" = false, "_updatedDate" = NOW()
+            WHERE "_id" = $1`,
+          [academicId, personId, effectiveContrato || null]);
+        if (person.email) {
+          await query(
+            `UPDATE "USUARIOS_ROLES" SET "activo" = true, "contrato" = COALESCE($2, "contrato")
+              WHERE LOWER(TRIM("email")) = LOWER(TRIM($1)) AND UPPER(COALESCE("rol",'')) = 'ESTUDIANTE'`,
+            [person.email, effectiveContrato || null]);
+        }
+        console.log(`🔁 [Approve] Ficha ACADEMICA re-ligada al contrato ${effectiveContrato} (re-matrícula)`);
+      }
     }
   } else if (esKids) {
     console.log(`ℹ️ [Approve] Beneficiario KIDS — se omite ACADEMICA (su programa es KIDS2026, no el de adultos)`);
