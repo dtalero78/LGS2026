@@ -1,6 +1,8 @@
 import { handlerWithStaffAuth, successResponse } from '@/lib/api-helpers';
 import { AcademicaRepository } from '@/repositories/academica.repository';
 import { verificarDocumento } from '@/lib/verificacion-documento';
+import { kidsIntake } from '@/lib/kids-intake';
+import { buildKidsReservation, plataformaToCountryCode, toISODate } from '@/lib/kids-mapping';
 import { ValidationError, ConflictError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 import { queryOne, query } from '@/lib/postgres';
@@ -119,6 +121,8 @@ export const POST = handlerWithStaffAuth(async (request) => {
   // apoderado) en KIDS_INSCRIPCIONES. Best-effort (no rompe la creación).
   if (body.kids === true && body.kidsData) {
     const kd = body.kidsData;
+    const kidsInscId = ids.kidsInscripcion();
+    const contratoKids = (person as any)?.contrato || contratoTarget || null;
     try {
       await query(
         `INSERT INTO "KIDS_INSCRIPCIONES"
@@ -126,7 +130,7 @@ export const POST = handlerWithStaffAuth(async (request) => {
             "campaign","tipoCurso","horario","classroomId","salonNombre",
             "apoderado","apoderadoApellidos","apoderadoDoc","apoderadoTelefono","apoderadoMail","parentesco")
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
-        [ids.kidsInscripcion(), (person as any)?.contrato || contratoTarget || null, personId, body.numeroId,
+        [kidsInscId, contratoKids, personId, body.numeroId,
          `${body.primerNombre || ''} ${body.primerApellido || ''}`.trim() || null,
          body.plataforma || (person as any)?.plataforma || null,
          kd.campaign || null, kd.tipoCurso || null, kd.horario || null, kd.classroomId || null, kd.salonNombre || null,
@@ -135,6 +139,40 @@ export const POST = handlerWithStaffAuth(async (request) => {
       );
     } catch (e) {
       console.error('[people POST] Error guardando KIDS_INSCRIPCIONES (best-effort):', e);
+    }
+
+    // Enviar la reserva a KIDS2026 — mismo flujo que Crear Contrato (antes faltaba
+    // aquí: un kid agregado desde la ficha nunca llegaba a KIDS y al aprobarlo no
+    // había reserva que activar). Best-effort: no rompe la creación.
+    if (kidsIntake.isConfigured() && kd.classroomId && contratoKids) {
+      try {
+        const titular = await queryOne<any>(
+          body.titularId
+            ? `SELECT * FROM "PEOPLE" WHERE "_id" = $1`
+            : `SELECT * FROM "PEOPLE" WHERE "contrato" = $1 AND "tipoUsuario" = 'TITULAR' ORDER BY "_createdDate" ASC LIMIT 1`,
+          [body.titularId || contratoKids]);
+        if (!titular) throw new Error('Titular no encontrado para la reserva Kids');
+        const input = buildKidsReservation({
+          externalRef: `${contratoKids}#${body.numeroId}`,
+          countryCode: plataformaToCountryCode(titular.plataforma || body.plataforma),
+          inicio: new Date().toISOString().slice(0, 10),
+          finalContrato: toISODate(body.finalContrato || titular.finalContrato),
+          titular,
+          beneficiario: body,
+          kidsData: kd,
+        });
+        const r = await kidsIntake.createReservation(input);
+        await query(
+          `UPDATE "KIDS_INSCRIPCIONES"
+             SET "enviadoAKids"=true, "kidsExternalRef"=$2, "kidsContractId"=$3,
+                 "kidsEnrollmentId"=$4, "fechaEnvioKids"=NOW(), "errorKids"=NULL, "_updatedDate"=NOW()
+           WHERE "_id"=$1`,
+          [kidsInscId, r.externalRef, r.contractId, r.enrollmentId]);
+      } catch (e: any) {
+        console.error('[people POST] Error enviando reserva a KIDS (best-effort):', e?.message);
+        await query(`UPDATE "KIDS_INSCRIPCIONES" SET "errorKids"=$2, "_updatedDate"=NOW() WHERE "_id"=$1`,
+          [kidsInscId, String(e?.message || 'error').slice(0, 500)]).catch(() => null);
+      }
     }
   }
 
