@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { XMarkIcon, AcademicCapIcon, LockClosedIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 
 type Nivel = 'beginner' | 'practical' | 'functional'
-interface NivelInfo { aprobado: boolean; fecha: string | null; yaGenerado?: boolean }
+interface NivelInfo { aprobado: boolean; fecha: string | null; yaGenerado?: boolean; generadoEn?: string | null }
 interface BloqueoMora {
   contrato: string
   diaCorte: number
@@ -23,6 +23,8 @@ const fmtFecha = (iso: string | null) => {
   return `${d}/${m}/${y}`
 }
 const fmtValor = (n: number) => `$${Math.round(n).toLocaleString('es-CO')}`
+const fmtFechaHora = (iso: string) =>
+  new Date(iso).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Bogota' })
 
 const NIVELES: { key: Nivel; label: string; cls: string }[] = [
   { key: 'beginner',   label: 'Beginner',   cls: 'bg-yellow-400 hover:bg-yellow-500 text-yellow-950' },
@@ -98,7 +100,7 @@ export default function CertificadosModal({ baseUrl, onClose }: { baseUrl: strin
               const leyenda = !aprobado
                 ? 'No ha aprobado el nivel, certificado no disponible'
                 : yaGenerado
-                  ? 'Ya generaste este certificado (solo se puede una vez)'
+                  ? `Ya generaste este certificado${info?.generadoEn ? ` el ${fmtFechaHora(info.generadoEn)}` : ''} (solo se puede una vez)`
                   : null
               return (
                 <div key={key}>
@@ -118,6 +120,12 @@ export default function CertificadosModal({ baseUrl, onClose }: { baseUrl: strin
                   )}
                   {!leyenda && bloqueo && (
                     <p className="mt-0.5 text-[11px] text-red-600 text-center">Requiere estar al día en los pagos</p>
+                  )}
+                  {/* Panel admin: informa si el alumno ya lo generó desde su panel (no bloquea al staff). */}
+                  {!yaGenerado && aprobado && info?.generadoEn && (
+                    <p className="mt-0.5 text-[11px] text-emerald-700 text-center">
+                      El alumno lo generó el {fmtFechaHora(info.generadoEn)}
+                    </p>
                   )}
                 </div>
               )

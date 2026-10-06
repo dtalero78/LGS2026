@@ -43,7 +43,9 @@ export interface CertificadoEstado {
   numeroId: string;
   // `yaGenerado` = el alumno ya generó ese certificado desde el panel estudiante
   // (límite de UNA sola vez). En el panel admin siempre viene false (sin límite).
-  niveles: Record<NivelCertificado, { aprobado: boolean; fecha: string | null; yaGenerado: boolean }>;
+  // `generadoEn` = fecha/hora en que el ALUMNO lo generó desde su panel (informativo; se
+  // muestra en ambos paneles, pero solo bloquea en el del estudiante vía `yaGenerado`).
+  niveles: Record<NivelCertificado, { aprobado: boolean; fecha: string | null; yaGenerado: boolean; generadoEn: string | null }>;
   // Causa del bloqueo por mora (null = puede generar). Ver moraService.getBloqueoCertificado.
   bloqueoMora?: BloqueoMora | null;
 }
@@ -74,13 +76,18 @@ function ensureTablaGenerados(): Promise<void> {
   return ensureGeneradosPromise;
 }
 
-async function getGenerados(studentId: string): Promise<Set<NivelCertificado>> {
+// nivel → fecha/hora (ISO) en que el alumno lo generó desde su panel.
+async function getGenerados(studentId: string): Promise<Map<NivelCertificado, string>> {
   await ensureTablaGenerados();
   const rows = await queryMany<any>(
-    `SELECT "nivel" FROM "CERTIFICADOS_GENERADOS" WHERE "studentId" = $1`, [studentId]);
-  const s = new Set<NivelCertificado>();
-  for (const r of rows) if (NIVELES_CERT.includes(r.nivel)) s.add(r.nivel as NivelCertificado);
-  return s;
+    `SELECT "nivel", "generadoEn" FROM "CERTIFICADOS_GENERADOS" WHERE "studentId" = $1`, [studentId]);
+  const m = new Map<NivelCertificado, string>();
+  for (const r of rows) {
+    if (!NIVELES_CERT.includes(r.nivel)) continue;
+    const f = r.generadoEn instanceof Date ? r.generadoEn : new Date(r.generadoEn);
+    m.set(r.nivel as NivelCertificado, isNaN(f.getTime()) ? '' : f.toISOString());
+  }
+  return m;
 }
 
 async function marcarGenerado(studentId: string, numeroId: string, nivel: NivelCertificado, nombre: string): Promise<void> {
@@ -117,7 +124,7 @@ async function loadInfo(id: string): Promise<{ academicaId: string; contrato: st
       .map((f: any) => (f instanceof Date ? f : new Date(f)))
       .filter((d: Date) => !isNaN(d.getTime()))
       .sort((a: Date, b: Date) => a.getTime() - b.getTime());
-    niveles[nivel] = { aprobado: fechas.length > 0, fecha: fechas[0] ? fechas[0].toISOString() : null, yaGenerado: false };
+    niveles[nivel] = { aprobado: fechas.length > 0, fecha: fechas[0] ? fechas[0].toISOString() : null, yaGenerado: false, generadoEn: null };
   }
   return { academicaId, contrato: acad.contrato || null, nombre, numeroId: String(acad.numeroId ?? ''), niveles };
 }
@@ -141,9 +148,12 @@ export const certificadoService = {
    */
   async getEstado(id: string, opts?: { incluirGenerado?: boolean; sinMora?: boolean }): Promise<CertificadoEstado> {
     const info = await loadInfo(id);
-    if (opts?.incluirGenerado) {
-      const gen = await getGenerados(info.academicaId);
-      for (const nivel of NIVELES_CERT) info.niveles[nivel].yaGenerado = gen.has(nivel);
+    // La fecha de generación por el alumno se informa siempre; solo bloquea (yaGenerado)
+    // cuando lo pide el panel del estudiante.
+    const gen = await getGenerados(info.academicaId);
+    for (const nivel of NIVELES_CERT) {
+      info.niveles[nivel].generadoEn = gen.get(nivel) || null;
+      if (opts?.incluirGenerado) info.niveles[nivel].yaGenerado = gen.has(nivel);
     }
     const bloqueoMora = opts?.sinMora ? null : await moraService.getBloqueoCertificado(await contratoDelAlumno(info));
     return { nombre: info.nombre, numeroId: info.numeroId, niveles: info.niveles, bloqueoMora };
