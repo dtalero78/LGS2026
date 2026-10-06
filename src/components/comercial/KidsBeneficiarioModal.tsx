@@ -222,7 +222,9 @@ export default function KidsBeneficiarioModal({
             ) : catalogConfigured ? (
               <>
                 <p className="text-xs text-gray-400 mb-3">
-                  Catálogo de KIDS2026: campañas en matrícula con cupo en {grupoPaisContrato === 'CL' ? 'Chile' : 'este país'}.
+                  Catálogo de KIDS2026: campañas en matrícula con cupo. Contrato de{' '}
+                  <strong className="text-gray-600">{plataforma || 'país sin definir'}</strong> → solo salones de{' '}
+                  <strong className="text-gray-600">{grupoPaisContrato === 'CL' ? 'Chile' : 'Colombia / Ecuador / Perú'}</strong>.
                 </p>
                 {campaniasUtiles.length === 0 && (
                   <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2 mb-3">

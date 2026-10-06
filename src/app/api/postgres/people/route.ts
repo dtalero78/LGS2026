@@ -1,7 +1,7 @@
 import { handlerWithStaffAuth, successResponse } from '@/lib/api-helpers';
 import { AcademicaRepository } from '@/repositories/academica.repository';
 import { verificarDocumento } from '@/lib/verificacion-documento';
-import { kidsIntake } from '@/lib/kids-intake';
+import { kidsIntake, validarSalonesDelPais } from '@/lib/kids-intake';
 import { buildKidsReservation, plataformaToCountryCode, toISODate } from '@/lib/kids-mapping';
 import { ValidationError, ConflictError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
@@ -36,6 +36,18 @@ export const POST = handlerWithStaffAuth(async (request) => {
   // Kids con KIDS2026 conectado: el salón es obligatorio (sin él no se envía la reserva).
   if (body.kids === true && kidsIntake.isConfigured() && !body.kidsData?.classroomId && !/^PRB-/i.test(String(contratoTarget || ''))) {
     throw new ValidationError('Falta elegir campaña, curso y salón de KIDS para este beneficiario.');
+  }
+  // El salón debe ser del país del contrato (plataforma del TITULAR): Chile → salones
+  // de Chile; Colombia/Ecuador/Perú → los otros.
+  if (body.kids === true && body.kidsData?.classroomId) {
+    const tit = await queryOne<{ plataforma: string | null }>(
+      body.titularId
+        ? `SELECT "plataforma" FROM "PEOPLE" WHERE "_id" = $1`
+        : `SELECT "plataforma" FROM "PEOPLE" WHERE "contrato" = $1 AND "tipoUsuario" = 'TITULAR' ORDER BY "_createdDate" ASC LIMIT 1`,
+      [body.titularId || contratoTarget]);
+    const errPais = await validarSalonesDelPais(tit?.plataforma || body.plataforma,
+      [{ classroomId: body.kidsData.classroomId, nombre: body.kidsData.salonNombre }]);
+    if (errPais) throw new ValidationError(errPais);
   }
 
   if (body.tipoUsuario === 'BENEFICIARIO') {

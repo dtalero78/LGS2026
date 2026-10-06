@@ -1671,9 +1671,12 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
           celular: beneficiaryData.celular,
           kidsData: beneficiaryKidsData || undefined,
         }}
-        titularNombre={`${person.primerNombre} ${person.primerApellido}`}
+        titularNombre={`${person.primerNombre || ''} ${person.segundoNombre || ''}`.trim()}
+        titularApellidos={`${person.primerApellido || ''} ${person.segundoApellido || ''}`.trim()}
+        titularDocumento={person.numeroId}
         titularCelular={person.celular}
         titularEmail={person.email}
+        plataforma={person.plataforma}
         onSave={(v) => {
           // Sincroniza al form los datos del beneficiario capturados en el modal.
           setBeneficiaryData(prev => ({

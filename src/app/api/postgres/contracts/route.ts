@@ -5,7 +5,7 @@ import { ValidationError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 import { syncFinancieroSaldo } from '@/services/pagos-titulares.service';
 import { checkBeneficiarioUnico, anularBeneficiariosViejos } from '@/lib/beneficiario-unico';
-import { kidsIntake } from '@/lib/kids-intake';
+import { kidsIntake, validarSalonesDelPais } from '@/lib/kids-intake';
 import { buildKidsReservation, plataformaToCountryCode, toISODate } from '@/lib/kids-mapping';
 import crypto from 'crypto';
 
@@ -164,6 +164,11 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
       throw new ValidationError(
         `Falta elegir campaña, curso y salón de KIDS para: ${sinSalon.map((b: any) => `${b.primerNombre || ''} ${b.primerApellido || ''}`.trim()).join(', ')}.`);
     }
+    // Salón del país del contrato: Chile → salones de Chile; resto → los otros.
+    const errPais = await validarSalonesDelPais(titular?.plataforma,
+      beneficiarios.filter((b: any) => b?.kids === true)
+        .map((b: any) => ({ classroomId: b?.kidsData?.classroomId, nombre: b?.kidsData?.salonNombre })));
+    if (errPais) throw new ValidationError(errPais);
   }
 
   // Invariante: un documento solo puede ser BENEFICIARIO en un contrato vivo.

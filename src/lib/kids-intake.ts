@@ -134,3 +134,28 @@ export const kidsIntake = {
   getReservation: (externalRef: string) =>
     call<KidsReservationStatus>('GET', `/api/kids-intake/reservations/${encodeURIComponent(externalRef)}`),
 };
+
+/**
+ * Salones por país: KIDS agrupa binario — "CL" (Chile) y "CO" (Colombia, Ecuador,
+ * Perú y resto). Devuelve un mensaje de error si alguno de los salones elegidos es
+ * de otro grupo que el de la plataforma del contrato; null si todo cuadra.
+ * Best-effort: si KIDS no responde, el salón no aparece o no trae `pais`, no bloquea
+ * (la reserva igual valida el salón del lado de KIDS).
+ */
+export async function validarSalonesDelPais(
+  plataforma: string | null | undefined,
+  salones: { classroomId?: string | null; nombre?: string | null }[],
+): Promise<string | null> {
+  const ids = salones.filter(s => s.classroomId);
+  if (!isKidsIntakeConfigured() || !ids.length) return null;
+  const grupo = String(plataforma || '').trim().toLowerCase().startsWith('chile') ? 'CL' : 'CO';
+  let catalogo: KidsAvailability;
+  try { catalogo = await kidsIntake.availability({ incluirLlenos: true }); } catch { return null; }
+  const paisDe = new Map<string, string | null | undefined>();
+  for (const c of catalogo.campanias || []) for (const cu of c.cursos || []) for (const s of cu.salones || []) paisDe.set(s.id, s.pais);
+  const malos = ids.filter(s => { const p = paisDe.get(String(s.classroomId)); return !!p && p !== grupo; });
+  if (!malos.length) return null;
+  const etiqueta = grupo === 'CL' ? 'Chile' : 'Colombia / Ecuador / Perú';
+  return `El salón elegido no corresponde al país del contrato (${etiqueta})` +
+    `${malos.some(m => m.nombre) ? `: ${malos.map(m => m.nombre).filter(Boolean).join(', ')}` : ''}. Elige un salón de ${etiqueta}.`;
+}
