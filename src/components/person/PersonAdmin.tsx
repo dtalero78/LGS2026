@@ -1677,6 +1677,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         titularCelular={person.celular}
         titularEmail={person.email}
         plataforma={person.plataforma}
+        mostrarLlenos
         onSave={(v) => {
           // Sincroniza al form los datos del beneficiario capturados en el modal.
           setBeneficiaryData(prev => ({

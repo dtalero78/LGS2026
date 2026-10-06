@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { plataformaToCountryCode } from '@/lib/kids-mapping'
+import KidsCursoTexto, { cursoColorCls } from '@/components/comercial/KidsCursoTexto'
 
 /**
  * Datos "kids" adicionales de un beneficiario (curso + apoderado). Cuando la
@@ -40,7 +41,7 @@ export interface KidsBeneficiarioValue {
 
 // Tipos del catálogo (espejo de /api/postgres/kids-intake/availability).
 interface Slot { tipo: string; diaSemana: number; horaLocal: string; duracionMin: number }
-interface Salon { id: string; nombre: string; courseId: string; pais?: string | null; cupo: number; ocupados: number; cupoDisponible: number; guia: string | null; horario: Slot[] }
+interface Salon { id: string; nombre: string; courseId: string; pais?: string | null; cupo: number; ocupados: number; cupoDisponible: number; lleno?: boolean; guia: string | null; horario: Slot[] }
 interface Curso { tipo: string; salones: Salon[] }
 interface Campania { id: string; nombre: string; inicio: string; fin: string; cursos: Curso[] }
 
@@ -63,14 +64,22 @@ interface Props {
   titularEmail?: string
   /** Plataforma/país del contrato (Chile/Colombia/Ecuador/Perú) — filtra los salones por país. */
   plataforma?: string
+  /**
+   * true = muestra también los salones llenos (marcados LLENO, no seleccionables).
+   * Lo usa la ficha del titular (pantalla de aprobación); Crear Contrato solo ve
+   * salones con cupo.
+   */
+  mostrarLlenos?: boolean
   onSave: (value: KidsBeneficiarioValue) => void
   onCancel: () => void
 }
 
+const salonLleno = (s: Salon) => s.lleno === true || s.ocupados >= s.cupo
+
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500'
 
 export default function KidsBeneficiarioModal({
-  open, initial, titularNombre, titularApellidos, titularDocumento, titularCelular, titularEmail, plataforma, onSave, onCancel,
+  open, initial, titularNombre, titularApellidos, titularDocumento, titularCelular, titularEmail, plataforma, mostrarLlenos = false, onSave, onCancel,
 }: Props) {
   const [form, setForm] = useState<KidsBeneficiarioValue>({})
   const [kids, setKids] = useState<KidsData>({})
@@ -90,7 +99,7 @@ export default function KidsBeneficiarioModal({
       setError(null)
       setCatalogLoading(true)
       setCatalogError(null)
-      fetch('/api/postgres/kids-intake/availability')
+      fetch(`/api/postgres/kids-intake/availability${mostrarLlenos ? '?incluirLlenos=1' : ''}`)
         .then(r => r.json())
         .then(d => {
           if (d?.success === false) {
@@ -108,7 +117,7 @@ export default function KidsBeneficiarioModal({
         .catch(() => { setCatalogConfigured(true); setCatalogError('No se pudo consultar el catálogo de KIDS2026 (sin conexión)'); setCampanias([]) })
         .finally(() => setCatalogLoading(false))
     }
-  }, [open, initial])
+  }, [open, initial, mostrarLlenos])
 
   if (!open) return null
 
@@ -122,7 +131,9 @@ export default function KidsBeneficiarioModal({
   const grupoPaisContrato = plataformaToCountryCode(plataforma) === 'CL' ? 'CL' : 'CO'
   // Fallback: si el salón no trae `pais` (KIDS aún sin desplegar el campo) se muestra,
   // para no dejar el selector vacío durante la transición.
-  const salonDelPais = (s: Salon) => !s.pais || s.pais === grupoPaisContrato
+  // Sin `mostrarLlenos` (Crear Contrato) los llenos se descartan también aquí, por si
+  // KIDS llegara a mandarlos.
+  const salonDelPais = (s: Salon) => (!s.pais || s.pais === grupoPaisContrato) && (mostrarLlenos || !salonLleno(s))
   // Solo se ofrecen campañas (y cursos) que tengan AL MENOS un salón con cupo del
   // país del contrato: una campaña en matrícula sin salones para este país no
   // sirve para inscribir y antes aparecía igual (selector de cursos vacío).
@@ -141,6 +152,7 @@ export default function KidsBeneficiarioModal({
   const onSelectTipo = (t: string) => setKids(d => ({ ...d, tipoCurso: t, classroomId: '', salonNombre: '', horario: '' }))
   const onSelectSalon = (id: string) => {
     const s = salonesDeCurso.find(x => x.id === id)
+    if (s && salonLleno(s)) return
     setKids(d => ({ ...d, classroomId: id, salonNombre: s?.nombre || '', horario: s ? horarioResumen(s) : '' }))
   }
 
@@ -222,7 +234,7 @@ export default function KidsBeneficiarioModal({
             ) : catalogConfigured ? (
               <>
                 <p className="text-xs text-gray-400 mb-3">
-                  Catálogo de KIDS2026: campañas en matrícula con cupo. Contrato de{' '}
+                  Catálogo de KIDS2026: campañas en matrícula{mostrarLlenos ? ' (todos los salones; los llenos aparecen en rojo y no se pueden elegir)' : ' con cupo'}. Contrato de{' '}
                   <strong className="text-gray-600">{plataforma || 'país sin definir'}</strong> → solo salones de{' '}
                   <strong className="text-gray-600">{grupoPaisContrato === 'CL' ? 'Chile' : 'Colombia / Ecuador / Perú'}</strong>.
                 </p>
@@ -240,21 +252,45 @@ export default function KidsBeneficiarioModal({
                     </select>
                   </Field>
                   <Field label="Tipo de curso" required>
-                    <select value={kids.tipoCurso || ''} onChange={e => onSelectTipo(e.target.value)} disabled={!campaniaSel} className={`${inputCls} bg-white disabled:bg-gray-50`}>
-                      <option value="">{campaniaSel ? '— Selecciona —' : '— Elige campaña —'}</option>
-                      {cursosDeCampania.map(c => <option key={c.tipo} value={c.tipo}>{c.tipo}</option>)}
+                    <select value={kids.tipoCurso || ''} onChange={e => onSelectTipo(e.target.value)} disabled={!campaniaSel} className={`${inputCls} bg-white disabled:bg-gray-50 font-bold ${cursoColorCls(kids.tipoCurso) || 'text-gray-900'}`}>
+                      <option value="" className="font-normal text-gray-900">{campaniaSel ? '— Selecciona —' : '— Elige campaña —'}</option>
+                      {cursosDeCampania.map(c => <option key={c.tipo} value={c.tipo} className={`font-bold ${cursoColorCls(c.tipo)}`}>{c.tipo}</option>)}
                     </select>
                   </Field>
                   <div className="sm:col-span-2">
                     <Field label="Salón / horario" required>
-                      <select value={kids.classroomId || ''} onChange={e => onSelectSalon(e.target.value)} disabled={!cursoSel} className={`${inputCls} bg-white disabled:bg-gray-50`}>
-                        <option value="">{cursoSel ? '— Selecciona —' : '— Elige tipo de curso —'}</option>
-                        {salonesDeCurso.map(s => (
-                          <option key={s.id} value={s.id}>
-                            {s.nombre} · {horarioResumen(s) || 'sin horario'}{s.guia ? ` · ${s.guia}` : ''} · cupo {s.cupoDisponible}/{s.cupo}
-                          </option>
-                        ))}
-                      </select>
+                      {!cursoSel ? (
+                        <div className={`${inputCls} bg-gray-50 text-gray-400`}>— Elige tipo de curso —</div>
+                      ) : (
+                        <div className="border border-gray-300 rounded-md divide-y divide-gray-100 max-h-56 overflow-y-auto">
+                          {salonesDeCurso.map(s => {
+                            const lleno = salonLleno(s)
+                            const sel = kids.classroomId === s.id
+                            return (
+                              <button
+                                key={s.id} type="button" disabled={lleno} onClick={() => onSelectSalon(s.id)}
+                                title={lleno ? 'Salón lleno: no se puede inscribir' : undefined}
+                                className={`w-full text-left px-3 py-2 text-sm flex items-center gap-3 ${
+                                  lleno ? 'bg-red-50 cursor-not-allowed'
+                                    : sel ? 'bg-primary-50 ring-1 ring-inset ring-primary-500' : 'hover:bg-gray-50'}`}
+                              >
+                                <span className={`h-4 w-4 flex-shrink-0 rounded-full border ${sel ? 'border-primary-600 border-[5px]' : 'border-gray-300'}`} />
+                                <span className="flex-1 min-w-0">
+                                  <KidsCursoTexto texto={s.nombre} className={lleno ? 'opacity-70' : ''} />
+                                  <span className={lleno ? 'text-red-700' : 'text-gray-600'}>
+                                    {' · '}{horarioResumen(s) || 'sin horario'}{s.guia ? ` · ${s.guia}` : ''}
+                                  </span>
+                                </span>
+                                {lleno ? (
+                                  <span className="flex-shrink-0 text-[11px] font-bold text-white bg-red-600 px-2 py-0.5 rounded-full">LLENO {s.ocupados}/{s.cupo}</span>
+                                ) : (
+                                  <span className="flex-shrink-0 text-xs text-gray-500">cupo {s.cupoDisponible}/{s.cupo}</span>
+                                )}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
                     </Field>
                     {cursoSel && salonesDeCurso.length === 0 && (
                       <p className="text-xs text-amber-600 mt-1">No hay salones con cupo para este curso en {grupoPaisContrato === 'CL' ? 'Chile' : 'este país'}.</p>
@@ -268,9 +304,9 @@ export default function KidsBeneficiarioModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Field label="Campaña"><input value={kids.campaign || ''} onChange={e => setK('campaign', e.target.value)} className={inputCls} /></Field>
                   <Field label="Tipo de curso">
-                    <select value={kids.tipoCurso || ''} onChange={e => setK('tipoCurso', e.target.value)} className={`${inputCls} bg-white`}>
-                      <option value="">— Selecciona —</option>
-                      {TIPOS_CURSO.map(t => <option key={t} value={t}>{t}</option>)}
+                    <select value={kids.tipoCurso || ''} onChange={e => setK('tipoCurso', e.target.value)} className={`${inputCls} bg-white font-bold ${cursoColorCls(kids.tipoCurso) || 'text-gray-900'}`}>
+                      <option value="" className="font-normal text-gray-900">— Selecciona —</option>
+                      {TIPOS_CURSO.map(t => <option key={t} value={t} className={`font-bold ${cursoColorCls(t)}`}>{t}</option>)}
                     </select>
                   </Field>
                   <div className="sm:col-span-2"><Field label="Horario"><input value={kids.horario || ''} onChange={e => setK('horario', e.target.value)} className={inputCls} /></Field></div>

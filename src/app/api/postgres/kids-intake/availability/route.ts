@@ -13,14 +13,18 @@ import { kidsIntake } from '@/lib/kids-intake';
  *     { configured: true, error, campanias: [] }. Antes se lanzaba la excepción y
  *     el modal lo confundía con "no configurado", dejando guardar un kid sin salón
  *     que luego nunca se enviaba a KIDS.
+ * `?incluirLlenos=1` agrega los salones sin cupo (`lleno: true`): lo pide el modal
+ * de la ficha del titular (pantalla de aprobación), que muestra todos los cursos;
+ * Crear Contrato no lo pide y solo ve salones con cupo.
  * Cualquier usuario autenticado puede leerlo.
  */
-export const GET = handlerWithAuth(async () => {
+export const GET = handlerWithAuth(async (request) => {
   if (!kidsIntake.isConfigured()) {
     return successResponse({ configured: false, campanias: [] });
   }
   try {
-    const data = await kidsIntake.availability();
+    const incluirLlenos = new URL(request.url).searchParams.get('incluirLlenos') === '1';
+    const data = await kidsIntake.availability({ incluirLlenos });
     return successResponse({ configured: true, campanias: data.campanias || [] });
   } catch (e: any) {
     console.error('[kids-intake/availability] KIDS2026 falló:', e?.status, e?.message);

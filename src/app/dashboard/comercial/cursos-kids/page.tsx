@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowPathIcon, AcademicCapIcon } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/layout/DashboardLayout'
+import KidsCursoTexto, { cursoColorCls } from '@/components/comercial/KidsCursoTexto'
 import { PermissionGuard } from '@/components/permissions'
 import { ComercialPermission } from '@/types/permissions'
 
@@ -176,8 +177,8 @@ export default function CursosKidsPage() {
                           const lleno = estaLleno(s)
                           return (
                             <tr key={s.id} className={lleno ? 'bg-red-50' : 'hover:bg-gray-50'}>
-                              <td className="px-3 py-2 font-medium text-gray-900">{cu.tipo}</td>
-                              <td className={`px-3 py-2 ${lleno ? 'text-red-700 font-medium' : 'text-gray-800'}`}>{s.nombre}</td>
+                              <td className={`px-3 py-2 font-bold ${cursoColorCls(cu.tipo) || 'text-gray-900'}`}>{cu.tipo}</td>
+                              <td className={`px-3 py-2 ${lleno ? 'text-red-700 font-medium' : 'text-gray-800'}`}><KidsCursoTexto texto={s.nombre} /></td>
                               <td className="px-3 py-2 text-gray-700 whitespace-nowrap">{PAIS[s.pais || ''] || s.pais || '—'}</td>
                               <td className="px-3 py-2 text-gray-700">{horario(s) || '—'}</td>
                               <td className="px-3 py-2 text-gray-700">{s.guia || '—'}</td>
