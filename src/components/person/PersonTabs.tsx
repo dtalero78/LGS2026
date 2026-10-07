@@ -48,10 +48,23 @@ function resolveInitialTab(initial?: string): string {
   return TAB_ALIASES[key] || 'general'
 }
 
+// Beneficiario Kids: su programa vive en KIDS2026; lo financiero, la administración
+// del contrato y los comentarios son del TITULAR. Solo ve General y Contacto.
+const TABS_KIDS = ['general', 'contact']
+
 export default function PersonTabs({ person, financialData, beneficiaries, initialTab, isSuspendida }: PersonTabsProps) {
-  const [activeTab, setActiveTab] = useState(() => resolveInitialTab(initialTab))
+  const esBeneficiarioKids = (person as any).kids === true && (person as any).tipoUsuario === 'BENEFICIARIO'
+  const tabsVisibles = esBeneficiarioKids ? tabs.filter(t => TABS_KIDS.includes(t.id)) : tabs
+  const [activeTab, setActiveTab] = useState(() => {
+    const inicial = resolveInitialTab(initialTab)
+    return esBeneficiarioKids && !TABS_KIDS.includes(inicial) ? 'general' : inicial
+  })
 
   const renderTabContent = () => {
+    // Defensa: un deep-link (?tab=financiera) no abre pestañas ocultas de un kid.
+    if (esBeneficiarioKids && !TABS_KIDS.includes(activeTab)) {
+      return <PersonGeneral person={person} isSuspendida={isSuspendida} />
+    }
     switch (activeTab) {
       case 'general':
         return <PersonGeneral person={person} isSuspendida={isSuspendida} />
@@ -73,7 +86,7 @@ export default function PersonTabs({ person, financialData, beneficiaries, initi
       {/* Tab Navigation */}
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
-          {tabs.map((tab) => (
+          {tabsVisibles.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
