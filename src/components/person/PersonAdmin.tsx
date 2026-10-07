@@ -29,7 +29,19 @@ const PREFIJOS_PAISES = [
 // Indicativos telefónicos (selector de celular) — catálogo completo compartido.
 const PREFIJOS_CELULAR = COUNTRY_CODES
 
-const sinTildes = (s?: string | null) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
+/** Resultado de la matrícula en KIDS al aprobar un beneficiario Kids (para alert/resumen). */
+function mensajeKids(d: { kidsErrores?: string[]; kidsCredenciales?: { nombre: string; username: string | null; password: string | null }[] }): string {
+  if (d.kidsErrores?.length) {
+    return `⚠️ Beneficiario Kids aprobado en LGS, pero NO quedó matriculado en KIDS:\n${d.kidsErrores.join('\n')}\n\nAvise a Tecnología para completar la matrícula.`
+  }
+  if (d.kidsCredenciales?.length) {
+    return `✅ Beneficiario Kids aprobado y matriculado en su curso en KIDS.\n` +
+      d.kidsCredenciales.map(c => `${c.nombre}: usuario ${c.username || '—'}${c.password ? ` · contraseña inicial ${c.password}` : ''}`).join('\n')
+  }
+  return '✅ Beneficiario Kids aprobado en LGS (KIDS no está conectado o ya estaba matriculado).'
+}
+
+const sinTildes =(s?: string | null) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
 /** Prefijo celular del país del contrato (Chile → +56); +57 si no se reconoce. */
 const prefijoDePais = (plataforma?: string | null) =>
   PREFIJOS_PAISES.find(p => sinTildes(p.pais) === sinTildes(plataforma))?.prefijo || '+57'
@@ -233,8 +245,15 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         if (data.whatsappSent) parts.push('+ WhatsApp enviado ✅')
         if (data.titularAutoApproved) parts.push('+ Titular aprobado')
 
-        // Show WhatsApp error prominently if it failed
-        if (data.whatsappError) {
+        const esKidsBen = data.esKids === true || String(data.whatsappError || '').includes('beneficiario KIDS')
+        if (esKidsBen) {
+          // Kid: no lleva ACADEMICA ni WhatsApp de LGS; lo que importa es su matrícula en KIDS.
+          const msg = mensajeKids(data)
+          if (data.kidsErrores?.length) parts.push('⚠️ NO matriculado en KIDS')
+          else if (data.kidsCredenciales?.length) parts.push('+ Matriculado en KIDS ✅')
+          if (msg) alert(msg)
+        } else if (data.whatsappError) {
+          // Show WhatsApp error prominently if it failed
           parts.push('⚠️ WhatsApp NO enviado')
           alert(`⚠️ Persona aprobada pero el WhatsApp NO se envió.\n\nError: ${data.whatsappError}\n\nDeberás enviar el mensaje manualmente.`)
         } else if (!data.whatsappSent && !data.whatsappError) {
@@ -422,7 +441,9 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
           if (data.beneficiariesApproved && data.beneficiariesApproved.length > 0) {
             lines.push(`\n👥 ${data.beneficiariesApproved.length} beneficiario(s) aprobados:`)
             for (const ben of data.beneficiariesApproved) {
-              if (ben.whatsappSent) {
+              if (ben.kidsErrores?.length || ben.kidsCredenciales?.length || String(ben.whatsappError || '').includes('beneficiario KIDS')) {
+                lines.push(`  🧒 ${ben.nombre} - ${mensajeKids(ben).replace(/\n+/g, ' ')}`)
+              } else if (ben.whatsappSent) {
                 lines.push(`  ✅ ${ben.nombre} - WhatsApp enviado`)
               } else if (ben.whatsappError) {
                 lines.push(`  ⚠️ ${ben.nombre} - WhatsApp falló: ${ben.whatsappError}`)
@@ -833,6 +854,13 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             fechaCreacion: created._createdDate || new Date().toISOString(),
           }
           setCurrentBeneficiaries(prev => [...prev, newBen])
+
+          // Kid: confirma la reserva en KIDS (si falló, al aprobarlo se reintenta).
+          if (result.kidsReserva) {
+            alert(result.kidsReserva.ok
+              ? `✅ Beneficiario Kids creado y su cupo quedó RESERVADO en KIDS${beneficiaryKidsData?.salonNombre ? ` (${beneficiaryKidsData.salonNombre})` : ''}.\nAl aprobarlo quedará matriculado en el curso.`
+              : `⚠️ Beneficiario Kids creado en LGS, pero KIDS no registró la reserva:\n${result.kidsReserva.error}\n\nAl aprobarlo se volverá a intentar.`)
+          }
 
           // ¿Este documento ya tomó el programa antes? → SIEMPRE se archiva el
           // historial (informe como documento del titular) y se limpia la ficha.

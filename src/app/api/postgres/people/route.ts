@@ -2,7 +2,7 @@ import { handlerWithStaffAuth, successResponse } from '@/lib/api-helpers';
 import { AcademicaRepository } from '@/repositories/academica.repository';
 import { verificarDocumento } from '@/lib/verificacion-documento';
 import { kidsIntake, validarSalonesDelPais } from '@/lib/kids-intake';
-import { buildKidsReservation, plataformaToCountryCode, toISODate } from '@/lib/kids-mapping';
+import { asegurarReservaKids } from '@/lib/kids-reserva';
 import { ValidationError, ConflictError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 import { queryOne, query } from '@/lib/postgres';
@@ -136,6 +136,7 @@ export const POST = handlerWithStaffAuth(async (request) => {
 
   // Kids: si el beneficiario se marcó como kid, guarda su inscripción (curso +
   // apoderado) en KIDS_INSCRIPCIONES. Best-effort (no rompe la creación).
+  let kidsReserva: { ok: boolean; error?: string } | undefined;
   if (body.kids === true && body.kidsData) {
     const kd = body.kidsData;
     const kidsInscId = ids.kidsInscripcion();
@@ -161,37 +162,19 @@ export const POST = handlerWithStaffAuth(async (request) => {
     // Enviar la reserva a KIDS2026 — mismo flujo que Crear Contrato (antes faltaba
     // aquí: un kid agregado desde la ficha nunca llegaba a KIDS y al aprobarlo no
     // había reserva que activar). Best-effort: no rompe la creación.
+    // Mismo helper que usa la aprobación (si aquí falla, al aprobar se reintenta).
     if (kidsIntake.isConfigured() && kd.classroomId && contratoKids) {
       try {
-        const titular = await queryOne<any>(
-          body.titularId
-            ? `SELECT * FROM "PEOPLE" WHERE "_id" = $1`
-            : `SELECT * FROM "PEOPLE" WHERE "contrato" = $1 AND "tipoUsuario" = 'TITULAR' ORDER BY "_createdDate" ASC LIMIT 1`,
-          [body.titularId || contratoKids]);
-        if (!titular) throw new Error('Titular no encontrado para la reserva Kids');
-        const input = buildKidsReservation({
-          externalRef: `${contratoKids}#${body.numeroId}`,
-          countryCode: plataformaToCountryCode(titular.plataforma || body.plataforma),
-          inicio: new Date().toISOString().slice(0, 10),
-          finalContrato: toISODate(body.finalContrato || titular.finalContrato),
-          titular,
-          beneficiario: body,
-          kidsData: kd,
-        });
-        const r = await kidsIntake.createReservation(input);
-        await query(
-          `UPDATE "KIDS_INSCRIPCIONES"
-             SET "enviadoAKids"=true, "kidsExternalRef"=$2, "kidsContractId"=$3,
-                 "kidsEnrollmentId"=$4, "fechaEnvioKids"=NOW(), "errorKids"=NULL, "_updatedDate"=NOW()
-           WHERE "_id"=$1`,
-          [kidsInscId, r.externalRef, r.contractId, r.enrollmentId]);
+        const insc = await queryOne<any>(`SELECT * FROM "KIDS_INSCRIPCIONES" WHERE "_id" = $1`, [kidsInscId]);
+        if (!insc) throw new Error('No se guardó la inscripción Kids en LGS');
+        await asegurarReservaKids(insc, person);
+        kidsReserva = { ok: true };
       } catch (e: any) {
         console.error('[people POST] Error enviando reserva a KIDS (best-effort):', e?.message);
-        await query(`UPDATE "KIDS_INSCRIPCIONES" SET "errorKids"=$2, "_updatedDate"=NOW() WHERE "_id"=$1`,
-          [kidsInscId, String(e?.message || 'error').slice(0, 500)]).catch(() => null);
+        kidsReserva = { ok: false, error: String(e?.message || 'error') };
       }
     }
   }
 
-  return successResponse({ message: `${body.tipoUsuario} created successfully`, person });
+  return successResponse({ message: `${body.tipoUsuario} created successfully`, person, kidsReserva });
 });

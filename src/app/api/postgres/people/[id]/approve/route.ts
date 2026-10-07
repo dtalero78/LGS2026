@@ -6,6 +6,7 @@ import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { ids } from '@/lib/id-generator';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
 import { kidsIntake } from '@/lib/kids-intake';
+import { asegurarReservaKids } from '@/lib/kids-reserva';
 import { registrarCambioAprobacion, nombreDe, type OrigenAprobacion } from '@/lib/aprobacion-audit';
 
 interface KidsCredenciales { numeroId: string; nombre: string; username: string | null; password: string | null }
@@ -17,6 +18,8 @@ interface ApproveResult {
   whatsappSent: boolean;
   whatsappError: string | null;
   kidsCredenciales?: KidsCredenciales[];
+  /** Fallos al matricular en KIDS2026 (el kid queda aprobado en LGS igual). */
+  kidsErrores?: string[];
 }
 
 /**
@@ -257,18 +260,27 @@ async function approveOnePerson(
     }
   }
   // Si la integración KIDS2026 está activa, además aprueba la reserva allá
-  // (RESERVADA→ACTIVA) y guarda las credenciales del alumno.
+  // (RESERVADA→ACTIVA, el niño queda en su curso/salón) y guarda las credenciales.
+  // Mismo proceso para el kid de Crear Contrato y el agregado desde la ficha. Si la
+  // reserva nunca llegó a KIDS (falló al agregarlo), se crea AHORA antes de aprobarla
+  // — antes se omitía en silencio y el niño quedaba aprobado en LGS sin curso en KIDS.
+  const kidsErrores: string[] = [];
   if (person.tipoUsuario === 'BENEFICIARIO' && esKids && kidsIntake.isConfigured()) {
     try {
       const inscs = await queryMany<any>(
-        `SELECT "_id","numeroId","nombre","kidsExternalRef" FROM "KIDS_INSCRIPCIONES"
-          WHERE "beneficiarioId" = $1 AND "enviadoAKids" = true
-            AND "aprobadoEnKids" IS NOT TRUE AND "kidsExternalRef" IS NOT NULL`,
+        `SELECT * FROM "KIDS_INSCRIPCIONES"
+          WHERE "beneficiarioId" = $1 AND "aprobadoEnKids" IS NOT TRUE`,
         [personId]
       );
+      if (inscs.length === 0) {
+        const yaAprobada = await queryOne(
+          `SELECT 1 FROM "KIDS_INSCRIPCIONES" WHERE "beneficiarioId" = $1 AND "aprobadoEnKids" = true LIMIT 1`, [personId]);
+        if (!yaAprobada) kidsErrores.push('No tiene inscripción Kids (campaña/curso/salón): no se pudo matricular en KIDS.')
+      }
       for (const insc of inscs) {
         try {
-          const r = await kidsIntake.approveReservation(insc.kidsExternalRef);
+          const ref = await asegurarReservaKids(insc, person);
+          const r = await kidsIntake.approveReservation(ref);
           const cred = r.credenciales;
           await query(
             `UPDATE "KIDS_INSCRIPCIONES"
@@ -284,11 +296,13 @@ async function approveOnePerson(
           });
         } catch (e: any) {
           console.error('[approve] Error aprobando reserva Kids (best-effort):', e?.message);
+          kidsErrores.push(String(e?.message || 'error desconocido'));
           try { await query(`UPDATE "KIDS_INSCRIPCIONES" SET "errorKids"=$2, "_updatedDate"=NOW() WHERE "_id"=$1`, [insc._id, String(e?.message || 'error').slice(0, 500)]); } catch { /* noop */ }
         }
       }
     } catch (e: any) {
       console.error('[approve] Error consultando KIDS_INSCRIPCIONES (best-effort):', e?.message);
+      kidsErrores.push(`No se pudo consultar la inscripción Kids: ${e?.message || 'error'}`);
     }
   }
 
@@ -300,6 +314,7 @@ async function approveOnePerson(
     whatsappSent,
     whatsappError,
     kidsCredenciales: kidsCredenciales.length ? kidsCredenciales : undefined,
+    kidsErrores: kidsErrores.length ? kidsErrores : undefined,
   };
 }
 
@@ -416,6 +431,8 @@ export const POST = handlerWithAuth(async (
         academicCreated: r.academicCreated,
         whatsappSent: r.whatsappSent,
         whatsappError: r.whatsappError,
+        kidsCredenciales: r.kidsCredenciales,
+        kidsErrores: r.kidsErrores,
       })),
       beneficiariesCount: beneficiaryResults.length,
     });
@@ -469,5 +486,8 @@ export const POST = handlerWithAuth(async (
     whatsappSent: mainResult.whatsappSent,
     whatsappError: mainResult.whatsappError,
     titularAutoApproved,
+    esKids: mainResult.kidsCredenciales !== undefined || mainResult.kidsErrores !== undefined,
+    kidsCredenciales: mainResult.kidsCredenciales,
+    kidsErrores: mainResult.kidsErrores,
   });
 });
