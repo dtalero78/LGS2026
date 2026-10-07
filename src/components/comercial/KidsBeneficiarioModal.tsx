@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
-import { plataformaToCountryCode, edadKidsEnFecha, cursoKidsParaEdad, errorEdadCursoKids } from '@/lib/kids-mapping'
+import { plataformaToCountryCode, edadKidsEnFecha, cursoKidsParaEdad, errorEdadCursoKids, RANGO_EDAD_CURSO } from '@/lib/kids-mapping'
 import KidsCursoTexto, { cursoColorCls } from '@/components/comercial/KidsCursoTexto'
 
 /**
@@ -131,6 +131,24 @@ export default function KidsBeneficiarioModal({
     }
   }, [open, initial, mostrarLlenos])
 
+  // Modal de edad: el curso elegido no corresponde a la edad del niño (o no cabe en
+  // ningún curso Kids). Se abre al cambiar fecha de nacimiento / curso y al guardar.
+  const [alertaEdad, setAlertaEdad] = useState<{ edad: number; actual: string | null; sugerido: string | null } | null>(null)
+  const [alertaVista, setAlertaVista] = useState('')
+  useEffect(() => { if (open) { setAlertaEdad(null); setAlertaVista('') } }, [open])
+  useEffect(() => {
+    if (!open || cursoFijo) return
+    const edad = edadKidsEnFecha(form.fechaNacimiento)
+    if (edad === null) return
+    const sugerido = cursoKidsParaEdad(edad)
+    const actual = kids.tipoCurso || null
+    const clave = `${form.fechaNacimiento}|${actual || ''}`
+    if ((!sugerido || (actual && actual !== sugerido)) && clave !== alertaVista) {
+      setAlertaEdad({ edad, actual, sugerido })
+      setAlertaVista(clave)
+    }
+  }, [open, cursoFijo, form.fechaNacimiento, kids.tipoCurso]) // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!open) return null
 
   const setF = (k: keyof KidsBeneficiarioValue, v: any) => setForm(d => ({ ...d, [k]: v }))
@@ -203,7 +221,12 @@ export default function KidsBeneficiarioModal({
     if (!cursoFijo) {
       // KIDS rechaza la reserva si la edad no corresponde al curso: se valida antes.
       const errEdad = errorEdadCursoKids(form.fechaNacimiento, kids.tipoCurso)
-      if (errEdad) { setError(errEdad); return }
+      const edadG = edadKidsEnFecha(form.fechaNacimiento)
+      if (errEdad || (edadG !== null && !cursoKidsParaEdad(edadG))) {
+        setError(errEdad || 'La edad del niño no corresponde a ningún curso Kids (6–13 años).')
+        if (edadG !== null) setAlertaEdad({ edad: edadG, actual: kids.tipoCurso || null, sugerido: cursoKidsParaEdad(edadG) })
+        return
+      }
       // Si KIDS está conectado, hay que elegir un salón real (sin él la reserva no se envía).
       if (catalogConfigured && catalogError) { setError(`${catalogError} No se puede inscribir el kid hasta resolverlo.`); return }
       if (catalogConfigured && !kids.classroomId) { setError('Selecciona campaña, tipo de curso y salón'); return }
@@ -381,6 +404,54 @@ export default function KidsBeneficiarioModal({
           <button type="button" onClick={guardar} className="px-5 py-2 text-sm font-semibold text-white bg-primary-600 rounded-lg hover:bg-primary-700">{textoGuardar}</button>
         </div>
       </div>
+
+      {/* Modal de edad vs curso */}
+      {alertaEdad && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-50" role="dialog" aria-modal="true">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-red-700">
+              {alertaEdad.sugerido ? 'La edad no corresponde al curso' : 'No cumple la edad para Kids'}
+            </h3>
+            <p className="mt-3 text-sm text-gray-700">
+              {`${form.primerNombre || 'El niño'} ${form.primerApellido || ''}`.trim()} tiene <strong>{alertaEdad.edad} años</strong> hoy.
+            </p>
+            {alertaEdad.sugerido ? (
+              <p className="mt-2 text-sm text-gray-700">
+                {alertaEdad.actual && RANGO_EDAD_CURSO[alertaEdad.actual]
+                  ? <>El curso <strong className={cursoColorCls(alertaEdad.actual)}>{alertaEdad.actual}</strong> es para {RANGO_EDAD_CURSO[alertaEdad.actual].etiqueta.replace(/^[^(]+/, '').trim()}. </>
+                  : null}
+                Por su edad le corresponde <strong className={cursoColorCls(alertaEdad.sugerido)}>{alertaEdad.sugerido}</strong> ({RANGO_EDAD_CURSO[alertaEdad.sugerido].etiqueta.replace(/^[^(]+/, '').trim()}). KIDS rechaza la inscripción si no coincide.
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-gray-700">
+                Los cursos Kids son para niños de <strong>6 a 13 años</strong> (Junior 6–9, Youngster 10–13). Revise la fecha de nacimiento; si es correcta, no puede inscribirse en Kids.
+              </p>
+            )}
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={() => setAlertaEdad(null)}
+                className="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
+                {alertaEdad.sugerido ? 'Revisar fecha de nacimiento' : 'Entendido'}
+              </button>
+              {alertaEdad.sugerido && (
+                <button type="button"
+                  onClick={() => {
+                    const s = alertaEdad.sugerido!
+                    setKids(d => ({ ...d, tipoCurso: s, classroomId: '', salonNombre: '', horario: '' }))
+                    setAlertaVista(`${form.fechaNacimiento}|${s}`)
+                    setError(null)
+                    setAlertaEdad(null)
+                  }}
+                  className="px-4 py-2 text-sm font-semibold rounded-lg text-white bg-primary-600 hover:bg-primary-700">
+                  Cambiar a {alertaEdad.sugerido}
+                </button>
+              )}
+            </div>
+            {alertaEdad.sugerido && (
+              <p className="mt-3 text-xs text-gray-400">Al cambiar el curso deberá elegir de nuevo el salón.</p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
