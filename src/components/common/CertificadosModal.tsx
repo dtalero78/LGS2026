@@ -79,12 +79,18 @@ export default function CertificadosModal({ baseUrl, onClose }: { baseUrl: strin
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
-        <p className="text-sm text-gray-600">
-          Certificado de finalización de nivel. Solo se habilitan los niveles ya aprobados
-          (Beginner: Jump 15, Practical: Jump 30, Functional: Jump 45). El certificado se
-          expide únicamente si se encuentra al día en los pagos. El PDF está protegido con el{' '}
-          <strong>número de documento</strong>.
-        </p>
+        <div className="text-sm text-gray-600 space-y-2">
+          <p className="text-gray-800">Certificado de Asistencia</p>
+          <p>
+            La emisión del certificado se habilita al aprobar la evaluación final correspondiente:
+            Beginner (Jump 15), Practical (Jump 30) y Functional (Jump 45).
+          </p>
+          <p>
+            Su expedición está condicionada a la validación <strong>del estado de pagos</strong>, que
+            debe encontrarse al día. El certificado se genera en formato PDF, protegido con una
+            contraseña correspondiente al <strong>número de documento de identidad del usuario</strong>.
+          </p>
+        </div>
 
         {loading ? (
           <p className="text-sm text-gray-400 italic text-center py-4">Cargando…</p>
