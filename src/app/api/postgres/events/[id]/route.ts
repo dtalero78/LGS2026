@@ -51,7 +51,11 @@ export const PUT = handlerWithAuth(async (request, { params }, session) => {
  */
 export const DELETE = handlerWithAuth(async (request, { params }, session) => {
   const { searchParams } = new URL(request.url);
-  const deleteBookings = searchParams.get('deleteBookings') === 'true';
+  // Default TRUE (como dice la doc): borrar un evento (Suspensión o Restructuración)
+  // borra sus agendamientos. Antes se leía `=== 'true'` y como la agenda nunca
+  // manda el parámetro, los bookings quedaban HUÉRFANOS (caso exámenes 10/10/2026:
+  // 53 alumnos seguían viendo una sesión borrada). Solo `deleteBookings=false` los conserva.
+  const deleteBookings = searchParams.get('deleteBookings') !== 'false';
   const motivo = searchParams.get('motivo') || undefined;
   const skipLog = searchParams.get('skipLog') === 'true';
   const deleteGroup = searchParams.get('deleteGroup') === 'true';
