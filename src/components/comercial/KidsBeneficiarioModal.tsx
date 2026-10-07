@@ -135,19 +135,25 @@ export default function KidsBeneficiarioModal({
   // ningún curso Kids). Se abre al cambiar fecha de nacimiento / curso y al guardar.
   const [alertaEdad, setAlertaEdad] = useState<{ edad: number; actual: string | null; sugerido: string | null } | null>(null)
   const [alertaVista, setAlertaVista] = useState('')
-  useEffect(() => { if (open) { setAlertaEdad(null); setAlertaVista('') } }, [open])
+  // Fecha de nacimiento "confirmada": la que quedó al SALIR del campo (onBlur) o la
+  // que trae el registro al abrir. Mientras se escribe NO se evalúa (el campo entrega
+  // años parciales y salían edades absurdas como 1824 años).
+  const [fechaConfirmada, setFechaConfirmada] = useState('')
+  useEffect(() => {
+    if (open) { setAlertaEdad(null); setAlertaVista(''); setFechaConfirmada(initial?.fechaNacimiento || '') }
+  }, [open, initial])
   useEffect(() => {
     if (!open || cursoFijo) return
-    const edad = edadKidsEnFecha(form.fechaNacimiento)
+    const edad = edadKidsEnFecha(fechaConfirmada)
     if (edad === null) return
     const sugerido = cursoKidsParaEdad(edad)
     const actual = kids.tipoCurso || null
-    const clave = `${form.fechaNacimiento}|${actual || ''}`
+    const clave = `${fechaConfirmada}|${actual || ''}`
     if ((!sugerido || (actual && actual !== sugerido)) && clave !== alertaVista) {
       setAlertaEdad({ edad, actual, sugerido })
       setAlertaVista(clave)
     }
-  }, [open, cursoFijo, form.fechaNacimiento, kids.tipoCurso]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, cursoFijo, fechaConfirmada, kids.tipoCurso]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!open) return null
 
@@ -218,6 +224,7 @@ export default function KidsBeneficiarioModal({
     }
     // La fecha de nacimiento del niño es obligatoria para KIDS (valida la edad).
     if (!form.fechaNacimiento?.trim()) { setError('La fecha de nacimiento es obligatoria para el proceso Kids'); return }
+    if (edadKidsEnFecha(form.fechaNacimiento) === null) { setError('La fecha de nacimiento no es válida (revise el año; no puede ser futura).'); return }
     if (!cursoFijo) {
       // KIDS rechaza la reserva si la edad no corresponde al curso: se valida antes.
       const errEdad = errorEdadCursoKids(form.fechaNacimiento, kids.tipoCurso)
@@ -261,7 +268,7 @@ export default function KidsBeneficiarioModal({
               <Field label="Primer apellido" required><input value={form.primerApellido || ''} onChange={e => setF('primerApellido', e.target.value)} className={inputCls} /></Field>
               <Field label="Segundo apellido"><input value={form.segundoApellido || ''} onChange={e => setF('segundoApellido', e.target.value)} className={inputCls} /></Field>
               <Field label="N° identificación" required><input value={form.numeroId || ''} onChange={e => setF('numeroId', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} className={`${inputCls} font-mono`} /></Field>
-              <Field label="Fecha de nacimiento" required><input type="date" value={form.fechaNacimiento || ''} onChange={e => setF('fechaNacimiento', e.target.value)} className={inputCls} /></Field>
+              <Field label="Fecha de nacimiento" required><input type="date" value={form.fechaNacimiento || ''} onChange={e => setF('fechaNacimiento', e.target.value)} onBlur={e => setFechaConfirmada(e.target.value)} max={new Date().toISOString().slice(0, 10)} className={inputCls} /></Field>
               <Field label="Email" required><input value={form.email || ''} onChange={e => setF('email', e.target.value.replace(/\s/g, ''))} className={`${inputCls} font-mono`} placeholder="correo@dominio.com" /></Field>
               <Field label="Celular" required><input value={form.celular || ''} onChange={e => setF('celular', e.target.value.replace(/\D/g, ''))} className={inputCls} placeholder="Solo dígitos" /></Field>
             </div>
@@ -437,7 +444,7 @@ export default function KidsBeneficiarioModal({
                   onClick={() => {
                     const s = alertaEdad.sugerido!
                     setKids(d => ({ ...d, tipoCurso: s, classroomId: '', salonNombre: '', horario: '' }))
-                    setAlertaVista(`${form.fechaNacimiento}|${s}`)
+                    setAlertaVista(`${fechaConfirmada}|${s}`)
                     setError(null)
                     setAlertaEdad(null)
                   }}

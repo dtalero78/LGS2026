@@ -39,6 +39,9 @@ export function edadKidsEnFecha(fechaNacimiento: any, fecha: string = new Date()
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fn)) return null;
   const [ny, nm, nd] = fn.split('-').map(Number);
   const [fy, fm, fd] = fecha.split('-').map(Number);
+  // Fecha incompleta o absurda (el <input type="date"> entrega años parciales como
+  // "0202" mientras se escribe) o futura → no hay edad que evaluar todavía.
+  if (ny < 1900 || fn > fecha || nm < 1 || nm > 12 || nd < 1 || nd > 31) return null;
   let edad = fy - ny;
   if (fm < nm || (fm === nm && fd < nd)) edad -= 1;
   return edad;
