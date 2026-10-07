@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowPathIcon, AcademicCapIcon } from '@heroicons/react/24/outline'
+import { ArrowPathIcon, AcademicCapIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
+import { exportToExcel } from '@/lib/export-excel'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { cursoColorCls } from '@/components/comercial/KidsCursoTexto'
 import { PermissionGuard } from '@/components/permissions'
@@ -113,6 +114,28 @@ export default function CursosKidsPage() {
   const totalDisp = activos.reduce((a, s) => a + Math.max(0, s.cupoDisponible), 0)
   const llenos = activos.filter(estaLleno).length
 
+  // CSV con lo visible (respeta filtros de país / curso / estado / solo con cupo).
+  const filasCsv = vista.flatMap(c => c.cursos.flatMap(cu => cu.salones.map(s => ({ c, cu, s }))))
+  const descargarCsv = () => {
+    type F = typeof filasCsv[number]
+    exportToExcel<F>(filasCsv, [
+      { header: 'Campaña', accessor: f => f.c.nombre },
+      { header: 'Curso', accessor: f => f.cu.tipo },
+      { header: 'Salón', accessor: f => etiquetaSalon(f.s.nombre, f.cu.tipo) },
+      { header: 'País', accessor: f => PAIS[f.s.pais || ''] || f.s.pais || '' },
+      { header: 'Guía', accessor: f => f.s.guia || '' },
+      { header: 'Horario', accessor: f => resumenHorario(f.s.horario) },
+      { header: 'Inicio curso', accessor: f => fmtFecha(f.cu.inicio) },
+      { header: 'Final curso', accessor: f => fmtFecha(f.cu.finalCurso) },
+      { header: 'Cierre ventas', accessor: f => fmtFecha(f.c.finalVenta) },
+      { header: 'Inscritos', accessor: f => f.s.ocupados },
+      { header: 'Cupo', accessor: f => f.s.cupo },
+      { header: 'Disponibles', accessor: f => esActivo(f.s) ? Math.max(0, f.s.cupoDisponible) : 0 },
+      { header: 'Lleno', accessor: f => esActivo(f.s) && estaLleno(f.s) ? 'Sí' : 'No' },
+      { header: 'Estado', accessor: f => esActivo(f.s) ? 'Activo' : 'Inactivo' },
+    ], `cursos-kids_${new Date().toISOString().slice(0, 10)}`)
+  }
+
   return (
     <DashboardLayout>
       <PermissionGuard permission={ComercialPermission.CURSOS_KIDS_VER} showDefaultMessage>
@@ -127,10 +150,17 @@ export default function CursosKidsPage() {
                 </p>
               </div>
             </div>
-            <button type="button" onClick={load} disabled={loading}
-              className="inline-flex items-center gap-1 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">
-              <ArrowPathIcon className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Actualizar
-            </button>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={descargarCsv} disabled={loading || filasCsv.length === 0}
+                title="Descarga los salones visibles (con los filtros aplicados)"
+                className="inline-flex items-center gap-1 px-3 py-2 text-sm border border-green-600 text-green-700 rounded-lg hover:bg-green-50 disabled:opacity-50">
+                <ArrowDownTrayIcon className="h-4 w-4" /> Descargar CSV
+              </button>
+              <button type="button" onClick={load} disabled={loading}
+                className="inline-flex items-center gap-1 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">
+                <ArrowPathIcon className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Actualizar
+              </button>
+            </div>
           </div>
 
           {!configured && (
