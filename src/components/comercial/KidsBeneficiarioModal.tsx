@@ -328,11 +328,13 @@ export default function KidsBeneficiarioModal({
               <Field label="Nombres del apoderado"><input value={kids.apoderado || ''} disabled={apoderadoLocked} onChange={e => setK('apoderado', e.target.value)} className={`${inputCls} disabled:bg-gray-100`} /></Field>
               <Field label="Apellidos del apoderado"><input value={kids.apoderadoApellidos || ''} disabled={apoderadoLocked} onChange={e => setK('apoderadoApellidos', e.target.value)} className={`${inputCls} disabled:bg-gray-100`} /></Field>
               <Field label="N° documento"><input value={kids.apoderadoDoc || ''} disabled={apoderadoLocked} onChange={e => setK('apoderadoDoc', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} className={`${inputCls} disabled:bg-gray-100 font-mono`} /></Field>
-              <Field label="Parentesco"><input value={kids.parentesco || ''} disabled={apoderadoLocked} onChange={e => setK('parentesco', e.target.value)} className={`${inputCls} disabled:bg-gray-100`} placeholder="Madre, padre, tutor…" /></Field>
+              {/* Parentesco = relación del apoderado con el niño: no es un dato del titular,
+                  así que sigue editable aunque el titular sea el apoderado. */}
+              <Field label="Parentesco"><input value={kids.parentesco || ''} onChange={e => setK('parentesco', e.target.value)} className={inputCls} placeholder="Madre, padre, tutor…" /></Field>
               <Field label="Teléfono"><input value={kids.apoderadoTelefono || ''} disabled={apoderadoLocked} onChange={e => setK('apoderadoTelefono', e.target.value.replace(/\D/g, ''))} className={`${inputCls} disabled:bg-gray-100`} placeholder="Solo dígitos" /></Field>
               <Field label="Correo"><input value={kids.apoderadoMail || ''} disabled={apoderadoLocked} onChange={e => setK('apoderadoMail', e.target.value.replace(/\s/g, ''))} className={`${inputCls} disabled:bg-gray-100 font-mono`} placeholder="correo@dominio.com" /></Field>
             </div>
-            {apoderadoLocked && <p className="text-xs text-gray-400 mt-2">El apoderado tomará los datos del titular del contrato.</p>}
+            {apoderadoLocked && <p className="text-xs text-gray-400 mt-2">El apoderado tomará los datos del titular del contrato. Indique el parentesco con el niño.</p>}
           </div>
         </div>
 
