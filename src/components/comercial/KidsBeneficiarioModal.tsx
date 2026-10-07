@@ -79,6 +79,8 @@ interface Props {
    * lectura con este aviso y no se valida/cambia el salón desde LGS.
    */
   cursoFijo?: string | null
+  /** true = no muestra el guía (advisor) del salón en la lista (Crear Contrato). */
+  ocultarGuia?: boolean
   onSave: (value: KidsBeneficiarioValue) => void
   onCancel: () => void
 }
@@ -88,7 +90,7 @@ const salonLleno = (s: Salon) => s.lleno === true || s.ocupados >= s.cupo
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500'
 
 export default function KidsBeneficiarioModal({
-  open, initial, titularNombre, titularApellidos, titularDocumento, titularCelular, titularEmail, plataforma, mostrarLlenos = false, textoGuardar = 'Guardar beneficiario Kids', titulo = 'Beneficiario Kids', cursoFijo = null, onSave, onCancel,
+  open, initial, titularNombre, titularApellidos, titularDocumento, titularCelular, titularEmail, plataforma, mostrarLlenos = false, textoGuardar = 'Guardar beneficiario Kids', titulo = 'Beneficiario Kids', cursoFijo = null, ocultarGuia = false, onSave, onCancel,
 }: Props) {
   const [form, setForm] = useState<KidsBeneficiarioValue>({})
   const [kids, setKids] = useState<KidsData>({})
@@ -348,7 +350,7 @@ export default function KidsBeneficiarioModal({
                                 <span className="flex-1 min-w-0">
                                   <KidsCursoTexto texto={s.nombre} className={lleno ? 'opacity-70' : ''} />
                                   <span className={lleno ? 'text-red-700' : 'text-gray-600'}>
-                                    {' · '}{horarioResumen(s) || 'sin horario'}{s.guia ? ` · ${s.guia}` : ''}
+                                    {' · '}{horarioResumen(s) || 'sin horario'}{s.guia && !ocultarGuia ? ` · ${s.guia}` : ''}
                                   </span>
                                 </span>
                                 {lleno ? (

@@ -2366,6 +2366,7 @@ function CrearContratoContent() {
           titularCelular={titular.celular ? getPhonePrefix() + titular.celular : ''}
           titularEmail={titular.email}
           plataforma={titular.plataforma}
+          ocultarGuia
           onSave={saveKidsModal}
           onCancel={cancelKidsModal}
         />
