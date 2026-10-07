@@ -72,6 +72,13 @@ interface Props {
   mostrarLlenos?: boolean
   /** Texto del botón principal (la ficha usa "Continuar": el modal no guarda por sí solo). */
   textoGuardar?: string
+  /** Título del modal (p. ej. "Modificar beneficiario Kids"). */
+  titulo?: string
+  /**
+   * Curso ya registrado en KIDS (reservado o matriculado): se muestra de solo
+   * lectura con este aviso y no se valida/cambia el salón desde LGS.
+   */
+  cursoFijo?: string | null
   onSave: (value: KidsBeneficiarioValue) => void
   onCancel: () => void
 }
@@ -81,7 +88,7 @@ const salonLleno = (s: Salon) => s.lleno === true || s.ocupados >= s.cupo
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500'
 
 export default function KidsBeneficiarioModal({
-  open, initial, titularNombre, titularApellidos, titularDocumento, titularCelular, titularEmail, plataforma, mostrarLlenos = false, textoGuardar = 'Guardar beneficiario Kids', onSave, onCancel,
+  open, initial, titularNombre, titularApellidos, titularDocumento, titularCelular, titularEmail, plataforma, mostrarLlenos = false, textoGuardar = 'Guardar beneficiario Kids', titulo = 'Beneficiario Kids', cursoFijo = null, onSave, onCancel,
 }: Props) {
   const [form, setForm] = useState<KidsBeneficiarioValue>({})
   const [kids, setKids] = useState<KidsData>({})
@@ -114,7 +121,10 @@ export default function KidsBeneficiarioModal({
           }
           setCatalogConfigured(!!d.configured)
           setCatalogError(d.error || null)
-          setCampanias(Array.isArray(d.campanias) ? d.campanias : [])
+          const lista: Campania[] = Array.isArray(d.campanias) ? d.campanias : []
+          setCampanias(lista)
+          // Al editar, la inscripción guarda el NOMBRE de la campaña (no su id): se resuelve.
+          setKids(k => (k.campaignId || !k.campaign) ? k : { ...k, campaignId: lista.find(c => c.nombre === k.campaign)?.id || '' })
         })
         .catch(() => { setCatalogConfigured(true); setCatalogError('No se pudo consultar el catálogo de KIDS2026 (sin conexión)'); setCampanias([]) })
         .finally(() => setCatalogLoading(false))
@@ -190,12 +200,14 @@ export default function KidsBeneficiarioModal({
     }
     // La fecha de nacimiento del niño es obligatoria para KIDS (valida la edad).
     if (!form.fechaNacimiento?.trim()) { setError('La fecha de nacimiento es obligatoria para el proceso Kids'); return }
-    // KIDS rechaza la reserva si la edad no corresponde al curso: se valida antes.
-    const errEdad = errorEdadCursoKids(form.fechaNacimiento, kids.tipoCurso)
-    if (errEdad) { setError(errEdad); return }
-    // Si KIDS está conectado, hay que elegir un salón real (sin él la reserva no se envía).
-    if (catalogConfigured && catalogError) { setError(`${catalogError} No se puede inscribir el kid hasta resolverlo.`); return }
-    if (catalogConfigured && !kids.classroomId) { setError('Selecciona campaña, tipo de curso y salón'); return }
+    if (!cursoFijo) {
+      // KIDS rechaza la reserva si la edad no corresponde al curso: se valida antes.
+      const errEdad = errorEdadCursoKids(form.fechaNacimiento, kids.tipoCurso)
+      if (errEdad) { setError(errEdad); return }
+      // Si KIDS está conectado, hay que elegir un salón real (sin él la reserva no se envía).
+      if (catalogConfigured && catalogError) { setError(`${catalogError} No se puede inscribir el kid hasta resolverlo.`); return }
+      if (catalogConfigured && !kids.classroomId) { setError('Selecciona campaña, tipo de curso y salón'); return }
+    }
     onSave({ ...form, kidsData: kids })
   }
 
@@ -205,7 +217,7 @@ export default function KidsBeneficiarioModal({
         <div className="flex items-start justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
           <div>
             <h2 className="text-lg font-bold text-gray-900">
-              Beneficiario Kids <span className="ml-2 align-middle inline-block bg-blue-100 text-blue-700 text-[11px] font-bold px-2 py-0.5 rounded-full">🧒 KIDS</span>
+              {titulo} <span className="ml-2 align-middle inline-block bg-blue-100 text-blue-700 text-[11px] font-bold px-2 py-0.5 rounded-full">🧒 KIDS</span>
             </h2>
             <p className="text-sm text-gray-500">Datos del beneficiario, curso y apoderado</p>
           </div>
@@ -235,7 +247,16 @@ export default function KidsBeneficiarioModal({
           {/* Curso */}
           <div className="border-t border-gray-100 pt-5">
             <h3 className="text-xs font-bold uppercase tracking-wide text-gray-700 mb-1"><span className="text-primary-600">＋</span> Curso <span className="normal-case font-normal text-gray-400">(adicional Kids)</span></h3>
-            {catalogLoading ? (
+            {cursoFijo ? (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+                <p>
+                  <KidsCursoTexto texto={kids.salonNombre || kids.tipoCurso || '—'} className="font-semibold" />
+                  {kids.horario ? <span className="text-blue-800"> · {kids.horario}</span> : null}
+                  {kids.campaign ? <span className="text-blue-800"> · {kids.campaign}</span> : null}
+                </p>
+                <p className="text-xs mt-1">{cursoFijo}</p>
+              </div>
+            ) : catalogLoading ? (
               <p className="text-xs text-gray-400 mb-3">Cargando catálogo…</p>
             ) : catalogConfigured && catalogError ? (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">

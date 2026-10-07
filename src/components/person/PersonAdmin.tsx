@@ -187,6 +187,97 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
       loadKidsMatricula(benId)
     }
   }
+  // "Modificar" de un beneficiario Kids: abre el modal Kids con sus datos + inscripción.
+  const [kidsEdit, setKidsEdit] = useState<{ benId: string; initial: any; original: any; cursoFijo: string | null } | null>(null)
+  const [guardandoKidsEdit, setGuardandoKidsEdit] = useState(false)
+  const abrirEdicionKids = async (benId: string) => {
+    try {
+      const r = await fetch(`/api/postgres/people/${benId}/kids-matricula`)
+      const d = await r.json()
+      if (!d?.success) { alert(d?.error || 'No se pudieron cargar los datos Kids'); return }
+      const p = d.person || {}
+      const i = d.inscripciones?.[0] || {}
+      const fechaNac = p.fechaNacimiento ? String(p.fechaNacimiento).slice(0, 10) : ''
+      const original = {
+        primerNombre: p.primerNombre || '', segundoNombre: p.segundoNombre || '',
+        primerApellido: p.primerApellido || '', segundoApellido: p.segundoApellido || '',
+        numeroId: p.numeroId || '', fechaNacimiento: fechaNac, email: p.email || '', celular: p.celular || '',
+      }
+      const titularEsApoderado = !i.apoderadoDoc || String(i.apoderadoDoc).replace(/\W/g, '') === String(person.numeroId || '').replace(/\W/g, '')
+      setKidsEdit({
+        benId,
+        original,
+        cursoFijo: i.aprobadoEnKids
+          ? 'Matriculado en KIDS: el cambio de curso o salón se hace en KIDS.'
+          : i.enviadoAKids ? 'Reservado en KIDS: el cambio de curso o salón se hace en KIDS.' : null,
+        initial: {
+          ...original,
+          kidsData: {
+            titularEsApoderado,
+            campaign: i.campaign || '', tipoCurso: i.tipoCurso || '', classroomId: i.classroomId || '',
+            salonNombre: i.salonNombre || '', horario: i.horario || '',
+            apoderado: i.apoderado || '', apoderadoApellidos: i.apoderadoApellidos || '', apoderadoDoc: i.apoderadoDoc || '',
+            apoderadoTelefono: i.apoderadoTelefono || '', apoderadoMail: i.apoderadoMail || '', parentesco: i.parentesco || '',
+          },
+        },
+      })
+    } catch {
+      alert('Error de conexión al cargar los datos Kids')
+    }
+  }
+  const guardarEdicionKids = async (v: any) => {
+    if (!kidsEdit || guardandoKidsEdit) return
+    const { benId, original } = kidsEdit
+    setGuardandoKidsEdit(true)
+    try {
+      // 1) Datos personales (mismo PATCH y mismas reglas de permiso que "Modificar").
+      const now: Record<string, string> = {
+        primerNombre: v.primerNombre || '', segundoNombre: v.segundoNombre || '',
+        primerApellido: v.primerApellido || '', segundoApellido: v.segundoApellido || '',
+        numeroId: (v.numeroId || '').toUpperCase().replace(/[.\s_]/g, '').trim(),
+        fechaNacimiento: v.fechaNacimiento || '', email: v.email || '', celular: (v.celular || '').replace(/\D/g, ''),
+      }
+      const cambio = (k: string) => now[k] !== (original[k] || '')
+      const cambiaNombre = ['primerNombre', 'segundoNombre', 'primerApellido', 'segundoApellido'].some(cambio)
+      if (cambiaNombre && !canEditarNombre) { alert('No tiene permiso para cambiar el nombre del beneficiario.'); return }
+      if (cambio('numeroId') && !canEditarNumeroId) { alert('No tiene permiso para cambiar el número de identificación.'); return }
+      const patch: Record<string, any> = {}
+      if (cambiaNombre) {
+        patch.primerNombre = now.primerNombre; patch.segundoNombre = now.segundoNombre || null
+        patch.primerApellido = now.primerApellido; patch.segundoApellido = now.segundoApellido || null
+      }
+      if (cambio('numeroId')) patch.numeroId = now.numeroId
+      if (cambio('fechaNacimiento')) patch.fechaNacimiento = now.fechaNacimiento || null
+      if (cambio('email')) patch.email = now.email
+      if (cambio('celular')) patch.celular = now.celular
+      if (Object.keys(patch).length) {
+        const r = await fetch(`/api/postgres/people/${benId}`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
+        })
+        const d = await r.json()
+        if (!r.ok || !d.success) { alert(`No se pudieron guardar los datos del beneficiario:\n${d.error || 'error'}`); return }
+        setCurrentBeneficiaries(prev => prev.map(b => b._id === benId ? {
+          ...b, numeroId: now.numeroId, nombre: now.primerNombre,
+          apellido: [now.primerApellido, now.segundoApellido].filter(Boolean).join(' '), celular: now.celular,
+        } : b))
+      }
+      // 2) Datos Kids (curso solo si aún no está en KIDS; apoderado/parentesco siempre).
+      const r2 = await fetch(`/api/postgres/people/${benId}/kids-matricula`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kidsData: v.kidsData }),
+      })
+      const d2 = await r2.json()
+      if (!r2.ok || !d2.success) { alert(`Datos personales guardados, pero no los datos Kids:\n${d2.error || 'error'}`); return }
+      setKidsEdit(null)
+      if (d2.estado === 'MATRICULADO' && d2.kidsCredenciales) alert(mensajeKids({ kidsCredenciales: d2.kidsCredenciales }))
+      else if (d2.estado === 'ERROR') alert(`⚠️ ${d2.mensaje}\n${d2.kidsError}`)
+      else alert(`✅ Beneficiario Kids actualizado. ${d2.mensaje || ''}`)
+    } catch {
+      alert('Error de conexión al guardar el beneficiario Kids')
+    } finally {
+      setGuardandoKidsEdit(false)
+      loadKidsMatricula(benId)
+    }
+  }
   const [isEditMode, setIsEditMode] = useState(false)
   const [editingBeneficiaryId, setEditingBeneficiaryId] = useState<string | null>(null)
   const [isTogglingContract, setIsTogglingContract] = useState(false)
@@ -637,6 +728,11 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
   }
 
   const handleEditBeneficiary = async (beneficiaryId: string) => {
+    // Beneficiario Kids → se modifica en el modal Kids (datos + curso + apoderado).
+    if (currentBeneficiaries.find(b => b._id === beneficiaryId)?.kids) {
+      await abrirEdicionKids(beneficiaryId)
+      return
+    }
     setIsEditMode(true)
     setEditingBeneficiaryId(beneficiaryId)
 
@@ -1877,6 +1973,23 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         textoGuardar={matriculando ? 'Enviando a KIDS…' : 'Enviar a KIDS'}
         onSave={(v) => { if (!matriculando) guardarMatricula(v) }}
         onCancel={() => { if (!matriculando) setMatriculaModal(null) }}
+      />
+
+      {/* Modificar un beneficiario Kids: datos + curso + apoderado. */}
+      <KidsBeneficiarioModal
+        open={!!kidsEdit}
+        initial={kidsEdit?.initial}
+        titulo="Modificar beneficiario Kids"
+        cursoFijo={kidsEdit?.cursoFijo}
+        titularNombre={`${person.primerNombre || ''} ${person.segundoNombre || ''}`.trim()}
+        titularApellidos={`${person.primerApellido || ''} ${person.segundoApellido || ''}`.trim()}
+        titularDocumento={person.numeroId}
+        titularCelular={person.celular}
+        titularEmail={person.email}
+        plataforma={person.plataforma}
+        textoGuardar={guardandoKidsEdit ? 'Guardando…' : 'Guardar cambios'}
+        onSave={(v) => guardarEdicionKids(v)}
+        onCancel={() => { if (!guardandoKidsEdit) setKidsEdit(null) }}
       />
 
       {/* Confirmación de cambios del beneficiario */}
