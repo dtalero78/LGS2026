@@ -12,6 +12,7 @@ import { BookingRepository } from '@/repositories/booking.repository';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { query, queryOne, queryMany } from '@/lib/postgres';
 import { ensureOnce } from '@/lib/ensure-once';
+import { efectosInactivacion, efectosReactivacion, type ResultadoEfectos } from '@/lib/suspension-beneficiario';
 
 // Ensure ACADEMICA.fechaPromocionEspecial column exists (idempotent, once per server start).
 // Written when student is promoted from F3 Step 45 to MASTER/IELS/B2FIRST/TOEFL;
@@ -175,28 +176,22 @@ export async function toggleStatus(id: string, active: boolean, opts: ToggleStat
     }
   }
 
-  // Sync estadoInactivo in ACADEMICA (match by numeroId)
-  if (person.numeroId) {
-    try {
-      await query(
-        `UPDATE "ACADEMICA" SET "estadoInactivo" = $1, "_updatedDate" = NOW() WHERE "numeroId" = $2`,
-        [wantInactive, person.numeroId]
-      );
-    } catch (err) {
-      console.warn('⚠️ Could not sync ACADEMICA.estadoInactivo for', person.numeroId, err);
-    }
-  }
-
-  // Sync login access in USUARIOS_ROLES
-  if (person.email) {
-    try {
-      await query(
-        `UPDATE "USUARIOS_ROLES" SET "activo" = $1, "_updatedDate" = NOW() WHERE LOWER("email") = LOWER($2)`,
-        [!wantInactive, person.email]
-      );
-    } catch (err) {
-      console.warn('⚠️ Could not sync USUARIOS_ROLES.activo for', person.email, err);
-    }
+  // Efectos (src/lib/suspension-beneficiario.ts): clases futuras canceladas,
+  // ficha ACADEMICA, login (solo el suyo, nunca el de un correo compartido ni el
+  // de quien sigue estudiando por otro contrato) y pausa/reactivación en KIDS.
+  // Antes: ACADEMICA y login se tocaban por numeroId/email sin más — bloqueaba a
+  // hermanos con el mismo correo y dejaba las clases futuras ocupando cupo.
+  let efectos: ResultadoEfectos | null = null;
+  try {
+    efectos = wantInactive
+      ? await efectosInactivacion(person, opts.motivo)
+      : await efectosReactivacion(person);
+    await query(
+      `UPDATE "PEOPLE" SET "suspenddata" = COALESCE("suspenddata", '{}'::jsonb) || $2::jsonb WHERE "_id" = $1`,
+      [id, JSON.stringify({ efectos })]
+    );
+  } catch (err) {
+    console.error('⚠️ Error aplicando efectos de la suspensión para', id, err);
   }
 
   return {
@@ -205,6 +200,7 @@ export async function toggleStatus(id: string, active: boolean, opts: ToggleStat
     previousStatus: currentlyInactive,
     newStatus: wantInactive,
     suspenddata: suspendData,
+    efectos,
   };
 }
 

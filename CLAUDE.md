@@ -1279,8 +1279,12 @@ All inactivation/reactivation flows update **3 tables** in sync:
 
 ### By Admin Toggle (PersonAdmin)
 When an admin toggles the contract status via the Estado del Contrato toggle in `/person/[id]`:
-- Calls `POST /api/postgres/students/{id}/toggle-status` sequentially for titular + all beneficiaries
-- `toggleStatus()` in `student.service.ts` updates PEOPLE, ACADEMICA, and USUARIOS_ROLES
+- Calls `POST /api/postgres/students/{id}/toggle-status` sequentially for titular + all beneficiaries (también el botón **Inactivar** de un beneficiario). Endpoint **solo staff + `PERSON.ADMIN.ACTIVAR_DESACTIVAR`**; su `GET` devuelve una vista previa que el modal muestra antes de confirmar
+- `toggleStatus()` in `student.service.ts` marca PEOPLE (`estadoInactivo`, `suspenddata` + `suspendcount`) y aplica los efectos de [src/lib/suspension-beneficiario.ts](src/lib/suspension-beneficiario.ts) (guardados en `suspenddata.efectos`):
+  - **Clases futuras**: al inactivar se cancelan (`cancelo=true`) y se descuenta `CALENDARIO.inscritos`
+  - **ACADEMICA / login**: no se tocan si la persona sigue como beneficiaria viva en otro contrato (re-matrícula). El login se bloquea solo para `rol='ESTUDIANTE'` y **no** si el correo lo usa otro beneficiario activo (hermanos con el correo del apoderado) — se avisa
+  - **Kids**: `kidsIntake.suspendReservation` / `reactivateReservation` (KIDS v12: contrato a ONHOLD/SUSPENDIDO + login del niño bloqueado; al reactivar cierra solo la pausa abierta por LGS, sin extender el fin)
+  - La vigencia **sigue corriendo** (no es un OnHold) y `estado` no cambia al inactivar
 - Implementation: `src/components/person/PersonAdmin.tsx`, `src/services/student.service.ts`
 
 ### By Admin Estado Change

@@ -1,7 +1,10 @@
-import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
+import { handlerWithStaffAuth, successResponse } from '@/lib/api-helpers';
+import { requirePermission } from '@/lib/api-permissions';
+import { PersonPermission } from '@/types/permissions';
 import { toggleStatus } from '@/services/student.service';
 import { PeopleRepository } from '@/repositories/people.repository';
 import { ValidationError } from '@/lib/errors';
+import { previewInactivacion } from '@/lib/suspension-beneficiario';
 
 /**
  * POST /api/postgres/students/[id]/toggle-status
@@ -14,9 +17,15 @@ import { ValidationError } from '@/lib/errors';
  * persisted in PEOPLE.suspenddata along with the executor's email taken
  * from the NextAuth session. The body cannot spoof `realizadoPor`.
  *
- * suspendcount increments only on INACTIVACION.
+ * suspendcount increments only on INACTIVACION. Los efectos (clases futuras,
+ * login, KIDS) los aplica toggleStatus → src/lib/suspension-beneficiario.ts y
+ * vuelven en `efectos`.
+ *
+ * Solo staff con PERSON.ADMIN.ACTIVAR_DESACTIVAR (antes bastaba cualquier
+ * sesión, incluida una cuenta ESTUDIANTE).
  */
-export const POST = handlerWithAuth(async (request, { params }, session) => {
+export const POST = handlerWithStaffAuth(async (request, { params }, session) => {
+  await requirePermission(session, PersonPermission.ACTIVAR_DESACTIVAR);
   const body = await request.json().catch(() => ({}));
   const { active, motivo } = body;
 
@@ -43,15 +52,17 @@ export const POST = handlerWithAuth(async (request, { params }, session) => {
     previousStatus: result.previousStatus,
     newStatus: result.newStatus,
     suspenddata: result.suspenddata ?? null,
+    efectos: (result as any).efectos ?? null,
   });
 });
 
 /**
  * GET /api/postgres/students/[id]/toggle-status
  *
- * Get student's current status
+ * Estado actual + vista previa de lo que pasaría al inactivar (clases futuras a
+ * cancelar, correo compartido, kid) para el modal de confirmación.
  */
-export const GET = handlerWithAuth(async (request, { params }) => {
+export const GET = handlerWithStaffAuth(async (request, { params }) => {
   const person = await PeopleRepository.findByIdOrNumeroIdOrThrow(params.id);
 
   return successResponse({
@@ -64,5 +75,6 @@ export const GET = handlerWithAuth(async (request, { params }) => {
       suspenddata: person.suspenddata ?? null,
       suspendcount: person.suspendcount ?? 0,
     },
+    preview: person.estadoInactivo ? null : await previewInactivacion(person),
   });
 });

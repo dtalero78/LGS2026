@@ -305,6 +305,21 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
   const [suspendTarget, setSuspendTarget] = useState<SuspendTarget | null>(null)
   const [suspendMotivo, setSuspendMotivo] = useState('')
   const [isSubmittingSuspend, setIsSubmittingSuspend] = useState(false)
+  // Vista previa de la inactivación (clases futuras, correo compartido, kid).
+  type PreviewInact = { nombre: string; clasesFuturas: number; correoCompartidoCon: string | null; sigueEnOtroContrato: boolean; esKids: boolean }
+  const [suspendPreview, setSuspendPreview] = useState<PreviewInact[] | null>(null)
+  useEffect(() => {
+    setSuspendPreview(null)
+    if (!suspendTarget || suspendTarget.activate) return
+    const objetivos = suspendTarget.kind === 'contract'
+      ? [{ _id: person._id, nombre: `${person.primerNombre || ''} ${person.primerApellido || ''}`.trim() }, ...currentBeneficiaries.map(b => ({ _id: b._id, nombre: `${b.nombre} ${b.apellido}`.trim() }))]
+      : [{ _id: suspendTarget.beneficiary._id, nombre: `${suspendTarget.beneficiary.nombre} ${suspendTarget.beneficiary.apellido}`.trim() }]
+    let vigente = true
+    Promise.all(objetivos.map(o =>
+      fetch(`/api/postgres/students/${o._id}/toggle-status`).then(r => r.json()).then(d => d?.preview ? { nombre: o.nombre, ...d.preview } : null).catch(() => null)
+    )).then(rs => { if (vigente) setSuspendPreview(rs.filter(Boolean) as PreviewInact[]) })
+    return () => { vigente = false }
+  }, [suspendTarget]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sincronizar las props con el estado local
   useEffect(() => {
@@ -679,6 +694,8 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
       const activate = suspendTarget.activate
 
       let failures = 0
+      const errores: string[] = []
+      const detalle: string[] = []
       for (const id of ids) {
         const res = await fetch(`/api/postgres/students/${id}/toggle-status`, {
           method: 'POST',
@@ -686,17 +703,29 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
           body: JSON.stringify({ active: activate, motivo }),
         })
         const data = await res.json().catch(() => ({}))
-        if (!res.ok || !data.success) failures++
+        if (!res.ok || !data.success) { failures++; if (data?.error) errores.push(data.error); continue }
+        const ef = data.efectos
+        const nom = data.student ? `${data.student.primerNombre || ''} ${data.student.primerApellido || ''}`.trim() : id
+        if (ef) {
+          const partes: string[] = []
+          if (ef.clasesCanceladas > 0) partes.push(`${ef.clasesCanceladas} clase(s) futura(s) cancelada(s)`)
+          if (ef.login === 'COMPARTIDO_NO_BLOQUEADO') partes.push(`login NO bloqueado (correo compartido con ${ef.correoCompartidoCon})`)
+          if (ef.login === 'SIGUE_EN_OTRO_CONTRATO') partes.push('sigue estudiando por otro contrato: login y clases intactos')
+          if (ef.kids) partes.push(ef.kids.error ? `KIDS: error — ${ef.kids.error}` : ef.kids.aplicado ? `KIDS: ${activate ? 'reactivado' : 'suspendido'}` : `KIDS: sin cambio${ef.kids.detalle ? ` (${ef.kids.detalle})` : ef.kids.estado ? ` (${ef.kids.estado})` : ''}`)
+          if (partes.length) detalle.push(`• ${nom}: ${partes.join('; ')}`)
+        }
       }
+      const resumen = detalle.length ? `\n\n${detalle.join('\n')}` : ''
 
       if (failures === 0) {
         if (suspendTarget.kind === 'contract') {
           alert(
             `✅ Contrato ${activate ? 'activado' : 'inactivado'} exitosamente\n\n` +
-            `Personas actualizadas: ${ids.length}`
+            `Personas actualizadas: ${ids.length}${resumen}`
           )
           window.location.href = window.location.href
         } else {
+          if (resumen) alert(`✅ Beneficiario ${activate ? 'reactivado' : 'inactivado'}.${resumen}`)
           // Beneficiario individual: actualizar lista local sin recargar
           const ben = suspendTarget.beneficiary
           setCurrentBeneficiaries(prev =>
@@ -710,7 +739,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
           setSuspendMotivo('')
         }
       } else {
-        alert(`❌ Error al cambiar estado: ${failures} de ${ids.length} fallaron`)
+        alert(`❌ Error al cambiar estado: ${failures} de ${ids.length} fallaron${errores.length ? `\n${errores.join('\n')}` : ''}${resumen}`)
       }
     } catch (error) {
       console.error('Error al cambiar estado:', error)
@@ -2346,6 +2375,31 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                 <p className="text-xs text-gray-500 mt-1">
                   El motivo será visible al hacer clic en el badge amarillo &quot;SUSPENDIDA&quot;.
                 </p>
+                {!activate && (
+                  <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 space-y-1">
+                    <p className="font-semibold">Qué va a pasar:</p>
+                    {!suspendPreview ? (
+                      <p>Calculando…</p>
+                    ) : (
+                      <>
+                        <p>• Se bloquea su acceso al panel y no podrá agendar. La vigencia del contrato sigue corriendo (no es un OnHold).</p>
+                        {suspendPreview.map(p => (
+                          <div key={p.nombre}>
+                            {p.sigueEnOtroContrato ? (
+                              <p>• <strong>{p.nombre}</strong>: sigue estudiando por otro contrato — no se tocan sus clases ni su login.</p>
+                            ) : (
+                              <>
+                                {p.clasesFuturas > 0 && <p>• <strong>{p.nombre}</strong>: se cancelan <strong>{p.clasesFuturas}</strong> clase(s) futura(s) y se libera el cupo.</p>}
+                                {p.correoCompartidoCon && <p>• <strong>{p.nombre}</strong>: su correo lo usa también <strong>{p.correoCompartidoCon}</strong> — su login NO se bloquea para no dejar sin acceso al otro.</p>}
+                              </>
+                            )}
+                            {p.esKids && <p>• <strong>{p.nombre}</strong>: es Kids — su contrato en KIDS queda suspendido y su acceso a KIDS bloqueado.</p>}
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center space-x-3">

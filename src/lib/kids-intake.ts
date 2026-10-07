@@ -143,6 +143,15 @@ export const kidsIntake = {
    */
   getReservation: (externalRef: string) =>
     call<KidsReservationStatus>('GET', `/api/kids-intake/reservations/${encodeURIComponent(externalRef)}`),
+  /**
+   * Beneficiario INACTIVADO en LGS → KIDS pausa su contrato (SUSPENDIDO) y bloquea
+   * el login del niño (KIDS v12+). `aplicado: false` si no aplica (no aprobado / ya en pausa).
+   */
+  suspendReservation: (externalRef: string, motivo: string) =>
+    call<{ aplicado: boolean; estado: string }>('POST', `/api/kids-intake/reservations/${encodeURIComponent(externalRef)}/suspend`, { motivo }),
+  /** Beneficiario REACTIVADO en LGS → KIDS cierra la pausa que abrió LGS y reactiva el login. */
+  reactivateReservation: (externalRef: string) =>
+    call<{ aplicado: boolean; estado: string; motivo?: string }>('POST', `/api/kids-intake/reservations/${encodeURIComponent(externalRef)}/reactivate`, {}),
 };
 
 /**
