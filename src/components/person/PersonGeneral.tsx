@@ -110,6 +110,7 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
   // ── Programa Kids (solo beneficiarios Kids) ──
   // `kidsInscripcion` lo adjunta el API de people/[id] desde KIDS_INSCRIPCIONES.
   const esKids = (person as any).kids === true
+  const esBeneficiarioKids = esKids && (person as any).tipoUsuario === 'BENEFICIARIO'
   const ki = (person as any).kidsInscripcion || null
 
   // Estado real del niño en KIDS2026 (situacion CURSANDO/SUSPENDIDO/NO_CURSANDO).
@@ -170,25 +171,31 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
         <PermissionGuard permission={PersonPermission.VER_CONTRATO}>
           <PersonContractViewer person={person as any} />
         </PermissionGuard>
-        <PermissionGuard permission={PersonPermission.DESCARGAR_CONTRATO}>
-          <button
-            onClick={downloadContrato}
-            className="btn-primary flex items-center space-x-2"
-          >
-            <ArrowDownTrayIcon className="h-4 w-4" />
-            <span>Descargar Contrato</span>
-          </button>
-        </PermissionGuard>
-        <PermissionGuard permission={PersonPermission.VER_DOCUMENTACION}>
-          <button
-            onClick={() => setShowDocReciboModal(true)}
-            className="btn-secondary flex items-center space-x-2"
-            title="Ver, subir documentación y recibo"
-          >
-            <DocumentTextIcon className="h-4 w-4" />
-            <span>Documentación y recibo</span>
-          </button>
-        </PermissionGuard>
+        {/* Beneficiario Kids: el contrato y su documentación/recibo se gestionan
+            desde la ficha del TITULAR; aquí no se ofrecen. */}
+        {!esBeneficiarioKids && (
+          <PermissionGuard permission={PersonPermission.DESCARGAR_CONTRATO}>
+            <button
+              onClick={downloadContrato}
+              className="btn-primary flex items-center space-x-2"
+            >
+              <ArrowDownTrayIcon className="h-4 w-4" />
+              <span>Descargar Contrato</span>
+            </button>
+          </PermissionGuard>
+        )}
+        {!esBeneficiarioKids && (
+          <PermissionGuard permission={PersonPermission.VER_DOCUMENTACION}>
+            <button
+              onClick={() => setShowDocReciboModal(true)}
+              className="btn-secondary flex items-center space-x-2"
+              title="Ver, subir documentación y recibo"
+            >
+              <DocumentTextIcon className="h-4 w-4" />
+              <span>Documentación y recibo</span>
+            </button>
+          </PermissionGuard>
+        )}
         <SuspendidaBadge
           show={!!isSuspendida}
           suspenddata={person.suspenddata ?? null}
