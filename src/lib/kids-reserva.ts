@@ -82,3 +82,31 @@ export async function asegurarReservaKids(insc: any, beneficiario: any): Promise
     [insc._id, ref, contractId, enrollmentId]);
   return ref;
 }
+
+export interface KidsCredencialesLGS { numeroId: string; nombre: string; username: string | null; password: string | null }
+
+/**
+ * Matricula al niño: asegura la reserva y la APRUEBA en KIDS (RESERVADA → ACTIVA,
+ * queda en su curso/salón). Guarda credenciales en KIDS_INSCRIPCIONES y las devuelve.
+ * Lanza Error legible si falla (y deja `errorKids` en la inscripción).
+ */
+export async function matricularKids(insc: any, beneficiario: any): Promise<KidsCredencialesLGS> {
+  const ref = await asegurarReservaKids(insc, beneficiario);
+  try {
+    const r = await kidsIntake.approveReservation(ref);
+    const cred = r.credenciales;
+    await query(
+      `UPDATE "KIDS_INSCRIPCIONES"
+          SET "aprobado"=true, "fechaAprobado"=COALESCE("fechaAprobado", NOW()),
+              "aprobadoEnKids"=true, "fechaAprobacionKids"=NOW(),
+              "kidsUserId"=$2, "kidsUsername"=$3, "kidsPassword"=$4,
+              "kidsEnrollmentId"=COALESCE($5,"kidsEnrollmentId"), "errorKids"=NULL, "_updatedDate"=NOW()
+        WHERE "_id"=$1`,
+      [insc._id, cred?.userId || null, cred?.username || null, cred?.passwordInicial || null, r.enrollmentId || null]);
+    return { numeroId: insc.numeroId, nombre: insc.nombre, username: cred?.username || null, password: cred?.passwordInicial || null };
+  } catch (e: any) {
+    await query(`UPDATE "KIDS_INSCRIPCIONES" SET "errorKids"=$2, "_updatedDate"=NOW() WHERE "_id"=$1`,
+      [insc._id, String(e?.message || 'error').slice(0, 500)]).catch(() => null);
+    throw new Error(`KIDS no aprobó la matrícula: ${e?.message || 'error desconocido'}`);
+  }
+}

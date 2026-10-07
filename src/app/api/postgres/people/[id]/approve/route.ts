@@ -6,7 +6,7 @@ import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { ids } from '@/lib/id-generator';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
 import { kidsIntake } from '@/lib/kids-intake';
-import { asegurarReservaKids } from '@/lib/kids-reserva';
+import { matricularKids } from '@/lib/kids-reserva';
 import { registrarCambioAprobacion, nombreDe, type OrigenAprobacion } from '@/lib/aprobacion-audit';
 
 interface KidsCredenciales { numeroId: string; nombre: string; username: string | null; password: string | null }
@@ -279,25 +279,11 @@ async function approveOnePerson(
       }
       for (const insc of inscs) {
         try {
-          const ref = await asegurarReservaKids(insc, person);
-          const r = await kidsIntake.approveReservation(ref);
-          const cred = r.credenciales;
-          await query(
-            `UPDATE "KIDS_INSCRIPCIONES"
-               SET "aprobadoEnKids"=true, "fechaAprobacionKids"=NOW(),
-                   "kidsUserId"=$2, "kidsUsername"=$3, "kidsPassword"=$4,
-                   "kidsEnrollmentId"=COALESCE($5,"kidsEnrollmentId"), "errorKids"=NULL, "_updatedDate"=NOW()
-             WHERE "_id"=$1`,
-            [insc._id, cred?.userId || null, cred?.username || null, cred?.passwordInicial || null, r.enrollmentId || null]
-          );
-          kidsCredenciales.push({
-            numeroId: insc.numeroId, nombre: insc.nombre,
-            username: cred?.username || null, password: cred?.passwordInicial || null,
-          });
+          kidsCredenciales.push(await matricularKids(insc, person));
         } catch (e: any) {
-          console.error('[approve] Error aprobando reserva Kids (best-effort):', e?.message);
+          // matricularKids ya dejó errorKids en la inscripción.
+          console.error('[approve] Error matriculando en KIDS (best-effort):', e?.message);
           kidsErrores.push(String(e?.message || 'error desconocido'));
-          try { await query(`UPDATE "KIDS_INSCRIPCIONES" SET "errorKids"=$2, "_updatedDate"=NOW() WHERE "_id"=$1`, [insc._id, String(e?.message || 'error').slice(0, 500)]); } catch { /* noop */ }
         }
       }
     } catch (e: any) {

@@ -123,6 +123,70 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
       .finally(() => setAuditLoading(false))
   }
   useEffect(() => { loadAudit() }, [person._id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Estado de la matrícula KIDS de cada beneficiario Kids (KIDS_INSCRIPCIONES).
+  const [kidsMatricula, setKidsMatricula] = useState<Record<string, { person: any; insc: any | null; kidsConfigurado: boolean }>>({})
+  const [matriculaModal, setMatriculaModal] = useState<{ benId: string; initial: any } | null>(null)
+  const [matriculando, setMatriculando] = useState(false)
+  const loadKidsMatricula = (benId: string) => {
+    fetch(`/api/postgres/people/${benId}/kids-matricula`)
+      .then(r => r.json())
+      .then(d => {
+        if (!d?.success) return
+        setKidsMatricula(prev => ({ ...prev, [benId]: { person: d.person, insc: d.inscripciones?.[0] || null, kidsConfigurado: !!d.kidsConfigurado } }))
+      })
+      .catch(() => null)
+  }
+  const kidsIdsKey = currentBeneficiaries.filter(b => b.kids).map(b => `${b._id}:${b.estado}`).join(',')
+  useEffect(() => {
+    currentBeneficiaries.filter(b => b.kids).forEach(b => loadKidsMatricula(b._id))
+  }, [kidsIdsKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const abrirMatricula = (benId: string) => {
+    const km = kidsMatricula[benId]
+    if (!km) return
+    const p = km.person || {}
+    const i = km.insc || {}
+    const titularEsApoderado = !i.apoderadoDoc || String(i.apoderadoDoc).replace(/\W/g, '') === String(person.numeroId || '').replace(/\W/g, '')
+    setMatriculaModal({
+      benId,
+      initial: {
+        primerNombre: p.primerNombre, segundoNombre: p.segundoNombre, primerApellido: p.primerApellido,
+        segundoApellido: p.segundoApellido, numeroId: p.numeroId,
+        fechaNacimiento: p.fechaNacimiento ? String(p.fechaNacimiento).slice(0, 10) : '',
+        email: p.email, celular: p.celular,
+        // Curso/salón se vuelven a elegir (el anterior es el que falló); apoderado se conserva.
+        kidsData: {
+          titularEsApoderado,
+          apoderado: i.apoderado || '', apoderadoApellidos: i.apoderadoApellidos || '', apoderadoDoc: i.apoderadoDoc || '',
+          apoderadoTelefono: i.apoderadoTelefono || '', apoderadoMail: i.apoderadoMail || '', parentesco: i.parentesco || '',
+        },
+      },
+    })
+  }
+  const guardarMatricula = async (v: any) => {
+    if (!matriculaModal) return
+    const benId = matriculaModal.benId
+    setMatriculando(true)
+    try {
+      const r = await fetch(`/api/postgres/people/${benId}/kids-matricula`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kidsData: v.kidsData }),
+      })
+      const d = await r.json()
+      if (r.ok && d.success) {
+        setMatriculaModal(null)
+        alert(d.estado === 'MATRICULADO' ? mensajeKids({ kidsCredenciales: d.kidsCredenciales }) : `✅ ${d.mensaje}`)
+      } else {
+        alert(`⚠️ No se pudo completar en KIDS:\n${d.error || 'error desconocido'}`)
+      }
+    } catch {
+      alert('⚠️ Error de conexión al matricular en KIDS.')
+    } finally {
+      setMatriculando(false)
+      loadKidsMatricula(benId)
+    }
+  }
   const [isEditMode, setIsEditMode] = useState(false)
   const [editingBeneficiaryId, setEditingBeneficiaryId] = useState<string | null>(null)
   const [isTogglingContract, setIsTogglingContract] = useState(false)
@@ -1128,9 +1192,19 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                       {beneficiary.estado}
                     </span>
                     {beneficiary.kids ? (
-                      <span className="badge bg-purple-100 text-purple-700">
-                        USUARIO KIDS
-                      </span>
+                      <>
+                        <span className="badge bg-purple-100 text-purple-700">
+                          USUARIO KIDS
+                        </span>
+                        {(() => {
+                          const km = kidsMatricula[beneficiary._id]
+                          if (!km || !km.kidsConfigurado) return null
+                          const i = km.insc
+                          if (i?.aprobadoEnKids) return <span className="badge bg-green-100 text-green-800" title={i.kidsUsername ? `Usuario KIDS: ${i.kidsUsername}` : undefined}>MATRICULADO EN KIDS{i.salonNombre ? ` · ${i.salonNombre}` : ''}</span>
+                          if (i?.enviadoAKids) return <span className="badge bg-blue-100 text-blue-800">RESERVADO EN KIDS{i.salonNombre ? ` · ${i.salonNombre}` : ''}</span>
+                          return <span className="badge bg-red-100 text-red-700" title={i?.errorKids || 'Sin inscripción Kids'}>SIN RESERVA EN KIDS</span>
+                        })()}
+                      </>
                     ) : !beneficiary.existeEnAcademica ? (
                       <span className="badge bg-red-100 text-red-700">
                         SIN REGISTRO ACADÉMICO
@@ -1150,8 +1224,30 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                     ID: {beneficiary.numeroId} • Creado: {formatDate(beneficiary.fechaCreacion)}
                     {beneficiary.celular && ` • Tel: ${beneficiary.celular}`}
                   </div>
+                  {beneficiary.kids && kidsMatricula[beneficiary._id]?.insc?.errorKids && !kidsMatricula[beneficiary._id]?.insc?.aprobadoEnKids && (
+                    <div className="text-xs text-red-700 mt-1">⚠️ KIDS: {kidsMatricula[beneficiary._id].insc.errorKids}</div>
+                  )}
                 </div>
                 <div className="flex items-center space-x-2">
+                  {(() => {
+                    // Kid sin matrícula en KIDS: sin reserva (falló o nunca se envió), o
+                    // reservado pero ya aprobado en LGS (falta activarla) → reintentar.
+                    const km = kidsMatricula[beneficiary._id]
+                    if (!beneficiary.kids || esContratoDePrueba || !km?.kidsConfigurado || km.insc?.aprobadoEnKids) return null
+                    const falta = !km.insc?.enviadoAKids || beneficiary.estado === 'Aprobado'
+                    if (!falta) return null
+                    return (
+                      <PermissionGuard permission={PersonPermission.APROBAR}>
+                        <button
+                          onClick={() => abrirMatricula(beneficiary._id)}
+                          className="inline-flex items-center px-4 py-1.5 border border-purple-600 text-sm font-medium rounded text-purple-700 bg-white hover:bg-purple-600 hover:text-white transition-colors"
+                          title={beneficiary.estado === 'Aprobado' ? 'Crear la reserva y matricular al niño en su curso en KIDS' : 'Crear la reserva del cupo en KIDS'}
+                        >
+                          {beneficiary.estado === 'Aprobado' ? 'Matricular en KIDS' : 'Reservar en KIDS'}
+                        </button>
+                      </PermissionGuard>
+                    )
+                  })()}
                   <PermissionGuard permission={PersonPermission.MODIFICAR}>
                     <button
                       onClick={() => handleEditBeneficiary(beneficiary._id)}
@@ -1766,6 +1862,21 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
           setShowKidsModal(false)
           if (!beneficiaryKidsData) setBeneficiaryKids(false)
         }}
+      />
+
+      {/* Matricular / reservar en KIDS un kid ya creado (corrige curso o salón). */}
+      <KidsBeneficiarioModal
+        open={!!matriculaModal}
+        initial={matriculaModal?.initial}
+        titularNombre={`${person.primerNombre || ''} ${person.segundoNombre || ''}`.trim()}
+        titularApellidos={`${person.primerApellido || ''} ${person.segundoApellido || ''}`.trim()}
+        titularDocumento={person.numeroId}
+        titularCelular={person.celular}
+        titularEmail={person.email}
+        plataforma={person.plataforma}
+        textoGuardar={matriculando ? 'Enviando a KIDS…' : 'Enviar a KIDS'}
+        onSave={(v) => { if (!matriculando) guardarMatricula(v) }}
+        onCancel={() => { if (!matriculando) setMatriculaModal(null) }}
       />
 
       {/* Confirmación de cambios del beneficiario */}

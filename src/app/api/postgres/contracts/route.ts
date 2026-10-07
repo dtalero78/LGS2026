@@ -6,7 +6,7 @@ import { ids } from '@/lib/id-generator';
 import { syncFinancieroSaldo } from '@/services/pagos-titulares.service';
 import { checkBeneficiarioUnico, anularBeneficiariosViejos } from '@/lib/beneficiario-unico';
 import { kidsIntake, validarSalonesDelPais } from '@/lib/kids-intake';
-import { buildKidsReservation, plataformaToCountryCode, toISODate } from '@/lib/kids-mapping';
+import { buildKidsReservation, plataformaToCountryCode, toISODate, errorEdadCursoKids } from '@/lib/kids-mapping';
 import crypto from 'crypto';
 
 const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
@@ -163,6 +163,11 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
     if (sinSalon.length) {
       throw new ValidationError(
         `Falta elegir campaña, curso y salón de KIDS para: ${sinSalon.map((b: any) => `${b.primerNombre || ''} ${b.primerApellido || ''}`.trim()).join(', ')}.`);
+    }
+    // Edad vs curso (misma regla que KIDS: Junior 6–9, Youngster 10–13).
+    for (const b of beneficiarios.filter((x: any) => x?.kids === true && x?.kidsData?.tipoCurso)) {
+      const errEdad = errorEdadCursoKids(b.fechaNacimiento, b.kidsData.tipoCurso);
+      if (errEdad) throw new ValidationError(`${`${b.primerNombre || ''} ${b.primerApellido || ''}`.trim()}: ${errEdad}`);
     }
     // Salón del país del contrato: Chile → salones de Chile; resto → los otros.
     const errPais = await validarSalonesDelPais(titular?.plataforma,

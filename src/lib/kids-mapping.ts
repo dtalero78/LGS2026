@@ -23,6 +23,44 @@ export function toISODate(v: any): string {
   try { return new Date(v).toISOString().slice(0, 10); } catch { return ''; }
 }
 
+/**
+ * Rango de edad por curso — MISMA regla que KIDS2026 (contracts/domain/edad.ts):
+ * edad cumplida a la fecha de inicio de la reserva (hoy). Si no cuadra, KIDS
+ * rechaza la reserva ("La edad del niño a la fecha de inicio… no corresponde…").
+ */
+export const RANGO_EDAD_CURSO: Record<string, { min: number; max: number; etiqueta: string }> = {
+  JUNIOR: { min: 6, max: 9, etiqueta: 'Junior (6–9 años)' },
+  YOUNGSTER: { min: 10, max: 13, etiqueta: 'Youngster (10–13 años)' },
+};
+
+/** Edad cumplida en `fecha` (YYYY-MM-DD). null si la fecha de nacimiento no es válida. */
+export function edadKidsEnFecha(fechaNacimiento: any, fecha: string = new Date().toISOString().slice(0, 10)): number | null {
+  const fn = toISODate(fechaNacimiento);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fn)) return null;
+  const [ny, nm, nd] = fn.split('-').map(Number);
+  const [fy, fm, fd] = fecha.split('-').map(Number);
+  let edad = fy - ny;
+  if (fm < nm || (fm === nm && fd < nd)) edad -= 1;
+  return edad;
+}
+
+/** Curso que corresponde a esa edad (null si no cabe en ninguno). */
+export function cursoKidsParaEdad(edad: number | null): string | null {
+  if (edad === null) return null;
+  return Object.entries(RANGO_EDAD_CURSO).find(([, r]) => edad >= r.min && edad <= r.max)?.[0] ?? null;
+}
+
+/** Mensaje de error si la edad no corresponde al curso; null si está bien (o si falta el dato). */
+export function errorEdadCursoKids(fechaNacimiento: any, tipoCurso?: string | null): string | null {
+  const rango = RANGO_EDAD_CURSO[String(tipoCurso || '').toUpperCase()];
+  const edad = edadKidsEnFecha(fechaNacimiento);
+  if (!rango || edad === null) return null;
+  if (edad >= rango.min && edad <= rango.max) return null;
+  const sugerido = cursoKidsParaEdad(edad);
+  return `La edad del niño hoy (${edad} años) no corresponde a ${rango.etiqueta}.` +
+    (sugerido ? ` Debe inscribirse en ${RANGO_EDAD_CURSO[sugerido].etiqueta}.` : ' No cabe en ningún curso Kids (6–13 años).');
+}
+
 function fullName(primer?: string, segundo?: string): string {
   return `${primer || ''} ${segundo || ''}`.trim();
 }

@@ -3,6 +3,7 @@ import { AcademicaRepository } from '@/repositories/academica.repository';
 import { verificarDocumento } from '@/lib/verificacion-documento';
 import { kidsIntake, validarSalonesDelPais } from '@/lib/kids-intake';
 import { asegurarReservaKids } from '@/lib/kids-reserva';
+import { errorEdadCursoKids } from '@/lib/kids-mapping';
 import { ValidationError, ConflictError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 import { queryOne, query } from '@/lib/postgres';
@@ -36,6 +37,11 @@ export const POST = handlerWithStaffAuth(async (request) => {
   // Kids con KIDS2026 conectado: el salón es obligatorio (sin él no se envía la reserva).
   if (body.kids === true && kidsIntake.isConfigured() && !body.kidsData?.classroomId && !/^PRB-/i.test(String(contratoTarget || ''))) {
     throw new ValidationError('Falta elegir campaña, curso y salón de KIDS para este beneficiario.');
+  }
+  // Edad vs curso (misma regla que KIDS): si no cuadra, KIDS rechazaría la reserva.
+  if (body.kids === true && body.kidsData?.tipoCurso) {
+    const errEdad = errorEdadCursoKids(body.fechaNacimiento, body.kidsData.tipoCurso);
+    if (errEdad) throw new ValidationError(errEdad);
   }
   // El salón debe ser del país del contrato (plataforma del TITULAR): Chile → salones
   // de Chile; Colombia/Ecuador/Perú → los otros.

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
-import { plataformaToCountryCode } from '@/lib/kids-mapping'
+import { plataformaToCountryCode, edadKidsEnFecha, cursoKidsParaEdad, errorEdadCursoKids } from '@/lib/kids-mapping'
 import KidsCursoTexto, { cursoColorCls } from '@/components/comercial/KidsCursoTexto'
 
 /**
@@ -147,9 +147,15 @@ export default function KidsBeneficiarioModal({
   const cursoSel = cursosDeCampania.find(c => c.tipo === kids.tipoCurso)
   const salonesDeCurso = cursoSel?.salones ?? []
 
+  // Edad del niño hoy → curso que le corresponde (misma regla que KIDS: Junior 6–9, Youngster 10–13).
+  const edadNino = edadKidsEnFecha(form.fechaNacimiento)
+  const cursoPorEdad = cursoKidsParaEdad(edadNino)
+
   const onSelectCampania = (id: string) => {
     const c = campaniasUtiles.find(x => x.id === id)
-    setKids(d => ({ ...d, campaignId: id, campaign: c?.nombre || '', tipoCurso: '', classroomId: '', salonNombre: '', horario: '' }))
+    // Preselecciona el curso que corresponde por edad, si la campaña lo tiene.
+    const tipoAuto = cursoPorEdad && c?.cursos.some(cu => cu.tipo === cursoPorEdad) ? cursoPorEdad : ''
+    setKids(d => ({ ...d, campaignId: id, campaign: c?.nombre || '', tipoCurso: tipoAuto, classroomId: '', salonNombre: '', horario: '' }))
   }
   const onSelectTipo = (t: string) => setKids(d => ({ ...d, tipoCurso: t, classroomId: '', salonNombre: '', horario: '' }))
   const onSelectSalon = (id: string) => {
@@ -184,6 +190,9 @@ export default function KidsBeneficiarioModal({
     }
     // La fecha de nacimiento del niño es obligatoria para KIDS (valida la edad).
     if (!form.fechaNacimiento?.trim()) { setError('La fecha de nacimiento es obligatoria para el proceso Kids'); return }
+    // KIDS rechaza la reserva si la edad no corresponde al curso: se valida antes.
+    const errEdad = errorEdadCursoKids(form.fechaNacimiento, kids.tipoCurso)
+    if (errEdad) { setError(errEdad); return }
     // Si KIDS está conectado, hay que elegir un salón real (sin él la reserva no se envía).
     if (catalogConfigured && catalogError) { setError(`${catalogError} No se puede inscribir el kid hasta resolverlo.`); return }
     if (catalogConfigured && !kids.classroomId) { setError('Selecciona campaña, tipo de curso y salón'); return }
@@ -256,8 +265,16 @@ export default function KidsBeneficiarioModal({
                   <Field label="Tipo de curso" required>
                     <select value={kids.tipoCurso || ''} onChange={e => onSelectTipo(e.target.value)} disabled={!campaniaSel} className={`${inputCls} bg-white disabled:bg-gray-50 font-bold ${cursoColorCls(kids.tipoCurso) || 'text-gray-900'}`}>
                       <option value="" className="font-normal text-gray-900">{campaniaSel ? '— Selecciona —' : '— Elige campaña —'}</option>
-                      {cursosDeCampania.map(c => <option key={c.tipo} value={c.tipo} className={`font-bold ${cursoColorCls(c.tipo)}`}>{c.tipo}</option>)}
+                      {cursosDeCampania.map(c => {
+                        const noEdad = !!cursoPorEdad && c.tipo !== cursoPorEdad
+                        return <option key={c.tipo} value={c.tipo} disabled={noEdad} className={`font-bold ${cursoColorCls(c.tipo)}`}>{c.tipo}{noEdad ? ' (no corresponde por edad)' : ''}</option>
+                      })}
                     </select>
+                    {edadNino !== null && (
+                      <p className={`text-xs mt-1 ${cursoPorEdad ? 'text-gray-500' : 'text-red-600 font-semibold'}`}>
+                        Edad hoy: {edadNino} años → {cursoPorEdad ? <strong className={cursoColorCls(cursoPorEdad)}>{cursoPorEdad}</strong> : 'no corresponde a ningún curso Kids (6–13 años)'}
+                      </p>
+                    )}
                   </Field>
                   <div className="sm:col-span-2">
                     <Field label="Salón / horario" required>
