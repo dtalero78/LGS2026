@@ -32,10 +32,14 @@ export interface KidsSalon {
   cupo: number; ocupados: number; cupoDisponible: number;
   /** true si no tiene cupo (solo llega con `availability({ incluirLlenos: true })`). */
   lleno?: boolean;
+  /** false = salón inactivo (solo llega con `availability({ incluirInactivos: true })`). */
+  activo?: boolean;
   guia: string | null; horario: KidsSlot[];
 }
-export interface KidsCurso { tipo: string; salones: KidsSalon[] }
-export interface KidsCampania { id: string; nombre: string; inicio: string; fin: string; cursos: KidsCurso[] }
+/** `inicio`/`finalCurso` = programa del curso (KIDS v11+). */
+export interface KidsCurso { tipo: string; inicio?: string | null; finalCurso?: string | null; salones: KidsSalon[] }
+/** `inicio`/`fin` = campaña comercial; `finalVenta` = cierre de ventas (KIDS v11+). */
+export interface KidsCampania { id: string; nombre: string; inicio: string; fin: string; finalVenta?: string; cursos: KidsCurso[] }
 export interface KidsAvailability { campanias: KidsCampania[] }
 
 // ── Tipos de reserva ──
@@ -114,11 +118,17 @@ export const kidsIntake = {
   isConfigured: isKidsIntakeConfigured,
   /**
    * Catálogo: campañas EN_MATRICULA con salones que tienen cupo (cascada Campaña→Curso→Salón).
-   * `incluirLlenos` agrega también los salones sin cupo (`lleno: true`) — para la
-   * consulta Comercial › Cursos Kids, no para inscribir.
+   * `incluirLlenos` agrega también los salones sin cupo (`lleno: true`) e
+   * `incluirInactivos` los inactivos (`activo: false`) — para la consulta
+   * Comercial › Cursos Kids; para inscribir nunca se piden inactivos.
    */
-  availability: (opts?: { incluirLlenos?: boolean }) =>
-    call<KidsAvailability>('GET', `/api/kids-intake/availability${opts?.incluirLlenos ? '?incluirLlenos=1' : ''}`),
+  availability: (opts?: { incluirLlenos?: boolean; incluirInactivos?: boolean }) => {
+    const qs = new URLSearchParams();
+    if (opts?.incluirLlenos) qs.set('incluirLlenos', '1');
+    if (opts?.incluirInactivos) qs.set('incluirInactivos', '1');
+    const q = qs.toString();
+    return call<KidsAvailability>('GET', `/api/kids-intake/availability${q ? `?${q}` : ''}`);
+  },
   /** Crea la reserva (RESERVADA, retiene cupo). Idempotente por externalRef → 409 si ya existe. */
   createReservation: (input: KidsReservationInput) =>
     call<KidsReservationResult>('POST', '/api/kids-intake/reservations', input),

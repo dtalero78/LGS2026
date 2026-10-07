@@ -41,7 +41,7 @@ export interface KidsBeneficiarioValue {
 
 // Tipos del catálogo (espejo de /api/postgres/kids-intake/availability).
 interface Slot { tipo: string; diaSemana: number; horaLocal: string; duracionMin: number }
-interface Salon { id: string; nombre: string; courseId: string; pais?: string | null; cupo: number; ocupados: number; cupoDisponible: number; lleno?: boolean; guia: string | null; horario: Slot[] }
+interface Salon { id: string; nombre: string; courseId: string; pais?: string | null; cupo: number; ocupados: number; cupoDisponible: number; lleno?: boolean; activo?: boolean; guia: string | null; horario: Slot[] }
 interface Curso { tipo: string; salones: Salon[] }
 interface Campania { id: string; nombre: string; inicio: string; fin: string; cursos: Curso[] }
 
@@ -135,7 +135,7 @@ export default function KidsBeneficiarioModal({
   // para no dejar el selector vacío durante la transición.
   // Sin `mostrarLlenos` (Crear Contrato) los llenos se descartan también aquí, por si
   // KIDS llegara a mandarlos.
-  const salonDelPais = (s: Salon) => (!s.pais || s.pais === grupoPaisContrato) && (mostrarLlenos || !salonLleno(s))
+  const salonDelPais = (s: Salon) => s.activo !== false && (!s.pais || s.pais === grupoPaisContrato) && (mostrarLlenos || !salonLleno(s))
   // Solo se ofrecen campañas (y cursos) que tengan AL MENOS un salón con cupo del
   // país del contrato: una campaña en matrícula sin salones para este país no
   // sirve para inscribir y antes aparecía igual (selector de cursos vacío).

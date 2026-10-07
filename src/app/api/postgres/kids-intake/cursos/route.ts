@@ -8,7 +8,8 @@ import { kidsIntake } from '@/lib/kids-intake';
  * GET /api/postgres/kids-intake/cursos
  *
  * Consulta "Comercial › Cursos Kids": campañas de KIDS2026 en matrícula con sus
- * cursos y salones, INCLUIDOS los llenos (`lleno: true`, para mostrarlos en rojo).
+ * cursos y salones, INCLUIDOS los llenos (`lleno: true`, en rojo) y los inactivos
+ * (`activo: false`, atenuados) — igual que el panel de la campaña en KIDS.
  * Solo lectura. Si KIDS falla responde { configured: true, error } en vez de lanzar.
  * Gateado por COMERCIAL.CURSOS_KIDS.VER.
  */
@@ -18,7 +19,7 @@ export const GET = handlerWithStaffAuth(async (_req, _ctx, session) => {
     return successResponse({ configured: false, campanias: [] });
   }
   try {
-    const data = await kidsIntake.availability({ incluirLlenos: true });
+    const data = await kidsIntake.availability({ incluirLlenos: true, incluirInactivos: true });
     return successResponse({ configured: true, campanias: data.campanias || [], consultado: new Date().toISOString() });
   } catch (e: any) {
     console.error('[kids-intake/cursos] KIDS2026 falló:', e?.status, e?.message);
