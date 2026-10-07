@@ -70,6 +70,8 @@ interface Props {
    * salones con cupo.
    */
   mostrarLlenos?: boolean
+  /** Texto del botón principal (la ficha usa "Continuar": el modal no guarda por sí solo). */
+  textoGuardar?: string
   onSave: (value: KidsBeneficiarioValue) => void
   onCancel: () => void
 }
@@ -79,7 +81,7 @@ const salonLleno = (s: Salon) => s.lleno === true || s.ocupados >= s.cupo
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500'
 
 export default function KidsBeneficiarioModal({
-  open, initial, titularNombre, titularApellidos, titularDocumento, titularCelular, titularEmail, plataforma, mostrarLlenos = false, onSave, onCancel,
+  open, initial, titularNombre, titularApellidos, titularDocumento, titularCelular, titularEmail, plataforma, mostrarLlenos = false, textoGuardar = 'Guardar beneficiario Kids', onSave, onCancel,
 }: Props) {
   const [form, setForm] = useState<KidsBeneficiarioValue>({})
   const [kids, setKids] = useState<KidsData>({})
@@ -336,7 +338,7 @@ export default function KidsBeneficiarioModal({
 
         <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-200 flex-shrink-0">
           <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</button>
-          <button type="button" onClick={guardar} className="px-5 py-2 text-sm font-semibold text-white bg-primary-600 rounded-lg hover:bg-primary-700">Guardar beneficiario Kids</button>
+          <button type="button" onClick={guardar} className="px-5 py-2 text-sm font-semibold text-white bg-primary-600 rounded-lg hover:bg-primary-700">{textoGuardar}</button>
         </div>
       </div>
     </div>

@@ -29,6 +29,11 @@ const PREFIJOS_PAISES = [
 // Indicativos telefónicos (selector de celular) — catálogo completo compartido.
 const PREFIJOS_CELULAR = COUNTRY_CODES
 
+const sinTildes = (s?: string | null) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
+/** Prefijo celular del país del contrato (Chile → +56); +57 si no se reconoce. */
+const prefijoDePais = (plataforma?: string | null) =>
+  PREFIJOS_PAISES.find(p => sinTildes(p.pais) === sinTildes(plataforma))?.prefijo || '+57'
+
 export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps) {
   console.log('🧪 PersonAdmin render - Props:', {
     personId: person._id,
@@ -616,7 +621,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
       pais: person.plataforma || '',
       domicilio: '',
       ciudad: '',
-      celularPrefijo: '+57',
+      celularPrefijo: prefijoDePais(person.plataforma),
       celular: '',
       email: '',
       genero: ''
@@ -656,8 +661,8 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
   // Regla 2026-10-06: no se agrega un beneficiario si su documento ya es
   // beneficiario ACTIVO en un contrato vivo (el servidor también lo valida).
   // Devuelve true si se puede seguir.
-  const verificarBeneficiarioActivo = async (): Promise<boolean> => {
-    const numeroId = beneficiaryData.numeroId.trim()
+  const verificarBeneficiarioActivo = async (numeroIdArg?: string): Promise<boolean> => {
+    const numeroId = (numeroIdArg ?? beneficiaryData.numeroId).trim()
     if (!numeroId) return true
     setVerificandoDoc(true)
     try {
@@ -860,7 +865,9 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         alert(`Error: ${result.error || 'No se pudo guardar el beneficiario'}\n${result.details || ''}`)
       }
     } catch (error) {
+      // Antes solo iba a la consola: el usuario no veía nada y el beneficiario no quedaba.
       console.error('❌ Error guardando beneficiario:', error)
+      alert('No se pudo guardar el beneficiario (error de conexión o del servidor). Intente de nuevo; si persiste, avise a Tecnología.')
     }
   }
 
@@ -1497,6 +1504,12 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                 {currentFormStep === 2 && (
                   <div className="space-y-4">
                     <h4 className="font-medium text-gray-900 mb-4">Información Personal y Contacto</h4>
+                    {beneficiaryKids && (
+                      <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+                        🧒 Datos Kids capturados{beneficiaryKidsData?.salonNombre ? ` (${beneficiaryKidsData.salonNombre})` : ''}, pero el beneficiario <strong>aún no está guardado</strong>:
+                        complete género, ciudad y domicilio y pulse <strong>Crear Beneficiario</strong>.
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1626,13 +1639,27 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                         {verificandoDoc ? 'Verificando…' : 'Siguiente'}
                       </button>
                     ) : (
-                      <button
-                        onClick={handleSaveBeneficiary}
-                        disabled={!validateRequiredFields(2)}
-                        className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Crear Beneficiario
-                      </button>
+                      <div className="flex flex-col items-end gap-1">
+                        <button
+                          onClick={handleSaveBeneficiary}
+                          disabled={!validateRequiredFields(2)}
+                          className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Crear Beneficiario
+                        </button>
+                        {!validateRequiredFields(2) && (
+                          <span className="text-xs text-red-600">
+                            Falta: {[
+                              !beneficiaryData.fechaNacimiento && 'fecha de nacimiento',
+                              !beneficiaryData.genero && 'género',
+                              !beneficiaryData.ciudad && 'ciudad',
+                              !beneficiaryData.domicilio.trim() && 'domicilio',
+                              !beneficiaryData.celular.trim() && 'celular',
+                              !beneficiaryData.email.trim() && 'email',
+                            ].filter(Boolean).join(', ')}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1678,7 +1705,14 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         titularEmail={person.email}
         plataforma={person.plataforma}
         mostrarLlenos
-        onSave={(v) => {
+        textoGuardar="Continuar →"
+        onSave={async (v) => {
+          // El modal pide el celular "solo dígitos" y suele venir con el indicativo
+          // (56979615214); el form lo concatena con el prefijo → se quita si ya lo trae.
+          const pref = (beneficiaryData.celularPrefijo || prefijoDePais(person.plataforma)).replace(/\D/g, '')
+          const cel = (v.celular || '').replace(/\D/g, '')
+          const celLocal = pref && cel.startsWith(pref) && cel.length > pref.length + 6 ? cel.slice(pref.length) : cel
+          v = { ...v, celular: celLocal || v.celular }
           // Sincroniza al form los datos del beneficiario capturados en el modal.
           setBeneficiaryData(prev => ({
             ...prev,
@@ -1694,6 +1728,11 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
           setBeneficiaryKidsData(v.kidsData || null)
           setBeneficiaryKids(true)
           setShowKidsModal(false)
+          // El modal NO guarda: lleva al paso 2 (género, ciudad, domicilio) donde se
+          // pulsa "Crear Beneficiario". Antes se quedaba en el paso 1 y parecía guardado.
+          if (!isEditMode && currentFormStep === 1 && v.numeroId && (await verificarBeneficiarioActivo(v.numeroId))) {
+            setCurrentFormStep(2)
+          }
         }}
         onCancel={() => {
           setShowKidsModal(false)
