@@ -107,10 +107,10 @@ export const POST = handlerWithStaffAuth(async (request) => {
     inicioContrato: body.inicioContrato, fechaContrato: body.fechaContrato,
     // Segmento infantil (mismo switch que Crear Contrato)
     kids: body.kids,
-    // Estado operativo: nace PENDIENTE si no viene aprobado (antes quedaba NULL
-    // y la ficha mostraba "Null" hasta aprobarlo). Mismo mapeo aprobacion→estado
-    // que PATCH /people/[id] y PUT /approvals/[id].
-    estado: body.estado ?? ((!body.aprobacion || body.aprobacion === 'Pendiente') ? 'PENDIENTE' : undefined),
+    // Estado operativo: una persona recién creada nace 'SIN APROBAR' (antes quedaba
+    // NULL y la ficha mostraba "Null"). 'PENDIENTE' se reserva para cuando alguien
+    // la pone en Pendiente a propósito (p. ej. un aprobado devuelto a Pendiente).
+    estado: body.estado ?? (body.aprobacion === 'Aprobado' ? undefined : 'SIN APROBAR'),
   };
 
   for (const [field, value] of Object.entries(optionalFields)) {

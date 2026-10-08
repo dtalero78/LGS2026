@@ -5,7 +5,7 @@
  *
  * Distinto al badge de `aprobacion` (decisión comercial: Aprobado / Pendiente
  * / Rechazado / etc.). Aquí mostramos la "máquina de estados" interna:
- *   ACTIVA · On Hold · CON EXTENSION · FINALIZADA · PENDIENTE · RETRACTADO ·
+ *   SIN APROBAR · ACTIVA · On Hold · CON EXTENSION · FINALIZADA · PENDIENTE · RETRACTADO ·
  *   ANULADO · (null → Null)
  *
  * Si `estado` es null/undefined/'' muestra "Null" en fondo negro.
@@ -29,6 +29,9 @@ const META: Record<string, { label: string; cls: string }> = {
   'CON EXTENSION': { label: 'CON EXTENSION',  cls: 'bg-emerald-200 text-emerald-900' },
   FINALIZADA:      { label: 'FINALIZADA',     cls: 'bg-red-500 text-white' },
   'EXAM. INTER.':  { label: 'EXAM. INTER.',   cls: 'bg-yellow-300 text-yellow-900' },
+  // SIN APROBAR = contrato recién creado, nunca aprobado. PENDIENTE = se puso en
+  // Pendiente a propósito (p. ej. un aprobado devuelto a Pendiente).
+  'SIN APROBAR':   { label: 'SIN APROBAR',    cls: 'bg-indigo-100 text-indigo-800' },
   PENDIENTE:       { label: 'PENDIENTE',      cls: 'bg-orange-200 text-orange-900' },
   RETRACTADO:      { label: 'RETRACTADO',     cls: 'bg-gray-300 text-gray-800' },
   ANULADO:         { label: 'ANULADO',        cls: 'bg-red-900 text-white' },

@@ -165,6 +165,7 @@ export async function toggleStatus(id: string, active: boolean, opts: ToggleStat
     let nuevoEstado: string | null = null;
     if (apro === 'Aprobado')        nuevoEstado = Number((person as any).extensionCount) > 0 ? 'CON EXTENSION' : 'ACTIVA';
     else if (apro === 'Pendiente')  nuevoEstado = 'PENDIENTE';
+    else if (!apro.trim())          nuevoEstado = 'SIN APROBAR';
     else if (apro === 'Retractado') nuevoEstado = 'RETRACTADO';
     if (nuevoEstado && nuevoEstado !== (person as any).estado) {
       try {
