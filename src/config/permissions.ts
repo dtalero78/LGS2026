@@ -145,6 +145,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Habilita los campos de nombres y apellidos en el modal "Modificar Beneficiario". El cambio se propaga a ACADEMICA, ACADEMICA_BOOKINGS (listas de asistencia), USUARIOS_ROLES, FINANCIEROS y STEP_OVERRIDES. Sin este permiso los campos se ven pero no se pueden editar',
   },
   {
+    code: PersonPermission.RESUMEN,
+    module: Module.PERSON,
+    section: 'Información General',
+    name: 'Botón "Resumen"',
+    description: 'Botón "Resumen" de la ficha (a la izquierda de "Ver Contrato"): abre el resumen de la matrícula con el titular y sus beneficiarios. No da acceso a la página Comercial › Matrículas. (También lo ven quienes tienen "Página Matrículas" + "Ver detalle de matrícula")',
+  },
+  {
     code: PersonPermission.EDITAR_NUMERO_ID,
     module: Module.PERSON,
     section: 'Información General',

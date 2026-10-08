@@ -6,6 +6,7 @@ import { formatDate } from '@/lib/utils'
 import { ArrowDownTrayIcon, ArrowUpTrayIcon, DocumentTextIcon, PhotoIcon, BanknotesIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
 import { PermissionGuard } from '@/components/permissions'
 import { PersonPermission, ComercialPermission } from '@/types/permissions'
+import { usePermissions } from '@/hooks/usePermissions'
 import { api, handleApiError } from '@/hooks/use-api'
 import toast from 'react-hot-toast'
 import PersonContractViewer from './PersonContractViewer'
@@ -19,6 +20,8 @@ interface PersonGeneralProps {
 }
 
 export default function PersonGeneral({ person, isSuspendida }: PersonGeneralProps) {
+  // Botón "Resumen": permiso propio PERSON.INFO.RESUMEN, o (como antes) Matrículas VER + DETALLE.
+  const { hasPermission } = usePermissions()
   const [showDocuments, setShowDocuments] = useState(false)
   const [showRecibo, setShowRecibo] = useState(false)
   const [showDocReciboModal, setShowDocReciboModal] = useState(false)
@@ -156,7 +159,8 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
       <div className="flex items-center flex-wrap gap-3">
         {/* Resumen de la matrícula (misma vista de Comercial › Matrículas, con
             "Ver ficha" / "Ver usuario"). Acepta el _id del titular o de un beneficiario. */}
-        <PermissionGuard allPermissions={[ComercialPermission.MATRICULAS_VER, ComercialPermission.MATRICULAS_DETALLE]}>
+        {(hasPermission(PersonPermission.RESUMEN as any) ||
+          (hasPermission(ComercialPermission.MATRICULAS_VER as any) && hasPermission(ComercialPermission.MATRICULAS_DETALLE as any))) && (
           <a
             href={`/dashboard/comercial/matriculas/${person._id}`}
             target="_blank"
@@ -167,7 +171,7 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
             <ClipboardDocumentListIcon className="h-4 w-4" />
             Resumen
           </a>
-        </PermissionGuard>
+        )}
         <PermissionGuard permission={PersonPermission.VER_CONTRATO}>
           <PersonContractViewer person={person as any} />
         </PermissionGuard>

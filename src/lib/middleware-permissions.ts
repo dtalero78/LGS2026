@@ -385,6 +385,14 @@ export const GENERIC_ROUTE_ACCESS: Record<string, Permission[]> = {
     'SERVICIO.CANCELACION_SIN_REEMPLAZO.VER' as Permission,
   ],
 
+  // Resumen de una matrícula (/dashboard/comercial/matriculas/[id]): lo abre el
+  // botón "Resumen" de la ficha. Va ANTES de '/dashboard/comercial' (gana el
+  // primer prefijo que coincide).
+  '/dashboard/comercial/matriculas/': [
+    'COMERCIAL.MATRICULAS.DETALLE' as Permission,
+    'PERSON.INFO.RESUMEN' as Permission,
+  ],
+
   '/dashboard/comercial': [
     // Cualquier permiso COMERCIAL.* da acceso a la sección
     'COMERCIAL.CONTRATO.MODIFICAR' as Permission,

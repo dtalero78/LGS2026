@@ -1,7 +1,7 @@
 import 'server-only';
-import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
-import { requirePermission } from '@/lib/api-permissions';
-import { ComercialPermission } from '@/types/permissions';
+import { handlerWithStaffAuth, successResponse } from '@/lib/api-helpers';
+import { requireAnyPermission } from '@/lib/api-permissions';
+import { ComercialPermission, PersonPermission } from '@/types/permissions';
 import { query, queryOne } from '@/lib/postgres';
 import { NotFoundError } from '@/lib/errors';
 import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
@@ -13,10 +13,10 @@ import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
  * estado de la matrícula (aprobacion → 'Sin aprobar' si es null), y los
  * beneficiarios del mismo contrato, cada uno con su estado de perfil académico
  * (ACADEMICA por numeroId): si existe → nivel/step; si no → tienePerfilAcademico=false.
- * Gateado por COMERCIAL.MATRICULAS.DETALLE.
+ * Gateado por COMERCIAL.MATRICULAS.DETALLE o PERSON.INFO.RESUMEN (botón "Resumen" de la ficha).
  */
-export const GET = handlerWithAuth(async (_req, { params }, session) => {
-  await requirePermission(session, ComercialPermission.MATRICULAS_DETALLE);
+export const GET = handlerWithStaffAuth(async (_req, { params }, session) => {
+  await requireAnyPermission(session, [ComercialPermission.MATRICULAS_DETALLE, PersonPermission.RESUMEN]);
   let id = params.id;
 
   // Si el id es de un BENEFICIARIO (botón "Resumen" de su ficha), se resuelve

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
-import { ComercialPermission } from '@/types/permissions'
+import { ComercialPermission, PersonPermission } from '@/types/permissions'
 import { ArrowLeft, ExternalLink, User, AlertCircle, GraduationCap, Users } from 'lucide-react'
 
 interface Titular {
@@ -70,7 +70,7 @@ export default function MatriculaDetallePage() {
 
   return (
     <DashboardLayout>
-      <PermissionGuard permission={ComercialPermission.MATRICULAS_DETALLE} showDefaultMessage>
+      <PermissionGuard anyPermissions={[ComercialPermission.MATRICULAS_DETALLE, PersonPermission.RESUMEN] as any} showDefaultMessage>
         <div className="max-w-6xl mx-auto space-y-6 py-2">
           {/* Header */}
           <div className="flex items-center gap-3">
