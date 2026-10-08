@@ -205,7 +205,10 @@ export function fillContractTemplate(
   // Build data map
   const data: Record<string, string> = {
     contrato: titular?.contrato || '',
-    fecha: fmtDate(titular?._createdDate),
+    // "Fecha" del contrato = fecha DEL CONTRATO (PEOPLE.fechaContrato, editable),
+    // no la de creación del registro: en contratos migrados _createdDate es la
+    // fecha de la migración y en los creados de noche se corría un día (UTC).
+    fecha: fmtDate(titular?.fechaContrato || titular?._createdDate),
     primerNombre: titular?.primerNombre || '',
     segundoNombre: titular?.segundoNombre || '',
     primerApellido: titular?.primerApellido || '',
