@@ -1,7 +1,8 @@
 # 02 — Proceso del contrato: reglas de negocio
 
 > Ciclo de vida completo de un contrato en la plataforma LGS: desde que el comercial lo crea hasta que vence o se depura.
-> Cada regla tiene un código (**RC-xx**) para poder citarla. Las reglas describen **cómo funciona hoy la plataforma**, verificadas contra el sistema el **06-10-2026**.
+> Cada regla tiene un código (**RC-xx**) para poder citarla. Las reglas describen **cómo funciona hoy la plataforma**, verificadas contra el sistema el **06-10-2026** y actualizadas el **08-10-2026** (Kids: país, edad, reserva y matrícula desde la ficha; efectos de inactivar).
+> La guía paso a paso para el personal está en [03 — Guía: crear un contrato y aprobarlo](03-guia-crear-contrato-y-aprobacion.md).
 > Las reglas generales del negocio (académico, certificados, pagos) están en [01 — Reglas de negocio](01-reglas-de-negocio.md).
 
 ---
@@ -153,12 +154,19 @@ Ejemplo: `01-10738-25`.
 - Al marcarlo se registran el curso y los datos del apoderado. Si se cierra sin guardar, el beneficiario deja de ser Kids.
 - Un beneficiario Kids **no es alumno del programa de adultos**: al aprobarse **no** se le crea ficha académica ni recibe mensaje de bienvenida.
 - **Campaña, curso y salón** se eligen del catálogo del sistema Kids:
-  - solo aparecen campañas **en matrícula** que tengan salones **con cupo** para el país del contrato. Chile ve los salones de Chile; los demás países, los del grupo general;
+  - solo aparecen campañas **en matrícula** y salones **activos** del **país del contrato**. Chile ve solo los salones de Chile; Colombia, Ecuador y Perú, los del grupo general. El servidor rechaza un salón de otro país;
+  - en **Crear Contrato** solo se ven salones **con cupo** y **no se muestra el guía**. En la ficha del titular también se ven los **llenos**, en rojo y no seleccionables;
+  - el curso **JUNIOR** se muestra en fucsia y el **YOUNGSTER** en azul;
   - el **salón es obligatorio**: sin él no se crea el beneficiario Kids;
   - si el catálogo no responde, el formulario muestra el error y no deja inscribir al niño, para que no quede registrado solo en LGS.
-- Su inscripción se envía al sistema Kids tanto al **crear el contrato** como al **agregar el beneficiario** desde la ficha.
+- **Edad y curso** (misma regla del sistema Kids): **JUNIOR = 6 a 9 años**, **YOUNGSTER = 10 a 13 años**, con la edad cumplida **al día de hoy**.
+  - El formulario muestra la edad, preselecciona el curso que corresponde y deshabilita el otro.
+  - Si no corresponde, un aviso ofrece **cambiar al curso correcto**. Fuera de 6 a 13 años, el niño no puede inscribirse en Kids.
+  - El servidor también lo valida antes de crear nada.
+- **Apoderado:** si es el titular, se copian sus datos. El **parentesco** siempre se puede editar.
+- Su inscripción se envía al sistema Kids como **reserva** del cupo, tanto al **crear el contrato** como al **agregar el beneficiario** desde la ficha.
 - La ficha de la persona muestra su estado real en el sistema Kids: **Cursando, Suspendido o No cursando**.
-- Si el envío falla, el beneficiario igual se crea y el error queda registrado en su inscripción.
+- Si el envío falla, el beneficiario igual se crea y el error queda registrado en su inscripción. En la ficha aparece como **SIN RESERVA EN KIDS**, con el motivo y un botón para corregirlo (RC-37).
 
 ### 1.5 Plan financiero
 
@@ -256,7 +264,7 @@ Un contrato **no se puede firmar dos veces**.
 - El **usuario de acceso** lo crea el propio alumno desde ese enlace. Aprobar no lo crea.
 - Los titulares no reciben ficha académica, salvo que también sean beneficiarios.
 - Si el beneficiario **ya tenía ficha académica** de un contrato anterior (re-matrícula), esa ficha pasa a este contrato y su acceso se reactiva, salvo que la ficha pertenezca a un beneficiario activo de otro contrato.
-- Los beneficiarios **Kids** quedan aprobados y su inscripción se activa en el sistema Kids.
+- Los beneficiarios **Kids** quedan aprobados y su reserva se **activa** en el sistema Kids: quedan **matriculados** en su salón. Si la reserva no había llegado a Kids, se crea en ese momento. Al aprobar se muestran su **usuario y contraseña inicial** de Kids, o el error si Kids no lo aceptó.
 - Los **contratos de prueba no se pueden aprobar.**
 
 **RC-33 — Aprobar sin firma.** Se puede aprobar un contrato que aún no está firmado. Hoy cerca del **44 %** de los contratos aprobados no tiene firma.
@@ -299,16 +307,33 @@ Pantalla: ficha del titular › **Administración › Gestión de Beneficiarios*
 - Si el documento solo aparece en contratos **finalizados, anulados o retractados**, o como titular, **sí se puede agregar** (re-matrícula):
   - si tenía clases, su historial se archiva en PDF;
   - al aprobarlo, su ficha académica pasa a este contrato y su acceso se reactiva.
+- **Beneficiario Kids desde la ficha:**
+  - Se pulsa **Activar Kids**. La ventana Kids **no guarda por sí sola**: con **Continuar →** lleva al paso 2, y el beneficiario se crea con **Crear Beneficiario**. Un aviso confirma si el cupo quedó reservado en Kids.
+  - El prefijo del celular se toma del país del contrato.
+  - Cada niño muestra su estado: **MATRICULADO**, **RESERVADO** o **SIN RESERVA EN KIDS**.
+  - Si falta la reserva, el botón **"Reservar / Matricular en KIDS"** permite elegir de nuevo curso y salón y la envía. Si el niño ya está aprobado, queda matriculado de una vez. Exige el permiso de aprobar beneficiarios.
+- La ficha de un **beneficiario Kids** muestra solo Información General y Contacto y Referencias, sin los botones Descargar Contrato ni Documentación y recibo.
 
 **RC-38 — Modificar beneficiario.**
 - Se pueden cambiar nombres, documento, fecha de nacimiento, celular, domicilio y email.
 - Antes de guardar se muestra un resumen de los cambios.
 - Cambiar nombres o documento exige permisos específicos.
 - El cambio se aplica también a la ficha académica, al usuario de acceso, a las clases y a los datos financieros.
+- **Modificar un beneficiario Kids** abre la ventana Kids con sus datos, su curso y su apoderado:
+  - si aún no está en Kids, se puede cambiar el curso y el salón, y se intenta la reserva;
+  - si ya está reservado o matriculado, el curso se muestra solo para consulta: **el cambio de salón se hace en el sistema Kids**. En LGS se actualizan el apoderado y el parentesco.
 
-**RC-39 — Inactivar / activar beneficiario.**
-- Solo si está **aprobado**, y con **motivo obligatorio**.
-- Se sincroniza con la ficha académica y el acceso: inactivo = no puede iniciar sesión.
+**RC-39 — Inactivar / activar beneficiario** (o todo el contrato, con el interruptor Estado del Contrato).
+- Solo si está **aprobado**, con **motivo obligatorio** y con el permiso de activar/desactivar.
+- Antes de confirmar, la ventana muestra **"Qué va a pasar"**. Al terminar, un resumen de lo ocurrido queda en el historial de la persona.
+- Al **inactivar**:
+  - se **bloquea su acceso** y no puede agendar;
+  - sus **clases futuras se cancelan** y se libera el cupo;
+  - si su **correo lo usa otro beneficiario activo** (hermanos con el correo del apoderado), su acceso **no se bloquea** y se avisa;
+  - si la persona **sigue estudiando por otro contrato**, no se tocan sus clases, su ficha académica ni su acceso;
+  - si es **Kids**, su contrato en Kids queda **suspendido** y su acceso a Kids bloqueado.
+- La **vigencia sigue corriendo**: inactivar no es un OnHold y no devuelve días. El estado del contrato no cambia; se muestra la marca "Suspendida".
+- Al **reactivar** se desbloquea el acceso y, si es Kids, se reactiva en Kids, salvo que la pausa la haya puesto el propio sistema Kids. Las clases canceladas no vuelven.
 
 **RC-40 — Eliminar beneficiario.**
 - Solo se ofrece para beneficiarios **no aprobados** y **no inactivos**, y exige el permiso de eliminar.
