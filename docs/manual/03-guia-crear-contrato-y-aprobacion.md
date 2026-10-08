@@ -11,7 +11,7 @@
 
 | Paso | Quién lo hace | Dónde | Resultado |
 |---|---|---|---|
-| 1. Crear el contrato | Comercial | Comercial › Crear Contrato | Contrato con número, en estado **Pendiente** |
+| 1. Crear el contrato | Comercial | Comercial › Crear Contrato | Contrato con número, en estado **SIN APROBAR** |
 | 2. Adjuntar documentos y recibo | Comercial | Detalle del contrato › Documentación y recibo | Cédulas, comprobantes y recibo de inscripción adjuntos |
 | 3. Hacer firmar al cliente | Comercial / Cliente | Detalle del contrato › Solicitar firma | Contrato **firmado** con código por WhatsApp |
 | 4. Aprobar | Aprobación | Aprobación › ficha del titular | Contrato **Aprobado**; alumnos con acceso o matriculados en Kids |
@@ -115,7 +115,7 @@ Pulse **Guardar beneficiario Kids**. El niño queda en la lista de beneficiarios
 ### 1.6 Qué pasa al pulsar "Crear"
 
 - La plataforma **asigna el número de contrato** en ese momento, con el formato `PP-NNNNN-AA`. Por ejemplo, `01-10738-25`: 01 = Chile, 02 = Colombia, 03 = Ecuador, 04 = Perú (RC-13, RC-14).
-- El contrato y todos sus beneficiarios quedan en estado **Pendiente**.
+- El contrato y todos sus beneficiarios quedan en estado **SIN APROBAR**: aún no se ha decidido su aprobación.
 - Se registra el **pago de inscripción (cuota 0)** sin validar. Recaudos lo valida después.
 - Cada beneficiario **Kids** queda con su cupo **reservado** en el salón elegido del sistema Kids.
 - Si un beneficiario ya había tomado clases en otro contrato, su **historial se archiva en un PDF** antes de continuar.
@@ -205,7 +205,7 @@ Además de **Aprobado**, el Estado del Titular puede ser (RC-34):
 
 | Estado | Efecto |
 |---|---|
-| **Pendiente** | Sin cambios. |
+| **Pendiente** | Se usa para dejar en espera un contrato a propósito (por ejemplo, devolver un aprobado). Su estado pasa a **PENDIENTE**, distinto de **SIN APROBAR** (contrato que nunca se aprobó). |
 | **Contrato nulo / Devuelto / Rechazado** | Inactiva al titular y a todos sus beneficiarios. El contrato queda para la Limpieza de Anulados. |
 | **Retractado** | El cliente se retractó dentro del plazo legal. Inhabilita al titular y a los beneficiarios, incluido su acceso. |
 
@@ -304,7 +304,7 @@ Antes de vender, el comercial puede revisar la oferta en **Comercial › Cursos 
 
 | Momento | En LGS | En el sistema Kids |
 |---|---|---|
-| Se crea el contrato o se agrega el niño | Beneficiario **Pendiente**, con su curso y apoderado | **Reserva**: el cupo queda apartado en el salón |
+| Se crea el contrato o se agrega el niño | Beneficiario **SIN APROBAR**, con su curso y apoderado | **Reserva**: el cupo queda apartado en el salón |
 | Se aprueba al niño (o al contrato) | Beneficiario **Aprobado**, sin ficha académica de adultos ni WhatsApp de LGS | **Matrícula** activa: el niño queda en su salón y se crea su usuario |
 | Clases | La ficha muestra su estado: **Cursando** | El niño toma clases con su guía |
 | Se inactiva en LGS | Inactivo, con motivo | Contrato **suspendido** y acceso del niño bloqueado |
@@ -374,6 +374,9 @@ Sí. La plataforma lo permite y es una decisión del área de Aprobación.
 **Aprobé un contrato por error.**
 Desde la ficha del titular se puede volver a **Pendiente**, con motivo, solo durante el primer mes y si ningún beneficiario avanzó de WELCOME.
 
+**¿Qué diferencia hay entre SIN APROBAR y PENDIENTE?**
+**SIN APROBAR** es el estado con el que nace todo contrato (y todo beneficiario agregado) mientras nadie lo aprueba. **PENDIENTE** significa que alguien lo puso en espera a propósito, por ejemplo al devolver un contrato aprobado.
+
 **¿Qué diferencia hay entre Inactivar y OnHold?**
 **OnHold** es una pausa programada que al terminar **devuelve los días** al contrato. **Inactivar** es una suspensión administrativa: la vigencia sigue corriendo y cancela las clases futuras.
 
@@ -392,6 +395,9 @@ Desde la ficha del titular se puede volver a **Pendiente**, con motivo, solo dur
 | **Matrícula** | Reserva activada al aprobar: el niño queda en su salón. |
 | **Ficha académica** | Registro del alumno adulto con su nivel y step. Se crea al aprobarlo. |
 | **WELCOME** | Primer nivel de un alumno adulto nuevo. |
+| **SIN APROBAR** | Estado de un contrato o beneficiario recién creado que aún no se aprueba. |
+| **PENDIENTE** | Estado de un contrato puesto en espera a propósito (por ejemplo, un aprobado devuelto). |
+| **ACTIVA** | Estado de un contrato aprobado y vigente. |
 | **Cuota 0** | El pago de inscripción. |
 | **Contrato vivo** | Contrato que no está finalizado, anulado, rechazado, devuelto, retractado ni inactivo (salvo OnHold). |
 | **Contrato de prueba (PRB-)** | Contrato para ensayos. No consume numeración real y no se aprueba. |

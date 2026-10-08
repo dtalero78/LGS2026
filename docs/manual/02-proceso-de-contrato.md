@@ -19,7 +19,7 @@
 
 | Etapa | Quién | Resultado |
 |---|---|---|
-| 1. Creación | Comercial | Contrato con número asignado, titular, beneficiarios y plan financiero. Estado **Pendiente**. |
+| 1. Creación | Comercial | Contrato con número asignado, titular, beneficiarios y plan financiero. Estado **SIN APROBAR**. |
 | 2. Documentos | Comercial | Documentación y recibo de inscripción adjuntos. |
 | 3. Firma | Cliente (o auto-aprobación autorizada) | Consentimiento firmado con código por WhatsApp. |
 | 4. Aprobación | Aprobación | Contrato **Aprobado**, beneficiarios con ficha académica y mensaje de bienvenida. |
@@ -273,7 +273,8 @@ Un contrato **no se puede firmar dos veces**.
 
 | Estado de aprobación | Estado del contrato | Efecto |
 |---|---|---|
-| **Pendiente** | PENDIENTE | — |
+| *(nuevo, sin decidir)* | **SIN APROBAR** | Estado con el que nace todo contrato y todo beneficiario agregado. Distinto de PENDIENTE |
+| **Pendiente** | PENDIENTE | Se puso en espera a propósito (por ejemplo, un aprobado devuelto a Pendiente) |
 | **Aprobado** | ACTIVA | Beneficiarios con ficha académica y bienvenida (RC-32) |
 | **Contrato nulo / Devuelto / Rechazado** | ANULADO | **Inactiva al titular y a todos sus beneficiarios.** El contrato queda listo para la Limpieza de Anulados |
 | **Retractado** | RETRACTADO | **Inhabilita al titular y a todos sus beneficiarios**, incluidos su ficha académica y su acceso. No es un Contrato nulo: tiene su propia pestaña en la Limpieza (ver RC-55) |
@@ -302,7 +303,7 @@ Pantalla: ficha del titular › **Administración › Gestión de Beneficiarios*
 
 **RC-37 — Agregar beneficiario.**
 - Datos obligatorios: nombre, apellido, documento, país, fecha de nacimiento, género, ciudad, domicilio, celular y email.
-- Hereda del titular el contrato, las fechas y la vigencia, y nace **Pendiente**.
+- Hereda del titular el contrato, las fechas y la vigencia, y nace **SIN APROBAR**.
 - **No se puede agregar si el documento ya es beneficiario activo** en un contrato vivo, sea este u otro. Al salir de los datos básicos aparece un aviso con el nombre y el contrato donde ya está activo.
 - Si el documento solo aparece en contratos **finalizados, anulados o retractados**, o como titular, **sí se puede agregar** (re-matrícula):
   - si tenía clases, su historial se archiva en PDF;
