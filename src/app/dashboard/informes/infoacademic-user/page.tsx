@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
+import FiltroAdvisorsChileAviso from '@/components/common/FiltroAdvisorsChileAviso'
 import { exportToExcel } from '@/lib/export-excel'
 import { useSession } from 'next-auth/react'
 import {
@@ -245,6 +246,7 @@ export default function InfoAcademicUserPage() {
         {/* ── Report content ── */}
         {data && data.total > 0 && (
           <div ref={reportRef}>
+            <FiltroAdvisorsChileAviso activo={data.filtroAdvisorsChile} />
 
             {/* Print header (only visible when printing) */}
             <div className="print-header items-start justify-between mb-6 pb-4 border-b-2 border-blue-600">

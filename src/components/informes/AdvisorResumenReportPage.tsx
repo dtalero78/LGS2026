@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
+import FiltroAdvisorsChileAviso from '@/components/common/FiltroAdvisorsChileAviso'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer,
@@ -264,6 +265,7 @@ export default function AdvisorResumenReportPage() {
         )}
 
         {consultado && (<>
+        <FiltroAdvisorsChileAviso activo={(data as any)?.filtroAdvisorsChile} />
 
         {/* KPIs */}
         {loading ? (

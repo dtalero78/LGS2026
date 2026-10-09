@@ -215,6 +215,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
           { name: 'Drive de Contratos', href: '/admin/drive-config', newTab: true },
           { name: 'Proceso Kids', href: '/admin/kids-config', newTab: true },
           { name: 'Bloqueo Certificados por Mora', href: '/admin/bloqueo-certificado-mora', newTab: true },
+          { name: 'Filtro Advisors Chile', href: '/admin/filtro-advisors-chile', newTab: true, superAdminOnly: true },
           { name: 'Página de Bienvenida', href: '/admin/bienvenida-config', newTab: true },
           { name: 'Edición Contrato', href: '/admin/edicion-contrato', newTab: true },
           { name: 'Generar Contrato', href: '/admin/generar-contrato', newTab: true },

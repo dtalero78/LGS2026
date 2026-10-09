@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
+import FiltroAdvisorsChileAviso from '@/components/common/FiltroAdvisorsChileAviso'
 import { MagnifyingGlassIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 import { exportToExcel } from '@/lib/export-excel'
 import { PermissionGuard } from '@/components/permissions/PermissionGuard'
@@ -41,6 +42,7 @@ export default function InformesUsuariosPage() {
   const [records,   setRecords]   = useState<Record[] | null>(null)
   const [student,   setStudent]   = useState<Student | null>(null)
   const [error,     setError]     = useState<string | null>(null)
+  const [filtroChile, setFiltroChile] = useState(false)
 
   const handleSearch = async () => {
     if (!numeroId.trim()) { setError('Ingrese el número de ID del usuario'); return }
@@ -59,6 +61,7 @@ export default function InformesUsuariosPage() {
       if (!data.success) throw new Error(data.error || 'Error al consultar')
       setStudent(data.student)
       setRecords(data.records)
+      setFiltroChile(!!data.filtroAdvisorsChile)
     } catch (e: any) {
       setError(e.message || 'Error desconocido')
     } finally {
@@ -171,6 +174,7 @@ export default function InformesUsuariosPage() {
               <div>
                 <p className="text-sm font-semibold text-gray-900">{student?.nombre}</p>
                 <p className="text-xs text-gray-500">ID: {student?.numeroId} · Nivel actual: {student?.nivel}</p>
+                {filtroChile && <div className="mt-2"><FiltroAdvisorsChileAviso activo /></div>}
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-sm text-gray-500">{records.length} registro{records.length !== 1 ? 's' : ''}</span>

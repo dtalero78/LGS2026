@@ -2,6 +2,7 @@ import 'server-only'
 import { successResponse } from '@/lib/api-helpers'
 import { handlerReport } from '@/lib/report-guard'
 import { queryMany } from '@/lib/postgres'
+import { advisorIdsFiltro } from '@/lib/filtro-advisors-chile'
 
 export type AdvisorReportType = 'sesiones' | 'jumps' | 'training' | 'clubes' | 'welcome' | 'essential'
 
@@ -99,7 +100,8 @@ function buildTypeCondition(reportType: AdvisorReportType): string {
   }
 }
 
-export const GET = handlerReport(async (req, _ctx, _session) => {
+export const GET = handlerReport(async (req, _ctx, session) => {
+  const idsChile = await advisorIdsFiltro(session)
   const { searchParams } = new URL(req.url)
   const reportType  = (searchParams.get('reportType') ?? 'sesiones') as AdvisorReportType
   const fechaInicio = searchParams.get('fechaInicio') ?? `${new Date().getFullYear()}-01-01`
@@ -116,6 +118,7 @@ export const GET = handlerReport(async (req, _ctx, _session) => {
   const extraWhere: string[] = []
 
   if (advisorId) { extraWhere.push(`adv."_id" = $${idx++}`); params.push(advisorId) }
+  if (idsChile)  { extraWhere.push(`adv."_id" = ANY($${idx++}::text[])`); params.push(idsChile) }
   if (nivel && reportType !== 'clubes' && reportType !== 'welcome') {
     extraWhere.push(`c."nivel" = $${idx++}`); params.push(nivel)
   }
@@ -245,10 +248,10 @@ export const GET = handlerReport(async (req, _ctx, _session) => {
   }))
 
   // Meta dropdowns
-  const allAdvisors = await queryMany<{ _id: string; nombreCompleto: string }>(
+  const allAdvisors = (await queryMany<{ _id: string; nombreCompleto: string }>(
     `SELECT "_id", "nombreCompleto" FROM "ADVISORS" WHERE "activo" = true ORDER BY "nombreCompleto"`,
     []
-  )
+  )).filter(a => !idsChile || idsChile.includes(a._id))
 
   // For clubes: distinct club types; for others: distinct niveles
   const secundarioValues = reportType === 'clubes'
@@ -258,5 +261,6 @@ export const GET = handlerReport(async (req, _ctx, _session) => {
   return successResponse({
     kpis, ranking, charts, table,
     meta: { advisors: allAdvisors, niveles: secundarioValues, reportType },
+    ...(idsChile ? { filtroAdvisorsChile: true } : {}),
   })
 })

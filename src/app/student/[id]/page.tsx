@@ -10,6 +10,9 @@ import { StudentPermission } from '@/types/permissions'
 import { formatDateTimeColombia } from '@/lib/utils'
 import { isAdminSuspended } from '@/lib/contract-status'
 import { formatEtapaNivelStep } from '@/lib/etapas'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth-postgres'
+import { filtroAplica, filtrarClasesPorAdvisorChile } from '@/lib/filtro-advisors-chile'
 
 // Force dynamic rendering to prevent page caching
 export const dynamic = 'force-dynamic'
@@ -48,6 +51,11 @@ async function StudentContent({ studentId }: { studentId: string }) {
     } catch {
       // Continue without classes if there's an error
     }
+
+    // Filtro temporal de capacitación (src/lib/filtro-advisors-chile.ts): solo la vista
+    const session = await getServerSession(authOptions).catch(() => null)
+    const filtroChile = await filtroAplica((session?.user as any)?.email).catch(() => false)
+    const classesVista = filtroChile ? await filtrarClasesPorAdvisorChile(classes) : classes
 
     // Find next scheduled class
     const now = new Date()
@@ -125,9 +133,10 @@ async function StudentContent({ studentId }: { studentId: string }) {
         {/* Student Tabs */}
         <StudentTabs
           student={student}
-          classes={classes}
+          classes={classesVista}
           contratoFinalizado={contratoFinalizado}
           isSuspendida={suspendida}
+          filtroAdvisorsChile={filtroChile}
         />
       </div>
     )

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
+import FiltroAdvisorsChileAviso from '@/components/common/FiltroAdvisorsChileAviso'
 import {
   BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
@@ -156,7 +157,7 @@ export default function HorasAdvisorPage() {
       const json = await res.json()
       if (!res.ok || !json.success) throw new Error(json.error || 'Error al cargar datos')
       // successResponse hace spread en la raíz: { success, table, totals, charts, meta }
-      setData({ table: json.table ?? [], totals: json.totals, charts: json.charts, meta: json.meta })
+      setData({ table: json.table ?? [], totals: json.totals, charts: json.charts, meta: json.meta, filtroAdvisorsChile: json.filtroAdvisorsChile } as any)
     } catch (e: any) { setError(e.message || 'Error inesperado') }
     finally { setLoading(false) }
   }, [])
@@ -295,6 +296,7 @@ export default function HorasAdvisorPage() {
 
         {consultado && (
         <>
+        <FiltroAdvisorsChileAviso activo={(data as any)?.filtroAdvisorsChile} />
 
         {/* KPIs */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">

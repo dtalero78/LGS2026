@@ -2,6 +2,7 @@ import 'server-only'
 import { successResponse } from '@/lib/api-helpers'
 import { handlerReport } from '@/lib/report-guard'
 import { queryMany } from '@/lib/postgres'
+import { advisorIdsFiltro } from '@/lib/filtro-advisors-chile'
 
 // ── Raw row returned from SQL ────────────────────────────────────────────────
 interface EventRow {
@@ -140,7 +141,8 @@ function buildTimeSeries(rows: EventRow[]) {
 }
 
 // ── Route ────────────────────────────────────────────────────────────────────
-export const GET = handlerReport(async (req, _ctx, _session) => {
+export const GET = handlerReport(async (req, _ctx, session) => {
+  const idsChile = await advisorIdsFiltro(session)
   const { searchParams } = new URL(req.url)
   const reportType    = searchParams.get('reportType') ?? 'sessions-jumps'
   const fechaInicio   = searchParams.get('fechaInicio') ?? `${new Date().getFullYear()}-01-01`
@@ -164,6 +166,7 @@ export const GET = handlerReport(async (req, _ctx, _session) => {
   if (hora)          { extraWhere.push(`TO_CHAR(c."dia" AT TIME ZONE $3, 'HH24:MI') LIKE $${idx++}`); params.push(`${hora}%`) }
   if (advisorNombre) { extraWhere.push(`COALESCE(adv."nombreCompleto", c."advisor", '') ILIKE $${idx++}`); params.push(`%${advisorNombre}%`) }
   if (tipoClub)      { extraWhere.push(`COALESCE(c."nombreEvento", c."tituloONivel", '') ILIKE $${idx++}`); params.push(`%${tipoClub}%`) }
+  if (idsChile)      { extraWhere.push(`adv."_id" = ANY($${idx++}::text[])`); params.push(idsChile) }
 
   const whereExtra = extraWhere.length > 0 ? `AND ${extraWhere.join(' AND ')}` : ''
 
@@ -284,5 +287,8 @@ export const GET = handlerReport(async (req, _ctx, _session) => {
   )].sort()
   const advisors = [...new Set(rows.map(r => r.advisorNombre).filter(v => v !== 'Sin advisor'))].sort()
 
-  return successResponse({ kpis, charts, table, meta: { niveles, horas, advisors } })
+  return successResponse({
+    kpis, charts, table, meta: { niveles, horas, advisors },
+    ...(idsChile ? { filtroAdvisorsChile: true } : {}),
+  })
 })

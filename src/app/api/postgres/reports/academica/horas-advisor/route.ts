@@ -3,6 +3,7 @@ import { successResponse } from '@/lib/api-helpers'
 import { handlerReport } from '@/lib/report-guard'
 import { requirePermission } from '@/lib/api-permissions'
 import { queryMany } from '@/lib/postgres'
+import { advisorIdsFiltro } from '@/lib/filtro-advisors-chile'
 import { InformesPermission } from '@/types/permissions'
 
 /**
@@ -81,7 +82,8 @@ export const GET = handlerReport(async (req, _ctx, session) => {
   const tipoRaw     = searchParams.get('tipo') || 'all'
   const tipo        = TIPO_FILTROS.includes(tipoRaw) ? tipoRaw : 'all'
 
-  const params: any[] = [fechaInicio, fechaFin, plataforma, advisorId, tipo]
+  const idsChile = await advisorIdsFiltro(session)
+  const params: any[] = [fechaInicio, fechaFin, plataforma, advisorId, tipo, idsChile]
 
   const sql = `
     WITH conducted AS (
@@ -153,6 +155,7 @@ export const GET = handlerReport(async (req, _ctx, session) => {
     ) ure ON true
     WHERE ($3::text IS NULL OR a."pais" = $3)
       AND ($4::text IS NULL OR a."_id" = $4)
+      AND ($6::text[] IS NULL OR a."_id" = ANY($6::text[]))
     ORDER BY "total" DESC, "advisorNombre" ASC
   `
 
@@ -163,8 +166,9 @@ export const GET = handlerReport(async (req, _ctx, session) => {
   // si tuvieron actividad — alimenta el KPI "Advisors Activos".
   const activosRows = await queryMany<{ n: number }>(
     `SELECT COUNT(*)::int AS n FROM "ADVISORS"
-     WHERE "activo" = true AND ($1::text IS NULL OR "pais" = $1)`,
-    [plataforma],
+     WHERE "activo" = true AND ($1::text IS NULL OR "pais" = $1)
+       AND ($2::text[] IS NULL OR "_id" = ANY($2::text[]))`,
+    [plataforma, idsChile],
   )
   const advisorsActivos = activosRows[0]?.n ?? 0
 
@@ -223,15 +227,19 @@ export const GET = handlerReport(async (req, _ctx, session) => {
     `SELECT DISTINCT "pais" FROM "ADVISORS" WHERE "pais" IS NOT NULL AND TRIM("pais") <> '' ORDER BY "pais"`,
     [],
   )
-  const advisors = await queryMany<{ _id: string; nombreCompleto: string; pais: string | null }>(
+  const advisors = (await queryMany<{ _id: string; nombreCompleto: string; pais: string | null }>(
     `SELECT "_id", "nombreCompleto", "pais" FROM "ADVISORS" WHERE "activo" = true ORDER BY "nombreCompleto"`,
     [],
-  )
+  )).filter(a => !idsChile || idsChile.includes(a._id))
 
   return successResponse({
     table: rows,
     totals,
     charts: { barByAdvisor, donut, byType },
-    meta: { plataformas: plataformas.map(p => p.pais), advisors },
+    meta: {
+      plataformas: idsChile ? plataformas.map(p => p.pais).filter(p => p?.trim().toLowerCase() === 'chile') : plataformas.map(p => p.pais),
+      advisors,
+    },
+    ...(idsChile ? { filtroAdvisorsChile: true } : {}),
   })
 })

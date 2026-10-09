@@ -3,6 +3,7 @@ import { successResponse } from '@/lib/api-helpers'
 import { handlerReport } from '@/lib/report-guard'
 import { queryMany, queryOne } from '@/lib/postgres'
 import { NotFoundError, ValidationError } from '@/lib/errors'
+import { filtroAplica, filtrarClasesPorAdvisorChile } from '@/lib/filtro-advisors-chile'
 
 const NIVEL_ORDER = ['ESS','BN1','BN2','BN3','P1','P2','P3','F1','F2','F3']
 
@@ -58,7 +59,7 @@ export const GET = handlerReport(async (req, _ctx, session) => {
   const WHERE = conditions.join(' AND ')
 
   // ── All bookings (for table + calculations) ────────────────────────────
-  const allBookings = await queryMany<any>(
+  let allBookings = await queryMany<any>(
     `SELECT b."_id", b."fechaEvento", b."cancelo",
             COALESCE(c."tipo", b."tipo", b."tipoEvento") AS tipo,
             COALESCE(a2."nombreCompleto", b."advisor") AS advisor,
@@ -75,6 +76,10 @@ export const GET = handlerReport(async (req, _ctx, session) => {
      ORDER BY b."fechaEvento" DESC NULLS LAST`,
     params
   )
+
+  // Filtro temporal de capacitación (src/lib/filtro-advisors-chile.ts)
+  const filtroChile = await filtroAplica((session?.user as any)?.email)
+  if (filtroChile) allBookings = await filtrarClasesPorAdvisorChile(allBookings)
 
   const nonCancelled = allBookings.filter((r: any) => !r.cancelo)
   const attended    = nonCancelled.filter((r: any) => r.asistio || r.asistencia)
@@ -189,6 +194,7 @@ export const GET = handlerReport(async (req, _ctx, session) => {
     nivelMasTiempo,
     records: allBookings,
     total: allBookings.length,
+    ...(filtroChile ? { filtroAdvisorsChile: true } : {}),
   })
 })
 

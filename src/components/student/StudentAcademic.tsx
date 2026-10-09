@@ -8,14 +8,16 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { usePermissions } from '@/hooks/usePermissions'
 import { StudentPermission, Role } from '@/types/permissions'
+import FiltroAdvisorsChileAviso from '@/components/common/FiltroAdvisorsChileAviso'
 
 interface StudentAcademicProps {
   student: Student
   classes: Class[]
   view?: 'attendance' | 'schedule' | 'steps'
+  filtroAdvisorsChile?: boolean
 }
 
-export default function StudentAcademic({ student, classes: initialClasses, view = 'attendance' }: StudentAcademicProps) {
+export default function StudentAcademic({ student, classes: initialClasses, view = 'attendance', filtroAdvisorsChile }: StudentAcademicProps) {
   const { data: session } = useSession()
   const { hasPermission, userRole } = usePermissions()
   const [showScheduleModal, setShowScheduleModal] = useState(false)
@@ -652,6 +654,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
   const renderAttendanceTable = () => (
     <div>
       <h3 className="text-lg font-medium text-gray-900 mb-4">Tabla de Asistencia</h3>
+      <FiltroAdvisorsChileAviso activo={filtroAdvisorsChile} />
 
       {/* Filters */}
       <div className="bg-gray-50 rounded-lg p-4 mb-4">

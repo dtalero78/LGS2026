@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
+import FiltroAdvisorsChileAviso from '@/components/common/FiltroAdvisorsChileAviso'
 import AdvisorScheduleFilters, { AdvisorFilterState } from './AdvisorScheduleFilters'
 import AdvisorScheduleKpis    from './AdvisorScheduleKpis'
 import AdvisorScheduleCharts  from './AdvisorScheduleCharts'
@@ -158,6 +159,7 @@ export default function AdvisorScheduleReportPage({ reportType }: Props) {
 
         {consultado && (
           <>
+            <FiltroAdvisorsChileAviso activo={(data as any)?.filtroAdvisorsChile} />
             {/* KPIs */}
             <AdvisorScheduleKpis
               kpis={data?.kpis ?? emptyKpis}

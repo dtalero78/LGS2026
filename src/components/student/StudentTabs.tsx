@@ -22,6 +22,8 @@ interface StudentTabsProps {
   contratoFinalizado?: boolean
   /** Si true, Información General muestra el badge SUSPENDIDA. */
   isSuspendida?: boolean
+  /** Filtro temporal de capacitación activo (src/lib/filtro-advisors-chile.ts). */
+  filtroAdvisorsChile?: boolean
 }
 
 const tabs = [
@@ -32,7 +34,7 @@ const tabs = [
   { id: 'comments', name: 'Comentarios', icon: '💭' },
 ]
 
-export default function StudentTabs({ student, classes, contratoFinalizado = false, isSuspendida }: StudentTabsProps) {
+export default function StudentTabs({ student, classes, contratoFinalizado = false, isSuspendida, filtroAdvisorsChile }: StudentTabsProps) {
   const [activeTab, setActiveTab] = useState('general')
   const [academicView, setAcademicView] = useState('attendance')
   const [showAcademicSubmenu, setShowAcademicSubmenu] = useState(false)
@@ -86,7 +88,7 @@ export default function StudentTabs({ student, classes, contratoFinalizado = fal
         if (academicView === 'progress') {
           return <StudentProgress student={student} />
         }
-        return <StudentAcademic student={student} classes={classes} view={academicView as any} />
+        return <StudentAcademic student={student} classes={classes} view={academicView as any} filtroAdvisorsChile={filtroAdvisorsChile} />
       case 'contract':
         return <StudentContract student={student} contratoFinalizado={contratoFinalizado} />
       case 'whatsapp':

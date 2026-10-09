@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
+import FiltroAdvisorsChileAviso from '@/components/common/FiltroAdvisorsChileAviso'
 import EventReportFilters from './EventReportFilters'
 import EventReportKpis    from './EventReportKpis'
 import EventReportCharts  from './EventReportCharts'
@@ -120,6 +121,7 @@ export default function EventReportPage({ reportType }: Props) {
 
         {consultado && (
           <>
+            <FiltroAdvisorsChileAviso activo={(data as any)?.filtroAdvisorsChile} />
             {/* KPIs */}
             <EventReportKpis
               kpis={data?.kpis ?? { totalEventos: 0, totalPorTipo: {}, totalInscritos: 0, totalAsistentes: 0, totalCapacidad: 0, pctAsistencia: 0, pctOcupacion: 0 }}

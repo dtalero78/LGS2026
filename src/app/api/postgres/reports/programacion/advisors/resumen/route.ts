@@ -2,6 +2,7 @@ import 'server-only'
 import { successResponse } from '@/lib/api-helpers'
 import { handlerReport } from '@/lib/report-guard'
 import { queryMany } from '@/lib/postgres'
+import { advisorIdsFiltro } from '@/lib/filtro-advisors-chile'
 
 type TipoFiltro = 'all' | 'sesiones' | 'jumps' | 'training' | 'clubes' | 'essential' | 'welcome'
 
@@ -62,7 +63,8 @@ function tipoWhereClause(tipoFiltro: TipoFiltro): string {
   return `AND (${TIPO_INFORME_EXPR}) = '${tipoFiltro}'`
 }
 
-export const GET = handlerReport(async (req, _ctx, _session) => {
+export const GET = handlerReport(async (req, _ctx, session) => {
+  const idsChile = await advisorIdsFiltro(session)
   const { searchParams } = new URL(req.url)
   const fechaInicio = searchParams.get('fechaInicio') ?? `${new Date().getFullYear()}-01-01`
   const fechaFin    = searchParams.get('fechaFin')    ?? new Date().toISOString().substring(0, 10)
@@ -76,6 +78,7 @@ export const GET = handlerReport(async (req, _ctx, _session) => {
   const extraWhere: string[] = []
 
   if (advisorId) { extraWhere.push(`adv."_id" = $${idx++}`); params.push(advisorId) }
+  if (idsChile)  { extraWhere.push(`adv."_id" = ANY($${idx++}::text[])`); params.push(idsChile) }
 
   const typeExtra   = tipoWhereClause(tipoFiltro)
   const whereExtra  = extraWhere.length ? `AND ${extraWhere.join(' AND ')}` : ''
@@ -170,7 +173,7 @@ export const GET = handlerReport(async (req, _ctx, _session) => {
 
   // ── Session details (only when advisor is selected) ──────────────────────
   let sessionDetails: any[] = []
-  if (advisorId) {
+  if (advisorId && (!idsChile || idsChile.includes(advisorId))) {
     // Build params for detail query: same fecha range + advisorId, reusing $1/$2/$3(tz)
     const detailParams: any[] = [fechaInicio, fechaFin, tz, advisorId]
     let didx = 5
@@ -225,10 +228,10 @@ export const GET = handlerReport(async (req, _ctx, _session) => {
   }
 
   // Meta dropdowns
-  const allAdvisors = await queryMany<{ _id: string; nombreCompleto: string }>(
+  const allAdvisors = (await queryMany<{ _id: string; nombreCompleto: string }>(
     `SELECT "_id", "nombreCompleto" FROM "ADVISORS" WHERE "activo" = true ORDER BY "nombreCompleto"`,
     []
-  )
+  )).filter(a => !idsChile || idsChile.includes(a._id))
 
   return successResponse({
     kpis,
@@ -236,5 +239,6 @@ export const GET = handlerReport(async (req, _ctx, _session) => {
     table:  rows,
     sessionDetails,
     meta:   { advisors: allAdvisors },
+    ...(idsChile ? { filtroAdvisorsChile: true } : {}),
   })
 })

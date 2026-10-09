@@ -3,6 +3,9 @@ import { successResponse } from '@/lib/api-helpers'
 import { handlerReportPublic } from '@/lib/report-guard';
 import { queryMany, queryOne } from '@/lib/postgres';
 import { NotFoundError, ValidationError } from '@/lib/errors';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth-postgres';
+import { filtroAplica, filtrarClasesPorAdvisorChile } from '@/lib/filtro-advisors-chile';
 
 /**
  * GET /api/postgres/reports/asistencia/usuario?numeroId=X&startDate=Y&endDate=Z&nivel=W
@@ -56,7 +59,7 @@ export const GET = handlerReportPublic(async (req) => {
     idx++;
   }
 
-  const rows = await queryMany(
+  let rows = await queryMany(
     `SELECT
        b."_id",
        b."fechaEvento",
@@ -81,6 +84,11 @@ export const GET = handlerReportPublic(async (req) => {
     params
   );
 
+  // Filtro temporal de capacitación (src/lib/filtro-advisors-chile.ts)
+  const session = await getServerSession(authOptions).catch(() => null);
+  const filtroChile = await filtroAplica((session?.user as any)?.email);
+  if (filtroChile) rows = await filtrarClasesPorAdvisorChile(rows);
+
   return successResponse({
     student: {
       nombre: `${academica.primerNombre} ${academica.primerApellido}`,
@@ -89,5 +97,6 @@ export const GET = handlerReportPublic(async (req) => {
     },
     records: rows,
     total: rows.length,
+    ...(filtroChile ? { filtroAdvisorsChile: true } : {}),
   });
 });
