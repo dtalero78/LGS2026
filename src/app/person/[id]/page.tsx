@@ -130,6 +130,9 @@ async function PersonContent({ personId, initialTab }: { personId: string; initi
                   {personData.person.vigencia && (
                     <span>Vigencia: {personData.person.vigencia}</span>
                   )}
+                  {personData.person.modulo === true && (
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800" title="Contrato MODULO: vigencia fija de 3 meses">MODULO</span>
+                  )}
                   <EstadoBadge estado={personData.person.estado} prefix="Estado: " />
                 </div>
               </div>

@@ -160,6 +160,11 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   if (!Number.isInteger(vigenciaNum) || vigenciaNum < 3 || vigenciaNum > 12) {
     throw new ValidationError('La vigencia debe estar entre 3 y 12 meses');
   }
+  // MODULO → PEOPLE.modulo (titular + beneficiarios); siempre con vigencia de 3 meses.
+  const modulo = financial?.modulo === true;
+  if (modulo && vigenciaNum !== 3) {
+    throw new ValidationError('Un contrato MODULO debe tener vigencia de 3 meses');
+  }
 
   // Kids (2026-10-06): con KIDS2026 conectado, cada beneficiario kid debe traer un
   // salón (classroomId) elegido del catálogo; sin él la reserva no se enviaba y el
@@ -222,8 +227,8 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
       "email", "celular", "telefono", "fechaNacimiento", "domicilio", "ciudad",
       "plataforma", "ingresos", "empresa", "cargo", "genero",
       "referenciaUno", "parentezcoRefUno", "telefonoRefUno", "referenciaDos", "parentezcoRefDos", "telefonoRefDos",
-      "asesor", "asesorCreadorContrato", "tipoUsuario", "contrato", "vigencia", "fechaContrato", "finalContrato", "plan", "sence", "tipoPersona", "rubro", "replegal", "replegalcargo", "replegalid", "replegalcel", "estado", "origen", "_createdDate", "_updatedDate")
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$29,'TITULAR',$25,$26,NOW(),$27::date,$28,$30,$31,$35,$32,$36,$33,$34,'SIN APROBAR','POSTGRES',NOW(),NOW()) RETURNING *`,
+      "asesor", "asesorCreadorContrato", "tipoUsuario", "contrato", "vigencia", "fechaContrato", "finalContrato", "plan", "sence", "tipoPersona", "rubro", "replegal", "replegalcargo", "replegalid", "replegalcel", "modulo", "estado", "origen", "_createdDate", "_updatedDate")
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$29,'TITULAR',$25,$26,NOW(),$27::date,$28,$30,$31,$35,$32,$36,$33,$34,$37,'SIN APROBAR','POSTGRES',NOW(),NOW()) RETURNING *`,
     [titularId, titular.numeroId, titular.primerNombre, titular.segundoNombre || null,
      titular.primerApellido, titular.segundoApellido || null,
      titular.email || null, titular.celular || null, titular.telefono || null,
@@ -234,7 +239,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
      titular.asesor || null, contrato, financial?.vigencia || null, finalContrato, tipoPlan,
      titular.asesorCreadorContrato || null, senceVal, tipoPersona,
      titular.replegal || null, titular.replegalid || null, titular.replegalcel || null,
-     titular.rubro || null, titular.replegalcargo || null]  // $29 asesorCreadorContrato, $30 sence, $31 tipoPersona, $32-34 rep. legal, $35 rubro, $36 cargo del representante
+     titular.rubro || null, titular.replegalcargo || null, modulo]  // $29 asesorCreadorContrato, $30 sence, $31 tipoPersona, $32-34 rep. legal, $35 rubro, $36 cargo del representante, $37 modulo
   );
   return { contrato, titularResult };
   });
@@ -269,15 +274,15 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
       `INSERT INTO "PEOPLE" ("_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
         "email", "celular", "fechaNacimiento", "titularId",
         "tipoUsuario", "contrato", "plataforma", "estadoInactivo",
-        "vigencia", "fechaContrato", "finalContrato", "sence", "senceCode", "kids", "estado", "origen", "_createdDate", "_updatedDate")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'BENEFICIARIO',$11,$12,false,$13,NOW(),$14::date,$15,$16,$17,'SIN APROBAR','POSTGRES',NOW(),NOW()) RETURNING *`,
+        "vigencia", "fechaContrato", "finalContrato", "sence", "senceCode", "kids", "modulo", "estado", "origen", "_createdDate", "_updatedDate")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'BENEFICIARIO',$11,$12,false,$13,NOW(),$14::date,$15,$16,$17,$18,'SIN APROBAR','POSTGRES',NOW(),NOW()) RETURNING *`,
       [benefId, b.numeroId, b.primerNombre, b.segundoNombre || null,
        b.primerApellido, b.segundoApellido || null,
        b.email || null, b.celular || null, b.fechaNacimiento || null, titularId,
        contrato, titular.plataforma || null, financial?.vigencia || null, finalContrato,
        b.sence === true && esChile && esEmpresa,
        (b.sence === true && esChile && esEmpresa) ? (String(b.senceCode || '').trim() || null) : null,
-       b.kids === true]
+       b.kids === true, modulo]
     );
     created.beneficiarios.push(benefResult.rows[0]);
 
