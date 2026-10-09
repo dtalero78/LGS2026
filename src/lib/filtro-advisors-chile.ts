@@ -4,7 +4,8 @@ import { query, queryOne, queryMany } from '@/lib/postgres';
 /**
  * Filtro TEMPORAL (capacitación del 2026-10-09): para los usuarios configurados
  * (hoy Mabel Nuñez), la Tabla de Asistencia del beneficiario y los informes con
- * advisors (Advisors, Resumen, Programación, Horas Advisor, Usuarios, InfoAcademic)
+ * advisors (Advisors, Resumen, Programación, Horas Advisor, Usuarios, InfoAcademic,
+ * Sesiones sin gestión, Performance Evaluation)
  * muestran SOLO clases/advisors de Chile, excepto Joseph Miguel Machado Acosta.
  * Las demás filas no se envían a esa sesión; KPIs y gráficas se calculan sobre lo filtrado.
  *
@@ -77,6 +78,21 @@ async function advisorsPermitidos(): Promise<{ ids: string[]; keys: Set<string> 
 export async function advisorIdsFiltro(session: any): Promise<string[] | null> {
   if (!(await filtroAplica(session?.user?.email))) return null;
   return (await advisorsPermitidos()).ids;
+}
+
+/**
+ * Restringe los filtros `advisorId` / `advisorIds` de un informe a los advisors
+ * permitidos. Un advisor no permitido (o una intersección vacía) se reemplaza por
+ * un id inexistente para que la consulta no devuelva nada de él.
+ */
+const NINGUNO = '__filtro_sin_advisor__';
+export function restringirAdvisors(idsChile: string[], advisorId: string | null, advisorIds: string[] | null) {
+  const permitido = (id: string) => idsChile.includes(id);
+  const lista = advisorIds && advisorIds.length ? advisorIds.filter(permitido) : idsChile;
+  return {
+    advisorId: advisorId ? (permitido(advisorId) ? advisorId : NINGUNO) : null,
+    advisorIds: lista.length ? lista : [NINGUNO],
+  };
 }
 
 /** ¿Este valor (id, email o nombre de advisor) es de un advisor permitido? */

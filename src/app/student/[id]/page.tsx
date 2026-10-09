@@ -59,7 +59,7 @@ async function StudentContent({ studentId }: { studentId: string }) {
 
     // Find next scheduled class
     const now = new Date()
-    const nextClass = classes
+    const nextClass = classesVista
       .filter((cls: any) => {
         const classDate = new Date(cls.fechaEvento)
         return classDate > now && !cls.cancelo

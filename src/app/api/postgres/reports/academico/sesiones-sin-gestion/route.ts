@@ -31,6 +31,7 @@ import { requirePermission } from '@/lib/api-permissions';
 import { AcademicoPermission } from '@/types/permissions';
 import { ValidationError } from '@/lib/errors';
 import { queryMany } from '@/lib/postgres';
+import { advisorIdsFiltro } from '@/lib/filtro-advisors-chile';
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const TZ_REGEX = /^[A-Za-z_]+\/[A-Za-z_+\-0-9]+(\/[A-Za-z_+\-0-9]+)?$/;
@@ -68,6 +69,8 @@ export const GET = handlerReport(async (request, _ctx, session) => {
 
   if (advisorId) { conds.push(`c."advisor" = $${p++}`); params.push(advisorId); }
   if (tipo)      { conds.push(`c."tipo" = $${p++}`);    params.push(tipo); }
+  const idsChile = await advisorIdsFiltro(session);
+  if (idsChile)  { conds.push(`adv."_id" = ANY($${p++}::text[])`); params.push(idsChile); }
 
   const rows = await queryMany<any>(
     `SELECT
@@ -116,5 +119,6 @@ export const GET = handlerReport(async (request, _ctx, session) => {
     items,
     total: items.length,
     rangoFiltro: { startDate, endDate, advisorId: advisorId || null, tipo: tipo || null },
+    ...(idsChile ? { filtroAdvisorsChile: true, advisorsPermitidos: idsChile } : {}),
   });
 });

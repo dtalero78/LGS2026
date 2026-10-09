@@ -18,6 +18,7 @@ import { handlerReport } from '@/lib/report-guard';
 import { requirePermission } from '@/lib/api-permissions';
 import { AcademicoPermission } from '@/types/permissions';
 import { queryMany } from '@/lib/postgres';
+import { advisorIdsFiltro } from '@/lib/filtro-advisors-chile';
 
 export const GET = handlerReport(async (_req, _ctx, session) => {
   // Base VER: lo consumen la pestaña "Por Advisor" y la pestaña "Lista".
@@ -45,5 +46,7 @@ export const GET = handlerReport(async (_req, _ctx, session) => {
     ORDER BY "nombre" ASC NULLS LAST
   `);
 
-  return successResponse({ advisors: rows });
+  // Filtro temporal de capacitación (src/lib/filtro-advisors-chile.ts)
+  const idsChile = await advisorIdsFiltro(session);
+  return successResponse({ advisors: idsChile ? rows.filter(r => idsChile.includes(r._id)) : rows });
 });

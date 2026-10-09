@@ -16,14 +16,15 @@ import { handlerReport } from '@/lib/report-guard';
 import { requirePermission } from '@/lib/api-permissions';
 import { AcademicoPermission } from '@/types/permissions';
 import { EvaluationsRepository } from '@/repositories/evaluations.repository';
+import { advisorIdsFiltro, restringirAdvisors } from '@/lib/filtro-advisors-chile';
 
 export const GET = handlerReport(async (req, _ctx, session) => {
   await requirePermission(session, AcademicoPermission.PERFORMANCE_EVAL_BUSQUEDA_COMENTARIO);
 
   const { searchParams } = new URL(req.url);
-  const advisorId = searchParams.get('advisorId');
+  let advisorId = searchParams.get('advisorId');
   const advisorIdsRaw = searchParams.get('advisorIds');
-  const advisorIds = advisorIdsRaw
+  let advisorIds = advisorIdsRaw
     ? advisorIdsRaw.split(',').map(s => s.trim()).filter(Boolean)
     : null;
 
@@ -31,6 +32,10 @@ export const GET = handlerReport(async (req, _ctx, session) => {
   if (!advisorId && !(advisorIds && advisorIds.length)) {
     return successResponse({ comentarios: [] });
   }
+
+  // Filtro temporal de capacitación (src/lib/filtro-advisors-chile.ts)
+  const idsChile = await advisorIdsFiltro(session);
+  if (idsChile) ({ advisorId, advisorIds } = restringirAdvisors(idsChile, advisorId, advisorIds));
 
   // `banda` = rango de promedio por entero (1..5). Ausente/'all'/0 → sin tope (todos).
   const bandaRaw = Number(searchParams.get('banda'));

@@ -11,24 +11,29 @@ import { handlerReport } from '@/lib/report-guard';
 import { requirePermission } from '@/lib/api-permissions';
 import { AcademicoPermission } from '@/types/permissions';
 import { getDashboardStats } from '@/services/evaluations.service';
+import { advisorIdsFiltro, restringirAdvisors } from '@/lib/filtro-advisors-chile';
 
 export const GET = handlerReport(async (req, _ctx, session) => {
   await requirePermission(session, AcademicoPermission.PERFORMANCE_EVAL_VER);
 
   const { searchParams } = new URL(req.url);
   const advisorIdsRaw = searchParams.get('advisorIds');
-  const advisorIds = advisorIdsRaw
+  let advisorIds = advisorIdsRaw
     ? advisorIdsRaw.split(',').map(s => s.trim()).filter(Boolean)
     : null;
+  let advisorId = searchParams.get('advisorId');
+  // Filtro temporal de capacitación (src/lib/filtro-advisors-chile.ts)
+  const idsChile = await advisorIdsFiltro(session);
+  if (idsChile) ({ advisorId, advisorIds } = restringirAdvisors(idsChile, advisorId, advisorIds));
   const stats = await getDashboardStats({
     startDate: searchParams.get('startDate'),
     endDate:   searchParams.get('endDate'),
-    advisorId: searchParams.get('advisorId'),
+    advisorId,
     advisorIds,
     nivel:     searchParams.get('nivel'),
     tipo:      searchParams.get('tipo'),
     plataforma: searchParams.get('plataforma'),
     comentarioSearch: searchParams.get('comentarioSearch'),
   });
-  return successResponse(stats);
+  return successResponse(idsChile ? { ...stats, filtroAdvisorsChile: true } : stats);
 });

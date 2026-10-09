@@ -53,7 +53,8 @@ function Content() {
       <h1 className="text-2xl font-bold text-gray-900">Filtro Advisors Chile (capacitación)</h1>
       <p className="mt-1 text-gray-600">
         Con el filtro activo, los usuarios indicados abajo ven en la <b>Tabla de Asistencia</b> del beneficiario y en los
-        <b> informes con advisors</b> (Advisors, Resumen, Programación, Horas Advisor, Usuarios, InfoAcademic) solo las
+        <b> informes con advisors</b> (Advisors, Resumen, Programación, Horas Advisor, Usuarios, InfoAcademic, Sesiones sin
+        gestión y Performance Evaluation) solo las
         clases de advisors de Chile, excepto Joseph Miguel Machado Acosta. Esas pantallas muestran el aviso
         “Mostrando clases con advisors de Chile”. No modifica ningún dato. El cambio aplica en ≤1 minuto.
       </p>

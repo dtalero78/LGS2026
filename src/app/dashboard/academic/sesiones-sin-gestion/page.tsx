@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import DashboardLayout from '@/components/layout/DashboardLayout'
+import FiltroAdvisorsChileAviso from '@/components/common/FiltroAdvisorsChileAviso'
 import { PermissionGuard } from '@/components/permissions/PermissionGuard'
 import { AcademicoPermission } from '@/types/permissions'
 import {
@@ -108,6 +109,8 @@ export default function SesionesSinGestionPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('academicas')
+  // Filtro temporal de capacitación (src/lib/filtro-advisors-chile.ts)
+  const [permitidos, setPermitidos] = useState<string[] | null>(null)
 
   // Cargar advisors activos para el dropdown
   useEffect(() => {
@@ -148,6 +151,7 @@ export default function SesionesSinGestionPage() {
       const [jAc, jAd] = await Promise.all([rAc.json(), rAd.json()])
       if (!rAc.ok || !jAc.success) throw new Error(jAc?.error || `Error ${rAc.status}`)
       setItems(jAc.items as Item[])
+      setPermitidos(jAc.filtroAdvisorsChile ? (jAc.advisorsPermitidos || []) : null)
       if (rAd.ok && jAd.success) setAdminItems(jAd.items as AdminItem[])
       else setAdminItems([])
     } catch (e: any) {
@@ -193,6 +197,7 @@ export default function SesionesSinGestionPage() {
                   Eventos pasados sin registrar — el coordinador puede entrar a cada uno y gestionar el cierre.
                   Default: ayer · todos los advisors. Hoy se excluye (aún en ventana operativa).
                 </p>
+                <div className="mt-2"><FiltroAdvisorsChileAviso activo={!!permitidos} /></div>
               </div>
             </div>
           </div>
@@ -226,7 +231,7 @@ export default function SesionesSinGestionPage() {
                   disabled={advisorsLoading}
                 >
                   <option value="">Todos</option>
-                  {advisors.map(a => <option key={a._id} value={a._id}>{a.nombre}</option>)}
+                  {advisors.filter(a => !permitidos || permitidos.includes(a._id)).map(a => <option key={a._id} value={a._id}>{a.nombre}</option>)}
                 </select>
               </div>
               <div>

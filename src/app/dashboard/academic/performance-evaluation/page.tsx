@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowDownTrayIcon, ArrowPathIcon, StarIcon, UserGroupIcon, UserCircleIcon, PrinterIcon, ListBulletIcon, ChatBubbleLeftEllipsisIcon } from '@heroicons/react/24/solid'
 import DashboardLayout from '@/components/layout/DashboardLayout'
+import FiltroAdvisorsChileAviso from '@/components/common/FiltroAdvisorsChileAviso'
 import { exportToExcel } from '@/lib/export-excel'
 import { PermissionGuard } from '@/components/permissions/PermissionGuard'
 import { AcademicoPermission, Role } from '@/types/permissions'
@@ -167,6 +168,7 @@ export default function PerformanceEvaluationPage() {
                   ? 'Lista de advisors — marca los que definen el Alcance (plataforma o selección).'
                   : 'Búsqueda por comentario — comentarios filtrados por banda de promedio, con el usuario que los escribió.'}
               </p>
+              <div className="mt-2"><FiltroAdvisorsChileAviso activo={data?.filtroAdvisorsChile} /></div>
             </div>
           </div>
 
