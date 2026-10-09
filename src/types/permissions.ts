@@ -401,6 +401,10 @@ export enum RecaudosPermission {
   // Informe "Usuarios en mora" y desbloqueo manual del certificado por mora.
   USUARIOS_MORA_VER         = 'RECAUDOS.USUARIOS_MORA.VER',
   USUARIOS_MORA_DESBLOQUEAR = 'RECAUDOS.USUARIOS_MORA.DESBLOQUEAR',
+  // Gestión › Ajustes: corregir registros YA validados (recalcula saldos y audita).
+  AJUSTES_INSCRIPCION = 'RECAUDOS.AJUSTES.INSCRIPCION',
+  AJUSTES_PAGO        = 'RECAUDOS.AJUSTES.PAGO',
+  AJUSTES_FACTURACION = 'RECAUDOS.AJUSTES.FACTURACION',
 }
 
 /**

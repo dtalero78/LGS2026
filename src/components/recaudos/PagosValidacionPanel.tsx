@@ -27,6 +27,7 @@ import { mediosPagoPara } from '@/lib/medios-pago'
 import { api, handleApiError } from '@/hooks/use-api'
 import { usePermissions } from '@/hooks/usePermissions'
 import { exportToExcel } from '@/lib/export-excel'
+import AjustesRecaudosPanel from './AjustesRecaudosPanel'
 
 interface DocAdjunto { url: string; nombre?: string | null; tipo?: string | null; fechaSubida?: string | null }
 
@@ -64,7 +65,7 @@ interface PagoRow {
 interface DisplayUser { _id: string; email: string; nombre: string; rol: string }
 
 type Variant = 'gestor' | 'medioPago'
-type Tab = 'pago' | 'inscripcion' | 'facturacion'
+type Tab = 'pago' | 'inscripcion' | 'facturacion' | 'ajustes'
 
 const DISPLAY_ROLES = ['RECAUDO_ASIST', 'RECAUDOS_JEFE', 'COMERCIAL', 'SUPER_ADMIN', 'ADMIN']
 const ROLE_LABEL: Record<string, string> = { RECAUDO_ASIST: 'Asistente', RECAUDOS_JEFE: 'Jefe', COMERCIAL: 'Comercial', SUPER_ADMIN: 'Admin', ADMIN: 'Admin' }
@@ -92,6 +93,11 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
   const canAprobarMasivo = hasPermission(RecaudosPermission.APROBACION_MASIVA)
 
   const isGestor = variant === 'gestor'
+  // Pestaña Ajustes (registros ya validados): solo en Gestión, con algún permiso de Ajustes.
+  const canAjustes = isGestor && (
+    hasPermission(RecaudosPermission.AJUSTES_INSCRIPCION) ||
+    hasPermission(RecaudosPermission.AJUSTES_PAGO) ||
+    hasPermission(RecaudosPermission.AJUSTES_FACTURACION))
   const lateralLabel = isGestor ? 'Gestor de Recaudo' : 'Medio de Pago'
 
   // Pestaña (pipeline): Verificación Pago | Verificación Inscripción | Facturación
@@ -212,7 +218,7 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
   useEffect(() => { fetchPagos() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [page])
   useEffect(() => { fetchPagos(true) /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [])
   // Al cambiar de pestaña, refetch desde la página 1
-  useEffect(() => { fetchPagos(true) /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [tab])
+  useEffect(() => { if (tab !== 'ajustes') fetchPagos(true) /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [tab])
 
   const handleAplicarFiltros = () => fetchPagos(true)
   const handleLimpiar = () => {
@@ -569,7 +575,7 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
             {isGestor ? 'Pagos registrados pendientes de validación por recaudos.' : 'Pagos registrados, consultados por medio de pago.'}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2 ${tab === 'ajustes' ? 'hidden' : ''}`}>
           <button type="button" onClick={handleExport} disabled={!pagos.length || loading}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50">
             <ArrowDownTrayIcon className="h-4 w-4" /> Exportar Excel
@@ -587,6 +593,7 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
           { key: 'pago', label: 'Verificación Pago' },
           { key: 'inscripcion', label: 'Verificación Inscripción' },
           { key: 'facturacion', label: 'Facturación' },
+          ...(canAjustes ? [{ key: 'ajustes', label: 'Ajustes' }] : []),
         ] as { key: Tab; label: string }[]).map(t => (
           <button key={t.key} type="button" onClick={() => setTab(t.key)}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition ${tab === t.key ? 'border-purple-600 text-purple-700' : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'}`}>
@@ -595,6 +602,9 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
         ))}
       </div>
 
+      {tab === 'ajustes' && <AjustesRecaudosPanel />}
+
+      {tab !== 'ajustes' && (<>
       {/* Filtros */}
       <div className="bg-white border border-gray-200 rounded-lg p-4 grid grid-cols-1 md:grid-cols-7 gap-3 items-end">
         <div className="md:col-span-2">
@@ -875,6 +885,7 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
           </div>
         )}
       </div>
+      </>)}
 
       {/* Modal validar (verificar → pasa a Facturación) */}
       {validateModal && (
