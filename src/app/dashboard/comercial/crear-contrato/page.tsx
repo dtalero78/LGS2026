@@ -433,6 +433,11 @@ function CrearContratoContent() {
     }
   }, [esEmpresa, titular.plataforma, titular.pais]);
 
+  // En modo Empresa los pasos 4 y 5 no existen (p. ej. al retomar un borrador).
+  useEffect(() => {
+    if (esEmpresa && (currentStep === 4 || currentStep === 5)) setCurrentStep(6);
+  }, [esEmpresa, currentStep]);
+
   // Validate current step
   // Email válido: contiene @ con texto antes/después + dominio con punto, y SIN
   // espacios (el regex rechaza cualquier espacio, incluidos inicio/fin).
@@ -504,8 +509,8 @@ function CrearContratoContent() {
       calculateBalance();
     }
     if (currentStep < 7) {
-      // En modo Empresa se omite el paso 4 (Adicional): salta 3 → 5.
-      const next = (esEmpresa && currentStep === 3) ? 5 : currentStep + 1;
+      // En modo Empresa se omiten los pasos 4 (Adicional) y 5 (Referencias): salta 3 → 6.
+      const next = (esEmpresa && currentStep === 3) ? 6 : currentStep + 1;
       setCurrentStep(next);
     }
   };
@@ -669,8 +674,8 @@ function CrearContratoContent() {
   const handlePrevious = () => {
     setError('');
     if (currentStep > 1) {
-      // En modo Empresa el paso 4 está omitido: 5 → 3.
-      const prev = (esEmpresa && currentStep === 5) ? 3 : currentStep - 1;
+      // En modo Empresa los pasos 4 y 5 están omitidos: 6 → 3.
+      const prev = (esEmpresa && currentStep === 6) ? 3 : currentStep - 1;
       setCurrentStep(prev);
     }
   };
@@ -979,7 +984,8 @@ function CrearContratoContent() {
         <div className="mb-8">
           <div className="flex justify-between">
             {[1, 2, 3, 4, 5, 6, 7].map((step) => {
-              const skip4 = esEmpresa && step === 4;
+              // Empresa: Adicional (4) y Referencias (5) no aplican.
+              const skip4 = esEmpresa && (step === 4 || step === 5);
               return (
               <div
                 key={step}
@@ -1003,7 +1009,7 @@ function CrearContratoContent() {
                   {step === 2 && 'Datos básicos'}
                   {step === 3 && 'Ubicación'}
                   {step === 4 && (skip4 ? 'Adicional (omitido)' : 'Adicional')}
-                  {step === 5 && 'Referencias'}
+                  {step === 5 && (skip4 ? 'Referencias (omitido)' : 'Referencias')}
                   {step === 6 && 'Financiero'}
                   {step === 7 && 'Beneficiarios'}
                 </p>
@@ -1569,8 +1575,8 @@ function CrearContratoContent() {
             </div>
           )}
 
-          {/* Step 5: Referencias */}
-          {currentStep === 5 && (
+          {/* Step 5: Referencias (omitido en modo Empresa) */}
+          {currentStep === 5 && !esEmpresa && (
             <div className="space-y-4">
               <h2 className="text-xl font-semibold mb-4">Referencias</h2>
               <div className="space-y-6">
