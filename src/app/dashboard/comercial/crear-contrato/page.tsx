@@ -175,7 +175,9 @@ function CrearContratoContent() {
     tipoPlan: '' as '' | 'Contado' | 'Credito' | 'Colaborador' | 'Empresa',
     valorCuota: 0,
     fechaPago: '',
-    vigencia: '',
+    vigencia: '12',
+    // MODULO: contrato de un módulo → vigencia fija de 3 meses (campo bloqueado).
+    modulo: false,
     medioPago: ''
   });
 
@@ -277,7 +279,11 @@ function CrearContratoContent() {
     const draft = (window as any).__contractDraft
     if (draft) {
       if (draft.titular) setTitular(draft.titular)
-      if (draft.financial) setFinancial(draft.financial)
+      if (draft.financial) {
+        // Borradores previos a MODULO: vigencia vacía o fuera de 3–12 → 12.
+        const v = Number(draft.financial.vigencia)
+        setFinancial({ ...draft.financial, vigencia: v >= 3 && v <= 12 ? String(v) : '12', modulo: !!draft.financial.modulo })
+      }
       if (draft.beneficiarios) setBeneficiarios(draft.beneficiarios)
       if (draft.titularBenefRespuesta === 'SI' || draft.titularBenefRespuesta === 'NO') {
         elegirTitularBenef(draft.titularBenefRespuesta)
@@ -496,7 +502,7 @@ function CrearContratoContent() {
         return financial.totalPlan > 0 &&
                financial.pagoInscripcion >= 0 &&
                financial.fechaPago !== '' &&
-               financial.vigencia !== '' &&
+               Number(financial.vigencia) >= 3 && Number(financial.vigencia) <= 12 &&
                financial.medioPago !== '';
       default:
         return true;
@@ -1763,14 +1769,35 @@ function CrearContratoContent() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Vigencia * <span className="text-xs text-gray-400">(meses, 1–12)</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label htmlFor="vigencia" className="block text-sm font-medium text-gray-700">
+                      Vigencia * <span className="text-xs text-gray-400">(meses, 3–12)</span>
+                    </label>
+                    {/* MODULO: vigencia fija de 3 meses, no editable. Apagado vuelve a 12. */}
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={!!financial.modulo}
+                      onClick={() => {
+                        const modulo = !financial.modulo
+                        setFinancial({...financial, modulo, vigencia: modulo ? '3' : '12'})
+                      }}
+                      className="inline-flex items-center gap-2 text-xs font-semibold text-gray-700"
+                    >
+                      <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${financial.modulo ? 'bg-primary-600' : 'bg-gray-300'}`}>
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${financial.modulo ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                      </span>
+                      MODULO
+                    </button>
+                  </div>
                   <input
+                    id="vigencia"
                     type="number"
-                    min={1}
+                    min={3}
                     max={12}
                     value={financial.vigencia}
+                    disabled={!!financial.modulo}
+                    title={financial.modulo ? 'Contrato MODULO: vigencia fija de 3 meses' : undefined}
                     onKeyDown={(e) => {
                       // Block anything that is not a digit, backspace, delete, arrows or tab
                       if (!/^\d$/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) {
@@ -1778,20 +1805,17 @@ function CrearContratoContent() {
                       }
                     }}
                     onChange={(e) => {
-                      const raw = e.target.value.replace(/[^0-9]/g, '')
-                      if (raw === '') { setFinancial({...financial, vigencia: ''}); return }
-                      const num = parseInt(raw, 10)
-                      if (!isNaN(num) && num >= 1 && num <= 12) {
-                        setFinancial({...financial, vigencia: String(num)})
-                      }
+                      // Se permite escribir libremente (p. ej. "1" antes de "12"); el rango 3–12 se aplica al salir.
+                      const raw = e.target.value.replace(/[^0-9]/g, '').slice(0, 2)
+                      setFinancial({...financial, vigencia: raw})
                     }}
                     onBlur={(e) => {
                       const num = parseInt(e.target.value, 10)
-                      if (isNaN(num) || num < 1) setFinancial({...financial, vigencia: '1'})
+                      if (isNaN(num) || num < 3) setFinancial({...financial, vigencia: '3'})
                       else if (num > 12)         setFinancial({...financial, vigencia: '12'})
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="1 – 12"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-100 disabled:text-gray-500"
+                    placeholder="3 – 12"
                   />
                 </div>
                 <div>

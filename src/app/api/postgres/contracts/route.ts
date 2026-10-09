@@ -155,6 +155,12 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
     throw new ValidationError(`tipoPlan debe ser uno de: ${VALID_TIPO_PLAN.join(', ')}`);
   }
 
+  // Vigencia del contrato nuevo: 3 a 12 meses (3 = MODULO).
+  const vigenciaNum = parseInt(String(financial?.vigencia ?? ''), 10);
+  if (!Number.isInteger(vigenciaNum) || vigenciaNum < 3 || vigenciaNum > 12) {
+    throw new ValidationError('La vigencia debe estar entre 3 y 12 meses');
+  }
+
   // Kids (2026-10-06): con KIDS2026 conectado, cada beneficiario kid debe traer un
   // salón (classroomId) elegido del catálogo; sin él la reserva no se enviaba y el
   // kid quedaba solo en LGS. Se valida ANTES de crear nada.
