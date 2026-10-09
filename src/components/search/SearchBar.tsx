@@ -38,13 +38,14 @@ export default function SearchBar() {
       return true
     })
 
-    // From PEOPLE: only show TITULARs (BENEFICIARIOs always come from ACADEMICA)
-    // Also deduplicate TITULARs by numeroId (in case DB has duplicate records)
+    // From PEOPLE: only show TITULARs (BENEFICIARIOs always come from ACADEMICA).
+    // Deduplicate by _id, NOT by numeroId: a titular with several contracts
+    // (empresa, recontratación) must show one row per contract.
     const seenTitularIds = new Set<string>()
     const filteredPeople = fromPeople.filter((r: any) => {
       if (r.tipoUsuario !== 'TITULAR') return false
-      if (seenTitularIds.has(r.numeroId)) return false
-      seenTitularIds.add(r.numeroId)
+      if (seenTitularIds.has(r._id)) return false
+      seenTitularIds.add(r._id)
       return true
     })
 
