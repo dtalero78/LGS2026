@@ -30,13 +30,25 @@ const PREFIJOS_PAISES = [
 const PREFIJOS_CELULAR = COUNTRY_CODES
 
 /** Resultado de la matrícula en KIDS al aprobar un beneficiario Kids (para alert/resumen). */
-function mensajeKids(d: { kidsErrores?: string[]; kidsCredenciales?: { nombre: string; username: string | null; password: string | null }[] }): string {
+/**
+ * Ya NO muestra la contraseña inicial: desde 2026-10-10 KIDS manda al apoderado
+ * el enlace donde el niño elige SU clave y agenda su Welcome, así que la inicial
+ * deja de servir en cuanto crea su perfil.
+ */
+function mensajeKids(d: { kidsErrores?: string[]; kidsCredenciales?: { nombre: string; username: string | null; perfilEnviado?: boolean | null; perfilError?: string | null }[] }): string {
   if (d.kidsErrores?.length) {
     return `⚠️ Beneficiario Kids aprobado en LGS, pero NO quedó matriculado en KIDS:\n${d.kidsErrores.join('\n')}\n\nAvise a Tecnología para completar la matrícula.`
   }
   if (d.kidsCredenciales?.length) {
     return `✅ Beneficiario Kids aprobado y matriculado en su curso en KIDS.\n` +
-      d.kidsCredenciales.map(c => `${c.nombre}: usuario ${c.username || '—'}${c.password ? ` · contraseña inicial ${c.password}` : ''}`).join('\n')
+      d.kidsCredenciales.map(c => {
+        const perfil = c.perfilEnviado === true
+          ? 'KIDS envió al apoderado por WhatsApp el enlace para crear el perfil y agendar el Welcome.'
+          : c.perfilEnviado === false
+            ? `⚠️ No se pudo enviar el enlace de perfil (${c.perfilError || 'error'}). Reenvíelo desde la ficha del niño en KIDS.`
+            : ''
+        return `${c.nombre}: usuario ${c.username || '—'}${perfil ? `\n   ${perfil}` : ''}`
+      }).join('\n')
   }
   return '✅ Beneficiario Kids aprobado en LGS (KIDS no está conectado o ya estaba matriculado).'
 }

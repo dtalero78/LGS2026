@@ -63,7 +63,17 @@ export interface KidsReservationInput {
 }
 export interface KidsReservationResult { contractId: string; externalRef: string; enrollmentId: string }
 export interface KidsCredenciales { userId: string; username: string; correo: string; passwordInicial: string }
-export interface KidsApproveResult { credenciales: KidsCredenciales | null; enrollmentId: string | null }
+/**
+ * `perfil`: al aprobar, KIDS manda al APODERADO por WhatsApp el enlace para que el
+ * niño cree su perfil (elige SU clave) y agende su Welcome (KIDS 2026-10-10).
+ * null = el niño ya tenía perfil. Desde entonces la clave inicial deja de servir
+ * en cuanto el niño elige la suya.
+ */
+export interface KidsApproveResult {
+  credenciales: KidsCredenciales | null;
+  enrollmentId: string | null;
+  perfil?: { enviado: boolean; destinatario: string | null; error?: string } | null;
+}
 
 /** Estado del niño en KIDS. `situacion` es la fuente de verdad para mostrar en LGS. */
 export type KidsSituacion = 'CURSANDO' | 'SUSPENDIDO' | 'NO_CURSANDO';

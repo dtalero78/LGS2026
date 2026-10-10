@@ -83,7 +83,14 @@ export async function asegurarReservaKids(insc: any, beneficiario: any): Promise
   return ref;
 }
 
-export interface KidsCredencialesLGS { numeroId: string; nombre: string; username: string | null; password: string | null }
+/**
+ * `perfilEnviado`: si KIDS mandó al apoderado el enlace de creación de perfil
+ * (null = ya tenía perfil o KIDS no lo informó); `perfilError`, por qué no.
+ */
+export interface KidsCredencialesLGS {
+  numeroId: string; nombre: string; username: string | null; password: string | null;
+  perfilEnviado: boolean | null; perfilError: string | null;
+}
 
 /**
  * Matricula al niño: asegura la reserva y la APRUEBA en KIDS (RESERVADA → ACTIVA,
@@ -103,7 +110,11 @@ export async function matricularKids(insc: any, beneficiario: any): Promise<Kids
               "kidsEnrollmentId"=COALESCE($5,"kidsEnrollmentId"), "errorKids"=NULL, "_updatedDate"=NOW()
         WHERE "_id"=$1`,
       [insc._id, cred?.userId || null, cred?.username || null, cred?.passwordInicial || null, r.enrollmentId || null]);
-    return { numeroId: insc.numeroId, nombre: insc.nombre, username: cred?.username || null, password: cred?.passwordInicial || null };
+    return {
+      numeroId: insc.numeroId, nombre: insc.nombre, username: cred?.username || null, password: cred?.passwordInicial || null,
+      perfilEnviado: r.perfil ? r.perfil.enviado : null,
+      perfilError: r.perfil && !r.perfil.enviado ? (r.perfil.error || 'error desconocido') : null,
+    };
   } catch (e: any) {
     await query(`UPDATE "KIDS_INSCRIPCIONES" SET "errorKids"=$2, "_updatedDate"=NOW() WHERE "_id"=$1`,
       [insc._id, String(e?.message || 'error').slice(0, 500)]).catch(() => null);
