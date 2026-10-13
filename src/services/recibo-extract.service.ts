@@ -191,6 +191,26 @@ export interface GuardarReciboInscripcionOpts {
   tipo: string | null;
   campos: Partial<ReciboExtraido>;
   actor: string;
+  /**
+   * "El pago tiene dos recibos": los dos comprobantes (con lo leído de cada uno)
+   * y el monto TOTAL digitado a mano. El primer recibo queda además en
+   * url/nombre/tipo/extraido para los lectores que solo conocen un recibo.
+   */
+  dosRecibos?: boolean;
+  recibos?: { url: string; nombre: string | null; tipo: string | null; extraido: Partial<ReciboExtraido> | null }[];
+  montoManual?: number | null;
+}
+
+function snapshotExtraido(c: Partial<ReciboExtraido> | null | undefined) {
+  const x = c || {};
+  return {
+    medioPago: x.medioPago ?? null,
+    fecha: (typeof x.fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x.fecha)) ? x.fecha : null,
+    monto: (x.monto === null || x.monto === undefined || !Number.isFinite(Number(x.monto))) ? null : Number(x.monto),
+    referencia: x.referencia ?? null,
+    banco: x.banco ?? null,
+    confianza: (x as any).confianza ?? null,
+  };
 }
 
 /**
@@ -202,22 +222,32 @@ export interface GuardarReciboInscripcionOpts {
 export async function guardarReciboInscripcionEnPeople(opts: GuardarReciboInscripcionOpts): Promise<any> {
   const peopleId = String(opts.peopleId || '').trim();
   if (!peopleId) throw new ValidationError('peopleId es requerido.');
-  const c = opts.campos || {};
-  const recibo = {
+  const dos = opts.dosRecibos === true;
+  if (dos) {
+    if (!Array.isArray(opts.recibos) || opts.recibos.length !== 2 || opts.recibos.some(r => !r?.url)) {
+      throw new ValidationError('Con dos recibos se deben adjuntar el recibo 1 y el recibo 2.');
+    }
+    if (!(Number(opts.montoManual) > 0)) {
+      throw new ValidationError('Con dos recibos el monto del pago se digita a mano y debe ser mayor a 0.');
+    }
+  }
+  // Con dos recibos el monto que vale es el digitado (también en FINANCIEROS.reciboMonto).
+  const c: Partial<ReciboExtraido> = dos ? { ...(opts.campos || {}), monto: Number(opts.montoManual) } : (opts.campos || {});
+  const recibo: Record<string, any> = {
     url: opts.url ?? null,
     nombre: opts.nombre ?? null,
     tipo: opts.tipo ?? null,
     subidoPor: opts.actor,
     subidoEn: new Date().toISOString(),
-    extraido: {
-      medioPago: c.medioPago ?? null,
-      fecha: (typeof c.fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(c.fecha)) ? c.fecha : null,
-      monto: (c.monto === null || c.monto === undefined || !Number.isFinite(Number(c.monto))) ? null : Number(c.monto),
-      referencia: c.referencia ?? null,
-      banco: c.banco ?? null,
-      confianza: (c as any).confianza ?? null,
-    },
+    extraido: snapshotExtraido(c),
   };
+  if (dos) {
+    recibo.dosRecibos = true;
+    recibo.montoManual = Number(opts.montoManual);
+    recibo.recibos = opts.recibos!.map(r => ({
+      url: r.url, nombre: r.nombre ?? null, tipo: r.tipo ?? null, extraido: snapshotExtraido(r.extraido),
+    }));
+  }
 
   await query(
     `UPDATE "PEOPLE" SET "reciboInscripcion" = $1::jsonb, "_updatedDate" = NOW() WHERE "_id" = $2`,

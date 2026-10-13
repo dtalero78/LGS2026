@@ -28,6 +28,7 @@ import { api, handleApiError } from '@/hooks/use-api'
 import { usePermissions } from '@/hooks/usePermissions'
 import { exportToExcel } from '@/lib/export-excel'
 import AjustesRecaudosPanel from './AjustesRecaudosPanel'
+import RecibosDobles, { type ReciboArchivo, sumaLeida, fmtPesos } from '@/components/common/RecibosDobles'
 
 interface DocAdjunto { url: string; nombre?: string | null; tipo?: string | null; fechaSubida?: string | null }
 
@@ -51,7 +52,11 @@ interface PagoRow {
   reciboMedioPago: string | null
   reciboReferencia: string | null
   reciboBanco: string | null
-  reciboInscripcion: { url?: string | null; nombre?: string | null; extraido?: any } | null
+  reciboInscripcion: {
+    url?: string | null; nombre?: string | null; extraido?: any
+    /** "El pago tiene dos recibos": los dos comprobantes + monto total digitado. */
+    dosRecibos?: boolean; montoManual?: number | null; recibos?: { url: string; nombre?: string | null }[]
+  } | null
   titular_primerNombre: string
   titular_primerApellido: string
   titular_segundoApellido: string | null
@@ -162,6 +167,9 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
   const [reciboLeyendo, setReciboLeyendo] = useState(false)
   const [reciboGuardando, setReciboGuardando] = useState(false)
   const [reciboForm, setReciboForm] = useState({ medioPago: '', fecha: '', monto: '', referencia: '', banco: '' })
+  // "El pago tiene dos recibos" en el recibo de inscripción del gestor.
+  const [reciboDos, setReciboDos] = useState(false)
+  const [reciboDobles, setReciboDobles] = useState<(ReciboArchivo | null)[]>([null, null])
   const [reciboConfianza, setReciboConfianza] = useState<number | null>(null)
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
@@ -462,6 +470,7 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
   const openRecibo = (p: PagoRow) => {
     setReciboUrl(null); setReciboFileName(''); setReciboConfianza(null)
     setReciboForm({ medioPago: '', fecha: '', monto: '', referencia: '', banco: '' })
+    setReciboDos(false); setReciboDobles([null, null])
     setReciboModal({
       contrato: p.titular_contrato || '',
       idPeople: p.idPeople,
@@ -507,13 +516,35 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
     } catch (err) { handleApiError(err, 'Error leyendo el recibo') }
     finally { setReciboLeyendo(false) }
   }
+  // Dos recibos: del recibo 1 se precargan medio/fecha/referencia/banco; el monto se digita.
+  const onReciboDobleLeido = (indice: number, e: any) => {
+    if (indice !== 0) return
+    setReciboForm(f => ({
+      ...f,
+      medioPago: f.medioPago || e.medioPago || '', fecha: f.fecha || e.fecha || '',
+      referencia: f.referencia || e.referencia || '', banco: f.banco || e.banco || '',
+    }))
+    setReciboConfianza(e.confianza ?? null)
+  }
+  const sumaReciboDobles = sumaLeida(reciboDobles)
+
   const handleGuardarRecibo = async () => {
     if (!reciboModal?.contrato) { toast.error('Este pago no tiene contrato asociado'); return }
+    if (reciboDos) {
+      if (!reciboDobles[0] || !reciboDobles[1]) { toast.error('Adjunta el recibo 1 y el recibo 2'); return }
+      if (!(Number(reciboForm.monto) > 0)) { toast.error('Digita el monto total del pago (los dos recibos juntos)'); return }
+    }
     setReciboGuardando(true)
     try {
       await api.post(`/api/postgres/recaudos/inscripcion-recibo/guardar`, {
         contrato: reciboModal.contrato,
-        url: reciboUrl,
+        idPeople: reciboModal.idPeople,
+        ...(reciboDos ? {
+          dosRecibos: true,
+          montoManual: Number(reciboForm.monto),
+          recibos: reciboDobles.map(r => ({ url: r!.url, nombre: r!.nombre, tipo: r!.tipo ?? null, montoLeido: r!.montoLeido ?? null })),
+        } : {}),
+        url: reciboDos ? reciboDobles[0]!.url : reciboUrl,
         campos: {
           medioPago: reciboForm.medioPago.trim() || null,
           fecha: reciboForm.fecha || null,
@@ -523,8 +554,9 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
           confianza: reciboConfianza,
         },
       })
-      toast.success('Datos del recibo guardados en el financiero')
+      toast.success(reciboDos ? 'Recibos de inscripción guardados' : 'Datos del recibo guardados en el financiero')
       setReciboModal(null)
+      fetchPagos()
     } catch (err) { handleApiError(err, 'Error guardando el recibo') }
     finally { setReciboGuardando(false) }
   }
@@ -791,7 +823,17 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                       </td>
                       {tab === 'inscripcion' && isGestor && (
                         <td className="px-2 py-2 text-center align-top">
-                          {p.reciboInscripcion?.url ? (
+                          {p.reciboInscripcion?.dosRecibos && Array.isArray(p.reciboInscripcion.recibos) ? (
+                            <div className="flex flex-col items-center gap-0.5"
+                              title={p.reciboInscripcion.montoManual ? `Dos recibos · total digitado $${Number(p.reciboInscripcion.montoManual).toLocaleString('es-CO')}` : 'Dos recibos'}>
+                              {p.reciboInscripcion.recibos.map((r, i) => (
+                                <a key={i} href={r.url} target="_blank" rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-0.5 text-teal-700 hover:underline text-xs font-medium">
+                                  <PaperClipIcon className="h-3.5 w-3.5" /> Recibo {i + 1}
+                                </a>
+                              ))}
+                            </div>
+                          ) : p.reciboInscripcion?.url ? (
                             <a href={p.reciboInscripcion.url} target="_blank" rel="noopener noreferrer" title="Ver recibo de inscripción subido en el contrato"
                               className="inline-flex items-center gap-0.5 text-teal-700 hover:underline text-xs font-medium">
                               <PaperClipIcon className="h-3.5 w-3.5" /> Ver
@@ -1151,8 +1193,23 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
               Adjunta el comprobante (imagen o PDF), léelo y guarda los datos en el financiero.
             </p>
 
+            {/* Dos recibos: se suben ambos y el monto se digita a mano. */}
+            <div className={`rounded-lg border p-3 space-y-3 ${reciboDos ? 'border-emerald-300 bg-emerald-50/40' : 'border-gray-200 bg-gray-50'}`}>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-800 cursor-pointer select-none">
+                <input type="checkbox" checked={reciboDos}
+                  onChange={() => { setReciboDos(d => !d); setReciboDobles([null, null]); setReciboUrl(null); setReciboFileName(''); setReciboForm(f => ({ ...f, monto: '' })) }}
+                  disabled={reciboGuardando}
+                  className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+                El pago tiene dos recibos
+              </label>
+              {reciboDos && (
+                <RecibosDobles carpetaId={reciboModal.idPeople} recibos={reciboDobles} onChange={setReciboDobles}
+                  leerConIA onLeido={onReciboDobleLeido} disabled={reciboGuardando} />
+              )}
+            </div>
+
             {/* Paso 1: adjuntar */}
-            <div className="flex items-center gap-2">
+            {!reciboDos && <div className="flex items-center gap-2">
               <button type="button" onClick={pickReciboArchivo} disabled={reciboSubiendo || reciboLeyendo || reciboGuardando}
                 className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700 disabled:opacity-50">
                 <PaperClipIcon className="h-4 w-4" /> {reciboSubiendo ? 'Subiendo…' : (reciboUrl ? 'Cambiar archivo' : 'Adjuntar recibo')}
@@ -1163,8 +1220,8 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                   {reciboLeyendo ? 'Leyendo…' : '🔍 Leer recibo'}
                 </button>
               )}
-            </div>
-            {reciboFileName && (
+            </div>}
+            {!reciboDos && reciboFileName && (
               <p className="text-xs text-gray-500 truncate">📎 {reciboFileName}{reciboUrl ? ' — adjuntado' : ''}</p>
             )}
 
@@ -1188,9 +1245,14 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Monto</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  {reciboDos ? <>Monto total (los dos recibos) <span className="text-red-500">*</span></> : 'Monto'}
+                </label>
                 <input type="number" min={0} value={reciboForm.monto} onChange={e => setReciboForm(f => ({ ...f, monto: e.target.value.replace(/[^0-9.]/g, '') }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                {reciboDos && sumaReciboDobles != null && Number(reciboForm.monto) > 0 && Math.round(Number(reciboForm.monto)) !== Math.round(sumaReciboDobles) && (
+                  <p className="mt-1 text-[11px] font-medium text-amber-700">No coincide con la suma leída ({fmtPesos(sumaReciboDobles)}).</p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Referencia</label>
@@ -1204,7 +1266,7 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
               </div>
             </div>
 
-            <p className="text-[11px] text-gray-400">La lectura es un apoyo — revisa los datos antes de guardar. Se guardan en FINANCIEROS del contrato.</p>
+            <p className="text-[11px] text-gray-400">La lectura es un apoyo — revisa los datos antes de guardar. Se guardan en el financiero del contrato y como recibo de inscripción del contrato.</p>
 
             <div className="flex items-center justify-end gap-3 pt-1">
               <button type="button" onClick={() => setReciboModal(null)} disabled={reciboGuardando} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">Cancelar</button>

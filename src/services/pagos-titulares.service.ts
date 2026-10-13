@@ -398,6 +398,20 @@ export const pagosTitularesService = {
       );
     }
 
+    // Dos recibos: el pago se respalda con DOS comprobantes (recibo 1 y 2 en
+    // documentosAdjuntos) y el valor lo digita el operador. Se exige acá también.
+    const dosRecibos = input.dosRecibos === true;
+    if (dosRecibos) {
+      const docs = Array.isArray(input.documentosAdjuntos) ? input.documentosAdjuntos : [];
+      const tiene = (n: number) => docs.some((d: any) => Number(d?.recibo) === n && d?.url);
+      if (!tiene(1) || !tiene(2)) {
+        throw new ValidationError('Marcaste "El pago tiene dos recibos": adjunta el recibo 1 y el recibo 2');
+      }
+      if (valorPagadoNum <= 0) {
+        throw new ValidationError('Con dos recibos el valor del pago se digita a mano y debe ser mayor a 0');
+      }
+    }
+
     const fechaPagoFinal = input.fechaPago ?? new Date().toISOString().slice(0, 10);
     const realizadopor = esCambioContado
       ? resolveRealizadoPor(fechaBaseContrato(titular as any), fechaPagoFinal)
@@ -434,6 +448,7 @@ export const pagosTitularesService = {
       numeroReferencia: input.numeroReferencia ?? null,
       numeroFactura: input.numeroFactura ?? null,
       documentosAdjuntos: Array.isArray(input.documentosAdjuntos) ? input.documentosAdjuntos : [],
+      dosRecibos,
       validado: false,
       createdBy,
     };

@@ -5,6 +5,7 @@ import { FileText, Upload, Receipt, Trash2, X, Eye } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { usePermissions } from '@/hooks/usePermissions'
 import { PersonPermission } from '@/types/permissions'
+import RecibosDobles, { type ReciboArchivo, fmtPesos } from '@/components/common/RecibosDobles'
 
 // Detecta si un archivo es imagen (por su mime o su extensión en la URL).
 function esImagen(tipo?: string, url?: string): boolean {
@@ -41,16 +42,22 @@ export default function DocumentosReciboModal({ open, personId, subtitulo, onClo
   const [loading, setLoading] = useState(false)
   const [uploadingDoc, setUploadingDoc] = useState(false)
   const [uploadingRecibo, setUploadingRecibo] = useState(false)
+  // "El pago tiene dos recibos": se suben los dos y el monto se digita a mano.
+  const [dosRecibos, setDosRecibos] = useState(false)
+  const [recibosDobles, setRecibosDobles] = useState<(ReciboArchivo | null)[]>([null, null])
+  const [montoManual, setMontoManual] = useState('')
+  const [pagoInscripcion, setPagoInscripcion] = useState<number | null>(null)
 
   useEffect(() => {
     if (!open || !personId) return
     setDocsList([]); setReciboData(null); setReciboActive(false); setLoading(true)
+    setDosRecibos(false); setRecibosDobles([null, null]); setMontoManual(''); setPagoInscripcion(null)
     Promise.all([
       fetch(`/api/contracts/${personId}/documents`).then(x => x.json()).catch(() => null),
       fetch(`/api/contracts/${personId}/recibo-inscripcion`).then(x => x.json()).catch(() => null),
     ]).then(([d, r]) => {
       if (d?.success) setDocsList(d.documentacion || [])
-      if (r?.success) { setReciboData(r.recibo || null); setReciboActive(!!r.active) }
+      if (r?.success) { setReciboData(r.recibo || null); setReciboActive(!!r.active); setPagoInscripcion(r.pagoInscripcion ?? null) }
     }).finally(() => setLoading(false))
   }, [open, personId])
 
@@ -100,6 +107,29 @@ export default function DocumentosReciboModal({ open, personId, subtitulo, onClo
       setReciboData(saved.recibo || null)
       toast.success('Recibo de inscripción subido')
     } catch (e: any) { toast.error(e?.message || 'Error subiendo el recibo') } finally { setUploadingRecibo(false) }
+  }
+
+  const montoNum = Number(montoManual.replace(/[^0-9]/g, '')) || 0
+  const difiereInscripcion = dosRecibos && montoNum > 0 && pagoInscripcion != null && Math.round(montoNum) !== Math.round(pagoInscripcion)
+
+  const guardarDosRecibos = async () => {
+    if (!recibosDobles[0] || !recibosDobles[1]) { toast.error('Adjunta el recibo 1 y el recibo 2'); return }
+    if (montoNum <= 0) { toast.error('Digita el monto total del pago (los dos recibos juntos)'); return }
+    setUploadingRecibo(true)
+    try {
+      const saved = await fetch(`/api/contracts/${personId}/recibo-inscripcion`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dosRecibos: true,
+          montoManual: montoNum,
+          recibos: recibosDobles.map(r => ({ url: r!.url, nombre: r!.nombre, tipo: r!.tipo })),
+        }),
+      }).then(x => x.json())
+      if (!saved?.success) throw new Error(saved?.error || 'No se pudieron guardar los recibos')
+      setReciboData(saved.recibo || null)
+      setDosRecibos(false); setRecibosDobles([null, null]); setMontoManual('')
+      toast.success('Recibos de inscripción guardados')
+    } catch (e: any) { toast.error(e?.message || 'Error guardando los recibos') } finally { setUploadingRecibo(false) }
   }
 
   const pickFiles = (multiple: boolean, cb: (files: File[]) => void) => {
@@ -171,7 +201,7 @@ export default function DocumentosReciboModal({ open, personId, subtitulo, onClo
               <section>
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5"><Receipt className="w-4 h-4 text-emerald-600" /> Recibo de inscripción</h4>
-                  {reciboActive && (
+                  {reciboActive && !dosRecibos && (
                     <button type="button" onClick={() => pickFiles(false, fs => { if (fs[0]) uploadRecibo(fs[0]) })} disabled={uploadingRecibo}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">
                       <Upload className="w-3.5 h-3.5" /> {uploadingRecibo ? 'Subiendo…' : (reciboData ? 'Reemplazar recibo' : 'Subir recibo')}
@@ -181,7 +211,74 @@ export default function DocumentosReciboModal({ open, personId, subtitulo, onClo
                 {!reciboActive && !reciboData && (
                   <p className="text-xs text-amber-600 mb-2">La subida del recibo no está habilitada para tu usuario (requiere el permiso «Subir recibo» o que la lectura de recibos esté activa).</p>
                 )}
-                {reciboData ? (
+                {reciboActive && (
+                  <div className={`mb-3 rounded-lg border p-3 space-y-3 ${dosRecibos ? 'border-emerald-300 bg-emerald-50/40' : 'border-gray-200 bg-gray-50'}`}>
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-800 cursor-pointer select-none">
+                      <input type="checkbox" checked={dosRecibos}
+                        onChange={() => { setDosRecibos(d => !d); setRecibosDobles([null, null]); setMontoManual('') }}
+                        className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+                      El pago tiene dos recibos
+                    </label>
+                    {dosRecibos && (
+                      <>
+                        <RecibosDobles carpetaId={personId} recibos={recibosDobles} onChange={setRecibosDobles} disabled={uploadingRecibo} />
+                        <div>
+                          <label htmlFor="monto-dos-recibos" className="block text-xs font-medium text-gray-700">
+                            Monto total del pago (los dos recibos juntos) <span className="text-red-500">*</span>
+                          </label>
+                          <input id="monto-dos-recibos" type="text" inputMode="numeric" value={montoManual}
+                            onChange={e => { const d = e.target.value.replace(/[^0-9]/g, ''); setMontoManual(d ? Number(d).toLocaleString('es-CO') : '') }}
+                            placeholder="Ej: 110.000"
+                            className="mt-1 w-48 px-3 py-2 border border-gray-300 rounded-md text-sm tabular-nums" />
+                          {pagoInscripcion != null && (
+                            <p className="text-xs text-gray-500 mt-1">Valor de inscripción del contrato: {fmtPesos(pagoInscripcion)}</p>
+                          )}
+                          {difiereInscripcion && (
+                            <p className="text-xs font-medium text-amber-700 mt-1">
+                              El monto digitado no coincide con el valor de inscripción del contrato. Puedes guardar igual, pero revísalo.
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex justify-end">
+                          <button type="button" onClick={guardarDosRecibos}
+                            disabled={uploadingRecibo || !recibosDobles[0] || !recibosDobles[1] || montoNum <= 0}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">
+                            <Upload className="w-3.5 h-3.5" /> {uploadingRecibo ? 'Guardando…' : (reciboData ? 'Reemplazar con los dos recibos' : 'Guardar los dos recibos')}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+                {reciboData?.dosRecibos && Array.isArray(reciboData.recibos) ? (
+                  <div className="border border-emerald-100 bg-emerald-50 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">Dos recibos</span>
+                      <span className="text-sm text-gray-800">Monto total digitado: <strong>{fmtPesos(Number(reciboData.montoManual) || 0)}</strong></span>
+                    </div>
+                    {reciboData.recibos.map((r: any, i: number) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <a href={r.url} target="_blank" rel="noopener noreferrer" title={`Ver recibo ${i + 1}`} className="shrink-0">
+                          {esImagen(r.tipo, r.url) ? (
+                            <img src={r.url} alt={r.nombre || `recibo ${i + 1}`} className="h-12 w-12 rounded object-cover border border-emerald-200 hover:ring-2 hover:ring-emerald-300" />
+                          ) : (
+                            <span className="h-12 w-12 rounded bg-white border border-emerald-200 flex items-center justify-center"><Receipt className="w-5 h-5 text-emerald-500" /></span>
+                          )}
+                        </a>
+                        <div className="min-w-0 text-sm">
+                          <span className="text-xs font-semibold text-gray-600">Recibo {i + 1}</span>
+                          <a href={r.url} target="_blank" rel="noopener noreferrer" className="block text-emerald-700 font-medium hover:underline break-all">{r.nombre || `Recibo ${i + 1}`}</a>
+                          {r.extraido && (r.extraido.monto || r.extraido.fecha) && (
+                            <div className="text-xs text-gray-600">
+                              {r.extraido.monto && <span>Leído: ${Number(r.extraido.monto).toLocaleString('es-CO')} · </span>}
+                              {r.extraido.fecha && <span>{r.extraido.fecha}</span>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : reciboData ? (
                   <div className="flex items-center gap-3 border border-emerald-100 bg-emerald-50 rounded-lg p-3">
                     <a href={reciboData.url} target="_blank" rel="noopener noreferrer" title="Ver recibo" className="shrink-0">
                       {esImagen(reciboData.tipo, reciboData.url) ? (

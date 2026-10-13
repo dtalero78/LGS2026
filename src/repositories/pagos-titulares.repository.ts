@@ -73,6 +73,8 @@ export interface PagoTitular {
   numeroReferencia: string | null;
   numeroFactura: string | null;
   documentosAdjuntos: any[];
+  /** Pago respaldado por DOS comprobantes (recibo 1 y 2 en documentosAdjuntos); valor digitado a mano. */
+  dosRecibos: boolean;
   validado: boolean;
   createdBy: string | null;
   validadoPor: string | null;
@@ -111,7 +113,7 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
          "saldo", "descuento", "valorAplicado", "inscripcion", "medioPago", "numeroReferencia",
          "numeroFactura", "documentosAdjuntos", "validado", "createdBy",
          "vlrpenalidad", "penalidad", "cambioContado", "realizadopor", "pagoDoble",
-         "nota", "banco"
+         "nota", "banco", "dosRecibos"
        ) VALUES (
          $1, $2, $3, $4, $5,
          $6, $7, $8, $9, $10,
@@ -119,7 +121,7 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
          $17, $18, $19, $20, $21, $22,
          $23, $24::jsonb, $25, $26,
          $27, $28, $29, $30, $31,
-         $32, $33
+         $32, $33, $34
        )
        RETURNING *`,
       [
@@ -156,6 +158,7 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
         data.pagoDoble ?? false,
         data.nota ?? null,
         data.banco ?? null,
+        data.dosRecibos ?? false,
       ]
     );
     return this.parse(row)!;

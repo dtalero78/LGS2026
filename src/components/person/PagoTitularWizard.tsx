@@ -8,6 +8,7 @@ import { PermissionGuard } from '@/components/permissions'
 import { PersonPermission } from '@/types/permissions'
 import { mediosPagoPara } from '@/lib/medios-pago'
 import { resolveRealizadoPor, diasDesdeBase, VENTANA_COMERCIAL_DIAS } from '@/lib/cambio-contado'
+import RecibosDobles, { type ReciboArchivo, sumaLeida, fmtPesos } from '@/components/common/RecibosDobles'
 
 interface PagoTitularWizardProps {
   isOpen: boolean
@@ -108,6 +109,12 @@ interface DraftState {
    * descuento, si lo hay, se aplica a la segunda.
    */
   pagoDoble: boolean
+  /**
+   * "El pago tiene dos recibos" — el pago se respalda con DOS comprobantes
+   * (recibo 1 y 2) y el valor se digita a mano: la IA no lo llena.
+   */
+  dosRecibos: boolean
+  recibos: (ReciboArchivo | null)[]
 }
 
 const DRAFT_TTL_MS = 72 * 60 * 60 * 1000 // 72 horas
@@ -144,6 +151,8 @@ const empty = (): DraftState => ({
   cambioContado: false,
   pagoDoble: false,
   nota: '',
+  dosRecibos: false,
+  recibos: [null, null],
 })
 
 function toNum(v: string): number {
@@ -334,7 +343,7 @@ export default function PagoTitularWizard({
     const draft = (window as any).__pagoDraft as DraftState | undefined
     if (draft) {
       const { savedAt: _omit, ...data } = draft as any
-      setForm({ ...empty(), ...data })
+      setForm({ ...empty(), ...data, recibos: Array.isArray(data.recibos) && data.recibos.length === 2 ? data.recibos : [null, null] })
       delete (window as any).__pagoDraft
     }
     setShowDraftBanner(false)
@@ -498,6 +507,25 @@ export default function PagoTitularWizard({
     input.click()
   }
 
+  // Dos recibos: el valor NO lo llena la IA. Del recibo 1 se precargan fecha,
+  // medio, banco y referencia (sin pisar lo ya escrito); del 2 solo se muestra el monto leído.
+  const toggleDosRecibos = () => setForm(f => f.dosRecibos
+    ? { ...f, dosRecibos: false, recibos: [null, null] }
+    : { ...f, dosRecibos: true, valorPagado: '' })
+  const onReciboLeido = (indice: number, e: any) => {
+    if (indice !== 0) return
+    setForm(f => ({
+      ...f,
+      fechaPago: (typeof e.fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(e.fecha)) ? e.fecha : f.fechaPago,
+      medioPago: f.medioPago || e.medioPago || '',
+      banco: f.banco || e.banco || '',
+      numeroReferencia: f.numeroReferencia || e.referencia || '',
+    }))
+  }
+  const sumaRecibos = sumaLeida(form.recibos)
+  const difiereDeSuma = form.dosRecibos && sumaRecibos != null && toNum(form.valorPagado) > 0
+    && Math.round(toNum(form.valorPagado)) !== Math.round(sumaRecibos)
+
   const removeDoc = (idx: number) => {
     setForm(f => ({ ...f, documentosAdjuntos: f.documentosAdjuntos.filter((_, i) => i !== idx) }))
   }
@@ -526,7 +554,12 @@ export default function PagoTitularWizard({
   // Valida y abre el modal de confirmación (no registra todavía).
   const handleSubmit = () => {
     if (!form.fechaPago) { toast.error('Fecha de pago es requerida'); return }
-    if (toNum(form.valorPagado) <= 0) { toast.error('Valor pagado debe ser mayor a 0'); return }
+    if (form.dosRecibos && (!form.recibos[0] || !form.recibos[1])) {
+      toast.error('Marcaste "El pago tiene dos recibos": adjunta el recibo 1 y el recibo 2'); return
+    }
+    if (toNum(form.valorPagado) <= 0) {
+      toast.error(form.dosRecibos ? 'Digita el valor total del pago (suma de los dos recibos)' : 'Valor pagado debe ser mayor a 0'); return
+    }
     if (form.numCuota && Number(form.numCuota) < 0) { toast.error('Número de cuota no puede ser negativo'); return }
     if (form.pagoDoble && !pagoDobleListo) {
       toast.error('Para un pago doble indica el # de cuota (1 o mayor)'); return
@@ -567,7 +600,17 @@ export default function PagoTitularWizard({
         medioPago: form.medioPago || null,
         banco: form.banco || null,
         numeroReferencia: form.numeroReferencia || null,
-        documentosAdjuntos: form.documentosAdjuntos,
+        // Con dos recibos, los comprobantes van como adjuntos marcados recibo 1 y 2.
+        documentosAdjuntos: [
+          ...form.documentosAdjuntos,
+          ...(form.dosRecibos
+            ? form.recibos.flatMap((r, i) => r ? [{
+                url: r.url, nombre: `Recibo ${i + 1} · ${r.nombre}`, tipo: r.tipo,
+                fechaSubida: r.fechaSubida, recibo: i + 1, montoLeido: r.montoLeido ?? null,
+              }] : [])
+            : []),
+        ],
+        dosRecibos: form.dosRecibos,
         // Penalidad: el backend guarda el valorCuota en vlrpenalidad y marca penalidad=true.
         penalidad: form.cambioCartera === 'penalidad',
         // Cambio Contado: el backend deriva `realizadopor` de la fecha del pago
@@ -657,8 +700,32 @@ export default function PagoTitularWizard({
             </div>
           </div>
 
+          {/* Dos recibos — el pago viene en DOS comprobantes: se suben ambos y el
+              valor se digita a mano (la IA no lo llena). */}
+          <div className={`rounded-lg border p-3 space-y-3 ${form.dosRecibos ? 'border-emerald-300 bg-emerald-50/40' : 'border-gray-200 bg-gray-50'}`}>
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-800 cursor-pointer select-none">
+              <input type="checkbox" checked={form.dosRecibos} onChange={toggleDosRecibos}
+                className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+              El pago tiene dos recibos
+            </label>
+            {form.dosRecibos && (
+              <>
+                <RecibosDobles
+                  carpetaId={titular._id}
+                  recibos={form.recibos}
+                  onChange={recibos => setForm(f => ({ ...f, recibos }))}
+                  leerConIA={reciboActivo}
+                  onLeido={onReciboLeido}
+                />
+                <p className="text-xs font-medium text-emerald-800">
+                  Digita en <strong>Valor a Pagar</strong> el monto total del pago (los dos recibos juntos).
+                </p>
+              </>
+            )}
+          </div>
+
           {/* Leer recibo — arriba, para alimentar el formulario primero */}
-          {reciboActivo && (
+          {reciboActivo && !form.dosRecibos && (
             <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 flex items-center justify-between gap-3 flex-wrap">
               <p className="text-sm text-teal-900">
                 <strong>¿Tienes el comprobante?</strong> Léelo y se autocompletan fecha, valor, medio de pago, banco y referencia.
@@ -787,6 +854,11 @@ export default function PagoTitularWizard({
               value={form.valorPagado}
               onChange={v => setForm(f => ({ ...f, valorPagado: v }))} required highlight />
           </div>
+          {difiereDeSuma && sumaRecibos != null && (
+            <p className="-mt-2 text-sm font-medium text-amber-700">
+              El valor digitado ({fmtPesos(toNum(form.valorPagado))}) no coincide con la suma leída de los dos recibos ({fmtPesos(sumaRecibos)}). Revísalo antes de registrar.
+            </p>
+          )}
 
           {/* Fila 4 — Reparto del pago doble. El valor capturado arriba se
               divide entre la cuota actual y la siguiente; si es impar, el peso
@@ -1109,7 +1181,15 @@ export default function PagoTitularWizard({
                 )}
               </p>
               <p><span className="text-gray-500">Valor del pago:</span>{' '}
-                <strong>$ {toNum(form.valorPagado).toLocaleString('es-CO')}</strong></p>
+                <strong>$ {toNum(form.valorPagado).toLocaleString('es-CO')}</strong>
+                {form.dosRecibos && (
+                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                    Dos recibos · valor digitado
+                  </span>
+                )}</p>
+              {difiereDeSuma && sumaRecibos != null && (
+                <p className="text-amber-700">⚠ No coincide con la suma leída de los recibos ({fmtPesos(sumaRecibos)}).</p>
+              )}
               <p><span className="text-gray-500">Fecha de pago:</span>{' '}
                 <strong>{fmtFecha(form.fechaPago)}</strong></p>
             </div>
