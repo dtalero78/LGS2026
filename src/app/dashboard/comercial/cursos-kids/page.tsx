@@ -66,7 +66,7 @@ export default function CursosKidsPage() {
   const [consultado, setConsultado] = useState<string | null>(null)
   const [pais, setPais] = useState('')
   const [curso, setCurso] = useState('')
-  const [estado, setEstado] = useState<FiltroEstado>('TODOS')
+  const [estado, setEstado] = useState<FiltroEstado>('ACTIVO')
   const [soloConCupo, setSoloConCupo] = useState(false)
 
   const load = async () => {
