@@ -68,6 +68,18 @@ function fullName(primer?: string, segundo?: string): string {
   return `${primer || ''} ${segundo || ''}`.trim();
 }
 
+/**
+ * KIDS rechaza la reserva entera ("La entrada no es válida") si un correo no es
+ * válido. Se toma el primer correo bien formado del texto (p. ej.
+ * "liamarvera@yahoo.es,hija" → "liamarvera@yahoo.es"); si no hay ninguno, null.
+ */
+function correoValido(v: unknown): string | null {
+  const m = String(v ?? '').match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+  return m ? m[0].toLowerCase() : null;
+}
+
+const normDoc = (v: unknown) => String(v ?? '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+
 /** Construye el body de POST /api/kids-intake/reservations desde los datos de LGS. */
 export function buildKidsReservation(args: {
   externalRef: string;
@@ -87,11 +99,15 @@ export function buildKidsReservation(args: {
     docTipo: DOC_TIPO,
     docNumero: String(titular.numeroId || ''),
     countryCode,
-    email: titular.email || null,
+    email: correoValido(titular.email),
     telefono: titular.celular || null,
   };
 
-  const esTitularApoderado = kd.titularEsApoderado === true;
+  // Si el apoderado tiene el MISMO documento que el titular es la misma persona:
+  // mandarlo como "apoderado nuevo" hace que KIDS intente crearla dos veces y
+  // falle con "Database error" (documento único). Se trata como titular = apoderado.
+  const esTitularApoderado = kd.titularEsApoderado === true
+    || (!!normDoc(kd.apoderadoDoc) && normDoc(kd.apoderadoDoc) === normDoc(titular.numeroId));
   const apoderadoNuevo: KidsPersona | undefined = esTitularApoderado ? undefined : {
     nombres: kd.apoderado || '',
     apellidos: kd.apoderadoApellidos || '',
@@ -99,7 +115,7 @@ export function buildKidsReservation(args: {
     docTipo: DOC_TIPO,
     docNumero: String(kd.apoderadoDoc || ''),
     countryCode,
-    email: kd.apoderadoMail || null,
+    email: correoValido(kd.apoderadoMail),
     telefono: kd.apoderadoTelefono || null,
   };
 
@@ -120,7 +136,7 @@ export function buildKidsReservation(args: {
       docTipo: DOC_TIPO,
       docNumero: String(b.numeroId || ''),
       countryCode,
-      email: b.email || null,
+      email: correoValido(b.email),
       telefono: b.celular || null,
     },
     parentesco: kd.parentesco || null,
