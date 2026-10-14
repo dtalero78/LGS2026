@@ -92,6 +92,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 63. Filtrado por estado (Pendiente, Aprobado, Rechazado) y tipo
 64. Descarga y envío de PDF de contratos
 65. Paginación y búsqueda de aprobaciones
+65b. **Kids** (`/dashboard/aprobacion/kids`, permiso `APROBACION.KIDS.VER`): usuarios Kids por campaña / curso / salón (guía, horarios, inscritos, cupo); clic expande los inscritos (niño, ID, edad, contrato, apoderado, ID apoderado, email, teléfono). Pestañas **Matriculados** (Activos *default* / Inactivos / Todos) y **En reserva**, filtros campaña (*default* la EN_MATRICULA) / curso / salón / guía, CSV por pestaña. Fuente = KIDS2026 `GET /api/kids-intake/roster` (KIDS v13) → `kidsIntake.roster()`, cruzado en `GET /api/postgres/aprobacion/kids` con las fichas LGS; "En reserva" suma los niños de `KIDS_INSCRIPCIONES` que aún no tienen reserva en KIDS
 
 ### Gestión de Permisos (Admin)
 66. Interfaz de matriz de permisos (solo SUPER_ADMIN/ADMIN, abre en nueva pestaña)
@@ -1520,6 +1521,7 @@ interface ConsentData {
 | Prospectos | `/dashboard/comercial/prospectos` | COMERCIAL permissions |
 | Cursos Kids | `/dashboard/comercial/cursos-kids` | COMERCIAL.CURSOS_KIDS.VER |
 | Aprobación | `/dashboard/aprobacion` | APROBACION permissions |
+| Aprobación › Kids | `/dashboard/aprobacion/kids` | APROBACION.KIDS.VER |
 | Permisos Admin | `/admin/permissions` | SUPER_ADMIN/ADMIN only |
 | Crea login | `/admin/crea-login` | MANTENIMIENTO.USUARIOS.CREAR_LOGIN |
 | Consulta de Scripts | `/admin/scripts/consulta` | MANTENIMIENTO.SCRIPTS.CONSULTA |

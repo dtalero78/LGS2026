@@ -975,6 +975,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Ver el ítem y la página de Contratos Aprobados (Aprobados/Inactivos/Finalizados)',
   },
   {
+    code: AprobacionPermission.KIDS_VER,
+    module: Module.APROBACION,
+    section: 'Menú Aprobación',
+    name: 'Ítem "Kids"',
+    description: 'Ver la consulta de usuarios Kids (matriculados y en reserva) por campaña, curso y salón, y descargar CSV',
+  },
+  {
     code: AprobacionPermission.CENTRO_BORRAR,
     module: Module.APROBACION,
     section: 'Menú Aprobación',

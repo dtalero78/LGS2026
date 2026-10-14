@@ -415,6 +415,8 @@ export enum AprobacionPermission {
   CENTRO_VER = 'APROBACION.CENTRO.VER',
   CONVERSION_TITULAR_VER = 'APROBACION.CONVERSION_TITULAR.VER',
   CONTRATOS_APROBADOS_VER = 'APROBACION.CONTRATOS_APROBADOS.VER',
+  // Consulta Kids: matriculados (activos/inactivos) y en reserva, por campaña/curso/salón
+  KIDS_VER = 'APROBACION.KIDS.VER',
 
   // Acción: borrar contrato NO aprobado + todos sus registros (cascade + snapshot en PURGE_LOG)
   CENTRO_BORRAR = 'APROBACION.CENTRO.BORRAR',

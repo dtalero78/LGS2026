@@ -340,6 +340,10 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/dashboard/aprobacion/contratos-aprobados': [
     'APROBACION.CONTRATOS_APROBADOS.VER' as Permission,
   ],
+  // Aprobación → Kids (su propio permiso)
+  '/dashboard/aprobacion/kids': [
+    'APROBACION.KIDS.VER' as Permission,
+  ],
 };
 
 /**

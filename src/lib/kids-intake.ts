@@ -42,6 +42,31 @@ export interface KidsCurso { tipo: string; inicio?: string | null; finalCurso?: 
 export interface KidsCampania { id: string; nombre: string; inicio: string; fin: string; finalVenta?: string; cursos: KidsCurso[] }
 export interface KidsAvailability { campanias: KidsCampania[] }
 
+// ── Tipos de roster (KIDS v13+) ──
+export interface KidsMatricula {
+  enrollmentId: string; classroomId: string;
+  /** ACTIVA | RESERVADA | FINALIZADA | CANCELADA */
+  matriculaEstado: string;
+  /** "contrato#documentoNiño" (LGS) */
+  externalRef: string | null;
+  /** PENDIENTE | APROBADO | ONHOLD | INACTIVO */
+  contratoEstado: string;
+  contratoNumero: number; inicio: string; finalContrato: string;
+  nino: { nombres: string; apellidos: string; docNumero: string; fechaNacimiento: string | null; username: string | null };
+  apoderado: { nombres: string; apellidos: string; docNumero: string; email: string | null; telefono: string | null; parentesco: string | null } | null;
+}
+export interface KidsRosterSalon {
+  id: string; nombre: string; pais: string; activo: boolean; cupo: number; ocupados: number;
+  guia: string | null; horario: KidsSlot[]; matriculas: KidsMatricula[];
+}
+export interface KidsRosterCampania {
+  id: string; nombre: string;
+  /** EN_MATRICULA | ACTIVA | CERRADA */
+  estado: string;
+  inicio: string; fin: string; finalVenta: string;
+  cursos: { tipo: string; inicio: string | null; finalCurso: string | null; salones: KidsRosterSalon[] }[];
+}
+
 // ── Tipos de reserva ──
 export interface KidsPersona {
   nombres: string; apellidos: string; fechaNacimiento?: string | null;
@@ -139,6 +164,11 @@ export const kidsIntake = {
     const q = qs.toString();
     return call<KidsAvailability>('GET', `/api/kids-intake/availability${q ? `?${q}` : ''}`);
   },
+  /**
+   * Todas las campañas (cualquier estado), cursos y salones con sus matrículas en
+   * cualquier estado (contrato, niño, apoderado). Consulta Aprobación › Kids. KIDS v13+.
+   */
+  roster: () => call<{ campanias: KidsRosterCampania[] }>('GET', '/api/kids-intake/roster'),
   /** Crea la reserva (RESERVADA, retiene cupo). Idempotente por externalRef → 409 si ya existe. */
   createReservation: (input: KidsReservationInput) =>
     call<KidsReservationResult>('POST', '/api/kids-intake/reservations', input),
