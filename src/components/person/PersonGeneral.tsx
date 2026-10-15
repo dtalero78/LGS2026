@@ -12,6 +12,7 @@ import toast from 'react-hot-toast'
 import PersonContractViewer from './PersonContractViewer'
 import SuspendidaBadge from '@/components/common/SuspendidaBadge'
 import DocumentosReciboModal from '@/components/common/DocumentosReciboModal'
+import StudentOnHold from '@/components/student/StudentOnHold'
 
 interface PersonGeneralProps {
   person: Person
@@ -326,6 +327,25 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
             </div>
           ) : (
             <p className="text-sm text-gray-500 italic">Beneficiario Kids — sin detalle de inscripción registrado.</p>
+          )}
+          {/* OnHold del kid: el mismo de LGS, sincronizado con KIDS2026 (src/lib/kids-onhold.ts).
+              Un kid no tiene ficha académica en LGS, por eso va aquí y no en /student/[id]. */}
+          {esBeneficiarioKids && (
+            <div className="mt-4">
+              <StudentOnHold
+                studentId={person._id}
+                peopleId={person._id}
+                numeroId={String((person as any).numeroId || '')}
+                estadoInactivo={(person as any).estadoInactivo === true}
+                currentFechaOnHold={(person as any).fechaOnHold || null}
+                currentFechaFinOnHold={(person as any).fechaFinOnHold || null}
+                onHoldCount={Number((person as any).onHoldCount) || 0}
+                onHoldHistory={Array.isArray((person as any).onHoldHistory) ? (person as any).onHoldHistory : []}
+              />
+              <p className="mt-2 text-xs text-gray-500">
+                El OnHold se aplica también en KIDS2026 (el niño queda en pausa y sin acceso allá), y uno hecho en KIDS se refleja aquí.
+              </p>
+            </div>
           )}
         </div>
       )}

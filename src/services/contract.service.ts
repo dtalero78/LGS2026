@@ -9,6 +9,7 @@ import { PeopleRepository } from '@/repositories/people.repository';
 import { ValidationError, NotFoundError } from '@/lib/errors';
 import { query } from '@/lib/postgres';
 import { sincronizarFinalTitularDe } from '@/lib/sync-final-titular';
+import { esBeneficiarioKids, finPausaEnKids, pausarEnKids, type ResultadoKidsOnhold } from '@/lib/kids-onhold';
 
 // ── Contract Extension ──
 
@@ -146,14 +147,25 @@ interface ActivateOnHoldInput {
   fechaFinOnHold: string;
   motivo?: string;
   activadoPor: string;
+  /**
+   * 'KIDS' = el OnHold se hizo en KIDS2026 y llega por /api/kids-sync/onhold:
+   * se aplica aquí SIN avisar de vuelta a KIDS (evita el eco).
+   */
+  origen?: 'LGS' | 'KIDS';
 }
 
 export async function activateOnHold(input: ActivateOnHoldInput) {
   if (!input.fechaOnHold || !input.fechaFinOnHold) {
     throw new ValidationError('fechaOnHold and fechaFinOnHold are required');
   }
+  if (String(input.fechaFinOnHold).slice(0, 10) <= String(input.fechaOnHold).slice(0, 10)) {
+    throw new ValidationError('La Fecha Fin OnHold debe ser posterior a la Fecha Inicio OnHold');
+  }
 
   const person = await PeopleRepository.findByIdOrThrow(input.studentId);
+  if (person.estadoInactivo === true && person.fechaOnHold) {
+    throw new ValidationError('El beneficiario ya está en OnHold');
+  }
 
   // Reglas de bloqueo de OnHold:
   //  - Máximo 2 OnHolds por contrato.
@@ -179,17 +191,33 @@ export async function activateOnHold(input: ActivateOnHoldInput) {
     activadoPor: input.activadoPor,
   };
 
-  const updatedHistory = [...currentHistory, onHoldEntry];
+  const esKids = esBeneficiarioKids(person);
+  const updatedHistory = [...currentHistory, { ...onHoldEntry, ...(esKids && { origen: input.origen || 'LGS' }) }];
 
-  const student = await PeopleRepository.activateOnHold(
-    input.studentId,
-    input.fechaOnHold,
-    input.fechaFinOnHold,
-    updatedHistory
-  );
+  // Kids: KIDS2026 PRIMERO (valida sus reglas). Si rechaza o no responde, lanza
+  // y aquí no se pausa: nunca quedan distintos.
+  const kids: ResultadoKidsOnhold = esKids && input.origen !== 'KIDS'
+    ? await pausarEnKids(person, input)
+    : 'NO_APLICA';
 
-  // Sync: block login in USUARIOS_ROLES
-  if (person.email) {
+  let student;
+  try {
+    student = await PeopleRepository.activateOnHold(
+      input.studentId,
+      input.fechaOnHold,
+      input.fechaFinOnHold,
+      updatedHistory
+    );
+  } catch (err) {
+    // KIDS ya quedó en pausa: se deshace allá (0 días) antes de propagar el error.
+    if (kids === 'SINCRONIZADO') await finPausaEnKids(person, 0, false);
+    throw err;
+  }
+
+  // Sync: block login in USUARIOS_ROLES. Un kid NO tiene login en LGS (entra a
+  // KIDS) y su correo suele ser el del apoderado/titular: bloquear por correo
+  // le quitaba el acceso a otra persona.
+  if (person.email && !esKids) {
     try {
       await query(
         `UPDATE "USUARIOS_ROLES" SET "activo" = false, "_updatedDate" = NOW() WHERE LOWER("email") = LOWER($1)`,
@@ -200,10 +228,18 @@ export async function activateOnHold(input: ActivateOnHoldInput) {
     }
   }
 
-  return { student, onHoldEntry };
+  return { student, onHoldEntry, kids };
 }
 
-export async function deactivateOnHold(studentId: string) {
+export async function deactivateOnHold(
+  studentId: string,
+  opts: {
+    /** Días a devolver, ya calculados por KIDS (OnHold cerrado allá): se usan tal cual. */
+    dias?: number;
+    /** 'KIDS' = llega por /api/kids-sync/onhold: no se avisa de vuelta. */
+    origen?: 'LGS' | 'KIDS';
+  } = {},
+) {
   const person = await PeopleRepository.findByIdOrThrow(studentId);
 
   if (!person.fechaOnHold || !person.fechaFinOnHold) {
@@ -223,9 +259,18 @@ export async function deactivateOnHold(studentId: string) {
   const fechaFinOnHold = new Date(person.fechaFinOnHold);
   const today = new Date();
   const effectiveEnd = today < fechaFinOnHold ? today : fechaFinOnHold;
-  const daysPaused = Math.max(0, Math.ceil(
-    (effectiveEnd.getTime() - fechaOnHold.getTime()) / (1000 * 60 * 60 * 24)
-  ));
+  const daysPaused = typeof opts.dias === 'number' && Number.isFinite(opts.dias)
+    ? Math.max(0, Math.round(opts.dias))
+    : Math.max(0, Math.ceil(
+        (effectiveEnd.getTime() - fechaOnHold.getTime()) / (1000 * 60 * 60 * 24)
+      ));
+
+  // Kids: KIDS2026 PRIMERO, con estos mismos días (la fecha final queda igual en
+  // los dos lados). Si KIDS rechaza o no responde, lanza y aquí no se reactiva.
+  const esKids = esBeneficiarioKids(person);
+  const kids: ResultadoKidsOnhold = esKids && opts.origen !== 'KIDS'
+    ? await finPausaEnKids(person, daysPaused)
+    : 'NO_APLICA';
 
   // Extend contract automatically
   const currentFinal = new Date(person.finalContrato);
@@ -262,8 +307,8 @@ export async function deactivateOnHold(studentId: string) {
     }
   }
 
-  // Sync: restore login in USUARIOS_ROLES
-  if (person.email) {
+  // Sync: restore login in USUARIOS_ROLES (un kid no tiene login en LGS; ver activateOnHold).
+  if (person.email && !esKids) {
     try {
       await query(
         `UPDATE "USUARIOS_ROLES" SET "activo" = true, "_updatedDate" = NOW() WHERE LOWER("email") = LOWER($1)`,
@@ -278,6 +323,7 @@ export async function deactivateOnHold(studentId: string) {
 
   return {
     student,
+    kids,
     extension: {
       daysPaused,
       previousFinalContrato: currentFinal.toISOString().split('T')[0],

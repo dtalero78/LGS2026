@@ -189,6 +189,16 @@ export const kidsIntake = {
    */
   suspendReservation: (externalRef: string, motivo: string) =>
     call<{ aplicado: boolean; estado: string }>('POST', `/api/kids-intake/reservations/${encodeURIComponent(externalRef)}/suspend`, { motivo }),
+  /**
+   * OnHold abierto en LGS → la misma pausa en KIDS (inicio, fin programado, motivo;
+   * bloquea el login del niño). KIDS v14+. `aplicado: false` si el contrato KIDS no
+   * está APROBADO. Lanza (4xx) si rompe una regla de KIDS.
+   */
+  pauseReservation: (externalRef: string, datos: { desde: string; hasta: string; motivo: string; activadoPor: string | null }) =>
+    call<{ aplicado: boolean; estado: string }>('POST', `/api/kids-intake/reservations/${encodeURIComponent(externalRef)}/onhold`, datos),
+  /** Fin del OnHold en LGS → KIDS cierra la pausa extendiendo el fin con los MISMOS días. KIDS v14+. */
+  endPauseReservation: (externalRef: string, dias: number) =>
+    call<{ aplicado: boolean; estado: string; nuevoFinal?: string }>('POST', `/api/kids-intake/reservations/${encodeURIComponent(externalRef)}/onhold/end`, { dias }),
   /** Beneficiario REACTIVADO en LGS → KIDS cierra la pausa que abrió LGS y reactiva el login. */
   reactivateReservation: (externalRef: string) =>
     call<{ aplicado: boolean; estado: string; motivo?: string }>('POST', `/api/kids-intake/reservations/${encodeURIComponent(externalRef)}/reactivate`, {}),

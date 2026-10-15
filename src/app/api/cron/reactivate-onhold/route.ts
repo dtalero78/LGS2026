@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/postgres'
 import { recordCronRun } from '@/lib/cron-runs'
 import { sincronizarFinalTitularDe } from '@/lib/sync-final-titular'
+import { esBeneficiarioKids, finPausaEnKids } from '@/lib/kids-onhold'
 
 const CRON_SECRET = process.env.CRON_SECRET
 
@@ -108,11 +109,20 @@ export async function GET(request: NextRequest) {
             ).catch(err => console.warn(`Cron reactivate-onhold: ACADEMICA sync failed for ${student.numeroId}:`, err))
           }
 
+          // Kids: KIDS2026 cierra su pausa con estos mismos días (best-effort:
+          // si no responde, el worker de KIDS la cierra al cumplirse su fin).
+          const esKids = esBeneficiarioKids(student)
+          if (esKids) {
+            const r = await finPausaEnKids(student, diasPausados, false)
+            if (r === 'ERROR') console.warn(`Cron reactivate-onhold: KIDS no confirmó el fin de OnHold de ${student._id}`)
+          }
+
           // Sync USUARIOS_ROLES.activo=true (RESTAURAR login). Sin esto el
           // estudiante quedaba reactivado (estadoInactivo=false) pero con el
           // login bloqueado → no podía entrar. Bug histórico: el cron no
           // restauraba el acceso (el panel/manual sí lo hacen).
-          if (student.email) {
+          // Un kid no tiene login en LGS: su correo es el del apoderado/titular.
+          if (student.email && !esKids) {
             await query(
               `UPDATE "USUARIOS_ROLES" SET "activo" = true, "_updatedDate" = NOW() WHERE LOWER("email") = LOWER($1)`,
               [student.email]

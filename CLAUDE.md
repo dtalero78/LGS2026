@@ -569,7 +569,7 @@ GOOGLE_SERVICE_ACCOUNT_JSON=service_account_json_para_modo_drive_lgs
 GOOGLE_DRIVE_FOLDER_ID=carpeta_contratos_unidad_compartida
 CRM_BRIDGE_SECRET=hmac_para_sso_con_el_crm
 KIDS_API_URL=base_url_de_kids2026 (integración proceso Kids; sin configurar = integración inactiva)
-KIDS_INTAKE_API_KEY=clave_de_servicio_x-api-key (= LGS_INTAKE_API_KEY del lado de KIDS2026)
+KIDS_INTAKE_API_KEY=clave_de_servicio_x-api-key (= LGS_INTAKE_API_KEY del lado de KIDS2026; también autentica a KIDS cuando llama a LGS en /api/kids-sync/*)
 DO_SPACES_KEY / DO_SPACES_SECRET / DO_SPACES_BUCKET / DO_SPACES_REGION / DO_SPACES_ENDPOINT
 SENCE_RUT_OTEC=rut_del_otec_para_integracion_sence
 SENCE_TOKEN=token_sence_generado_en_sistemas_sence_cl_rts
@@ -927,6 +927,13 @@ Contract end: 2025-12-31 (365 days)
 
 Result: Student maintains full 365 days of contract
 ```
+
+### OnHold de beneficiarios Kids (sincronizado con KIDS2026)
+- La tarjeta OnHold de un kid está en su ficha `/person/[id]` (sección Programa Kids), no en `/student/[id]` (los kids no tienen ficha académica).
+- **LGS → KIDS**: `activateOnHold`/`deactivateOnHold` llaman **primero** a KIDS ([src/lib/kids-onhold.ts](src/lib/kids-onhold.ts) → `kidsIntake.pauseReservation` / `endPauseReservation`); si KIDS rechaza o no responde, no se hace en LGS. Al cerrar, KIDS extiende con los **mismos días** que LGS. El cron `reactivate-onhold` avisa a KIDS en modo best-effort.
+- **KIDS → LGS**: `POST /api/kids-sync/onhold` (`x-api-key` = `KIDS_INTAKE_API_KEY`, la misma clave en ambos sentidos; KIDS usa `LGS_API_URL`). Se aplica con `origen:'KIDS'` (sin eco) y valida las reglas de LGS (máx. 2, sin extensión manual previa).
+- En KIDS la pausa pide lo mismo que en LGS (inicio, fin, motivo), bloquea el login del niño y su worker la cierra al llegar el fin programado. `contracts_onhold.tipo` distingue `ONHOLD` (devuelve días) de `SUSPENSION` (inactivación en LGS, no devuelve).
+- Un kid **no** toca `USUARIOS_ROLES` (no tiene login en LGS; su correo es el del apoderado/titular).
 
 ### Benefits
 
