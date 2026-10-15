@@ -92,9 +92,22 @@ export function buildKidsReservation(args: {
 }): KidsReservationInput {
   const { externalRef, countryCode, inicio, finalContrato, titular, beneficiario: b, kidsData: kd } = args;
 
+  // Titular EMPRESA (contrato de empresa): la razón social va en primerNombre y no
+  // tiene apellidos. KIDS exige apellidos (persona), así que se rotula "(Empresa)".
+  // Y una empresa nunca es la apoderada del niño: debe venir una persona.
+  const esEmpresa = String(titular.tipoPersona || '').trim() === 'Empresa';
+  if (esEmpresa) {
+    const doc = normDoc(kd.apoderadoDoc);
+    if (!doc || doc === normDoc(titular.numeroId) || !String(kd.apoderado || '').trim()) {
+      throw new Error(
+        'El titular es una empresa: el apoderado debe ser una persona (p. ej. el representante legal), ' +
+        'con su propio nombre y documento — no el RUT de la empresa.');
+    }
+  }
+
   const titularPersona: KidsPersona = {
     nombres: fullName(titular.primerNombre, titular.segundoNombre),
-    apellidos: fullName(titular.primerApellido, titular.segundoApellido),
+    apellidos: fullName(titular.primerApellido, titular.segundoApellido) || (esEmpresa ? '(Empresa)' : '-'),
     fechaNacimiento: toISODate(titular.fechaNacimiento) || null,
     docTipo: DOC_TIPO,
     docNumero: String(titular.numeroId || ''),
@@ -106,8 +119,8 @@ export function buildKidsReservation(args: {
   // Si el apoderado tiene el MISMO documento que el titular es la misma persona:
   // mandarlo como "apoderado nuevo" hace que KIDS intente crearla dos veces y
   // falle con "Database error" (documento único). Se trata como titular = apoderado.
-  const esTitularApoderado = kd.titularEsApoderado === true
-    || (!!normDoc(kd.apoderadoDoc) && normDoc(kd.apoderadoDoc) === normDoc(titular.numeroId));
+  const esTitularApoderado = !esEmpresa && (kd.titularEsApoderado === true
+    || (!!normDoc(kd.apoderadoDoc) && normDoc(kd.apoderadoDoc) === normDoc(titular.numeroId)));
   const apoderadoNuevo: KidsPersona | undefined = esTitularApoderado ? undefined : {
     nombres: kd.apoderado || '',
     apellidos: kd.apoderadoApellidos || '',

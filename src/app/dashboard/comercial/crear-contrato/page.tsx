@@ -2393,6 +2393,7 @@ function CrearContratoContent() {
           titularNombre={`${titular.primerNombre || ''} ${titular.segundoNombre || ''}`.trim()}
           titularApellidos={`${titular.primerApellido || ''} ${titular.segundoApellido || ''}`.trim()}
           titularDocumento={titular.numeroId}
+          titularEsEmpresa={titular.tipoPersona === 'Empresa'}
           titularCelular={titular.celular ? getPhonePrefix() + titular.celular : ''}
           titularEmail={titular.email}
           plataforma={titular.plataforma}

@@ -2,6 +2,7 @@ import 'server-only';
 import { query, queryOne } from '@/lib/postgres';
 import { kidsIntake, KidsIntakeError } from '@/lib/kids-intake';
 import { buildKidsReservation, plataformaToCountryCode, toISODate } from '@/lib/kids-mapping';
+import { ValidationError } from '@/lib/errors';
 
 const normDoc = (v: any) => String(v ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
@@ -34,10 +35,13 @@ export async function asegurarReservaKids(insc: any, beneficiario: any): Promise
   if (!titular) throw new Error(`No se encontró el titular del contrato ${contrato}.`);
 
   // "titularEsApoderado" no se guarda en KIDS_INSCRIPCIONES: se deduce del documento.
-  const titularEsApoderado = !insc.apoderadoDoc || normDoc(insc.apoderadoDoc) === normDoc(titular.numeroId);
+  // Una empresa nunca es apoderada (buildKidsReservation lo valida con mensaje claro).
+  const esEmpresa = String(titular.tipoPersona || '').trim() === 'Empresa';
+  const titularEsApoderado = !esEmpresa && (!insc.apoderadoDoc || normDoc(insc.apoderadoDoc) === normDoc(titular.numeroId));
   const externalRef = `${contrato}#${beneficiario.numeroId || insc.numeroId}`;
 
-  const input = buildKidsReservation({
+  let input: ReturnType<typeof buildKidsReservation>;
+  try { input = buildKidsReservation({
     externalRef,
     countryCode: plataformaToCountryCode(titular.plataforma || beneficiario.plataforma),
     inicio: new Date().toISOString().slice(0, 10),
@@ -55,7 +59,12 @@ export async function asegurarReservaKids(insc: any, beneficiario: any): Promise
       apoderadoMail: insc.apoderadoMail,
       parentesco: insc.parentesco,
     },
-  });
+  }); } catch (e: any) {
+    // Datos que KIDS no aceptaría (p. ej. empresa como apoderada): se avisa claro.
+    await query(`UPDATE "KIDS_INSCRIPCIONES" SET "errorKids"=$2, "_updatedDate"=NOW() WHERE "_id"=$1`,
+      [insc._id, String(e?.message || 'error').slice(0, 500)]).catch(() => null);
+    throw new ValidationError(String(e?.message || 'Datos Kids incompletos'));
+  }
 
   let ref = externalRef;
   let contractId: string | null = null;
@@ -70,7 +79,8 @@ export async function asegurarReservaKids(insc: any, beneficiario: any): Promise
     if (!(e instanceof KidsIntakeError && e.status === 409)) {
       await query(`UPDATE "KIDS_INSCRIPCIONES" SET "errorKids"=$2, "_updatedDate"=NOW() WHERE "_id"=$1`,
         [insc._id, String(e?.message || 'error').slice(0, 500)]).catch(() => null);
-      throw new Error(`KIDS no aceptó la reserva: ${e?.message || 'error desconocido'}`);
+      // ValidationError (400): la pantalla muestra el motivo real, no "Database error".
+      throw new ValidationError(`KIDS no aceptó la reserva: ${e?.message || 'error desconocido'}`);
     }
   }
   await query(
@@ -118,6 +128,6 @@ export async function matricularKids(insc: any, beneficiario: any): Promise<Kids
   } catch (e: any) {
     await query(`UPDATE "KIDS_INSCRIPCIONES" SET "errorKids"=$2, "_updatedDate"=NOW() WHERE "_id"=$1`,
       [insc._id, String(e?.message || 'error').slice(0, 500)]).catch(() => null);
-    throw new Error(`KIDS no aprobó la matrícula: ${e?.message || 'error desconocido'}`);
+    throw new ValidationError(`KIDS no aprobó la matrícula: ${e?.message || 'error desconocido'}`);
   }
 }

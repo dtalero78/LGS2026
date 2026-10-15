@@ -81,6 +81,11 @@ interface Props {
   cursoFijo?: string | null
   /** true = no muestra el guía (advisor) del salón en la lista (Crear Contrato). */
   ocultarGuia?: boolean
+  /**
+   * Titular EMPRESA: no puede ser el apoderado del niño. Se oculta "¿El titular
+   * será el apoderado?" y se exige una persona con su propio documento.
+   */
+  titularEsEmpresa?: boolean
   onSave: (value: KidsBeneficiarioValue) => void
   onCancel: () => void
 }
@@ -90,7 +95,7 @@ const salonLleno = (s: Salon) => s.lleno === true || s.ocupados >= s.cupo
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500'
 
 export default function KidsBeneficiarioModal({
-  open, initial, titularNombre, titularApellidos, titularDocumento, titularCelular, titularEmail, plataforma, mostrarLlenos = false, textoGuardar = 'Guardar beneficiario Kids', titulo = 'Beneficiario Kids', cursoFijo = null, ocultarGuia = false, onSave, onCancel,
+  open, initial, titularNombre, titularApellidos, titularDocumento, titularCelular, titularEmail, plataforma, mostrarLlenos = false, textoGuardar = 'Guardar beneficiario Kids', titulo = 'Beneficiario Kids', cursoFijo = null, ocultarGuia = false, titularEsEmpresa = false, onSave, onCancel,
 }: Props) {
   const [form, setForm] = useState<KidsBeneficiarioValue>({})
   const [kids, setKids] = useState<KidsData>({})
@@ -211,10 +216,20 @@ export default function KidsBeneficiarioModal({
         apoderadoMail: titularEmail || d.apoderadoMail || '',
       }))
     } else {
-      setKids(d => ({ ...d, titularEsApoderado: false }))
+      // Al desmarcar se limpian los datos que se copiaron del titular: antes quedaban
+      // (incl. su documento) y, como el documento coincidía, se seguía tratando al
+      // titular como apoderado aunque se hubiera escrito otro nombre.
+      setKids(d => ({
+        ...d, titularEsApoderado: false,
+        apoderado: d.apoderado === titularNombre ? '' : d.apoderado,
+        apoderadoApellidos: d.apoderadoApellidos === titularApellidos ? '' : d.apoderadoApellidos,
+        apoderadoDoc: d.apoderadoDoc === titularDocumento ? '' : d.apoderadoDoc,
+        apoderadoTelefono: d.apoderadoTelefono === titularCelular ? '' : d.apoderadoTelefono,
+        apoderadoMail: d.apoderadoMail === titularEmail ? '' : d.apoderadoMail,
+      }))
     }
   }
-  const apoderadoLocked = kids.titularEsApoderado === true
+  const apoderadoLocked = !titularEsEmpresa && kids.titularEsApoderado === true
 
   const guardar = () => {
     if (!form.primerNombre?.trim() || !form.primerApellido?.trim()) {
@@ -240,7 +255,19 @@ export default function KidsBeneficiarioModal({
       if (catalogConfigured && catalogError) { setError(`${catalogError} No se puede inscribir el kid hasta resolverlo.`); return }
       if (catalogConfigured && !kids.classroomId) { setError('Selecciona campaña, tipo de curso y salón'); return }
     }
-    onSave({ ...form, kidsData: kids })
+    // Titular empresa: el apoderado es una PERSONA con su propio documento (KIDS
+    // rechazaba la reserva con "La entrada no es válida" si llegaba el RUT de la empresa).
+    if (titularEsEmpresa) {
+      const docAp = String(kids.apoderadoDoc || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+      const docTit = String(titularDocumento || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+      if (!kids.apoderado?.trim() || !kids.apoderadoApellidos?.trim() || !docAp) {
+        setError('El titular es una empresa: indique nombres, apellidos y documento de la persona apoderada (p. ej. el representante legal).'); return
+      }
+      if (docAp === docTit) {
+        setError('El documento del apoderado no puede ser el RUT de la empresa: use el documento de la persona apoderada.'); return
+      }
+    }
+    onSave({ ...form, kidsData: titularEsEmpresa ? { ...kids, titularEsApoderado: false } : kids })
   }
 
   return (
@@ -390,10 +417,16 @@ export default function KidsBeneficiarioModal({
           {/* Apoderado */}
           <div className="border-t border-gray-100 pt-5">
             <h3 className="text-xs font-bold uppercase tracking-wide text-gray-700 mb-3"><span className="text-primary-600">＋</span> Apoderado <span className="normal-case font-normal text-gray-400">(adicional Kids)</span></h3>
-            <label className="flex items-center gap-2 mb-3 cursor-pointer">
-              <input type="checkbox" checked={kids.titularEsApoderado === true} onChange={e => toggleTitularApoderado(e.target.checked)} className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded" />
-              <span className="text-sm text-gray-800">¿El titular será el apoderado?</span>
-            </label>
+            {titularEsEmpresa ? (
+              <p className="mb-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                El titular es una <strong>empresa</strong>: el apoderado debe ser una persona (p. ej. el representante legal), con su propio documento — no el RUT de la empresa.
+              </p>
+            ) : (
+              <label className="flex items-center gap-2 mb-3 cursor-pointer">
+                <input type="checkbox" checked={kids.titularEsApoderado === true} onChange={e => toggleTitularApoderado(e.target.checked)} className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded" />
+                <span className="text-sm text-gray-800">¿El titular será el apoderado?</span>
+              </label>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Nombres del apoderado"><input value={kids.apoderado || ''} disabled={apoderadoLocked} onChange={e => setK('apoderado', e.target.value)} className={`${inputCls} disabled:bg-gray-100`} /></Field>
               <Field label="Apellidos del apoderado"><input value={kids.apoderadoApellidos || ''} disabled={apoderadoLocked} onChange={e => setK('apoderadoApellidos', e.target.value)} className={`${inputCls} disabled:bg-gray-100`} /></Field>

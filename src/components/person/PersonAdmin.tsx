@@ -1973,6 +1973,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         titularNombre={`${person.primerNombre || ''} ${person.segundoNombre || ''}`.trim()}
         titularApellidos={`${person.primerApellido || ''} ${person.segundoApellido || ''}`.trim()}
         titularDocumento={person.numeroId}
+        titularEsEmpresa={(person as any).tipoPersona === 'Empresa'}
         titularCelular={person.celular}
         titularEmail={person.email}
         plataforma={person.plataforma}
@@ -2019,6 +2020,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         titularNombre={`${person.primerNombre || ''} ${person.segundoNombre || ''}`.trim()}
         titularApellidos={`${person.primerApellido || ''} ${person.segundoApellido || ''}`.trim()}
         titularDocumento={person.numeroId}
+        titularEsEmpresa={(person as any).tipoPersona === 'Empresa'}
         titularCelular={person.celular}
         titularEmail={person.email}
         plataforma={person.plataforma}
@@ -2036,6 +2038,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         titularNombre={`${person.primerNombre || ''} ${person.segundoNombre || ''}`.trim()}
         titularApellidos={`${person.primerApellido || ''} ${person.segundoApellido || ''}`.trim()}
         titularDocumento={person.numeroId}
+        titularEsEmpresa={(person as any).tipoPersona === 'Empresa'}
         titularCelular={person.celular}
         titularEmail={person.email}
         plataforma={person.plataforma}
