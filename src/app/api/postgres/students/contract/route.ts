@@ -3,6 +3,7 @@ import { requirePermission } from '@/lib/api-permissions';
 import { StudentPermission } from '@/types/permissions';
 import { extendByDays, extendToDate } from '@/services/contract.service';
 import { ValidationError } from '@/lib/errors';
+import { textoKids } from '@/lib/kids-onhold';
 
 /**
  * PUT /api/postgres/students/contract
@@ -37,9 +38,10 @@ export const PUT = handlerWithAuth(async (request, _ctx, session) => {
 
     return successResponse({
       student: result.student,
-      message: `Contrato extendido exitosamente por ${body.diasExtendidos} días`,
+      message: `Contrato extendido exitosamente por ${body.diasExtendidos} días.${textoKids(result.kids)}`,
       extension: result.extension,
       extensionEntry: result.extensionEntry,
+      kids: result.kids,
     });
   }
 
@@ -53,8 +55,9 @@ export const PUT = handlerWithAuth(async (request, _ctx, session) => {
 
   return successResponse({
     student: result.student,
-    message: `Contrato extendido exitosamente`,
+    message: `Contrato extendido exitosamente.${textoKids(result.kids)}`,
     extension: result.extension,
     extensionEntry: result.extensionEntry,
+    kids: result.kids,
   });
 });

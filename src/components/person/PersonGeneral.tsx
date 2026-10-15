@@ -13,6 +13,7 @@ import PersonContractViewer from './PersonContractViewer'
 import SuspendidaBadge from '@/components/common/SuspendidaBadge'
 import DocumentosReciboModal from '@/components/common/DocumentosReciboModal'
 import StudentOnHold from '@/components/student/StudentOnHold'
+import ExtensionVigencia from '@/components/student/ExtensionVigencia'
 
 interface PersonGeneralProps {
   person: Person
@@ -331,7 +332,15 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
           {/* OnHold del kid: el mismo de LGS, sincronizado con KIDS2026 (src/lib/kids-onhold.ts).
               Un kid no tiene ficha académica en LGS, por eso va aquí y no en /student/[id]. */}
           {esBeneficiarioKids && (
-            <div className="mt-4">
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+              <ExtensionVigencia
+                peopleId={person._id}
+                nombre={[(person as any).primerNombre, (person as any).primerApellido].filter(Boolean).join(' ')}
+                finalContrato={(person as any).finalContrato || null}
+                vigencia={(person as any).vigencia ?? null}
+                extensionCount={Number((person as any).extensionCount) || 0}
+                extensionHistory={Array.isArray((person as any).extensionHistory) ? (person as any).extensionHistory : []}
+              />
               <StudentOnHold
                 studentId={person._id}
                 peopleId={person._id}
@@ -342,8 +351,8 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
                 onHoldCount={Number((person as any).onHoldCount) || 0}
                 onHoldHistory={Array.isArray((person as any).onHoldHistory) ? (person as any).onHoldHistory : []}
               />
-              <p className="mt-2 text-xs text-gray-500">
-                El OnHold se aplica también en KIDS2026 (el niño queda en pausa y sin acceso allá), y uno hecho en KIDS se refleja aquí.
+              <p className="lg:col-span-2 text-xs text-gray-500">
+                La extensión de vigencia y el OnHold se aplican también en KIDS2026 (misma fecha final; en OnHold el niño queda en pausa y sin acceso allá), y los que se hagan en KIDS se reflejan aquí.
               </p>
             </div>
           )}

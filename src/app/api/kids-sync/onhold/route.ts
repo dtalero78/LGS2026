@@ -1,8 +1,8 @@
 import 'server-only';
-import { timingSafeEqual } from 'crypto';
 import { handler, successResponse } from '@/lib/api-helpers';
-import { NotFoundError, UnauthorizedError, ValidationError } from '@/lib/errors';
+import { ValidationError } from '@/lib/errors';
 import { queryOne } from '@/lib/postgres';
+import { beneficiarioKidsDeRef, exigirClaveKids } from '@/lib/kids-sync-server';
 import { activateOnHold, deactivateOnHold } from '@/services/contract.service';
 
 /**
@@ -16,8 +16,7 @@ import { activateOnHold, deactivateOnHold } from '@/services/contract.service';
  * avisar a KIDS (sin eco). Las reglas de LGS (máx. 2 OnHold, sin extensión
  * manual previa) se validan aquí: si se rompen, 400 y KIDS no pausa.
  *
- * Autenticación de servicio: header `x-api-key` = KIDS_INTAKE_API_KEY (la misma
- * clave compartida con la que LGS entra a KIDS). Sin clave configurada → 401.
+ * Autenticación de servicio: ver src/lib/kids-sync-server.ts.
  *
  * Body:
  *   { accion: 'activar', externalRef, desde, hasta, motivo, activadoPor }
@@ -26,45 +25,13 @@ import { activateOnHold, deactivateOnHold } from '@/services/contract.service';
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
-function claveValida(recibida: string | null): boolean {
-  const esperada = process.env.KIDS_INTAKE_API_KEY || '';
-  if (!esperada || !recibida) return false;
-  const a = Buffer.from(recibida);
-  const b = Buffer.from(esperada);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
-/** Beneficiario Kids de LGS a partir del N° de reserva "contrato#documento". */
-async function personaDeRef(externalRef: string): Promise<string | null> {
-  const insc = await queryOne<{ id: string }>(
-    `SELECT k."beneficiarioId" AS id
-       FROM "KIDS_INSCRIPCIONES" k JOIN "PEOPLE" p ON p."_id" = k."beneficiarioId"
-      WHERE k."kidsExternalRef" = $1
-      ORDER BY k."_createdDate" DESC LIMIT 1`,
-    [externalRef],
-  );
-  if (insc?.id) return insc.id;
-  const [contrato, doc] = externalRef.split('#');
-  if (!contrato || !doc) return null;
-  const p = await queryOne<{ id: string }>(
-    `SELECT "_id" AS id FROM "PEOPLE"
-      WHERE "contrato" = $1 AND "numeroId" = $2 AND "tipoUsuario" = 'BENEFICIARIO' AND "kids" = true
-      ORDER BY "_createdDate" DESC LIMIT 1`,
-    [contrato, doc],
-  );
-  return p?.id ?? null;
-}
-
 export const POST = handler(async (request) => {
-  if (!claveValida(request.headers.get('x-api-key'))) {
-    throw new UnauthorizedError('Clave de servicio inválida');
-  }
+  exigirClaveKids(request);
   const body = await request.json().catch(() => ({}));
   const externalRef = String(body?.externalRef || '').trim();
   if (!externalRef) throw new ValidationError('externalRef es obligatorio');
 
-  const personId = await personaDeRef(externalRef);
-  if (!personId) throw new NotFoundError('Beneficiario Kids en LGS', externalRef);
+  const personId = await beneficiarioKidsDeRef(externalRef);
   const person = await queryOne<{ estadoInactivo: boolean | null; fechaOnHold: any }>(
     `SELECT "estadoInactivo", "fechaOnHold" FROM "PEOPLE" WHERE "_id" = $1`,
     [personId],

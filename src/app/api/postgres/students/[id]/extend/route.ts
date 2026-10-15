@@ -3,6 +3,7 @@ import { requirePermission } from '@/lib/api-permissions';
 import { StudentPermission } from '@/types/permissions';
 import { extendByDays } from '@/services/contract.service';
 import { ValidationError } from '@/lib/errors';
+import { textoKids } from '@/lib/kids-onhold';
 
 /**
  * POST /api/postgres/students/[id]/extend
@@ -31,8 +32,9 @@ export const POST = handlerWithAuth(async (request, { params }, session) => {
   });
 
   return successResponse({
-    message: `Vigencia extendida ${diasExtension} días exitosamente`,
+    message: `Vigencia extendida ${diasExtension} días exitosamente.${textoKids(result.kids)}`,
     student: result.student,
     extension: result.extension,
+    kids: result.kids,
   });
 });

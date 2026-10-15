@@ -9,7 +9,7 @@ import { PeopleRepository } from '@/repositories/people.repository';
 import { ValidationError, NotFoundError } from '@/lib/errors';
 import { query } from '@/lib/postgres';
 import { sincronizarFinalTitularDe } from '@/lib/sync-final-titular';
-import { esBeneficiarioKids, finPausaEnKids, pausarEnKids, type ResultadoKidsOnhold } from '@/lib/kids-onhold';
+import { esBeneficiarioKids, extenderEnKids, finPausaEnKids, pausarEnKids, type ResultadoKidsOnhold } from '@/lib/kids-onhold';
 
 // ── Contract Extension ──
 
@@ -19,6 +19,11 @@ interface ExtendByDaysInput {
   motivo: string;
   ejecutadoPor: string;
   ejecutadoPorEmail: string;
+  /**
+   * 'KIDS' = la extensión se hizo en KIDS2026 y llega por /api/kids-sync/extension:
+   * se aplica aquí SIN avisar de vuelta a KIDS (evita el eco).
+   */
+  origen?: 'LGS' | 'KIDS';
 }
 
 export async function extendByDays(input: ExtendByDaysInput) {
@@ -42,6 +47,7 @@ export async function extendByDays(input: ExtendByDaysInput) {
   const today = new Date();
   const newVigencia = Math.ceil((newFinal.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
+  const esKids = esBeneficiarioKids(person);
   const currentHistory = Array.isArray(person.extensionHistory) ? person.extensionHistory : [];
   const extensionEntry = {
     numero: (person.extensionCount || 0) + 1,
@@ -52,9 +58,20 @@ export async function extendByDays(input: ExtendByDaysInput) {
     motivo: input.motivo,
     ejecutadoPor: input.ejecutadoPor,
     ejecutadoPorEmail: input.ejecutadoPorEmail,
+    ...(esKids && { origen: input.origen || 'LGS' }),
   };
 
   const updatedHistory = [...currentHistory, extensionEntry];
+
+  // Kids: KIDS2026 PRIMERO, con los mismos días. Si rechaza o no responde, lanza
+  // y aquí no se extiende: nunca quedan con fechas distintas.
+  const kids: ResultadoKidsOnhold = esKids && input.origen !== 'KIDS'
+    ? await extenderEnKids(person, {
+        dias: input.diasExtension,
+        motivo: input.motivo,
+        ejecutadoPor: input.ejecutadoPor,
+      })
+    : 'NO_APLICA';
 
   const student = await PeopleRepository.extendContract(
     input.studentId,
@@ -63,26 +80,33 @@ export async function extendByDays(input: ExtendByDaysInput) {
     updatedHistory
   );
 
-  // Reactivar: PEOPLE estadoInactivo = false
-  await query(
-    `UPDATE "PEOPLE" SET "estadoInactivo" = false, "_updatedDate" = NOW() WHERE "_id" = $1`,
-    [input.studentId]
-  );
-
-  // Reactivar: ACADEMICA estadoInactivo = false (por numeroId)
-  if (person.numeroId) {
+  // Si está en OnHold, la extensión solo corre la fecha: la pausa sigue (antes
+  // lo reactivaba a mitad del OnHold, dejando fechaOnHold puesta con el alumno
+  // activo, y el fin del OnHold volvía a extender después).
+  const enOnHold = person.estadoInactivo === true && !!person.fechaOnHold;
+  if (!enOnHold) {
+    // Reactivar: PEOPLE estadoInactivo = false
     await query(
-      `UPDATE "ACADEMICA" SET "estadoInactivo" = false, "_updatedDate" = NOW() WHERE "numeroId" = $1`,
-      [person.numeroId]
+      `UPDATE "PEOPLE" SET "estadoInactivo" = false, "_updatedDate" = NOW() WHERE "_id" = $1`,
+      [input.studentId]
     );
-  }
 
-  // Reactivar: USUARIOS_ROLES activo = true (por email)
-  if (person.email) {
-    await query(
-      `UPDATE "USUARIOS_ROLES" SET "activo" = true, "_updatedDate" = NOW() WHERE LOWER("email") = LOWER($1)`,
-      [person.email]
-    );
+    // Reactivar: ACADEMICA estadoInactivo = false (por numeroId)
+    if (person.numeroId) {
+      await query(
+        `UPDATE "ACADEMICA" SET "estadoInactivo" = false, "_updatedDate" = NOW() WHERE "numeroId" = $1`,
+        [person.numeroId]
+      );
+    }
+
+    // Reactivar: USUARIOS_ROLES activo = true (por email). Un kid no tiene login
+    // en LGS: su correo es el del apoderado/titular.
+    if (person.email && !esKids) {
+      await query(
+        `UPDATE "USUARIOS_ROLES" SET "activo" = true, "_updatedDate" = NOW() WHERE LOWER("email") = LOWER($1)`,
+        [person.email]
+      );
+    }
   }
 
   // Opción A: el titular refleja la fecha final vigente de sus beneficiarios.
@@ -90,6 +114,7 @@ export async function extendByDays(input: ExtendByDaysInput) {
 
   return {
     student,
+    kids,
     extension: {
       vigenciaAnterior: currentFinal.toISOString().split('T')[0],
       vigenciaNueva: newFinal.toISOString().split('T')[0],
@@ -107,6 +132,7 @@ interface ExtendToDateInput {
   motivo: string;
   ejecutadoPor: string;
   ejecutadoPorEmail: string;
+  origen?: 'LGS' | 'KIDS';
 }
 
 export async function extendToDate(input: ExtendToDateInput) {
@@ -136,6 +162,7 @@ export async function extendToDate(input: ExtendToDateInput) {
     motivo: input.motivo,
     ejecutadoPor: input.ejecutadoPor,
     ejecutadoPorEmail: input.ejecutadoPorEmail,
+    origen: input.origen,
   });
 }
 

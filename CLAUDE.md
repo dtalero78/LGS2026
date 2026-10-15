@@ -928,8 +928,9 @@ Contract end: 2025-12-31 (365 days)
 Result: Student maintains full 365 days of contract
 ```
 
-### OnHold de beneficiarios Kids (sincronizado con KIDS2026)
-- La tarjeta OnHold de un kid está en su ficha `/person/[id]` (sección Programa Kids), no en `/student/[id]` (los kids no tienen ficha académica).
+### OnHold y extensión de vigencia de beneficiarios Kids (sincronizados con KIDS2026)
+- Las tarjetas **Extensión de Vigencia** ([ExtensionVigencia](src/components/student/ExtensionVigencia.tsx), compartida con `/student/[id]` › Contrato) y **OnHold** de un kid están en su ficha `/person/[id]` (sección Programa Kids), no en `/student/[id]` (los kids no tienen ficha académica).
+- **Extensión**: `extendByDays` llama primero a KIDS (`kidsIntake.extendReservation`, mismos días; si KIDS rechaza o no responde no se extiende). Desde KIDS entra por `POST /api/kids-sync/extension`. En KIDS queda en `contracts_extension` y, como en LGS, un contrato con extensión manual ya no admite OnHold. Extender a alguien **en OnHold** solo corre la fecha (no lo reactiva). Auth y búsqueda del beneficiario de `/api/kids-sync/*` en [src/lib/kids-sync-server.ts](src/lib/kids-sync-server.ts).
 - **LGS → KIDS**: `activateOnHold`/`deactivateOnHold` llaman **primero** a KIDS ([src/lib/kids-onhold.ts](src/lib/kids-onhold.ts) → `kidsIntake.pauseReservation` / `endPauseReservation`); si KIDS rechaza o no responde, no se hace en LGS. Al cerrar, KIDS extiende con los **mismos días** que LGS. El cron `reactivate-onhold` avisa a KIDS en modo best-effort.
 - **KIDS → LGS**: `POST /api/kids-sync/onhold` (`x-api-key` = `KIDS_INTAKE_API_KEY`, la misma clave en ambos sentidos; KIDS usa `LGS_API_URL`). Se aplica con `origen:'KIDS'` (sin eco) y valida las reglas de LGS (máx. 2, sin extensión manual previa).
 - En KIDS la pausa pide lo mismo que en LGS (inicio, fin, motivo), bloquea el login del niño y su worker la cierra al llegar el fin programado. `contracts_onhold.tipo` distingue `ONHOLD` (devuelve días) de `SUSPENSION` (inactivación en LGS, no devuelve).

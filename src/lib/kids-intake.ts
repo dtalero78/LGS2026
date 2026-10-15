@@ -199,6 +199,12 @@ export const kidsIntake = {
   /** Fin del OnHold en LGS → KIDS cierra la pausa extendiendo el fin con los MISMOS días. KIDS v14+. */
   endPauseReservation: (externalRef: string, dias: number) =>
     call<{ aplicado: boolean; estado: string; nuevoFinal?: string }>('POST', `/api/kids-intake/reservations/${encodeURIComponent(externalRef)}/onhold/end`, { dias }),
+  /**
+   * Extensión manual de vigencia en LGS → la misma en KIDS (mismos días; reactiva al
+   * niño si estaba inactivo o suspendido, como LGS). KIDS v15+.
+   */
+  extendReservation: (externalRef: string, datos: { dias: number; motivo: string; ejecutadoPor: string | null }) =>
+    call<{ aplicado: boolean; nuevoFinal: string; reactivado: boolean; requiereMatricula: boolean }>('POST', `/api/kids-intake/reservations/${encodeURIComponent(externalRef)}/extend`, datos),
   /** Beneficiario REACTIVADO en LGS → KIDS cierra la pausa que abrió LGS y reactiva el login. */
   reactivateReservation: (externalRef: string) =>
     call<{ aplicado: boolean; estado: string; motivo?: string }>('POST', `/api/kids-intake/reservations/${encodeURIComponent(externalRef)}/reactivate`, {}),

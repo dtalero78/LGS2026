@@ -4,8 +4,9 @@ import { kidsIntake, KidsIntakeError } from '@/lib/kids-intake';
 import { ValidationError } from '@/lib/errors';
 
 /**
- * OnHold de un beneficiario KIDS sincronizado con KIDS2026 (camino de IDA).
- * El de VUELTA (OnHold hecho en KIDS) entra por POST /api/kids-sync/onhold.
+ * OnHold y extensión de vigencia de un beneficiario KIDS sincronizados con
+ * KIDS2026 (camino de IDA). Los de VUELTA (hechos en KIDS) entran por
+ * POST /api/kids-sync/onhold y POST /api/kids-sync/extension.
  *
  * Resultado:
  *  - SINCRONIZADO   KIDS quedó igual.
@@ -15,6 +16,17 @@ import { ValidationError } from '@/lib/errors';
  *  - ERROR          KIDS no respondió (solo en modo no estricto, p. ej. el cron).
  */
 export type ResultadoKidsOnhold = 'SINCRONIZADO' | 'NO_APLICA' | 'SIN_RESERVA' | 'SIN_CONFIGURAR' | 'ERROR';
+
+/** Frase para el usuario sobre lo que pasó en KIDS2026 ('' si no aplica). */
+export function textoKids(r: ResultadoKidsOnhold | undefined): string {
+  switch (r) {
+    case 'SINCRONIZADO': return ' KIDS2026 quedó igual.';
+    case 'SIN_RESERVA': return ' (Este niño no tiene reserva en KIDS2026: no se sincronizó.)';
+    case 'SIN_CONFIGURAR': return ' ⚠ La integración con KIDS2026 no está configurada: revise también en KIDS.';
+    case 'ERROR': return ' ⚠ KIDS2026 no confirmó el cambio.';
+    default: return '';
+  }
+}
 
 export function esBeneficiarioKids(person: any): boolean {
   return person?.kids === true && person?.tipoUsuario === 'BENEFICIARIO';
@@ -78,6 +90,23 @@ export async function pausarEnKids(
     motivo: (datos.motivo || '').trim().length >= 5 ? (datos.motivo as string).trim() : 'OnHold registrado en LGS',
     activadoPor: datos.activadoPor || null,
   }), estricto, 'OnHold');
+}
+
+/** Extensión manual en LGS → la misma en KIDS, con los MISMOS días. */
+export async function extenderEnKids(
+  person: any,
+  datos: { dias: number; motivo: string; ejecutadoPor: string },
+  estricto = true,
+): Promise<ResultadoKidsOnhold> {
+  if (!esBeneficiarioKids(person)) return 'NO_APLICA';
+  if (!kidsIntake.isConfigured()) return 'SIN_CONFIGURAR';
+  const ref = await refKidsDe(person._id);
+  if (!ref) return 'SIN_RESERVA';
+  return llamar(() => kidsIntake.extendReservation(ref, {
+    dias: Math.max(1, Math.round(datos.dias)),
+    motivo: (datos.motivo || '').trim().length >= 5 ? datos.motivo.trim() : 'Extensión registrada en LGS',
+    ejecutadoPor: datos.ejecutadoPor || null,
+  }), estricto, 'extensión de vigencia');
 }
 
 /** Fin del OnHold en LGS → KIDS cierra la pausa con los MISMOS días. */

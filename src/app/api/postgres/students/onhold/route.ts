@@ -3,15 +3,7 @@ import { requirePermission } from '@/lib/api-permissions';
 import { StudentPermission } from '@/types/permissions';
 import { activateOnHold, deactivateOnHold } from '@/services/contract.service';
 import { ValidationError } from '@/lib/errors';
-
-/** Texto para el usuario sobre lo que pasó en KIDS2026 (beneficiarios Kids). */
-const TEXTO_KIDS: Record<string, string> = {
-  SINCRONIZADO: ' KIDS2026 quedó igual.',
-  NO_APLICA: '',
-  SIN_RESERVA: ' (Este niño no tiene reserva en KIDS2026: no se sincronizó.)',
-  SIN_CONFIGURAR: ' ⚠ La integración con KIDS2026 no está configurada: revise también en KIDS.',
-  ERROR: ' ⚠ KIDS2026 no confirmó el cambio.',
-};
+import { textoKids } from '@/lib/kids-onhold';
 
 /**
  * POST /api/postgres/students/onhold
@@ -43,7 +35,7 @@ export const POST = handlerWithStaffAuth(async (request, context, session) => {
 
     return successResponse({
       student: result.student,
-      message: `OnHold activado exitosamente.${TEXTO_KIDS[result.kids] ?? ''}`,
+      message: `OnHold activado exitosamente.${textoKids(result.kids)}`,
       onHoldEntry: result.onHoldEntry,
       kids: result.kids,
     });
@@ -53,7 +45,7 @@ export const POST = handlerWithStaffAuth(async (request, context, session) => {
 
   return successResponse({
     student: result.student,
-    message: `OnHold desactivado y contrato extendido ${result.extension.daysPaused} días automáticamente.${TEXTO_KIDS[result.kids] ?? ''}`,
+    message: `OnHold desactivado y contrato extendido ${result.extension.daysPaused} días automáticamente.${textoKids(result.kids)}`,
     extension: result.extension,
     kids: result.kids,
   });
