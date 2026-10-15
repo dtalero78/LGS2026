@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { plataformaToCountryCode, edadKidsEnFecha, cursoKidsParaEdad, errorEdadCursoKids, RANGO_EDAD_CURSO } from '@/lib/kids-mapping'
 import KidsCursoTexto, { cursoColorCls } from '@/components/comercial/KidsCursoTexto'
@@ -86,6 +86,8 @@ interface Props {
    * será el apoderado?" y se exige una persona con su propio documento.
    */
   titularEsEmpresa?: boolean
+  /** true = al abrir, se desplaza a la sección Apoderado (botón "Apoderado" de la ficha). */
+  enfocarApoderado?: boolean
   onSave: (value: KidsBeneficiarioValue) => void
   onCancel: () => void
 }
@@ -95,8 +97,15 @@ const salonLleno = (s: Salon) => s.lleno === true || s.ocupados >= s.cupo
 const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500'
 
 export default function KidsBeneficiarioModal({
-  open, initial, titularNombre, titularApellidos, titularDocumento, titularCelular, titularEmail, plataforma, mostrarLlenos = false, textoGuardar = 'Guardar beneficiario Kids', titulo = 'Beneficiario Kids', cursoFijo = null, ocultarGuia = false, titularEsEmpresa = false, onSave, onCancel,
+  open, initial, titularNombre, titularApellidos, titularDocumento, titularCelular, titularEmail, plataforma, mostrarLlenos = false, textoGuardar = 'Guardar beneficiario Kids', titulo = 'Beneficiario Kids', cursoFijo = null, ocultarGuia = false, titularEsEmpresa = false, enfocarApoderado = false, onSave, onCancel,
 }: Props) {
+  const apoderadoRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (open && enfocarApoderado) {
+      const t = setTimeout(() => apoderadoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150)
+      return () => clearTimeout(t)
+    }
+  }, [open, enfocarApoderado])
   const [form, setForm] = useState<KidsBeneficiarioValue>({})
   const [kids, setKids] = useState<KidsData>({})
   const [error, setError] = useState<string | null>(null)
@@ -415,7 +424,7 @@ export default function KidsBeneficiarioModal({
           </div>
 
           {/* Apoderado */}
-          <div className="border-t border-gray-100 pt-5">
+          <div ref={apoderadoRef} className="border-t border-gray-100 pt-5">
             <h3 className="text-xs font-bold uppercase tracking-wide text-gray-700 mb-3"><span className="text-primary-600">＋</span> Apoderado <span className="normal-case font-normal text-gray-400">(adicional Kids)</span></h3>
             {titularEsEmpresa ? (
               <p className="mb-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">

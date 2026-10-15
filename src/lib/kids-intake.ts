@@ -205,6 +205,14 @@ export const kidsIntake = {
    */
   extendReservation: (externalRef: string, datos: { dias: number; motivo: string; ejecutadoPor: string | null }) =>
     call<{ aplicado: boolean; nuevoFinal: string; reactivado: boolean; requiereMatricula: boolean }>('POST', `/api/kids-intake/reservations/${encodeURIComponent(externalRef)}/extend`, datos),
+  /**
+   * Apoderado cambiado en LGS ("Modificar" beneficiario Kids) → KIDS deja a ese
+   * apoderado (o al titular) como el del niño. KIDS v16+. `nombresConservados`:
+   * el documento ya era de otra persona ligada a más niños/contratos y sus nombres
+   * no se tocaron (solo correo/teléfono).
+   */
+  updateGuardian: (externalRef: string, datos: { titularEsApoderado: boolean; apoderado: KidsPersona | null; parentesco: string | null }) =>
+    call<{ aplicado: boolean; apoderadoId: string; nombresConservados: boolean }>('POST', `/api/kids-intake/reservations/${encodeURIComponent(externalRef)}/apoderado`, datos),
   /** Beneficiario REACTIVADO en LGS → KIDS cierra la pausa que abrió LGS y reactiva el login. */
   reactivateReservation: (externalRef: string) =>
     call<{ aplicado: boolean; estado: string; motivo?: string }>('POST', `/api/kids-intake/reservations/${encodeURIComponent(externalRef)}/reactivate`, {}),

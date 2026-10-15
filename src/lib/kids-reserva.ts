@@ -1,7 +1,7 @@
 import 'server-only';
 import { query, queryOne } from '@/lib/postgres';
 import { kidsIntake, KidsIntakeError } from '@/lib/kids-intake';
-import { buildKidsReservation, plataformaToCountryCode, toISODate } from '@/lib/kids-mapping';
+import { apoderadoParaKids, buildKidsReservation, plataformaToCountryCode, toISODate } from '@/lib/kids-mapping';
 import { ValidationError } from '@/lib/errors';
 
 const normDoc = (v: any) => String(v ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -91,6 +91,37 @@ export async function asegurarReservaKids(insc: any, beneficiario: any): Promise
       WHERE "_id"=$1`,
     [insc._id, ref, contractId, enrollmentId]);
   return ref;
+}
+
+/**
+ * Lleva a KIDS el apoderado guardado en la inscripción (tras "Modificar"). Misma
+ * regla que la reserva (`apoderadoParaKids`). Devuelve si KIDS conservó los
+ * nombres de una persona compartida. Lanza ValidationError legible si falla.
+ */
+export async function actualizarApoderadoKids(insc: any, beneficiario: any): Promise<{ nombresConservados: boolean }> {
+  const ref = insc.kidsExternalRef;
+  if (!ref) throw new ValidationError('El niño aún no tiene reserva en KIDS.');
+  const contrato = insc.contrato || beneficiario.contrato;
+  const titular = await queryOne<any>(
+    `SELECT * FROM "PEOPLE" WHERE "contrato" = $1 AND "tipoUsuario" = 'TITULAR'
+      ORDER BY "_createdDate" ASC LIMIT 1`, [contrato]);
+  if (!titular) throw new ValidationError(`No se encontró el titular del contrato ${contrato}.`);
+  let datos: ReturnType<typeof apoderadoParaKids>;
+  try {
+    datos = apoderadoParaKids(titular, {
+      apoderado: insc.apoderado, apoderadoApellidos: insc.apoderadoApellidos, apoderadoDoc: insc.apoderadoDoc,
+      apoderadoTelefono: insc.apoderadoTelefono, apoderadoMail: insc.apoderadoMail, parentesco: insc.parentesco,
+      titularEsApoderado: !insc.apoderadoDoc,
+    }, plataformaToCountryCode(titular.plataforma || beneficiario.plataforma));
+  } catch (e: any) {
+    throw new ValidationError(String(e?.message || 'Datos del apoderado incompletos'));
+  }
+  try {
+    const r = await kidsIntake.updateGuardian(ref, datos);
+    return { nombresConservados: r.nombresConservados === true };
+  } catch (e: any) {
+    throw new ValidationError(`KIDS no aceptó el cambio de apoderado: ${e?.message || 'error desconocido'}`);
+  }
 }
 
 /**

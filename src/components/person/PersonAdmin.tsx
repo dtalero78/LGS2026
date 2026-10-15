@@ -200,9 +200,10 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     }
   }
   // "Modificar" de un beneficiario Kids: abre el modal Kids con sus datos + inscripción.
-  const [kidsEdit, setKidsEdit] = useState<{ benId: string; initial: any; original: any; cursoFijo: string | null } | null>(null)
+  const [kidsEdit, setKidsEdit] = useState<{ benId: string; initial: any; original: any; cursoFijo: string | null; enfocarApoderado?: boolean } | null>(null)
   const [guardandoKidsEdit, setGuardandoKidsEdit] = useState(false)
-  const abrirEdicionKids = async (benId: string) => {
+  // enfocarApoderado = botón "Apoderado": el mismo modal, abierto en esa sección.
+  const abrirEdicionKids = async (benId: string, enfocarApoderado = false) => {
     try {
       const r = await fetch(`/api/postgres/people/${benId}/kids-matricula`)
       const d = await r.json()
@@ -218,6 +219,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
       const titularEsApoderado = !i.apoderadoDoc || String(i.apoderadoDoc).replace(/\W/g, '') === String(person.numeroId || '').replace(/\W/g, '')
       setKidsEdit({
         benId,
+        enfocarApoderado,
         original,
         cursoFijo: i.aprobadoEnKids
           ? 'Matriculado en KIDS: el cambio de curso o salón se hace en KIDS.'
@@ -1405,6 +1407,17 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                       Modificar
                     </button>
                   </PermissionGuard>
+                  {beneficiary.kids && (
+                    <PermissionGuard permission={PersonPermission.MODIFICAR}>
+                      <button
+                        onClick={() => abrirEdicionKids(beneficiary._id, true)}
+                        className="inline-flex items-center px-4 py-1.5 border border-fuchsia-600 text-sm font-medium rounded text-fuchsia-700 bg-white hover:bg-fuchsia-600 hover:text-white transition-colors"
+                        title="Modificar el apoderado del niño (se actualiza también en KIDS)"
+                      >
+                        Apoderado
+                      </button>
+                    </PermissionGuard>
+                  )}
                   {!esContratoDePrueba && ((!beneficiary.estado || beneficiary.estado === 'Pendiente') || approvingBeneficiaries.has(beneficiary._id)) && (
                     <PermissionGuard permission={PersonPermission.APROBAR}>
                       <button
@@ -2033,7 +2046,8 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
       <KidsBeneficiarioModal
         open={!!kidsEdit}
         initial={kidsEdit?.initial}
-        titulo="Modificar beneficiario Kids"
+        titulo={kidsEdit?.enfocarApoderado ? 'Modificar apoderado' : 'Modificar beneficiario Kids'}
+        enfocarApoderado={kidsEdit?.enfocarApoderado === true}
         cursoFijo={kidsEdit?.cursoFijo}
         titularNombre={`${person.primerNombre || ''} ${person.segundoNombre || ''}`.trim()}
         titularApellidos={`${person.primerApellido || ''} ${person.segundoApellido || ''}`.trim()}

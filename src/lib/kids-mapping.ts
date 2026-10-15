@@ -80,6 +80,50 @@ function correoValido(v: unknown): string | null {
 
 const normDoc = (v: unknown) => String(v ?? '').toUpperCase().replace(/[^0-9A-Z]/g, '');
 
+/**
+ * Apoderado del niño tal como lo espera KIDS — LA regla única (reserva y
+ * "Modificar" del apoderado la usan igual):
+ *  - mismo documento que el titular ⇒ titular = apoderado (mandarlo como persona
+ *    nueva hacía que KIDS la creara dos veces → "Database error");
+ *  - titular EMPRESA ⇒ nunca es apoderada: se exige una persona con nombre y
+ *    documento propios (si no, lanza con un mensaje claro).
+ */
+export function apoderadoParaKids(titular: any, kd: any, countryCode: string): {
+  titularEsApoderado: boolean;
+  apoderado: KidsPersona | null;
+  parentesco: string | null;
+} {
+  const esEmpresa = String(titular.tipoPersona || '').trim() === 'Empresa';
+  if (esEmpresa) {
+    const doc = normDoc(kd.apoderadoDoc);
+    if (!doc || doc === normDoc(titular.numeroId) || !String(kd.apoderado || '').trim()) {
+      throw new Error(
+        'El titular es una empresa: el apoderado debe ser una persona (p. ej. el representante legal), ' +
+        'con su propio nombre y documento — no el RUT de la empresa.');
+    }
+  }
+  const titularEsApoderado = !esEmpresa && (kd.titularEsApoderado === true
+    || (!!normDoc(kd.apoderadoDoc) && normDoc(kd.apoderadoDoc) === normDoc(titular.numeroId)));
+  if (!titularEsApoderado && (!String(kd.apoderado || '').trim() || !String(kd.apoderadoApellidos || '').trim() || !normDoc(kd.apoderadoDoc))) {
+    throw new Error('Faltan nombres, apellidos o documento del apoderado.');
+  }
+  return {
+    titularEsApoderado,
+    apoderado: titularEsApoderado ? null : {
+      nombres: String(kd.apoderado).trim(),
+      apellidos: String(kd.apoderadoApellidos).trim(),
+      fechaNacimiento: null,
+      docTipo: DOC_TIPO,
+      // Tal cual (recortado), como siempre: KIDS identifica a la persona por documento exacto.
+      docNumero: String(kd.apoderadoDoc || '').trim(),
+      countryCode,
+      email: correoValido(kd.apoderadoMail),
+      telefono: kd.apoderadoTelefono || null,
+    },
+    parentesco: kd.parentesco || null,
+  };
+}
+
 /** Construye el body de POST /api/kids-intake/reservations desde los datos de LGS. */
 export function buildKidsReservation(args: {
   externalRef: string;
@@ -92,18 +136,10 @@ export function buildKidsReservation(args: {
 }): KidsReservationInput {
   const { externalRef, countryCode, inicio, finalContrato, titular, beneficiario: b, kidsData: kd } = args;
 
-  // Titular EMPRESA (contrato de empresa): la razón social va en primerNombre y no
-  // tiene apellidos. KIDS exige apellidos (persona), así que se rotula "(Empresa)".
-  // Y una empresa nunca es la apoderada del niño: debe venir una persona.
+  // Titular EMPRESA: la razón social va en primerNombre y no tiene apellidos.
+  // KIDS exige apellidos (persona), así que se rotula "(Empresa)".
   const esEmpresa = String(titular.tipoPersona || '').trim() === 'Empresa';
-  if (esEmpresa) {
-    const doc = normDoc(kd.apoderadoDoc);
-    if (!doc || doc === normDoc(titular.numeroId) || !String(kd.apoderado || '').trim()) {
-      throw new Error(
-        'El titular es una empresa: el apoderado debe ser una persona (p. ej. el representante legal), ' +
-        'con su propio nombre y documento — no el RUT de la empresa.');
-    }
-  }
+  const ap = apoderadoParaKids(titular, kd, countryCode);
 
   const titularPersona: KidsPersona = {
     nombres: fullName(titular.primerNombre, titular.segundoNombre),
@@ -116,21 +152,8 @@ export function buildKidsReservation(args: {
     telefono: titular.celular || null,
   };
 
-  // Si el apoderado tiene el MISMO documento que el titular es la misma persona:
-  // mandarlo como "apoderado nuevo" hace que KIDS intente crearla dos veces y
-  // falle con "Database error" (documento único). Se trata como titular = apoderado.
-  const esTitularApoderado = !esEmpresa && (kd.titularEsApoderado === true
-    || (!!normDoc(kd.apoderadoDoc) && normDoc(kd.apoderadoDoc) === normDoc(titular.numeroId)));
-  const apoderadoNuevo: KidsPersona | undefined = esTitularApoderado ? undefined : {
-    nombres: kd.apoderado || '',
-    apellidos: kd.apoderadoApellidos || '',
-    fechaNacimiento: null,
-    docTipo: DOC_TIPO,
-    docNumero: String(kd.apoderadoDoc || ''),
-    countryCode,
-    email: correoValido(kd.apoderadoMail),
-    telefono: kd.apoderadoTelefono || null,
-  };
+  const esTitularApoderado = ap.titularEsApoderado;
+  const apoderadoNuevo: KidsPersona | undefined = ap.apoderado ?? undefined;
 
   return {
     externalRef,
@@ -152,6 +175,6 @@ export function buildKidsReservation(args: {
       email: correoValido(b.email),
       telefono: b.celular || null,
     },
-    parentesco: kd.parentesco || null,
+    parentesco: ap.parentesco,
   };
 }

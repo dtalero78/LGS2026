@@ -7,7 +7,7 @@ import { NotFoundError, ValidationError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 import { kidsIntake, validarSalonesDelPais } from '@/lib/kids-intake';
 import { errorEdadCursoKids } from '@/lib/kids-mapping';
-import { asegurarReservaKids, matricularKids } from '@/lib/kids-reserva';
+import { actualizarApoderadoKids, asegurarReservaKids, matricularKids } from '@/lib/kids-reserva';
 
 /**
  * Estado, corrección y edición de la inscripción KIDS de un beneficiario Kids.
@@ -133,10 +133,26 @@ export const PATCH = handlerWithStaffAuth(async (request, { params }, session) =
   const { person, plataforma, insc } = await cargarKid(params.id);
   const enKids = insc?.enviadoAKids === true || insc?.aprobadoEnKids === true;
 
-  // Ya está en KIDS: el curso/salón no se toca desde LGS; solo apoderado/parentesco.
+  // Ya está en KIDS: el curso/salón no se toca desde LGS; solo apoderado/parentesco,
+  // que se guardan aquí y se llevan a KIDS (antes quedaban solo en LGS).
   if (enKids) {
     await guardarInscripcion(person, plataforma, insc, kd, false);
-    return successResponse({ estado: insc.aprobadoEnKids ? 'MATRICULADO' : 'RESERVADO', mensaje: 'Datos del apoderado actualizados en LGS.' });
+    const estado = insc.aprobadoEnKids ? 'MATRICULADO' : 'RESERVADO';
+    if (!kidsIntake.isConfigured() || !insc.kidsExternalRef) {
+      return successResponse({ estado, mensaje: 'Datos del apoderado actualizados en LGS.' });
+    }
+    const fila = await queryOne<any>(`SELECT * FROM "KIDS_INSCRIPCIONES" WHERE "_id" = $1`, [insc._id]);
+    try {
+      const r = await actualizarApoderadoKids(fila, person);
+      return successResponse({
+        estado,
+        mensaje: r.nombresConservados
+          ? 'Apoderado actualizado en LGS y en KIDS. Ese documento ya era de una persona registrada en KIDS (apoderada de otro niño o titular): allá se conservó su nombre y se actualizaron correo y teléfono.'
+          : 'Apoderado actualizado en LGS y en KIDS.',
+      });
+    } catch (e: any) {
+      return successResponse({ estado: 'ERROR', kidsError: String(e?.message || 'error'), mensaje: 'Apoderado guardado en LGS, pero KIDS no lo aceptó.' });
+    }
   }
 
   const configurado = kidsIntake.isConfigured();
