@@ -699,10 +699,18 @@ export const DELETE = handlerWithAuth(async (
         AND NOT EXISTS (SELECT 1 FROM "ACADEMICA_BOOKINGS" b WHERE b."studentId" = a."_id" OR b."idEstudiante" = a."_id")`,
     [person.numeroId, personId, person.contrato]);
 
+  // Kids: su inscripción (curso/apoderado) se va con él. Antes quedaba huérfana
+  // y, al volver a crearlo, el niño tenía dos inscripciones. La reserva en
+  // KIDS2026 se conserva: al recrearlo con el mismo documento KIDS la reutiliza.
+  const insc = await query(
+    `DELETE FROM "KIDS_INSCRIPCIONES" WHERE "beneficiarioId" = $1 RETURNING "kidsExternalRef"`,
+    [personId]);
+  const reservaKids = (insc.rows as any[]).find(r => r.kidsExternalRef)?.kidsExternalRef || null;
+
   // Delete from PEOPLE
   await query(`DELETE FROM "PEOPLE" WHERE "_id" = $1`, [personId]);
 
-  console.log('✅ [PostgreSQL People] Beneficiario deleted:', personId);
+  console.log('✅ [PostgreSQL People] Beneficiario deleted:', personId, reservaKids ? `(reserva KIDS ${reservaKids} se conserva)` : '');
 
-  return successResponse({ deleted: true, personId });
+  return successResponse({ deleted: true, personId, reservaKids });
 });

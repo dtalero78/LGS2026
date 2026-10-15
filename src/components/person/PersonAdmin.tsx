@@ -549,6 +549,12 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         )
         setShowDeleteModal(false)
         setBeneficiaryToDelete(null)
+        if (data.reservaKids) {
+          alert(
+            `Beneficiario eliminado de LGS.\n\n⚠️ Su reserva en KIDS (${data.reservaKids}) sigue ocupando el cupo del salón. ` +
+            `Si lo vuelve a crear con el mismo documento, KIDS reutiliza esa reserva; si no, pida a coordinación KIDS que la cancele.`
+          )
+        }
       } else {
         console.error('❌ Error al eliminar beneficiario:', data.error)
       }
@@ -1053,6 +1059,11 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             celular: (created.celular || '').replace(/\D/g, '') || created.celular || '',
             estado: 'Pendiente',
             fechaCreacion: created._createdDate || new Date().toISOString(),
+            // Sin esto el kid recién creado se veía como adulto ("SIN REGISTRO
+            // ACADÉMICO", clic a /student) hasta recargar la página.
+            kids: created.kids === true,
+            existeEnAcademica: false,
+            academicaId: null,
           }
           setCurrentBeneficiaries(prev => [...prev, newBen])
 
