@@ -18,6 +18,7 @@ import 'server-only';
 import { queryMany, transaction } from '@/lib/postgres';
 import { ids } from '@/lib/id-generator';
 import { NotFoundError, ValidationError } from '@/lib/errors';
+import { validarNumeroFactura } from '@/lib/numero-factura';
 import { recalcularSaldosTitular } from '@/lib/recalcular-saldos';
 import { computePlataformaScope, getSessionPlataforma, buildPlataformaWhereSql } from '@/lib/recaudos-scope';
 
@@ -57,8 +58,13 @@ function normalizar(campo: string, valor: any): any {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(valor || ''))) throw new ValidationError('fechaPago debe tener formato YYYY-MM-DD');
     return String(valor);
   }
+  if (campo === 'numeroFactura') {
+    // Misma regla que Facturación: número real o "Admin" (nunca LGS/LGS01/…).
+    const v = validarNumeroFactura(valor);
+    if (!v.ok) throw new ValidationError(v.error);
+    return v.valor;
+  }
   const s = String(valor ?? '').trim();
-  if (campo === 'numeroFactura' && !s) throw new ValidationError('El número de factura no puede quedar vacío');
   return s || null;
 }
 

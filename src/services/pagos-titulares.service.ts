@@ -16,6 +16,7 @@ import { PeopleRepository } from '@/repositories/people.repository';
 import { ids } from '@/lib/id-generator';
 import { query, queryOne } from '@/lib/postgres';
 import { NotFoundError, ValidationError } from '@/lib/errors';
+import { validarNumeroFactura } from '@/lib/numero-factura';
 import { computePlataformaScope, getSessionPlataforma, buildPlataformaWhereSql, type PlataformaScope } from '@/lib/recaudos-scope';
 import { spacesClient, SPACES_BUCKET, SPACES_CDN } from '@/lib/spaces';
 import { fechaBaseContrato, resolveRealizadoPor } from '@/lib/cambio-contado';
@@ -648,8 +649,9 @@ export const pagosTitularesService = {
     numeroFactura: string,
     documento?: { url?: string; nombre?: string; tipo?: string } | null,
   ): Promise<PagoTitular> {
-    const factura = (numeroFactura || '').trim();
-    if (!factura) throw new ValidationError('El número de factura es obligatorio');
+    const v = validarNumeroFactura(numeroFactura);
+    if (!v.ok) throw new ValidationError(v.error);
+    const factura = v.valor;
 
     const existing = await PagosTitularesRepository.findById(id);
     if (!existing) throw new NotFoundError('PAGOS_TITULARES', id);
@@ -682,8 +684,9 @@ export const pagosTitularesService = {
     numeroFactura: string,
     documento?: { url?: string; nombre?: string; tipo?: string } | null,
   ): Promise<{ ok: number; fail: number; errores: { id: string; error: string }[] }> {
-    const factura = (numeroFactura || '').trim();
-    if (!factura) throw new ValidationError('El número de factura es obligatorio');
+    const v = validarNumeroFactura(numeroFactura);
+    if (!v.ok) throw new ValidationError(v.error);
+    const factura = v.valor;
 
     const errores: { id: string; error: string }[] = [];
     let ok = 0;

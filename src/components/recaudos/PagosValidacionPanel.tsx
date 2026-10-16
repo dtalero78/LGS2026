@@ -24,6 +24,7 @@ import { BanknotesIcon, BuildingLibraryIcon, CheckBadgeIcon, ArrowPathIcon, Arro
 import { PersonPermission, RecaudosPermission } from '@/types/permissions'
 import { formatCurrency } from '@/lib/utils'
 import { mediosPagoPara } from '@/lib/medios-pago'
+import { FACTURA_ADMIN, validarNumeroFactura } from '@/lib/numero-factura'
 import { api, handleApiError } from '@/hooks/use-api'
 import { usePermissions } from '@/hooks/usePermissions'
 import { exportToExcel } from '@/lib/export-excel'
@@ -966,7 +967,13 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
             </p>
             <div>
               <label htmlFor="facturar-input" className="block text-sm font-medium text-gray-700 mb-1"># Factura <span className="text-red-500">*</span></label>
-              <input id="facturar-input" type="text" value={facturaInput} onChange={e => setFacturaInput(e.target.value.replace(/[^A-Za-z0-9\-]/g, ''))} autoFocus placeholder="Alfanumérico" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500" />
+              <div className="flex gap-2">
+                <input id="facturar-input" type="text" value={facturaInput} onChange={e => setFacturaInput(e.target.value.replace(/[^A-Za-z0-9\-]/g, ''))} autoFocus placeholder="N° real de la factura" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500" />
+                <button type="button" onClick={() => setFacturaInput(FACTURA_ADMIN)} title="La factura la emitió Admin fuera de la plataforma" className="whitespace-nowrap px-3 py-2 text-xs font-medium text-purple-700 border border-purple-300 rounded-md hover:bg-purple-50">Facturado por Admin</button>
+              </div>
+              {facturaInput.trim() && !validarNumeroFactura(facturaInput).ok && (
+                <p className="mt-1 text-xs text-red-600">{(validarNumeroFactura(facturaInput) as { error: string }).error}</p>
+              )}
             </div>
             {facturarDocs.length > 0 ? (
               <div>
@@ -1031,7 +1038,7 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
             )}
             <div className="flex items-center justify-end gap-3 pt-2">
               <button type="button" onClick={() => { setFacturarModal(null); setFacturaInput(''); setFacturaFile(null); setFacturarDocs([]) }} disabled={facturando} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
-              <button type="button" onClick={handleFacturar} disabled={facturando || subiendoFactura || !facturaInput.trim()} className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed">{facturando ? 'Registrando…' : 'Registrar Factura'}</button>
+              <button type="button" onClick={handleFacturar} disabled={facturando || subiendoFactura || !validarNumeroFactura(facturaInput).ok} className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed">{facturando ? 'Registrando…' : 'Registrar Factura'}</button>
             </div>
           </div>
         </div>
@@ -1119,7 +1126,13 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
             </p>
             <div>
               <label htmlFor="bulk-facturar-input" className="block text-sm font-medium text-gray-700 mb-1"># Factura <span className="text-red-500">*</span></label>
-              <input id="bulk-facturar-input" type="text" value={bulkFactura} onChange={e => setBulkFactura(e.target.value.replace(/[^A-Za-z0-9\-]/g, ''))} autoFocus placeholder="Alfanumérico" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500" />
+              <div className="flex gap-2">
+                <input id="bulk-facturar-input" type="text" value={bulkFactura} onChange={e => setBulkFactura(e.target.value.replace(/[^A-Za-z0-9\-]/g, ''))} autoFocus placeholder="N° real de la factura" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500" />
+                <button type="button" onClick={() => setBulkFactura(FACTURA_ADMIN)} title="Las facturas las emitió Admin fuera de la plataforma" className="whitespace-nowrap px-3 py-2 text-xs font-medium text-purple-700 border border-purple-300 rounded-md hover:bg-purple-50">Facturado por Admin</button>
+              </div>
+              {bulkFactura.trim() && !validarNumeroFactura(bulkFactura).ok && (
+                <p className="mt-1 text-xs text-red-600">{(validarNumeroFactura(bulkFactura) as { error: string }).error}</p>
+              )}
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">
@@ -1139,7 +1152,7 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
             </div>
             <div className="flex items-center justify-end gap-3 pt-2">
               <button type="button" onClick={() => setBulkFacturarModal(false)} disabled={bulkFacturando} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
-              <button type="button" onClick={handleBulkFacturar} disabled={bulkFacturando || bulkSubiendo || !bulkFactura.trim()} className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed">{bulkFacturando ? 'Facturando…' : `Facturar ${selectedCount}`}</button>
+              <button type="button" onClick={handleBulkFacturar} disabled={bulkFacturando || bulkSubiendo || !validarNumeroFactura(bulkFactura).ok} className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed">{bulkFacturando ? 'Facturando…' : `Facturar ${selectedCount}`}</button>
             </div>
           </div>
         </div>

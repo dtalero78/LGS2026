@@ -521,6 +521,10 @@ Cuenta **`ACee5675…` ("LGS")** — distinta de la de las env vars `TWILIO_*` d
 ### Calendario de festivos (LGS vs KIDS)
 - LGS usa un diccionario **estático** [src/data/festivos.json](src/data/festivos.json) (banderas de la agenda y panel "Festivos y días off" del SetUp Ciclo); KIDS2026 los **calcula por código** (ley + traslados, `feriados.ts`) y los guarda en `scheduling_holiday`. Al editar el JSON, mantenerlo igual a lo que calcula KIDS (corregido 2026-10-09: "Encuentro de Dos Mundos" CL 2026 = 12-oct; faltaban 18/19-sep, Sábado Santo, 31-oct y 1-nov).
 
+### Facturación de pagos (Recaudos › Gestión › Facturación)
+- Cola = pagos **validados** sin `numeroFactura` (cuotas + inscripciones, excluye PRB-). La factura se emite **fuera** de la plataforma: aquí solo se marca.
+- `numeroFactura` solo acepta **"Admin"** (facturado por Admin) o un **número real** (≥3 dígitos y no `LGS…`) — regla única `validarNumeroFactura()` de [src/lib/numero-factura.ts](src/lib/numero-factura.ts), aplicada en Facturar, Facturar en bloque y Ajustes. Los modales tienen el botón "Facturado por Admin". Los genéricos históricos (`LGS`, `LGS01`, `ADMIN`…) se normalizaron a "Admin" con [scripts/normalizar-facturas-admin.js](scripts/normalizar-facturas-admin.js).
+
 ### Ajustes de pagos validados (Recaudos › Gestión › Ajustes)
 - Pestaña del Centro de Validación (solo variante Gestión) con subpestañas **Inscripciones / Pagos / Facturación**; permisos `RECAUDOS.AJUSTES.INSCRIPCION|PAGO|FACTURACION`. Corrige registros **ya validados** (los pendientes se editan en Verificación).
 - `PATCH /api/postgres/recaudos/ajustes/[id]` → [pagos-ajustes.service.ts](src/services/pagos-ajustes.service.ts): motivo ≥10, transacción, **`recalcularSaldosTitular()`** ([src/lib/recalcular-saldos.ts](src/lib/recalcular-saldos.ts)) y auditoría en `PAGOS_AJUSTES`.
