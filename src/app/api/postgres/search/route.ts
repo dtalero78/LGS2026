@@ -23,6 +23,7 @@ export const GET = handlerWithStaffAuth(async (request) => {
     data: {
       people: result.people,
       academica: result.academica,
+      kids: result.kids,
     },
     totalCount: result.totalCount,
   });

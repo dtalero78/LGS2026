@@ -173,7 +173,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 ### Búsqueda Global
 119. Búsqueda por nombre, apellido, número de ID, contrato
 120. Búsqueda con debounce configurable (400ms default, mínimo 3 caracteres)
-121. Resultados multi-tipo (PEOPLE y ACADEMICA) con deduplicación — los titulares se deduplican por `_id` (no por `numeroId`): un titular con varios contratos (empresa, recontratación) sale una vez por contrato ([SearchBar.tsx](src/components/search/SearchBar.tsx))
+121. Resultados multi-tipo (PEOPLE y ACADEMICA) con deduplicación — los titulares se deduplican por `_id` (no por `numeroId`): un titular con varios contratos (empresa, recontratación) sale una vez por contrato ([SearchBar.tsx](src/components/search/SearchBar.tsx)). Los beneficiarios **Kids** (PEOPLE `kids=true`, sin ACADEMICA) salen con badge "BENEFICIARIO KIDS" → `/person/[id]`; si no hay ningún resultado visible, [search.service.ts](src/services/search.service.ts) busca en el roster de KIDS2026 como respaldo
 122. Navegación por teclado en resultados (↑↓ Enter Escape)
 123. Badges de tipo de resultado con colores (TITULAR, BENEFICIARIO, Registro Académico)
 

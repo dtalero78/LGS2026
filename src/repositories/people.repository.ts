@@ -16,7 +16,7 @@ const JSONB_FIELDS = ['onHoldHistory', 'extensionHistory'];
 const SEARCH_COLUMNS = `
   "_id", "numeroId", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
   "tipoUsuario", "email", "contrato", "nivel", "step", "nivelParalelo", "stepParalelo",
-  "estadoInactivo", "vigencia", "finalContrato", "_createdDate"
+  "estadoInactivo", "vigencia", "finalContrato", "_createdDate", "kids"
 `;
 
 const BENEFICIARY_COLUMNS = `

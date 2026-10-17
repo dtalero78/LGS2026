@@ -38,18 +38,38 @@ export default function SearchBar() {
       return true
     })
 
-    // From PEOPLE: only show TITULARs (BENEFICIARIOs always come from ACADEMICA).
+    // From PEOPLE: TITULARs + beneficiarios Kids (los kids no tienen ACADEMICA,
+    // su ficha es /person/[id]); el resto de BENEFICIARIOs sale de ACADEMICA.
     // Deduplicate by _id, NOT by numeroId: a titular with several contracts
     // (empresa, recontratación) must show one row per contract.
-    const seenTitularIds = new Set<string>()
-    const filteredPeople = fromPeople.filter((r: any) => {
-      if (r.tipoUsuario !== 'TITULAR') return false
-      if (seenTitularIds.has(r._id)) return false
-      seenTitularIds.add(r._id)
-      return true
-    })
+    const seenPeopleIds = new Set<string>()
+    const filteredPeople = fromPeople
+      .filter((r: any) => {
+        const esKid = r.tipoUsuario === 'BENEFICIARIO' && r.kids === true
+        if (r.tipoUsuario !== 'TITULAR' && !esKid) return false
+        if (seenPeopleIds.has(r._id)) return false
+        seenPeopleIds.add(r._id)
+        return true
+      })
+      .map((r: any) => (r.tipoUsuario === 'BENEFICIARIO' ? { ...r, type: 'person', esKids: true } : r))
 
-    return [...dedupedAcademica, ...filteredPeople]
+    // Respaldo: encontrados solo en KIDS2026 (la API los pide si no hubo nada más).
+    const fromKids = (results?.data?.kids || [])
+      .filter((k: any) => !k.personId || !seenPeopleIds.has(k.personId))
+      .map((k: any, i: number) => ({
+        _id: k.personId || `kids-${i}`,
+        primerNombre: k.nombre,
+        primerApellido: '',
+        numeroId: k.docNumero,
+        contrato: k.contrato,
+        kidsDetalle: `${k.campania} · ${k.curso} · ${k.salon}${k.enLgs ? '' : ' · ficha del titular'}`,
+        personId: k.personId,
+        type: 'kids',
+        esKids: true,
+        source: 'kids',
+      }))
+
+    return [...dedupedAcademica, ...filteredPeople, ...fromKids]
   })()
 
   const handleSearch = () => {
@@ -91,7 +111,10 @@ export default function SearchBar() {
   }
 
   const handleResultClick = (result: any) => {
-    if (result.type === 'person') {
+    if (result.type === 'kids') {
+      if (result.personId) router.push(`/person/${result.personId}`)
+      else alert('Este niño está en KIDS pero su contrato no existe en LGS.')
+    } else if (result.type === 'person') {
       router.push(`/person/${result._id}`)
     } else {
       if (result.type === 'student' && result.hasOwnProperty('nivel')) {
@@ -189,13 +212,17 @@ export default function SearchBar() {
                         </span>
                         <span className={cn(
                           "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
-                          result.tipoUsuario === 'TITULAR'
+                          (result as any).esKids
+                            ? "bg-pink-100 text-pink-800"
+                            : result.tipoUsuario === 'TITULAR'
                             ? "bg-primary-100 text-primary-800"
                             : (result as any).source === 'academica'
                             ? "bg-green-100 text-green-800"
                             : "bg-accent-100 text-accent-800"
                         )}>
-                          {result.tipoUsuario || ((result as any).source === 'academica' ? 'Registro Académico' : 'Beneficiario')}
+                          {(result as any).esKids
+                            ? 'BENEFICIARIO KIDS'
+                            : result.tipoUsuario || ((result as any).source === 'academica' ? 'Registro Académico' : 'Beneficiario')}
                         </span>
                       </div>
                       <div className="text-sm text-gray-500">
@@ -203,6 +230,9 @@ export default function SearchBar() {
                         {result.contrato && ` • Contrato: ${result.contrato}`}
                         {result.email && ` • ${result.email}`}
                       </div>
+                      {(result as any).kidsDetalle && (
+                        <div className="text-xs text-pink-700">{(result as any).kidsDetalle}</div>
+                      )}
                     </div>
                   </div>
                 </button>

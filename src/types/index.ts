@@ -255,6 +255,13 @@ export interface SearchResult {
   data: {
     people: Person[]
     academica: Student[]
+    /** Respaldo KIDS2026: solo llega si la búsqueda normal no mostró nada. */
+    kids?: Array<{
+      nombre: string; docNumero: string; contrato: string | null
+      campania: string; curso: string; salon: string
+      matriculaEstado: string; contratoEstado: string; apoderado: string | null
+      personId: string | null; enLgs: boolean
+    }>
   }
   totalCount: number
 }
