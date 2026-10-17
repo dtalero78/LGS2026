@@ -756,7 +756,10 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                   <th className="px-2 py-2 text-left font-medium text-gray-600">Contrato</th>
                   <th className="px-2 py-2 text-left font-medium text-gray-600">Fecha</th>
                   <th className="px-2 py-2 text-right font-medium text-gray-600">Valor</th>
-                  <th className="px-2 py-2 text-center font-medium text-gray-600">{tab === 'inscripcion' && isGestor ? 'Medio de pago' : 'Cuota'}</th>
+                  {/* En Inscripción la cuota siempre es "Insc.": no se muestra (Gestión la usa para el medio de pago). */}
+                  {(tab !== 'inscripcion' || isGestor) && (
+                    <th className="px-2 py-2 text-center font-medium text-gray-600">{tab === 'inscripcion' ? 'Medio de pago' : 'Cuota'}</th>
+                  )}
                   <th className="px-2 py-2 text-left font-medium text-gray-600"># Ref.</th>
                   {tab === 'inscripcion' && isGestor && (
                     <th className="px-2 py-2 text-center font-medium text-gray-600">Recibo insc.</th>
@@ -806,16 +809,18 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                       </td>
                       <td className="px-2 py-2 text-gray-900 align-top whitespace-nowrap">{fmtDate(p.fechaPago)}</td>
                       <td className="px-2 py-2 text-right text-gray-900 font-medium align-top whitespace-nowrap">{p.valorPagado ? formatCurrency(p.valorPagado) : '—'}</td>
-                      <td className="px-2 py-2 text-center align-top whitespace-nowrap">
-                        {tab === 'inscripcion' && isGestor ? (
-                          <div>
-                            <div className="text-gray-900 font-medium">{p.reciboMedioPago || p.medioPago || '—'}</div>
-                            {p.reciboBanco && <div className="text-[11px] text-gray-500">{p.reciboBanco}</div>}
-                          </div>
-                        ) : (
-                          <span className="text-gray-900 font-medium">{p.numCuota === 0 ? 'Insc.' : (p.numCuota ?? '—')}</span>
-                        )}
-                      </td>
+                      {(tab !== 'inscripcion' || isGestor) && (
+                        <td className="px-2 py-2 text-center align-top whitespace-nowrap">
+                          {tab === 'inscripcion' ? (
+                            <div>
+                              <div className="text-gray-900 font-medium">{p.reciboMedioPago || p.medioPago || '—'}</div>
+                              {p.reciboBanco && <div className="text-[11px] text-gray-500">{p.reciboBanco}</div>}
+                            </div>
+                          ) : (
+                            <span className="text-gray-900 font-medium">{p.numCuota === 0 ? 'Insc.' : (p.numCuota ?? '—')}</span>
+                          )}
+                        </td>
+                      )}
                       <td className="px-2 py-2 text-gray-700 text-xs align-top">
                         {(() => {
                           const ref = tab === 'inscripcion' ? (p.reciboReferencia || p.numeroReferencia) : p.numeroReferencia
