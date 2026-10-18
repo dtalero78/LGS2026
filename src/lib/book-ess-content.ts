@@ -13,6 +13,7 @@ import 'server-only';
 import manifest from '@/data/books/st00-00/manifest.json';
 import answerKey from '@/data/books/st00-00/activities.answer-key.json';
 import assessmentsFile from '@/data/books/st00-00/assessments.json';
+import lessonsFile from '@/data/books/st00-00/lessons.json';
 
 export const BOOK_CODE = 'ST00-00';
 export const CONTENT_VERSION = manifest.content_version; // '1.0.0'
@@ -100,6 +101,30 @@ export function actividadesParaAlumno() {
     prompt: a.prompt,
     options: a.type === 'single_choice' ? (a.options || []).map((o) => ({ id: o.id, text: o.text })) : undefined,
     maxLength: a.type === 'open_response' ? a.max_length ?? 4000 : undefined,
+  }));
+}
+
+/** Foto de apertura de la unidad n (privada en Spaces). */
+export function claveImagenUnidad(n: number): string {
+  return `materials/interactive/ST00-00/ui/unit${String(n).padStart(2, '0')}.jpg`;
+}
+
+/**
+ * Contenido de cada unidad para el libro interactivo (lessons.json, archivo
+ * del alumno: vocabulario, explicación, diálogo y consignas — sin claves).
+ * `pages` = páginas de la edición corregida que corresponden a la unidad.
+ */
+export function lecciones() {
+  return (lessonsFile.units as any[]).map((u) => ({
+    id: u.id as number,
+    unitId: u.unit_id as string,
+    title: u.title as string,
+    es: u.es as string,
+    goal: u.goal as string,
+    explain: u.explain as string,
+    groups: (u.groups as any[]).map((g) => ({ title: g.title as string, words: g.words as [string, string][] })),
+    dialog: u.dialog as string[],
+    pages: u.pages as number[],
   }));
 }
 

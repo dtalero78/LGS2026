@@ -6,6 +6,8 @@
  *   - las 88 páginas JPG  → materials/interactive/ST00-00/page-NNN.jpg
  *   - el PDF CORREGIDO    → materials/interactive/ST00-00/LGS_ESSENTIAL.pdf
  *
+ *   - las 12 fotos de unidad → materials/interactive/ST00-00/ui/unitNN.jpg
+ *
  * NO sube el PDF original (trae la clave de respuestas), ni data/server-only,
  * ni reference-html. Antes de subir verifica cada archivo contra SHA256SUMS.txt.
  *
@@ -52,6 +54,14 @@ function sha256(file) {
     return { rel: p.object_key, key: p.object_key, type: 'image/jpeg' };
   });
   items.push({ rel: manifest.pdf_corrected, key: PDF_KEY, type: 'application/pdf' });
+  // Fotos de apertura de cada unidad (diseño del libro: tarjetas, portada de unidad).
+  for (let n = 1; n <= manifest.units; n++) {
+    items.push({
+      rel: `reference-html/assets/unit${n}.jpg`,
+      key: `${PREFIX}/ui/unit${String(n).padStart(2, '0')}.jpg`,
+      type: 'image/jpeg',
+    });
+  }
 
   let bytes = 0;
   for (const it of items) {
@@ -63,7 +73,7 @@ function sha256(file) {
     it.file = file;
     bytes += fs.statSync(file).size;
   }
-  console.log(`✔ ${items.length} archivos verificados (${(bytes / 1048576).toFixed(1)} MB): ${items.length - 1} páginas + PDF corregido`);
+  console.log(`✔ ${items.length} archivos verificados (${(bytes / 1048576).toFixed(1)} MB): ${items.length} (88 páginas + PDF corregido + 12 fotos de unidad)`);
 
   const s3 = new S3Client({
     endpoint: process.env.DO_SPACES_ENDPOINT || 'https://sfo3.digitaloceanspaces.com',

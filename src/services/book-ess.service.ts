@@ -27,7 +27,7 @@ import { resolveStudentFromSession } from '@/services/panel-estudiante.service';
 import {
   BOOK_CODE, CONTENT_VERSION, BOOK_TITLE, BOOK_NIVEL, BOOK_STEP, PDF_KEY, SIGNED_URL_TTL,
   TOTAL_UNIDADES, FINAL_ID, PAGINAS, PAGINAS_REQUERIDAS, EVALUACIONES,
-  paginaPorId, evaluacionPorId, actividad, actividadesParaAlumno, unidades,
+  paginaPorId, evaluacionPorId, actividad, actividadesParaAlumno, unidades, lecciones, claveImagenUnidad,
 } from '@/lib/book-ess-content';
 
 export const FLAG_KEY = 'book_ess_new_activo';
@@ -35,8 +35,8 @@ const FLAG_TTL_MS = 60 * 1000;
 let flagCache: { value: boolean; expires: number } | null = null;
 
 export type BookCtx =
-  | { modo: 'estudiante'; studentId: string; numeroId: string | null }
-  | { modo: 'preview' };
+  | { modo: 'estudiante'; studentId: string; numeroId: string | null; nombre: string }
+  | { modo: 'preview'; nombre: string };
 
 const ROLES_PREVIEW = ['SUPER_ADMIN', 'ADMIN'];
 
@@ -70,7 +70,8 @@ async function motivoBloqueo(session: Session): Promise<{ motivo: string | null;
   }
   const studentId = student.academicaId || student._id;
   if (!studentId) return { motivo: 'No encontramos tu ficha académica.' };
-  return { motivo: null, ctx: { modo: 'estudiante', studentId, numeroId: student.numeroId ?? null } };
+  const nombre = [student.primerNombre, student.primerApellido].filter(Boolean).join(' ').trim();
+  return { motivo: null, ctx: { modo: 'estudiante', studentId, numeroId: student.numeroId ?? null, nombre } };
 }
 
 /** Autoriza la solicitud o lanza 403. `escritura` excluye la vista previa de admin. */
@@ -78,7 +79,7 @@ async function autorizar(session: Session, escritura = false): Promise<BookCtx> 
   const role = String((session.user as any)?.role || '').toUpperCase();
   if (ROLES_PREVIEW.includes(role)) {
     if (escritura) throw new ForbiddenError('Vista previa: el avance no se guarda');
-    return { modo: 'preview' };
+    return { modo: 'preview', nombre: String(session.user?.name || 'Vista previa') };
   }
   if (role !== 'ESTUDIANTE') throw new ForbiddenError('No autorizado');
   const { motivo, ctx } = await motivoBloqueo(session);
@@ -163,7 +164,13 @@ export const bookEssService = {
       titulo: BOOK_TITLE,
       preview: ctx.modo === 'preview',
       flagActivo: await isActive(),
+      alumno: { nombre: ctx.nombre },
       paginas: PAGINAS.map(({ objectKey, ...p }) => p),
+      lecciones: lecciones(),
+      // Fotos de unidad: URL firmada (10 min), igual que las páginas.
+      imagenes: Object.fromEntries(
+        await Promise.all(Array.from({ length: TOTAL_UNIDADES }, async (_, i) => [i + 1, await firmar(claveImagenUnidad(i + 1))])),
+      ),
       unidades: unidades(),
       actividades: actividadesParaAlumno(),
       evaluaciones: EVALUACIONES,
