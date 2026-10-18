@@ -2,7 +2,7 @@
  * Book ESS New — libro interactivo ST00-00 (LGS ESSENTIAL) para alumnos ESS.
  *
  * Autorización (se repite en CADA endpoint: abrir, página, PDF, vista, intento, respuesta):
- *   - Interruptor `APP_CONFIG.book_ess_new_activo` (Mantenimiento › Book ESS New, nace APAGADO).
+ *   - Interruptor `APP_CONFIG.book_ess_new_activo` (Mantenimiento › New Books › Book ESS New, nace APAGADO).
  *   - ESTUDIANTE: sesión → resolveStudentFromSession (aplica vencimiento/OnHold) →
  *     ficha activa, login activo en USUARIOS_ROLES, nivel ESS y step "Step 0".
  *     La identidad sale SIEMPRE de la sesión, nunca del cuerpo de la solicitud.

@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 
 /**
- * Mantenimiento › Book ESS New — interruptor del libro interactivo ESSENTIAL
+ * Mantenimiento › New Books › Book ESS New — interruptor del libro interactivo ESSENTIAL
  * (ST00-00). Encendido: los alumnos ESS · Step 0 activos ven la opción en su
  * panel. Apagado: nadie la ve. Los administradores siempre pueden abrir la
  * vista previa (solo lectura, no guarda avance).
