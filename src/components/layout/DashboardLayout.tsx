@@ -239,6 +239,9 @@ const getNavigation = (userEmail: string, userRole: string) => [
       {
         name: 'New Books', isSubmenu: true, children: [
           { name: 'Book ESS New', href: '/admin/book-ess', newTab: true },
+          { name: 'Book BEG New', href: '/admin/book-new/beg', newTab: true },
+          { name: 'Book PRA New', href: '/admin/book-new/pra', newTab: true },
+          { name: 'Book FUNC New', href: '/admin/book-new/func', newTab: true },
         ],
       },
       { name: 'Diagnóstico', href: '/admin/diagnostico', newTab: true },

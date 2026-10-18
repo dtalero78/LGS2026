@@ -1,0 +1,208 @@
+[
+  {
+    "id": "LGS-PRACTICAL-V2-S16-CHECK",
+    "step_number": 16,
+    "activity_ids": [
+      "LGS-PRACTICAL-V2-S16-CORE-Q01",
+      "LGS-PRACTICAL-V2-S16-CORE-Q02",
+      "LGS-PRACTICAL-V2-S16-CORE-Q03",
+      "LGS-PRACTICAL-V2-S16-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S17-CHECK",
+    "step_number": 17,
+    "activity_ids": [
+      "LGS-PRACTICAL-V2-S17-CORE-Q01",
+      "LGS-PRACTICAL-V2-S17-CORE-Q02",
+      "LGS-PRACTICAL-V2-S17-CORE-Q03",
+      "LGS-PRACTICAL-V2-S17-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S18-CHECK",
+    "step_number": 18,
+    "activity_ids": [
+      "LGS-PRACTICAL-V2-S18-CORE-Q01",
+      "LGS-PRACTICAL-V2-S18-CORE-Q02",
+      "LGS-PRACTICAL-V2-S18-CORE-Q03",
+      "LGS-PRACTICAL-V2-S18-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S19-CHECK",
+    "step_number": 19,
+    "activity_ids": [
+      "LGS-PRACTICAL-V2-S19-CORE-Q01",
+      "LGS-PRACTICAL-V2-S19-CORE-Q02",
+      "LGS-PRACTICAL-V2-S19-CORE-Q03",
+      "LGS-PRACTICAL-V2-S19-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S20-CHECK",
+    "step_number": 20,
+    "activity_ids": [
+      "LGS-PRACTICAL-V2-S20-JUMP-Q01",
+      "LGS-PRACTICAL-V2-S20-JUMP-Q02",
+      "LGS-PRACTICAL-V2-S20-JUMP-Q03",
+      "LGS-PRACTICAL-V2-S20-JUMP-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true,
+    "kind": "jump"
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S21-CHECK",
+    "step_number": 21,
+    "activity_ids": [
+      "LGS-PRACTICAL-V2-S21-CORE-Q01",
+      "LGS-PRACTICAL-V2-S21-CORE-Q02",
+      "LGS-PRACTICAL-V2-S21-CORE-Q03",
+      "LGS-PRACTICAL-V2-S21-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S22-CHECK",
+    "step_number": 22,
+    "activity_ids": [
+      "LGS-PRACTICAL-V2-S22-CORE-Q01",
+      "LGS-PRACTICAL-V2-S22-CORE-Q02",
+      "LGS-PRACTICAL-V2-S22-CORE-Q03",
+      "LGS-PRACTICAL-V2-S22-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S23-CHECK",
+    "step_number": 23,
+    "activity_ids": [
+      "LGS-PRACTICAL-V2-S23-CORE-Q01",
+      "LGS-PRACTICAL-V2-S23-CORE-Q02",
+      "LGS-PRACTICAL-V2-S23-CORE-Q03",
+      "LGS-PRACTICAL-V2-S23-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S24-CHECK",
+    "step_number": 24,
+    "activity_ids": [
+      "LGS-PRACTICAL-V2-S24-CORE-Q01",
+      "LGS-PRACTICAL-V2-S24-CORE-Q02",
+      "LGS-PRACTICAL-V2-S24-CORE-Q03",
+      "LGS-PRACTICAL-V2-S24-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S25-CHECK",
+    "step_number": 25,
+    "activity_ids": [
+      "LGS-PRACTICAL-V2-S25-JUMP-Q01",
+      "LGS-PRACTICAL-V2-S25-JUMP-Q02",
+      "LGS-PRACTICAL-V2-S25-JUMP-Q03",
+      "LGS-PRACTICAL-V2-S25-JUMP-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true,
+    "kind": "jump"
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S26-CHECK",
+    "step_number": 26,
+    "activity_ids": [
+      "LGS-PRACTICAL-V2-S26-CORE-Q01",
+      "LGS-PRACTICAL-V2-S26-CORE-Q02",
+      "LGS-PRACTICAL-V2-S26-CORE-Q03",
+      "LGS-PRACTICAL-V2-S26-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S27-CHECK",
+    "step_number": 27,
+    "activity_ids": [
+      "LGS-PRACTICAL-V2-S27-CORE-Q01",
+      "LGS-PRACTICAL-V2-S27-CORE-Q02",
+      "LGS-PRACTICAL-V2-S27-CORE-Q03",
+      "LGS-PRACTICAL-V2-S27-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S28-CHECK",
+    "step_number": 28,
+    "activity_ids": [
+      "LGS-PRACTICAL-V2-S28-CORE-Q01",
+      "LGS-PRACTICAL-V2-S28-CORE-Q02",
+      "LGS-PRACTICAL-V2-S28-CORE-Q03",
+      "LGS-PRACTICAL-V2-S28-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S29-CHECK",
+    "step_number": 29,
+    "activity_ids": [
+      "LGS-PRACTICAL-V2-S29-CORE-Q01",
+      "LGS-PRACTICAL-V2-S29-CORE-Q02",
+      "LGS-PRACTICAL-V2-S29-CORE-Q03",
+      "LGS-PRACTICAL-V2-S29-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S30-CHECK",
+    "step_number": 30,
+    "activity_ids": [
+      "LGS-PRACTICAL-V2-S30-JUMP-Q01",
+      "LGS-PRACTICAL-V2-S30-JUMP-Q02",
+      "LGS-PRACTICAL-V2-S30-JUMP-Q03",
+      "LGS-PRACTICAL-V2-S30-JUMP-Q04",
+      "LGS-PRACTICAL-V2-S30-JUMP-Q05",
+      "LGS-PRACTICAL-V2-S30-JUMP-Q06",
+      "LGS-PRACTICAL-V2-S30-JUMP-Q07",
+      "LGS-PRACTICAL-V2-S30-JUMP-Q08",
+      "LGS-PRACTICAL-V2-S30-JUMP-Q09",
+      "LGS-PRACTICAL-V2-S30-JUMP-Q10",
+      "LGS-PRACTICAL-V2-S30-JUMP-Q11",
+      "LGS-PRACTICAL-V2-S30-JUMP-Q12"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 9,
+    "required": true,
+    "kind": "final"
+  }
+]

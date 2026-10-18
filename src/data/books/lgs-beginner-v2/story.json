@@ -1,0 +1,631 @@
+[
+  {
+    "step": 1,
+    "title": "Meet the friends",
+    "time": "The beginning",
+    "characters": [
+      "Sara",
+      "Taylor",
+      "Evan",
+      "Clarice",
+      "Ethan",
+      "Denali",
+      "Maria"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Sara",
+        "text": "Hello! I am Sara. Taylor and Evan are my parents."
+      },
+      {
+        "speaker": "Taylor",
+        "text": "I am a chef. Clarice is my friend. She is a fashion designer."
+      },
+      {
+        "speaker": "Evan",
+        "text": "I am a financial analyst. I work with numbers."
+      },
+      {
+        "speaker": "Clarice",
+        "text": "I design clothes. These are my sketches."
+      },
+      {
+        "speaker": "Denali",
+        "text": "Maria and I are roommates. I am a teacher."
+      },
+      {
+        "speaker": "Maria",
+        "text": "I am a counselor. Our friend Ethan is an anesthesiologist."
+      }
+    ],
+    "reading": "Sara is a student. Taylor and Evan are her parents. Taylor is a chef, and Evan is a financial analyst. Clarice is Taylor’s friend. She is a fashion designer. Denali is a teacher, and Maria is a counselor. They are roommates. Ethan is an anesthesiologist. These people have different jobs, but they are part of the same circle of friends. We will follow their everyday lives.",
+    "questions": [
+      {
+        "prompt": "Who is a fashion designer?"
+      },
+      {
+        "prompt": "Who are Sara’s parents?"
+      },
+      {
+        "prompt": "What does Ethan do?"
+      },
+      {
+        "prompt": "Who are roommates?"
+      }
+    ],
+    "focus": "Subject and object pronouns",
+    "task": "Introduce two characters. Replace their names with subject pronouns, then write a sentence using an object pronoun."
+  },
+  {
+    "step": 2,
+    "title": "A visit to Chicago",
+    "time": "A few days later",
+    "characters": [
+      "Denali",
+      "Maria"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Maria",
+        "text": "Is your flight to Chicago today?"
+      },
+      {
+        "speaker": "Denali",
+        "text": "Yes. I am at the airport. My father lives in Chicago."
+      },
+      {
+        "speaker": "Maria",
+        "text": "How long is your visit?"
+      },
+      {
+        "speaker": "Denali",
+        "text": "Five days and four nights. There is one suitcase with me."
+      },
+      {
+        "speaker": "Maria",
+        "text": "Are there any books in your bag?"
+      },
+      {
+        "speaker": "Denali",
+        "text": "Yes, there are two books and a gift for my father. My ID and boarding pass are ready."
+      }
+    ],
+    "reading": "Denali is at the airport. Her flight is from Omaha to Chicago. Her father lives in Chicago, and her visit is five days and four nights long. There is one suitcase beside her. There are two books and a gift in her bag. Her ID and boarding pass are ready. Maria is at home. She sends Denali a message before the flight.",
+    "questions": [
+      {
+        "prompt": "Where is Denali flying?"
+      },
+      {
+        "prompt": "Who lives in Chicago?"
+      },
+      {
+        "prompt": "How long is the visit?"
+      },
+      {
+        "prompt": "How many books are in the bag?"
+      }
+    ],
+    "focus": "Nouns, plurals and there is / there are",
+    "task": "Describe Denali’s bag with there is and there are. Include one singular and two plural nouns."
+  },
+  {
+    "step": 3,
+    "title": "The missing keys",
+    "time": "During Denali’s trip",
+    "characters": [
+      "Clarice",
+      "Ethan"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Ethan",
+        "text": "Excuse me. Are these your keys?"
+      },
+      {
+        "speaker": "Clarice",
+        "text": "Yes, they are! Thank you. I often put them in this pocket."
+      },
+      {
+        "speaker": "Ethan",
+        "text": "I am Ethan. Do you live near this grocery store?"
+      },
+      {
+        "speaker": "Clarice",
+        "text": "Yes. I am Clarice. I also work nearby. I design clothes."
+      },
+      {
+        "speaker": "Ethan",
+        "text": "That sounds interesting. I work at the hospital."
+      },
+      {
+        "speaker": "Clarice",
+        "text": "Please tell me about your work. And thanks again for the keys!"
+      }
+    ],
+    "reading": "Clarice and Ethan meet at a grocery store. Clarice drops her keys, and Ethan returns them. Clarice lives near the store and works nearby. She designs clothes. Ethan works at the hospital as an anesthesiologist. They introduce themselves and talk about their jobs. This is their first meeting. Clarice thanks Ethan for his help.",
+    "questions": [
+      {
+        "prompt": "Where do Clarice and Ethan meet?"
+      },
+      {
+        "prompt": "What does Clarice drop?"
+      },
+      {
+        "prompt": "Who returns the keys?"
+      },
+      {
+        "prompt": "What do they talk about?"
+      }
+    ],
+    "focus": "Present simple and imperatives",
+    "task": "Write three questions about the characters’ routines. Add one polite instruction beginning with Please."
+  },
+  {
+    "step": 4,
+    "title": "Making a connection",
+    "time": "The next day",
+    "characters": [
+      "Clarice",
+      "Ethan"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Clarice",
+        "text": "Hello again! Are you taking a break?"
+      },
+      {
+        "speaker": "Ethan",
+        "text": "Yes. I am drinking coffee before work. Are you working today?"
+      },
+      {
+        "speaker": "Clarice",
+        "text": "I am finishing a design at my studio."
+      },
+      {
+        "speaker": "Ethan",
+        "text": "Would you like to have dinner with me sometime?"
+      },
+      {
+        "speaker": "Clarice",
+        "text": "Yes. I am saving your number now."
+      },
+      {
+        "speaker": "Ethan",
+        "text": "Great. I am checking my schedule. I will call you to arrange it."
+      }
+    ],
+    "reading": "The day after their first meeting, Clarice and Ethan see each other again. Ethan is drinking coffee before work. Clarice is finishing a design at her studio that day. Ethan invites her to dinner, and she accepts. They exchange phone numbers. They do not choose a restaurant or a time yet. Ethan is checking his schedule before he calls her.",
+    "questions": [
+      {
+        "prompt": "When do they meet again?"
+      },
+      {
+        "prompt": "What is Ethan drinking?"
+      },
+      {
+        "prompt": "What is Clarice finishing?"
+      },
+      {
+        "prompt": "What do they exchange?"
+      }
+    ],
+    "focus": "Present continuous",
+    "task": "Describe what Clarice and Ethan are doing. Write two affirmative sentences, one negative sentence and one question."
+  },
+  {
+    "step": 6,
+    "title": "A family Saturday",
+    "time": "That Saturday",
+    "characters": [
+      "Taylor",
+      "Evan",
+      "Sara"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Taylor",
+        "text": "This garden looks lovely. Is that your book, Sara?"
+      },
+      {
+        "speaker": "Sara",
+        "text": "Yes. These cushions are for the playroom."
+      },
+      {
+        "speaker": "Evan",
+        "text": "There is a new plant beside the gate. I will water it."
+      },
+      {
+        "speaker": "Taylor",
+        "text": "After lunch, let’s go to the store."
+      },
+      {
+        "speaker": "Sara",
+        "text": "Is that Ethan over there?"
+      },
+      {
+        "speaker": "Taylor",
+        "text": "Yes. He is a friend of Charlene’s. Let’s say hello."
+      }
+    ],
+    "reading": "On Saturday, Taylor, Evan and Sara spend the morning at home. Taylor enjoys the garden. Sara takes cushions to the playroom. Evan waters a new plant beside the gate. After lunch, they go to the store. They see Ethan there and say hello. Taylor knows him through Charlene, their friend. Taylor works as a chef; she does not work at Ethan’s hospital.",
+    "questions": [
+      {
+        "prompt": "Where is the new plant?"
+      },
+      {
+        "prompt": "What does Sara take to the playroom?"
+      },
+      {
+        "prompt": "When do they go to the store?"
+      },
+      {
+        "prompt": "Through whom does Taylor know Ethan?"
+      }
+    ],
+    "focus": "Articles and demonstratives",
+    "task": "Describe the family’s home using a, an, the, this, that, these and those."
+  },
+  {
+    "step": 7,
+    "title": "Checking in",
+    "time": "Earlier, on Denali’s arrival day",
+    "characters": [
+      "Denali"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Denali",
+        "text": "Hello. I have a reservation under Denali Kumar."
+      },
+      {
+        "speaker": "Receptionist",
+        "text": "Welcome. Your room is on the second floor, opposite the elevator."
+      },
+      {
+        "speaker": "Denali",
+        "text": "Thank you. Is the restaurant downstairs?"
+      },
+      {
+        "speaker": "Receptionist",
+        "text": "Yes, next to the lobby. Breakfast is from seven to ten."
+      },
+      {
+        "speaker": "Denali",
+        "text": "Perfect. I am here for four nights."
+      },
+      {
+        "speaker": "Receptionist",
+        "text": "Here is your key. Enjoy your visit to Chicago."
+      }
+    ],
+    "reading": "This episode returns to Denali’s arrival in Chicago. She checks in at a hotel for four nights. Her room is on the second floor, opposite the elevator. The restaurant is downstairs, next to the lobby. Breakfast is from seven to ten. Denali takes her key and goes to her room. Her visit lasts five days, including the day she arrives and the day she leaves.",
+    "questions": [
+      {
+        "prompt": "How many nights will Denali stay?"
+      },
+      {
+        "prompt": "Which floor is her room on?"
+      },
+      {
+        "prompt": "What is opposite her room?"
+      },
+      {
+        "prompt": "When does breakfast finish?"
+      }
+    ],
+    "focus": "Prepositions of place and time",
+    "task": "Draw a simple hotel plan. Write four sentences about where the room, elevator, restaurant and lobby are."
+  },
+  {
+    "step": 8,
+    "title": "A difficult day out",
+    "time": "Back with the Thompsons, on Sunday",
+    "characters": [
+      "Taylor",
+      "Evan",
+      "Sara"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Sara",
+        "text": "Our trip was not very relaxing, was it?"
+      },
+      {
+        "speaker": "Evan",
+        "text": "No. We waited a long time at the entrance."
+      },
+      {
+        "speaker": "Taylor",
+        "text": "The lake looked beautiful, but the water was too cold for swimming."
+      },
+      {
+        "speaker": "Sara",
+        "text": "And the line for the restrooms was very long."
+      },
+      {
+        "speaker": "Evan",
+        "text": "We left the park at seven in the evening."
+      },
+      {
+        "speaker": "Taylor",
+        "text": "Next time, let’s check the information and arrive earlier."
+      }
+    ],
+    "reading": "The Thompson family visited a park on Sunday. They waited at the entrance and then walked to the lake. The water was too cold, so they did not swim. Later, there was a long line for the restrooms. The family left at seven in the evening. They were tired. Taylor suggested checking the information and arriving earlier on their next visit.",
+    "questions": [
+      {
+        "prompt": "Where did the family go?"
+      },
+      {
+        "prompt": "Why did they not swim?"
+      },
+      {
+        "prompt": "Where was there a long line?"
+      },
+      {
+        "prompt": "When did they leave?"
+      }
+    ],
+    "focus": "Past simple",
+    "task": "Retell the trip in five sentences. Use at least two irregular past forms and one negative sentence."
+  },
+  {
+    "step": 9,
+    "title": "A table for two",
+    "time": "Thursday before the first date",
+    "characters": [
+      "Ethan"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Ethan",
+        "text": "Hello. I was checking your menu when I decided to call. Can I book a table for Saturday at eight?"
+      },
+      {
+        "speaker": "Luiggi",
+        "text": "Eight is fully booked. We have a table upstairs at eight thirty."
+      },
+      {
+        "speaker": "Ethan",
+        "text": "That works. A table for two, please."
+      },
+      {
+        "speaker": "Luiggi",
+        "text": "Certainly. May I have your name?"
+      },
+      {
+        "speaker": "Ethan",
+        "text": "Ethan Plein. I was looking for a quiet place for dinner."
+      },
+      {
+        "speaker": "Luiggi",
+        "text": "Your reservation at Al Dente is confirmed for Saturday at eight thirty."
+      }
+    ],
+    "reading": "On Thursday, Ethan called Al Dente while he was planning his first date with Clarice. Luiggi answered the phone. Ethan asked for a table at eight, but that time was fully booked. Luiggi offered a table upstairs at eight thirty on Saturday. Ethan accepted. The reservation is for two people. The confirmed time is eight thirty, not eight.",
+    "questions": [
+      {
+        "prompt": "When does Ethan call?"
+      },
+      {
+        "prompt": "What is the confirmed dinner time?"
+      },
+      {
+        "prompt": "Where is the table?"
+      },
+      {
+        "prompt": "Who takes the reservation?"
+      }
+    ],
+    "focus": "Past continuous",
+    "task": "Write two sentences combining past continuous and past simple about Ethan’s phone call."
+  },
+  {
+    "step": 11,
+    "title": "One thing at a time",
+    "time": "Later that Thursday",
+    "characters": [
+      "Clarice",
+      "Charlene"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Charlene",
+        "text": "You look worried. What is happening?"
+      },
+      {
+        "speaker": "Clarice",
+        "text": "I have a design deadline on Friday and a date on Saturday."
+      },
+      {
+        "speaker": "Charlene",
+        "text": "Which task needs your attention first?"
+      },
+      {
+        "speaker": "Clarice",
+        "text": "The design. Could you tell me how to organize the afternoon?"
+      },
+      {
+        "speaker": "Charlene",
+        "text": "Write a short list and start with the most urgent task. You can ask for help, can’t you?"
+      },
+      {
+        "speaker": "Clarice",
+        "text": "Yes. A plan will help me enjoy Saturday."
+      }
+    ],
+    "reading": "Clarice talks to Charlene, her friend and a nurse. Clarice has a design deadline on Friday. Her first dinner date with Ethan is on Saturday. Charlene asks her which task is most urgent. Clarice decides to finish the design first. Charlene suggests a short list and asking for help when needed. Clarice feels more organized after their conversation.",
+    "questions": [
+      {
+        "prompt": "When is the design deadline?"
+      },
+      {
+        "prompt": "Who gives Clarice advice?"
+      },
+      {
+        "prompt": "What should Clarice do first?"
+      },
+      {
+        "prompt": "What does Charlene suggest?"
+      }
+    ],
+    "focus": "WH questions, indirect questions and question tags",
+    "task": "Ask Clarice one WH question, one polite indirect question and one question tag."
+  },
+  {
+    "step": 12,
+    "title": "An evening together",
+    "time": "Thursday evening",
+    "characters": [
+      "Taylor",
+      "Evan"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Taylor",
+        "text": "Is this your list of films or mine?"
+      },
+      {
+        "speaker": "Evan",
+        "text": "It is mine. I would like to watch a science-fiction film."
+      },
+      {
+        "speaker": "Taylor",
+        "text": "I prefer a comedy. Can we choose one together?"
+      },
+      {
+        "speaker": "Evan",
+        "text": "Of course. And what about dinner?"
+      },
+      {
+        "speaker": "Taylor",
+        "text": "Let’s go to the Japanese restaurant. Their sushi is excellent."
+      },
+      {
+        "speaker": "Evan",
+        "text": "Good idea. The sashimi is my favorite. We can see the comedy afterward."
+      }
+    ],
+    "reading": "Taylor and Evan plan an evening together. Evan’s list includes science-fiction films, but Taylor prefers a comedy. They agree to watch the comedy after dinner. They choose a Japanese restaurant. Taylor likes its sushi, and Evan likes the sashimi. They both help make the plan. The evening is for Taylor and Evan, not for Clarice and Ethan.",
+    "questions": [
+      {
+        "prompt": "Whose film list is it?"
+      },
+      {
+        "prompt": "Which type of film do they choose?"
+      },
+      {
+        "prompt": "What kind of restaurant do they choose?"
+      },
+      {
+        "prompt": "What is Evan’s favorite dish there?"
+      }
+    ],
+    "focus": "Possessives and the genitive",
+    "task": "Describe three possessions belonging to the characters. Use a possessive adjective, a possessive pronoun and apostrophe s."
+  },
+  {
+    "step": 13,
+    "title": "Getting ready",
+    "time": "Friday afternoon",
+    "characters": [
+      "Clarice",
+      "Taylor"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Clarice",
+        "text": "Will you help me choose something for tomorrow’s date?"
+      },
+      {
+        "speaker": "Taylor",
+        "text": "Of course. I will meet you at three."
+      },
+      {
+        "speaker": "Clarice",
+        "text": "Thank you. Ethan will pick me up at seven forty-five tomorrow."
+      },
+      {
+        "speaker": "Taylor",
+        "text": "Will you wear the blue dress?"
+      },
+      {
+        "speaker": "Clarice",
+        "text": "I think so. I will look for a simple bag to go with it."
+      },
+      {
+        "speaker": "Taylor",
+        "text": "We will find one. You have already finished your design, haven’t you?"
+      }
+    ],
+    "reading": "On Friday, Clarice asks Taylor for help with her outfit. They agree to meet at three in the afternoon. The date is on Saturday. Ethan will pick Clarice up at seven forty-five, before their eight-thirty dinner reservation. Clarice plans to wear a blue dress and look for a simple bag. Her urgent design is finished, so she can enjoy the afternoon.",
+    "questions": [
+      {
+        "prompt": "When do Clarice and Taylor meet?"
+      },
+      {
+        "prompt": "When is the date?"
+      },
+      {
+        "prompt": "What time will Ethan pick Clarice up?"
+      },
+      {
+        "prompt": "What will Clarice look for?"
+      }
+    ],
+    "focus": "Future with will",
+    "task": "Make three offers or promises to help Clarice. Use will and write one question with Will you...?"
+  },
+  {
+    "step": 14,
+    "title": "A plan for tomorrow",
+    "time": "Later on Friday",
+    "characters": [
+      "Clarice",
+      "Caleb"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Clarice",
+        "text": "Caleb, my laptop is very slow. Are you going to check it today?"
+      },
+      {
+        "speaker": "Caleb",
+        "text": "Yes. I am going to look at it this afternoon. Have you backed up your designs?"
+      },
+      {
+        "speaker": "Clarice",
+        "text": "Yes. They are in my backup folder."
+      },
+      {
+        "speaker": "Caleb",
+        "text": "Good. What are you going to do tomorrow?"
+      },
+      {
+        "speaker": "Clarice",
+        "text": "I am going to have dinner with Ethan at Al Dente."
+      },
+      {
+        "speaker": "Caleb",
+        "text": "Enjoy it! I am going to call you when the laptop is ready."
+      }
+    ],
+    "reading": "Clarice visits Caleb’s computer shop on Friday. Her laptop is slow. Caleb is going to check it that afternoon. Clarice has backed up her designs, so she has another copy of her work. She tells Caleb about her plan for Saturday: dinner with Ethan at Al Dente. Caleb is going to call when the laptop is ready. The dinner has not happened yet.",
+    "questions": [
+      {
+        "prompt": "Where does Clarice go?"
+      },
+      {
+        "prompt": "What is wrong with the laptop?"
+      },
+      {
+        "prompt": "What has Clarice backed up?"
+      },
+      {
+        "prompt": "Where is tomorrow’s dinner?"
+      }
+    ],
+    "focus": "Future with be going to",
+    "task": "Write Clarice’s and Caleb’s plans using be going to. Explain the difference between a plan and a spontaneous offer."
+  }
+]

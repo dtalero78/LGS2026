@@ -1,0 +1,3366 @@
+[
+  {
+    "page": 1,
+    "id": "LGS-FUNCTIONAL-V2-P001",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Functional • Source page 1",
+    "source_pdf_pages": [
+      1
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-001.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 2,
+    "id": "LGS-FUNCTIONAL-V2-P002",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Functional • Source page 2",
+    "source_pdf_pages": [
+      2
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-002.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 3,
+    "id": "LGS-FUNCTIONAL-V2-P003",
+    "step": null,
+    "step_number": null,
+    "kind": "guide",
+    "title": "Your story. Your progress.",
+    "source_pdf_pages": [],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-003.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 4,
+    "id": "LGS-FUNCTIONAL-V2-P004",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Functional • Source page 3",
+    "source_pdf_pages": [
+      3
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-004.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 5,
+    "id": "LGS-FUNCTIONAL-V2-P005",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Functional • Source page 4",
+    "source_pdf_pages": [
+      4
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-005.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 6,
+    "id": "LGS-FUNCTIONAL-V2-P006",
+    "step": null,
+    "step_number": null,
+    "kind": "characters",
+    "title": "Meet the characters",
+    "source_pdf_pages": [
+      5
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-006.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 7,
+    "id": "LGS-FUNCTIONAL-V2-P007",
+    "step": null,
+    "step_number": null,
+    "kind": "characters",
+    "title": "Meet the characters",
+    "source_pdf_pages": [
+      6
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-007.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 8,
+    "id": "LGS-FUNCTIONAL-V2-P008",
+    "step": "Step 31",
+    "step_number": 31,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 7",
+    "source_pdf_pages": [
+      7
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-008.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 9,
+    "id": "LGS-FUNCTIONAL-V2-P009",
+    "step": "Step 31",
+    "step_number": 31,
+    "kind": "story",
+    "title": "The Christmas gathering",
+    "source_pdf_pages": [
+      8
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-009.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 10,
+    "id": "LGS-FUNCTIONAL-V2-P010",
+    "step": "Step 31",
+    "step_number": 31,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      9
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-010.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S31-LAB-P009"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 11,
+    "id": "LGS-FUNCTIONAL-V2-P011",
+    "step": "Step 31",
+    "step_number": 31,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 10",
+    "source_pdf_pages": [
+      10
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-011.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S31-SOURCE-P010"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 12,
+    "id": "LGS-FUNCTIONAL-V2-P012",
+    "step": "Step 31",
+    "step_number": 31,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      11
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-012.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S31-DETECTIVE-P011"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 13,
+    "id": "LGS-FUNCTIONAL-V2-P013",
+    "step": "Step 31",
+    "step_number": 31,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      12
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-013.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S31-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S31-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S31-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S31-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 14,
+    "id": "LGS-FUNCTIONAL-V2-P014",
+    "step": "Step 31",
+    "step_number": 31,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 13",
+    "source_pdf_pages": [
+      13
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-014.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S31-SOURCE-P013"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 15,
+    "id": "LGS-FUNCTIONAL-V2-P015",
+    "step": "Step 31",
+    "step_number": 31,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 14",
+    "source_pdf_pages": [
+      14
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-015.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S31-SOURCE-P014"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 16,
+    "id": "LGS-FUNCTIONAL-V2-P016",
+    "step": "Step 31",
+    "step_number": 31,
+    "kind": "source_practice",
+    "title": "Functional • Source page 15",
+    "source_pdf_pages": [
+      15
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-016.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S31-SOURCE-P015"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 17,
+    "id": "LGS-FUNCTIONAL-V2-P017",
+    "step": "Step 31",
+    "step_number": 31,
+    "kind": "source_practice",
+    "title": "Functional • Source page 16",
+    "source_pdf_pages": [
+      16
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-017.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S31-SOURCE-P016"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 18,
+    "id": "LGS-FUNCTIONAL-V2-P018",
+    "step": "Step 32",
+    "step_number": 32,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 17",
+    "source_pdf_pages": [
+      17
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-018.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 19,
+    "id": "LGS-FUNCTIONAL-V2-P019",
+    "step": "Step 32",
+    "step_number": 32,
+    "kind": "story",
+    "title": "A confident first step",
+    "source_pdf_pages": [
+      18
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-019.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 20,
+    "id": "LGS-FUNCTIONAL-V2-P020",
+    "step": "Step 32",
+    "step_number": 32,
+    "kind": "source_practice",
+    "title": "Functional • Source page 19",
+    "source_pdf_pages": [
+      19
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-020.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S32-SOURCE-P019"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 21,
+    "id": "LGS-FUNCTIONAL-V2-P021",
+    "step": "Step 32",
+    "step_number": 32,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      20
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-021.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S32-DETECTIVE-P020"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 22,
+    "id": "LGS-FUNCTIONAL-V2-P022",
+    "step": "Step 32",
+    "step_number": 32,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      21
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-022.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S32-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S32-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S32-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S32-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 23,
+    "id": "LGS-FUNCTIONAL-V2-P023",
+    "step": "Step 32",
+    "step_number": 32,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      22
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-023.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S32-LAB-P022"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 24,
+    "id": "LGS-FUNCTIONAL-V2-P024",
+    "step": "Step 32",
+    "step_number": 32,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 23",
+    "source_pdf_pages": [
+      23
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-024.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S32-SOURCE-P023"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 25,
+    "id": "LGS-FUNCTIONAL-V2-P025",
+    "step": "Step 32",
+    "step_number": 32,
+    "kind": "source_practice",
+    "title": "Functional • Source page 24",
+    "source_pdf_pages": [
+      24
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-025.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S32-SOURCE-P024"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 26,
+    "id": "LGS-FUNCTIONAL-V2-P026",
+    "step": "Step 32",
+    "step_number": 32,
+    "kind": "source_practice",
+    "title": "Functional • Source page 25",
+    "source_pdf_pages": [
+      25
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-026.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S32-SOURCE-P025"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 27,
+    "id": "LGS-FUNCTIONAL-V2-P027",
+    "step": "Step 32",
+    "step_number": 32,
+    "kind": "extension",
+    "title": "Before the lesson",
+    "source_pdf_pages": [
+      26
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-027.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S32-DETECTIVE-P026"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 28,
+    "id": "LGS-FUNCTIONAL-V2-P028",
+    "step": "Step 32",
+    "step_number": 32,
+    "kind": "assessment",
+    "title": "Reading Plus · Check",
+    "source_pdf_pages": [
+      27
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-028.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S32-PLUS-Q01",
+      "LGS-FUNCTIONAL-V2-S32-PLUS-Q02",
+      "LGS-FUNCTIONAL-V2-S32-PLUS-Q03",
+      "LGS-FUNCTIONAL-V2-S32-PLUS-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 29,
+    "id": "LGS-FUNCTIONAL-V2-P029",
+    "step": "Step 32",
+    "step_number": 32,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      28
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-029.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S32-EXTRALAB-P028"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 30,
+    "id": "LGS-FUNCTIONAL-V2-P030",
+    "step": "Step 32",
+    "step_number": 32,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      29
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-030.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S32-EXTRALAB-P029"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 31,
+    "id": "LGS-FUNCTIONAL-V2-P031",
+    "step": "Step 32",
+    "step_number": 32,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      30
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-031.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S32-EXTRALAB-P030"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 32,
+    "id": "LGS-FUNCTIONAL-V2-P032",
+    "step": "Step 33",
+    "step_number": 33,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 31",
+    "source_pdf_pages": [
+      31
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-032.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 33,
+    "id": "LGS-FUNCTIONAL-V2-P033",
+    "step": "Step 33",
+    "step_number": 33,
+    "kind": "story",
+    "title": "A Sunday plan",
+    "source_pdf_pages": [
+      32
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-033.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 34,
+    "id": "LGS-FUNCTIONAL-V2-P034",
+    "step": "Step 33",
+    "step_number": 33,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      33
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-034.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S33-LAB-P033"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 35,
+    "id": "LGS-FUNCTIONAL-V2-P035",
+    "step": "Step 33",
+    "step_number": 33,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 34",
+    "source_pdf_pages": [
+      34
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-035.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S33-SOURCE-P034"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 36,
+    "id": "LGS-FUNCTIONAL-V2-P036",
+    "step": "Step 33",
+    "step_number": 33,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      35
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-036.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S33-DETECTIVE-P035"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 37,
+    "id": "LGS-FUNCTIONAL-V2-P037",
+    "step": "Step 33",
+    "step_number": 33,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      36
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-037.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S33-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S33-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S33-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S33-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 38,
+    "id": "LGS-FUNCTIONAL-V2-P038",
+    "step": "Step 33",
+    "step_number": 33,
+    "kind": "source_practice",
+    "title": "Functional • Source page 37",
+    "source_pdf_pages": [
+      37
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-038.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S33-SOURCE-P037"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 39,
+    "id": "LGS-FUNCTIONAL-V2-P039",
+    "step": "Step 33",
+    "step_number": 33,
+    "kind": "source_practice",
+    "title": "Functional • Source page 38",
+    "source_pdf_pages": [
+      38
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-039.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S33-SOURCE-P038"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 40,
+    "id": "LGS-FUNCTIONAL-V2-P040",
+    "step": "Step 33",
+    "step_number": 33,
+    "kind": "source_practice",
+    "title": "Functional • Source page 39",
+    "source_pdf_pages": [
+      39
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-040.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S33-SOURCE-P039"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 41,
+    "id": "LGS-FUNCTIONAL-V2-P041",
+    "step": "Step 33",
+    "step_number": 33,
+    "kind": "extension",
+    "title": "By the time we meet",
+    "source_pdf_pages": [
+      40
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-041.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S33-DETECTIVE-P040"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 42,
+    "id": "LGS-FUNCTIONAL-V2-P042",
+    "step": "Step 33",
+    "step_number": 33,
+    "kind": "assessment",
+    "title": "Reading Plus · Check",
+    "source_pdf_pages": [
+      41
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-042.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S33-PLUS-Q01",
+      "LGS-FUNCTIONAL-V2-S33-PLUS-Q02",
+      "LGS-FUNCTIONAL-V2-S33-PLUS-Q03",
+      "LGS-FUNCTIONAL-V2-S33-PLUS-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 43,
+    "id": "LGS-FUNCTIONAL-V2-P043",
+    "step": "Step 33",
+    "step_number": 33,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      42
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-043.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S33-EXTRALAB-P042"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 44,
+    "id": "LGS-FUNCTIONAL-V2-P044",
+    "step": "Step 33",
+    "step_number": 33,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      43
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-044.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S33-EXTRALAB-P043"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 45,
+    "id": "LGS-FUNCTIONAL-V2-P045",
+    "step": "Step 34",
+    "step_number": 34,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 44",
+    "source_pdf_pages": [
+      44
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-045.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 46,
+    "id": "LGS-FUNCTIONAL-V2-P046",
+    "step": "Step 34",
+    "step_number": 34,
+    "kind": "story",
+    "title": "A misunderstanding at dinner",
+    "source_pdf_pages": [
+      45
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-046.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 47,
+    "id": "LGS-FUNCTIONAL-V2-P047",
+    "step": "Step 34",
+    "step_number": 34,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 46",
+    "source_pdf_pages": [
+      46
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-047.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S34-SOURCE-P046"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 48,
+    "id": "LGS-FUNCTIONAL-V2-P048",
+    "step": "Step 34",
+    "step_number": 34,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      47
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-048.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S34-DETECTIVE-P047"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 49,
+    "id": "LGS-FUNCTIONAL-V2-P049",
+    "step": "Step 34",
+    "step_number": 34,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      48
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-049.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S34-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S34-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S34-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S34-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 50,
+    "id": "LGS-FUNCTIONAL-V2-P050",
+    "step": "Step 34",
+    "step_number": 34,
+    "kind": "source_practice",
+    "title": "Functional • Source page 49",
+    "source_pdf_pages": [
+      49
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-050.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S34-SOURCE-P049"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 51,
+    "id": "LGS-FUNCTIONAL-V2-P051",
+    "step": "Step 34",
+    "step_number": 34,
+    "kind": "source_practice",
+    "title": "Functional • Source page 50",
+    "source_pdf_pages": [
+      50
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-051.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S34-SOURCE-P050"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 52,
+    "id": "LGS-FUNCTIONAL-V2-P052",
+    "step": "Step 34",
+    "step_number": 34,
+    "kind": "source_practice",
+    "title": "Functional • Source page 51",
+    "source_pdf_pages": [
+      51
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-052.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S34-SOURCE-P051"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 53,
+    "id": "LGS-FUNCTIONAL-V2-P053",
+    "step": "Step 34",
+    "step_number": 34,
+    "kind": "extension",
+    "title": "Checking an assumption",
+    "source_pdf_pages": [
+      52
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-053.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S34-DETECTIVE-P052"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 54,
+    "id": "LGS-FUNCTIONAL-V2-P054",
+    "step": "Step 34",
+    "step_number": 34,
+    "kind": "assessment",
+    "title": "Reading Plus · Check",
+    "source_pdf_pages": [
+      53
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-054.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S34-PLUS-Q01",
+      "LGS-FUNCTIONAL-V2-S34-PLUS-Q02",
+      "LGS-FUNCTIONAL-V2-S34-PLUS-Q03",
+      "LGS-FUNCTIONAL-V2-S34-PLUS-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 55,
+    "id": "LGS-FUNCTIONAL-V2-P055",
+    "step": "Step 34",
+    "step_number": 34,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      54
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-055.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S34-EXTRALAB-P054"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 56,
+    "id": "LGS-FUNCTIONAL-V2-P056",
+    "step": "Step 35",
+    "step_number": 35,
+    "kind": "source_practice",
+    "title": "Functional • Source page 55",
+    "source_pdf_pages": [
+      55
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-056.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 57,
+    "id": "LGS-FUNCTIONAL-V2-P057",
+    "step": "Step 35",
+    "step_number": 35,
+    "kind": "assessment",
+    "title": "Story checkpoint",
+    "source_pdf_pages": [],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-057.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S35-JUMP-Q01",
+      "LGS-FUNCTIONAL-V2-S35-JUMP-Q02",
+      "LGS-FUNCTIONAL-V2-S35-JUMP-Q03",
+      "LGS-FUNCTIONAL-V2-S35-JUMP-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 58,
+    "id": "LGS-FUNCTIONAL-V2-P058",
+    "step": "Step 35",
+    "step_number": 35,
+    "kind": "source_practice",
+    "title": "Functional • Source page 56",
+    "source_pdf_pages": [
+      56
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-058.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S35-SOURCE-P056"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 59,
+    "id": "LGS-FUNCTIONAL-V2-P059",
+    "step": "Step 35",
+    "step_number": 35,
+    "kind": "source_practice",
+    "title": "Functional • Source page 57",
+    "source_pdf_pages": [
+      57
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-059.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S35-SOURCE-P057"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 60,
+    "id": "LGS-FUNCTIONAL-V2-P060",
+    "step": "Step 35",
+    "step_number": 35,
+    "kind": "source_practice",
+    "title": "Functional • Source page 58",
+    "source_pdf_pages": [
+      58
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-060.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S35-SOURCE-P058"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 61,
+    "id": "LGS-FUNCTIONAL-V2-P061",
+    "step": "Step 35",
+    "step_number": 35,
+    "kind": "source_practice",
+    "title": "Functional • Source page 59",
+    "source_pdf_pages": [
+      59
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-061.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S35-SOURCE-P059"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 62,
+    "id": "LGS-FUNCTIONAL-V2-P062",
+    "step": "Step 35",
+    "step_number": 35,
+    "kind": "source_practice",
+    "title": "Functional • Source page 60",
+    "source_pdf_pages": [
+      60
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-062.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S35-SOURCE-P060"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 63,
+    "id": "LGS-FUNCTIONAL-V2-P063",
+    "step": "Step 35",
+    "step_number": 35,
+    "kind": "source_practice",
+    "title": "Functional • Source page 61",
+    "source_pdf_pages": [
+      61
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-063.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S35-SOURCE-P061"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 64,
+    "id": "LGS-FUNCTIONAL-V2-P064",
+    "step": "Step 36",
+    "step_number": 36,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 62",
+    "source_pdf_pages": [
+      62
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-064.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 65,
+    "id": "LGS-FUNCTIONAL-V2-P065",
+    "step": "Step 36",
+    "step_number": 36,
+    "kind": "story",
+    "title": "A new chapter",
+    "source_pdf_pages": [
+      63
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-065.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 66,
+    "id": "LGS-FUNCTIONAL-V2-P066",
+    "step": "Step 36",
+    "step_number": 36,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      64
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-066.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S36-LAB-P064"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 67,
+    "id": "LGS-FUNCTIONAL-V2-P067",
+    "step": "Step 36",
+    "step_number": 36,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 65",
+    "source_pdf_pages": [
+      65
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-067.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S36-SOURCE-P065"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 68,
+    "id": "LGS-FUNCTIONAL-V2-P068",
+    "step": "Step 36",
+    "step_number": 36,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      66
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-068.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S36-DETECTIVE-P066"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 69,
+    "id": "LGS-FUNCTIONAL-V2-P069",
+    "step": "Step 36",
+    "step_number": 36,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      67
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-069.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S36-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S36-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S36-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S36-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 70,
+    "id": "LGS-FUNCTIONAL-V2-P070",
+    "step": "Step 36",
+    "step_number": 36,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 68",
+    "source_pdf_pages": [
+      68
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-070.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S36-SOURCE-P068"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 71,
+    "id": "LGS-FUNCTIONAL-V2-P071",
+    "step": "Step 36",
+    "step_number": 36,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 69",
+    "source_pdf_pages": [
+      69
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-071.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S36-SOURCE-P069"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 72,
+    "id": "LGS-FUNCTIONAL-V2-P072",
+    "step": "Step 36",
+    "step_number": 36,
+    "kind": "source_practice",
+    "title": "Functional • Source page 70",
+    "source_pdf_pages": [
+      70
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-072.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S36-SOURCE-P070"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 73,
+    "id": "LGS-FUNCTIONAL-V2-P073",
+    "step": "Step 36",
+    "step_number": 36,
+    "kind": "source_practice",
+    "title": "Functional • Source page 71",
+    "source_pdf_pages": [
+      71
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-073.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S36-SOURCE-P071"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 74,
+    "id": "LGS-FUNCTIONAL-V2-P074",
+    "step": "Step 36",
+    "step_number": 36,
+    "kind": "extension",
+    "title": "Planning together",
+    "source_pdf_pages": [
+      72
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-074.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S36-DETECTIVE-P072"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 75,
+    "id": "LGS-FUNCTIONAL-V2-P075",
+    "step": "Step 36",
+    "step_number": 36,
+    "kind": "assessment",
+    "title": "Reading Plus · Check",
+    "source_pdf_pages": [
+      73
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-075.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S36-PLUS-Q01",
+      "LGS-FUNCTIONAL-V2-S36-PLUS-Q02",
+      "LGS-FUNCTIONAL-V2-S36-PLUS-Q03",
+      "LGS-FUNCTIONAL-V2-S36-PLUS-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 76,
+    "id": "LGS-FUNCTIONAL-V2-P076",
+    "step": "Step 37",
+    "step_number": 37,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 74",
+    "source_pdf_pages": [
+      74
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-076.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 77,
+    "id": "LGS-FUNCTIONAL-V2-P077",
+    "step": "Step 37",
+    "step_number": 37,
+    "kind": "story",
+    "title": "The missing invitation",
+    "source_pdf_pages": [
+      75
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-077.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 78,
+    "id": "LGS-FUNCTIONAL-V2-P078",
+    "step": "Step 37",
+    "step_number": 37,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      76
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-078.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S37-LAB-P076"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 79,
+    "id": "LGS-FUNCTIONAL-V2-P079",
+    "step": "Step 37",
+    "step_number": 37,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 77",
+    "source_pdf_pages": [
+      77
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-079.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S37-SOURCE-P077"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 80,
+    "id": "LGS-FUNCTIONAL-V2-P080",
+    "step": "Step 37",
+    "step_number": 37,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      78
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-080.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S37-DETECTIVE-P078"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 81,
+    "id": "LGS-FUNCTIONAL-V2-P081",
+    "step": "Step 37",
+    "step_number": 37,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      79
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-081.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S37-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S37-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S37-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S37-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 82,
+    "id": "LGS-FUNCTIONAL-V2-P082",
+    "step": "Step 37",
+    "step_number": 37,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 80",
+    "source_pdf_pages": [
+      80
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-082.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S37-SOURCE-P080"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 83,
+    "id": "LGS-FUNCTIONAL-V2-P083",
+    "step": "Step 37",
+    "step_number": 37,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 81",
+    "source_pdf_pages": [
+      81
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-083.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S37-SOURCE-P081"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 84,
+    "id": "LGS-FUNCTIONAL-V2-P084",
+    "step": "Step 37",
+    "step_number": 37,
+    "kind": "source_practice",
+    "title": "Functional • Source page 82",
+    "source_pdf_pages": [
+      82
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-084.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S37-SOURCE-P082"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 85,
+    "id": "LGS-FUNCTIONAL-V2-P085",
+    "step": "Step 37",
+    "step_number": 37,
+    "kind": "source_practice",
+    "title": "Functional • Source page 83",
+    "source_pdf_pages": [
+      83
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-085.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S37-SOURCE-P083"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 86,
+    "id": "LGS-FUNCTIONAL-V2-P086",
+    "step": "Step 37",
+    "step_number": 37,
+    "kind": "source_practice",
+    "title": "Functional • Source page 84",
+    "source_pdf_pages": [
+      84
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-086.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S37-SOURCE-P084"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 87,
+    "id": "LGS-FUNCTIONAL-V2-P087",
+    "step": "Step 37",
+    "step_number": 37,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 85",
+    "source_pdf_pages": [
+      85
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-087.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S37-SOURCE-P085"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 88,
+    "id": "LGS-FUNCTIONAL-V2-P088",
+    "step": "Step 37",
+    "step_number": 37,
+    "kind": "source_practice",
+    "title": "Functional • Source page 86",
+    "source_pdf_pages": [
+      86
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-088.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S37-SOURCE-P086"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 89,
+    "id": "LGS-FUNCTIONAL-V2-P089",
+    "step": "Step 37",
+    "step_number": 37,
+    "kind": "source_practice",
+    "title": "Functional • Source page 87",
+    "source_pdf_pages": [
+      87
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-089.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S37-SOURCE-P087"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 90,
+    "id": "LGS-FUNCTIONAL-V2-P090",
+    "step": "Step 37",
+    "step_number": 37,
+    "kind": "extension",
+    "title": "The address check",
+    "source_pdf_pages": [
+      88
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-090.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S37-DETECTIVE-P088"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 91,
+    "id": "LGS-FUNCTIONAL-V2-P091",
+    "step": "Step 37",
+    "step_number": 37,
+    "kind": "assessment",
+    "title": "Reading Plus · Check",
+    "source_pdf_pages": [
+      89
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-091.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S37-PLUS-Q01",
+      "LGS-FUNCTIONAL-V2-S37-PLUS-Q02",
+      "LGS-FUNCTIONAL-V2-S37-PLUS-Q03",
+      "LGS-FUNCTIONAL-V2-S37-PLUS-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 92,
+    "id": "LGS-FUNCTIONAL-V2-P092",
+    "step": "Step 37",
+    "step_number": 37,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      90
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-092.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S37-EXTRALAB-P090"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 93,
+    "id": "LGS-FUNCTIONAL-V2-P093",
+    "step": "Step 38",
+    "step_number": 38,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 91",
+    "source_pdf_pages": [
+      91
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-093.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 94,
+    "id": "LGS-FUNCTIONAL-V2-P094",
+    "step": "Step 38",
+    "step_number": 38,
+    "kind": "story",
+    "title": "A birthday worth celebrating",
+    "source_pdf_pages": [
+      92
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-094.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 95,
+    "id": "LGS-FUNCTIONAL-V2-P095",
+    "step": "Step 38",
+    "step_number": 38,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      93
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-095.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S38-LAB-P093"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 96,
+    "id": "LGS-FUNCTIONAL-V2-P096",
+    "step": "Step 38",
+    "step_number": 38,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 94",
+    "source_pdf_pages": [
+      94
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-096.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S38-SOURCE-P094"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 97,
+    "id": "LGS-FUNCTIONAL-V2-P097",
+    "step": "Step 38",
+    "step_number": 38,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      95
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-097.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S38-DETECTIVE-P095"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 98,
+    "id": "LGS-FUNCTIONAL-V2-P098",
+    "step": "Step 38",
+    "step_number": 38,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      96
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-098.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S38-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S38-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S38-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S38-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 99,
+    "id": "LGS-FUNCTIONAL-V2-P099",
+    "step": "Step 38",
+    "step_number": 38,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      97
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-099.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S38-LAB-P097"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 100,
+    "id": "LGS-FUNCTIONAL-V2-P100",
+    "step": "Step 38",
+    "step_number": 38,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 98",
+    "source_pdf_pages": [
+      98
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-100.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S38-SOURCE-P098"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 101,
+    "id": "LGS-FUNCTIONAL-V2-P101",
+    "step": "Step 38",
+    "step_number": 38,
+    "kind": "lesson",
+    "title": "From active to passive",
+    "source_pdf_pages": [
+      99
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-101.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S38-REVISED-P099"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 102,
+    "id": "LGS-FUNCTIONAL-V2-P102",
+    "step": "Step 38",
+    "step_number": 38,
+    "kind": "lesson",
+    "title": "Active and passive: choosing a focus",
+    "source_pdf_pages": [
+      100
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-102.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S38-REVISED-P100"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 103,
+    "id": "LGS-FUNCTIONAL-V2-P103",
+    "step": "Step 38",
+    "step_number": 38,
+    "kind": "source_practice",
+    "title": "Functional • Source page 101",
+    "source_pdf_pages": [
+      101
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-103.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S38-SOURCE-P101"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 104,
+    "id": "LGS-FUNCTIONAL-V2-P104",
+    "step": "Step 38",
+    "step_number": 38,
+    "kind": "source_practice",
+    "title": "Functional • Source page 102",
+    "source_pdf_pages": [
+      102
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-104.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S38-SOURCE-P102"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 105,
+    "id": "LGS-FUNCTIONAL-V2-P105",
+    "step": "Step 38",
+    "step_number": 38,
+    "kind": "extension",
+    "title": "An evening at home",
+    "source_pdf_pages": [
+      103
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-105.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S38-DETECTIVE-P103"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 106,
+    "id": "LGS-FUNCTIONAL-V2-P106",
+    "step": "Step 38",
+    "step_number": 38,
+    "kind": "assessment",
+    "title": "Reading Plus · Check",
+    "source_pdf_pages": [
+      104
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-106.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S38-PLUS-Q01",
+      "LGS-FUNCTIONAL-V2-S38-PLUS-Q02",
+      "LGS-FUNCTIONAL-V2-S38-PLUS-Q03",
+      "LGS-FUNCTIONAL-V2-S38-PLUS-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 107,
+    "id": "LGS-FUNCTIONAL-V2-P107",
+    "step": "Step 38",
+    "step_number": 38,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      105
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-107.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S38-EXTRALAB-P105"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 108,
+    "id": "LGS-FUNCTIONAL-V2-P108",
+    "step": "Step 39",
+    "step_number": 39,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 106",
+    "source_pdf_pages": [
+      106
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-108.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 109,
+    "id": "LGS-FUNCTIONAL-V2-P109",
+    "step": "Step 39",
+    "step_number": 39,
+    "kind": "story",
+    "title": "Choosing a dress",
+    "source_pdf_pages": [
+      107
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-109.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 110,
+    "id": "LGS-FUNCTIONAL-V2-P110",
+    "step": "Step 39",
+    "step_number": 39,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 108",
+    "source_pdf_pages": [
+      108
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-110.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S39-SOURCE-P108"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 111,
+    "id": "LGS-FUNCTIONAL-V2-P111",
+    "step": "Step 39",
+    "step_number": 39,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      109
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-111.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S39-DETECTIVE-P109"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 112,
+    "id": "LGS-FUNCTIONAL-V2-P112",
+    "step": "Step 39",
+    "step_number": 39,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      110
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-112.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S39-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S39-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S39-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S39-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 113,
+    "id": "LGS-FUNCTIONAL-V2-P113",
+    "step": "Step 39",
+    "step_number": 39,
+    "kind": "source_practice",
+    "title": "Functional • Source page 111",
+    "source_pdf_pages": [
+      111
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-113.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S39-SOURCE-P111"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 114,
+    "id": "LGS-FUNCTIONAL-V2-P114",
+    "step": "Step 39",
+    "step_number": 39,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 112",
+    "source_pdf_pages": [
+      112
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-114.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S39-SOURCE-P112"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 115,
+    "id": "LGS-FUNCTIONAL-V2-P115",
+    "step": "Step 39",
+    "step_number": 39,
+    "kind": "source_practice",
+    "title": "Functional • Source page 113",
+    "source_pdf_pages": [
+      113
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-115.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S39-SOURCE-P113"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 116,
+    "id": "LGS-FUNCTIONAL-V2-P116",
+    "step": "Step 39",
+    "step_number": 39,
+    "kind": "source_practice",
+    "title": "Functional • Source page 114",
+    "source_pdf_pages": [
+      114
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-116.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S39-SOURCE-P114"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 117,
+    "id": "LGS-FUNCTIONAL-V2-P117",
+    "step": "Step 39",
+    "step_number": 39,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 115",
+    "source_pdf_pages": [
+      115
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-117.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S39-SOURCE-P115"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 118,
+    "id": "LGS-FUNCTIONAL-V2-P118",
+    "step": "Step 39",
+    "step_number": 39,
+    "kind": "extension",
+    "title": "Reporting clearly",
+    "source_pdf_pages": [
+      116
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-118.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S39-DETECTIVE-P116"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 119,
+    "id": "LGS-FUNCTIONAL-V2-P119",
+    "step": "Step 39",
+    "step_number": 39,
+    "kind": "assessment",
+    "title": "Reading Plus · Check",
+    "source_pdf_pages": [
+      117
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-119.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S39-PLUS-Q01",
+      "LGS-FUNCTIONAL-V2-S39-PLUS-Q02",
+      "LGS-FUNCTIONAL-V2-S39-PLUS-Q03",
+      "LGS-FUNCTIONAL-V2-S39-PLUS-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 120,
+    "id": "LGS-FUNCTIONAL-V2-P120",
+    "step": "Step 40",
+    "step_number": 40,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 118",
+    "source_pdf_pages": [
+      118
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-120.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 121,
+    "id": "LGS-FUNCTIONAL-V2-P121",
+    "step": "Step 40",
+    "step_number": 40,
+    "kind": "assessment",
+    "title": "Story checkpoint",
+    "source_pdf_pages": [],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-121.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S40-JUMP-Q01",
+      "LGS-FUNCTIONAL-V2-S40-JUMP-Q02",
+      "LGS-FUNCTIONAL-V2-S40-JUMP-Q03",
+      "LGS-FUNCTIONAL-V2-S40-JUMP-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 122,
+    "id": "LGS-FUNCTIONAL-V2-P122",
+    "step": "Step 40",
+    "step_number": 40,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 119",
+    "source_pdf_pages": [
+      119
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-122.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S40-SOURCE-P119"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 123,
+    "id": "LGS-FUNCTIONAL-V2-P123",
+    "step": "Step 40",
+    "step_number": 40,
+    "kind": "lesson",
+    "title": "Review: an invitation and a plan",
+    "source_pdf_pages": [
+      120
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-123.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S40-REVISED-P120"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 124,
+    "id": "LGS-FUNCTIONAL-V2-P124",
+    "step": "Step 40",
+    "step_number": 40,
+    "kind": "source_practice",
+    "title": "Functional • Source page 121",
+    "source_pdf_pages": [
+      121
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-124.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S40-SOURCE-P121"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 125,
+    "id": "LGS-FUNCTIONAL-V2-P125",
+    "step": "Step 40",
+    "step_number": 40,
+    "kind": "source_practice",
+    "title": "Functional • Source page 122",
+    "source_pdf_pages": [
+      122
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-125.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S40-SOURCE-P122"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 126,
+    "id": "LGS-FUNCTIONAL-V2-P126",
+    "step": "Step 40",
+    "step_number": 40,
+    "kind": "source_practice",
+    "title": "Functional • Source page 123",
+    "source_pdf_pages": [
+      123
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-126.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S40-SOURCE-P123"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 127,
+    "id": "LGS-FUNCTIONAL-V2-P127",
+    "step": "Step 40",
+    "step_number": 40,
+    "kind": "lesson",
+    "title": "Read and review: planning and possibilities",
+    "source_pdf_pages": [
+      124
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-127.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S40-SOURCE-P124"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 128,
+    "id": "LGS-FUNCTIONAL-V2-P128",
+    "step": "Step 40",
+    "step_number": 40,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 125",
+    "source_pdf_pages": [
+      125
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-128.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S40-SOURCE-P125"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 129,
+    "id": "LGS-FUNCTIONAL-V2-P129",
+    "step": "Step 40",
+    "step_number": 40,
+    "kind": "lesson",
+    "title": "Report the shopping conversation",
+    "source_pdf_pages": [
+      126
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-129.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S40-SOURCE-P126"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 130,
+    "id": "LGS-FUNCTIONAL-V2-P130",
+    "step": "Step 41",
+    "step_number": 41,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 127",
+    "source_pdf_pages": [
+      127
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-130.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 131,
+    "id": "LGS-FUNCTIONAL-V2-P131",
+    "step": "Step 41",
+    "step_number": 41,
+    "kind": "story",
+    "title": "A realistic plan",
+    "source_pdf_pages": [
+      128
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-131.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 132,
+    "id": "LGS-FUNCTIONAL-V2-P132",
+    "step": "Step 41",
+    "step_number": 41,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      129
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-132.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S41-LAB-P129"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 133,
+    "id": "LGS-FUNCTIONAL-V2-P133",
+    "step": "Step 41",
+    "step_number": 41,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 130",
+    "source_pdf_pages": [
+      130
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-133.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S41-SOURCE-P130"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 134,
+    "id": "LGS-FUNCTIONAL-V2-P134",
+    "step": "Step 41",
+    "step_number": 41,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      131
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-134.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S41-DETECTIVE-P131"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 135,
+    "id": "LGS-FUNCTIONAL-V2-P135",
+    "step": "Step 41",
+    "step_number": 41,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      132
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-135.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S41-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S41-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S41-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S41-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 136,
+    "id": "LGS-FUNCTIONAL-V2-P136",
+    "step": "Step 41",
+    "step_number": 41,
+    "kind": "extension",
+    "title": "Behind the photograph",
+    "source_pdf_pages": [
+      133
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-136.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S41-DETECTIVE-P133"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 137,
+    "id": "LGS-FUNCTIONAL-V2-P137",
+    "step": "Step 41",
+    "step_number": 41,
+    "kind": "assessment",
+    "title": "Reading Plus · Check",
+    "source_pdf_pages": [
+      134
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-137.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S41-PLUS-Q01",
+      "LGS-FUNCTIONAL-V2-S41-PLUS-Q02",
+      "LGS-FUNCTIONAL-V2-S41-PLUS-Q03",
+      "LGS-FUNCTIONAL-V2-S41-PLUS-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 138,
+    "id": "LGS-FUNCTIONAL-V2-P138",
+    "step": "Step 41",
+    "step_number": 41,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      135
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-138.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S41-EXTRALAB-P135"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 139,
+    "id": "LGS-FUNCTIONAL-V2-P139",
+    "step": "Step 41",
+    "step_number": 41,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      136
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-139.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S41-EXTRALAB-P136"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 140,
+    "id": "LGS-FUNCTIONAL-V2-P140",
+    "step": "Step 42",
+    "step_number": 42,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 137",
+    "source_pdf_pages": [
+      137
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-140.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 141,
+    "id": "LGS-FUNCTIONAL-V2-P141",
+    "step": "Step 42",
+    "step_number": 42,
+    "kind": "story",
+    "title": "People who inspire us",
+    "source_pdf_pages": [
+      138
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-141.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 142,
+    "id": "LGS-FUNCTIONAL-V2-P142",
+    "step": "Step 42",
+    "step_number": 42,
+    "kind": "source_practice",
+    "title": "Functional • Source page 139",
+    "source_pdf_pages": [
+      139
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-142.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S42-SOURCE-P139"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 143,
+    "id": "LGS-FUNCTIONAL-V2-P143",
+    "step": "Step 42",
+    "step_number": 42,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      140
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-143.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S42-DETECTIVE-P140"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 144,
+    "id": "LGS-FUNCTIONAL-V2-P144",
+    "step": "Step 42",
+    "step_number": 42,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      141
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-144.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S42-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S42-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S42-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S42-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 145,
+    "id": "LGS-FUNCTIONAL-V2-P145",
+    "step": "Step 42",
+    "step_number": 42,
+    "kind": "source_practice",
+    "title": "Functional • Source page 142",
+    "source_pdf_pages": [
+      142
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-145.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S42-SOURCE-P142"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 146,
+    "id": "LGS-FUNCTIONAL-V2-P146",
+    "step": "Step 42",
+    "step_number": 42,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 143",
+    "source_pdf_pages": [
+      143
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-146.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S42-SOURCE-P143"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 147,
+    "id": "LGS-FUNCTIONAL-V2-P147",
+    "step": "Step 42",
+    "step_number": 42,
+    "kind": "extension",
+    "title": "Evidence makes a speech stronger",
+    "source_pdf_pages": [
+      144
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-147.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S42-DETECTIVE-P144"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 148,
+    "id": "LGS-FUNCTIONAL-V2-P148",
+    "step": "Step 42",
+    "step_number": 42,
+    "kind": "assessment",
+    "title": "Reading Plus · Check",
+    "source_pdf_pages": [
+      145
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-148.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S42-PLUS-Q01",
+      "LGS-FUNCTIONAL-V2-S42-PLUS-Q02",
+      "LGS-FUNCTIONAL-V2-S42-PLUS-Q03",
+      "LGS-FUNCTIONAL-V2-S42-PLUS-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 149,
+    "id": "LGS-FUNCTIONAL-V2-P149",
+    "step": "Step 42",
+    "step_number": 42,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      146
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-149.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S42-EXTRALAB-P146"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 150,
+    "id": "LGS-FUNCTIONAL-V2-P150",
+    "step": "Step 42",
+    "step_number": 42,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      147
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-150.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S42-EXTRALAB-P147"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 151,
+    "id": "LGS-FUNCTIONAL-V2-P151",
+    "step": "Step 43",
+    "step_number": 43,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 148",
+    "source_pdf_pages": [
+      148
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-151.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 152,
+    "id": "LGS-FUNCTIONAL-V2-P152",
+    "step": "Step 43",
+    "step_number": 43,
+    "kind": "story",
+    "title": "A celebration with less waste",
+    "source_pdf_pages": [
+      149
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-152.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 153,
+    "id": "LGS-FUNCTIONAL-V2-P153",
+    "step": "Step 43",
+    "step_number": 43,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 150",
+    "source_pdf_pages": [
+      150
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-153.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S43-SOURCE-P150"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 154,
+    "id": "LGS-FUNCTIONAL-V2-P154",
+    "step": "Step 43",
+    "step_number": 43,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      151
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-154.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S43-DETECTIVE-P151"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 155,
+    "id": "LGS-FUNCTIONAL-V2-P155",
+    "step": "Step 43",
+    "step_number": 43,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      152
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-155.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S43-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S43-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S43-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S43-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 156,
+    "id": "LGS-FUNCTIONAL-V2-P156",
+    "step": "Step 43",
+    "step_number": 43,
+    "kind": "extension",
+    "title": "A practical resource plan",
+    "source_pdf_pages": [
+      153
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-156.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S43-DETECTIVE-P153"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 157,
+    "id": "LGS-FUNCTIONAL-V2-P157",
+    "step": "Step 43",
+    "step_number": 43,
+    "kind": "assessment",
+    "title": "Reading Plus · Check",
+    "source_pdf_pages": [
+      154
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-157.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S43-PLUS-Q01",
+      "LGS-FUNCTIONAL-V2-S43-PLUS-Q02",
+      "LGS-FUNCTIONAL-V2-S43-PLUS-Q03",
+      "LGS-FUNCTIONAL-V2-S43-PLUS-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 158,
+    "id": "LGS-FUNCTIONAL-V2-P158",
+    "step": "Step 43",
+    "step_number": 43,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      155
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-158.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S43-EXTRALAB-P155"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 159,
+    "id": "LGS-FUNCTIONAL-V2-P159",
+    "step": "Step 43",
+    "step_number": 43,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      156
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-159.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S43-EXTRALAB-P156"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 160,
+    "id": "LGS-FUNCTIONAL-V2-P160",
+    "step": "Step 44",
+    "step_number": 44,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 157",
+    "source_pdf_pages": [
+      157
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-160.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 161,
+    "id": "LGS-FUNCTIONAL-V2-P161",
+    "step": "Step 44",
+    "step_number": 44,
+    "kind": "story",
+    "title": "The day has arrived",
+    "source_pdf_pages": [
+      158
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-161.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 162,
+    "id": "LGS-FUNCTIONAL-V2-P162",
+    "step": "Step 44",
+    "step_number": 44,
+    "kind": "source_practice",
+    "title": "Functional • Source page 159",
+    "source_pdf_pages": [
+      159
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-162.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S44-SOURCE-P159"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 163,
+    "id": "LGS-FUNCTIONAL-V2-P163",
+    "step": "Step 44",
+    "step_number": 44,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      160
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-163.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S44-DETECTIVE-P160"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 164,
+    "id": "LGS-FUNCTIONAL-V2-P164",
+    "step": "Step 44",
+    "step_number": 44,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      161
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-164.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S44-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S44-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S44-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S44-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 165,
+    "id": "LGS-FUNCTIONAL-V2-P165",
+    "step": "Step 44",
+    "step_number": 44,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 162",
+    "source_pdf_pages": [
+      162
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-165.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S44-SOURCE-P162"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 166,
+    "id": "LGS-FUNCTIONAL-V2-P166",
+    "step": "Step 44",
+    "step_number": 44,
+    "kind": "source_practice",
+    "title": "Functional • Source page 163",
+    "source_pdf_pages": [
+      163
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-166.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S44-SOURCE-P163"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 167,
+    "id": "LGS-FUNCTIONAL-V2-P167",
+    "step": "Step 44",
+    "step_number": 44,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 164",
+    "source_pdf_pages": [
+      164
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-167.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S44-SOURCE-P164"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 168,
+    "id": "LGS-FUNCTIONAL-V2-P168",
+    "step": "Step 44",
+    "step_number": 44,
+    "kind": "source_practice",
+    "title": "Functional • Source page 165",
+    "source_pdf_pages": [
+      165
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-168.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S44-SOURCE-P165"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 169,
+    "id": "LGS-FUNCTIONAL-V2-P169",
+    "step": "Step 44",
+    "step_number": 44,
+    "kind": "extension",
+    "title": "Understanding more than words",
+    "source_pdf_pages": [
+      166
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-169.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S44-DETECTIVE-P166"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 170,
+    "id": "LGS-FUNCTIONAL-V2-P170",
+    "step": "Step 44",
+    "step_number": 44,
+    "kind": "assessment",
+    "title": "Reading Plus · Check",
+    "source_pdf_pages": [
+      167
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-170.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S44-PLUS-Q01",
+      "LGS-FUNCTIONAL-V2-S44-PLUS-Q02",
+      "LGS-FUNCTIONAL-V2-S44-PLUS-Q03",
+      "LGS-FUNCTIONAL-V2-S44-PLUS-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 171,
+    "id": "LGS-FUNCTIONAL-V2-P171",
+    "step": "Step 45",
+    "step_number": 45,
+    "kind": "source_practice",
+    "title": "Functional • Source page 168",
+    "source_pdf_pages": [
+      168
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-171.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 172,
+    "id": "LGS-FUNCTIONAL-V2-P172",
+    "step": "Step 45",
+    "step_number": 45,
+    "kind": "assessment",
+    "title": "Final story challenge · 1/3",
+    "source_pdf_pages": [],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-172.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q01",
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q02",
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q03",
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 173,
+    "id": "LGS-FUNCTIONAL-V2-P173",
+    "step": "Step 45",
+    "step_number": 45,
+    "kind": "assessment",
+    "title": "Final story challenge · 2/3",
+    "source_pdf_pages": [],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-173.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q05",
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q06",
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q07",
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q08"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 174,
+    "id": "LGS-FUNCTIONAL-V2-P174",
+    "step": "Step 45",
+    "step_number": 45,
+    "kind": "assessment",
+    "title": "Final story challenge · 3/3",
+    "source_pdf_pages": [],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-174.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q09",
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q10",
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q11",
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q12"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 175,
+    "id": "LGS-FUNCTIONAL-V2-P175",
+    "step": "Step 45",
+    "step_number": 45,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 169",
+    "source_pdf_pages": [
+      169
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-175.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S45-SOURCE-P169"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 176,
+    "id": "LGS-FUNCTIONAL-V2-P176",
+    "step": "Step 45",
+    "step_number": 45,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 170",
+    "source_pdf_pages": [
+      170
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-176.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S45-SOURCE-P170"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 177,
+    "id": "LGS-FUNCTIONAL-V2-P177",
+    "step": "Step 45",
+    "step_number": 45,
+    "kind": "source_lesson",
+    "title": "Functional • Source page 171",
+    "source_pdf_pages": [
+      171
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-177.jpg",
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S45-SOURCE-P171"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 178,
+    "id": "LGS-FUNCTIONAL-V2-P178",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Functional • Source page 183",
+    "source_pdf_pages": [
+      183
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-178.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 179,
+    "id": "LGS-FUNCTIONAL-V2-P179",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Functional • Source page 184",
+    "source_pdf_pages": [
+      184
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-179.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 180,
+    "id": "LGS-FUNCTIONAL-V2-P180",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Functional • Source page 185",
+    "source_pdf_pages": [
+      185
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-180.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 181,
+    "id": "LGS-FUNCTIONAL-V2-P181",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Functional • Source page 186",
+    "source_pdf_pages": [
+      186
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-181.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 182,
+    "id": "LGS-FUNCTIONAL-V2-P182",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Functional • Source page 187",
+    "source_pdf_pages": [
+      187
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-182.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 183,
+    "id": "LGS-FUNCTIONAL-V2-P183",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Functional • Source page 188",
+    "source_pdf_pages": [
+      188
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-183.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 184,
+    "id": "LGS-FUNCTIONAL-V2-P184",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Functional • Source page 189",
+    "source_pdf_pages": [
+      189
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-184.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 185,
+    "id": "LGS-FUNCTIONAL-V2-P185",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Functional • Source page 190",
+    "source_pdf_pages": [
+      190
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-185.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 186,
+    "id": "LGS-FUNCTIONAL-V2-P186",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Functional • Source page 191",
+    "source_pdf_pages": [
+      191
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-186.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 187,
+    "id": "LGS-FUNCTIONAL-V2-P187",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Functional • Source page 192",
+    "source_pdf_pages": [
+      192
+    ],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-187.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 188,
+    "id": "LGS-FUNCTIONAL-V2-P188",
+    "step": null,
+    "step_number": null,
+    "kind": "timeline",
+    "title": "The story so far",
+    "source_pdf_pages": [],
+    "object_key": "materials/interactive/LGS-FUNCTIONAL-V2/page-188.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  }
+]

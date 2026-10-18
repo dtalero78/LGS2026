@@ -1,0 +1,3071 @@
+[
+  {
+    "page": 1,
+    "id": "LGS-BEGINNER-V2-P001",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Beginner • Source page 1",
+    "source_pdf_pages": [
+      1
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-001.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 2,
+    "id": "LGS-BEGINNER-V2-P002",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Beginner • Source page 2",
+    "source_pdf_pages": [
+      2
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-002.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 3,
+    "id": "LGS-BEGINNER-V2-P003",
+    "step": null,
+    "step_number": null,
+    "kind": "guide",
+    "title": "Your story. Your progress.",
+    "source_pdf_pages": [],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-003.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 4,
+    "id": "LGS-BEGINNER-V2-P004",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Beginner • Source page 3",
+    "source_pdf_pages": [
+      3
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-004.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 5,
+    "id": "LGS-BEGINNER-V2-P005",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Beginner • Source page 4",
+    "source_pdf_pages": [
+      4
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-005.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 6,
+    "id": "LGS-BEGINNER-V2-P006",
+    "step": null,
+    "step_number": null,
+    "kind": "characters",
+    "title": "Meet the characters",
+    "source_pdf_pages": [
+      5
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-006.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 7,
+    "id": "LGS-BEGINNER-V2-P007",
+    "step": null,
+    "step_number": null,
+    "kind": "characters",
+    "title": "Meet the characters",
+    "source_pdf_pages": [
+      6
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-007.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 8,
+    "id": "LGS-BEGINNER-V2-P008",
+    "step": "Step 1",
+    "step_number": 1,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 7",
+    "source_pdf_pages": [
+      7
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-008.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 9,
+    "id": "LGS-BEGINNER-V2-P009",
+    "step": "Step 1",
+    "step_number": 1,
+    "kind": "story",
+    "title": "Meet the friends",
+    "source_pdf_pages": [],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-009.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 10,
+    "id": "LGS-BEGINNER-V2-P010",
+    "step": "Step 1",
+    "step_number": 1,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 8",
+    "source_pdf_pages": [
+      8
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-010.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S01-SOURCE-P008"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 11,
+    "id": "LGS-BEGINNER-V2-P011",
+    "step": "Step 1",
+    "step_number": 1,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      9
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-011.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S01-DETECTIVE-P009"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 12,
+    "id": "LGS-BEGINNER-V2-P012",
+    "step": "Step 1",
+    "step_number": 1,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      10
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-012.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S01-CORE-Q01",
+      "LGS-BEGINNER-V2-S01-CORE-Q02",
+      "LGS-BEGINNER-V2-S01-CORE-Q03",
+      "LGS-BEGINNER-V2-S01-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 13,
+    "id": "LGS-BEGINNER-V2-P013",
+    "step": "Step 1",
+    "step_number": 1,
+    "kind": "source_lesson",
+    "title": "Beginner • Source page 11",
+    "source_pdf_pages": [
+      11
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-013.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S01-SOURCE-P011"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 14,
+    "id": "LGS-BEGINNER-V2-P014",
+    "step": "Step 1",
+    "step_number": 1,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 12",
+    "source_pdf_pages": [
+      12
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-014.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S01-SOURCE-P012"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 15,
+    "id": "LGS-BEGINNER-V2-P015",
+    "step": "Step 1",
+    "step_number": 1,
+    "kind": "lesson",
+    "title": "Object pronouns",
+    "source_pdf_pages": [
+      13
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-015.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S01-REVISED-P013"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 16,
+    "id": "LGS-BEGINNER-V2-P016",
+    "step": "Step 1",
+    "step_number": 1,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 14",
+    "source_pdf_pages": [
+      14
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-016.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S01-SOURCE-P014"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 17,
+    "id": "LGS-BEGINNER-V2-P017",
+    "step": "Step 1",
+    "step_number": 1,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 15",
+    "source_pdf_pages": [
+      15
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-017.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S01-SOURCE-P015"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 18,
+    "id": "LGS-BEGINNER-V2-P018",
+    "step": "Step 1",
+    "step_number": 1,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 16",
+    "source_pdf_pages": [
+      16
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-018.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S01-SOURCE-P016"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 19,
+    "id": "LGS-BEGINNER-V2-P019",
+    "step": "Step 1",
+    "step_number": 1,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 17",
+    "source_pdf_pages": [
+      17
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-019.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S01-SOURCE-P017"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 20,
+    "id": "LGS-BEGINNER-V2-P020",
+    "step": "Step 2",
+    "step_number": 2,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 18",
+    "source_pdf_pages": [
+      18
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-020.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 21,
+    "id": "LGS-BEGINNER-V2-P021",
+    "step": "Step 2",
+    "step_number": 2,
+    "kind": "story",
+    "title": "A visit to Chicago",
+    "source_pdf_pages": [
+      19
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-021.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 22,
+    "id": "LGS-BEGINNER-V2-P022",
+    "step": "Step 2",
+    "step_number": 2,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 20",
+    "source_pdf_pages": [
+      20
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-022.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S02-SOURCE-P020"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 23,
+    "id": "LGS-BEGINNER-V2-P023",
+    "step": "Step 2",
+    "step_number": 2,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      21
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-023.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S02-DETECTIVE-P021"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 24,
+    "id": "LGS-BEGINNER-V2-P024",
+    "step": "Step 2",
+    "step_number": 2,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      22
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-024.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S02-CORE-Q01",
+      "LGS-BEGINNER-V2-S02-CORE-Q02",
+      "LGS-BEGINNER-V2-S02-CORE-Q03",
+      "LGS-BEGINNER-V2-S02-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 25,
+    "id": "LGS-BEGINNER-V2-P025",
+    "step": "Step 2",
+    "step_number": 2,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 23",
+    "source_pdf_pages": [
+      23
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-025.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S02-SOURCE-P023"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 26,
+    "id": "LGS-BEGINNER-V2-P026",
+    "step": "Step 2",
+    "step_number": 2,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 24",
+    "source_pdf_pages": [
+      24
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-026.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S02-SOURCE-P024"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 27,
+    "id": "LGS-BEGINNER-V2-P027",
+    "step": "Step 2",
+    "step_number": 2,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 25",
+    "source_pdf_pages": [
+      25
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-027.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S02-SOURCE-P025"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 28,
+    "id": "LGS-BEGINNER-V2-P028",
+    "step": "Step 2",
+    "step_number": 2,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 26",
+    "source_pdf_pages": [
+      26
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-028.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S02-SOURCE-P026"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 29,
+    "id": "LGS-BEGINNER-V2-P029",
+    "step": "Step 2",
+    "step_number": 2,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 27",
+    "source_pdf_pages": [
+      27
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-029.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S02-SOURCE-P027"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 30,
+    "id": "LGS-BEGINNER-V2-P030",
+    "step": "Step 2",
+    "step_number": 2,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 28",
+    "source_pdf_pages": [
+      28
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-030.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S02-SOURCE-P028"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 31,
+    "id": "LGS-BEGINNER-V2-P031",
+    "step": "Step 2",
+    "step_number": 2,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 29",
+    "source_pdf_pages": [
+      29
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-031.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S02-SOURCE-P029"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 32,
+    "id": "LGS-BEGINNER-V2-P032",
+    "step": "Step 2",
+    "step_number": 2,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 30",
+    "source_pdf_pages": [
+      30
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-032.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S02-SOURCE-P030"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 33,
+    "id": "LGS-BEGINNER-V2-P033",
+    "step": "Step 2",
+    "step_number": 2,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 31",
+    "source_pdf_pages": [
+      31
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-033.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S02-SOURCE-P031"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 34,
+    "id": "LGS-BEGINNER-V2-P034",
+    "step": "Step 3",
+    "step_number": 3,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 32",
+    "source_pdf_pages": [
+      32
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-034.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 35,
+    "id": "LGS-BEGINNER-V2-P035",
+    "step": "Step 3",
+    "step_number": 3,
+    "kind": "story",
+    "title": "The missing keys",
+    "source_pdf_pages": [
+      33
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-035.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 36,
+    "id": "LGS-BEGINNER-V2-P036",
+    "step": "Step 3",
+    "step_number": 3,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 34",
+    "source_pdf_pages": [
+      34
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-036.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S03-SOURCE-P034"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 37,
+    "id": "LGS-BEGINNER-V2-P037",
+    "step": "Step 3",
+    "step_number": 3,
+    "kind": "lesson",
+    "title": "Words in context",
+    "source_pdf_pages": [
+      35
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-037.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S03-REVISED-P035"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 38,
+    "id": "LGS-BEGINNER-V2-P038",
+    "step": "Step 3",
+    "step_number": 3,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      36
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-038.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S03-DETECTIVE-P036"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 39,
+    "id": "LGS-BEGINNER-V2-P039",
+    "step": "Step 3",
+    "step_number": 3,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      37
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-039.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S03-CORE-Q01",
+      "LGS-BEGINNER-V2-S03-CORE-Q02",
+      "LGS-BEGINNER-V2-S03-CORE-Q03",
+      "LGS-BEGINNER-V2-S03-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 40,
+    "id": "LGS-BEGINNER-V2-P040",
+    "step": "Step 3",
+    "step_number": 3,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 38",
+    "source_pdf_pages": [
+      38
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-040.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S03-SOURCE-P038"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 41,
+    "id": "LGS-BEGINNER-V2-P041",
+    "step": "Step 3",
+    "step_number": 3,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 39",
+    "source_pdf_pages": [
+      39
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-041.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S03-SOURCE-P039"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 42,
+    "id": "LGS-BEGINNER-V2-P042",
+    "step": "Step 3",
+    "step_number": 3,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 40",
+    "source_pdf_pages": [
+      40
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-042.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S03-SOURCE-P040"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 43,
+    "id": "LGS-BEGINNER-V2-P043",
+    "step": "Step 3",
+    "step_number": 3,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 41",
+    "source_pdf_pages": [
+      41
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-043.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S03-SOURCE-P041"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 44,
+    "id": "LGS-BEGINNER-V2-P044",
+    "step": "Step 3",
+    "step_number": 3,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 42",
+    "source_pdf_pages": [
+      42
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-044.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S03-SOURCE-P042"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 45,
+    "id": "LGS-BEGINNER-V2-P045",
+    "step": "Step 3",
+    "step_number": 3,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 43",
+    "source_pdf_pages": [
+      43
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-045.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S03-SOURCE-P043"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 46,
+    "id": "LGS-BEGINNER-V2-P046",
+    "step": "Step 3",
+    "step_number": 3,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 44",
+    "source_pdf_pages": [
+      44
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-046.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S03-SOURCE-P044"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 47,
+    "id": "LGS-BEGINNER-V2-P047",
+    "step": "Step 4",
+    "step_number": 4,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 45",
+    "source_pdf_pages": [
+      45
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-047.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 48,
+    "id": "LGS-BEGINNER-V2-P048",
+    "step": "Step 4",
+    "step_number": 4,
+    "kind": "story",
+    "title": "Making a connection",
+    "source_pdf_pages": [
+      46
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-048.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 49,
+    "id": "LGS-BEGINNER-V2-P049",
+    "step": "Step 4",
+    "step_number": 4,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 47",
+    "source_pdf_pages": [
+      47
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-049.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S04-SOURCE-P047"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 50,
+    "id": "LGS-BEGINNER-V2-P050",
+    "step": "Step 4",
+    "step_number": 4,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      48
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-050.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S04-DETECTIVE-P048"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 51,
+    "id": "LGS-BEGINNER-V2-P051",
+    "step": "Step 4",
+    "step_number": 4,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      49
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-051.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S04-CORE-Q01",
+      "LGS-BEGINNER-V2-S04-CORE-Q02",
+      "LGS-BEGINNER-V2-S04-CORE-Q03",
+      "LGS-BEGINNER-V2-S04-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 52,
+    "id": "LGS-BEGINNER-V2-P052",
+    "step": "Step 4",
+    "step_number": 4,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 50",
+    "source_pdf_pages": [
+      50
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-052.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S04-SOURCE-P050"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 53,
+    "id": "LGS-BEGINNER-V2-P053",
+    "step": "Step 4",
+    "step_number": 4,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 51",
+    "source_pdf_pages": [
+      51
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-053.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S04-SOURCE-P051"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 54,
+    "id": "LGS-BEGINNER-V2-P054",
+    "step": "Step 4",
+    "step_number": 4,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 52",
+    "source_pdf_pages": [
+      52
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-054.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S04-SOURCE-P052"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 55,
+    "id": "LGS-BEGINNER-V2-P055",
+    "step": "Step 4",
+    "step_number": 4,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 53",
+    "source_pdf_pages": [
+      53
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-055.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S04-SOURCE-P053"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 56,
+    "id": "LGS-BEGINNER-V2-P056",
+    "step": "Step 5",
+    "step_number": 5,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 54",
+    "source_pdf_pages": [
+      54
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-056.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 57,
+    "id": "LGS-BEGINNER-V2-P057",
+    "step": "Step 5",
+    "step_number": 5,
+    "kind": "assessment",
+    "title": "Story checkpoint",
+    "source_pdf_pages": [],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-057.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S05-JUMP-Q01",
+      "LGS-BEGINNER-V2-S05-JUMP-Q02",
+      "LGS-BEGINNER-V2-S05-JUMP-Q03",
+      "LGS-BEGINNER-V2-S05-JUMP-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 58,
+    "id": "LGS-BEGINNER-V2-P058",
+    "step": "Step 5",
+    "step_number": 5,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 55",
+    "source_pdf_pages": [
+      55
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-058.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S05-SOURCE-P055"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 59,
+    "id": "LGS-BEGINNER-V2-P059",
+    "step": "Step 5",
+    "step_number": 5,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 56",
+    "source_pdf_pages": [
+      56
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-059.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S05-SOURCE-P056"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 60,
+    "id": "LGS-BEGINNER-V2-P060",
+    "step": "Step 5",
+    "step_number": 5,
+    "kind": "source_lesson",
+    "title": "Beginner • Source page 57",
+    "source_pdf_pages": [
+      57
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-060.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S05-SOURCE-P057"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 61,
+    "id": "LGS-BEGINNER-V2-P061",
+    "step": "Step 5",
+    "step_number": 5,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 58",
+    "source_pdf_pages": [
+      58
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-061.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S05-SOURCE-P058"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 62,
+    "id": "LGS-BEGINNER-V2-P062",
+    "step": "Step 5",
+    "step_number": 5,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 59",
+    "source_pdf_pages": [
+      59
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-062.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S05-SOURCE-P059"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 63,
+    "id": "LGS-BEGINNER-V2-P063",
+    "step": "Step 5",
+    "step_number": 5,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 60",
+    "source_pdf_pages": [
+      60
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-063.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S05-SOURCE-P060"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 64,
+    "id": "LGS-BEGINNER-V2-P064",
+    "step": "Step 6",
+    "step_number": 6,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 61",
+    "source_pdf_pages": [
+      61
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-064.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 65,
+    "id": "LGS-BEGINNER-V2-P065",
+    "step": "Step 6",
+    "step_number": 6,
+    "kind": "story",
+    "title": "A family Saturday",
+    "source_pdf_pages": [
+      62
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-065.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 66,
+    "id": "LGS-BEGINNER-V2-P066",
+    "step": "Step 6",
+    "step_number": 6,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 63",
+    "source_pdf_pages": [
+      63
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-066.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S06-SOURCE-P063"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 67,
+    "id": "LGS-BEGINNER-V2-P067",
+    "step": "Step 6",
+    "step_number": 6,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      64
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-067.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S06-DETECTIVE-P064"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 68,
+    "id": "LGS-BEGINNER-V2-P068",
+    "step": "Step 6",
+    "step_number": 6,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      65
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-068.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S06-CORE-Q01",
+      "LGS-BEGINNER-V2-S06-CORE-Q02",
+      "LGS-BEGINNER-V2-S06-CORE-Q03",
+      "LGS-BEGINNER-V2-S06-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 69,
+    "id": "LGS-BEGINNER-V2-P069",
+    "step": "Step 6",
+    "step_number": 6,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 66",
+    "source_pdf_pages": [
+      66
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-069.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S06-SOURCE-P066"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 70,
+    "id": "LGS-BEGINNER-V2-P070",
+    "step": "Step 6",
+    "step_number": 6,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 67",
+    "source_pdf_pages": [
+      67
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-070.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S06-SOURCE-P067"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 71,
+    "id": "LGS-BEGINNER-V2-P071",
+    "step": "Step 6",
+    "step_number": 6,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 68",
+    "source_pdf_pages": [
+      68
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-071.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S06-SOURCE-P068"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 72,
+    "id": "LGS-BEGINNER-V2-P072",
+    "step": "Step 6",
+    "step_number": 6,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 69",
+    "source_pdf_pages": [
+      69
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-072.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S06-SOURCE-P069"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 73,
+    "id": "LGS-BEGINNER-V2-P073",
+    "step": "Step 7",
+    "step_number": 7,
+    "kind": "source_lesson",
+    "title": "Beginner • Source page 70",
+    "source_pdf_pages": [
+      70
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-073.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 74,
+    "id": "LGS-BEGINNER-V2-P074",
+    "step": "Step 7",
+    "step_number": 7,
+    "kind": "story",
+    "title": "Checking in",
+    "source_pdf_pages": [
+      71
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-074.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 75,
+    "id": "LGS-BEGINNER-V2-P075",
+    "step": "Step 7",
+    "step_number": 7,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 72",
+    "source_pdf_pages": [
+      72
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-075.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S07-SOURCE-P072"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 76,
+    "id": "LGS-BEGINNER-V2-P076",
+    "step": "Step 7",
+    "step_number": 7,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      73
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-076.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S07-DETECTIVE-P073"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 77,
+    "id": "LGS-BEGINNER-V2-P077",
+    "step": "Step 7",
+    "step_number": 7,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      74
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-077.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S07-CORE-Q01",
+      "LGS-BEGINNER-V2-S07-CORE-Q02",
+      "LGS-BEGINNER-V2-S07-CORE-Q03",
+      "LGS-BEGINNER-V2-S07-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 78,
+    "id": "LGS-BEGINNER-V2-P078",
+    "step": "Step 7",
+    "step_number": 7,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 75",
+    "source_pdf_pages": [
+      75
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-078.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S07-SOURCE-P075"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 79,
+    "id": "LGS-BEGINNER-V2-P079",
+    "step": "Step 7",
+    "step_number": 7,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 76",
+    "source_pdf_pages": [
+      76
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-079.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S07-SOURCE-P076"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 80,
+    "id": "LGS-BEGINNER-V2-P080",
+    "step": "Step 7",
+    "step_number": 7,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 77",
+    "source_pdf_pages": [
+      77
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-080.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S07-SOURCE-P077"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 81,
+    "id": "LGS-BEGINNER-V2-P081",
+    "step": "Step 7",
+    "step_number": 7,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 78",
+    "source_pdf_pages": [
+      78
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-081.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S07-SOURCE-P078"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 82,
+    "id": "LGS-BEGINNER-V2-P082",
+    "step": "Step 7",
+    "step_number": 7,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 79",
+    "source_pdf_pages": [
+      79
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-082.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S07-SOURCE-P079"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 83,
+    "id": "LGS-BEGINNER-V2-P083",
+    "step": "Step 8",
+    "step_number": 8,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 80",
+    "source_pdf_pages": [
+      80
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-083.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 84,
+    "id": "LGS-BEGINNER-V2-P084",
+    "step": "Step 8",
+    "step_number": 8,
+    "kind": "story",
+    "title": "A difficult day out",
+    "source_pdf_pages": [
+      81
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-084.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 85,
+    "id": "LGS-BEGINNER-V2-P085",
+    "step": "Step 8",
+    "step_number": 8,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 82",
+    "source_pdf_pages": [
+      82
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-085.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S08-SOURCE-P082"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 86,
+    "id": "LGS-BEGINNER-V2-P086",
+    "step": "Step 8",
+    "step_number": 8,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 83",
+    "source_pdf_pages": [
+      83
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-086.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S08-SOURCE-P083"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 87,
+    "id": "LGS-BEGINNER-V2-P087",
+    "step": "Step 8",
+    "step_number": 8,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      84
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-087.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S08-DETECTIVE-P084"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 88,
+    "id": "LGS-BEGINNER-V2-P088",
+    "step": "Step 8",
+    "step_number": 8,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      85
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-088.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S08-CORE-Q01",
+      "LGS-BEGINNER-V2-S08-CORE-Q02",
+      "LGS-BEGINNER-V2-S08-CORE-Q03",
+      "LGS-BEGINNER-V2-S08-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 89,
+    "id": "LGS-BEGINNER-V2-P089",
+    "step": "Step 8",
+    "step_number": 8,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 86",
+    "source_pdf_pages": [
+      86
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-089.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S08-SOURCE-P086"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 90,
+    "id": "LGS-BEGINNER-V2-P090",
+    "step": "Step 8",
+    "step_number": 8,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 87",
+    "source_pdf_pages": [
+      87
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-090.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S08-SOURCE-P087"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 91,
+    "id": "LGS-BEGINNER-V2-P091",
+    "step": "Step 8",
+    "step_number": 8,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 88",
+    "source_pdf_pages": [
+      88
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-091.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S08-SOURCE-P088"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 92,
+    "id": "LGS-BEGINNER-V2-P092",
+    "step": "Step 8",
+    "step_number": 8,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 89",
+    "source_pdf_pages": [
+      89
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-092.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S08-SOURCE-P089"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 93,
+    "id": "LGS-BEGINNER-V2-P093",
+    "step": "Step 8",
+    "step_number": 8,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 90",
+    "source_pdf_pages": [
+      90
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-093.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S08-SOURCE-P090"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 94,
+    "id": "LGS-BEGINNER-V2-P094",
+    "step": "Step 8",
+    "step_number": 8,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 91",
+    "source_pdf_pages": [
+      91
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-094.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S08-SOURCE-P091"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 95,
+    "id": "LGS-BEGINNER-V2-P095",
+    "step": "Step 8",
+    "step_number": 8,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 92",
+    "source_pdf_pages": [
+      92
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-095.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S08-SOURCE-P092"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 96,
+    "id": "LGS-BEGINNER-V2-P096",
+    "step": "Step 8",
+    "step_number": 8,
+    "kind": "lesson",
+    "title": "Read and review: the park trip",
+    "source_pdf_pages": [
+      93
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-096.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S08-SOURCE-P093"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 97,
+    "id": "LGS-BEGINNER-V2-P097",
+    "step": "Step 8",
+    "step_number": 8,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 94",
+    "source_pdf_pages": [
+      94
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-097.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S08-SOURCE-P094"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 98,
+    "id": "LGS-BEGINNER-V2-P098",
+    "step": "Step 9",
+    "step_number": 9,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 95",
+    "source_pdf_pages": [
+      95
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-098.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 99,
+    "id": "LGS-BEGINNER-V2-P099",
+    "step": "Step 9",
+    "step_number": 9,
+    "kind": "story",
+    "title": "A table for two",
+    "source_pdf_pages": [
+      96
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-099.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 100,
+    "id": "LGS-BEGINNER-V2-P100",
+    "step": "Step 9",
+    "step_number": 9,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      97
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-100.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S09-LAB-P097"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 101,
+    "id": "LGS-BEGINNER-V2-P101",
+    "step": "Step 9",
+    "step_number": 9,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 98",
+    "source_pdf_pages": [
+      98
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-101.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S09-SOURCE-P098"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 102,
+    "id": "LGS-BEGINNER-V2-P102",
+    "step": "Step 9",
+    "step_number": 9,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      99
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-102.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S09-DETECTIVE-P099"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 103,
+    "id": "LGS-BEGINNER-V2-P103",
+    "step": "Step 9",
+    "step_number": 9,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      100
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-103.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S09-CORE-Q01",
+      "LGS-BEGINNER-V2-S09-CORE-Q02",
+      "LGS-BEGINNER-V2-S09-CORE-Q03",
+      "LGS-BEGINNER-V2-S09-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 104,
+    "id": "LGS-BEGINNER-V2-P104",
+    "step": "Step 9",
+    "step_number": 9,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 101",
+    "source_pdf_pages": [
+      101
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-104.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S09-SOURCE-P101"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 105,
+    "id": "LGS-BEGINNER-V2-P105",
+    "step": "Step 9",
+    "step_number": 9,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 102",
+    "source_pdf_pages": [
+      102
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-105.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S09-SOURCE-P102"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 106,
+    "id": "LGS-BEGINNER-V2-P106",
+    "step": "Step 9",
+    "step_number": 9,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 103",
+    "source_pdf_pages": [
+      103
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-106.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S09-SOURCE-P103"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 107,
+    "id": "LGS-BEGINNER-V2-P107",
+    "step": "Step 9",
+    "step_number": 9,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 104",
+    "source_pdf_pages": [
+      104
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-107.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S09-SOURCE-P104"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 108,
+    "id": "LGS-BEGINNER-V2-P108",
+    "step": "Step 10",
+    "step_number": 10,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 105",
+    "source_pdf_pages": [
+      105
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-108.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 109,
+    "id": "LGS-BEGINNER-V2-P109",
+    "step": "Step 10",
+    "step_number": 10,
+    "kind": "assessment",
+    "title": "Story checkpoint",
+    "source_pdf_pages": [],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-109.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S10-JUMP-Q01",
+      "LGS-BEGINNER-V2-S10-JUMP-Q02",
+      "LGS-BEGINNER-V2-S10-JUMP-Q03",
+      "LGS-BEGINNER-V2-S10-JUMP-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 110,
+    "id": "LGS-BEGINNER-V2-P110",
+    "step": "Step 10",
+    "step_number": 10,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 106",
+    "source_pdf_pages": [
+      106
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-110.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S10-SOURCE-P106"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 111,
+    "id": "LGS-BEGINNER-V2-P111",
+    "step": "Step 10",
+    "step_number": 10,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 107",
+    "source_pdf_pages": [
+      107
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-111.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S10-SOURCE-P107"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 112,
+    "id": "LGS-BEGINNER-V2-P112",
+    "step": "Step 10",
+    "step_number": 10,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 108",
+    "source_pdf_pages": [
+      108
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-112.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S10-SOURCE-P108"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 113,
+    "id": "LGS-BEGINNER-V2-P113",
+    "step": "Step 10",
+    "step_number": 10,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 109",
+    "source_pdf_pages": [
+      109
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-113.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S10-SOURCE-P109"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 114,
+    "id": "LGS-BEGINNER-V2-P114",
+    "step": "Step 10",
+    "step_number": 10,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 110",
+    "source_pdf_pages": [
+      110
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-114.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S10-SOURCE-P110"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 115,
+    "id": "LGS-BEGINNER-V2-P115",
+    "step": "Step 10",
+    "step_number": 10,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 111",
+    "source_pdf_pages": [
+      111
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-115.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S10-SOURCE-P111"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 116,
+    "id": "LGS-BEGINNER-V2-P116",
+    "step": "Step 10",
+    "step_number": 10,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 112",
+    "source_pdf_pages": [
+      112
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-116.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S10-SOURCE-P112"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 117,
+    "id": "LGS-BEGINNER-V2-P117",
+    "step": "Step 11",
+    "step_number": 11,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 113",
+    "source_pdf_pages": [
+      113
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-117.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 118,
+    "id": "LGS-BEGINNER-V2-P118",
+    "step": "Step 11",
+    "step_number": 11,
+    "kind": "story",
+    "title": "One thing at a time",
+    "source_pdf_pages": [
+      114
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-118.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 119,
+    "id": "LGS-BEGINNER-V2-P119",
+    "step": "Step 11",
+    "step_number": 11,
+    "kind": "source_lesson",
+    "title": "Beginner • Source page 115",
+    "source_pdf_pages": [
+      115
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-119.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S11-SOURCE-P115"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 120,
+    "id": "LGS-BEGINNER-V2-P120",
+    "step": "Step 11",
+    "step_number": 11,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      116
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-120.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S11-DETECTIVE-P116"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 121,
+    "id": "LGS-BEGINNER-V2-P121",
+    "step": "Step 11",
+    "step_number": 11,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      117
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-121.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S11-CORE-Q01",
+      "LGS-BEGINNER-V2-S11-CORE-Q02",
+      "LGS-BEGINNER-V2-S11-CORE-Q03",
+      "LGS-BEGINNER-V2-S11-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 122,
+    "id": "LGS-BEGINNER-V2-P122",
+    "step": "Step 11",
+    "step_number": 11,
+    "kind": "source_lesson",
+    "title": "Beginner • Source page 118",
+    "source_pdf_pages": [
+      118
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-122.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S11-SOURCE-P118"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 123,
+    "id": "LGS-BEGINNER-V2-P123",
+    "step": "Step 11",
+    "step_number": 11,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 119",
+    "source_pdf_pages": [
+      119
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-123.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S11-SOURCE-P119"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 124,
+    "id": "LGS-BEGINNER-V2-P124",
+    "step": "Step 11",
+    "step_number": 11,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 120",
+    "source_pdf_pages": [
+      120
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-124.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S11-SOURCE-P120"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 125,
+    "id": "LGS-BEGINNER-V2-P125",
+    "step": "Step 11",
+    "step_number": 11,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 121",
+    "source_pdf_pages": [
+      121
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-125.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S11-SOURCE-P121"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 126,
+    "id": "LGS-BEGINNER-V2-P126",
+    "step": "Step 11",
+    "step_number": 11,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 122",
+    "source_pdf_pages": [
+      122
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-126.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S11-SOURCE-P122"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 127,
+    "id": "LGS-BEGINNER-V2-P127",
+    "step": "Step 11",
+    "step_number": 11,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 123",
+    "source_pdf_pages": [
+      123
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-127.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S11-SOURCE-P123"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 128,
+    "id": "LGS-BEGINNER-V2-P128",
+    "step": "Step 12",
+    "step_number": 12,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 124",
+    "source_pdf_pages": [
+      124
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-128.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 129,
+    "id": "LGS-BEGINNER-V2-P129",
+    "step": "Step 12",
+    "step_number": 12,
+    "kind": "story",
+    "title": "An evening together",
+    "source_pdf_pages": [
+      125
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-129.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 130,
+    "id": "LGS-BEGINNER-V2-P130",
+    "step": "Step 12",
+    "step_number": 12,
+    "kind": "source_lesson",
+    "title": "Beginner • Source page 126",
+    "source_pdf_pages": [
+      126
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-130.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S12-SOURCE-P126"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 131,
+    "id": "LGS-BEGINNER-V2-P131",
+    "step": "Step 12",
+    "step_number": 12,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      127
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-131.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S12-DETECTIVE-P127"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 132,
+    "id": "LGS-BEGINNER-V2-P132",
+    "step": "Step 12",
+    "step_number": 12,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      128
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-132.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S12-CORE-Q01",
+      "LGS-BEGINNER-V2-S12-CORE-Q02",
+      "LGS-BEGINNER-V2-S12-CORE-Q03",
+      "LGS-BEGINNER-V2-S12-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 133,
+    "id": "LGS-BEGINNER-V2-P133",
+    "step": "Step 12",
+    "step_number": 12,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 129",
+    "source_pdf_pages": [
+      129
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-133.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S12-SOURCE-P129"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 134,
+    "id": "LGS-BEGINNER-V2-P134",
+    "step": "Step 12",
+    "step_number": 12,
+    "kind": "source_lesson",
+    "title": "Beginner • Source page 130",
+    "source_pdf_pages": [
+      130
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-134.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S12-SOURCE-P130"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 135,
+    "id": "LGS-BEGINNER-V2-P135",
+    "step": "Step 12",
+    "step_number": 12,
+    "kind": "lesson",
+    "title": "Possessive pronouns",
+    "source_pdf_pages": [
+      131
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-135.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S12-REVISED-P131"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 136,
+    "id": "LGS-BEGINNER-V2-P136",
+    "step": "Step 12",
+    "step_number": 12,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 132",
+    "source_pdf_pages": [
+      132
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-136.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S12-SOURCE-P132"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 137,
+    "id": "LGS-BEGINNER-V2-P137",
+    "step": "Step 13",
+    "step_number": 13,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 133",
+    "source_pdf_pages": [
+      133
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-137.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 138,
+    "id": "LGS-BEGINNER-V2-P138",
+    "step": "Step 13",
+    "step_number": 13,
+    "kind": "story",
+    "title": "Getting ready",
+    "source_pdf_pages": [
+      134
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-138.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 139,
+    "id": "LGS-BEGINNER-V2-P139",
+    "step": "Step 13",
+    "step_number": 13,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      135
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-139.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S13-LAB-P135"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 140,
+    "id": "LGS-BEGINNER-V2-P140",
+    "step": "Step 13",
+    "step_number": 13,
+    "kind": "source_lesson",
+    "title": "Beginner • Source page 136",
+    "source_pdf_pages": [
+      136
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-140.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S13-SOURCE-P136"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 141,
+    "id": "LGS-BEGINNER-V2-P141",
+    "step": "Step 13",
+    "step_number": 13,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      137
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-141.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S13-DETECTIVE-P137"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 142,
+    "id": "LGS-BEGINNER-V2-P142",
+    "step": "Step 13",
+    "step_number": 13,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      138
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-142.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S13-CORE-Q01",
+      "LGS-BEGINNER-V2-S13-CORE-Q02",
+      "LGS-BEGINNER-V2-S13-CORE-Q03",
+      "LGS-BEGINNER-V2-S13-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 143,
+    "id": "LGS-BEGINNER-V2-P143",
+    "step": "Step 13",
+    "step_number": 13,
+    "kind": "lesson",
+    "title": "Talking about the future",
+    "source_pdf_pages": [
+      139
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-143.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S13-REVISED-P139"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 144,
+    "id": "LGS-BEGINNER-V2-P144",
+    "step": "Step 13",
+    "step_number": 13,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 140",
+    "source_pdf_pages": [
+      140
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-144.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S13-SOURCE-P140"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 145,
+    "id": "LGS-BEGINNER-V2-P145",
+    "step": "Step 13",
+    "step_number": 13,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 141",
+    "source_pdf_pages": [
+      141
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-145.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S13-SOURCE-P141"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 146,
+    "id": "LGS-BEGINNER-V2-P146",
+    "step": "Step 13",
+    "step_number": 13,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 142",
+    "source_pdf_pages": [
+      142
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-146.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S13-SOURCE-P142"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 147,
+    "id": "LGS-BEGINNER-V2-P147",
+    "step": "Step 14",
+    "step_number": 14,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 143",
+    "source_pdf_pages": [
+      143
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-147.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 148,
+    "id": "LGS-BEGINNER-V2-P148",
+    "step": "Step 14",
+    "step_number": 14,
+    "kind": "story",
+    "title": "A plan for tomorrow",
+    "source_pdf_pages": [
+      144
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-148.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 149,
+    "id": "LGS-BEGINNER-V2-P149",
+    "step": "Step 14",
+    "step_number": 14,
+    "kind": "practice",
+    "title": "Your turn with the characters",
+    "source_pdf_pages": [
+      145
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-149.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S14-LAB-P145"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 150,
+    "id": "LGS-BEGINNER-V2-P150",
+    "step": "Step 14",
+    "step_number": 14,
+    "kind": "source_lesson",
+    "title": "Beginner • Source page 146",
+    "source_pdf_pages": [
+      146
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-150.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S14-SOURCE-P146"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 151,
+    "id": "LGS-BEGINNER-V2-P151",
+    "step": "Step 14",
+    "step_number": 14,
+    "kind": "reading",
+    "title": "Read the same story",
+    "source_pdf_pages": [
+      147
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-151.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S14-DETECTIVE-P147"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 152,
+    "id": "LGS-BEGINNER-V2-P152",
+    "step": "Step 14",
+    "step_number": 14,
+    "kind": "assessment",
+    "title": "Check your understanding",
+    "source_pdf_pages": [
+      148
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-152.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S14-CORE-Q01",
+      "LGS-BEGINNER-V2-S14-CORE-Q02",
+      "LGS-BEGINNER-V2-S14-CORE-Q03",
+      "LGS-BEGINNER-V2-S14-CORE-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 153,
+    "id": "LGS-BEGINNER-V2-P153",
+    "step": "Step 14",
+    "step_number": 14,
+    "kind": "source_lesson",
+    "title": "Beginner • Source page 149",
+    "source_pdf_pages": [
+      149
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-153.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S14-SOURCE-P149"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 154,
+    "id": "LGS-BEGINNER-V2-P154",
+    "step": "Step 14",
+    "step_number": 14,
+    "kind": "lesson",
+    "title": "Be going to",
+    "source_pdf_pages": [
+      150
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-154.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S14-REVISED-P150"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 155,
+    "id": "LGS-BEGINNER-V2-P155",
+    "step": "Step 14",
+    "step_number": 14,
+    "kind": "lesson",
+    "title": "Will or be going to?",
+    "source_pdf_pages": [
+      151
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-155.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S14-REVISED-P151"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": true
+  },
+  {
+    "page": 156,
+    "id": "LGS-BEGINNER-V2-P156",
+    "step": "Step 14",
+    "step_number": 14,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 152",
+    "source_pdf_pages": [
+      152
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-156.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S14-SOURCE-P152"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 157,
+    "id": "LGS-BEGINNER-V2-P157",
+    "step": "Step 14",
+    "step_number": 14,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 153",
+    "source_pdf_pages": [
+      153
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-157.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S14-SOURCE-P153"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 158,
+    "id": "LGS-BEGINNER-V2-P158",
+    "step": "Step 14",
+    "step_number": 14,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 154",
+    "source_pdf_pages": [
+      154
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-158.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S14-SOURCE-P154"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 159,
+    "id": "LGS-BEGINNER-V2-P159",
+    "step": "Step 15",
+    "step_number": 15,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 155",
+    "source_pdf_pages": [
+      155
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-159.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 160,
+    "id": "LGS-BEGINNER-V2-P160",
+    "step": "Step 15",
+    "step_number": 15,
+    "kind": "assessment",
+    "title": "Final story challenge · 1/3",
+    "source_pdf_pages": [],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-160.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S15-JUMP-Q01",
+      "LGS-BEGINNER-V2-S15-JUMP-Q02",
+      "LGS-BEGINNER-V2-S15-JUMP-Q03",
+      "LGS-BEGINNER-V2-S15-JUMP-Q04"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 161,
+    "id": "LGS-BEGINNER-V2-P161",
+    "step": "Step 15",
+    "step_number": 15,
+    "kind": "assessment",
+    "title": "Final story challenge · 2/3",
+    "source_pdf_pages": [],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-161.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S15-JUMP-Q05",
+      "LGS-BEGINNER-V2-S15-JUMP-Q06",
+      "LGS-BEGINNER-V2-S15-JUMP-Q07",
+      "LGS-BEGINNER-V2-S15-JUMP-Q08"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 162,
+    "id": "LGS-BEGINNER-V2-P162",
+    "step": "Step 15",
+    "step_number": 15,
+    "kind": "assessment",
+    "title": "Final story challenge · 3/3",
+    "source_pdf_pages": [],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-162.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S15-JUMP-Q09",
+      "LGS-BEGINNER-V2-S15-JUMP-Q10",
+      "LGS-BEGINNER-V2-S15-JUMP-Q11",
+      "LGS-BEGINNER-V2-S15-JUMP-Q12"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 163,
+    "id": "LGS-BEGINNER-V2-P163",
+    "step": "Step 15",
+    "step_number": 15,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 156",
+    "source_pdf_pages": [
+      156
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-163.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S15-SOURCE-P156"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 164,
+    "id": "LGS-BEGINNER-V2-P164",
+    "step": "Step 15",
+    "step_number": 15,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 157",
+    "source_pdf_pages": [
+      157
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-164.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S15-SOURCE-P157"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 165,
+    "id": "LGS-BEGINNER-V2-P165",
+    "step": "Step 15",
+    "step_number": 15,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 158",
+    "source_pdf_pages": [
+      158
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-165.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S15-SOURCE-P158"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 166,
+    "id": "LGS-BEGINNER-V2-P166",
+    "step": "Step 15",
+    "step_number": 15,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 159",
+    "source_pdf_pages": [
+      159
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-166.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S15-SOURCE-P159"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 167,
+    "id": "LGS-BEGINNER-V2-P167",
+    "step": "Step 15",
+    "step_number": 15,
+    "kind": "source_practice",
+    "title": "Beginner • Source page 160",
+    "source_pdf_pages": [
+      160
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-167.jpg",
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S15-SOURCE-P160"
+    ],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 168,
+    "id": "LGS-BEGINNER-V2-P168",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Beginner • Source page 169",
+    "source_pdf_pages": [
+      169
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-168.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 169,
+    "id": "LGS-BEGINNER-V2-P169",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Beginner • Source page 170",
+    "source_pdf_pages": [
+      170
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-169.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 170,
+    "id": "LGS-BEGINNER-V2-P170",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Beginner • Source page 171",
+    "source_pdf_pages": [
+      171
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-170.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 171,
+    "id": "LGS-BEGINNER-V2-P171",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Beginner • Source page 172",
+    "source_pdf_pages": [
+      172
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-171.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 172,
+    "id": "LGS-BEGINNER-V2-P172",
+    "step": null,
+    "step_number": null,
+    "kind": "source_reference",
+    "title": "Beginner • Source page 173",
+    "source_pdf_pages": [
+      173
+    ],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-172.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  },
+  {
+    "page": 173,
+    "id": "LGS-BEGINNER-V2-P173",
+    "step": null,
+    "step_number": null,
+    "kind": "timeline",
+    "title": "The story so far",
+    "source_pdf_pages": [],
+    "object_key": "materials/interactive/LGS-BEGINNER-V2/page-173.jpg",
+    "activity_ids": [],
+    "audio_object_key": null,
+    "audio_status": "not_provided",
+    "required_reading": false
+  }
+]

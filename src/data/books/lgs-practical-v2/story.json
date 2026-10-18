@@ -1,0 +1,632 @@
+[
+  {
+    "step": 16,
+    "title": "A ride downtown",
+    "time": "Saturday afternoon",
+    "characters": [
+      "Denali",
+      "Maria"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Maria",
+        "text": "It is good to have you back from Chicago. Shall we take a taxi downtown?"
+      },
+      {
+        "speaker": "Denali",
+        "text": "Yes. We have several errands, and the bus stop is far away."
+      },
+      {
+        "speaker": "Richard",
+        "text": "Welcome. I am Richard. Where would you like to go?"
+      },
+      {
+        "speaker": "Maria",
+        "text": "To the bookstore near Al Dente, please."
+      },
+      {
+        "speaker": "Richard",
+        "text": "Certainly. I grew up in Mexico City. My grandfather Mateo taught me to drive."
+      },
+      {
+        "speaker": "Denali",
+        "text": "Thank you. We will buy our books and decide how to get home afterward."
+      }
+    ],
+    "reading": "Denali is back from her visit to Chicago. On Saturday afternoon, she and Maria take a taxi to a downtown bookstore near Al Dente. Their driver is Richard Pérez. He grew up in Mexico City, and his grandfather Mateo taught him to drive. The friends have several errands to do. They have not decided how to return home yet. This happens before Clarice and Ethan’s first dinner date that evening.",
+    "questions": [
+      {
+        "prompt": "Where are Denali and Maria going?"
+      },
+      {
+        "prompt": "Who is driving?"
+      },
+      {
+        "prompt": "Where did Richard grow up?"
+      },
+      {
+        "prompt": "Who taught Richard to drive?"
+      }
+    ],
+    "focus": "Prefixes and suffixes",
+    "task": "Build words with un-, re- and -ful. Use two of them in sentences about the friends’ trip downtown."
+  },
+  {
+    "step": 17,
+    "title": "Choosing the bus",
+    "time": "After the bookstore visit",
+    "characters": [
+      "Denali",
+      "Maria"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Maria",
+        "text": "Shopping was interesting, but I am tired. How should we get home?"
+      },
+      {
+        "speaker": "Denali",
+        "text": "The taxi would cost about twenty to twenty-three dollars."
+      },
+      {
+        "speaker": "Maria",
+        "text": "What about taking the bus?"
+      },
+      {
+        "speaker": "Denali",
+        "text": "It costs seven dollars for both of us. The stop is close to this bookstore."
+      },
+      {
+        "speaker": "Maria",
+        "text": "That is less expensive. I do not mind waiting a few minutes."
+      },
+      {
+        "speaker": "Denali",
+        "text": "Then let’s take the bus. We can enjoy reading our new books tonight."
+      }
+    ],
+    "reading": "After buying their books, Maria and Denali discuss the trip home. A taxi would cost about twenty to twenty-three dollars. The bus costs seven dollars for both of them. The stop is near the bookstore, so they choose the bus. Maria is tired, but she does not mind waiting. The shopping trip was interesting. The friends plan to read their new books that evening.",
+    "questions": [
+      {
+        "prompt": "What did the friends buy?"
+      },
+      {
+        "prompt": "How much is the bus for both?"
+      },
+      {
+        "prompt": "Which transport do they choose?"
+      },
+      {
+        "prompt": "How does Maria feel?"
+      }
+    ],
+    "focus": "-ed / -ing adjectives; gerunds and infinitives",
+    "task": "Explain why the trip was interesting and why Maria felt tired. Add sentences with enjoy reading and decide to take."
+  },
+  {
+    "step": 18,
+    "title": "Finding the right street",
+    "time": "Saturday, before 7:45 p.m.",
+    "characters": [
+      "Ethan"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Ethan",
+        "text": "Excuse me. I am looking for Westlake Street. Could you help me?"
+      },
+      {
+        "speaker": "Pete",
+        "text": "Go along Oak Street and turn right onto Sixth Avenue."
+      },
+      {
+        "speaker": "Ethan",
+        "text": "Do I go past the park?"
+      },
+      {
+        "speaker": "Pete",
+        "text": "Yes. Westlake Street is just after the park. Turn left there."
+      },
+      {
+        "speaker": "Ethan",
+        "text": "Thank you. I am on my way to pick someone up."
+      },
+      {
+        "speaker": "Pete",
+        "text": "You are close. You should reach it in a few minutes."
+      }
+    ],
+    "reading": "Ethan is driving to pick up Clarice before their first date. He is unsure of the route, so he asks Pete for directions. Pete tells him to go along Oak Street and turn right onto Sixth Avenue. After passing the park, Ethan should turn left onto Westlake Street. Ethan thanks him and continues. He is still on his way to Clarice’s home; they have not reached the restaurant.",
+    "questions": [
+      {
+        "prompt": "Who asks for directions?"
+      },
+      {
+        "prompt": "Where should Ethan turn right?"
+      },
+      {
+        "prompt": "What landmark should he pass?"
+      },
+      {
+        "prompt": "What will he do before dinner?"
+      }
+    ],
+    "focus": "Verbs with prepositions",
+    "task": "Give Ethan four directions. Use go along, turn onto, go past and arrive at."
+  },
+  {
+    "step": 19,
+    "title": "Finishing the workday",
+    "time": "Saturday, early evening",
+    "characters": [
+      "Evan",
+      "Taylor",
+      "Sara"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Taylor",
+        "text": "Are you still working, Evan?"
+      },
+      {
+        "speaker": "Evan",
+        "text": "I need to finish this report, but I will wrap it up soon."
+      },
+      {
+        "speaker": "Sara",
+        "text": "Can you help me set up my science project afterward?"
+      },
+      {
+        "speaker": "Evan",
+        "text": "Yes. First, I need to back up this file and shut down the computer."
+      },
+      {
+        "speaker": "Taylor",
+        "text": "I will put away the dishes while you finish."
+      },
+      {
+        "speaker": "Sara",
+        "text": "Great. I will take out the project kit and clear the table."
+      }
+    ],
+    "reading": "Evan is finishing a financial report at home on Saturday. He promises to help Sara with her science project after work. Before he stops, he needs to back up the file and shut down his computer. Taylor puts away the dishes. Sara takes out her project kit and clears the table. The family shares the jobs so that they can work together later that evening.",
+    "questions": [
+      {
+        "prompt": "What is Evan finishing?"
+      },
+      {
+        "prompt": "Who needs help with a science project?"
+      },
+      {
+        "prompt": "What does Evan back up?"
+      },
+      {
+        "prompt": "What does Taylor put away?"
+      }
+    ],
+    "focus": "Phrasal verbs",
+    "task": "Write a family to-do list using wrap up, back up, shut down, put away and take out."
+  },
+  {
+    "step": 21,
+    "title": "A short stop",
+    "time": "Saturday, after 7:45 p.m.",
+    "characters": [
+      "Ethan",
+      "Clarice",
+      "Taylor"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Clarice",
+        "text": "Thank you for picking me up on time."
+      },
+      {
+        "speaker": "Ethan",
+        "text": "We have time for a short stop for fuel before our eight-thirty reservation."
+      },
+      {
+        "speaker": "Taylor",
+        "text": "Hello, you two! It is nice to see you here."
+      },
+      {
+        "speaker": "Clarice",
+        "text": "What a surprise! Is this station cheaper than the one near your house?"
+      },
+      {
+        "speaker": "Taylor",
+        "text": "Yes, a little. That one is more expensive."
+      },
+      {
+        "speaker": "Ethan",
+        "text": "Then we chose well. Enjoy your evening, Taylor!"
+      }
+    ],
+    "reading": "Ethan picks Clarice up at seven forty-five on Saturday. On the way to Al Dente, they stop for fuel and see Taylor. Taylor says this station is a little cheaper than the one near her house. The couple has enough time because the restaurant reservation is at eight thirty. This is their first date, and it is still the same Saturday evening. Taylor says goodbye before they continue to the restaurant.",
+    "questions": [
+      {
+        "prompt": "When does Ethan pick Clarice up?"
+      },
+      {
+        "prompt": "Why do they stop?"
+      },
+      {
+        "prompt": "Whom do they see?"
+      },
+      {
+        "prompt": "Which station is cheaper?"
+      }
+    ],
+    "focus": "Comparatives and superlatives",
+    "task": "Compare two ways to travel and two restaurants. Use than and one superlative without inventing facts about the story."
+  },
+  {
+    "step": 22,
+    "title": "The science project",
+    "time": "Meanwhile, at the Thompson home",
+    "characters": [
+      "Sara",
+      "Evan",
+      "Denali"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Sara",
+        "text": "I tried the school circuit kit myself, but the light did not come on."
+      },
+      {
+        "speaker": "Evan",
+        "text": "Let’s follow the instructions together. Did you check the battery?"
+      },
+      {
+        "speaker": "Sara",
+        "text": "Not yet. I can do that with you."
+      },
+      {
+        "speaker": "Denali",
+        "text": "I can help over the phone. Is everything connected as the diagram shows?"
+      },
+      {
+        "speaker": "Evan",
+        "text": "Now it is. The battery connector was loose."
+      },
+      {
+        "speaker": "Sara",
+        "text": "It works! I will explain each step in my report for Monday."
+      }
+    ],
+    "reading": "While Clarice and Ethan are on their way to dinner, Sara works on a school science project. Evan helps her check the kit according to its instructions. Denali offers help by phone. They find a loose battery connector, fix the connection and make the light work. Sara will explain the steps in her report, which is due on Monday. She tries the project herself but accepts help when she needs it.",
+    "questions": [
+      {
+        "prompt": "What are they testing?"
+      },
+      {
+        "prompt": "Who helps by phone?"
+      },
+      {
+        "prompt": "What was the problem?"
+      },
+      {
+        "prompt": "When is the report due?"
+      }
+    ],
+    "focus": "Reflexive and indefinite pronouns",
+    "task": "Describe the project with herself, themselves, something and everything. Check what each pronoun refers to."
+  },
+  {
+    "step": 23,
+    "title": "Dinner at Al Dente",
+    "time": "Saturday, 8:30 p.m.",
+    "characters": [
+      "Clarice",
+      "Ethan"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Luiggi",
+        "text": "Welcome to Al Dente. Your table upstairs is ready."
+      },
+      {
+        "speaker": "Ethan",
+        "text": "Thank you. May we see the menu?"
+      },
+      {
+        "speaker": "Clarice",
+        "text": "The ravioli sounds delicious. Could I have that, please?"
+      },
+      {
+        "speaker": "Ethan",
+        "text": "I will have the calzone. Can we also have some water?"
+      },
+      {
+        "speaker": "Luiggi",
+        "text": "Certainly. Would you like anything else?"
+      },
+      {
+        "speaker": "Clarice",
+        "text": "That is all for now. It is lovely to finally be here."
+      }
+    ],
+    "reading": "Clarice and Ethan arrive at Al Dente for their eight-thirty reservation. Luiggi shows them to their table upstairs. They look at the menu and order politely. Clarice chooses ravioli, and Ethan chooses a calzone. They also ask for water. This is the dinner Ethan booked on Thursday. The restaurant, table and time match the reservation, and the couple can finally enjoy their first date.",
+    "questions": [
+      {
+        "prompt": "Who welcomes the couple?"
+      },
+      {
+        "prompt": "Where is their table?"
+      },
+      {
+        "prompt": "What does Clarice order?"
+      },
+      {
+        "prompt": "What does Ethan order?"
+      }
+    ],
+    "focus": "Modals: ability, permission and possibility",
+    "task": "Write a polite request with could, a permission question with may and a possibility statement with might."
+  },
+  {
+    "step": 24,
+    "title": "Friends at the door",
+    "time": "Later that Saturday evening",
+    "characters": [
+      "Clarice",
+      "Ethan",
+      "Denali",
+      "Maria"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Maria",
+        "text": "Clarice! We came back downtown for a late dessert. It is nice to see you."
+      },
+      {
+        "speaker": "Clarice",
+        "text": "This is Ethan. We have just had dinner upstairs."
+      },
+      {
+        "speaker": "Denali",
+        "text": "Hello, Ethan. We should all have dinner together sometime."
+      },
+      {
+        "speaker": "Ethan",
+        "text": "I would like that. We must choose a day that works for everyone."
+      },
+      {
+        "speaker": "Maria",
+        "text": "You do not have to arrange it now. Enjoy the rest of your evening."
+      },
+      {
+        "speaker": "Clarice",
+        "text": "Thank you. We will send a message next week."
+      }
+    ],
+    "reading": "After dinner, Clarice and Ethan meet Denali and Maria near the restaurant door. The roommates had returned home by bus earlier and have now come downtown again for dessert. Clarice introduces Ethan. Denali suggests a future dinner with the friends. They agree to choose a date next week, rather than interrupt the evening to organize it. The first date ends warmly, and a new connection has formed between the friends.",
+    "questions": [
+      {
+        "prompt": "Where do the friends meet?"
+      },
+      {
+        "prompt": "Why have Maria and Denali returned downtown?"
+      },
+      {
+        "prompt": "Who introduces Ethan?"
+      },
+      {
+        "prompt": "When will they arrange a group dinner?"
+      }
+    ],
+    "focus": "Modals: advice and obligation",
+    "task": "Give advice with should. Contrast must with do not have to using the dinner plan."
+  },
+  {
+    "step": 26,
+    "title": "A different kind of adventure",
+    "time": "Several weeks later",
+    "characters": [
+      "Clarice",
+      "Ethan"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Clarice",
+        "text": "The amusement park is lively, but you look uncomfortable."
+      },
+      {
+        "speaker": "Ethan",
+        "text": "I enjoy being here with you, although high rides make me dizzy."
+      },
+      {
+        "speaker": "Clarice",
+        "text": "Then we can skip them and choose something else."
+      },
+      {
+        "speaker": "Ethan",
+        "text": "Thank you. Would you like to try the ring-toss game?"
+      },
+      {
+        "speaker": "Clarice",
+        "text": "Yes! If I win, that teddy bear is coming home with me."
+      },
+      {
+        "speaker": "Ethan",
+        "text": "You won! Let’s celebrate with cotton candy and a walk."
+      }
+    ],
+    "reading": "Several weeks after their first date, Clarice and Ethan visit an amusement park. Ethan explains that high rides make him dizzy. Clarice listens, and they choose activities they can both enjoy. She plays a ring-toss game and wins a teddy bear. Afterward, they buy cotton candy and take a walk. The visit goes well because they discuss their preferences instead of pretending to enjoy the same things.",
+    "questions": [
+      {
+        "prompt": "Where do they go?"
+      },
+      {
+        "prompt": "What makes Ethan dizzy?"
+      },
+      {
+        "prompt": "What does Clarice win?"
+      },
+      {
+        "prompt": "Why does the visit go well?"
+      }
+    ],
+    "focus": "Conjunctions",
+    "task": "Connect events with although, because, so and after. Keep the reasons consistent with the episode."
+  },
+  {
+    "step": 27,
+    "title": "Remember the plan",
+    "time": "A few days later",
+    "characters": [
+      "Taylor",
+      "Evan",
+      "Sara"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Taylor",
+        "text": "Please remind me to buy rice after work."
+      },
+      {
+        "speaker": "Evan",
+        "text": "I will. I remember that we finished the last bag yesterday."
+      },
+      {
+        "speaker": "Sara",
+        "text": "Can I make dinner with you tonight?"
+      },
+      {
+        "speaker": "Taylor",
+        "text": "Yes. First, look at the recipe and listen to the instructions."
+      },
+      {
+        "speaker": "Evan",
+        "text": "I will do the dishes afterward. We can watch a film when everything is ready."
+      },
+      {
+        "speaker": "Sara",
+        "text": "Good plan. I will make a shopping list so we do not forget anything."
+      }
+    ],
+    "reading": "The Thompson family organizes an ordinary evening at home. Taylor asks Evan to remind her to buy rice. He remembers that they finished the last bag yesterday. Sara wants to help make dinner. Taylor asks her to look at the recipe and listen to the instructions. Evan offers to do the dishes. They plan to watch a film afterward. This episode takes place before Clarice and Ethan’s engagement; it is not a wedding scene.",
+    "questions": [
+      {
+        "prompt": "What must Taylor buy?"
+      },
+      {
+        "prompt": "Who wants to help cook?"
+      },
+      {
+        "prompt": "Who will do the dishes?"
+      },
+      {
+        "prompt": "What do they plan to do afterward?"
+      }
+    ],
+    "focus": "Common confusions: remember/remind, look/see/watch, hear/listen, do/make",
+    "task": "Write a reminder for Taylor. Explain the difference between remember and remind, then use do and make correctly."
+  },
+  {
+    "step": 28,
+    "title": "A thoughtful gift",
+    "time": "Later that month",
+    "characters": [
+      "Clarice",
+      "Taylor",
+      "Sara"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Clarice",
+        "text": "Welcome! What can I help you find?"
+      },
+      {
+        "speaker": "Taylor",
+        "text": "Evan has completed an important project. We want to get him a gift."
+      },
+      {
+        "speaker": "Sara",
+        "text": "Could you design a tie? He wears suits to work."
+      },
+      {
+        "speaker": "Clarice",
+        "text": "Certainly. What colors does he like?"
+      },
+      {
+        "speaker": "Taylor",
+        "text": "Blue and gray. How are things with Ethan?"
+      },
+      {
+        "speaker": "Clarice",
+        "text": "Very well. We are getting to know each other. We even went to an amusement park."
+      }
+    ],
+    "reading": "Taylor and Sara visit Clarice’s boutique to choose a gift for Evan after an important work project. They ask Clarice to design a tie because Evan wears suits to work. His favorite colors for it are blue and gray. Taylor also asks about Ethan. Clarice says they are getting to know each other and mentions their visit to the amusement park. Their first dinner is already in the past, and they are continuing to date.",
+    "questions": [
+      {
+        "prompt": "Who is the gift for?"
+      },
+      {
+        "prompt": "Why do they want a gift?"
+      },
+      {
+        "prompt": "What will Clarice design?"
+      },
+      {
+        "prompt": "Which colors do they choose?"
+      }
+    ],
+    "focus": "Get and get to",
+    "task": "Use get with a noun, get with an adjective and get to know in sentences connected to the boutique scene."
+  },
+  {
+    "step": 29,
+    "title": "Christmas plans",
+    "time": "December",
+    "characters": [
+      "Clarice",
+      "Ethan"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Ethan",
+        "text": "I used to spend Christmas quietly, but this year I would like to invite our friends."
+      },
+      {
+        "speaker": "Clarice",
+        "text": "That sounds lovely. The Thompsons, Denali and Maria could join us."
+      },
+      {
+        "speaker": "Ethan",
+        "text": "Are you used to cooking for a group?"
+      },
+      {
+        "speaker": "Clarice",
+        "text": "Not yet. I am getting used to planning meals, though."
+      },
+      {
+        "speaker": "Ethan",
+        "text": "We can ask everyone to bring something."
+      },
+      {
+        "speaker": "Clarice",
+        "text": "Good idea. I will bring canapés, and we can make the guest list together."
+      }
+    ],
+    "reading": "In December, Clarice and Ethan plan a Christmas gathering. Ethan used to celebrate quietly. This year, they want to invite Taylor, Evan, Sara, Denali and Maria. Clarice is still getting used to planning meals for a group. They decide to ask everyone to bring something. Clarice offers to bring canapés. The gathering is planned here and will take place at the beginning of the next book.",
+    "questions": [
+      {
+        "prompt": "Which celebration are they planning?"
+      },
+      {
+        "prompt": "How did Ethan use to celebrate?"
+      },
+      {
+        "prompt": "How will they share the preparation?"
+      },
+      {
+        "prompt": "What will Clarice bring?"
+      }
+    ],
+    "focus": "Used to, be used to and get used to",
+    "task": "Contrast a past habit, a familiar situation and the process of adapting. Use all three structures."
+  }
+]

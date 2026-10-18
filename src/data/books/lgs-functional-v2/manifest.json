@@ -1,0 +1,58 @@
+{
+  "schema_version": "lgs-editorial-package/2.0",
+  "book_code": "LGS-FUNCTIONAL-V2",
+  "level_name": "FUNCTIONAL",
+  "platform_level_code": null,
+  "level_mapping_required": true,
+  "import_status": "requires_platform_adapter_and_level_mapping",
+  "academic_steps": [
+    "Step 31",
+    "Step 32",
+    "Step 33",
+    "Step 34",
+    "Step 35",
+    "Step 36",
+    "Step 37",
+    "Step 38",
+    "Step 39",
+    "Step 40",
+    "Step 41",
+    "Step 42",
+    "Step 43",
+    "Step 44",
+    "Step 45"
+  ],
+  "page_count": 188,
+  "source_page_count": 192,
+  "source_file": "Functional (ALL) - Lets Go Speak 2024 (ALL).pdf",
+  "removed_source_answer_pages": [
+    172,
+    173,
+    174,
+    175,
+    176,
+    177,
+    178,
+    179,
+    180,
+    181,
+    182
+  ],
+  "pages_file": "data/student/pages.json",
+  "student_activities_file": "data/student/activities.json",
+  "private_answers_file": "data/server-only/activities-with-keys.json",
+  "checkpoints_file": "data/server-only/checkpoints.json",
+  "storage_prefix": "materials/interactive/LGS-FUNCTIONAL-V2",
+  "access": {
+    "authenticated": true,
+    "active_student": true,
+    "assigned_level_required": true,
+    "signed_url_ttl_seconds": 600
+  },
+  "audio": {
+    "status": "not_provided",
+    "files": 0
+  },
+  "edition": "Editorial adaptation; original lesson layouts retained except identified replacements",
+  "hash_algorithm": "SHA256"
+}

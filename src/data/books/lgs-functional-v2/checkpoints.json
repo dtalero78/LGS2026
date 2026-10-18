@@ -1,0 +1,208 @@
+[
+  {
+    "id": "LGS-FUNCTIONAL-V2-S31-CHECK",
+    "step_number": 31,
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S31-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S31-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S31-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S31-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S32-CHECK",
+    "step_number": 32,
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S32-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S32-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S32-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S32-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S33-CHECK",
+    "step_number": 33,
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S33-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S33-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S33-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S33-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S34-CHECK",
+    "step_number": 34,
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S34-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S34-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S34-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S34-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S35-CHECK",
+    "step_number": 35,
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S35-JUMP-Q01",
+      "LGS-FUNCTIONAL-V2-S35-JUMP-Q02",
+      "LGS-FUNCTIONAL-V2-S35-JUMP-Q03",
+      "LGS-FUNCTIONAL-V2-S35-JUMP-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true,
+    "kind": "jump"
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S36-CHECK",
+    "step_number": 36,
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S36-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S36-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S36-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S36-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-CHECK",
+    "step_number": 37,
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S37-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S37-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S37-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S37-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S38-CHECK",
+    "step_number": 38,
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S38-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S38-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S38-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S38-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S39-CHECK",
+    "step_number": 39,
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S39-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S39-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S39-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S39-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S40-CHECK",
+    "step_number": 40,
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S40-JUMP-Q01",
+      "LGS-FUNCTIONAL-V2-S40-JUMP-Q02",
+      "LGS-FUNCTIONAL-V2-S40-JUMP-Q03",
+      "LGS-FUNCTIONAL-V2-S40-JUMP-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true,
+    "kind": "jump"
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S41-CHECK",
+    "step_number": 41,
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S41-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S41-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S41-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S41-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S42-CHECK",
+    "step_number": 42,
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S42-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S42-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S42-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S42-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S43-CHECK",
+    "step_number": 43,
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S43-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S43-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S43-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S43-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S44-CHECK",
+    "step_number": 44,
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S44-CORE-Q01",
+      "LGS-FUNCTIONAL-V2-S44-CORE-Q02",
+      "LGS-FUNCTIONAL-V2-S44-CORE-Q03",
+      "LGS-FUNCTIONAL-V2-S44-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S45-CHECK",
+    "step_number": 45,
+    "activity_ids": [
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q01",
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q02",
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q03",
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q04",
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q05",
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q06",
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q07",
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q08",
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q09",
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q10",
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q11",
+      "LGS-FUNCTIONAL-V2-S45-JUMP-Q12"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 9,
+    "required": true,
+    "kind": "final"
+  }
+]

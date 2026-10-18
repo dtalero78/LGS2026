@@ -1,0 +1,208 @@
+[
+  {
+    "id": "LGS-BEGINNER-V2-S01-CHECK",
+    "step_number": 1,
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S01-CORE-Q01",
+      "LGS-BEGINNER-V2-S01-CORE-Q02",
+      "LGS-BEGINNER-V2-S01-CORE-Q03",
+      "LGS-BEGINNER-V2-S01-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S02-CHECK",
+    "step_number": 2,
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S02-CORE-Q01",
+      "LGS-BEGINNER-V2-S02-CORE-Q02",
+      "LGS-BEGINNER-V2-S02-CORE-Q03",
+      "LGS-BEGINNER-V2-S02-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S03-CHECK",
+    "step_number": 3,
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S03-CORE-Q01",
+      "LGS-BEGINNER-V2-S03-CORE-Q02",
+      "LGS-BEGINNER-V2-S03-CORE-Q03",
+      "LGS-BEGINNER-V2-S03-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S04-CHECK",
+    "step_number": 4,
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S04-CORE-Q01",
+      "LGS-BEGINNER-V2-S04-CORE-Q02",
+      "LGS-BEGINNER-V2-S04-CORE-Q03",
+      "LGS-BEGINNER-V2-S04-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S05-CHECK",
+    "step_number": 5,
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S05-JUMP-Q01",
+      "LGS-BEGINNER-V2-S05-JUMP-Q02",
+      "LGS-BEGINNER-V2-S05-JUMP-Q03",
+      "LGS-BEGINNER-V2-S05-JUMP-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true,
+    "kind": "jump"
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S06-CHECK",
+    "step_number": 6,
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S06-CORE-Q01",
+      "LGS-BEGINNER-V2-S06-CORE-Q02",
+      "LGS-BEGINNER-V2-S06-CORE-Q03",
+      "LGS-BEGINNER-V2-S06-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S07-CHECK",
+    "step_number": 7,
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S07-CORE-Q01",
+      "LGS-BEGINNER-V2-S07-CORE-Q02",
+      "LGS-BEGINNER-V2-S07-CORE-Q03",
+      "LGS-BEGINNER-V2-S07-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S08-CHECK",
+    "step_number": 8,
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S08-CORE-Q01",
+      "LGS-BEGINNER-V2-S08-CORE-Q02",
+      "LGS-BEGINNER-V2-S08-CORE-Q03",
+      "LGS-BEGINNER-V2-S08-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S09-CHECK",
+    "step_number": 9,
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S09-CORE-Q01",
+      "LGS-BEGINNER-V2-S09-CORE-Q02",
+      "LGS-BEGINNER-V2-S09-CORE-Q03",
+      "LGS-BEGINNER-V2-S09-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S10-CHECK",
+    "step_number": 10,
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S10-JUMP-Q01",
+      "LGS-BEGINNER-V2-S10-JUMP-Q02",
+      "LGS-BEGINNER-V2-S10-JUMP-Q03",
+      "LGS-BEGINNER-V2-S10-JUMP-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true,
+    "kind": "jump"
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S11-CHECK",
+    "step_number": 11,
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S11-CORE-Q01",
+      "LGS-BEGINNER-V2-S11-CORE-Q02",
+      "LGS-BEGINNER-V2-S11-CORE-Q03",
+      "LGS-BEGINNER-V2-S11-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S12-CHECK",
+    "step_number": 12,
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S12-CORE-Q01",
+      "LGS-BEGINNER-V2-S12-CORE-Q02",
+      "LGS-BEGINNER-V2-S12-CORE-Q03",
+      "LGS-BEGINNER-V2-S12-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S13-CHECK",
+    "step_number": 13,
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S13-CORE-Q01",
+      "LGS-BEGINNER-V2-S13-CORE-Q02",
+      "LGS-BEGINNER-V2-S13-CORE-Q03",
+      "LGS-BEGINNER-V2-S13-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S14-CHECK",
+    "step_number": 14,
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S14-CORE-Q01",
+      "LGS-BEGINNER-V2-S14-CORE-Q02",
+      "LGS-BEGINNER-V2-S14-CORE-Q03",
+      "LGS-BEGINNER-V2-S14-CORE-Q04"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 3,
+    "required": true
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S15-CHECK",
+    "step_number": 15,
+    "activity_ids": [
+      "LGS-BEGINNER-V2-S15-JUMP-Q01",
+      "LGS-BEGINNER-V2-S15-JUMP-Q02",
+      "LGS-BEGINNER-V2-S15-JUMP-Q03",
+      "LGS-BEGINNER-V2-S15-JUMP-Q04",
+      "LGS-BEGINNER-V2-S15-JUMP-Q05",
+      "LGS-BEGINNER-V2-S15-JUMP-Q06",
+      "LGS-BEGINNER-V2-S15-JUMP-Q07",
+      "LGS-BEGINNER-V2-S15-JUMP-Q08",
+      "LGS-BEGINNER-V2-S15-JUMP-Q09",
+      "LGS-BEGINNER-V2-S15-JUMP-Q10",
+      "LGS-BEGINNER-V2-S15-JUMP-Q11",
+      "LGS-BEGINNER-V2-S15-JUMP-Q12"
+    ],
+    "pass_percent": 75,
+    "minimum_correct": 9,
+    "required": true,
+    "kind": "final"
+  }
+]

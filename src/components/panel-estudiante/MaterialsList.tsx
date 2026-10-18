@@ -7,6 +7,8 @@ import {
   SparklesIcon,
   PencilSquareIcon,
 } from '@heroicons/react/24/outline'
+import { getEtapaForNivel } from '@/lib/etapas'
+import { libroV2PorEtapa } from '@/lib/libros-v2-catalogo'
 
 function normalizeNivelCode(nivel: string): string {
   return (nivel || '').replace(/\s*JUMP\s*/i, '').trim().toUpperCase()
@@ -54,6 +56,21 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
     }
   )
   const bookEssDisponible: boolean = nivelNormalizado === 'ESS' && Boolean(bookEss?.disponible)
+  // New Books v2 (BEGINNER / PRACTICAL / FUNCTIONAL): el libro de la etapa del alumno.
+  const libroNuevo = libroV2PorEtapa(getEtapaForNivel(nivelNormalizado))
+  const { data: libroNuevoEstado } = useQuery(
+    ['libro-v2-estado', libroNuevo?.slug],
+    () =>
+      fetch(`/api/postgres/panel-estudiante/libro-v2/${libroNuevo!.slug}/estado`)
+        .then(r => r.json())
+        .catch(() => ({ disponible: false })),
+    {
+      enabled: Boolean(libroNuevo),
+      staleTime: 60 * 1000,
+      refetchOnWindowFocus: false,
+    }
+  )
+  const libroNuevoDisponible: boolean = Boolean(libroNuevo && libroNuevoEstado?.disponible)
   const v2Available: boolean = Boolean(libroData?.available)
   // Fase 2 — ejercicios de práctica (flag independiente).
   const ejerciciosActivo: boolean = Boolean(libroData?.ejerciciosActivo)
@@ -112,6 +129,22 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-indigo-900">Book ESS New</p>
             <p className="text-xs text-indigo-600">Libro Essential con actividades y avance</p>
+          </div>
+        </a>
+      )}
+
+      {/* New Books v2 — Book BEG / PRA / FUNC New según la etapa (interruptor en Mantenimiento) */}
+      {libroNuevoDisponible && libroNuevo && (
+        <a
+          href={`/panel-estudiante/book-new/${libroNuevo.slug}`}
+          className="flex items-center gap-3 p-3 mb-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors group border border-blue-200"
+        >
+          <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200">
+            <SparklesIcon className="h-5 w-5 text-blue-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-blue-900">{libroNuevo.menu}</p>
+            <p className="text-xs text-blue-600">Libro {libroNuevo.nivel} con historias, checkpoints y avance</p>
           </div>
         </a>
       )}

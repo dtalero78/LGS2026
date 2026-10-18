@@ -1,0 +1,420 @@
+{
+  "32": {
+    "title": "Before the lesson",
+    "text": "Before Maria booked her swimming lesson, she had written down three questions for the instructor: where the lesson would begin, how many people would attend and whether she could pause. The instructor explained the plan, and Maria chose a beginner session. Caleb had offered to accompany her, but he had not made the decision for her. At the pool, Maria recognized the shallow practice area from the description. Having clear information helped her understand what to expect. Her goal for that day was to become familiar with the lesson, not to swim a long distance.",
+    "questions": [
+      {
+        "prompt": "What had Maria prepared?",
+        "correct": "Three questions",
+        "distractors": [
+          "A race schedule",
+          "A lesson for Caleb"
+        ]
+      },
+      {
+        "prompt": "Who chose to book the lesson?",
+        "correct": "Maria",
+        "distractors": [
+          "Caleb",
+          "Denali"
+        ]
+      },
+      {
+        "prompt": "Where would practice begin?",
+        "correct": "In the shallow area",
+        "distractors": [
+          "In a river",
+          "In the deep end"
+        ]
+      },
+      {
+        "prompt": "What was Maria’s goal that day?",
+        "correct": "Become familiar with the lesson",
+        "distractors": [
+          "Win a race",
+          "Teach the instructor"
+        ]
+      }
+    ]
+  },
+  "33": {
+    "title": "By the time we meet",
+    "text": "Clarice makes a short checklist for the Sunday picnic. By nine fifteen, she will have packed sandwiches and a bottle of water. Ethan will have finished his messages by nine. They will meet at nine thirty and walk to the park. By noon, they expect to have enjoyed a quiet morning together. They have not promised to visit every part of the park. If they want to stay longer, they will decide together. The schedule is a plan, not a report of events that have already happened.",
+    "questions": [
+      {
+        "prompt": "What will Clarice have packed?",
+        "correct": "Sandwiches and water",
+        "distractors": [
+          "Wedding invitations",
+          "Swimming clothes"
+        ]
+      },
+      {
+        "prompt": "When will Ethan have finished his messages?",
+        "correct": "By nine",
+        "distractors": [
+          "By noon",
+          "By nine thirty"
+        ]
+      },
+      {
+        "prompt": "What time will they meet?",
+        "correct": "Nine thirty",
+        "distractors": [
+          "Nine fifteen",
+          "Ten thirty"
+        ]
+      },
+      {
+        "prompt": "What kind of text is this?",
+        "correct": "A plan",
+        "distractors": [
+          "A report of a completed wedding",
+          "A restaurant review"
+        ]
+      }
+    ]
+  },
+  "34": {
+    "title": "Checking an assumption",
+    "text": "After dinner, Taylor thinks about the misunderstanding. She had seen Sara’s bedroom door open and assumed Sara was still inside. In fact, Sara had been waiting near the front door. Taylor could have called her name or checked the hallway. Sara might have spoken too quietly when she said she was ready. Neither detail changes the fact that Taylor blamed her before checking. The next time they go out, they agree to meet at the front door at a stated time and send their hosts a message if they are delayed.",
+    "questions": [
+      {
+        "prompt": "What did Taylor assume?",
+        "correct": "Sara was still in her bedroom.",
+        "distractors": [
+          "Sara had left for school.",
+          "Sara had canceled dinner."
+        ]
+      },
+      {
+        "prompt": "Where was Sara actually waiting?",
+        "correct": "Near the front door",
+        "distractors": [
+          "In the bedroom",
+          "At the restaurant"
+        ]
+      },
+      {
+        "prompt": "What could Taylor have done?",
+        "correct": "Checked the hallway",
+        "distractors": [
+          "Hidden the keys",
+          "Changed the guest list"
+        ]
+      },
+      {
+        "prompt": "What will they do if delayed?",
+        "correct": "Send their hosts a message",
+        "distractors": [
+          "Say nothing",
+          "Cancel every plan"
+        ]
+      }
+    ]
+  },
+  "36": {
+    "title": "Planning together",
+    "text": "Clarice and Ethan divide their wedding plans into small tasks. If they confirm the guest list early, they will have more time to check the addresses. When people share a task, clear instructions help them work together. If Clarice had unlimited free time, she would design every decoration, but she has a business to run. She therefore asks her friends which jobs they would enjoy helping with. Ethan offers to keep the schedule. They have chosen September nineteenth, and each new decision must fit that date. They do not expect a perfect celebration; they want a meaningful one.",
+    "questions": [
+      {
+        "prompt": "What should they confirm early?",
+        "correct": "The guest list",
+        "distractors": [
+          "A swimming record",
+          "A flight to Chicago"
+        ]
+      },
+      {
+        "prompt": "Why can Clarice not design everything herself?",
+        "correct": "She has a business to run.",
+        "distractors": [
+          "She dislikes design.",
+          "She has moved away."
+        ]
+      },
+      {
+        "prompt": "What does Ethan offer to keep?",
+        "correct": "The schedule",
+        "distractors": [
+          "The restaurant keys",
+          "The school kit"
+        ]
+      },
+      {
+        "prompt": "Which date guides the plan?",
+        "correct": "September nineteenth",
+        "distractors": [
+          "January first",
+          "March ninth"
+        ]
+      }
+    ]
+  },
+  "37": {
+    "title": "The address check",
+    "text": "Clarice compares Maria’s returned invitation with the guest list. The envelope contains the address where Maria and Denali used to live. If the list had been updated earlier, the invitation would not have gone to the old home. Maria says she would have felt less anxious if she had asked about it sooner. The friends agree that a delivery mistake is not evidence that someone has been excluded. Clarice corrects the address and asks Maria to confirm it before the new invitation is sent. The conversation ends with a practical solution and an apology.",
+    "questions": [
+      {
+        "prompt": "What was wrong on the envelope?",
+        "correct": "The address",
+        "distractors": [
+          "The wedding date",
+          "Maria’s name"
+        ]
+      },
+      {
+        "prompt": "Who used to live at that address?",
+        "correct": "Maria and Denali",
+        "distractors": [
+          "Ethan and Evan",
+          "Taylor and Clarice"
+        ]
+      },
+      {
+        "prompt": "What does Clarice ask Maria to confirm?",
+        "correct": "The corrected address",
+        "distractors": [
+          "The menu",
+          "The taxi fare"
+        ]
+      },
+      {
+        "prompt": "How does the conversation end?",
+        "correct": "With a solution and an apology",
+        "distractors": [
+          "With a canceled wedding",
+          "With a new argument"
+        ]
+      }
+    ]
+  },
+  "38": {
+    "title": "An evening at home",
+    "text": "When Maria returns from her birthday dinner, the living room is prepared for a quiet evening. Two cups are placed on the table, and a small cake is brought out by Denali. Maria is asked what she would prefer to do next. She chooses tea, cake and a conversation with her friend. The upsetting dinner is not treated as her fault. A taxi was called when she decided to leave, and she arrived home safely. The passive forms in this account focus on actions and arrangements; they do not mean that Maria has no choices.",
+    "questions": [
+      {
+        "prompt": "Who brings out the cake?",
+        "correct": "Denali",
+        "distractors": [
+          "Sara",
+          "Ethan"
+        ]
+      },
+      {
+        "prompt": "How many cups are on the table?",
+        "correct": "Two",
+        "distractors": [
+          "Three",
+          "Four"
+        ]
+      },
+      {
+        "prompt": "Who chooses the evening’s activity?",
+        "correct": "Maria",
+        "distractors": [
+          "The restaurant staff",
+          "Richard"
+        ]
+      },
+      {
+        "prompt": "What do the passive forms emphasize?",
+        "correct": "Actions and arrangements",
+        "distractors": [
+          "That Maria cannot make choices",
+          "A future wedding"
+        ]
+      }
+    ]
+  },
+  "39": {
+    "title": "Reporting clearly",
+    "text": "At the boutique, Sara tells Taylor, “The assistant said the red dress was available in your size.” Taylor asks whether the fitting room is free, and Sara reports that it is. Later, Taylor sends Clarice a message: “You said the celebration would be in the afternoon. Is that still correct?” Clarice confirms the information. Taylor does not assume that a remembered detail is enough when it affects a plan. She checks the invitation before buying accessories. Reporting someone’s words and verifying current arrangements are related but different tasks.",
+    "questions": [
+      {
+        "prompt": "What information does Sara report?",
+        "correct": "The red dress is available in Taylor’s size.",
+        "distractors": [
+          "The wedding is canceled.",
+          "The shop has no dresses."
+        ]
+      },
+      {
+        "prompt": "Whom does Taylor message?",
+        "correct": "Clarice",
+        "distractors": [
+          "Richard",
+          "Caleb"
+        ]
+      },
+      {
+        "prompt": "What detail does Taylor verify?",
+        "correct": "The time of the celebration",
+        "distractors": [
+          "Maria’s age",
+          "The bus fare"
+        ]
+      },
+      {
+        "prompt": "What does she check before buying accessories?",
+        "correct": "The invitation",
+        "distractors": [
+          "A swimming timetable",
+          "A financial report"
+        ]
+      }
+    ]
+  },
+  "41": {
+    "title": "Behind the photograph",
+    "text": "Clarice saves a photograph of an elaborate wedding display. At first, she compares it with her own plans and feels that something is missing. Taylor asks what the photograph does not show: the preparation time, the budget and the help behind the scene. Clarice cannot determine those details from the image alone. She returns to her own checklist: a fitting on September fifteenth, flowers on September eighteenth and friends who have offered support. She sets aside her phone for the evening. Her goal is to make decisions that suit her circumstances, rather than copy an image without context.",
+    "questions": [
+      {
+        "prompt": "What cannot Clarice determine from the photograph alone?",
+        "correct": "The preparation time and budget",
+        "distractors": [
+          "That it shows a display",
+          "That it is an image"
+        ]
+      },
+      {
+        "prompt": "When is her fitting?",
+        "correct": "September fifteenth",
+        "distractors": [
+          "September eighteenth",
+          "September nineteenth"
+        ]
+      },
+      {
+        "prompt": "What does she set aside?",
+        "correct": "Her phone",
+        "distractors": [
+          "Her dress",
+          "Her invitations"
+        ]
+      },
+      {
+        "prompt": "What is her new goal?",
+        "correct": "Choose what suits her circumstances",
+        "distractors": [
+          "Copy every detail in the image",
+          "Cancel the celebration"
+        ]
+      }
+    ]
+  },
+  "42": {
+    "title": "Evidence makes a speech stronger",
+    "text": "Sara’s first draft says, “Clarice is wonderful.” Denali asks for an example that listeners can understand. Sara changes the sentence: “Clarice helped my mother and me design a tie for my father after his work project.” The specific detail explains the compliment. Sara also writes a question about a writer she might research later. She leaves it in her notes rather than present an unverified answer as a fact. Before practicing her speech, she marks each sentence as a fact from the story, a personal opinion or a question for future research.",
+    "questions": [
+      {
+        "prompt": "What gift does Sara mention?",
+        "correct": "A tie for her father",
+        "distractors": [
+          "A ring for Ethan",
+          "A book for Denali"
+        ]
+      },
+      {
+        "prompt": "Why does she add a specific detail?",
+        "correct": "To support her compliment",
+        "distractors": [
+          "To make the speech less clear",
+          "To change the wedding date"
+        ]
+      },
+      {
+        "prompt": "What does she leave in her research notes?",
+        "correct": "An unanswered question about a writer",
+        "distractors": [
+          "A confirmed wedding date",
+          "Her completed speech"
+        ]
+      },
+      {
+        "prompt": "How does she classify her sentences?",
+        "correct": "Facts, opinions and research questions",
+        "distractors": [
+          "Only true and false",
+          "Only past and future"
+        ]
+      }
+    ]
+  },
+  "43": {
+    "title": "A practical resource plan",
+    "text": "For the small celebration before the wedding, Taylor counts the guests before preparing the food. Denali checks that there are enough reusable plates. Maria labels a place for clean items and another for used ones. Clarice asks everyone to help leave the room tidy. These decisions reduce unnecessary purchases and make cleanup easier. The friends recognize that wider resource problems also require decisions beyond their event. Their plan is a local example, not a claim to solve every environmental challenge. After the celebration, they review what worked and what they would change next time.",
+    "questions": [
+      {
+        "prompt": "What does Taylor count first?",
+        "correct": "The guests",
+        "distractors": [
+          "The invitations from March",
+          "The taxis"
+        ]
+      },
+      {
+        "prompt": "What kind of plates do they use?",
+        "correct": "Reusable plates",
+        "distractors": [
+          "Disposable plates",
+          "No plates"
+        ]
+      },
+      {
+        "prompt": "Why are separate places labeled?",
+        "correct": "To separate clean and used items",
+        "distractors": [
+          "To assign wedding seats",
+          "To hide the food"
+        ]
+      },
+      {
+        "prompt": "How do they describe their plan?",
+        "correct": "A local example with limits",
+        "distractors": [
+          "A solution to every global problem",
+          "An unrelated science experiment"
+        ]
+      }
+    ]
+  },
+  "44": {
+    "title": "Understanding more than words",
+    "text": "Before her speech, Sara says she has butterflies in her stomach. Denali understands the idiom and reassures her. A guest who has not heard the expression asks what it means. Sara explains, “I feel nervous.” She does not assume that every English speaker uses the same expressions. Later, she hears different ways of congratulating the couple and notices that tone and context matter. Clear language helps everyone join the celebration. When the group poses for its photograph, Sara remembers how much she has learned by listening, asking questions and checking meaning.",
+    "questions": [
+      {
+        "prompt": "What does Sara’s idiom mean?",
+        "correct": "She feels nervous.",
+        "distractors": [
+          "She is hungry.",
+          "She is talking about insects."
+        ]
+      },
+      {
+        "prompt": "What does an unfamiliar guest do?",
+        "correct": "Asks what it means",
+        "distractors": [
+          "Leaves immediately",
+          "Corrects the wedding date"
+        ]
+      },
+      {
+        "prompt": "What helps everyone join the celebration?",
+        "correct": "Clear language",
+        "distractors": [
+          "Unexplained slang",
+          "Assuming everyone knows every idiom"
+        ]
+      },
+      {
+        "prompt": "What does Sara value in learning?",
+        "correct": "Listening and checking meaning",
+        "distractors": [
+          "Avoiding questions",
+          "Memorizing without context"
+        ]
+      }
+    ]
+  }
+}

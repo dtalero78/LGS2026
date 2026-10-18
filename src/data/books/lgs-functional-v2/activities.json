@@ -1,0 +1,5399 @@
+[
+  {
+    "id": "LGS-FUNCTIONAL-V2-S31-CORE-Q01",
+    "step": "Step 31",
+    "step_number": 31,
+    "type": "single_choice",
+    "prompt": "Which earlier plan is fulfilled?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S31-CORE-Q01-O1",
+        "text": "The wedding"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S31-CORE-Q01-O2",
+        "text": "The trip to Chicago"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S31-CORE-Q01-O3",
+        "text": "The Christmas gathering"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      11,
+      12
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P013"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S31-CORE-Q02",
+    "step": "Step 31",
+    "step_number": 31,
+    "type": "single_choice",
+    "prompt": "What has Clarice brought?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S31-CORE-Q02-O1",
+        "text": "Ravioli"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S31-CORE-Q02-O2",
+        "text": "Canapés"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S31-CORE-Q02-O3",
+        "text": "A birthday cake"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      11,
+      12
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P013"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S31-CORE-Q03",
+    "step": "Step 31",
+    "step_number": 31,
+    "type": "single_choice",
+    "prompt": "What has Evan finished?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S31-CORE-Q03-O1",
+        "text": "A financial report"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S31-CORE-Q03-O2",
+        "text": "A hospital shift"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S31-CORE-Q03-O3",
+        "text": "A school exam"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      11,
+      12
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P013"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S31-CORE-Q04",
+    "step": "Step 31",
+    "step_number": 31,
+    "type": "single_choice",
+    "prompt": "What does Sara suggest before the meal?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S31-CORE-Q04-O1",
+        "text": "Going swimming"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S31-CORE-Q04-O2",
+        "text": "Buying tickets"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S31-CORE-Q04-O3",
+        "text": "Taking a group photograph"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      11,
+      12
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P013"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S32-CORE-Q01",
+    "step": "Step 32",
+    "step_number": 32,
+    "type": "single_choice",
+    "prompt": "When does the lesson take place?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-CORE-Q01-O1",
+        "text": "September"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-CORE-Q01-O2",
+        "text": "January"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-CORE-Q01-O3",
+        "text": "Christmas Day"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      20,
+      21,
+      22
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P022"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S32-CORE-Q02",
+    "step": "Step 32",
+    "step_number": 32,
+    "type": "single_choice",
+    "prompt": "Whom had Maria spoken to before booking?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-CORE-Q02-O1",
+        "text": "The instructor"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-CORE-Q02-O2",
+        "text": "Luiggi"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-CORE-Q02-O3",
+        "text": "Richard"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      20,
+      21,
+      22
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P022"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S32-CORE-Q03",
+    "step": "Step 32",
+    "step_number": 32,
+    "type": "single_choice",
+    "prompt": "Where does she want to begin?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-CORE-Q03-O1",
+        "text": "In the deep end"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-CORE-Q03-O2",
+        "text": "In a lake"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-CORE-Q03-O3",
+        "text": "In the shallow end"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      20,
+      21,
+      22
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P022"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S32-CORE-Q04",
+    "step": "Step 32",
+    "step_number": 32,
+    "type": "single_choice",
+    "prompt": "How does Caleb support her?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-CORE-Q04-O1",
+        "text": "He cancels the lesson."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-CORE-Q04-O2",
+        "text": "He respects her pace and waits nearby."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-CORE-Q04-O3",
+        "text": "He forces her into the water."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      20,
+      21,
+      22
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P022"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S33-CORE-Q01",
+    "step": "Step 33",
+    "step_number": 33,
+    "type": "single_choice",
+    "prompt": "What time will they meet?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-CORE-Q01-O1",
+        "text": "9:30 a.m."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-CORE-Q01-O2",
+        "text": "9:00 p.m."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-CORE-Q01-O3",
+        "text": "12:30 p.m."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      35,
+      36
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P037"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S33-CORE-Q02",
+    "step": "Step 33",
+    "step_number": 33,
+    "type": "single_choice",
+    "prompt": "What has Clarice already done?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-CORE-Q02-O1",
+        "text": "Packed the picnic"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-CORE-Q02-O2",
+        "text": "Reached the park"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-CORE-Q02-O3",
+        "text": "Eaten breakfast"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      35,
+      36
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P037"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S33-CORE-Q03",
+    "step": "Step 33",
+    "step_number": 33,
+    "type": "single_choice",
+    "prompt": "What will Ethan have finished by nine?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-CORE-Q03-O1",
+        "text": "His shopping"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-CORE-Q03-O2",
+        "text": "His messages"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-CORE-Q03-O3",
+        "text": "His dinner"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      35,
+      36
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P037"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S33-CORE-Q04",
+    "step": "Step 33",
+    "step_number": 33,
+    "type": "single_choice",
+    "prompt": "What will Clarice have packed?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-CORE-Q04-O1",
+        "text": "A small picnic"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-CORE-Q04-O2",
+        "text": "A suitcase"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-CORE-Q04-O3",
+        "text": "A school kit"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      35,
+      36
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P037"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S34-CORE-Q01",
+    "step": "Step 34",
+    "step_number": 34,
+    "type": "single_choice",
+    "prompt": "Who arrives late?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-CORE-Q01-O1",
+        "text": "Denali and Maria"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-CORE-Q01-O2",
+        "text": "Clarice and Ethan"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-CORE-Q01-O3",
+        "text": "Taylor and Sara"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      47,
+      48
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P049"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S34-CORE-Q02",
+    "step": "Step 34",
+    "step_number": 34,
+    "type": "single_choice",
+    "prompt": "Where had Sara been waiting?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-CORE-Q02-O1",
+        "text": "At the airport"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-CORE-Q02-O2",
+        "text": "By the door"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-CORE-Q02-O3",
+        "text": "At school"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      47,
+      48
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P049"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S34-CORE-Q03",
+    "step": "Step 34",
+    "step_number": 34,
+    "type": "single_choice",
+    "prompt": "What should Taylor have done?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-CORE-Q03-O1",
+        "text": "Checked before blaming Sara"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-CORE-Q03-O2",
+        "text": "Canceled the dinner"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-CORE-Q03-O3",
+        "text": "Hidden the invitation"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      47,
+      48
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P049"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S34-CORE-Q04",
+    "step": "Step 34",
+    "step_number": 34,
+    "type": "single_choice",
+    "prompt": "What could they have sent?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-CORE-Q04-O1",
+        "text": "A suitcase"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-CORE-Q04-O2",
+        "text": "A recipe"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-CORE-Q04-O3",
+        "text": "A message"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      47,
+      48
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P049"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S36-CORE-Q01",
+    "step": "Step 36",
+    "step_number": 36,
+    "type": "single_choice",
+    "prompt": "When does Ethan propose?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-CORE-Q01-O1",
+        "text": "February"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-CORE-Q01-O2",
+        "text": "September"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-CORE-Q01-O3",
+        "text": "December"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      66,
+      67
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P069"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S36-CORE-Q02",
+    "step": "Step 36",
+    "step_number": 36,
+    "type": "single_choice",
+    "prompt": "What does Clarice answer?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-CORE-Q02-O1",
+        "text": "Not until tomorrow"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-CORE-Q02-O2",
+        "text": "No"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-CORE-Q02-O3",
+        "text": "Yes"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      66,
+      67
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P069"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S36-CORE-Q03",
+    "step": "Step 36",
+    "step_number": 36,
+    "type": "single_choice",
+    "prompt": "What date do they choose?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-CORE-Q03-O1",
+        "text": "January ninth"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-CORE-Q03-O2",
+        "text": "September nineteenth"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-CORE-Q03-O3",
+        "text": "February nineteenth"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      66,
+      67
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P069"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S36-CORE-Q04",
+    "step": "Step 36",
+    "step_number": 36,
+    "type": "single_choice",
+    "prompt": "How will they manage the preparations?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-CORE-Q04-O1",
+        "text": "Share the work and ask for help"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-CORE-Q04-O2",
+        "text": "Ask Sara to do everything"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-CORE-Q04-O3",
+        "text": "Avoid making plans"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      66,
+      67
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P069"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-CORE-Q01",
+    "step": "Step 37",
+    "step_number": 37,
+    "type": "single_choice",
+    "prompt": "Why did the invitation not arrive?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-CORE-Q01-O1",
+        "text": "Maria was not invited."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-CORE-Q01-O2",
+        "text": "The wedding was canceled."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-CORE-Q01-O3",
+        "text": "It was sent to an old address."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      78,
+      79
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P081"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-CORE-Q02",
+    "step": "Step 37",
+    "step_number": 37,
+    "type": "single_choice",
+    "prompt": "Who asks about the problem?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-CORE-Q02-O1",
+        "text": "Sara"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-CORE-Q02-O2",
+        "text": "Maria"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-CORE-Q02-O3",
+        "text": "Ethan"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      78,
+      79
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P081"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-CORE-Q03",
+    "step": "Step 37",
+    "step_number": 37,
+    "type": "single_choice",
+    "prompt": "What do they check?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-CORE-Q03-O1",
+        "text": "The guest list"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-CORE-Q03-O2",
+        "text": "The restaurant menu"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-CORE-Q03-O3",
+        "text": "The weather report"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      78,
+      79
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P081"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-CORE-Q04",
+    "step": "Step 37",
+    "step_number": 37,
+    "type": "single_choice",
+    "prompt": "What will Clarice send?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-CORE-Q04-O1",
+        "text": "A bill"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-CORE-Q04-O2",
+        "text": "A school report"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-CORE-Q04-O3",
+        "text": "A corrected invitation"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      78,
+      79
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P081"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S38-CORE-Q01",
+    "step": "Step 38",
+    "step_number": 38,
+    "type": "single_choice",
+    "prompt": "How old does Maria turn?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-CORE-Q01-O1",
+        "text": "Thirty-nine"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-CORE-Q01-O2",
+        "text": "Twenty-nine"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-CORE-Q01-O3",
+        "text": "Twenty-eight"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      95,
+      96,
+      97
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P098"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S38-CORE-Q02",
+    "step": "Step 38",
+    "step_number": 38,
+    "type": "single_choice",
+    "prompt": "Why does she leave dinner?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-CORE-Q02-O1",
+        "text": "There is an uncomfortable argument."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-CORE-Q02-O2",
+        "text": "She forgets her book."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-CORE-Q02-O3",
+        "text": "She has a flight."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      95,
+      96,
+      97
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P098"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S38-CORE-Q03",
+    "step": "Step 38",
+    "step_number": 38,
+    "type": "single_choice",
+    "prompt": "Who calls the taxi?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-CORE-Q03-O1",
+        "text": "Sara"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-CORE-Q03-O2",
+        "text": "Caleb"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-CORE-Q03-O3",
+        "text": "The restaurant staff"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      95,
+      96,
+      97
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P098"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S38-CORE-Q04",
+    "step": "Step 38",
+    "step_number": 38,
+    "type": "single_choice",
+    "prompt": "Who celebrates with Maria at home?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-CORE-Q04-O1",
+        "text": "Taylor"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-CORE-Q04-O2",
+        "text": "Denali"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-CORE-Q04-O3",
+        "text": "Clarice"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      95,
+      96,
+      97
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P098"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S39-CORE-Q01",
+    "step": "Step 39",
+    "step_number": 39,
+    "type": "single_choice",
+    "prompt": "What event is Taylor shopping for?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-CORE-Q01-O1",
+        "text": "Clarice and Ethan’s wedding"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-CORE-Q01-O2",
+        "text": "Maria’s swimming lesson"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-CORE-Q01-O3",
+        "text": "Sara’s exam"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      109,
+      110
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P112"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S39-CORE-Q02",
+    "step": "Step 39",
+    "step_number": 39,
+    "type": "single_choice",
+    "prompt": "Which dress is available?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-CORE-Q02-O1",
+        "text": "The blue one"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-CORE-Q02-O2",
+        "text": "The gray one"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-CORE-Q02-O3",
+        "text": "The red one"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      109,
+      110
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P112"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S39-CORE-Q03",
+    "step": "Step 39",
+    "step_number": 39,
+    "type": "single_choice",
+    "prompt": "What did the assistant say about the fitting room?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-CORE-Q03-O1",
+        "text": "It was upstairs."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-CORE-Q03-O2",
+        "text": "It was free."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-CORE-Q03-O3",
+        "text": "It was closed."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      109,
+      110
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P112"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S39-CORE-Q04",
+    "step": "Step 39",
+    "step_number": 39,
+    "type": "single_choice",
+    "prompt": "When will the celebration be?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-CORE-Q04-O1",
+        "text": "In the afternoon"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-CORE-Q04-O2",
+        "text": "At midnight"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-CORE-Q04-O3",
+        "text": "Before breakfast"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      109,
+      110
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P112"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S41-CORE-Q01",
+    "step": "Step 41",
+    "step_number": 41,
+    "type": "single_choice",
+    "prompt": "When does this episode take place?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-CORE-Q01-O1",
+        "text": "Before the first date"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-CORE-Q01-O2",
+        "text": "The week before the wedding"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-CORE-Q01-O3",
+        "text": "After the wedding"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      131,
+      132
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P135"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S41-CORE-Q02",
+    "step": "Step 41",
+    "step_number": 41,
+    "type": "single_choice",
+    "prompt": "When is the final fitting?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-CORE-Q02-O1",
+        "text": "September fifteenth"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-CORE-Q02-O2",
+        "text": "September eighteenth"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-CORE-Q02-O3",
+        "text": "September nineteenth"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      131,
+      132
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P135"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S41-CORE-Q03",
+    "step": "Step 41",
+    "step_number": 41,
+    "type": "single_choice",
+    "prompt": "Who will deliver on September eighteenth?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-CORE-Q03-O1",
+        "text": "The taxi driver"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-CORE-Q03-O2",
+        "text": "The teacher"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-CORE-Q03-O3",
+        "text": "The florist"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      131,
+      132
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P135"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S41-CORE-Q04",
+    "step": "Step 41",
+    "step_number": 41,
+    "type": "single_choice",
+    "prompt": "What does Clarice decide to limit?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-CORE-Q04-O1",
+        "text": "Her reading lessons"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-CORE-Q04-O2",
+        "text": "Her scrolling time"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-CORE-Q04-O3",
+        "text": "Her friends’ invitations"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      131,
+      132
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P135"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S42-CORE-Q01",
+    "step": "Step 42",
+    "step_number": 42,
+    "type": "single_choice",
+    "prompt": "What is Sara preparing?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-CORE-Q01-O1",
+        "text": "A speech"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-CORE-Q01-O2",
+        "text": "A financial report"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-CORE-Q01-O3",
+        "text": "A dinner menu"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      140,
+      141
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P144"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S42-CORE-Q02",
+    "step": "Step 42",
+    "step_number": 42,
+    "type": "single_choice",
+    "prompt": "What message does she choose?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-CORE-Q02-O1",
+        "text": "Success never requires help."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-CORE-Q02-O2",
+        "text": "Only famous people matter."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-CORE-Q02-O3",
+        "text": "Support helps people achieve goals."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      140,
+      141
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P144"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S42-CORE-Q03",
+    "step": "Step 42",
+    "step_number": 42,
+    "type": "single_choice",
+    "prompt": "Whose design work does she mention?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-CORE-Q03-O1",
+        "text": "Evan’s"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-CORE-Q03-O2",
+        "text": "Clarice’s"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-CORE-Q03-O3",
+        "text": "Maria’s"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      140,
+      141
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P144"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S42-CORE-Q04",
+    "step": "Step 42",
+    "step_number": 42,
+    "type": "single_choice",
+    "prompt": "Has Sara selected a writer yet?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-CORE-Q04-O1",
+        "text": "No"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-CORE-Q04-O2",
+        "text": "Yes, Jane Austen"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-CORE-Q04-O3",
+        "text": "Yes, Charles Dickens"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      140,
+      141
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P144"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S43-CORE-Q01",
+    "step": "Step 43",
+    "step_number": 43,
+    "type": "single_choice",
+    "prompt": "When is the gathering?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-CORE-Q01-O1",
+        "text": "The day after the wedding"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-CORE-Q01-O2",
+        "text": "At Christmas"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-CORE-Q01-O3",
+        "text": "The evening before the wedding"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      151,
+      152
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P155"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S43-CORE-Q02",
+    "step": "Step 43",
+    "step_number": 43,
+    "type": "single_choice",
+    "prompt": "What does Taylor bring?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-CORE-Q02-O1",
+        "text": "A new laptop"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-CORE-Q02-O2",
+        "text": "Reusable plates"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-CORE-Q02-O3",
+        "text": "Disposable cups"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      151,
+      152
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P155"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S43-CORE-Q03",
+    "step": "Step 43",
+    "step_number": 43,
+    "type": "single_choice",
+    "prompt": "Why do they plan portions?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-CORE-Q03-O1",
+        "text": "To reduce food waste"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-CORE-Q03-O2",
+        "text": "To delay the wedding"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-CORE-Q03-O3",
+        "text": "To avoid inviting friends"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      151,
+      152
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P155"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S43-CORE-Q04",
+    "step": "Step 43",
+    "step_number": 43,
+    "type": "single_choice",
+    "prompt": "What does Maria say about their choices?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-CORE-Q04-O1",
+        "text": "They solve every global problem."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-CORE-Q04-O2",
+        "text": "They make no difference at all."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-CORE-Q04-O3",
+        "text": "They can reduce waste at this event."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      151,
+      152
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P155"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S44-CORE-Q01",
+    "step": "Step 44",
+    "step_number": 44,
+    "type": "single_choice",
+    "prompt": "What is the date?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-CORE-Q01-O1",
+        "text": "December twenty-fifth"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-CORE-Q01-O2",
+        "text": "September nineteenth"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-CORE-Q01-O3",
+        "text": "February nineteenth"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      160,
+      161
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P164"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S44-CORE-Q02",
+    "step": "Step 44",
+    "step_number": 44,
+    "type": "single_choice",
+    "prompt": "What does butterflies in my stomach mean here?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-CORE-Q02-O1",
+        "text": "Feeling nervous"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-CORE-Q02-O2",
+        "text": "Feeling hungry"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-CORE-Q02-O3",
+        "text": "Having a stomach illness"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      160,
+      161
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P164"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S44-CORE-Q03",
+    "step": "Step 44",
+    "step_number": 44,
+    "type": "single_choice",
+    "prompt": "What does Clarice remember?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-CORE-Q03-O1",
+        "text": "A missed flight"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-CORE-Q03-O2",
+        "text": "A lost invitation"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-CORE-Q03-O3",
+        "text": "The keys Ethan returned"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      160,
+      161
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P164"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S44-CORE-Q04",
+    "step": "Step 44",
+    "step_number": 44,
+    "type": "single_choice",
+    "prompt": "What do they plan after the ceremony?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-CORE-Q04-O1",
+        "text": "A work meeting"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-CORE-Q04-O2",
+        "text": "A group photograph"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-CORE-Q04-O3",
+        "text": "A swimming lesson"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      160,
+      161
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P164"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S32-PLUS-Q01",
+    "step": "Step 32",
+    "step_number": 32,
+    "type": "single_choice",
+    "prompt": "What had Maria prepared?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-PLUS-Q01-O1",
+        "text": "A lesson for Caleb"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-PLUS-Q01-O2",
+        "text": "Three questions"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-PLUS-Q01-O3",
+        "text": "A race schedule"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      26,
+      27,
+      28,
+      29,
+      30
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P028"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S32-PLUS-Q02",
+    "step": "Step 32",
+    "step_number": 32,
+    "type": "single_choice",
+    "prompt": "Who chose to book the lesson?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-PLUS-Q02-O1",
+        "text": "Maria"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-PLUS-Q02-O2",
+        "text": "Caleb"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-PLUS-Q02-O3",
+        "text": "Denali"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      26,
+      27,
+      28,
+      29,
+      30
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P028"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S32-PLUS-Q03",
+    "step": "Step 32",
+    "step_number": 32,
+    "type": "single_choice",
+    "prompt": "Where would practice begin?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-PLUS-Q03-O1",
+        "text": "In a river"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-PLUS-Q03-O2",
+        "text": "In the deep end"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-PLUS-Q03-O3",
+        "text": "In the shallow area"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      26,
+      27,
+      28,
+      29,
+      30
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P028"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S32-PLUS-Q04",
+    "step": "Step 32",
+    "step_number": 32,
+    "type": "single_choice",
+    "prompt": "What was Maria’s goal that day?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-PLUS-Q04-O1",
+        "text": "Teach the instructor"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-PLUS-Q04-O2",
+        "text": "Become familiar with the lesson"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S32-PLUS-Q04-O3",
+        "text": "Win a race"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      26,
+      27,
+      28,
+      29,
+      30
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P028"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S33-PLUS-Q01",
+    "step": "Step 33",
+    "step_number": 33,
+    "type": "single_choice",
+    "prompt": "What will Clarice have packed?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-PLUS-Q01-O1",
+        "text": "Sandwiches and water"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-PLUS-Q01-O2",
+        "text": "Wedding invitations"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-PLUS-Q01-O3",
+        "text": "Swimming clothes"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      40,
+      41,
+      42,
+      43
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P042"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S33-PLUS-Q02",
+    "step": "Step 33",
+    "step_number": 33,
+    "type": "single_choice",
+    "prompt": "When will Ethan have finished his messages?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-PLUS-Q02-O1",
+        "text": "By noon"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-PLUS-Q02-O2",
+        "text": "By nine thirty"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-PLUS-Q02-O3",
+        "text": "By nine"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      40,
+      41,
+      42,
+      43
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P042"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S33-PLUS-Q03",
+    "step": "Step 33",
+    "step_number": 33,
+    "type": "single_choice",
+    "prompt": "What time will they meet?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-PLUS-Q03-O1",
+        "text": "Ten thirty"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-PLUS-Q03-O2",
+        "text": "Nine thirty"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-PLUS-Q03-O3",
+        "text": "Nine fifteen"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      40,
+      41,
+      42,
+      43
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P042"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S33-PLUS-Q04",
+    "step": "Step 33",
+    "step_number": 33,
+    "type": "single_choice",
+    "prompt": "What kind of text is this?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-PLUS-Q04-O1",
+        "text": "A plan"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-PLUS-Q04-O2",
+        "text": "A report of a completed wedding"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S33-PLUS-Q04-O3",
+        "text": "A restaurant review"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      40,
+      41,
+      42,
+      43
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P042"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S34-PLUS-Q01",
+    "step": "Step 34",
+    "step_number": 34,
+    "type": "single_choice",
+    "prompt": "What did Taylor assume?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-PLUS-Q01-O1",
+        "text": "Sara had left for school."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-PLUS-Q01-O2",
+        "text": "Sara had canceled dinner."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-PLUS-Q01-O3",
+        "text": "Sara was still in her bedroom."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      52,
+      53,
+      54
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P054"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S34-PLUS-Q02",
+    "step": "Step 34",
+    "step_number": 34,
+    "type": "single_choice",
+    "prompt": "Where was Sara actually waiting?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-PLUS-Q02-O1",
+        "text": "At the restaurant"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-PLUS-Q02-O2",
+        "text": "Near the front door"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-PLUS-Q02-O3",
+        "text": "In the bedroom"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      52,
+      53,
+      54
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P054"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S34-PLUS-Q03",
+    "step": "Step 34",
+    "step_number": 34,
+    "type": "single_choice",
+    "prompt": "What could Taylor have done?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-PLUS-Q03-O1",
+        "text": "Checked the hallway"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-PLUS-Q03-O2",
+        "text": "Hidden the keys"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-PLUS-Q03-O3",
+        "text": "Changed the guest list"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      52,
+      53,
+      54
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P054"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S34-PLUS-Q04",
+    "step": "Step 34",
+    "step_number": 34,
+    "type": "single_choice",
+    "prompt": "What will they do if delayed?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-PLUS-Q04-O1",
+        "text": "Say nothing"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-PLUS-Q04-O2",
+        "text": "Cancel every plan"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S34-PLUS-Q04-O3",
+        "text": "Send their hosts a message"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      52,
+      53,
+      54
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P054"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S36-PLUS-Q01",
+    "step": "Step 36",
+    "step_number": 36,
+    "type": "single_choice",
+    "prompt": "What should they confirm early?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-PLUS-Q01-O1",
+        "text": "The guest list"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-PLUS-Q01-O2",
+        "text": "A swimming record"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-PLUS-Q01-O3",
+        "text": "A flight to Chicago"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      72,
+      73
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P075"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S36-PLUS-Q02",
+    "step": "Step 36",
+    "step_number": 36,
+    "type": "single_choice",
+    "prompt": "Why can Clarice not design everything herself?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-PLUS-Q02-O1",
+        "text": "She dislikes design."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-PLUS-Q02-O2",
+        "text": "She has moved away."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-PLUS-Q02-O3",
+        "text": "She has a business to run."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      72,
+      73
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P075"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S36-PLUS-Q03",
+    "step": "Step 36",
+    "step_number": 36,
+    "type": "single_choice",
+    "prompt": "What does Ethan offer to keep?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-PLUS-Q03-O1",
+        "text": "The school kit"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-PLUS-Q03-O2",
+        "text": "The schedule"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-PLUS-Q03-O3",
+        "text": "The restaurant keys"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      72,
+      73
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P075"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S36-PLUS-Q04",
+    "step": "Step 36",
+    "step_number": 36,
+    "type": "single_choice",
+    "prompt": "Which date guides the plan?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-PLUS-Q04-O1",
+        "text": "September nineteenth"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-PLUS-Q04-O2",
+        "text": "January first"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S36-PLUS-Q04-O3",
+        "text": "March ninth"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      72,
+      73
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P075"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-PLUS-Q01",
+    "step": "Step 37",
+    "step_number": 37,
+    "type": "single_choice",
+    "prompt": "What was wrong on the envelope?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-PLUS-Q01-O1",
+        "text": "The wedding date"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-PLUS-Q01-O2",
+        "text": "Maria’s name"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-PLUS-Q01-O3",
+        "text": "The address"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      88,
+      89,
+      90
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P091"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-PLUS-Q02",
+    "step": "Step 37",
+    "step_number": 37,
+    "type": "single_choice",
+    "prompt": "Who used to live at that address?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-PLUS-Q02-O1",
+        "text": "Taylor and Clarice"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-PLUS-Q02-O2",
+        "text": "Maria and Denali"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-PLUS-Q02-O3",
+        "text": "Ethan and Evan"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      88,
+      89,
+      90
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P091"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-PLUS-Q03",
+    "step": "Step 37",
+    "step_number": 37,
+    "type": "single_choice",
+    "prompt": "What does Clarice ask Maria to confirm?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-PLUS-Q03-O1",
+        "text": "The corrected address"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-PLUS-Q03-O2",
+        "text": "The menu"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-PLUS-Q03-O3",
+        "text": "The taxi fare"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      88,
+      89,
+      90
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P091"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-PLUS-Q04",
+    "step": "Step 37",
+    "step_number": 37,
+    "type": "single_choice",
+    "prompt": "How does the conversation end?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-PLUS-Q04-O1",
+        "text": "With a canceled wedding"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-PLUS-Q04-O2",
+        "text": "With a new argument"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S37-PLUS-Q04-O3",
+        "text": "With a solution and an apology"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      88,
+      89,
+      90
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P091"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S38-PLUS-Q01",
+    "step": "Step 38",
+    "step_number": 38,
+    "type": "single_choice",
+    "prompt": "Who brings out the cake?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-PLUS-Q01-O1",
+        "text": "Ethan"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-PLUS-Q01-O2",
+        "text": "Denali"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-PLUS-Q01-O3",
+        "text": "Sara"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      103,
+      104,
+      105
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P106"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S38-PLUS-Q02",
+    "step": "Step 38",
+    "step_number": 38,
+    "type": "single_choice",
+    "prompt": "How many cups are on the table?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-PLUS-Q02-O1",
+        "text": "Two"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-PLUS-Q02-O2",
+        "text": "Three"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-PLUS-Q02-O3",
+        "text": "Four"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      103,
+      104,
+      105
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P106"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S38-PLUS-Q03",
+    "step": "Step 38",
+    "step_number": 38,
+    "type": "single_choice",
+    "prompt": "Who chooses the evening’s activity?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-PLUS-Q03-O1",
+        "text": "The restaurant staff"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-PLUS-Q03-O2",
+        "text": "Richard"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-PLUS-Q03-O3",
+        "text": "Maria"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      103,
+      104,
+      105
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P106"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S38-PLUS-Q04",
+    "step": "Step 38",
+    "step_number": 38,
+    "type": "single_choice",
+    "prompt": "What do the passive forms emphasize?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-PLUS-Q04-O1",
+        "text": "A future wedding"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-PLUS-Q04-O2",
+        "text": "Actions and arrangements"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S38-PLUS-Q04-O3",
+        "text": "That Maria cannot make choices"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      103,
+      104,
+      105
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P106"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S39-PLUS-Q01",
+    "step": "Step 39",
+    "step_number": 39,
+    "type": "single_choice",
+    "prompt": "What information does Sara report?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-PLUS-Q01-O1",
+        "text": "The red dress is available in Taylor’s size."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-PLUS-Q01-O2",
+        "text": "The wedding is canceled."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-PLUS-Q01-O3",
+        "text": "The shop has no dresses."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      116,
+      117
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P119"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S39-PLUS-Q02",
+    "step": "Step 39",
+    "step_number": 39,
+    "type": "single_choice",
+    "prompt": "Whom does Taylor message?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-PLUS-Q02-O1",
+        "text": "Richard"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-PLUS-Q02-O2",
+        "text": "Caleb"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-PLUS-Q02-O3",
+        "text": "Clarice"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      116,
+      117
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P119"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S39-PLUS-Q03",
+    "step": "Step 39",
+    "step_number": 39,
+    "type": "single_choice",
+    "prompt": "What detail does Taylor verify?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-PLUS-Q03-O1",
+        "text": "The bus fare"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-PLUS-Q03-O2",
+        "text": "The time of the celebration"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-PLUS-Q03-O3",
+        "text": "Maria’s age"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      116,
+      117
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P119"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S39-PLUS-Q04",
+    "step": "Step 39",
+    "step_number": 39,
+    "type": "single_choice",
+    "prompt": "What does she check before buying accessories?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-PLUS-Q04-O1",
+        "text": "The invitation"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-PLUS-Q04-O2",
+        "text": "A swimming timetable"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S39-PLUS-Q04-O3",
+        "text": "A financial report"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      116,
+      117
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P119"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S41-PLUS-Q01",
+    "step": "Step 41",
+    "step_number": 41,
+    "type": "single_choice",
+    "prompt": "What cannot Clarice determine from the photograph alone?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-PLUS-Q01-O1",
+        "text": "That it is an image"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-PLUS-Q01-O2",
+        "text": "The preparation time and budget"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-PLUS-Q01-O3",
+        "text": "That it shows a display"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      133,
+      134,
+      135,
+      136
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P137"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S41-PLUS-Q02",
+    "step": "Step 41",
+    "step_number": 41,
+    "type": "single_choice",
+    "prompt": "When is her fitting?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-PLUS-Q02-O1",
+        "text": "September fifteenth"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-PLUS-Q02-O2",
+        "text": "September eighteenth"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-PLUS-Q02-O3",
+        "text": "September nineteenth"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      133,
+      134,
+      135,
+      136
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P137"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S41-PLUS-Q03",
+    "step": "Step 41",
+    "step_number": 41,
+    "type": "single_choice",
+    "prompt": "What does she set aside?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-PLUS-Q03-O1",
+        "text": "Her dress"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-PLUS-Q03-O2",
+        "text": "Her invitations"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-PLUS-Q03-O3",
+        "text": "Her phone"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      133,
+      134,
+      135,
+      136
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P137"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S41-PLUS-Q04",
+    "step": "Step 41",
+    "step_number": 41,
+    "type": "single_choice",
+    "prompt": "What is her new goal?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-PLUS-Q04-O1",
+        "text": "Cancel the celebration"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-PLUS-Q04-O2",
+        "text": "Choose what suits her circumstances"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S41-PLUS-Q04-O3",
+        "text": "Copy every detail in the image"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      133,
+      134,
+      135,
+      136
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P137"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S42-PLUS-Q01",
+    "step": "Step 42",
+    "step_number": 42,
+    "type": "single_choice",
+    "prompt": "What gift does Sara mention?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-PLUS-Q01-O1",
+        "text": "A tie for her father"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-PLUS-Q01-O2",
+        "text": "A ring for Ethan"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-PLUS-Q01-O3",
+        "text": "A book for Denali"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      144,
+      145,
+      146,
+      147
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P148"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S42-PLUS-Q02",
+    "step": "Step 42",
+    "step_number": 42,
+    "type": "single_choice",
+    "prompt": "Why does she add a specific detail?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-PLUS-Q02-O1",
+        "text": "To make the speech less clear"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-PLUS-Q02-O2",
+        "text": "To change the wedding date"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-PLUS-Q02-O3",
+        "text": "To support her compliment"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      144,
+      145,
+      146,
+      147
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P148"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S42-PLUS-Q03",
+    "step": "Step 42",
+    "step_number": 42,
+    "type": "single_choice",
+    "prompt": "What does she leave in her research notes?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-PLUS-Q03-O1",
+        "text": "Her completed speech"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-PLUS-Q03-O2",
+        "text": "An unanswered question about a writer"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-PLUS-Q03-O3",
+        "text": "A confirmed wedding date"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      144,
+      145,
+      146,
+      147
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P148"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S42-PLUS-Q04",
+    "step": "Step 42",
+    "step_number": 42,
+    "type": "single_choice",
+    "prompt": "How does she classify her sentences?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-PLUS-Q04-O1",
+        "text": "Facts, opinions and research questions"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-PLUS-Q04-O2",
+        "text": "Only true and false"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S42-PLUS-Q04-O3",
+        "text": "Only past and future"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      144,
+      145,
+      146,
+      147
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P148"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S43-PLUS-Q01",
+    "step": "Step 43",
+    "step_number": 43,
+    "type": "single_choice",
+    "prompt": "What does Taylor count first?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-PLUS-Q01-O1",
+        "text": "The invitations from March"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-PLUS-Q01-O2",
+        "text": "The taxis"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-PLUS-Q01-O3",
+        "text": "The guests"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      153,
+      154,
+      155,
+      156
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P157"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S43-PLUS-Q02",
+    "step": "Step 43",
+    "step_number": 43,
+    "type": "single_choice",
+    "prompt": "What kind of plates do they use?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-PLUS-Q02-O1",
+        "text": "No plates"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-PLUS-Q02-O2",
+        "text": "Reusable plates"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-PLUS-Q02-O3",
+        "text": "Disposable plates"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      153,
+      154,
+      155,
+      156
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P157"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S43-PLUS-Q03",
+    "step": "Step 43",
+    "step_number": 43,
+    "type": "single_choice",
+    "prompt": "Why are separate places labeled?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-PLUS-Q03-O1",
+        "text": "To separate clean and used items"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-PLUS-Q03-O2",
+        "text": "To assign wedding seats"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-PLUS-Q03-O3",
+        "text": "To hide the food"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      153,
+      154,
+      155,
+      156
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P157"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S43-PLUS-Q04",
+    "step": "Step 43",
+    "step_number": 43,
+    "type": "single_choice",
+    "prompt": "How do they describe their plan?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-PLUS-Q04-O1",
+        "text": "A solution to every global problem"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-PLUS-Q04-O2",
+        "text": "An unrelated science experiment"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S43-PLUS-Q04-O3",
+        "text": "A local example with limits"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      153,
+      154,
+      155,
+      156
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P157"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S44-PLUS-Q01",
+    "step": "Step 44",
+    "step_number": 44,
+    "type": "single_choice",
+    "prompt": "What does Sara’s idiom mean?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-PLUS-Q01-O1",
+        "text": "She is talking about insects."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-PLUS-Q01-O2",
+        "text": "She feels nervous."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-PLUS-Q01-O3",
+        "text": "She is hungry."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      166,
+      167
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P170"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S44-PLUS-Q02",
+    "step": "Step 44",
+    "step_number": 44,
+    "type": "single_choice",
+    "prompt": "What does an unfamiliar guest do?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-PLUS-Q02-O1",
+        "text": "Asks what it means"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-PLUS-Q02-O2",
+        "text": "Leaves immediately"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-PLUS-Q02-O3",
+        "text": "Corrects the wedding date"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      166,
+      167
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P170"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S44-PLUS-Q03",
+    "step": "Step 44",
+    "step_number": 44,
+    "type": "single_choice",
+    "prompt": "What helps everyone join the celebration?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-PLUS-Q03-O1",
+        "text": "Unexplained slang"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-PLUS-Q03-O2",
+        "text": "Assuming everyone knows every idiom"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-PLUS-Q03-O3",
+        "text": "Clear language"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      166,
+      167
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P170"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S44-PLUS-Q04",
+    "step": "Step 44",
+    "step_number": 44,
+    "type": "single_choice",
+    "prompt": "What does Sara value in learning?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-PLUS-Q04-O1",
+        "text": "Memorizing without context"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-PLUS-Q04-O2",
+        "text": "Listening and checking meaning"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S44-PLUS-Q04-O3",
+        "text": "Avoiding questions"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": false,
+    "source_pdf_pages": [
+      166,
+      167
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P170"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S35-JUMP-Q01",
+    "step": "Step 35",
+    "step_number": 35,
+    "type": "single_choice",
+    "prompt": "What has Evan finished?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S35-JUMP-Q01-O1",
+        "text": "A financial report"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S35-JUMP-Q01-O2",
+        "text": "A hospital shift"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S35-JUMP-Q01-O3",
+        "text": "A school exam"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      11,
+      12
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-FUNCTIONAL-V2-S31-CORE-Q03",
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P057"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S35-JUMP-Q02",
+    "step": "Step 35",
+    "step_number": 35,
+    "type": "single_choice",
+    "prompt": "How does Caleb support her?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S35-JUMP-Q02-O1",
+        "text": "He cancels the lesson."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S35-JUMP-Q02-O2",
+        "text": "He respects her pace and waits nearby."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S35-JUMP-Q02-O3",
+        "text": "He forces her into the water."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      20,
+      21,
+      22
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-FUNCTIONAL-V2-S32-CORE-Q04",
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P057"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S35-JUMP-Q03",
+    "step": "Step 35",
+    "step_number": 35,
+    "type": "single_choice",
+    "prompt": "What time will they meet?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S35-JUMP-Q03-O1",
+        "text": "9:30 a.m."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S35-JUMP-Q03-O2",
+        "text": "9:00 p.m."
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S35-JUMP-Q03-O3",
+        "text": "12:30 p.m."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      35,
+      36
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-FUNCTIONAL-V2-S33-CORE-Q01",
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P057"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S35-JUMP-Q04",
+    "step": "Step 35",
+    "step_number": 35,
+    "type": "single_choice",
+    "prompt": "Where had Sara been waiting?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S35-JUMP-Q04-O1",
+        "text": "At the airport"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S35-JUMP-Q04-O2",
+        "text": "By the door"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S35-JUMP-Q04-O3",
+        "text": "At school"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      47,
+      48
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-FUNCTIONAL-V2-S34-CORE-Q02",
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P057"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S40-JUMP-Q01",
+    "step": "Step 40",
+    "step_number": 40,
+    "type": "single_choice",
+    "prompt": "When does Ethan propose?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S40-JUMP-Q01-O1",
+        "text": "February"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S40-JUMP-Q01-O2",
+        "text": "September"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S40-JUMP-Q01-O3",
+        "text": "December"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      66,
+      67
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-FUNCTIONAL-V2-S36-CORE-Q01",
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P121"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S40-JUMP-Q02",
+    "step": "Step 40",
+    "step_number": 40,
+    "type": "single_choice",
+    "prompt": "Who asks about the problem?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S40-JUMP-Q02-O1",
+        "text": "Sara"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S40-JUMP-Q02-O2",
+        "text": "Maria"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S40-JUMP-Q02-O3",
+        "text": "Ethan"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      78,
+      79
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-FUNCTIONAL-V2-S37-CORE-Q02",
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P121"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S40-JUMP-Q03",
+    "step": "Step 40",
+    "step_number": 40,
+    "type": "single_choice",
+    "prompt": "Who calls the taxi?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S40-JUMP-Q03-O1",
+        "text": "Sara"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S40-JUMP-Q03-O2",
+        "text": "Caleb"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S40-JUMP-Q03-O3",
+        "text": "The restaurant staff"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      95,
+      96,
+      97
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-FUNCTIONAL-V2-S38-CORE-Q03",
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P121"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S40-JUMP-Q04",
+    "step": "Step 40",
+    "step_number": 40,
+    "type": "single_choice",
+    "prompt": "When will the celebration be?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S40-JUMP-Q04-O1",
+        "text": "In the afternoon"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S40-JUMP-Q04-O2",
+        "text": "At midnight"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S40-JUMP-Q04-O3",
+        "text": "Before breakfast"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      109,
+      110
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-FUNCTIONAL-V2-S39-CORE-Q04",
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P121"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q01",
+    "step": "Step 45",
+    "step_number": 45,
+    "type": "single_choice",
+    "prompt": "Which earlier plan is fulfilled?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q01-O1",
+        "text": "The wedding"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q01-O2",
+        "text": "The trip to Chicago"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q01-O3",
+        "text": "The Christmas gathering"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      11,
+      12
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-FUNCTIONAL-V2-S31-CORE-Q01",
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P172"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q02",
+    "step": "Step 45",
+    "step_number": 45,
+    "type": "single_choice",
+    "prompt": "Whom had Maria spoken to before booking?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q02-O1",
+        "text": "The instructor"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q02-O2",
+        "text": "Luiggi"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q02-O3",
+        "text": "Richard"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      20,
+      21,
+      22
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-FUNCTIONAL-V2-S32-CORE-Q02",
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P172"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q03",
+    "step": "Step 45",
+    "step_number": 45,
+    "type": "single_choice",
+    "prompt": "What will Ethan have finished by nine?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q03-O1",
+        "text": "His shopping"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q03-O2",
+        "text": "His messages"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q03-O3",
+        "text": "His dinner"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      35,
+      36
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-FUNCTIONAL-V2-S33-CORE-Q03",
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P172"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q04",
+    "step": "Step 45",
+    "step_number": 45,
+    "type": "single_choice",
+    "prompt": "What could they have sent?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q04-O1",
+        "text": "A suitcase"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q04-O2",
+        "text": "A recipe"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q04-O3",
+        "text": "A message"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      47,
+      48
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-FUNCTIONAL-V2-S34-CORE-Q04",
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P172"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q05",
+    "step": "Step 45",
+    "step_number": 45,
+    "type": "single_choice",
+    "prompt": "What does Clarice answer?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q05-O1",
+        "text": "Not until tomorrow"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q05-O2",
+        "text": "No"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q05-O3",
+        "text": "Yes"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      66,
+      67
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-FUNCTIONAL-V2-S36-CORE-Q02",
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P173"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q06",
+    "step": "Step 45",
+    "step_number": 45,
+    "type": "single_choice",
+    "prompt": "What do they check?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q06-O1",
+        "text": "The guest list"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q06-O2",
+        "text": "The restaurant menu"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q06-O3",
+        "text": "The weather report"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      78,
+      79
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-FUNCTIONAL-V2-S37-CORE-Q03",
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P173"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q07",
+    "step": "Step 45",
+    "step_number": 45,
+    "type": "single_choice",
+    "prompt": "Who celebrates with Maria at home?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q07-O1",
+        "text": "Taylor"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q07-O2",
+        "text": "Denali"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q07-O3",
+        "text": "Clarice"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      95,
+      96,
+      97
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-FUNCTIONAL-V2-S38-CORE-Q04",
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P173"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q08",
+    "step": "Step 45",
+    "step_number": 45,
+    "type": "single_choice",
+    "prompt": "What event is Taylor shopping for?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q08-O1",
+        "text": "Clarice and Ethan’s wedding"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q08-O2",
+        "text": "Maria’s swimming lesson"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q08-O3",
+        "text": "Sara’s exam"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      109,
+      110
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-FUNCTIONAL-V2-S39-CORE-Q01",
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P173"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q09",
+    "step": "Step 45",
+    "step_number": 45,
+    "type": "single_choice",
+    "prompt": "Who will deliver on September eighteenth?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q09-O1",
+        "text": "The taxi driver"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q09-O2",
+        "text": "The teacher"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q09-O3",
+        "text": "The florist"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      131,
+      132
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-FUNCTIONAL-V2-S41-CORE-Q03",
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P174"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q10",
+    "step": "Step 45",
+    "step_number": 45,
+    "type": "single_choice",
+    "prompt": "Has Sara selected a writer yet?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q10-O1",
+        "text": "No"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q10-O2",
+        "text": "Yes, Jane Austen"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q10-O3",
+        "text": "Yes, Charles Dickens"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      140,
+      141
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-FUNCTIONAL-V2-S42-CORE-Q04",
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P174"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q11",
+    "step": "Step 45",
+    "step_number": 45,
+    "type": "single_choice",
+    "prompt": "When is the gathering?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q11-O1",
+        "text": "The day after the wedding"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q11-O2",
+        "text": "At Christmas"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q11-O3",
+        "text": "The evening before the wedding"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      151,
+      152
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-FUNCTIONAL-V2-S43-CORE-Q01",
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P174"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q12",
+    "step": "Step 45",
+    "step_number": 45,
+    "type": "single_choice",
+    "prompt": "What does butterflies in my stomach mean here?",
+    "options": [
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q12-O1",
+        "text": "Feeling nervous"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q12-O2",
+        "text": "Feeling hungry"
+      },
+      {
+        "id": "LGS-FUNCTIONAL-V2-S45-JUMP-Q12-O3",
+        "text": "Having a stomach illness"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      160,
+      161
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-FUNCTIONAL-V2-S44-CORE-Q02",
+    "page_ids": [
+      "LGS-FUNCTIONAL-V2-P174"
+    ]
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S31-LAB-P009",
+    "step": "Step 31",
+    "step_number": 31,
+    "type": "open_response",
+    "prompt": "Write four statements about what the friends have already done and two questions about what they have not done yet.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      9
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P010",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S31-SOURCE-P010",
+    "step": "Step 31",
+    "step_number": 31,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Write four statements about what the friends have already done and two questions about what they have not done yet.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      10
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P011",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S31-DETECTIVE-P011",
+    "step": "Step 31",
+    "step_number": 31,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      11
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P012",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S31-SOURCE-P013",
+    "step": "Step 31",
+    "step_number": 31,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Write four statements about what the friends have already done and two questions about what they have not done yet.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      13
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P014",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S31-SOURCE-P014",
+    "step": "Step 31",
+    "step_number": 31,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Write four statements about what the friends have already done and two questions about what they have not done yet.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      14
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P015",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S31-SOURCE-P015",
+    "step": "Step 31",
+    "step_number": 31,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write four statements about what the friends have already done and two questions about what they have not done yet.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      15
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P016",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S31-SOURCE-P016",
+    "step": "Step 31",
+    "step_number": 31,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write four statements about what the friends have already done and two questions about what they have not done yet.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      16
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P017",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S32-SOURCE-P019",
+    "step": "Step 32",
+    "step_number": 32,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe two events that happened before Maria arrived. Use past perfect for the earlier event and past simple for the later event.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      19
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P020",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S32-DETECTIVE-P020",
+    "step": "Step 32",
+    "step_number": 32,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      20
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P021",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S32-LAB-P022",
+    "step": "Step 32",
+    "step_number": 32,
+    "type": "open_response",
+    "prompt": "Retell this episode in your own words. Keep the people, events and time consistent with the story.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      22
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P023",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S32-SOURCE-P023",
+    "step": "Step 32",
+    "step_number": 32,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Describe two events that happened before Maria arrived. Use past perfect for the earlier event and past simple for the later event.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      23
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P024",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S32-SOURCE-P024",
+    "step": "Step 32",
+    "step_number": 32,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe two events that happened before Maria arrived. Use past perfect for the earlier event and past simple for the later event.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      24
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P025",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S32-SOURCE-P025",
+    "step": "Step 32",
+    "step_number": 32,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe two events that happened before Maria arrived. Use past perfect for the earlier event and past simple for the later event.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      25
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P026",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S32-DETECTIVE-P026",
+    "step": "Step 32",
+    "step_number": 32,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      26
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P027",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S32-EXTRALAB-P028",
+    "step": "Step 32",
+    "step_number": 32,
+    "type": "open_response",
+    "prompt": "Retell this episode in your own words. Keep the people, events and time consistent with the story.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      28
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P029",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S32-EXTRALAB-P029",
+    "step": "Step 32",
+    "step_number": 32,
+    "type": "open_response",
+    "prompt": "Write two questions for a character and answer them in character. Label any invented detail as an imagined continuation.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      29
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P030",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S32-EXTRALAB-P030",
+    "step": "Step 32",
+    "step_number": 32,
+    "type": "open_response",
+    "prompt": "Describe two events that happened before Maria arrived. Use past perfect for the earlier event and past simple for the later event.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      30
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P031",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S33-LAB-P033",
+    "step": "Step 33",
+    "step_number": 33,
+    "type": "open_response",
+    "prompt": "Write three predictions using will have + past participle and a deadline introduced by by or by the time.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      33
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P034",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S33-SOURCE-P034",
+    "step": "Step 33",
+    "step_number": 33,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Write three predictions using will have + past participle and a deadline introduced by by or by the time.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      34
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P035",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S33-DETECTIVE-P035",
+    "step": "Step 33",
+    "step_number": 33,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      35
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P036",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S33-SOURCE-P037",
+    "step": "Step 33",
+    "step_number": 33,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write three predictions using will have + past participle and a deadline introduced by by or by the time.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      37
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P038",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S33-SOURCE-P038",
+    "step": "Step 33",
+    "step_number": 33,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write three predictions using will have + past participle and a deadline introduced by by or by the time.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      38
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P039",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S33-SOURCE-P039",
+    "step": "Step 33",
+    "step_number": 33,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write three predictions using will have + past participle and a deadline introduced by by or by the time.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      39
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P040",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S33-DETECTIVE-P040",
+    "step": "Step 33",
+    "step_number": 33,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      40
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P041",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S33-EXTRALAB-P042",
+    "step": "Step 33",
+    "step_number": 33,
+    "type": "open_response",
+    "prompt": "Write three predictions using will have + past participle and a deadline introduced by by or by the time.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      42
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P043",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S33-EXTRALAB-P043",
+    "step": "Step 33",
+    "step_number": 33,
+    "type": "open_response",
+    "prompt": "Retell this episode in your own words. Keep the people, events and time consistent with the story.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      43
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P044",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S34-SOURCE-P046",
+    "step": "Step 34",
+    "step_number": 34,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Use should have, could have and might have to reflect on the misunderstanding. Distinguish a suggestion from a possibility.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      46
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P047",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S34-DETECTIVE-P047",
+    "step": "Step 34",
+    "step_number": 34,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      47
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P048",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S34-SOURCE-P049",
+    "step": "Step 34",
+    "step_number": 34,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Use should have, could have and might have to reflect on the misunderstanding. Distinguish a suggestion from a possibility.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      49
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P050",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S34-SOURCE-P050",
+    "step": "Step 34",
+    "step_number": 34,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Use should have, could have and might have to reflect on the misunderstanding. Distinguish a suggestion from a possibility.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      50
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P051",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S34-SOURCE-P051",
+    "step": "Step 34",
+    "step_number": 34,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Use should have, could have and might have to reflect on the misunderstanding. Distinguish a suggestion from a possibility.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      51
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P052",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S34-DETECTIVE-P052",
+    "step": "Step 34",
+    "step_number": 34,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      52
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P053",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S34-EXTRALAB-P054",
+    "step": "Step 34",
+    "step_number": 34,
+    "type": "open_response",
+    "prompt": "Use should have, could have and might have to reflect on the misunderstanding. Distinguish a suggestion from a possibility.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      54
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P055",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S35-SOURCE-P056",
+    "step": "Step 35",
+    "step_number": 35,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Use should have, could have and might have to reflect on the misunderstanding. Distinguish a suggestion from a possibility.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      56
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P058",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S35-SOURCE-P057",
+    "step": "Step 35",
+    "step_number": 35,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Use should have, could have and might have to reflect on the misunderstanding. Distinguish a suggestion from a possibility.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      57
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P059",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S35-SOURCE-P058",
+    "step": "Step 35",
+    "step_number": 35,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Use should have, could have and might have to reflect on the misunderstanding. Distinguish a suggestion from a possibility.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      58
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P060",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S35-SOURCE-P059",
+    "step": "Step 35",
+    "step_number": 35,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Use should have, could have and might have to reflect on the misunderstanding. Distinguish a suggestion from a possibility.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      59
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P061",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S35-SOURCE-P060",
+    "step": "Step 35",
+    "step_number": 35,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Use should have, could have and might have to reflect on the misunderstanding. Distinguish a suggestion from a possibility.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      60
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P062",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S35-SOURCE-P061",
+    "step": "Step 35",
+    "step_number": 35,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Use should have, could have and might have to reflect on the misunderstanding. Distinguish a suggestion from a possibility.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      61
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P063",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S36-LAB-P064",
+    "step": "Step 36",
+    "step_number": 36,
+    "type": "open_response",
+    "prompt": "Retell this episode in your own words. Keep the people, events and time consistent with the story.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      64
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P066",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S36-SOURCE-P065",
+    "step": "Step 36",
+    "step_number": 36,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Write a general planning rule, a realistic future possibility and an imaginary situation. Label the conditional type.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      65
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P067",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S36-DETECTIVE-P066",
+    "step": "Step 36",
+    "step_number": 36,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      66
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P068",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S36-SOURCE-P068",
+    "step": "Step 36",
+    "step_number": 36,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Write a general planning rule, a realistic future possibility and an imaginary situation. Label the conditional type.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      68
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P070",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S36-SOURCE-P069",
+    "step": "Step 36",
+    "step_number": 36,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Write a general planning rule, a realistic future possibility and an imaginary situation. Label the conditional type.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      69
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P071",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S36-SOURCE-P070",
+    "step": "Step 36",
+    "step_number": 36,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write a general planning rule, a realistic future possibility and an imaginary situation. Label the conditional type.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      70
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P072",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S36-SOURCE-P071",
+    "step": "Step 36",
+    "step_number": 36,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write a general planning rule, a realistic future possibility and an imaginary situation. Label the conditional type.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      71
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P073",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S36-DETECTIVE-P072",
+    "step": "Step 36",
+    "step_number": 36,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      72
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P074",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-LAB-P076",
+    "step": "Step 37",
+    "step_number": 37,
+    "type": "open_response",
+    "prompt": "Retell this episode in your own words. Keep the people, events and time consistent with the story.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      76
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P078",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-SOURCE-P077",
+    "step": "Step 37",
+    "step_number": 37,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Write two third conditional sentences about the address mistake. Keep the imagined past separate from what really happened.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      77
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P079",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-DETECTIVE-P078",
+    "step": "Step 37",
+    "step_number": 37,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      78
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P080",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-SOURCE-P080",
+    "step": "Step 37",
+    "step_number": 37,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Write two third conditional sentences about the address mistake. Keep the imagined past separate from what really happened.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      80
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P082",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-SOURCE-P081",
+    "step": "Step 37",
+    "step_number": 37,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Write two third conditional sentences about the address mistake. Keep the imagined past separate from what really happened.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      81
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P083",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-SOURCE-P082",
+    "step": "Step 37",
+    "step_number": 37,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write two third conditional sentences about the address mistake. Keep the imagined past separate from what really happened.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      82
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P084",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-SOURCE-P083",
+    "step": "Step 37",
+    "step_number": 37,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write two third conditional sentences about the address mistake. Keep the imagined past separate from what really happened.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      83
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P085",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-SOURCE-P084",
+    "step": "Step 37",
+    "step_number": 37,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write two third conditional sentences about the address mistake. Keep the imagined past separate from what really happened.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      84
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P086",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-SOURCE-P085",
+    "step": "Step 37",
+    "step_number": 37,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Write two third conditional sentences about the address mistake. Keep the imagined past separate from what really happened.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      85
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P087",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-SOURCE-P086",
+    "step": "Step 37",
+    "step_number": 37,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write two third conditional sentences about the address mistake. Keep the imagined past separate from what really happened.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      86
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P088",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-SOURCE-P087",
+    "step": "Step 37",
+    "step_number": 37,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write two third conditional sentences about the address mistake. Keep the imagined past separate from what really happened.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      87
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P089",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-DETECTIVE-P088",
+    "step": "Step 37",
+    "step_number": 37,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      88
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P090",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S37-EXTRALAB-P090",
+    "step": "Step 37",
+    "step_number": 37,
+    "type": "open_response",
+    "prompt": "Write two third conditional sentences about the address mistake. Keep the imagined past separate from what really happened.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      90
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P092",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S38-LAB-P093",
+    "step": "Step 38",
+    "step_number": 38,
+    "type": "open_response",
+    "prompt": "Rewrite three active sentences from the episode in the passive. Keep the tense and meaning unchanged.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      93
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P095",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S38-SOURCE-P094",
+    "step": "Step 38",
+    "step_number": 38,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Rewrite three active sentences from the episode in the passive. Keep the tense and meaning unchanged.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      94
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P096",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S38-DETECTIVE-P095",
+    "step": "Step 38",
+    "step_number": 38,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      95
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P097",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S38-LAB-P097",
+    "step": "Step 38",
+    "step_number": 38,
+    "type": "open_response",
+    "prompt": "Retell this episode in your own words. Keep the people, events and time consistent with the story.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      97
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P099",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S38-SOURCE-P098",
+    "step": "Step 38",
+    "step_number": 38,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Rewrite three active sentences from the episode in the passive. Keep the tense and meaning unchanged.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      98
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P100",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S38-REVISED-P099",
+    "step": "Step 38",
+    "step_number": 38,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Rewrite three active sentences from the episode in the passive. Keep the tense and meaning unchanged.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      99
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P101",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S38-REVISED-P100",
+    "step": "Step 38",
+    "step_number": 38,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Rewrite three active sentences from the episode in the passive. Keep the tense and meaning unchanged.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      100
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P102",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S38-SOURCE-P101",
+    "step": "Step 38",
+    "step_number": 38,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Rewrite three active sentences from the episode in the passive. Keep the tense and meaning unchanged.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      101
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P103",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S38-SOURCE-P102",
+    "step": "Step 38",
+    "step_number": 38,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Rewrite three active sentences from the episode in the passive. Keep the tense and meaning unchanged.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      102
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P104",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S38-DETECTIVE-P103",
+    "step": "Step 38",
+    "step_number": 38,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      103
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P105",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S38-EXTRALAB-P105",
+    "step": "Step 38",
+    "step_number": 38,
+    "type": "open_response",
+    "prompt": "Rewrite three active sentences from the episode in the passive. Keep the tense and meaning unchanged.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      105
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P107",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S39-SOURCE-P108",
+    "step": "Step 39",
+    "step_number": 39,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Report three statements and one question from the shop conversation. Adjust pronouns and tense where the context requires it.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      108
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P110",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S39-DETECTIVE-P109",
+    "step": "Step 39",
+    "step_number": 39,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      109
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P111",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S39-SOURCE-P111",
+    "step": "Step 39",
+    "step_number": 39,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Report three statements and one question from the shop conversation. Adjust pronouns and tense where the context requires it.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      111
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P113",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S39-SOURCE-P112",
+    "step": "Step 39",
+    "step_number": 39,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Report three statements and one question from the shop conversation. Adjust pronouns and tense where the context requires it.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      112
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P114",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S39-SOURCE-P113",
+    "step": "Step 39",
+    "step_number": 39,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Report three statements and one question from the shop conversation. Adjust pronouns and tense where the context requires it.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      113
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P115",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S39-SOURCE-P114",
+    "step": "Step 39",
+    "step_number": 39,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Report three statements and one question from the shop conversation. Adjust pronouns and tense where the context requires it.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      114
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P116",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S39-SOURCE-P115",
+    "step": "Step 39",
+    "step_number": 39,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Report three statements and one question from the shop conversation. Adjust pronouns and tense where the context requires it.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      115
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P117",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S39-DETECTIVE-P116",
+    "step": "Step 39",
+    "step_number": 39,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      116
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P118",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S40-SOURCE-P119",
+    "step": "Step 40",
+    "step_number": 40,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Report three statements and one question from the shop conversation. Adjust pronouns and tense where the context requires it.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      119
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P122",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S40-REVISED-P120",
+    "step": "Step 40",
+    "step_number": 40,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Use examples from the story.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      120
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P123",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S40-SOURCE-P121",
+    "step": "Step 40",
+    "step_number": 40,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Report three statements and one question from the shop conversation. Adjust pronouns and tense where the context requires it.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      121
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P124",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S40-SOURCE-P122",
+    "step": "Step 40",
+    "step_number": 40,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Report three statements and one question from the shop conversation. Adjust pronouns and tense where the context requires it.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      122
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P125",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S40-SOURCE-P123",
+    "step": "Step 40",
+    "step_number": 40,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Report three statements and one question from the shop conversation. Adjust pronouns and tense where the context requires it.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      123
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P126",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S40-SOURCE-P124",
+    "step": "Step 40",
+    "step_number": 40,
+    "type": "open_response",
+    "prompt": "Complete all reading and language tasks on this page: Read and review: planning and possibilities. When we share accurate information, planning becomes easier. If an address is wrong, a letter can go to the wrong home. Maria’s invitation went to her old address, but we found the mistake together. If we check the remaining addresses today, we will avoid repeating that mistake. If I had more free time, I would check every detail myself. In reality, I need help, and I am grateful for my friends. 1. What went wrong with Maria’s invitation?\n2. Which two sentences express general relationships?\n3. Which sentence describes a realistic future possibility?\n4. Which sentence describes an imagined present situation? Complete: If we _____ (confirm) the list today, we _____ (send) the invitations tomorrow. Complete: If Clarice _____ (have) more time, she _____ (check) every detail herself. Then write an imaginary situation of your own.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      124
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P127",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S40-SOURCE-P125",
+    "step": "Step 40",
+    "step_number": 40,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Report three statements and one question from the shop conversation. Adjust pronouns and tense where the context requires it.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      125
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P128",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S40-SOURCE-P126",
+    "step": "Step 40",
+    "step_number": 40,
+    "type": "open_response",
+    "prompt": "Complete all reading and language tasks on this page: Report the shopping conversation. Taylor and Sara are choosing a dress for the wedding. The assistant says, “The red dress is available in your size.” Taylor asks, “Is the fitting room free?” The assistant answers, “Yes, it is.” Later, Taylor tells Sara, “Clarice said the celebration would be in the afternoon.” Sara suggests, “Let’s check the invitation before buying accessories.” 1. The assistant said that...\n2. Taylor asked whether...\n3. The assistant answered that...\n4. Taylor told Sara that...\n5. Sara suggested... In an indirect question, use statement word order. After suggested, you can use an -ing form: Sara suggested checking the invitation. Write two direct statements and one direct question from another episode. Report them from the viewpoint of a character who heard them.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      126
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P129",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S41-LAB-P129",
+    "step": "Step 41",
+    "step_number": 41,
+    "type": "open_response",
+    "prompt": "Discuss how online images can influence expectations. Support your opinion with one event from the story and one clearly labeled personal example.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      129
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P132",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S41-SOURCE-P130",
+    "step": "Step 41",
+    "step_number": 41,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Discuss how online images can influence expectations. Support your opinion with one event from the story and one clearly labeled personal example.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      130
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P133",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S41-DETECTIVE-P131",
+    "step": "Step 41",
+    "step_number": 41,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      131
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P134",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S41-DETECTIVE-P133",
+    "step": "Step 41",
+    "step_number": 41,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      133
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P136",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S41-EXTRALAB-P135",
+    "step": "Step 41",
+    "step_number": 41,
+    "type": "open_response",
+    "prompt": "Discuss how online images can influence expectations. Support your opinion with one event from the story and one clearly labeled personal example.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      135
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P138",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S41-EXTRALAB-P136",
+    "step": "Step 41",
+    "step_number": 41,
+    "type": "open_response",
+    "prompt": "Retell this episode in your own words. Keep the people, events and time consistent with the story.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      136
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P139",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S42-SOURCE-P139",
+    "step": "Step 42",
+    "step_number": 42,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Choose a person who has contributed to a community. Separate facts, opinions and unanswered research questions.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      139
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P142",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S42-DETECTIVE-P140",
+    "step": "Step 42",
+    "step_number": 42,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      140
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P143",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S42-SOURCE-P142",
+    "step": "Step 42",
+    "step_number": 42,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Choose a person who has contributed to a community. Separate facts, opinions and unanswered research questions.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      142
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P145",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S42-SOURCE-P143",
+    "step": "Step 42",
+    "step_number": 42,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Choose a person who has contributed to a community. Separate facts, opinions and unanswered research questions.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      143
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P146",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S42-DETECTIVE-P144",
+    "step": "Step 42",
+    "step_number": 42,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      144
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P147",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S42-EXTRALAB-P146",
+    "step": "Step 42",
+    "step_number": 42,
+    "type": "open_response",
+    "prompt": "Write two questions for a character and answer them in character. Label any invented detail as an imagined continuation.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      146
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P149",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S42-EXTRALAB-P147",
+    "step": "Step 42",
+    "step_number": 42,
+    "type": "open_response",
+    "prompt": "Choose a person who has contributed to a community. Separate facts, opinions and unanswered research questions.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      147
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P150",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S43-SOURCE-P150",
+    "step": "Step 43",
+    "step_number": 43,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Propose three practical changes for an event. Explain their benefits and limits without making unsupported claims.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      150
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P153",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S43-DETECTIVE-P151",
+    "step": "Step 43",
+    "step_number": 43,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      151
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P154",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S43-DETECTIVE-P153",
+    "step": "Step 43",
+    "step_number": 43,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      153
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P156",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S43-EXTRALAB-P155",
+    "step": "Step 43",
+    "step_number": 43,
+    "type": "open_response",
+    "prompt": "Write two questions for a character and answer them in character. Label any invented detail as an imagined continuation.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      155
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P158",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S43-EXTRALAB-P156",
+    "step": "Step 43",
+    "step_number": 43,
+    "type": "open_response",
+    "prompt": "Propose three practical changes for an event. Explain their benefits and limits without making unsupported claims.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      156
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P159",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S44-SOURCE-P159",
+    "step": "Step 44",
+    "step_number": 44,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Explain an idiom in plain English. Compare two ways of congratulating someone, noting context and tone rather than stereotypes.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      159
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P162",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S44-DETECTIVE-P160",
+    "step": "Step 44",
+    "step_number": 44,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      160
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P163",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S44-SOURCE-P162",
+    "step": "Step 44",
+    "step_number": 44,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Explain an idiom in plain English. Compare two ways of congratulating someone, noting context and tone rather than stereotypes.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      162
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P165",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S44-SOURCE-P163",
+    "step": "Step 44",
+    "step_number": 44,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Explain an idiom in plain English. Compare two ways of congratulating someone, noting context and tone rather than stereotypes.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      163
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P166",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S44-SOURCE-P164",
+    "step": "Step 44",
+    "step_number": 44,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Explain an idiom in plain English. Compare two ways of congratulating someone, noting context and tone rather than stereotypes.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      164
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P167",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S44-SOURCE-P165",
+    "step": "Step 44",
+    "step_number": 44,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Explain an idiom in plain English. Compare two ways of congratulating someone, noting context and tone rather than stereotypes.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      165
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P168",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S44-DETECTIVE-P166",
+    "step": "Step 44",
+    "step_number": 44,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      166
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P169",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S45-SOURCE-P169",
+    "step": "Step 45",
+    "step_number": 45,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Explain an idiom in plain English. Compare two ways of congratulating someone, noting context and tone rather than stereotypes.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      169
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P175",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S45-SOURCE-P170",
+    "step": "Step 45",
+    "step_number": 45,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Explain an idiom in plain English. Compare two ways of congratulating someone, noting context and tone rather than stereotypes.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      170
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P176",
+    "version": 2
+  },
+  {
+    "id": "LGS-FUNCTIONAL-V2-S45-SOURCE-P171",
+    "step": "Step 45",
+    "step_number": 45,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Explain an idiom in plain English. Compare two ways of congratulating someone, noting context and tone rather than stereotypes.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      171
+    ],
+    "page_id": "LGS-FUNCTIONAL-V2-P177",
+    "version": 2
+  }
+]

@@ -1,0 +1,55 @@
+{
+  "schema_version": "lgs-editorial-package/2.0",
+  "book_code": "LGS-BEGINNER-V2",
+  "level_name": "BEGINNER",
+  "platform_level_code": null,
+  "level_mapping_required": true,
+  "import_status": "requires_platform_adapter_and_level_mapping",
+  "academic_steps": [
+    "Step 1",
+    "Step 2",
+    "Step 3",
+    "Step 4",
+    "Step 5",
+    "Step 6",
+    "Step 7",
+    "Step 8",
+    "Step 9",
+    "Step 10",
+    "Step 11",
+    "Step 12",
+    "Step 13",
+    "Step 14",
+    "Step 15"
+  ],
+  "page_count": 173,
+  "source_page_count": 173,
+  "source_file": "Beginner (ALL) - Lets Go Speak 2024.pdf",
+  "removed_source_answer_pages": [
+    161,
+    162,
+    163,
+    164,
+    165,
+    166,
+    167,
+    168
+  ],
+  "pages_file": "data/student/pages.json",
+  "student_activities_file": "data/student/activities.json",
+  "private_answers_file": "data/server-only/activities-with-keys.json",
+  "checkpoints_file": "data/server-only/checkpoints.json",
+  "storage_prefix": "materials/interactive/LGS-BEGINNER-V2",
+  "access": {
+    "authenticated": true,
+    "active_student": true,
+    "assigned_level_required": true,
+    "signed_url_ttl_seconds": 600
+  },
+  "audio": {
+    "status": "not_provided",
+    "files": 0
+  },
+  "edition": "Editorial adaptation; original lesson layouts retained except identified replacements",
+  "hash_algorithm": "SHA256"
+}

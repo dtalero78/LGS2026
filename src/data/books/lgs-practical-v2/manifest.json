@@ -1,0 +1,57 @@
+{
+  "schema_version": "lgs-editorial-package/2.0",
+  "book_code": "LGS-PRACTICAL-V2",
+  "level_name": "PRACTICAL",
+  "platform_level_code": null,
+  "level_mapping_required": true,
+  "import_status": "requires_platform_adapter_and_level_mapping",
+  "academic_steps": [
+    "Step 16",
+    "Step 17",
+    "Step 18",
+    "Step 19",
+    "Step 20",
+    "Step 21",
+    "Step 22",
+    "Step 23",
+    "Step 24",
+    "Step 25",
+    "Step 26",
+    "Step 27",
+    "Step 28",
+    "Step 29",
+    "Step 30"
+  ],
+  "page_count": 172,
+  "source_page_count": 175,
+  "source_file": "Practical (ALL) - Lets Go Speak 2024.pdf",
+  "removed_source_answer_pages": [
+    156,
+    157,
+    158,
+    159,
+    160,
+    161,
+    162,
+    163,
+    164,
+    165
+  ],
+  "pages_file": "data/student/pages.json",
+  "student_activities_file": "data/student/activities.json",
+  "private_answers_file": "data/server-only/activities-with-keys.json",
+  "checkpoints_file": "data/server-only/checkpoints.json",
+  "storage_prefix": "materials/interactive/LGS-PRACTICAL-V2",
+  "access": {
+    "authenticated": true,
+    "active_student": true,
+    "assigned_level_required": true,
+    "signed_url_ttl_seconds": 600
+  },
+  "audio": {
+    "status": "not_provided",
+    "files": 0
+  },
+  "edition": "Editorial adaptation; original lesson layouts retained except identified replacements",
+  "hash_algorithm": "SHA256"
+}

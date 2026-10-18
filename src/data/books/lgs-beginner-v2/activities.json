@@ -1,0 +1,3938 @@
+[
+  {
+    "id": "LGS-BEGINNER-V2-S01-CORE-Q01",
+    "step": "Step 1",
+    "step_number": 1,
+    "type": "single_choice",
+    "prompt": "Who is a fashion designer?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S01-CORE-Q01-O1",
+        "text": "Sara"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S01-CORE-Q01-O2",
+        "text": "Evan"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S01-CORE-Q01-O3",
+        "text": "Clarice"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      9,
+      10
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P012"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S01-CORE-Q02",
+    "step": "Step 1",
+    "step_number": 1,
+    "type": "single_choice",
+    "prompt": "Who are Sara’s parents?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S01-CORE-Q02-O1",
+        "text": "Clarice and Ethan"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S01-CORE-Q02-O2",
+        "text": "Taylor and Evan"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S01-CORE-Q02-O3",
+        "text": "Denali and Maria"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      9,
+      10
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P012"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S01-CORE-Q03",
+    "step": "Step 1",
+    "step_number": 1,
+    "type": "single_choice",
+    "prompt": "What does Ethan do?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S01-CORE-Q03-O1",
+        "text": "He is an anesthesiologist."
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S01-CORE-Q03-O2",
+        "text": "He is a chef."
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S01-CORE-Q03-O3",
+        "text": "He is a financial analyst."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      9,
+      10
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P012"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S01-CORE-Q04",
+    "step": "Step 1",
+    "step_number": 1,
+    "type": "single_choice",
+    "prompt": "Who are roommates?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S01-CORE-Q04-O1",
+        "text": "Sara and Clarice"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S01-CORE-Q04-O2",
+        "text": "Ethan and Evan"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S01-CORE-Q04-O3",
+        "text": "Denali and Maria"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      9,
+      10
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P012"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S02-CORE-Q01",
+    "step": "Step 2",
+    "step_number": 2,
+    "type": "single_choice",
+    "prompt": "Where is Denali flying?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S02-CORE-Q01-O1",
+        "text": "New York"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S02-CORE-Q01-O2",
+        "text": "Chicago"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S02-CORE-Q01-O3",
+        "text": "Omaha"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      21,
+      22
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P024"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S02-CORE-Q02",
+    "step": "Step 2",
+    "step_number": 2,
+    "type": "single_choice",
+    "prompt": "Who lives in Chicago?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S02-CORE-Q02-O1",
+        "text": "Denali’s father"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S02-CORE-Q02-O2",
+        "text": "Sara’s teacher"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S02-CORE-Q02-O3",
+        "text": "Ethan’s sister"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      21,
+      22
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P024"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S02-CORE-Q03",
+    "step": "Step 2",
+    "step_number": 2,
+    "type": "single_choice",
+    "prompt": "How long is the visit?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S02-CORE-Q03-O1",
+        "text": "Two days and one night"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S02-CORE-Q03-O2",
+        "text": "Seven days and six nights"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S02-CORE-Q03-O3",
+        "text": "Five days and four nights"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      21,
+      22
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P024"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S02-CORE-Q04",
+    "step": "Step 2",
+    "step_number": 2,
+    "type": "single_choice",
+    "prompt": "How many books are in the bag?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S02-CORE-Q04-O1",
+        "text": "Four"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S02-CORE-Q04-O2",
+        "text": "Two"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S02-CORE-Q04-O3",
+        "text": "One"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      21,
+      22
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P024"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S03-CORE-Q01",
+    "step": "Step 3",
+    "step_number": 3,
+    "type": "single_choice",
+    "prompt": "Where do Clarice and Ethan meet?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S03-CORE-Q01-O1",
+        "text": "At a grocery store"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S03-CORE-Q01-O2",
+        "text": "At a hotel"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S03-CORE-Q01-O3",
+        "text": "At a school"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      36,
+      37
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P039"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S03-CORE-Q02",
+    "step": "Step 3",
+    "step_number": 3,
+    "type": "single_choice",
+    "prompt": "What does Clarice drop?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S03-CORE-Q02-O1",
+        "text": "Her phone"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S03-CORE-Q02-O2",
+        "text": "Her bag"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S03-CORE-Q02-O3",
+        "text": "Her keys"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      36,
+      37
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P039"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S03-CORE-Q03",
+    "step": "Step 3",
+    "step_number": 3,
+    "type": "single_choice",
+    "prompt": "Who returns the keys?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S03-CORE-Q03-O1",
+        "text": "Caleb"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S03-CORE-Q03-O2",
+        "text": "Ethan"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S03-CORE-Q03-O3",
+        "text": "Evan"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      36,
+      37
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P039"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S03-CORE-Q04",
+    "step": "Step 3",
+    "step_number": 3,
+    "type": "single_choice",
+    "prompt": "What do they talk about?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S03-CORE-Q04-O1",
+        "text": "Their jobs"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S03-CORE-Q04-O2",
+        "text": "Their wedding"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S03-CORE-Q04-O3",
+        "text": "Their flight"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      36,
+      37
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P039"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S04-CORE-Q01",
+    "step": "Step 4",
+    "step_number": 4,
+    "type": "single_choice",
+    "prompt": "When do they meet again?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S04-CORE-Q01-O1",
+        "text": "A month later"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S04-CORE-Q01-O2",
+        "text": "On their wedding day"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S04-CORE-Q01-O3",
+        "text": "The next day"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      48,
+      49
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P051"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S04-CORE-Q02",
+    "step": "Step 4",
+    "step_number": 4,
+    "type": "single_choice",
+    "prompt": "What is Ethan drinking?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S04-CORE-Q02-O1",
+        "text": "Tea"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S04-CORE-Q02-O2",
+        "text": "Coffee"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S04-CORE-Q02-O3",
+        "text": "Juice"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      48,
+      49
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P051"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S04-CORE-Q03",
+    "step": "Step 4",
+    "step_number": 4,
+    "type": "single_choice",
+    "prompt": "What is Clarice finishing?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S04-CORE-Q03-O1",
+        "text": "A design"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S04-CORE-Q03-O2",
+        "text": "A school report"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S04-CORE-Q03-O3",
+        "text": "A meal"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      48,
+      49
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P051"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S04-CORE-Q04",
+    "step": "Step 4",
+    "step_number": 4,
+    "type": "single_choice",
+    "prompt": "What do they exchange?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S04-CORE-Q04-O1",
+        "text": "Plane tickets"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S04-CORE-Q04-O2",
+        "text": "Wedding invitations"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S04-CORE-Q04-O3",
+        "text": "Phone numbers"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      48,
+      49
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P051"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S06-CORE-Q01",
+    "step": "Step 6",
+    "step_number": 6,
+    "type": "single_choice",
+    "prompt": "Where is the new plant?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S06-CORE-Q01-O1",
+        "text": "Beside the gate"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S06-CORE-Q01-O2",
+        "text": "In the playroom"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S06-CORE-Q01-O3",
+        "text": "At the hospital"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      64,
+      65
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P068"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S06-CORE-Q02",
+    "step": "Step 6",
+    "step_number": 6,
+    "type": "single_choice",
+    "prompt": "What does Sara take to the playroom?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S06-CORE-Q02-O1",
+        "text": "Plants"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S06-CORE-Q02-O2",
+        "text": "Tickets"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S06-CORE-Q02-O3",
+        "text": "Cushions"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      64,
+      65
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P068"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S06-CORE-Q03",
+    "step": "Step 6",
+    "step_number": 6,
+    "type": "single_choice",
+    "prompt": "When do they go to the store?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S06-CORE-Q03-O1",
+        "text": "At midnight"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S06-CORE-Q03-O2",
+        "text": "After lunch"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S06-CORE-Q03-O3",
+        "text": "Before breakfast"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      64,
+      65
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P068"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S06-CORE-Q04",
+    "step": "Step 6",
+    "step_number": 6,
+    "type": "single_choice",
+    "prompt": "Through whom does Taylor know Ethan?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S06-CORE-Q04-O1",
+        "text": "Charlene"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S06-CORE-Q04-O2",
+        "text": "Richard"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S06-CORE-Q04-O3",
+        "text": "Luiggi"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      64,
+      65
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P068"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S07-CORE-Q01",
+    "step": "Step 7",
+    "step_number": 7,
+    "type": "single_choice",
+    "prompt": "How many nights will Denali stay?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S07-CORE-Q01-O1",
+        "text": "Five"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S07-CORE-Q01-O2",
+        "text": "Two"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S07-CORE-Q01-O3",
+        "text": "Four"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      73,
+      74
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P077"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S07-CORE-Q02",
+    "step": "Step 7",
+    "step_number": 7,
+    "type": "single_choice",
+    "prompt": "Which floor is her room on?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S07-CORE-Q02-O1",
+        "text": "The third floor"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S07-CORE-Q02-O2",
+        "text": "The second floor"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S07-CORE-Q02-O3",
+        "text": "The first floor"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      73,
+      74
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P077"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S07-CORE-Q03",
+    "step": "Step 7",
+    "step_number": 7,
+    "type": "single_choice",
+    "prompt": "What is opposite her room?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S07-CORE-Q03-O1",
+        "text": "The elevator"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S07-CORE-Q03-O2",
+        "text": "The restaurant"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S07-CORE-Q03-O3",
+        "text": "The garden"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      73,
+      74
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P077"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S07-CORE-Q04",
+    "step": "Step 7",
+    "step_number": 7,
+    "type": "single_choice",
+    "prompt": "When does breakfast finish?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S07-CORE-Q04-O1",
+        "text": "At seven"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S07-CORE-Q04-O2",
+        "text": "At twelve"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S07-CORE-Q04-O3",
+        "text": "At ten"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      73,
+      74
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P077"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S08-CORE-Q01",
+    "step": "Step 8",
+    "step_number": 8,
+    "type": "single_choice",
+    "prompt": "Where did the family go?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S08-CORE-Q01-O1",
+        "text": "To an airport"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S08-CORE-Q01-O2",
+        "text": "To a park"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S08-CORE-Q01-O3",
+        "text": "To a museum"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      84,
+      85
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P088"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S08-CORE-Q02",
+    "step": "Step 8",
+    "step_number": 8,
+    "type": "single_choice",
+    "prompt": "Why did they not swim?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S08-CORE-Q02-O1",
+        "text": "The water was too cold."
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S08-CORE-Q02-O2",
+        "text": "They lost their towels."
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S08-CORE-Q02-O3",
+        "text": "The lake was closed."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      84,
+      85
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P088"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S08-CORE-Q03",
+    "step": "Step 8",
+    "step_number": 8,
+    "type": "single_choice",
+    "prompt": "Where was there a long line?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S08-CORE-Q03-O1",
+        "text": "At the hotel desk"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S08-CORE-Q03-O2",
+        "text": "At the bus stop"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S08-CORE-Q03-O3",
+        "text": "At the restrooms"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      84,
+      85
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P088"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S08-CORE-Q04",
+    "step": "Step 8",
+    "step_number": 8,
+    "type": "single_choice",
+    "prompt": "When did they leave?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S08-CORE-Q04-O1",
+        "text": "At noon"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S08-CORE-Q04-O2",
+        "text": "At seven in the evening"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S08-CORE-Q04-O3",
+        "text": "At seven in the morning"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      84,
+      85
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P088"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S09-CORE-Q01",
+    "step": "Step 9",
+    "step_number": 9,
+    "type": "single_choice",
+    "prompt": "When does Ethan call?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S09-CORE-Q01-O1",
+        "text": "Thursday"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S09-CORE-Q01-O2",
+        "text": "Saturday"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S09-CORE-Q01-O3",
+        "text": "Sunday"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      99,
+      100
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P103"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S09-CORE-Q02",
+    "step": "Step 9",
+    "step_number": 9,
+    "type": "single_choice",
+    "prompt": "What is the confirmed dinner time?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S09-CORE-Q02-O1",
+        "text": "8:00 p.m."
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S09-CORE-Q02-O2",
+        "text": "7:00 p.m."
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S09-CORE-Q02-O3",
+        "text": "8:30 p.m."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      99,
+      100
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P103"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S09-CORE-Q03",
+    "step": "Step 9",
+    "step_number": 9,
+    "type": "single_choice",
+    "prompt": "Where is the table?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S09-CORE-Q03-O1",
+        "text": "Beside the entrance"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S09-CORE-Q03-O2",
+        "text": "Upstairs"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S09-CORE-Q03-O3",
+        "text": "In the garden"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      99,
+      100
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P103"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S09-CORE-Q04",
+    "step": "Step 9",
+    "step_number": 9,
+    "type": "single_choice",
+    "prompt": "Who takes the reservation?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S09-CORE-Q04-O1",
+        "text": "Luiggi"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S09-CORE-Q04-O2",
+        "text": "Richard"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S09-CORE-Q04-O3",
+        "text": "Caleb"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      99,
+      100
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P103"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S11-CORE-Q01",
+    "step": "Step 11",
+    "step_number": 11,
+    "type": "single_choice",
+    "prompt": "When is the design deadline?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S11-CORE-Q01-O1",
+        "text": "Monday"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S11-CORE-Q01-O2",
+        "text": "Friday"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S11-CORE-Q01-O3",
+        "text": "Saturday"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      116,
+      117
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P121"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S11-CORE-Q02",
+    "step": "Step 11",
+    "step_number": 11,
+    "type": "single_choice",
+    "prompt": "Who gives Clarice advice?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S11-CORE-Q02-O1",
+        "text": "Charlene"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S11-CORE-Q02-O2",
+        "text": "Sara"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S11-CORE-Q02-O3",
+        "text": "Richard"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      116,
+      117
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P121"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S11-CORE-Q03",
+    "step": "Step 11",
+    "step_number": 11,
+    "type": "single_choice",
+    "prompt": "What should Clarice do first?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S11-CORE-Q03-O1",
+        "text": "Cancel the date"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S11-CORE-Q03-O2",
+        "text": "Buy a plane ticket"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S11-CORE-Q03-O3",
+        "text": "Finish the design"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      116,
+      117
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P121"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S11-CORE-Q04",
+    "step": "Step 11",
+    "step_number": 11,
+    "type": "single_choice",
+    "prompt": "What does Charlene suggest?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S11-CORE-Q04-O1",
+        "text": "Working without a break"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S11-CORE-Q04-O2",
+        "text": "Writing a short list"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S11-CORE-Q04-O3",
+        "text": "Ignoring the deadline"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      116,
+      117
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P121"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S12-CORE-Q01",
+    "step": "Step 12",
+    "step_number": 12,
+    "type": "single_choice",
+    "prompt": "Whose film list is it?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S12-CORE-Q01-O1",
+        "text": "Evan’s"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S12-CORE-Q01-O2",
+        "text": "Taylor’s"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S12-CORE-Q01-O3",
+        "text": "Sara’s"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      127,
+      128
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P132"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S12-CORE-Q02",
+    "step": "Step 12",
+    "step_number": 12,
+    "type": "single_choice",
+    "prompt": "Which type of film do they choose?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S12-CORE-Q02-O1",
+        "text": "A science-fiction film"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S12-CORE-Q02-O2",
+        "text": "A documentary"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S12-CORE-Q02-O3",
+        "text": "A comedy"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      127,
+      128
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P132"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S12-CORE-Q03",
+    "step": "Step 12",
+    "step_number": 12,
+    "type": "single_choice",
+    "prompt": "What kind of restaurant do they choose?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S12-CORE-Q03-O1",
+        "text": "Mexican"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S12-CORE-Q03-O2",
+        "text": "Japanese"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S12-CORE-Q03-O3",
+        "text": "Italian"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      127,
+      128
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P132"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S12-CORE-Q04",
+    "step": "Step 12",
+    "step_number": 12,
+    "type": "single_choice",
+    "prompt": "What is Evan’s favorite dish there?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S12-CORE-Q04-O1",
+        "text": "Sashimi"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S12-CORE-Q04-O2",
+        "text": "Ravioli"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S12-CORE-Q04-O3",
+        "text": "Pizza"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      127,
+      128
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P132"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S13-CORE-Q01",
+    "step": "Step 13",
+    "step_number": 13,
+    "type": "single_choice",
+    "prompt": "When do Clarice and Taylor meet?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S13-CORE-Q01-O1",
+        "text": "Saturday at 3 p.m."
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S13-CORE-Q01-O2",
+        "text": "Friday at 8 p.m."
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S13-CORE-Q01-O3",
+        "text": "Friday at 3 p.m."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      137,
+      138
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P142"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S13-CORE-Q02",
+    "step": "Step 13",
+    "step_number": 13,
+    "type": "single_choice",
+    "prompt": "When is the date?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S13-CORE-Q02-O1",
+        "text": "Sunday"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S13-CORE-Q02-O2",
+        "text": "Saturday"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S13-CORE-Q02-O3",
+        "text": "Friday"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      137,
+      138
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P142"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S13-CORE-Q03",
+    "step": "Step 13",
+    "step_number": 13,
+    "type": "single_choice",
+    "prompt": "What time will Ethan pick Clarice up?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S13-CORE-Q03-O1",
+        "text": "7:45 p.m."
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S13-CORE-Q03-O2",
+        "text": "8:30 p.m."
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S13-CORE-Q03-O3",
+        "text": "3:00 p.m."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      137,
+      138
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P142"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S13-CORE-Q04",
+    "step": "Step 13",
+    "step_number": 13,
+    "type": "single_choice",
+    "prompt": "What will Clarice look for?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S13-CORE-Q04-O1",
+        "text": "A suitcase"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S13-CORE-Q04-O2",
+        "text": "A wedding ring"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S13-CORE-Q04-O3",
+        "text": "A simple bag"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      137,
+      138
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P142"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S14-CORE-Q01",
+    "step": "Step 14",
+    "step_number": 14,
+    "type": "single_choice",
+    "prompt": "Where does Clarice go?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S14-CORE-Q01-O1",
+        "text": "Sara’s school"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S14-CORE-Q01-O2",
+        "text": "Caleb’s computer shop"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S14-CORE-Q01-O3",
+        "text": "Ethan’s hospital"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      147,
+      148
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P152"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S14-CORE-Q02",
+    "step": "Step 14",
+    "step_number": 14,
+    "type": "single_choice",
+    "prompt": "What is wrong with the laptop?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S14-CORE-Q02-O1",
+        "text": "It is slow."
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S14-CORE-Q02-O2",
+        "text": "It is missing."
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S14-CORE-Q02-O3",
+        "text": "It is wet."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      147,
+      148
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P152"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S14-CORE-Q03",
+    "step": "Step 14",
+    "step_number": 14,
+    "type": "single_choice",
+    "prompt": "What has Clarice backed up?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S14-CORE-Q03-O1",
+        "text": "Her tickets"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S14-CORE-Q03-O2",
+        "text": "Her invitations"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S14-CORE-Q03-O3",
+        "text": "Her designs"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      147,
+      148
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P152"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S14-CORE-Q04",
+    "step": "Step 14",
+    "step_number": 14,
+    "type": "single_choice",
+    "prompt": "Where is tomorrow’s dinner?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S14-CORE-Q04-O1",
+        "text": "The park"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S14-CORE-Q04-O2",
+        "text": "Al Dente"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S14-CORE-Q04-O3",
+        "text": "The hotel"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      147,
+      148
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-BEGINNER-V2-P152"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S05-JUMP-Q01",
+    "step": "Step 5",
+    "step_number": 5,
+    "type": "single_choice",
+    "prompt": "What does Ethan do?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S05-JUMP-Q01-O1",
+        "text": "He is an anesthesiologist."
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S05-JUMP-Q01-O2",
+        "text": "He is a chef."
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S05-JUMP-Q01-O3",
+        "text": "He is a financial analyst."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      9,
+      10
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-BEGINNER-V2-S01-CORE-Q03",
+    "page_ids": [
+      "LGS-BEGINNER-V2-P057"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S05-JUMP-Q02",
+    "step": "Step 5",
+    "step_number": 5,
+    "type": "single_choice",
+    "prompt": "How many books are in the bag?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S05-JUMP-Q02-O1",
+        "text": "Four"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S05-JUMP-Q02-O2",
+        "text": "Two"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S05-JUMP-Q02-O3",
+        "text": "One"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      21,
+      22
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-BEGINNER-V2-S02-CORE-Q04",
+    "page_ids": [
+      "LGS-BEGINNER-V2-P057"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S05-JUMP-Q03",
+    "step": "Step 5",
+    "step_number": 5,
+    "type": "single_choice",
+    "prompt": "Where do Clarice and Ethan meet?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S05-JUMP-Q03-O1",
+        "text": "At a grocery store"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S05-JUMP-Q03-O2",
+        "text": "At a hotel"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S05-JUMP-Q03-O3",
+        "text": "At a school"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      36,
+      37
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-BEGINNER-V2-S03-CORE-Q01",
+    "page_ids": [
+      "LGS-BEGINNER-V2-P057"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S05-JUMP-Q04",
+    "step": "Step 5",
+    "step_number": 5,
+    "type": "single_choice",
+    "prompt": "What is Ethan drinking?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S05-JUMP-Q04-O1",
+        "text": "Tea"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S05-JUMP-Q04-O2",
+        "text": "Coffee"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S05-JUMP-Q04-O3",
+        "text": "Juice"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      48,
+      49
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-BEGINNER-V2-S04-CORE-Q02",
+    "page_ids": [
+      "LGS-BEGINNER-V2-P057"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S10-JUMP-Q01",
+    "step": "Step 10",
+    "step_number": 10,
+    "type": "single_choice",
+    "prompt": "Where is the new plant?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S10-JUMP-Q01-O1",
+        "text": "Beside the gate"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S10-JUMP-Q01-O2",
+        "text": "In the playroom"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S10-JUMP-Q01-O3",
+        "text": "At the hospital"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      64,
+      65
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-BEGINNER-V2-S06-CORE-Q01",
+    "page_ids": [
+      "LGS-BEGINNER-V2-P109"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S10-JUMP-Q02",
+    "step": "Step 10",
+    "step_number": 10,
+    "type": "single_choice",
+    "prompt": "Which floor is her room on?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S10-JUMP-Q02-O1",
+        "text": "The third floor"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S10-JUMP-Q02-O2",
+        "text": "The second floor"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S10-JUMP-Q02-O3",
+        "text": "The first floor"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      73,
+      74
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-BEGINNER-V2-S07-CORE-Q02",
+    "page_ids": [
+      "LGS-BEGINNER-V2-P109"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S10-JUMP-Q03",
+    "step": "Step 10",
+    "step_number": 10,
+    "type": "single_choice",
+    "prompt": "Where was there a long line?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S10-JUMP-Q03-O1",
+        "text": "At the hotel desk"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S10-JUMP-Q03-O2",
+        "text": "At the bus stop"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S10-JUMP-Q03-O3",
+        "text": "At the restrooms"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      84,
+      85
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-BEGINNER-V2-S08-CORE-Q03",
+    "page_ids": [
+      "LGS-BEGINNER-V2-P109"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S10-JUMP-Q04",
+    "step": "Step 10",
+    "step_number": 10,
+    "type": "single_choice",
+    "prompt": "Who takes the reservation?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S10-JUMP-Q04-O1",
+        "text": "Luiggi"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S10-JUMP-Q04-O2",
+        "text": "Richard"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S10-JUMP-Q04-O3",
+        "text": "Caleb"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      99,
+      100
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-BEGINNER-V2-S09-CORE-Q04",
+    "page_ids": [
+      "LGS-BEGINNER-V2-P109"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S15-JUMP-Q01",
+    "step": "Step 15",
+    "step_number": 15,
+    "type": "single_choice",
+    "prompt": "Who is a fashion designer?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q01-O1",
+        "text": "Sara"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q01-O2",
+        "text": "Evan"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q01-O3",
+        "text": "Clarice"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      9,
+      10
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-BEGINNER-V2-S01-CORE-Q01",
+    "page_ids": [
+      "LGS-BEGINNER-V2-P160"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S15-JUMP-Q02",
+    "step": "Step 15",
+    "step_number": 15,
+    "type": "single_choice",
+    "prompt": "Who lives in Chicago?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q02-O1",
+        "text": "Denali’s father"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q02-O2",
+        "text": "Sara’s teacher"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q02-O3",
+        "text": "Ethan’s sister"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      21,
+      22
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-BEGINNER-V2-S02-CORE-Q02",
+    "page_ids": [
+      "LGS-BEGINNER-V2-P160"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S15-JUMP-Q03",
+    "step": "Step 15",
+    "step_number": 15,
+    "type": "single_choice",
+    "prompt": "Who returns the keys?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q03-O1",
+        "text": "Caleb"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q03-O2",
+        "text": "Ethan"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q03-O3",
+        "text": "Evan"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      36,
+      37
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-BEGINNER-V2-S03-CORE-Q03",
+    "page_ids": [
+      "LGS-BEGINNER-V2-P160"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S15-JUMP-Q04",
+    "step": "Step 15",
+    "step_number": 15,
+    "type": "single_choice",
+    "prompt": "What do they exchange?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q04-O1",
+        "text": "Plane tickets"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q04-O2",
+        "text": "Wedding invitations"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q04-O3",
+        "text": "Phone numbers"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      48,
+      49
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-BEGINNER-V2-S04-CORE-Q04",
+    "page_ids": [
+      "LGS-BEGINNER-V2-P160"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S15-JUMP-Q05",
+    "step": "Step 15",
+    "step_number": 15,
+    "type": "single_choice",
+    "prompt": "What does Sara take to the playroom?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q05-O1",
+        "text": "Plants"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q05-O2",
+        "text": "Tickets"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q05-O3",
+        "text": "Cushions"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      64,
+      65
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-BEGINNER-V2-S06-CORE-Q02",
+    "page_ids": [
+      "LGS-BEGINNER-V2-P161"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S15-JUMP-Q06",
+    "step": "Step 15",
+    "step_number": 15,
+    "type": "single_choice",
+    "prompt": "What is opposite her room?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q06-O1",
+        "text": "The elevator"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q06-O2",
+        "text": "The restaurant"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q06-O3",
+        "text": "The garden"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      73,
+      74
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-BEGINNER-V2-S07-CORE-Q03",
+    "page_ids": [
+      "LGS-BEGINNER-V2-P161"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S15-JUMP-Q07",
+    "step": "Step 15",
+    "step_number": 15,
+    "type": "single_choice",
+    "prompt": "When did they leave?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q07-O1",
+        "text": "At noon"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q07-O2",
+        "text": "At seven in the evening"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q07-O3",
+        "text": "At seven in the morning"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      84,
+      85
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-BEGINNER-V2-S08-CORE-Q04",
+    "page_ids": [
+      "LGS-BEGINNER-V2-P161"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S15-JUMP-Q08",
+    "step": "Step 15",
+    "step_number": 15,
+    "type": "single_choice",
+    "prompt": "When does Ethan call?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q08-O1",
+        "text": "Thursday"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q08-O2",
+        "text": "Saturday"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q08-O3",
+        "text": "Sunday"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      99,
+      100
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-BEGINNER-V2-S09-CORE-Q01",
+    "page_ids": [
+      "LGS-BEGINNER-V2-P161"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S15-JUMP-Q09",
+    "step": "Step 15",
+    "step_number": 15,
+    "type": "single_choice",
+    "prompt": "What should Clarice do first?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q09-O1",
+        "text": "Cancel the date"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q09-O2",
+        "text": "Buy a plane ticket"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q09-O3",
+        "text": "Finish the design"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      116,
+      117
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-BEGINNER-V2-S11-CORE-Q03",
+    "page_ids": [
+      "LGS-BEGINNER-V2-P162"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S15-JUMP-Q10",
+    "step": "Step 15",
+    "step_number": 15,
+    "type": "single_choice",
+    "prompt": "What is Evan’s favorite dish there?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q10-O1",
+        "text": "Sashimi"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q10-O2",
+        "text": "Ravioli"
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q10-O3",
+        "text": "Pizza"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      127,
+      128
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-BEGINNER-V2-S12-CORE-Q04",
+    "page_ids": [
+      "LGS-BEGINNER-V2-P162"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S15-JUMP-Q11",
+    "step": "Step 15",
+    "step_number": 15,
+    "type": "single_choice",
+    "prompt": "When do Clarice and Taylor meet?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q11-O1",
+        "text": "Saturday at 3 p.m."
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q11-O2",
+        "text": "Friday at 8 p.m."
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q11-O3",
+        "text": "Friday at 3 p.m."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      137,
+      138
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-BEGINNER-V2-S13-CORE-Q01",
+    "page_ids": [
+      "LGS-BEGINNER-V2-P162"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S15-JUMP-Q12",
+    "step": "Step 15",
+    "step_number": 15,
+    "type": "single_choice",
+    "prompt": "What is wrong with the laptop?",
+    "options": [
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q12-O1",
+        "text": "It is slow."
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q12-O2",
+        "text": "It is missing."
+      },
+      {
+        "id": "LGS-BEGINNER-V2-S15-JUMP-Q12-O3",
+        "text": "It is wet."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      147,
+      148
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-BEGINNER-V2-S14-CORE-Q02",
+    "page_ids": [
+      "LGS-BEGINNER-V2-P162"
+    ]
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S01-SOURCE-P008",
+    "step": "Step 1",
+    "step_number": 1,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Introduce two characters. Replace their names with subject pronouns, then write a sentence using an object pronoun.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      8
+    ],
+    "page_id": "LGS-BEGINNER-V2-P010",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S01-DETECTIVE-P009",
+    "step": "Step 1",
+    "step_number": 1,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      9
+    ],
+    "page_id": "LGS-BEGINNER-V2-P011",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S01-SOURCE-P011",
+    "step": "Step 1",
+    "step_number": 1,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Introduce two characters. Replace their names with subject pronouns, then write a sentence using an object pronoun.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      11
+    ],
+    "page_id": "LGS-BEGINNER-V2-P013",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S01-SOURCE-P012",
+    "step": "Step 1",
+    "step_number": 1,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Introduce two characters. Replace their names with subject pronouns, then write a sentence using an object pronoun.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      12
+    ],
+    "page_id": "LGS-BEGINNER-V2-P014",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S01-REVISED-P013",
+    "step": "Step 1",
+    "step_number": 1,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Introduce two characters. Replace their names with subject pronouns, then write a sentence using an object pronoun.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      13
+    ],
+    "page_id": "LGS-BEGINNER-V2-P015",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S01-SOURCE-P014",
+    "step": "Step 1",
+    "step_number": 1,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Introduce two characters. Replace their names with subject pronouns, then write a sentence using an object pronoun.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      14
+    ],
+    "page_id": "LGS-BEGINNER-V2-P016",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S01-SOURCE-P015",
+    "step": "Step 1",
+    "step_number": 1,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Introduce two characters. Replace their names with subject pronouns, then write a sentence using an object pronoun.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      15
+    ],
+    "page_id": "LGS-BEGINNER-V2-P017",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S01-SOURCE-P016",
+    "step": "Step 1",
+    "step_number": 1,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Introduce two characters. Replace their names with subject pronouns, then write a sentence using an object pronoun.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      16
+    ],
+    "page_id": "LGS-BEGINNER-V2-P018",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S01-SOURCE-P017",
+    "step": "Step 1",
+    "step_number": 1,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Introduce two characters. Replace their names with subject pronouns, then write a sentence using an object pronoun.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      17
+    ],
+    "page_id": "LGS-BEGINNER-V2-P019",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S02-SOURCE-P020",
+    "step": "Step 2",
+    "step_number": 2,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe Denali’s bag with there is and there are. Include one singular and two plural nouns.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      20
+    ],
+    "page_id": "LGS-BEGINNER-V2-P022",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S02-DETECTIVE-P021",
+    "step": "Step 2",
+    "step_number": 2,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      21
+    ],
+    "page_id": "LGS-BEGINNER-V2-P023",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S02-SOURCE-P023",
+    "step": "Step 2",
+    "step_number": 2,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe Denali’s bag with there is and there are. Include one singular and two plural nouns.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      23
+    ],
+    "page_id": "LGS-BEGINNER-V2-P025",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S02-SOURCE-P024",
+    "step": "Step 2",
+    "step_number": 2,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe Denali’s bag with there is and there are. Include one singular and two plural nouns.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      24
+    ],
+    "page_id": "LGS-BEGINNER-V2-P026",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S02-SOURCE-P025",
+    "step": "Step 2",
+    "step_number": 2,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe Denali’s bag with there is and there are. Include one singular and two plural nouns.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      25
+    ],
+    "page_id": "LGS-BEGINNER-V2-P027",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S02-SOURCE-P026",
+    "step": "Step 2",
+    "step_number": 2,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe Denali’s bag with there is and there are. Include one singular and two plural nouns.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      26
+    ],
+    "page_id": "LGS-BEGINNER-V2-P028",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S02-SOURCE-P027",
+    "step": "Step 2",
+    "step_number": 2,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe Denali’s bag with there is and there are. Include one singular and two plural nouns.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      27
+    ],
+    "page_id": "LGS-BEGINNER-V2-P029",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S02-SOURCE-P028",
+    "step": "Step 2",
+    "step_number": 2,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe Denali’s bag with there is and there are. Include one singular and two plural nouns.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      28
+    ],
+    "page_id": "LGS-BEGINNER-V2-P030",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S02-SOURCE-P029",
+    "step": "Step 2",
+    "step_number": 2,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe Denali’s bag with there is and there are. Include one singular and two plural nouns.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      29
+    ],
+    "page_id": "LGS-BEGINNER-V2-P031",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S02-SOURCE-P030",
+    "step": "Step 2",
+    "step_number": 2,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe Denali’s bag with there is and there are. Include one singular and two plural nouns.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      30
+    ],
+    "page_id": "LGS-BEGINNER-V2-P032",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S02-SOURCE-P031",
+    "step": "Step 2",
+    "step_number": 2,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe Denali’s bag with there is and there are. Include one singular and two plural nouns.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      31
+    ],
+    "page_id": "LGS-BEGINNER-V2-P033",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S03-SOURCE-P034",
+    "step": "Step 3",
+    "step_number": 3,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write three questions about the characters’ routines. Add one polite instruction beginning with Please.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      34
+    ],
+    "page_id": "LGS-BEGINNER-V2-P036",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S03-REVISED-P035",
+    "step": "Step 3",
+    "step_number": 3,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Write three questions about the characters’ routines. Add one polite instruction beginning with Please.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      35
+    ],
+    "page_id": "LGS-BEGINNER-V2-P037",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S03-DETECTIVE-P036",
+    "step": "Step 3",
+    "step_number": 3,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      36
+    ],
+    "page_id": "LGS-BEGINNER-V2-P038",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S03-SOURCE-P038",
+    "step": "Step 3",
+    "step_number": 3,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write three questions about the characters’ routines. Add one polite instruction beginning with Please.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      38
+    ],
+    "page_id": "LGS-BEGINNER-V2-P040",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S03-SOURCE-P039",
+    "step": "Step 3",
+    "step_number": 3,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write three questions about the characters’ routines. Add one polite instruction beginning with Please.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      39
+    ],
+    "page_id": "LGS-BEGINNER-V2-P041",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S03-SOURCE-P040",
+    "step": "Step 3",
+    "step_number": 3,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write three questions about the characters’ routines. Add one polite instruction beginning with Please.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      40
+    ],
+    "page_id": "LGS-BEGINNER-V2-P042",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S03-SOURCE-P041",
+    "step": "Step 3",
+    "step_number": 3,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write three questions about the characters’ routines. Add one polite instruction beginning with Please.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      41
+    ],
+    "page_id": "LGS-BEGINNER-V2-P043",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S03-SOURCE-P042",
+    "step": "Step 3",
+    "step_number": 3,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write three questions about the characters’ routines. Add one polite instruction beginning with Please.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      42
+    ],
+    "page_id": "LGS-BEGINNER-V2-P044",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S03-SOURCE-P043",
+    "step": "Step 3",
+    "step_number": 3,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write three questions about the characters’ routines. Add one polite instruction beginning with Please.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      43
+    ],
+    "page_id": "LGS-BEGINNER-V2-P045",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S03-SOURCE-P044",
+    "step": "Step 3",
+    "step_number": 3,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write three questions about the characters’ routines. Add one polite instruction beginning with Please.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      44
+    ],
+    "page_id": "LGS-BEGINNER-V2-P046",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S04-SOURCE-P047",
+    "step": "Step 4",
+    "step_number": 4,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe what Clarice and Ethan are doing. Write two affirmative sentences, one negative sentence and one question.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      47
+    ],
+    "page_id": "LGS-BEGINNER-V2-P049",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S04-DETECTIVE-P048",
+    "step": "Step 4",
+    "step_number": 4,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      48
+    ],
+    "page_id": "LGS-BEGINNER-V2-P050",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S04-SOURCE-P050",
+    "step": "Step 4",
+    "step_number": 4,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe what Clarice and Ethan are doing. Write two affirmative sentences, one negative sentence and one question.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      50
+    ],
+    "page_id": "LGS-BEGINNER-V2-P052",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S04-SOURCE-P051",
+    "step": "Step 4",
+    "step_number": 4,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe what Clarice and Ethan are doing. Write two affirmative sentences, one negative sentence and one question.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      51
+    ],
+    "page_id": "LGS-BEGINNER-V2-P053",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S04-SOURCE-P052",
+    "step": "Step 4",
+    "step_number": 4,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe what Clarice and Ethan are doing. Write two affirmative sentences, one negative sentence and one question.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      52
+    ],
+    "page_id": "LGS-BEGINNER-V2-P054",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S04-SOURCE-P053",
+    "step": "Step 4",
+    "step_number": 4,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe what Clarice and Ethan are doing. Write two affirmative sentences, one negative sentence and one question.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      53
+    ],
+    "page_id": "LGS-BEGINNER-V2-P055",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S05-SOURCE-P055",
+    "step": "Step 5",
+    "step_number": 5,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe what Clarice and Ethan are doing. Write two affirmative sentences, one negative sentence and one question.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      55
+    ],
+    "page_id": "LGS-BEGINNER-V2-P058",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S05-SOURCE-P056",
+    "step": "Step 5",
+    "step_number": 5,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe what Clarice and Ethan are doing. Write two affirmative sentences, one negative sentence and one question.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      56
+    ],
+    "page_id": "LGS-BEGINNER-V2-P059",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S05-SOURCE-P057",
+    "step": "Step 5",
+    "step_number": 5,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Describe what Clarice and Ethan are doing. Write two affirmative sentences, one negative sentence and one question.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      57
+    ],
+    "page_id": "LGS-BEGINNER-V2-P060",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S05-SOURCE-P058",
+    "step": "Step 5",
+    "step_number": 5,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe what Clarice and Ethan are doing. Write two affirmative sentences, one negative sentence and one question.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      58
+    ],
+    "page_id": "LGS-BEGINNER-V2-P061",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S05-SOURCE-P059",
+    "step": "Step 5",
+    "step_number": 5,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe what Clarice and Ethan are doing. Write two affirmative sentences, one negative sentence and one question.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      59
+    ],
+    "page_id": "LGS-BEGINNER-V2-P062",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S05-SOURCE-P060",
+    "step": "Step 5",
+    "step_number": 5,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe what Clarice and Ethan are doing. Write two affirmative sentences, one negative sentence and one question.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      60
+    ],
+    "page_id": "LGS-BEGINNER-V2-P063",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S06-SOURCE-P063",
+    "step": "Step 6",
+    "step_number": 6,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe the family’s home using a, an, the, this, that, these and those.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      63
+    ],
+    "page_id": "LGS-BEGINNER-V2-P066",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S06-DETECTIVE-P064",
+    "step": "Step 6",
+    "step_number": 6,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      64
+    ],
+    "page_id": "LGS-BEGINNER-V2-P067",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S06-SOURCE-P066",
+    "step": "Step 6",
+    "step_number": 6,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe the family’s home using a, an, the, this, that, these and those.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      66
+    ],
+    "page_id": "LGS-BEGINNER-V2-P069",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S06-SOURCE-P067",
+    "step": "Step 6",
+    "step_number": 6,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe the family’s home using a, an, the, this, that, these and those.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      67
+    ],
+    "page_id": "LGS-BEGINNER-V2-P070",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S06-SOURCE-P068",
+    "step": "Step 6",
+    "step_number": 6,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe the family’s home using a, an, the, this, that, these and those.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      68
+    ],
+    "page_id": "LGS-BEGINNER-V2-P071",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S06-SOURCE-P069",
+    "step": "Step 6",
+    "step_number": 6,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe the family’s home using a, an, the, this, that, these and those.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      69
+    ],
+    "page_id": "LGS-BEGINNER-V2-P072",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S07-SOURCE-P072",
+    "step": "Step 7",
+    "step_number": 7,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Draw a simple hotel plan. Write four sentences about where the room, elevator, restaurant and lobby are.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      72
+    ],
+    "page_id": "LGS-BEGINNER-V2-P075",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S07-DETECTIVE-P073",
+    "step": "Step 7",
+    "step_number": 7,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      73
+    ],
+    "page_id": "LGS-BEGINNER-V2-P076",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S07-SOURCE-P075",
+    "step": "Step 7",
+    "step_number": 7,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Draw a simple hotel plan. Write four sentences about where the room, elevator, restaurant and lobby are.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      75
+    ],
+    "page_id": "LGS-BEGINNER-V2-P078",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S07-SOURCE-P076",
+    "step": "Step 7",
+    "step_number": 7,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Draw a simple hotel plan. Write four sentences about where the room, elevator, restaurant and lobby are.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      76
+    ],
+    "page_id": "LGS-BEGINNER-V2-P079",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S07-SOURCE-P077",
+    "step": "Step 7",
+    "step_number": 7,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Draw a simple hotel plan. Write four sentences about where the room, elevator, restaurant and lobby are.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      77
+    ],
+    "page_id": "LGS-BEGINNER-V2-P080",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S07-SOURCE-P078",
+    "step": "Step 7",
+    "step_number": 7,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Draw a simple hotel plan. Write four sentences about where the room, elevator, restaurant and lobby are.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      78
+    ],
+    "page_id": "LGS-BEGINNER-V2-P081",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S07-SOURCE-P079",
+    "step": "Step 7",
+    "step_number": 7,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Draw a simple hotel plan. Write four sentences about where the room, elevator, restaurant and lobby are.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      79
+    ],
+    "page_id": "LGS-BEGINNER-V2-P082",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S08-SOURCE-P082",
+    "step": "Step 8",
+    "step_number": 8,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Retell the trip in five sentences. Use at least two irregular past forms and one negative sentence.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      82
+    ],
+    "page_id": "LGS-BEGINNER-V2-P085",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S08-SOURCE-P083",
+    "step": "Step 8",
+    "step_number": 8,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Retell the trip in five sentences. Use at least two irregular past forms and one negative sentence.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      83
+    ],
+    "page_id": "LGS-BEGINNER-V2-P086",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S08-DETECTIVE-P084",
+    "step": "Step 8",
+    "step_number": 8,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      84
+    ],
+    "page_id": "LGS-BEGINNER-V2-P087",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S08-SOURCE-P086",
+    "step": "Step 8",
+    "step_number": 8,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Retell the trip in five sentences. Use at least two irregular past forms and one negative sentence.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      86
+    ],
+    "page_id": "LGS-BEGINNER-V2-P089",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S08-SOURCE-P087",
+    "step": "Step 8",
+    "step_number": 8,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Retell the trip in five sentences. Use at least two irregular past forms and one negative sentence.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      87
+    ],
+    "page_id": "LGS-BEGINNER-V2-P090",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S08-SOURCE-P088",
+    "step": "Step 8",
+    "step_number": 8,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Retell the trip in five sentences. Use at least two irregular past forms and one negative sentence.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      88
+    ],
+    "page_id": "LGS-BEGINNER-V2-P091",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S08-SOURCE-P089",
+    "step": "Step 8",
+    "step_number": 8,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Retell the trip in five sentences. Use at least two irregular past forms and one negative sentence.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      89
+    ],
+    "page_id": "LGS-BEGINNER-V2-P092",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S08-SOURCE-P090",
+    "step": "Step 8",
+    "step_number": 8,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Retell the trip in five sentences. Use at least two irregular past forms and one negative sentence.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      90
+    ],
+    "page_id": "LGS-BEGINNER-V2-P093",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S08-SOURCE-P091",
+    "step": "Step 8",
+    "step_number": 8,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Retell the trip in five sentences. Use at least two irregular past forms and one negative sentence.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      91
+    ],
+    "page_id": "LGS-BEGINNER-V2-P094",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S08-SOURCE-P092",
+    "step": "Step 8",
+    "step_number": 8,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Retell the trip in five sentences. Use at least two irregular past forms and one negative sentence.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      92
+    ],
+    "page_id": "LGS-BEGINNER-V2-P095",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S08-SOURCE-P093",
+    "step": "Step 8",
+    "step_number": 8,
+    "type": "open_response",
+    "prompt": "Complete all reading and language tasks on this page: Read and review: the park trip. Taylor, Evan and Sara visited a park on Sunday. They waited at the entrance and walked to the lake. The water was too cold, so they did not swim. Later, they saw a long line for the restrooms. They left at seven in the evening. Taylor suggested arriving earlier next time. 1. The family went to a park on Sunday.\n2. They swam in warm water.\n3. There was a long line for the restrooms.\n4. They left at seven in the morning.\n5. Taylor suggested arriving earlier next time.\n6. They went to a museum. Find three regular and three irregular past forms in the passage. Write the base form of each verb. Then write two negative sentences about what the family did not do.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      93
+    ],
+    "page_id": "LGS-BEGINNER-V2-P096",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S08-SOURCE-P094",
+    "step": "Step 8",
+    "step_number": 8,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Retell the trip in five sentences. Use at least two irregular past forms and one negative sentence.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      94
+    ],
+    "page_id": "LGS-BEGINNER-V2-P097",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S09-LAB-P097",
+    "step": "Step 9",
+    "step_number": 9,
+    "type": "open_response",
+    "prompt": "Retell this episode in your own words. Keep the people, events and time consistent with the story.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      97
+    ],
+    "page_id": "LGS-BEGINNER-V2-P100",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S09-SOURCE-P098",
+    "step": "Step 9",
+    "step_number": 9,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write two sentences combining past continuous and past simple about Ethan’s phone call.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      98
+    ],
+    "page_id": "LGS-BEGINNER-V2-P101",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S09-DETECTIVE-P099",
+    "step": "Step 9",
+    "step_number": 9,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      99
+    ],
+    "page_id": "LGS-BEGINNER-V2-P102",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S09-SOURCE-P101",
+    "step": "Step 9",
+    "step_number": 9,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write two sentences combining past continuous and past simple about Ethan’s phone call.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      101
+    ],
+    "page_id": "LGS-BEGINNER-V2-P104",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S09-SOURCE-P102",
+    "step": "Step 9",
+    "step_number": 9,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write two sentences combining past continuous and past simple about Ethan’s phone call.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      102
+    ],
+    "page_id": "LGS-BEGINNER-V2-P105",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S09-SOURCE-P103",
+    "step": "Step 9",
+    "step_number": 9,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write two sentences combining past continuous and past simple about Ethan’s phone call.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      103
+    ],
+    "page_id": "LGS-BEGINNER-V2-P106",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S09-SOURCE-P104",
+    "step": "Step 9",
+    "step_number": 9,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write two sentences combining past continuous and past simple about Ethan’s phone call.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      104
+    ],
+    "page_id": "LGS-BEGINNER-V2-P107",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S10-SOURCE-P106",
+    "step": "Step 10",
+    "step_number": 10,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write two sentences combining past continuous and past simple about Ethan’s phone call.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      106
+    ],
+    "page_id": "LGS-BEGINNER-V2-P110",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S10-SOURCE-P107",
+    "step": "Step 10",
+    "step_number": 10,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write two sentences combining past continuous and past simple about Ethan’s phone call.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      107
+    ],
+    "page_id": "LGS-BEGINNER-V2-P111",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S10-SOURCE-P108",
+    "step": "Step 10",
+    "step_number": 10,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write two sentences combining past continuous and past simple about Ethan’s phone call.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      108
+    ],
+    "page_id": "LGS-BEGINNER-V2-P112",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S10-SOURCE-P109",
+    "step": "Step 10",
+    "step_number": 10,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write two sentences combining past continuous and past simple about Ethan’s phone call.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      109
+    ],
+    "page_id": "LGS-BEGINNER-V2-P113",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S10-SOURCE-P110",
+    "step": "Step 10",
+    "step_number": 10,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write two sentences combining past continuous and past simple about Ethan’s phone call.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      110
+    ],
+    "page_id": "LGS-BEGINNER-V2-P114",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S10-SOURCE-P111",
+    "step": "Step 10",
+    "step_number": 10,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write two sentences combining past continuous and past simple about Ethan’s phone call.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      111
+    ],
+    "page_id": "LGS-BEGINNER-V2-P115",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S10-SOURCE-P112",
+    "step": "Step 10",
+    "step_number": 10,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write two sentences combining past continuous and past simple about Ethan’s phone call.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      112
+    ],
+    "page_id": "LGS-BEGINNER-V2-P116",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S11-SOURCE-P115",
+    "step": "Step 11",
+    "step_number": 11,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Ask Clarice one WH question, one polite indirect question and one question tag.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      115
+    ],
+    "page_id": "LGS-BEGINNER-V2-P119",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S11-DETECTIVE-P116",
+    "step": "Step 11",
+    "step_number": 11,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      116
+    ],
+    "page_id": "LGS-BEGINNER-V2-P120",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S11-SOURCE-P118",
+    "step": "Step 11",
+    "step_number": 11,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Ask Clarice one WH question, one polite indirect question and one question tag.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      118
+    ],
+    "page_id": "LGS-BEGINNER-V2-P122",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S11-SOURCE-P119",
+    "step": "Step 11",
+    "step_number": 11,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Ask Clarice one WH question, one polite indirect question and one question tag.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      119
+    ],
+    "page_id": "LGS-BEGINNER-V2-P123",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S11-SOURCE-P120",
+    "step": "Step 11",
+    "step_number": 11,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Ask Clarice one WH question, one polite indirect question and one question tag.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      120
+    ],
+    "page_id": "LGS-BEGINNER-V2-P124",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S11-SOURCE-P121",
+    "step": "Step 11",
+    "step_number": 11,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Ask Clarice one WH question, one polite indirect question and one question tag.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      121
+    ],
+    "page_id": "LGS-BEGINNER-V2-P125",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S11-SOURCE-P122",
+    "step": "Step 11",
+    "step_number": 11,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Ask Clarice one WH question, one polite indirect question and one question tag.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      122
+    ],
+    "page_id": "LGS-BEGINNER-V2-P126",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S11-SOURCE-P123",
+    "step": "Step 11",
+    "step_number": 11,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Ask Clarice one WH question, one polite indirect question and one question tag.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      123
+    ],
+    "page_id": "LGS-BEGINNER-V2-P127",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S12-SOURCE-P126",
+    "step": "Step 12",
+    "step_number": 12,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Describe three possessions belonging to the characters. Use a possessive adjective, a possessive pronoun and apostrophe s.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      126
+    ],
+    "page_id": "LGS-BEGINNER-V2-P130",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S12-DETECTIVE-P127",
+    "step": "Step 12",
+    "step_number": 12,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      127
+    ],
+    "page_id": "LGS-BEGINNER-V2-P131",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S12-SOURCE-P129",
+    "step": "Step 12",
+    "step_number": 12,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe three possessions belonging to the characters. Use a possessive adjective, a possessive pronoun and apostrophe s.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      129
+    ],
+    "page_id": "LGS-BEGINNER-V2-P133",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S12-SOURCE-P130",
+    "step": "Step 12",
+    "step_number": 12,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Describe three possessions belonging to the characters. Use a possessive adjective, a possessive pronoun and apostrophe s.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      130
+    ],
+    "page_id": "LGS-BEGINNER-V2-P134",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S12-REVISED-P131",
+    "step": "Step 12",
+    "step_number": 12,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Describe three possessions belonging to the characters. Use a possessive adjective, a possessive pronoun and apostrophe s.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      131
+    ],
+    "page_id": "LGS-BEGINNER-V2-P135",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S12-SOURCE-P132",
+    "step": "Step 12",
+    "step_number": 12,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe three possessions belonging to the characters. Use a possessive adjective, a possessive pronoun and apostrophe s.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      132
+    ],
+    "page_id": "LGS-BEGINNER-V2-P136",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S13-LAB-P135",
+    "step": "Step 13",
+    "step_number": 13,
+    "type": "open_response",
+    "prompt": "Make three offers or promises to help Clarice. Use will and write one question with Will you...?",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      135
+    ],
+    "page_id": "LGS-BEGINNER-V2-P139",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S13-SOURCE-P136",
+    "step": "Step 13",
+    "step_number": 13,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Make three offers or promises to help Clarice. Use will and write one question with Will you...?",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      136
+    ],
+    "page_id": "LGS-BEGINNER-V2-P140",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S13-DETECTIVE-P137",
+    "step": "Step 13",
+    "step_number": 13,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      137
+    ],
+    "page_id": "LGS-BEGINNER-V2-P141",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S13-REVISED-P139",
+    "step": "Step 13",
+    "step_number": 13,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Make three offers or promises to help Clarice. Use will and write one question with Will you...?",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      139
+    ],
+    "page_id": "LGS-BEGINNER-V2-P143",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S13-SOURCE-P140",
+    "step": "Step 13",
+    "step_number": 13,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Make three offers or promises to help Clarice. Use will and write one question with Will you...?",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      140
+    ],
+    "page_id": "LGS-BEGINNER-V2-P144",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S13-SOURCE-P141",
+    "step": "Step 13",
+    "step_number": 13,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Make three offers or promises to help Clarice. Use will and write one question with Will you...?",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      141
+    ],
+    "page_id": "LGS-BEGINNER-V2-P145",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S13-SOURCE-P142",
+    "step": "Step 13",
+    "step_number": 13,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Make three offers or promises to help Clarice. Use will and write one question with Will you...?",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      142
+    ],
+    "page_id": "LGS-BEGINNER-V2-P146",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S14-LAB-P145",
+    "step": "Step 14",
+    "step_number": 14,
+    "type": "open_response",
+    "prompt": "Retell this episode in your own words. Keep the people, events and time consistent with the story.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      145
+    ],
+    "page_id": "LGS-BEGINNER-V2-P149",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S14-SOURCE-P146",
+    "step": "Step 14",
+    "step_number": 14,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Write Clarice’s and Caleb’s plans using be going to. Explain the difference between a plan and a spontaneous offer.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      146
+    ],
+    "page_id": "LGS-BEGINNER-V2-P150",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S14-DETECTIVE-P147",
+    "step": "Step 14",
+    "step_number": 14,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      147
+    ],
+    "page_id": "LGS-BEGINNER-V2-P151",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S14-SOURCE-P149",
+    "step": "Step 14",
+    "step_number": 14,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Write Clarice’s and Caleb’s plans using be going to. Explain the difference between a plan and a spontaneous offer.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      149
+    ],
+    "page_id": "LGS-BEGINNER-V2-P153",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S14-REVISED-P150",
+    "step": "Step 14",
+    "step_number": 14,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Write Clarice’s and Caleb’s plans using be going to. Explain the difference between a plan and a spontaneous offer.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      150
+    ],
+    "page_id": "LGS-BEGINNER-V2-P154",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S14-REVISED-P151",
+    "step": "Step 14",
+    "step_number": 14,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Write Clarice’s and Caleb’s plans using be going to. Explain the difference between a plan and a spontaneous offer.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      151
+    ],
+    "page_id": "LGS-BEGINNER-V2-P155",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S14-SOURCE-P152",
+    "step": "Step 14",
+    "step_number": 14,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write Clarice’s and Caleb’s plans using be going to. Explain the difference between a plan and a spontaneous offer.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      152
+    ],
+    "page_id": "LGS-BEGINNER-V2-P156",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S14-SOURCE-P153",
+    "step": "Step 14",
+    "step_number": 14,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write Clarice’s and Caleb’s plans using be going to. Explain the difference between a plan and a spontaneous offer.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      153
+    ],
+    "page_id": "LGS-BEGINNER-V2-P157",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S14-SOURCE-P154",
+    "step": "Step 14",
+    "step_number": 14,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write Clarice’s and Caleb’s plans using be going to. Explain the difference between a plan and a spontaneous offer.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      154
+    ],
+    "page_id": "LGS-BEGINNER-V2-P158",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S15-SOURCE-P156",
+    "step": "Step 15",
+    "step_number": 15,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write Clarice’s and Caleb’s plans using be going to. Explain the difference between a plan and a spontaneous offer.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      156
+    ],
+    "page_id": "LGS-BEGINNER-V2-P163",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S15-SOURCE-P157",
+    "step": "Step 15",
+    "step_number": 15,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write Clarice’s and Caleb’s plans using be going to. Explain the difference between a plan and a spontaneous offer.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      157
+    ],
+    "page_id": "LGS-BEGINNER-V2-P164",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S15-SOURCE-P158",
+    "step": "Step 15",
+    "step_number": 15,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write Clarice’s and Caleb’s plans using be going to. Explain the difference between a plan and a spontaneous offer.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      158
+    ],
+    "page_id": "LGS-BEGINNER-V2-P165",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S15-SOURCE-P159",
+    "step": "Step 15",
+    "step_number": 15,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write Clarice’s and Caleb’s plans using be going to. Explain the difference between a plan and a spontaneous offer.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      159
+    ],
+    "page_id": "LGS-BEGINNER-V2-P166",
+    "version": 2
+  },
+  {
+    "id": "LGS-BEGINNER-V2-S15-SOURCE-P160",
+    "step": "Step 15",
+    "step_number": 15,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write Clarice’s and Caleb’s plans using be going to. Explain the difference between a plan and a spontaneous offer.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      160
+    ],
+    "page_id": "LGS-BEGINNER-V2-P167",
+    "version": 2
+  }
+]

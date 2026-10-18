@@ -1,0 +1,3863 @@
+[
+  {
+    "id": "LGS-PRACTICAL-V2-S16-CORE-Q01",
+    "step": "Step 16",
+    "step_number": 16,
+    "type": "single_choice",
+    "prompt": "Where are Denali and Maria going?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S16-CORE-Q01-O1",
+        "text": "To the airport"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S16-CORE-Q01-O2",
+        "text": "To a wedding"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S16-CORE-Q01-O3",
+        "text": "To a downtown bookstore"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      10,
+      11
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P012"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S16-CORE-Q02",
+    "step": "Step 16",
+    "step_number": 16,
+    "type": "single_choice",
+    "prompt": "Who is driving?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S16-CORE-Q02-O1",
+        "text": "Caleb"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S16-CORE-Q02-O2",
+        "text": "Richard"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S16-CORE-Q02-O3",
+        "text": "Evan"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      10,
+      11
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P012"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S16-CORE-Q03",
+    "step": "Step 16",
+    "step_number": 16,
+    "type": "single_choice",
+    "prompt": "Where did Richard grow up?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S16-CORE-Q03-O1",
+        "text": "Mexico City"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S16-CORE-Q03-O2",
+        "text": "Chicago"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S16-CORE-Q03-O3",
+        "text": "Omaha"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      10,
+      11
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P012"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S16-CORE-Q04",
+    "step": "Step 16",
+    "step_number": 16,
+    "type": "single_choice",
+    "prompt": "Who taught Richard to drive?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S16-CORE-Q04-O1",
+        "text": "His sister"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S16-CORE-Q04-O2",
+        "text": "Maria"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S16-CORE-Q04-O3",
+        "text": "His grandfather Mateo"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      10,
+      11
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P012"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S17-CORE-Q01",
+    "step": "Step 17",
+    "step_number": 17,
+    "type": "single_choice",
+    "prompt": "What did the friends buy?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S17-CORE-Q01-O1",
+        "text": "Shoes"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S17-CORE-Q01-O2",
+        "text": "Books"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S17-CORE-Q01-O3",
+        "text": "Flowers"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      19,
+      20
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P021"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S17-CORE-Q02",
+    "step": "Step 17",
+    "step_number": 17,
+    "type": "single_choice",
+    "prompt": "How much is the bus for both?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S17-CORE-Q02-O1",
+        "text": "Seven dollars"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S17-CORE-Q02-O2",
+        "text": "Twenty dollars"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S17-CORE-Q02-O3",
+        "text": "Twenty-three dollars"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      19,
+      20
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P021"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S17-CORE-Q03",
+    "step": "Step 17",
+    "step_number": 17,
+    "type": "single_choice",
+    "prompt": "Which transport do they choose?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S17-CORE-Q03-O1",
+        "text": "A taxi"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S17-CORE-Q03-O2",
+        "text": "A train"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S17-CORE-Q03-O3",
+        "text": "The bus"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      19,
+      20
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P021"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S17-CORE-Q04",
+    "step": "Step 17",
+    "step_number": 17,
+    "type": "single_choice",
+    "prompt": "How does Maria feel?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S17-CORE-Q04-O1",
+        "text": "Angry"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S17-CORE-Q04-O2",
+        "text": "Tired"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S17-CORE-Q04-O3",
+        "text": "Frightened"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      19,
+      20
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P021"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S18-CORE-Q01",
+    "step": "Step 18",
+    "step_number": 18,
+    "type": "single_choice",
+    "prompt": "Who asks for directions?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S18-CORE-Q01-O1",
+        "text": "Ethan"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S18-CORE-Q01-O2",
+        "text": "Clarice"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S18-CORE-Q01-O3",
+        "text": "Maria"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      30,
+      31
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P032"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S18-CORE-Q02",
+    "step": "Step 18",
+    "step_number": 18,
+    "type": "single_choice",
+    "prompt": "Where should Ethan turn right?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S18-CORE-Q02-O1",
+        "text": "Onto Oak Street"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S18-CORE-Q02-O2",
+        "text": "Onto Westlake Street"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S18-CORE-Q02-O3",
+        "text": "Onto Sixth Avenue"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      30,
+      31
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P032"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S18-CORE-Q03",
+    "step": "Step 18",
+    "step_number": 18,
+    "type": "single_choice",
+    "prompt": "What landmark should he pass?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S18-CORE-Q03-O1",
+        "text": "The school"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S18-CORE-Q03-O2",
+        "text": "The park"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S18-CORE-Q03-O3",
+        "text": "The airport"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      30,
+      31
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P032"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S18-CORE-Q04",
+    "step": "Step 18",
+    "step_number": 18,
+    "type": "single_choice",
+    "prompt": "What will he do before dinner?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S18-CORE-Q04-O1",
+        "text": "Pick up Clarice"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S18-CORE-Q04-O2",
+        "text": "Buy a laptop"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S18-CORE-Q04-O3",
+        "text": "Teach a class"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      30,
+      31
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P032"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S19-CORE-Q01",
+    "step": "Step 19",
+    "step_number": 19,
+    "type": "single_choice",
+    "prompt": "What is Evan finishing?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S19-CORE-Q01-O1",
+        "text": "A wedding speech"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S19-CORE-Q01-O2",
+        "text": "A recipe"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S19-CORE-Q01-O3",
+        "text": "A financial report"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      41,
+      42
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P043"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S19-CORE-Q02",
+    "step": "Step 19",
+    "step_number": 19,
+    "type": "single_choice",
+    "prompt": "Who needs help with a science project?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S19-CORE-Q02-O1",
+        "text": "Clarice"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S19-CORE-Q02-O2",
+        "text": "Sara"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S19-CORE-Q02-O3",
+        "text": "Taylor"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      41,
+      42
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P043"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S19-CORE-Q03",
+    "step": "Step 19",
+    "step_number": 19,
+    "type": "single_choice",
+    "prompt": "What does Evan back up?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S19-CORE-Q03-O1",
+        "text": "His file"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S19-CORE-Q03-O2",
+        "text": "His phone number"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S19-CORE-Q03-O3",
+        "text": "His shopping list"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      41,
+      42
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P043"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S19-CORE-Q04",
+    "step": "Step 19",
+    "step_number": 19,
+    "type": "single_choice",
+    "prompt": "What does Taylor put away?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S19-CORE-Q04-O1",
+        "text": "The books"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S19-CORE-Q04-O2",
+        "text": "The invitations"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S19-CORE-Q04-O3",
+        "text": "The dishes"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      41,
+      42
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P043"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S21-CORE-Q01",
+    "step": "Step 21",
+    "step_number": 21,
+    "type": "single_choice",
+    "prompt": "When does Ethan pick Clarice up?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S21-CORE-Q01-O1",
+        "text": "7:45 p.m."
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S21-CORE-Q01-O2",
+        "text": "8:30 p.m."
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S21-CORE-Q01-O3",
+        "text": "9:00 p.m."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      61,
+      62
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P064"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S21-CORE-Q02",
+    "step": "Step 21",
+    "step_number": 21,
+    "type": "single_choice",
+    "prompt": "Why do they stop?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S21-CORE-Q02-O1",
+        "text": "To buy books"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S21-CORE-Q02-O2",
+        "text": "To cancel dinner"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S21-CORE-Q02-O3",
+        "text": "To buy fuel"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      61,
+      62
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P064"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S21-CORE-Q03",
+    "step": "Step 21",
+    "step_number": 21,
+    "type": "single_choice",
+    "prompt": "Whom do they see?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S21-CORE-Q03-O1",
+        "text": "Luiggi"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S21-CORE-Q03-O2",
+        "text": "Taylor"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S21-CORE-Q03-O3",
+        "text": "Richard"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      61,
+      62
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P064"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S21-CORE-Q04",
+    "step": "Step 21",
+    "step_number": 21,
+    "type": "single_choice",
+    "prompt": "Which station is cheaper?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S21-CORE-Q04-O1",
+        "text": "The station they are at"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S21-CORE-Q04-O2",
+        "text": "The station near Taylor’s house"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S21-CORE-Q04-O3",
+        "text": "Neither; they cost the same"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      61,
+      62
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P064"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S22-CORE-Q01",
+    "step": "Step 22",
+    "step_number": 22,
+    "type": "single_choice",
+    "prompt": "What are they testing?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S22-CORE-Q01-O1",
+        "text": "A car engine"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S22-CORE-Q01-O2",
+        "text": "A laptop screen"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S22-CORE-Q01-O3",
+        "text": "A school circuit kit"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      71,
+      72
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P074"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S22-CORE-Q02",
+    "step": "Step 22",
+    "step_number": 22,
+    "type": "single_choice",
+    "prompt": "Who helps by phone?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S22-CORE-Q02-O1",
+        "text": "Richard"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S22-CORE-Q02-O2",
+        "text": "Denali"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S22-CORE-Q02-O3",
+        "text": "Clarice"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      71,
+      72
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P074"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S22-CORE-Q03",
+    "step": "Step 22",
+    "step_number": 22,
+    "type": "single_choice",
+    "prompt": "What was the problem?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S22-CORE-Q03-O1",
+        "text": "A loose battery connector"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S22-CORE-Q03-O2",
+        "text": "A missing report"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S22-CORE-Q03-O3",
+        "text": "A broken table"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      71,
+      72
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P074"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S22-CORE-Q04",
+    "step": "Step 22",
+    "step_number": 22,
+    "type": "single_choice",
+    "prompt": "When is the report due?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S22-CORE-Q04-O1",
+        "text": "Saturday"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S22-CORE-Q04-O2",
+        "text": "Thursday"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S22-CORE-Q04-O3",
+        "text": "Monday"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      71,
+      72
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P074"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S23-CORE-Q01",
+    "step": "Step 23",
+    "step_number": 23,
+    "type": "single_choice",
+    "prompt": "Who welcomes the couple?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S23-CORE-Q01-O1",
+        "text": "Richard"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S23-CORE-Q01-O2",
+        "text": "Luiggi"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S23-CORE-Q01-O3",
+        "text": "Caleb"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      81,
+      82
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P084"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S23-CORE-Q02",
+    "step": "Step 23",
+    "step_number": 23,
+    "type": "single_choice",
+    "prompt": "Where is their table?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S23-CORE-Q02-O1",
+        "text": "Upstairs"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S23-CORE-Q02-O2",
+        "text": "Outside"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S23-CORE-Q02-O3",
+        "text": "In the kitchen"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      81,
+      82
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P084"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S23-CORE-Q03",
+    "step": "Step 23",
+    "step_number": 23,
+    "type": "single_choice",
+    "prompt": "What does Clarice order?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S23-CORE-Q03-O1",
+        "text": "A calzone"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S23-CORE-Q03-O2",
+        "text": "Sashimi"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S23-CORE-Q03-O3",
+        "text": "Ravioli"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      81,
+      82
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P084"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S23-CORE-Q04",
+    "step": "Step 23",
+    "step_number": 23,
+    "type": "single_choice",
+    "prompt": "What does Ethan order?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S23-CORE-Q04-O1",
+        "text": "Sushi"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S23-CORE-Q04-O2",
+        "text": "A calzone"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S23-CORE-Q04-O3",
+        "text": "Ravioli"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      81,
+      82
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P084"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S24-CORE-Q01",
+    "step": "Step 24",
+    "step_number": 24,
+    "type": "single_choice",
+    "prompt": "Where do the friends meet?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S24-CORE-Q01-O1",
+        "text": "Near the restaurant door"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S24-CORE-Q01-O2",
+        "text": "At the airport"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S24-CORE-Q01-O3",
+        "text": "At the computer shop"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      91,
+      92
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P094"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S24-CORE-Q02",
+    "step": "Step 24",
+    "step_number": 24,
+    "type": "single_choice",
+    "prompt": "Why have Maria and Denali returned downtown?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S24-CORE-Q02-O1",
+        "text": "For a flight"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S24-CORE-Q02-O2",
+        "text": "For a lesson"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S24-CORE-Q02-O3",
+        "text": "For dessert"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      91,
+      92
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P094"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S24-CORE-Q03",
+    "step": "Step 24",
+    "step_number": 24,
+    "type": "single_choice",
+    "prompt": "Who introduces Ethan?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S24-CORE-Q03-O1",
+        "text": "Sara"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S24-CORE-Q03-O2",
+        "text": "Clarice"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S24-CORE-Q03-O3",
+        "text": "Taylor"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      91,
+      92
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P094"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S24-CORE-Q04",
+    "step": "Step 24",
+    "step_number": 24,
+    "type": "single_choice",
+    "prompt": "When will they arrange a group dinner?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S24-CORE-Q04-O1",
+        "text": "Next week"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S24-CORE-Q04-O2",
+        "text": "During the meal they already finished"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S24-CORE-Q04-O3",
+        "text": "After the wedding"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      91,
+      92
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P094"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S26-CORE-Q01",
+    "step": "Step 26",
+    "step_number": 26,
+    "type": "single_choice",
+    "prompt": "Where do they go?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S26-CORE-Q01-O1",
+        "text": "A hotel"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S26-CORE-Q01-O2",
+        "text": "An amusement park"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S26-CORE-Q01-O3",
+        "text": "A school"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      106,
+      107
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P110"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S26-CORE-Q02",
+    "step": "Step 26",
+    "step_number": 26,
+    "type": "single_choice",
+    "prompt": "What makes Ethan dizzy?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S26-CORE-Q02-O1",
+        "text": "High rides"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S26-CORE-Q02-O2",
+        "text": "Reading"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S26-CORE-Q02-O3",
+        "text": "Walking"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      106,
+      107
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P110"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S26-CORE-Q03",
+    "step": "Step 26",
+    "step_number": 26,
+    "type": "single_choice",
+    "prompt": "What does Clarice win?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S26-CORE-Q03-O1",
+        "text": "A book"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S26-CORE-Q03-O2",
+        "text": "A ring"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S26-CORE-Q03-O3",
+        "text": "A teddy bear"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      106,
+      107
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P110"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S26-CORE-Q04",
+    "step": "Step 26",
+    "step_number": 26,
+    "type": "single_choice",
+    "prompt": "Why does the visit go well?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S26-CORE-Q04-O1",
+        "text": "They cancel every activity."
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S26-CORE-Q04-O2",
+        "text": "They discuss their preferences."
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S26-CORE-Q04-O3",
+        "text": "Ethan hides his feelings."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      106,
+      107
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P110"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S27-CORE-Q01",
+    "step": "Step 27",
+    "step_number": 27,
+    "type": "single_choice",
+    "prompt": "What must Taylor buy?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S27-CORE-Q01-O1",
+        "text": "Rice"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S27-CORE-Q01-O2",
+        "text": "A dress"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S27-CORE-Q01-O3",
+        "text": "A computer"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      121,
+      122
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P125"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S27-CORE-Q02",
+    "step": "Step 27",
+    "step_number": 27,
+    "type": "single_choice",
+    "prompt": "Who wants to help cook?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S27-CORE-Q02-O1",
+        "text": "Clarice"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S27-CORE-Q02-O2",
+        "text": "Denali"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S27-CORE-Q02-O3",
+        "text": "Sara"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      121,
+      122
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P125"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S27-CORE-Q03",
+    "step": "Step 27",
+    "step_number": 27,
+    "type": "single_choice",
+    "prompt": "Who will do the dishes?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S27-CORE-Q03-O1",
+        "text": "Maria"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S27-CORE-Q03-O2",
+        "text": "Evan"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S27-CORE-Q03-O3",
+        "text": "Taylor"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      121,
+      122
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P125"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S27-CORE-Q04",
+    "step": "Step 27",
+    "step_number": 27,
+    "type": "single_choice",
+    "prompt": "What do they plan to do afterward?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S27-CORE-Q04-O1",
+        "text": "Watch a film"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S27-CORE-Q04-O2",
+        "text": "Catch a flight"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S27-CORE-Q04-O3",
+        "text": "Attend a wedding"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      121,
+      122
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P125"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S28-CORE-Q01",
+    "step": "Step 28",
+    "step_number": 28,
+    "type": "single_choice",
+    "prompt": "Who is the gift for?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S28-CORE-Q01-O1",
+        "text": "Ethan"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S28-CORE-Q01-O2",
+        "text": "Caleb"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S28-CORE-Q01-O3",
+        "text": "Evan"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      134,
+      135
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P138"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S28-CORE-Q02",
+    "step": "Step 28",
+    "step_number": 28,
+    "type": "single_choice",
+    "prompt": "Why do they want a gift?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S28-CORE-Q02-O1",
+        "text": "Denali is moving away."
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S28-CORE-Q02-O2",
+        "text": "Evan completed an important project."
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S28-CORE-Q02-O3",
+        "text": "It is Sara’s birthday."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      134,
+      135
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P138"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S28-CORE-Q03",
+    "step": "Step 28",
+    "step_number": 28,
+    "type": "single_choice",
+    "prompt": "What will Clarice design?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S28-CORE-Q03-O1",
+        "text": "A tie"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S28-CORE-Q03-O2",
+        "text": "A suitcase"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S28-CORE-Q03-O3",
+        "text": "A school uniform"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      134,
+      135
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P138"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S28-CORE-Q04",
+    "step": "Step 28",
+    "step_number": 28,
+    "type": "single_choice",
+    "prompt": "Which colors do they choose?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S28-CORE-Q04-O1",
+        "text": "Red and green"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S28-CORE-Q04-O2",
+        "text": "Black and gold"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S28-CORE-Q04-O3",
+        "text": "Blue and gray"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      134,
+      135
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P138"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S29-CORE-Q01",
+    "step": "Step 29",
+    "step_number": 29,
+    "type": "single_choice",
+    "prompt": "Which celebration are they planning?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S29-CORE-Q01-O1",
+        "text": "A graduation"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S29-CORE-Q01-O2",
+        "text": "Christmas"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S29-CORE-Q01-O3",
+        "text": "A wedding"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      144,
+      145
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P148"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S29-CORE-Q02",
+    "step": "Step 29",
+    "step_number": 29,
+    "type": "single_choice",
+    "prompt": "How did Ethan use to celebrate?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S29-CORE-Q02-O1",
+        "text": "Quietly"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S29-CORE-Q02-O2",
+        "text": "At an amusement park"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S29-CORE-Q02-O3",
+        "text": "On a plane"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      144,
+      145
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P148"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S29-CORE-Q03",
+    "step": "Step 29",
+    "step_number": 29,
+    "type": "single_choice",
+    "prompt": "How will they share the preparation?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S29-CORE-Q03-O1",
+        "text": "Sara will do everything."
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S29-CORE-Q03-O2",
+        "text": "They will cancel the meal."
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S29-CORE-Q03-O3",
+        "text": "Everyone will bring something."
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      144,
+      145
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P148"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S29-CORE-Q04",
+    "step": "Step 29",
+    "step_number": 29,
+    "type": "single_choice",
+    "prompt": "What will Clarice bring?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S29-CORE-Q04-O1",
+        "text": "Cotton candy"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S29-CORE-Q04-O2",
+        "text": "Canapés"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S29-CORE-Q04-O3",
+        "text": "Sushi"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      144,
+      145
+    ],
+    "version": 2,
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P148"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S20-JUMP-Q01",
+    "step": "Step 20",
+    "step_number": 20,
+    "type": "single_choice",
+    "prompt": "Where are Denali and Maria going?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S20-JUMP-Q01-O1",
+        "text": "To the airport"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S20-JUMP-Q01-O2",
+        "text": "To a wedding"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S20-JUMP-Q01-O3",
+        "text": "To a downtown bookstore"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      10,
+      11
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-PRACTICAL-V2-S16-CORE-Q01",
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P054"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S20-JUMP-Q02",
+    "step": "Step 20",
+    "step_number": 20,
+    "type": "single_choice",
+    "prompt": "How much is the bus for both?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S20-JUMP-Q02-O1",
+        "text": "Seven dollars"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S20-JUMP-Q02-O2",
+        "text": "Twenty dollars"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S20-JUMP-Q02-O3",
+        "text": "Twenty-three dollars"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      19,
+      20
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-PRACTICAL-V2-S17-CORE-Q02",
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P054"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S20-JUMP-Q03",
+    "step": "Step 20",
+    "step_number": 20,
+    "type": "single_choice",
+    "prompt": "What landmark should he pass?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S20-JUMP-Q03-O1",
+        "text": "The school"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S20-JUMP-Q03-O2",
+        "text": "The park"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S20-JUMP-Q03-O3",
+        "text": "The airport"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      30,
+      31
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-PRACTICAL-V2-S18-CORE-Q03",
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P054"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S20-JUMP-Q04",
+    "step": "Step 20",
+    "step_number": 20,
+    "type": "single_choice",
+    "prompt": "What does Taylor put away?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S20-JUMP-Q04-O1",
+        "text": "The books"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S20-JUMP-Q04-O2",
+        "text": "The invitations"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S20-JUMP-Q04-O3",
+        "text": "The dishes"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      41,
+      42
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-PRACTICAL-V2-S19-CORE-Q04",
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P054"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S25-JUMP-Q01",
+    "step": "Step 25",
+    "step_number": 25,
+    "type": "single_choice",
+    "prompt": "Whom do they see?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S25-JUMP-Q01-O1",
+        "text": "Luiggi"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S25-JUMP-Q01-O2",
+        "text": "Taylor"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S25-JUMP-Q01-O3",
+        "text": "Richard"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      61,
+      62
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-PRACTICAL-V2-S21-CORE-Q03",
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P099"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S25-JUMP-Q02",
+    "step": "Step 25",
+    "step_number": 25,
+    "type": "single_choice",
+    "prompt": "When is the report due?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S25-JUMP-Q02-O1",
+        "text": "Saturday"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S25-JUMP-Q02-O2",
+        "text": "Thursday"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S25-JUMP-Q02-O3",
+        "text": "Monday"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      71,
+      72
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-PRACTICAL-V2-S22-CORE-Q04",
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P099"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S25-JUMP-Q03",
+    "step": "Step 25",
+    "step_number": 25,
+    "type": "single_choice",
+    "prompt": "Who welcomes the couple?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S25-JUMP-Q03-O1",
+        "text": "Richard"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S25-JUMP-Q03-O2",
+        "text": "Luiggi"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S25-JUMP-Q03-O3",
+        "text": "Caleb"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      81,
+      82
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-PRACTICAL-V2-S23-CORE-Q01",
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P099"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S25-JUMP-Q04",
+    "step": "Step 25",
+    "step_number": 25,
+    "type": "single_choice",
+    "prompt": "Why have Maria and Denali returned downtown?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S25-JUMP-Q04-O1",
+        "text": "For a flight"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S25-JUMP-Q04-O2",
+        "text": "For a lesson"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S25-JUMP-Q04-O3",
+        "text": "For dessert"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      91,
+      92
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-PRACTICAL-V2-S24-CORE-Q02",
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P099"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S30-JUMP-Q01",
+    "step": "Step 30",
+    "step_number": 30,
+    "type": "single_choice",
+    "prompt": "Where did Richard grow up?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q01-O1",
+        "text": "Mexico City"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q01-O2",
+        "text": "Chicago"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q01-O3",
+        "text": "Omaha"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      10,
+      11
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-PRACTICAL-V2-S16-CORE-Q03",
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P156"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S30-JUMP-Q02",
+    "step": "Step 30",
+    "step_number": 30,
+    "type": "single_choice",
+    "prompt": "How does Maria feel?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q02-O1",
+        "text": "Angry"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q02-O2",
+        "text": "Tired"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q02-O3",
+        "text": "Frightened"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      19,
+      20
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-PRACTICAL-V2-S17-CORE-Q04",
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P156"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S30-JUMP-Q03",
+    "step": "Step 30",
+    "step_number": 30,
+    "type": "single_choice",
+    "prompt": "Who asks for directions?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q03-O1",
+        "text": "Ethan"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q03-O2",
+        "text": "Clarice"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q03-O3",
+        "text": "Maria"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      30,
+      31
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-PRACTICAL-V2-S18-CORE-Q01",
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P156"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S30-JUMP-Q04",
+    "step": "Step 30",
+    "step_number": 30,
+    "type": "single_choice",
+    "prompt": "Who needs help with a science project?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q04-O1",
+        "text": "Clarice"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q04-O2",
+        "text": "Sara"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q04-O3",
+        "text": "Taylor"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      41,
+      42
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-PRACTICAL-V2-S19-CORE-Q02",
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P156"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S30-JUMP-Q05",
+    "step": "Step 30",
+    "step_number": 30,
+    "type": "single_choice",
+    "prompt": "Which station is cheaper?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q05-O1",
+        "text": "The station they are at"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q05-O2",
+        "text": "The station near Taylor’s house"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q05-O3",
+        "text": "Neither; they cost the same"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      61,
+      62
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-PRACTICAL-V2-S21-CORE-Q04",
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P157"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S30-JUMP-Q06",
+    "step": "Step 30",
+    "step_number": 30,
+    "type": "single_choice",
+    "prompt": "What are they testing?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q06-O1",
+        "text": "A car engine"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q06-O2",
+        "text": "A laptop screen"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q06-O3",
+        "text": "A school circuit kit"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      71,
+      72
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-PRACTICAL-V2-S22-CORE-Q01",
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P157"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S30-JUMP-Q07",
+    "step": "Step 30",
+    "step_number": 30,
+    "type": "single_choice",
+    "prompt": "Where is their table?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q07-O1",
+        "text": "Upstairs"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q07-O2",
+        "text": "Outside"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q07-O3",
+        "text": "In the kitchen"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      81,
+      82
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-PRACTICAL-V2-S23-CORE-Q02",
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P157"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S30-JUMP-Q08",
+    "step": "Step 30",
+    "step_number": 30,
+    "type": "single_choice",
+    "prompt": "Who introduces Ethan?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q08-O1",
+        "text": "Sara"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q08-O2",
+        "text": "Clarice"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q08-O3",
+        "text": "Taylor"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      91,
+      92
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-PRACTICAL-V2-S24-CORE-Q03",
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P157"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S30-JUMP-Q09",
+    "step": "Step 30",
+    "step_number": 30,
+    "type": "single_choice",
+    "prompt": "Where do they go?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q09-O1",
+        "text": "A hotel"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q09-O2",
+        "text": "An amusement park"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q09-O3",
+        "text": "A school"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      106,
+      107
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-PRACTICAL-V2-S26-CORE-Q01",
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P158"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S30-JUMP-Q10",
+    "step": "Step 30",
+    "step_number": 30,
+    "type": "single_choice",
+    "prompt": "Who wants to help cook?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q10-O1",
+        "text": "Clarice"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q10-O2",
+        "text": "Denali"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q10-O3",
+        "text": "Sara"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      121,
+      122
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-PRACTICAL-V2-S27-CORE-Q02",
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P158"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S30-JUMP-Q11",
+    "step": "Step 30",
+    "step_number": 30,
+    "type": "single_choice",
+    "prompt": "What will Clarice design?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q11-O1",
+        "text": "A tie"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q11-O2",
+        "text": "A suitcase"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q11-O3",
+        "text": "A school uniform"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      134,
+      135
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-PRACTICAL-V2-S28-CORE-Q03",
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P158"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S30-JUMP-Q12",
+    "step": "Step 30",
+    "step_number": 30,
+    "type": "single_choice",
+    "prompt": "What will Clarice bring?",
+    "options": [
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q12-O1",
+        "text": "Cotton candy"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q12-O2",
+        "text": "Canapés"
+      },
+      {
+        "id": "LGS-PRACTICAL-V2-S30-JUMP-Q12-O3",
+        "text": "Sushi"
+      }
+    ],
+    "points": 1,
+    "grading": "server",
+    "required_for_completion": true,
+    "source_pdf_pages": [
+      144,
+      145
+    ],
+    "version": 2,
+    "reuses_activity_id": "LGS-PRACTICAL-V2-S29-CORE-Q04",
+    "page_ids": [
+      "LGS-PRACTICAL-V2-P158"
+    ]
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S16-SOURCE-P009",
+    "step": "Step 16",
+    "step_number": 16,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Build words with un-, re- and -ful. Use two of them in sentences about the friends’ trip downtown.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      9
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P010",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S16-DETECTIVE-P010",
+    "step": "Step 16",
+    "step_number": 16,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      10
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P011",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S16-REVISED-P012",
+    "step": "Step 16",
+    "step_number": 16,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Build words with un-, re- and -ful. Use two of them in sentences about the friends’ trip downtown.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      12
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P013",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S16-REVISED-P013",
+    "step": "Step 16",
+    "step_number": 16,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Build words with un-, re- and -ful. Use two of them in sentences about the friends’ trip downtown.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      13
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P014",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S16-SOURCE-P014",
+    "step": "Step 16",
+    "step_number": 16,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Build words with un-, re- and -ful. Use two of them in sentences about the friends’ trip downtown.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      14
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P015",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S16-SOURCE-P015",
+    "step": "Step 16",
+    "step_number": 16,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Build words with un-, re- and -ful. Use two of them in sentences about the friends’ trip downtown.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      15
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P016",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S17-SOURCE-P018",
+    "step": "Step 17",
+    "step_number": 17,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Explain why the trip was interesting and why Maria felt tired. Add sentences with enjoy reading and decide to take.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      18
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P019",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S17-DETECTIVE-P019",
+    "step": "Step 17",
+    "step_number": 17,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      19
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P020",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S17-SOURCE-P021",
+    "step": "Step 17",
+    "step_number": 17,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Explain why the trip was interesting and why Maria felt tired. Add sentences with enjoy reading and decide to take.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      21
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P022",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S17-SOURCE-P022",
+    "step": "Step 17",
+    "step_number": 17,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Explain why the trip was interesting and why Maria felt tired. Add sentences with enjoy reading and decide to take.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      22
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P023",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S17-SOURCE-P023",
+    "step": "Step 17",
+    "step_number": 17,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Explain why the trip was interesting and why Maria felt tired. Add sentences with enjoy reading and decide to take.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      23
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P024",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S17-SOURCE-P024",
+    "step": "Step 17",
+    "step_number": 17,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Explain why the trip was interesting and why Maria felt tired. Add sentences with enjoy reading and decide to take.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      24
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P025",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S17-SOURCE-P025",
+    "step": "Step 17",
+    "step_number": 17,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Explain why the trip was interesting and why Maria felt tired. Add sentences with enjoy reading and decide to take.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      25
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P026",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S17-SOURCE-P026",
+    "step": "Step 17",
+    "step_number": 17,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Explain why the trip was interesting and why Maria felt tired. Add sentences with enjoy reading and decide to take.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      26
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P027",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S18-SOURCE-P029",
+    "step": "Step 18",
+    "step_number": 18,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Give Ethan four directions. Use go along, turn onto, go past and arrive at.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      29
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P030",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S18-DETECTIVE-P030",
+    "step": "Step 18",
+    "step_number": 18,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      30
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P031",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S18-REVISED-P032",
+    "step": "Step 18",
+    "step_number": 18,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Give Ethan four directions. Use go along, turn onto, go past and arrive at.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      32
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P033",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S18-SOURCE-P033",
+    "step": "Step 18",
+    "step_number": 18,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Give Ethan four directions. Use go along, turn onto, go past and arrive at.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      33
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P034",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S18-SOURCE-P034",
+    "step": "Step 18",
+    "step_number": 18,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Give Ethan four directions. Use go along, turn onto, go past and arrive at.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      34
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P035",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S18-SOURCE-P035",
+    "step": "Step 18",
+    "step_number": 18,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Give Ethan four directions. Use go along, turn onto, go past and arrive at.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      35
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P036",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S18-REVISED-P036",
+    "step": "Step 18",
+    "step_number": 18,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Give Ethan four directions. Use go along, turn onto, go past and arrive at.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      36
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P037",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S18-SOURCE-P037",
+    "step": "Step 18",
+    "step_number": 18,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Give Ethan four directions. Use go along, turn onto, go past and arrive at.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      37
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P038",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S19-REVISED-P040",
+    "step": "Step 19",
+    "step_number": 19,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Write a family to-do list using wrap up, back up, shut down, put away and take out.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      40
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P041",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S19-DETECTIVE-P041",
+    "step": "Step 19",
+    "step_number": 19,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      41
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P042",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S19-SOURCE-P043",
+    "step": "Step 19",
+    "step_number": 19,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write a family to-do list using wrap up, back up, shut down, put away and take out.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      43
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P044",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S19-SOURCE-P044",
+    "step": "Step 19",
+    "step_number": 19,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Write a family to-do list using wrap up, back up, shut down, put away and take out.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      44
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P045",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S19-SOURCE-P045",
+    "step": "Step 19",
+    "step_number": 19,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Write a family to-do list using wrap up, back up, shut down, put away and take out.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      45
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P046",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S19-SOURCE-P046",
+    "step": "Step 19",
+    "step_number": 19,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Write a family to-do list using wrap up, back up, shut down, put away and take out.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      46
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P047",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S19-REVISED-P047",
+    "step": "Step 19",
+    "step_number": 19,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Write a family to-do list using wrap up, back up, shut down, put away and take out.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      47
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P048",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S19-SOURCE-P048",
+    "step": "Step 19",
+    "step_number": 19,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write a family to-do list using wrap up, back up, shut down, put away and take out.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      48
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P049",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S19-SOURCE-P049",
+    "step": "Step 19",
+    "step_number": 19,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write a family to-do list using wrap up, back up, shut down, put away and take out.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      49
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P050",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S19-SOURCE-P050",
+    "step": "Step 19",
+    "step_number": 19,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write a family to-do list using wrap up, back up, shut down, put away and take out.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      50
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P051",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S19-SOURCE-P051",
+    "step": "Step 19",
+    "step_number": 19,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write a family to-do list using wrap up, back up, shut down, put away and take out.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      51
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P052",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S20-SOURCE-P053",
+    "step": "Step 20",
+    "step_number": 20,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Write a family to-do list using wrap up, back up, shut down, put away and take out.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      53
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P055",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S20-SOURCE-P054",
+    "step": "Step 20",
+    "step_number": 20,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write a family to-do list using wrap up, back up, shut down, put away and take out.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      54
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P056",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S20-SOURCE-P055",
+    "step": "Step 20",
+    "step_number": 20,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write a family to-do list using wrap up, back up, shut down, put away and take out.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      55
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P057",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S20-SOURCE-P056",
+    "step": "Step 20",
+    "step_number": 20,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write a family to-do list using wrap up, back up, shut down, put away and take out.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      56
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P058",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S20-SOURCE-P057",
+    "step": "Step 20",
+    "step_number": 20,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write a family to-do list using wrap up, back up, shut down, put away and take out.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      57
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P059",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S21-SOURCE-P060",
+    "step": "Step 21",
+    "step_number": 21,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Compare two ways to travel and two restaurants. Use than and one superlative without inventing facts about the story.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      60
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P062",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S21-DETECTIVE-P061",
+    "step": "Step 21",
+    "step_number": 21,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      61
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P063",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S21-SOURCE-P063",
+    "step": "Step 21",
+    "step_number": 21,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Compare two ways to travel and two restaurants. Use than and one superlative without inventing facts about the story.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      63
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P065",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S21-SOURCE-P064",
+    "step": "Step 21",
+    "step_number": 21,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Compare two ways to travel and two restaurants. Use than and one superlative without inventing facts about the story.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      64
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P066",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S21-SOURCE-P065",
+    "step": "Step 21",
+    "step_number": 21,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Compare two ways to travel and two restaurants. Use than and one superlative without inventing facts about the story.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      65
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P067",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S21-SOURCE-P066",
+    "step": "Step 21",
+    "step_number": 21,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Compare two ways to travel and two restaurants. Use than and one superlative without inventing facts about the story.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      66
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P068",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S21-SOURCE-P067",
+    "step": "Step 21",
+    "step_number": 21,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Compare two ways to travel and two restaurants. Use than and one superlative without inventing facts about the story.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      67
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P069",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S22-SOURCE-P070",
+    "step": "Step 22",
+    "step_number": 22,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Describe the project with herself, themselves, something and everything. Check what each pronoun refers to.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      70
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P072",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S22-DETECTIVE-P071",
+    "step": "Step 22",
+    "step_number": 22,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      71
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P073",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S22-REVISED-P073",
+    "step": "Step 22",
+    "step_number": 22,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Describe the project with herself, themselves, something and everything. Check what each pronoun refers to.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      73
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P075",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S22-SOURCE-P074",
+    "step": "Step 22",
+    "step_number": 22,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Describe the project with herself, themselves, something and everything. Check what each pronoun refers to.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      74
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P076",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S22-REVISED-P075",
+    "step": "Step 22",
+    "step_number": 22,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Describe the project with herself, themselves, something and everything. Check what each pronoun refers to.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      75
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P077",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S22-REVISED-P076",
+    "step": "Step 22",
+    "step_number": 22,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Describe the project with herself, themselves, something and everything. Check what each pronoun refers to.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      76
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P078",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S22-SOURCE-P077",
+    "step": "Step 22",
+    "step_number": 22,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Describe the project with herself, themselves, something and everything. Check what each pronoun refers to.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      77
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P079",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S23-SOURCE-P080",
+    "step": "Step 23",
+    "step_number": 23,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Write a polite request with could, a permission question with may and a possibility statement with might.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      80
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P082",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S23-DETECTIVE-P081",
+    "step": "Step 23",
+    "step_number": 23,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      81
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P083",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S23-SOURCE-P083",
+    "step": "Step 23",
+    "step_number": 23,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Write a polite request with could, a permission question with may and a possibility statement with might.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      83
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P085",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S23-REVISED-P084",
+    "step": "Step 23",
+    "step_number": 23,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Write a polite request with could, a permission question with may and a possibility statement with might.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      84
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P086",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S23-SOURCE-P085",
+    "step": "Step 23",
+    "step_number": 23,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write a polite request with could, a permission question with may and a possibility statement with might.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      85
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P087",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S23-REVISED-P086",
+    "step": "Step 23",
+    "step_number": 23,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Write a polite request with could, a permission question with may and a possibility statement with might.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      86
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P088",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S24-LAB-P089",
+    "step": "Step 24",
+    "step_number": 24,
+    "type": "open_response",
+    "prompt": "Write two questions for a character and answer them in character. Label any invented detail as an imagined continuation.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      89
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P091",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S24-SOURCE-P090",
+    "step": "Step 24",
+    "step_number": 24,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Give advice with should. Contrast must with do not have to using the dinner plan.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      90
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P092",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S24-DETECTIVE-P091",
+    "step": "Step 24",
+    "step_number": 24,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      91
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P093",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S24-SOURCE-P093",
+    "step": "Step 24",
+    "step_number": 24,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Give advice with should. Contrast must with do not have to using the dinner plan.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      93
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P095",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S24-SOURCE-P094",
+    "step": "Step 24",
+    "step_number": 24,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Give advice with should. Contrast must with do not have to using the dinner plan.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      94
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P096",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S24-SOURCE-P095",
+    "step": "Step 24",
+    "step_number": 24,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Give advice with should. Contrast must with do not have to using the dinner plan.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      95
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P097",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S25-SOURCE-P097",
+    "step": "Step 25",
+    "step_number": 25,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Give advice with should. Contrast must with do not have to using the dinner plan.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      97
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P100",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S25-SOURCE-P098",
+    "step": "Step 25",
+    "step_number": 25,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Give advice with should. Contrast must with do not have to using the dinner plan.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      98
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P101",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S25-SOURCE-P099",
+    "step": "Step 25",
+    "step_number": 25,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Give advice with should. Contrast must with do not have to using the dinner plan.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      99
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P102",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S25-SOURCE-P100",
+    "step": "Step 25",
+    "step_number": 25,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Give advice with should. Contrast must with do not have to using the dinner plan.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      100
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P103",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S25-SOURCE-P101",
+    "step": "Step 25",
+    "step_number": 25,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Give advice with should. Contrast must with do not have to using the dinner plan.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      101
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P104",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S25-SOURCE-P102",
+    "step": "Step 25",
+    "step_number": 25,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Give advice with should. Contrast must with do not have to using the dinner plan.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      102
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P105",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S26-SOURCE-P105",
+    "step": "Step 26",
+    "step_number": 26,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Connect events with although, because, so and after. Keep the reasons consistent with the episode.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      105
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P108",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S26-DETECTIVE-P106",
+    "step": "Step 26",
+    "step_number": 26,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      106
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P109",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S26-SOURCE-P108",
+    "step": "Step 26",
+    "step_number": 26,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Connect events with although, because, so and after. Keep the reasons consistent with the episode.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      108
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P111",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S26-SOURCE-P109",
+    "step": "Step 26",
+    "step_number": 26,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Connect events with although, because, so and after. Keep the reasons consistent with the episode.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      109
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P112",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S26-SOURCE-P110",
+    "step": "Step 26",
+    "step_number": 26,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Connect events with although, because, so and after. Keep the reasons consistent with the episode.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      110
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P113",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S26-SOURCE-P111",
+    "step": "Step 26",
+    "step_number": 26,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Connect events with although, because, so and after. Keep the reasons consistent with the episode.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      111
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P114",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S26-SOURCE-P112",
+    "step": "Step 26",
+    "step_number": 26,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Connect events with although, because, so and after. Keep the reasons consistent with the episode.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      112
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P115",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S26-SOURCE-P113",
+    "step": "Step 26",
+    "step_number": 26,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Connect events with although, because, so and after. Keep the reasons consistent with the episode.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      113
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P116",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S26-SOURCE-P114",
+    "step": "Step 26",
+    "step_number": 26,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Connect events with although, because, so and after. Keep the reasons consistent with the episode.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      114
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P117",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S26-SOURCE-P115",
+    "step": "Step 26",
+    "step_number": 26,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Connect events with although, because, so and after. Keep the reasons consistent with the episode.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      115
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P118",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S26-SOURCE-P116",
+    "step": "Step 26",
+    "step_number": 26,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Connect events with although, because, so and after. Keep the reasons consistent with the episode.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      116
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P119",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S26-SOURCE-P117",
+    "step": "Step 26",
+    "step_number": 26,
+    "type": "open_response",
+    "prompt": "Complete all reading and language tasks on this page: Read and connect: a shared adventure. Clarice and Ethan wanted to enjoy the day together. Ethan explained that high rides made him dizzy. Clarice listened and suggested a different activity. She played a ring-toss game and won a teddy bear. Afterward, they bought cotton candy and took a walk. They had a good time because they respected each other’s preferences. although • because • after • so • while 1. _____ Ethan liked the park, he did not want to go on the high rides.\n2. They changed their plan _____ the rides made him dizzy.\n3. Clarice played the game _____ Ethan watched.\n4. _____ Clarice won the bear, they bought cotton candy.\n5. They respected each other’s preferences, _____ they both enjoyed the visit. Which word introduces a contrast, a reason, simultaneous actions, a sequence and a result? Use each in a new sentence about the episode.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      117
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P120",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S27-REVISED-P120",
+    "step": "Step 27",
+    "step_number": 27,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Write a reminder for Taylor. Explain the difference between remember and remind, then use do and make correctly.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      120
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P123",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S27-DETECTIVE-P121",
+    "step": "Step 27",
+    "step_number": 27,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      121
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P124",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S27-SOURCE-P123",
+    "step": "Step 27",
+    "step_number": 27,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write a reminder for Taylor. Explain the difference between remember and remind, then use do and make correctly.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      123
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P126",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S27-SOURCE-P124",
+    "step": "Step 27",
+    "step_number": 27,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write a reminder for Taylor. Explain the difference between remember and remind, then use do and make correctly.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      124
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P127",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S27-SOURCE-P125",
+    "step": "Step 27",
+    "step_number": 27,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write a reminder for Taylor. Explain the difference between remember and remind, then use do and make correctly.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      125
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P128",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S27-SOURCE-P126",
+    "step": "Step 27",
+    "step_number": 27,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write a reminder for Taylor. Explain the difference between remember and remind, then use do and make correctly.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      126
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P129",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S27-SOURCE-P127",
+    "step": "Step 27",
+    "step_number": 27,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write a reminder for Taylor. Explain the difference between remember and remind, then use do and make correctly.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      127
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P130",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S27-SOURCE-P128",
+    "step": "Step 27",
+    "step_number": 27,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Write a reminder for Taylor. Explain the difference between remember and remind, then use do and make correctly.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      128
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P131",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S27-SOURCE-P129",
+    "step": "Step 27",
+    "step_number": 27,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Write a reminder for Taylor. Explain the difference between remember and remind, then use do and make correctly.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      129
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P132",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S28-LAB-P132",
+    "step": "Step 28",
+    "step_number": 28,
+    "type": "open_response",
+    "prompt": "Use get with a noun, get with an adjective and get to know in sentences connected to the boutique scene.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      132
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P135",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S28-SOURCE-P133",
+    "step": "Step 28",
+    "step_number": 28,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Use get with a noun, get with an adjective and get to know in sentences connected to the boutique scene.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      133
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P136",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S28-DETECTIVE-P134",
+    "step": "Step 28",
+    "step_number": 28,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      134
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P137",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S28-SOURCE-P136",
+    "step": "Step 28",
+    "step_number": 28,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Use get with a noun, get with an adjective and get to know in sentences connected to the boutique scene.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      136
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P139",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S28-SOURCE-P137",
+    "step": "Step 28",
+    "step_number": 28,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Use get with a noun, get with an adjective and get to know in sentences connected to the boutique scene.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      137
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P140",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S28-SOURCE-P138",
+    "step": "Step 28",
+    "step_number": 28,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Use get with a noun, get with an adjective and get to know in sentences connected to the boutique scene.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      138
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P141",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S28-SOURCE-P139",
+    "step": "Step 28",
+    "step_number": 28,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Use get with a noun, get with an adjective and get to know in sentences connected to the boutique scene.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      139
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P142",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S29-LAB-P142",
+    "step": "Step 29",
+    "step_number": 29,
+    "type": "open_response",
+    "prompt": "Retell this episode in your own words. Keep the people, events and time consistent with the story.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      142
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P145",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S29-SOURCE-P143",
+    "step": "Step 29",
+    "step_number": 29,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Contrast a past habit, a familiar situation and the process of adapting. Use all three structures.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      143
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P146",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S29-DETECTIVE-P144",
+    "step": "Step 29",
+    "step_number": 29,
+    "type": "open_response",
+    "prompt": "Complete the Story Detective notes: who and where, when, and what changes. Support each note with information from this reading.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      144
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P147",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S29-SOURCE-P146",
+    "step": "Step 29",
+    "step_number": 29,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Contrast a past habit, a familiar situation and the process of adapting. Use all three structures.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      146
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P149",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S29-REVISED-P147",
+    "step": "Step 29",
+    "step_number": 29,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Contrast a past habit, a familiar situation and the process of adapting. Use all three structures.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      147
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P150",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S29-REVISED-P148",
+    "step": "Step 29",
+    "step_number": 29,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Contrast a past habit, a familiar situation and the process of adapting. Use all three structures.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      148
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P151",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S29-SOURCE-P149",
+    "step": "Step 29",
+    "step_number": 29,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Contrast a past habit, a familiar situation and the process of adapting. Use all three structures.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      149
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P152",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S29-SOURCE-P150",
+    "step": "Step 29",
+    "step_number": 29,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Contrast a past habit, a familiar situation and the process of adapting. Use all three structures.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      150
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P153",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S29-SOURCE-P151",
+    "step": "Step 29",
+    "step_number": 29,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Contrast a past habit, a familiar situation and the process of adapting. Use all three structures.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      151
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P154",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S30-SOURCE-P153",
+    "step": "Step 30",
+    "step_number": 30,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Contrast a past habit, a familiar situation and the process of adapting. Use all three structures.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      153
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P159",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S30-SOURCE-P154",
+    "step": "Step 30",
+    "step_number": 30,
+    "type": "open_response",
+    "prompt": "Apply the lesson in the character challenge: Contrast a past habit, a familiar situation and the process of adapting. Use all three structures.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      154
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P160",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S30-SOURCE-P155",
+    "step": "Step 30",
+    "step_number": 30,
+    "type": "open_response",
+    "prompt": "Complete the original exercises on this page, then respond to the character challenge: Contrast a past habit, a familiar situation and the process of adapting. Use all three structures.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      155
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P161",
+    "version": 2
+  },
+  {
+    "id": "LGS-PRACTICAL-V2-S30-REVISED-P169",
+    "step": "Step 30",
+    "step_number": 30,
+    "type": "open_response",
+    "prompt": "Complete the practice on this page and explain your choices. Use examples from the story.",
+    "grading": "teacher_review",
+    "required_for_completion": false,
+    "max_length": 6000,
+    "source_pdf_pages": [
+      169
+    ],
+    "page_id": "LGS-PRACTICAL-V2-P165",
+    "version": 2
+  }
+]

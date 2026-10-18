@@ -1,0 +1,640 @@
+[
+  {
+    "step": 31,
+    "title": "The Christmas gathering",
+    "time": "Christmas",
+    "characters": [
+      "Clarice",
+      "Ethan",
+      "Taylor",
+      "Evan",
+      "Sara",
+      "Denali",
+      "Maria"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Clarice",
+        "text": "I have brought the canapés we planned. Has everyone arrived?"
+      },
+      {
+        "speaker": "Ethan",
+        "text": "Yes. Taylor, Evan, Sara, Denali and Maria are here."
+      },
+      {
+        "speaker": "Evan",
+        "text": "I have finally finished my financial report, so I can relax."
+      },
+      {
+        "speaker": "Taylor",
+        "text": "We have prepared a salad. Where should we put it?"
+      },
+      {
+        "speaker": "Maria",
+        "text": "I have never tried these canapés before. They look wonderful."
+      },
+      {
+        "speaker": "Sara",
+        "text": "Let’s take a picture before we sit down. We have made a great team."
+      }
+    ],
+    "reading": "The Christmas gathering planned in PRACTICAL now takes place. Clarice has brought canapés, and Taylor’s family has prepared a salad. Ethan welcomes Taylor, Evan, Sara, Denali and Maria. Evan has finished a financial report; he is a financial analyst, not a hospital employee. The friends have shared the preparation as agreed. Sara suggests a group photograph before the meal. The gathering celebrates both the holiday and the friendships that have developed.",
+    "questions": [
+      {
+        "prompt": "Which earlier plan is fulfilled?"
+      },
+      {
+        "prompt": "What has Clarice brought?"
+      },
+      {
+        "prompt": "What has Evan finished?"
+      },
+      {
+        "prompt": "What does Sara suggest before the meal?"
+      }
+    ],
+    "focus": "Present perfect",
+    "task": "Write four statements about what the friends have already done and two questions about what they have not done yet."
+  },
+  {
+    "step": 32,
+    "title": "A confident first step",
+    "time": "January, at an indoor pool",
+    "characters": [
+      "Maria",
+      "Caleb"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Maria",
+        "text": "I had avoided swimming lessons because I felt nervous in the water."
+      },
+      {
+        "speaker": "Caleb",
+        "text": "Thank you for telling me. You can decide what you feel ready to try."
+      },
+      {
+        "speaker": "Maria",
+        "text": "I had spoken to the instructor before I booked this beginner session."
+      },
+      {
+        "speaker": "Caleb",
+        "text": "That was a good idea. I can wait here while you have your lesson."
+      },
+      {
+        "speaker": "Maria",
+        "text": "I would like that. Today I only want to practice in the shallow end."
+      },
+      {
+        "speaker": "Caleb",
+        "text": "Take your time. We can talk afterward."
+      }
+    ],
+    "reading": "In January, Maria attends a beginner lesson at a heated indoor pool. She had avoided swimming because she felt nervous. Before booking, she had spoken to the instructor about her concerns. Caleb accompanies her and respects her decision to begin in the shallow end. The qualified instructor leads the lesson. Maria chooses her own pace, and Caleb waits nearby. This is a small, deliberate step toward a goal she has wanted to pursue.",
+    "questions": [
+      {
+        "prompt": "When does the lesson take place?"
+      },
+      {
+        "prompt": "Whom had Maria spoken to before booking?"
+      },
+      {
+        "prompt": "Where does she want to begin?"
+      },
+      {
+        "prompt": "How does Caleb support her?"
+      }
+    ],
+    "focus": "Past perfect",
+    "task": "Describe two events that happened before Maria arrived. Use past perfect for the earlier event and past simple for the later event."
+  },
+  {
+    "step": 33,
+    "title": "A Sunday plan",
+    "time": "The Sunday after the lesson",
+    "characters": [
+      "Clarice",
+      "Ethan"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Ethan",
+        "text": "Good morning! Would you like to meet at nine thirty?"
+      },
+      {
+        "speaker": "Clarice",
+        "text": "Yes. I have already had breakfast, but I would love a walk."
+      },
+      {
+        "speaker": "Ethan",
+        "text": "I need to send two messages first. I will have finished them by nine."
+      },
+      {
+        "speaker": "Clarice",
+        "text": "I will have packed a small picnic by the time you arrive."
+      },
+      {
+        "speaker": "Ethan",
+        "text": "Perfect. We will have reached the park before it gets busy."
+      },
+      {
+        "speaker": "Clarice",
+        "text": "And by noon, we will have enjoyed a peaceful morning together."
+      }
+    ],
+    "reading": "On the Sunday after Maria’s lesson, Ethan calls Clarice. They agree to meet at nine thirty. Clarice has already eaten breakfast, so they choose a walk and a small picnic. Ethan expects to have finished his messages by nine. Clarice will have packed the picnic before he arrives. They plan to reach the park before it becomes busy and to spend a quiet morning together. The future perfect describes what will be complete by a future time.",
+    "questions": [
+      {
+        "prompt": "What time will they meet?"
+      },
+      {
+        "prompt": "What has Clarice already done?"
+      },
+      {
+        "prompt": "What will Ethan have finished by nine?"
+      },
+      {
+        "prompt": "What will Clarice have packed?"
+      }
+    ],
+    "focus": "Future perfect",
+    "task": "Write three predictions using will have + past participle and a deadline introduced by by or by the time."
+  },
+  {
+    "step": 34,
+    "title": "A misunderstanding at dinner",
+    "time": "Later in January",
+    "characters": [
+      "Taylor",
+      "Sara",
+      "Clarice",
+      "Ethan"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Taylor",
+        "text": "We are late. I thought Sara was still getting ready."
+      },
+      {
+        "speaker": "Sara",
+        "text": "I was waiting by the door. You might not have heard me call."
+      },
+      {
+        "speaker": "Taylor",
+        "text": "You are right. I should have checked before blaming you."
+      },
+      {
+        "speaker": "Clarice",
+        "text": "We were wondering what had happened. You could have sent a message."
+      },
+      {
+        "speaker": "Taylor",
+        "text": "I am sorry. Next time, we will agree on a meeting time and send an update."
+      },
+      {
+        "speaker": "Ethan",
+        "text": "You are here now. Let’s enjoy dinner together."
+      }
+    ],
+    "reading": "Later in January, Taylor and Sara arrive late for dinner with Clarice and Ethan. Taylor had assumed Sara was still getting ready, but Sara had been waiting by the door. Taylor realizes she should have checked before blaming her. Clarice says they could have sent a message. The family agrees to communicate more clearly next time. No one is being introduced for the first time: these friends already know one another.",
+    "questions": [
+      {
+        "prompt": "Who arrives late?"
+      },
+      {
+        "prompt": "Where had Sara been waiting?"
+      },
+      {
+        "prompt": "What should Taylor have done?"
+      },
+      {
+        "prompt": "What could they have sent?"
+      }
+    ],
+    "focus": "Past modals",
+    "task": "Use should have, could have and might have to reflect on the misunderstanding. Distinguish a suggestion from a possibility."
+  },
+  {
+    "step": 36,
+    "title": "A new chapter",
+    "time": "February",
+    "characters": [
+      "Clarice",
+      "Ethan"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Ethan",
+        "text": "If you are ready for another adventure together, I have a question."
+      },
+      {
+        "speaker": "Clarice",
+        "text": "You look nervous. What is it?"
+      },
+      {
+        "speaker": "Ethan",
+        "text": "Will you marry me?"
+      },
+      {
+        "speaker": "Clarice",
+        "text": "Yes! I would love to. If we plan carefully, we can celebrate with our friends."
+      },
+      {
+        "speaker": "Ethan",
+        "text": "How about September nineteenth?"
+      },
+      {
+        "speaker": "Clarice",
+        "text": "That gives us time. If I had unlimited time, I would design everything myself, but we can ask for help."
+      }
+    ],
+    "reading": "In February, Ethan proposes to Clarice, and she accepts. They choose September nineteenth for their wedding. They want their friends to be part of the celebration, and they know that planning will take time. Clarice says that she would design everything herself if she had unlimited time. In reality, they will share the work and ask for help. This is their engagement; the wedding has not happened yet.",
+    "questions": [
+      {
+        "prompt": "When does Ethan propose?"
+      },
+      {
+        "prompt": "What does Clarice answer?"
+      },
+      {
+        "prompt": "What date do they choose?"
+      },
+      {
+        "prompt": "How will they manage the preparations?"
+      }
+    ],
+    "focus": "Zero, first and second conditionals",
+    "task": "Write a general planning rule, a realistic future possibility and an imaginary situation. Label the conditional type."
+  },
+  {
+    "step": 37,
+    "title": "The missing invitation",
+    "time": "March",
+    "characters": [
+      "Maria",
+      "Clarice",
+      "Denali"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Maria",
+        "text": "I heard about the invitations, but mine has not arrived. Did I misunderstand something?"
+      },
+      {
+        "speaker": "Clarice",
+        "text": "You are invited, of course. I may have used your old address."
+      },
+      {
+        "speaker": "Denali",
+        "text": "We moved last year. Let’s check the list together."
+      },
+      {
+        "speaker": "Clarice",
+        "text": "Here is the mistake. If I had checked the address, the invitation would have reached you."
+      },
+      {
+        "speaker": "Maria",
+        "text": "If I had asked sooner, I would not have worried so much."
+      },
+      {
+        "speaker": "Clarice",
+        "text": "I am glad we talked. I will send the corrected invitation today."
+      }
+    ],
+    "reading": "In March, Maria worries because her wedding invitation has not arrived. She asks Clarice directly instead of assuming she was excluded. Clarice and Denali check the guest list and discover an old address. Clarice apologizes and sends a corrected invitation. Maria realizes that asking sooner would have saved her some worry. The mistake is administrative, not a change in their friendship. Both women describe how the past might have been different.",
+    "questions": [
+      {
+        "prompt": "Why did the invitation not arrive?"
+      },
+      {
+        "prompt": "Who asks about the problem?"
+      },
+      {
+        "prompt": "What do they check?"
+      },
+      {
+        "prompt": "What will Clarice send?"
+      }
+    ],
+    "focus": "Third conditional",
+    "task": "Write two third conditional sentences about the address mistake. Keep the imagined past separate from what really happened."
+  },
+  {
+    "step": 38,
+    "title": "A birthday worth celebrating",
+    "time": "August",
+    "characters": [
+      "Maria",
+      "Denali"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Maria",
+        "text": "My birthday dinner was interrupted by an uncomfortable argument with my date."
+      },
+      {
+        "speaker": "Denali",
+        "text": "I am sorry. You deserve to be treated with respect."
+      },
+      {
+        "speaker": "Maria",
+        "text": "I left early. A taxi was called by the restaurant staff, and I came home."
+      },
+      {
+        "speaker": "Denali",
+        "text": "Would you like a quiet celebration here instead?"
+      },
+      {
+        "speaker": "Maria",
+        "text": "Yes. I turn twenty-nine today, and I want to spend the evening with a friend."
+      },
+      {
+        "speaker": "Denali",
+        "text": "Then tea and cake it is. The candles have already been set out."
+      }
+    ],
+    "reading": "In August, Maria turns twenty-nine. Her birthday dinner with a date is interrupted by an argument, and she decides to leave. A taxi is called by the restaurant staff. At home, Denali listens without judging and offers tea and cake. The candles have already been set out. Maria chooses a calm celebration with her roommate. The episode uses passive forms to describe events while keeping Maria’s decisions and boundaries clear.",
+    "questions": [
+      {
+        "prompt": "How old does Maria turn?"
+      },
+      {
+        "prompt": "Why does she leave dinner?"
+      },
+      {
+        "prompt": "Who calls the taxi?"
+      },
+      {
+        "prompt": "Who celebrates with Maria at home?"
+      }
+    ],
+    "focus": "Passive voice",
+    "task": "Rewrite three active sentences from the episode in the passive. Keep the tense and meaning unchanged."
+  },
+  {
+    "step": 39,
+    "title": "Choosing a dress",
+    "time": "Early September",
+    "characters": [
+      "Taylor",
+      "Sara"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Taylor",
+        "text": "I am looking for a dress for Clarice and Ethan’s wedding."
+      },
+      {
+        "speaker": "Sara",
+        "text": "The assistant said the red one was available in your size."
+      },
+      {
+        "speaker": "Taylor",
+        "text": "Did she say whether I could try it on?"
+      },
+      {
+        "speaker": "Sara",
+        "text": "Yes. She said the fitting room was free."
+      },
+      {
+        "speaker": "Taylor",
+        "text": "I like it. Clarice told me the celebration would be in the afternoon."
+      },
+      {
+        "speaker": "Sara",
+        "text": "Then it sounds suitable. Let’s check the invitation before we choose accessories."
+      }
+    ],
+    "reading": "In early September, Taylor and Sara look for a dress for the wedding on September nineteenth. Sara reports what the shop assistant said: the red dress was available in Taylor’s size, and the fitting room was free. Taylor remembers that Clarice said the celebration would be in the afternoon. Before choosing accessories, they check the invitation. The reported information supports a real decision in the continuing story.",
+    "questions": [
+      {
+        "prompt": "What event is Taylor shopping for?"
+      },
+      {
+        "prompt": "Which dress is available?"
+      },
+      {
+        "prompt": "What did the assistant say about the fitting room?"
+      },
+      {
+        "prompt": "When will the celebration be?"
+      }
+    ],
+    "focus": "Reported speech",
+    "task": "Report three statements and one question from the shop conversation. Adjust pronouns and tense where the context requires it."
+  },
+  {
+    "step": 41,
+    "title": "A realistic plan",
+    "time": "The week before September nineteenth",
+    "characters": [
+      "Clarice",
+      "Taylor"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Clarice",
+        "text": "The dress is almost ready, but I keep comparing my plans with pictures online."
+      },
+      {
+        "speaker": "Taylor",
+        "text": "What still needs to be done before next week?"
+      },
+      {
+        "speaker": "Clarice",
+        "text": "The final fitting is on September fifteenth. The florist will deliver on September eighteenth."
+      },
+      {
+        "speaker": "Taylor",
+        "text": "Then write those appointments down and set a time to stop scrolling."
+      },
+      {
+        "speaker": "Clarice",
+        "text": "You are right. The pictures do not show every difficulty behind a celebration."
+      },
+      {
+        "speaker": "Taylor",
+        "text": "We can help with the remaining tasks. You do not have to organize everything alone."
+      }
+    ],
+    "reading": "One week before the wedding, Clarice feels distracted by idealized celebrations online. Taylor helps her focus on concrete tasks. The final dress fitting is on September fifteenth, and the florist will deliver on September eighteenth, before the wedding on September nineteenth. Clarice writes the appointments down and decides to limit her scrolling time. She also accepts help from her friends. The conversation connects planning, online information and everyday wellbeing without changing the wedding timeline.",
+    "questions": [
+      {
+        "prompt": "When does this episode take place?"
+      },
+      {
+        "prompt": "When is the final fitting?"
+      },
+      {
+        "prompt": "Who will deliver on September eighteenth?"
+      },
+      {
+        "prompt": "What does Clarice decide to limit?"
+      }
+    ],
+    "focus": "Content discussion: media and everyday decisions",
+    "task": "Discuss how online images can influence expectations. Support your opinion with one event from the story and one clearly labeled personal example."
+  },
+  {
+    "step": 42,
+    "title": "People who inspire us",
+    "time": "During the final preparations",
+    "characters": [
+      "Sara",
+      "Denali",
+      "Clarice"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Sara",
+        "text": "I am preparing a short speech about people who inspire me."
+      },
+      {
+        "speaker": "Denali",
+        "text": "What would you like your audience to remember?"
+      },
+      {
+        "speaker": "Sara",
+        "text": "That achievements often depend on support. Clarice built her design work with help from friends."
+      },
+      {
+        "speaker": "Clarice",
+        "text": "And you have worked hard on your school projects. Give specific examples, not just compliments."
+      },
+      {
+        "speaker": "Sara",
+        "text": "I will also research a writer for my class, using reliable sources."
+      },
+      {
+        "speaker": "Denali",
+        "text": "Good. Separate what you know from what you still need to verify."
+      }
+    ],
+    "reading": "During the final wedding preparations, Sara works on a speech about people who inspire her. Denali encourages her to identify a clear message. Sara chooses the importance of support and uses Clarice’s design work as an example. Clarice asks her to use specific evidence. Sara also plans to research a writer for class, but she has not selected one yet. The friends distinguish verified information from ideas that still need research.",
+    "questions": [
+      {
+        "prompt": "What is Sara preparing?"
+      },
+      {
+        "prompt": "What message does she choose?"
+      },
+      {
+        "prompt": "Whose design work does she mention?"
+      },
+      {
+        "prompt": "Has Sara selected a writer yet?"
+      }
+    ],
+    "focus": "Content discussion: contributions and evidence",
+    "task": "Choose a person who has contributed to a community. Separate facts, opinions and unanswered research questions."
+  },
+  {
+    "step": 43,
+    "title": "A celebration with less waste",
+    "time": "The evening before the wedding",
+    "characters": [
+      "Clarice",
+      "Taylor",
+      "Denali",
+      "Maria"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Maria",
+        "text": "Everything is ready for our small celebration tonight."
+      },
+      {
+        "speaker": "Taylor",
+        "text": "I have brought reusable plates, so we will not need disposable ones."
+      },
+      {
+        "speaker": "Denali",
+        "text": "We should also plan portions and save the untouched food safely."
+      },
+      {
+        "speaker": "Clarice",
+        "text": "Thank you. I wanted a relaxed evening with friends before tomorrow."
+      },
+      {
+        "speaker": "Maria",
+        "text": "Small decisions will not solve every global problem, but they can reduce waste here."
+      },
+      {
+        "speaker": "Clarice",
+        "text": "Exactly. Let’s enjoy the evening and leave the room as tidy as we found it."
+      }
+    ],
+    "reading": "On the evening before the wedding, Clarice celebrates with Taylor, Denali and Maria. They choose a small gathering. Taylor brings reusable plates, and the friends plan portions to reduce food waste. Maria points out that these choices do not solve every global problem, but they can make a practical difference at their own event. Clarice enjoys a relaxed evening before the wedding the next day. The episode links a personal celebration to a wider discussion about resources.",
+    "questions": [
+      {
+        "prompt": "When is the gathering?"
+      },
+      {
+        "prompt": "What does Taylor bring?"
+      },
+      {
+        "prompt": "Why do they plan portions?"
+      },
+      {
+        "prompt": "What does Maria say about their choices?"
+      }
+    ],
+    "focus": "Content discussion: future challenges and resources",
+    "task": "Propose three practical changes for an event. Explain their benefits and limits without making unsupported claims."
+  },
+  {
+    "step": 44,
+    "title": "The day has arrived",
+    "time": "September nineteenth",
+    "characters": [
+      "Clarice",
+      "Ethan",
+      "Sara",
+      "Denali",
+      "Maria"
+    ],
+    "dialogue": [
+      {
+        "speaker": "Sara",
+        "text": "The guests are here, and my speech is ready. I have butterflies in my stomach."
+      },
+      {
+        "speaker": "Denali",
+        "text": "That means you are nervous. Take your time; everyone is glad to hear you."
+      },
+      {
+        "speaker": "Ethan",
+        "text": "The ceremony is about to begin. Thank you all for helping us get here."
+      },
+      {
+        "speaker": "Clarice",
+        "text": "From a pair of lost keys to this day! What a journey."
+      },
+      {
+        "speaker": "Maria",
+        "text": "After the ceremony, let’s take a photograph with all our friends."
+      },
+      {
+        "speaker": "Sara",
+        "text": "And this time, I know exactly what to say: congratulations!"
+      }
+    ],
+    "reading": "On September nineteenth, Clarice and Ethan celebrate their wedding with their friends. Sara is ready to give her speech but says she has butterflies in her stomach, an idiom meaning that she feels nervous. Denali reassures her. Clarice remembers the keys Ethan returned when they first met. After the ceremony, the group plans a photograph. The story closes by connecting the first meeting, the friendships and the preparations to a celebration that finally takes place.",
+    "questions": [
+      {
+        "prompt": "What is the date?"
+      },
+      {
+        "prompt": "What does butterflies in my stomach mean here?"
+      },
+      {
+        "prompt": "What does Clarice remember?"
+      },
+      {
+        "prompt": "What do they plan after the ceremony?"
+      }
+    ],
+    "focus": "Idioms and cultural awareness",
+    "task": "Explain an idiom in plain English. Compare two ways of congratulating someone, noting context and tone rather than stereotypes."
+  }
+]
