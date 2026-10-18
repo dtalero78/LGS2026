@@ -235,6 +235,8 @@ const getNavigation = (userEmail: string, userRole: string) => [
           { name: 'Canales WhatsApp', href: '/admin/contingencia/whatsapp', newTab: true },
         ],
       },
+      // Interruptor del libro interactivo ESSENTIAL nuevo (solo SUPER_ADMIN/ADMIN).
+      { name: 'Book ESS New', href: '/admin/book-ess', newTab: true },
       { name: 'Diagnóstico', href: '/admin/diagnostico', newTab: true },
       { name: 'Lgs-Buckets', href: '/admin/lgs-buckets', newTab: true },
     ],

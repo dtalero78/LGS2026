@@ -1,0 +1,1208 @@
+{
+  "schema_version": "1.0",
+  "content_version": "1.0.0",
+  "book_code": "ST00-00",
+  "book_code_status": "propuesto a partir del nombre ST00-00; confirmar identificador existente antes de importar",
+  "title": "LGS ESSENTIAL",
+  "academic_level": "ESS",
+  "academic_step": "Step 0",
+  "units": 12,
+  "page_count": 88,
+  "pages": [
+    {
+      "page": 1,
+      "id": "ST00-00-p001",
+      "unit_id": null,
+      "kind": "cover",
+      "title": "El mundo empieza con un hello.",
+      "object_key": "materials/interactive/ST00-00/page-001.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": []
+    },
+    {
+      "page": 2,
+      "id": "ST00-00-p002",
+      "unit_id": "ESS-U01",
+      "kind": "lesson",
+      "title": "Let's say hello!",
+      "object_key": "materials/interactive/ST00-00/page-002.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 3,
+      "id": "ST00-00-p003",
+      "unit_id": "ESS-U01",
+      "kind": "vocabulary",
+      "title": "Greetings & farewells",
+      "object_key": "materials/interactive/ST00-00/page-003.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 4,
+      "id": "ST00-00-p004",
+      "unit_id": "ESS-U01",
+      "kind": "vocabulary",
+      "title": "The alphabet · 1",
+      "object_key": "materials/interactive/ST00-00/page-004.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 5,
+      "id": "ST00-00-p005",
+      "unit_id": "ESS-U01",
+      "kind": "vocabulary",
+      "title": "The alphabet · 2",
+      "object_key": "materials/interactive/ST00-00/page-005.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 6,
+      "id": "ST00-00-p006",
+      "unit_id": "ESS-U01",
+      "kind": "conversation",
+      "title": "Let’s connect.",
+      "object_key": "materials/interactive/ST00-00/page-006.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 7,
+      "id": "ST00-00-p007",
+      "unit_id": "ESS-U01",
+      "kind": "practice",
+      "title": "Write & reflect",
+      "object_key": "materials/interactive/ST00-00/page-007.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U01-W01",
+        "ESS-U01-W02"
+      ]
+    },
+    {
+      "page": 8,
+      "id": "ST00-00-p008",
+      "unit_id": "ESS-U01",
+      "kind": "assessment",
+      "title": "Checkpoint",
+      "object_key": "materials/interactive/ST00-00/page-008.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U01-Q01",
+        "ESS-U01-Q02",
+        "ESS-U01-Q03",
+        "ESS-U01-Q04"
+      ]
+    },
+    {
+      "page": 9,
+      "id": "ST00-00-p009",
+      "unit_id": "ESS-U02",
+      "kind": "lesson",
+      "title": "Important dates",
+      "object_key": "materials/interactive/ST00-00/page-009.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 10,
+      "id": "ST00-00-p010",
+      "unit_id": "ESS-U02",
+      "kind": "vocabulary",
+      "title": "Days of the week",
+      "object_key": "materials/interactive/ST00-00/page-010.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 11,
+      "id": "ST00-00-p011",
+      "unit_id": "ESS-U02",
+      "kind": "vocabulary",
+      "title": "Months of the year",
+      "object_key": "materials/interactive/ST00-00/page-011.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 12,
+      "id": "ST00-00-p012",
+      "unit_id": "ESS-U02",
+      "kind": "vocabulary",
+      "title": "Numbers 1–100 · 1",
+      "object_key": "materials/interactive/ST00-00/page-012.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 13,
+      "id": "ST00-00-p013",
+      "unit_id": "ESS-U02",
+      "kind": "vocabulary",
+      "title": "Numbers 1–100 · 2",
+      "object_key": "materials/interactive/ST00-00/page-013.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 14,
+      "id": "ST00-00-p014",
+      "unit_id": "ESS-U02",
+      "kind": "vocabulary",
+      "title": "Numbers 1–100 · 3",
+      "object_key": "materials/interactive/ST00-00/page-014.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 15,
+      "id": "ST00-00-p015",
+      "unit_id": "ESS-U02",
+      "kind": "vocabulary",
+      "title": "Numbers 1–100 · 4",
+      "object_key": "materials/interactive/ST00-00/page-015.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 16,
+      "id": "ST00-00-p016",
+      "unit_id": "ESS-U02",
+      "kind": "vocabulary",
+      "title": "Numbers 1–100 · 5",
+      "object_key": "materials/interactive/ST00-00/page-016.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 17,
+      "id": "ST00-00-p017",
+      "unit_id": "ESS-U02",
+      "kind": "vocabulary",
+      "title": "Ordinal numbers",
+      "object_key": "materials/interactive/ST00-00/page-017.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 18,
+      "id": "ST00-00-p018",
+      "unit_id": "ESS-U02",
+      "kind": "vocabulary",
+      "title": "Special events",
+      "object_key": "materials/interactive/ST00-00/page-018.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 19,
+      "id": "ST00-00-p019",
+      "unit_id": "ESS-U02",
+      "kind": "conversation",
+      "title": "Let’s connect.",
+      "object_key": "materials/interactive/ST00-00/page-019.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 20,
+      "id": "ST00-00-p020",
+      "unit_id": "ESS-U02",
+      "kind": "practice",
+      "title": "Write & reflect",
+      "object_key": "materials/interactive/ST00-00/page-020.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U02-W01",
+        "ESS-U02-W02",
+        "ESS-U02-W03",
+        "ESS-U02-W04",
+        "ESS-U02-W05"
+      ]
+    },
+    {
+      "page": 21,
+      "id": "ST00-00-p021",
+      "unit_id": "ESS-U02",
+      "kind": "assessment",
+      "title": "Checkpoint",
+      "object_key": "materials/interactive/ST00-00/page-021.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U02-Q01",
+        "ESS-U02-Q02",
+        "ESS-U02-Q03",
+        "ESS-U02-Q04"
+      ]
+    },
+    {
+      "page": 22,
+      "id": "ST00-00-p022",
+      "unit_id": "ESS-U03",
+      "kind": "lesson",
+      "title": "Occupations",
+      "object_key": "materials/interactive/ST00-00/page-022.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 23,
+      "id": "ST00-00-p023",
+      "unit_id": "ESS-U03",
+      "kind": "vocabulary",
+      "title": "Professions & occupations",
+      "object_key": "materials/interactive/ST00-00/page-023.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 24,
+      "id": "ST00-00-p024",
+      "unit_id": "ESS-U03",
+      "kind": "conversation",
+      "title": "Let’s connect.",
+      "object_key": "materials/interactive/ST00-00/page-024.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 25,
+      "id": "ST00-00-p025",
+      "unit_id": "ESS-U03",
+      "kind": "practice",
+      "title": "Write & reflect",
+      "object_key": "materials/interactive/ST00-00/page-025.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U03-W01",
+        "ESS-U03-W02"
+      ]
+    },
+    {
+      "page": 26,
+      "id": "ST00-00-p026",
+      "unit_id": "ESS-U03",
+      "kind": "assessment",
+      "title": "Checkpoint",
+      "object_key": "materials/interactive/ST00-00/page-026.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U03-Q01",
+        "ESS-U03-Q02",
+        "ESS-U03-Q03",
+        "ESS-U03-Q04"
+      ]
+    },
+    {
+      "page": 27,
+      "id": "ST00-00-p027",
+      "unit_id": "ESS-U04",
+      "kind": "lesson",
+      "title": "Where are you from?",
+      "object_key": "materials/interactive/ST00-00/page-027.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 28,
+      "id": "ST00-00-p028",
+      "unit_id": "ESS-U04",
+      "kind": "vocabulary",
+      "title": "Countries & nationalities",
+      "object_key": "materials/interactive/ST00-00/page-028.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 29,
+      "id": "ST00-00-p029",
+      "unit_id": "ESS-U04",
+      "kind": "conversation",
+      "title": "Let’s connect.",
+      "object_key": "materials/interactive/ST00-00/page-029.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 30,
+      "id": "ST00-00-p030",
+      "unit_id": "ESS-U04",
+      "kind": "practice",
+      "title": "Write & reflect",
+      "object_key": "materials/interactive/ST00-00/page-030.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U04-W01",
+        "ESS-U04-W02"
+      ]
+    },
+    {
+      "page": 31,
+      "id": "ST00-00-p031",
+      "unit_id": "ESS-U04",
+      "kind": "assessment",
+      "title": "Checkpoint",
+      "object_key": "materials/interactive/ST00-00/page-031.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U04-Q01",
+        "ESS-U04-Q02",
+        "ESS-U04-Q03",
+        "ESS-U04-Q04"
+      ]
+    },
+    {
+      "page": 32,
+      "id": "ST00-00-p032",
+      "unit_id": "ESS-U05",
+      "kind": "lesson",
+      "title": "How's the weather?",
+      "object_key": "materials/interactive/ST00-00/page-032.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 33,
+      "id": "ST00-00-p033",
+      "unit_id": "ESS-U05",
+      "kind": "vocabulary",
+      "title": "Seasons",
+      "object_key": "materials/interactive/ST00-00/page-033.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 34,
+      "id": "ST00-00-p034",
+      "unit_id": "ESS-U05",
+      "kind": "vocabulary",
+      "title": "Weather",
+      "object_key": "materials/interactive/ST00-00/page-034.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 35,
+      "id": "ST00-00-p035",
+      "unit_id": "ESS-U05",
+      "kind": "vocabulary",
+      "title": "Temperature",
+      "object_key": "materials/interactive/ST00-00/page-035.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 36,
+      "id": "ST00-00-p036",
+      "unit_id": "ESS-U05",
+      "kind": "conversation",
+      "title": "Let’s connect.",
+      "object_key": "materials/interactive/ST00-00/page-036.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 37,
+      "id": "ST00-00-p037",
+      "unit_id": "ESS-U05",
+      "kind": "practice",
+      "title": "Write & reflect",
+      "object_key": "materials/interactive/ST00-00/page-037.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U05-W01",
+        "ESS-U05-W02"
+      ]
+    },
+    {
+      "page": 38,
+      "id": "ST00-00-p038",
+      "unit_id": "ESS-U05",
+      "kind": "assessment",
+      "title": "Checkpoint",
+      "object_key": "materials/interactive/ST00-00/page-038.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U05-Q01",
+        "ESS-U05-Q02",
+        "ESS-U05-Q03",
+        "ESS-U05-Q04"
+      ]
+    },
+    {
+      "page": 39,
+      "id": "ST00-00-p039",
+      "unit_id": "ESS-U06",
+      "kind": "lesson",
+      "title": "Let's go shopping!",
+      "object_key": "materials/interactive/ST00-00/page-039.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 40,
+      "id": "ST00-00-p040",
+      "unit_id": "ESS-U06",
+      "kind": "vocabulary",
+      "title": "Colors",
+      "object_key": "materials/interactive/ST00-00/page-040.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 41,
+      "id": "ST00-00-p041",
+      "unit_id": "ESS-U06",
+      "kind": "vocabulary",
+      "title": "Clothes",
+      "object_key": "materials/interactive/ST00-00/page-041.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 42,
+      "id": "ST00-00-p042",
+      "unit_id": "ESS-U06",
+      "kind": "vocabulary",
+      "title": "Accessories",
+      "object_key": "materials/interactive/ST00-00/page-042.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 43,
+      "id": "ST00-00-p043",
+      "unit_id": "ESS-U06",
+      "kind": "conversation",
+      "title": "Let’s connect.",
+      "object_key": "materials/interactive/ST00-00/page-043.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 44,
+      "id": "ST00-00-p044",
+      "unit_id": "ESS-U06",
+      "kind": "practice",
+      "title": "Write & reflect",
+      "object_key": "materials/interactive/ST00-00/page-044.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U06-W01",
+        "ESS-U06-W02"
+      ]
+    },
+    {
+      "page": 45,
+      "id": "ST00-00-p045",
+      "unit_id": "ESS-U06",
+      "kind": "assessment",
+      "title": "Checkpoint",
+      "object_key": "materials/interactive/ST00-00/page-045.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U06-Q01",
+        "ESS-U06-Q02",
+        "ESS-U06-Q03",
+        "ESS-U06-Q04"
+      ]
+    },
+    {
+      "page": 46,
+      "id": "ST00-00-p046",
+      "unit_id": "ESS-U07",
+      "kind": "lesson",
+      "title": "My family",
+      "object_key": "materials/interactive/ST00-00/page-046.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 47,
+      "id": "ST00-00-p047",
+      "unit_id": "ESS-U07",
+      "kind": "vocabulary",
+      "title": "Family members",
+      "object_key": "materials/interactive/ST00-00/page-047.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 48,
+      "id": "ST00-00-p048",
+      "unit_id": "ESS-U07",
+      "kind": "conversation",
+      "title": "Let’s connect.",
+      "object_key": "materials/interactive/ST00-00/page-048.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 49,
+      "id": "ST00-00-p049",
+      "unit_id": "ESS-U07",
+      "kind": "practice",
+      "title": "Write & reflect",
+      "object_key": "materials/interactive/ST00-00/page-049.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U07-W01",
+        "ESS-U07-W02",
+        "ESS-U07-W03"
+      ]
+    },
+    {
+      "page": 50,
+      "id": "ST00-00-p050",
+      "unit_id": "ESS-U07",
+      "kind": "assessment",
+      "title": "Checkpoint",
+      "object_key": "materials/interactive/ST00-00/page-050.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U07-Q01",
+        "ESS-U07-Q02",
+        "ESS-U07-Q03",
+        "ESS-U07-Q04"
+      ]
+    },
+    {
+      "page": 51,
+      "id": "ST00-00-p051",
+      "unit_id": "ESS-U08",
+      "kind": "lesson",
+      "title": "My body",
+      "object_key": "materials/interactive/ST00-00/page-051.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 52,
+      "id": "ST00-00-p052",
+      "unit_id": "ESS-U08",
+      "kind": "vocabulary",
+      "title": "Parts of the body",
+      "object_key": "materials/interactive/ST00-00/page-052.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 53,
+      "id": "ST00-00-p053",
+      "unit_id": "ESS-U08",
+      "kind": "vocabulary",
+      "title": "Parts of the face",
+      "object_key": "materials/interactive/ST00-00/page-053.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 54,
+      "id": "ST00-00-p054",
+      "unit_id": "ESS-U08",
+      "kind": "vocabulary",
+      "title": "Health vocabulary",
+      "object_key": "materials/interactive/ST00-00/page-054.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 55,
+      "id": "ST00-00-p055",
+      "unit_id": "ESS-U08",
+      "kind": "conversation",
+      "title": "Let’s connect.",
+      "object_key": "materials/interactive/ST00-00/page-055.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 56,
+      "id": "ST00-00-p056",
+      "unit_id": "ESS-U08",
+      "kind": "practice",
+      "title": "Write & reflect",
+      "object_key": "materials/interactive/ST00-00/page-056.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U08-W01",
+        "ESS-U08-W02"
+      ]
+    },
+    {
+      "page": 57,
+      "id": "ST00-00-p057",
+      "unit_id": "ESS-U08",
+      "kind": "assessment",
+      "title": "Checkpoint",
+      "object_key": "materials/interactive/ST00-00/page-057.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U08-Q01",
+        "ESS-U08-Q02",
+        "ESS-U08-Q03",
+        "ESS-U08-Q04"
+      ]
+    },
+    {
+      "page": 58,
+      "id": "ST00-00-p058",
+      "unit_id": "ESS-U09",
+      "kind": "lesson",
+      "title": "My daily routine",
+      "object_key": "materials/interactive/ST00-00/page-058.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 59,
+      "id": "ST00-00-p059",
+      "unit_id": "ESS-U09",
+      "kind": "vocabulary",
+      "title": "Daily activities",
+      "object_key": "materials/interactive/ST00-00/page-059.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 60,
+      "id": "ST00-00-p060",
+      "unit_id": "ESS-U09",
+      "kind": "vocabulary",
+      "title": "More activities",
+      "object_key": "materials/interactive/ST00-00/page-060.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 61,
+      "id": "ST00-00-p061",
+      "unit_id": "ESS-U09",
+      "kind": "vocabulary",
+      "title": "Telling the time",
+      "object_key": "materials/interactive/ST00-00/page-061.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 62,
+      "id": "ST00-00-p062",
+      "unit_id": "ESS-U09",
+      "kind": "conversation",
+      "title": "Let’s connect.",
+      "object_key": "materials/interactive/ST00-00/page-062.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 63,
+      "id": "ST00-00-p063",
+      "unit_id": "ESS-U09",
+      "kind": "practice",
+      "title": "Write & reflect",
+      "object_key": "materials/interactive/ST00-00/page-063.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U09-W01",
+        "ESS-U09-W02"
+      ]
+    },
+    {
+      "page": 64,
+      "id": "ST00-00-p064",
+      "unit_id": "ESS-U09",
+      "kind": "assessment",
+      "title": "Checkpoint",
+      "object_key": "materials/interactive/ST00-00/page-064.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U09-Q01",
+        "ESS-U09-Q02",
+        "ESS-U09-Q03",
+        "ESS-U09-Q04"
+      ]
+    },
+    {
+      "page": 65,
+      "id": "ST00-00-p065",
+      "unit_id": "ESS-U10",
+      "kind": "lesson",
+      "title": "Places in the city",
+      "object_key": "materials/interactive/ST00-00/page-065.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 66,
+      "id": "ST00-00-p066",
+      "unit_id": "ESS-U10",
+      "kind": "vocabulary",
+      "title": "Places in the city",
+      "object_key": "materials/interactive/ST00-00/page-066.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 67,
+      "id": "ST00-00-p067",
+      "unit_id": "ESS-U10",
+      "kind": "vocabulary",
+      "title": "Directions",
+      "object_key": "materials/interactive/ST00-00/page-067.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 68,
+      "id": "ST00-00-p068",
+      "unit_id": "ESS-U10",
+      "kind": "conversation",
+      "title": "Let’s connect.",
+      "object_key": "materials/interactive/ST00-00/page-068.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 69,
+      "id": "ST00-00-p069",
+      "unit_id": "ESS-U10",
+      "kind": "practice",
+      "title": "Write & reflect",
+      "object_key": "materials/interactive/ST00-00/page-069.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U10-W01",
+        "ESS-U10-W02"
+      ]
+    },
+    {
+      "page": 70,
+      "id": "ST00-00-p070",
+      "unit_id": "ESS-U10",
+      "kind": "assessment",
+      "title": "Checkpoint",
+      "object_key": "materials/interactive/ST00-00/page-070.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U10-Q01",
+        "ESS-U10-Q02",
+        "ESS-U10-Q03",
+        "ESS-U10-Q04"
+      ]
+    },
+    {
+      "page": 71,
+      "id": "ST00-00-p071",
+      "unit_id": "ESS-U11",
+      "kind": "lesson",
+      "title": "In my house",
+      "object_key": "materials/interactive/ST00-00/page-071.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 72,
+      "id": "ST00-00-p072",
+      "unit_id": "ESS-U11",
+      "kind": "vocabulary",
+      "title": "Parts of the house",
+      "object_key": "materials/interactive/ST00-00/page-072.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 73,
+      "id": "ST00-00-p073",
+      "unit_id": "ESS-U11",
+      "kind": "vocabulary",
+      "title": "Furniture & fixtures",
+      "object_key": "materials/interactive/ST00-00/page-073.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 74,
+      "id": "ST00-00-p074",
+      "unit_id": "ESS-U11",
+      "kind": "vocabulary",
+      "title": "Appliances",
+      "object_key": "materials/interactive/ST00-00/page-074.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 75,
+      "id": "ST00-00-p075",
+      "unit_id": "ESS-U11",
+      "kind": "conversation",
+      "title": "Let’s connect.",
+      "object_key": "materials/interactive/ST00-00/page-075.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 76,
+      "id": "ST00-00-p076",
+      "unit_id": "ESS-U11",
+      "kind": "practice",
+      "title": "Write & reflect",
+      "object_key": "materials/interactive/ST00-00/page-076.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U11-W01",
+        "ESS-U11-W02",
+        "ESS-U11-W03"
+      ]
+    },
+    {
+      "page": 77,
+      "id": "ST00-00-p077",
+      "unit_id": "ESS-U11",
+      "kind": "assessment",
+      "title": "Checkpoint",
+      "object_key": "materials/interactive/ST00-00/page-077.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U11-Q01",
+        "ESS-U11-Q02",
+        "ESS-U11-Q03",
+        "ESS-U11-Q04"
+      ]
+    },
+    {
+      "page": 78,
+      "id": "ST00-00-p078",
+      "unit_id": "ESS-U12",
+      "kind": "lesson",
+      "title": "All about me",
+      "object_key": "materials/interactive/ST00-00/page-078.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 79,
+      "id": "ST00-00-p079",
+      "unit_id": "ESS-U12",
+      "kind": "vocabulary",
+      "title": "Personal information",
+      "object_key": "materials/interactive/ST00-00/page-079.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 80,
+      "id": "ST00-00-p080",
+      "unit_id": "ESS-U12",
+      "kind": "vocabulary",
+      "title": "Words to describe",
+      "object_key": "materials/interactive/ST00-00/page-080.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 81,
+      "id": "ST00-00-p081",
+      "unit_id": "ESS-U12",
+      "kind": "conversation",
+      "title": "Let’s connect.",
+      "object_key": "materials/interactive/ST00-00/page-081.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": true,
+      "activity_ids": []
+    },
+    {
+      "page": 82,
+      "id": "ST00-00-p082",
+      "unit_id": "ESS-U12",
+      "kind": "practice",
+      "title": "Write & reflect",
+      "object_key": "materials/interactive/ST00-00/page-082.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U12-W01",
+        "ESS-U12-W02"
+      ]
+    },
+    {
+      "page": 83,
+      "id": "ST00-00-p083",
+      "unit_id": "ESS-U12",
+      "kind": "assessment",
+      "title": "Checkpoint",
+      "object_key": "materials/interactive/ST00-00/page-083.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-U12-Q01",
+        "ESS-U12-Q02",
+        "ESS-U12-Q03",
+        "ESS-U12-Q04"
+      ]
+    },
+    {
+      "page": 84,
+      "id": "ST00-00-p084",
+      "unit_id": null,
+      "kind": "practice",
+      "title": "Final practice · All about you",
+      "object_key": "materials/interactive/ST00-00/page-084.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-FINAL-W01",
+        "ESS-FINAL-W02",
+        "ESS-FINAL-W03",
+        "ESS-FINAL-W04"
+      ]
+    },
+    {
+      "page": 85,
+      "id": "ST00-00-p085",
+      "unit_id": null,
+      "kind": "assessment",
+      "title": "Final challenge · 1/3",
+      "object_key": "materials/interactive/ST00-00/page-085.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-FINAL-Q01",
+        "ESS-FINAL-Q02",
+        "ESS-FINAL-Q03",
+        "ESS-FINAL-Q04"
+      ]
+    },
+    {
+      "page": 86,
+      "id": "ST00-00-p086",
+      "unit_id": null,
+      "kind": "assessment",
+      "title": "Final challenge · 2/3",
+      "object_key": "materials/interactive/ST00-00/page-086.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-FINAL-Q05",
+        "ESS-FINAL-Q06",
+        "ESS-FINAL-Q07",
+        "ESS-FINAL-Q08"
+      ]
+    },
+    {
+      "page": 87,
+      "id": "ST00-00-p087",
+      "unit_id": null,
+      "kind": "assessment",
+      "title": "Final challenge · 3/3",
+      "object_key": "materials/interactive/ST00-00/page-087.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": [
+        "ESS-FINAL-Q09",
+        "ESS-FINAL-Q10",
+        "ESS-FINAL-Q11",
+        "ESS-FINAL-Q12"
+      ]
+    },
+    {
+      "page": 88,
+      "id": "ST00-00-p088",
+      "unit_id": null,
+      "kind": "credits",
+      "title": "Credits & edition notes",
+      "object_key": "materials/interactive/ST00-00/page-088.jpg",
+      "audio_object_key": null,
+      "audio_status": "not_provided",
+      "required_reading": false,
+      "activity_ids": []
+    }
+  ],
+  "production_pages_prefix": "materials/interactive/ST00-00",
+  "pdf_corrected": "pdf/LGS_ESSENTIAL_corregido.pdf",
+  "pdf_original_reference": "pdf/LGS_ESSENTIAL_original.pdf",
+  "audio": {
+    "mp3_count": 0,
+    "status": "not_provided",
+    "scripts": "audio/narration-scripts.json",
+    "hide_audio_controls_until_asset_exists": true
+  },
+  "server_answer_key": "data/server-only/activities.answer-key.json",
+  "student_activities": "data/student/activities.json",
+  "integration_status": "asset_handoff_not_deployed_to_LGS",
+  "access": {
+    "active_student": true,
+    "level": "ESS",
+    "step": "Step 0",
+    "signed_url_ttl_seconds": 600
+  }
+}

@@ -37,4 +37,5 @@ export const ids = {
   advisorEventLog: () => generateId('ael'),
   cancelacion: () => generateId('can'),
   kidsInscripcion: () => generateId('kid'),
+  libro: () => generateId('lib'),
 };

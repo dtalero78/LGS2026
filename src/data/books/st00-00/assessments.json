@@ -1,0 +1,169 @@
+{
+  "schema_version": "1.0",
+  "assessments": [
+    {
+      "id": "ESS-U01-CHECKPOINT",
+      "unit_id": "ESS-U01",
+      "activity_ids": [
+        "ESS-U01-Q01",
+        "ESS-U01-Q02",
+        "ESS-U01-Q03",
+        "ESS-U01-Q04"
+      ],
+      "pass_correct_count": 3,
+      "total_points": 4
+    },
+    {
+      "id": "ESS-U02-CHECKPOINT",
+      "unit_id": "ESS-U02",
+      "activity_ids": [
+        "ESS-U02-Q01",
+        "ESS-U02-Q02",
+        "ESS-U02-Q03",
+        "ESS-U02-Q04"
+      ],
+      "pass_correct_count": 3,
+      "total_points": 4
+    },
+    {
+      "id": "ESS-U03-CHECKPOINT",
+      "unit_id": "ESS-U03",
+      "activity_ids": [
+        "ESS-U03-Q01",
+        "ESS-U03-Q02",
+        "ESS-U03-Q03",
+        "ESS-U03-Q04"
+      ],
+      "pass_correct_count": 3,
+      "total_points": 4
+    },
+    {
+      "id": "ESS-U04-CHECKPOINT",
+      "unit_id": "ESS-U04",
+      "activity_ids": [
+        "ESS-U04-Q01",
+        "ESS-U04-Q02",
+        "ESS-U04-Q03",
+        "ESS-U04-Q04"
+      ],
+      "pass_correct_count": 3,
+      "total_points": 4
+    },
+    {
+      "id": "ESS-U05-CHECKPOINT",
+      "unit_id": "ESS-U05",
+      "activity_ids": [
+        "ESS-U05-Q01",
+        "ESS-U05-Q02",
+        "ESS-U05-Q03",
+        "ESS-U05-Q04"
+      ],
+      "pass_correct_count": 3,
+      "total_points": 4
+    },
+    {
+      "id": "ESS-U06-CHECKPOINT",
+      "unit_id": "ESS-U06",
+      "activity_ids": [
+        "ESS-U06-Q01",
+        "ESS-U06-Q02",
+        "ESS-U06-Q03",
+        "ESS-U06-Q04"
+      ],
+      "pass_correct_count": 3,
+      "total_points": 4
+    },
+    {
+      "id": "ESS-U07-CHECKPOINT",
+      "unit_id": "ESS-U07",
+      "activity_ids": [
+        "ESS-U07-Q01",
+        "ESS-U07-Q02",
+        "ESS-U07-Q03",
+        "ESS-U07-Q04"
+      ],
+      "pass_correct_count": 3,
+      "total_points": 4
+    },
+    {
+      "id": "ESS-U08-CHECKPOINT",
+      "unit_id": "ESS-U08",
+      "activity_ids": [
+        "ESS-U08-Q01",
+        "ESS-U08-Q02",
+        "ESS-U08-Q03",
+        "ESS-U08-Q04"
+      ],
+      "pass_correct_count": 3,
+      "total_points": 4
+    },
+    {
+      "id": "ESS-U09-CHECKPOINT",
+      "unit_id": "ESS-U09",
+      "activity_ids": [
+        "ESS-U09-Q01",
+        "ESS-U09-Q02",
+        "ESS-U09-Q03",
+        "ESS-U09-Q04"
+      ],
+      "pass_correct_count": 3,
+      "total_points": 4
+    },
+    {
+      "id": "ESS-U10-CHECKPOINT",
+      "unit_id": "ESS-U10",
+      "activity_ids": [
+        "ESS-U10-Q01",
+        "ESS-U10-Q02",
+        "ESS-U10-Q03",
+        "ESS-U10-Q04"
+      ],
+      "pass_correct_count": 3,
+      "total_points": 4
+    },
+    {
+      "id": "ESS-U11-CHECKPOINT",
+      "unit_id": "ESS-U11",
+      "activity_ids": [
+        "ESS-U11-Q01",
+        "ESS-U11-Q02",
+        "ESS-U11-Q03",
+        "ESS-U11-Q04"
+      ],
+      "pass_correct_count": 3,
+      "total_points": 4
+    },
+    {
+      "id": "ESS-U12-CHECKPOINT",
+      "unit_id": "ESS-U12",
+      "activity_ids": [
+        "ESS-U12-Q01",
+        "ESS-U12-Q02",
+        "ESS-U12-Q03",
+        "ESS-U12-Q04"
+      ],
+      "pass_correct_count": 3,
+      "total_points": 4
+    },
+    {
+      "id": "ESS-FINAL",
+      "unit_id": null,
+      "activity_ids": [
+        "ESS-FINAL-Q01",
+        "ESS-FINAL-Q02",
+        "ESS-FINAL-Q03",
+        "ESS-FINAL-Q04",
+        "ESS-FINAL-Q05",
+        "ESS-FINAL-Q06",
+        "ESS-FINAL-Q07",
+        "ESS-FINAL-Q08",
+        "ESS-FINAL-Q09",
+        "ESS-FINAL-Q10",
+        "ESS-FINAL-Q11",
+        "ESS-FINAL-Q12"
+      ],
+      "pass_correct_count": 9,
+      "total_points": 12
+    }
+  ]
+}

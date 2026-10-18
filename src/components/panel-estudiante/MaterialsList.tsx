@@ -40,6 +40,20 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
       refetchOnWindowFocus: false,
     }
   )
+  // Book ESS New: el servidor decide (interruptor + alumno activo en ESS · Step 0).
+  const { data: bookEss } = useQuery(
+    ['book-ess-estado'],
+    () =>
+      fetch('/api/postgres/panel-estudiante/book-ess/estado')
+        .then(r => r.json())
+        .catch(() => ({ disponible: false })),
+    {
+      enabled: nivelNormalizado === 'ESS',
+      staleTime: 60 * 1000,
+      refetchOnWindowFocus: false,
+    }
+  )
+  const bookEssDisponible: boolean = nivelNormalizado === 'ESS' && Boolean(bookEss?.disponible)
   const v2Available: boolean = Boolean(libroData?.available)
   // Fase 2 — ejercicios de práctica (flag independiente).
   const ejerciciosActivo: boolean = Boolean(libroData?.ejerciciosActivo)
@@ -85,6 +99,22 @@ export default function MaterialsList({ data, isLoading }: MaterialsListProps) {
       <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
         Material - {nivel}
       </h3>
+
+      {/* Book ESS New — libro ESSENTIAL con actividades (interruptor en Mantenimiento) */}
+      {bookEssDisponible && (
+        <a
+          href="/panel-estudiante/book-ess"
+          className="flex items-center gap-3 p-3 mb-3 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors group border border-indigo-200"
+        >
+          <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-200">
+            <SparklesIcon className="h-5 w-5 text-indigo-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-indigo-900">Book ESS New</p>
+            <p className="text-xs text-indigo-600">Libro Essential con actividades y avance</p>
+          </div>
+        </a>
+      )}
 
       {/* v2 (LGS) — solo si el flag global está ON y el nivel tiene libro configurado */}
       {v2Available && !isWelcome && (
