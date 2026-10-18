@@ -89,3 +89,7 @@ jsconfig.json
 # Scripts de diagnóstico one-off (con numeroId / _id específicos de un usuario).
 # Los reutilizables (verify-*, inspect-*) sí se commitean — los uso-único no.
 /scripts/diag-*.js
+
+# Paquetes fuente de libros interactivos (PDF original con claves, solucionarios,
+# prototipos). Se suben a Spaces con scripts/upload-book-ess.js; nunca a git.
+Books/
