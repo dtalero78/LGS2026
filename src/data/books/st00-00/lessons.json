@@ -1,0 +1,2498 @@
+{
+  "schema_version": "1.0",
+  "book_code": "ST00-00",
+  "units": [
+    {
+      "id": 1,
+      "title": "Let's say hello!",
+      "es": "Primeras conexiones",
+      "goal": "Saluda, preséntate y deletrea tu nombre.",
+      "groups": [
+        {
+          "title": "Greetings & farewells",
+          "words": [
+            [
+              "Hello",
+              "Hola"
+            ],
+            [
+              "Hi",
+              "Hola"
+            ],
+            [
+              "Good morning",
+              "Buenos días"
+            ],
+            [
+              "Good afternoon",
+              "Buenas tardes"
+            ],
+            [
+              "Good evening",
+              "Buenas noches (saludo)"
+            ],
+            [
+              "How are you?",
+              "¿Cómo estás?"
+            ],
+            [
+              "Goodbye",
+              "Adiós"
+            ],
+            [
+              "Bye",
+              "Chao"
+            ],
+            [
+              "See you later",
+              "Hasta luego"
+            ],
+            [
+              "Take care",
+              "Cuídate"
+            ],
+            [
+              "Good night",
+              "Buenas noches (despedida)"
+            ]
+          ]
+        },
+        {
+          "title": "The alphabet",
+          "words": [
+            [
+              "A",
+              "Letra A"
+            ],
+            [
+              "B",
+              "Letra B"
+            ],
+            [
+              "C",
+              "Letra C"
+            ],
+            [
+              "D",
+              "Letra D"
+            ],
+            [
+              "E",
+              "Letra E"
+            ],
+            [
+              "F",
+              "Letra F"
+            ],
+            [
+              "G",
+              "Letra G"
+            ],
+            [
+              "H",
+              "Letra H"
+            ],
+            [
+              "I",
+              "Letra I"
+            ],
+            [
+              "J",
+              "Letra J"
+            ],
+            [
+              "K",
+              "Letra K"
+            ],
+            [
+              "L",
+              "Letra L"
+            ],
+            [
+              "M",
+              "Letra M"
+            ],
+            [
+              "N",
+              "Letra N"
+            ],
+            [
+              "O",
+              "Letra O"
+            ],
+            [
+              "P",
+              "Letra P"
+            ],
+            [
+              "Q",
+              "Letra Q"
+            ],
+            [
+              "R",
+              "Letra R"
+            ],
+            [
+              "S",
+              "Letra S"
+            ],
+            [
+              "T",
+              "Letra T"
+            ],
+            [
+              "U",
+              "Letra U"
+            ],
+            [
+              "V",
+              "Letra V"
+            ],
+            [
+              "W",
+              "Letra W"
+            ],
+            [
+              "X",
+              "Letra X"
+            ],
+            [
+              "Y",
+              "Letra Y"
+            ],
+            [
+              "Z",
+              "Letra Z"
+            ]
+          ]
+        }
+      ],
+      "explain": "Usa I’m o My name is para presentarte. Good evening es un saludo; good night se usa al despedirse o ir a dormir. Para pedir que deletreen: How do you spell that?",
+      "dialog": [
+        "Hi, I'm Evan.",
+        "Hi, Evan. I'm Caleb.",
+        "Nice to meet you, Caleb.",
+        "Nice to meet you, too.",
+        "How do you spell your name?",
+        "C-A-L-E-B.",
+        "How are you?",
+        "Fine, thanks. And you?",
+        "I'm fine.",
+        "Goodbye! See you tomorrow.",
+        "See you!"
+      ],
+      "write": [
+        "Write a short introduction.",
+        "Spell your first name."
+      ],
+      "unit_id": "ESS-U01",
+      "academic_step": "Step 0",
+      "pages": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "source_pdf_pages": [
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Important dates",
+      "es": "Momentos para recordar",
+      "goal": "Habla de días, meses, números y fechas.",
+      "groups": [
+        {
+          "title": "Days of the week",
+          "words": [
+            [
+              "Monday",
+              "Lunes"
+            ],
+            [
+              "Tuesday",
+              "Martes"
+            ],
+            [
+              "Wednesday",
+              "Miércoles"
+            ],
+            [
+              "Thursday",
+              "Jueves"
+            ],
+            [
+              "Friday",
+              "Viernes"
+            ],
+            [
+              "Saturday",
+              "Sábado"
+            ],
+            [
+              "Sunday",
+              "Domingo"
+            ]
+          ]
+        },
+        {
+          "title": "Months of the year",
+          "words": [
+            [
+              "January",
+              "Enero"
+            ],
+            [
+              "February",
+              "Febrero"
+            ],
+            [
+              "March",
+              "Marzo"
+            ],
+            [
+              "April",
+              "Abril"
+            ],
+            [
+              "May",
+              "Mayo"
+            ],
+            [
+              "June",
+              "Junio"
+            ],
+            [
+              "July",
+              "Julio"
+            ],
+            [
+              "August",
+              "Agosto"
+            ],
+            [
+              "September",
+              "Septiembre"
+            ],
+            [
+              "October",
+              "Octubre"
+            ],
+            [
+              "November",
+              "Noviembre"
+            ],
+            [
+              "December",
+              "Diciembre"
+            ]
+          ]
+        },
+        {
+          "title": "Numbers 1–100",
+          "words": [
+            [
+              "one",
+              "1"
+            ],
+            [
+              "two",
+              "2"
+            ],
+            [
+              "three",
+              "3"
+            ],
+            [
+              "four",
+              "4"
+            ],
+            [
+              "five",
+              "5"
+            ],
+            [
+              "six",
+              "6"
+            ],
+            [
+              "seven",
+              "7"
+            ],
+            [
+              "eight",
+              "8"
+            ],
+            [
+              "nine",
+              "9"
+            ],
+            [
+              "ten",
+              "10"
+            ],
+            [
+              "eleven",
+              "11"
+            ],
+            [
+              "twelve",
+              "12"
+            ],
+            [
+              "thirteen",
+              "13"
+            ],
+            [
+              "fourteen",
+              "14"
+            ],
+            [
+              "fifteen",
+              "15"
+            ],
+            [
+              "sixteen",
+              "16"
+            ],
+            [
+              "seventeen",
+              "17"
+            ],
+            [
+              "eighteen",
+              "18"
+            ],
+            [
+              "nineteen",
+              "19"
+            ],
+            [
+              "twenty",
+              "20"
+            ],
+            [
+              "twenty-one",
+              "21"
+            ],
+            [
+              "twenty-two",
+              "22"
+            ],
+            [
+              "twenty-three",
+              "23"
+            ],
+            [
+              "twenty-four",
+              "24"
+            ],
+            [
+              "twenty-five",
+              "25"
+            ],
+            [
+              "twenty-six",
+              "26"
+            ],
+            [
+              "twenty-seven",
+              "27"
+            ],
+            [
+              "twenty-eight",
+              "28"
+            ],
+            [
+              "twenty-nine",
+              "29"
+            ],
+            [
+              "thirty",
+              "30"
+            ],
+            [
+              "thirty-one",
+              "31"
+            ],
+            [
+              "thirty-two",
+              "32"
+            ],
+            [
+              "thirty-three",
+              "33"
+            ],
+            [
+              "thirty-four",
+              "34"
+            ],
+            [
+              "thirty-five",
+              "35"
+            ],
+            [
+              "thirty-six",
+              "36"
+            ],
+            [
+              "thirty-seven",
+              "37"
+            ],
+            [
+              "thirty-eight",
+              "38"
+            ],
+            [
+              "thirty-nine",
+              "39"
+            ],
+            [
+              "forty",
+              "40"
+            ],
+            [
+              "forty-one",
+              "41"
+            ],
+            [
+              "forty-two",
+              "42"
+            ],
+            [
+              "forty-three",
+              "43"
+            ],
+            [
+              "forty-four",
+              "44"
+            ],
+            [
+              "forty-five",
+              "45"
+            ],
+            [
+              "forty-six",
+              "46"
+            ],
+            [
+              "forty-seven",
+              "47"
+            ],
+            [
+              "forty-eight",
+              "48"
+            ],
+            [
+              "forty-nine",
+              "49"
+            ],
+            [
+              "fifty",
+              "50"
+            ],
+            [
+              "fifty-one",
+              "51"
+            ],
+            [
+              "fifty-two",
+              "52"
+            ],
+            [
+              "fifty-three",
+              "53"
+            ],
+            [
+              "fifty-four",
+              "54"
+            ],
+            [
+              "fifty-five",
+              "55"
+            ],
+            [
+              "fifty-six",
+              "56"
+            ],
+            [
+              "fifty-seven",
+              "57"
+            ],
+            [
+              "fifty-eight",
+              "58"
+            ],
+            [
+              "fifty-nine",
+              "59"
+            ],
+            [
+              "sixty",
+              "60"
+            ],
+            [
+              "sixty-one",
+              "61"
+            ],
+            [
+              "sixty-two",
+              "62"
+            ],
+            [
+              "sixty-three",
+              "63"
+            ],
+            [
+              "sixty-four",
+              "64"
+            ],
+            [
+              "sixty-five",
+              "65"
+            ],
+            [
+              "sixty-six",
+              "66"
+            ],
+            [
+              "sixty-seven",
+              "67"
+            ],
+            [
+              "sixty-eight",
+              "68"
+            ],
+            [
+              "sixty-nine",
+              "69"
+            ],
+            [
+              "seventy",
+              "70"
+            ],
+            [
+              "seventy-one",
+              "71"
+            ],
+            [
+              "seventy-two",
+              "72"
+            ],
+            [
+              "seventy-three",
+              "73"
+            ],
+            [
+              "seventy-four",
+              "74"
+            ],
+            [
+              "seventy-five",
+              "75"
+            ],
+            [
+              "seventy-six",
+              "76"
+            ],
+            [
+              "seventy-seven",
+              "77"
+            ],
+            [
+              "seventy-eight",
+              "78"
+            ],
+            [
+              "seventy-nine",
+              "79"
+            ],
+            [
+              "eighty",
+              "80"
+            ],
+            [
+              "eighty-one",
+              "81"
+            ],
+            [
+              "eighty-two",
+              "82"
+            ],
+            [
+              "eighty-three",
+              "83"
+            ],
+            [
+              "eighty-four",
+              "84"
+            ],
+            [
+              "eighty-five",
+              "85"
+            ],
+            [
+              "eighty-six",
+              "86"
+            ],
+            [
+              "eighty-seven",
+              "87"
+            ],
+            [
+              "eighty-eight",
+              "88"
+            ],
+            [
+              "eighty-nine",
+              "89"
+            ],
+            [
+              "ninety",
+              "90"
+            ],
+            [
+              "ninety-one",
+              "91"
+            ],
+            [
+              "ninety-two",
+              "92"
+            ],
+            [
+              "ninety-three",
+              "93"
+            ],
+            [
+              "ninety-four",
+              "94"
+            ],
+            [
+              "ninety-five",
+              "95"
+            ],
+            [
+              "ninety-six",
+              "96"
+            ],
+            [
+              "ninety-seven",
+              "97"
+            ],
+            [
+              "ninety-eight",
+              "98"
+            ],
+            [
+              "ninety-nine",
+              "99"
+            ],
+            [
+              "one hundred",
+              "100"
+            ]
+          ]
+        },
+        {
+          "title": "Ordinal numbers",
+          "words": [
+            [
+              "first",
+              "1st"
+            ],
+            [
+              "second",
+              "2nd"
+            ],
+            [
+              "third",
+              "3rd"
+            ],
+            [
+              "fourth",
+              "4th"
+            ],
+            [
+              "fifth",
+              "5th"
+            ],
+            [
+              "sixth",
+              "6th"
+            ],
+            [
+              "seventh",
+              "7th"
+            ],
+            [
+              "eighth",
+              "8th"
+            ],
+            [
+              "ninth",
+              "9th"
+            ],
+            [
+              "tenth",
+              "10th"
+            ],
+            [
+              "eleventh",
+              "11th"
+            ],
+            [
+              "twelfth",
+              "12th"
+            ],
+            [
+              "thirteenth",
+              "13th"
+            ],
+            [
+              "fourteenth",
+              "14th"
+            ],
+            [
+              "fifteenth",
+              "15th"
+            ],
+            [
+              "sixteenth",
+              "16th"
+            ],
+            [
+              "seventeenth",
+              "17th"
+            ],
+            [
+              "eighteenth",
+              "18th"
+            ],
+            [
+              "nineteenth",
+              "19th"
+            ],
+            [
+              "twentieth",
+              "20th"
+            ],
+            [
+              "twenty-first",
+              "21st"
+            ],
+            [
+              "twenty-second",
+              "22nd"
+            ],
+            [
+              "thirtieth",
+              "30th"
+            ],
+            [
+              "fortieth",
+              "40th"
+            ]
+          ]
+        },
+        {
+          "title": "Special events",
+          "words": [
+            [
+              "Valentine's Day",
+              "San Valentín"
+            ],
+            [
+              "Christmas",
+              "Navidad"
+            ],
+            [
+              "New Year's Day",
+              "Año Nuevo"
+            ],
+            [
+              "Graduation",
+              "Graduación"
+            ],
+            [
+              "Thanksgiving",
+              "Día de Acción de Gracias"
+            ],
+            [
+              "Easter",
+              "Pascua"
+            ],
+            [
+              "Birthday",
+              "Cumpleaños"
+            ],
+            [
+              "Wedding",
+              "Boda"
+            ]
+          ]
+        }
+      ],
+      "explain": "Días y meses llevan mayúscula. En inglés estadounidense: February 16th; en inglés británico: 16 February. Los números 21–99 que no son decenas llevan guion: twenty-five. Para 1998: nineteen ninety-eight; para 2002: two thousand two (también two thousand and two).",
+      "dialog": [
+        "When is your birthday?",
+        "My birthday is on February sixteenth.",
+        "What is your favorite holiday?",
+        "My favorite holiday is Christmas."
+      ],
+      "write": [
+        "When is your birthday?",
+        "What day is it today?",
+        "When is Christmas?",
+        "What is your favorite holiday?",
+        "What is your phone number? Use a fictional number if you prefer."
+      ],
+      "unit_id": "ESS-U02",
+      "academic_step": "Step 0",
+      "pages": [
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
+      ],
+      "source_pdf_pages": [
+        10,
+        11,
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Occupations",
+      "es": "Un mundo de posibilidades",
+      "goal": "Pregunta y responde sobre profesiones.",
+      "groups": [
+        {
+          "title": "Professions & occupations",
+          "words": [
+            [
+              "Teacher",
+              "Docente"
+            ],
+            [
+              "Student",
+              "Estudiante"
+            ],
+            [
+              "Doctor",
+              "Médico/a"
+            ],
+            [
+              "Architect",
+              "Arquitecto/a"
+            ],
+            [
+              "Actor",
+              "Actor/actriz"
+            ],
+            [
+              "Musician",
+              "Músico/a"
+            ],
+            [
+              "Vet",
+              "Veterinario/a"
+            ],
+            [
+              "Farmer",
+              "Agricultor/a"
+            ],
+            [
+              "Police officer",
+              "Policía"
+            ],
+            [
+              "Firefighter",
+              "Bombero/a"
+            ],
+            [
+              "Dentist",
+              "Dentista"
+            ],
+            [
+              "Engineer",
+              "Ingeniero/a"
+            ],
+            [
+              "Chef",
+              "Chef"
+            ],
+            [
+              "Scientist",
+              "Científico/a"
+            ],
+            [
+              "Photographer",
+              "Fotógrafo/a"
+            ],
+            [
+              "Reporter",
+              "Reportero/a"
+            ],
+            [
+              "Pilot",
+              "Piloto"
+            ],
+            [
+              "Flight attendant",
+              "Auxiliar de vuelo"
+            ],
+            [
+              "Athlete",
+              "Atleta"
+            ],
+            [
+              "Hairdresser",
+              "Peluquero/a"
+            ],
+            [
+              "Salesperson",
+              "Vendedor/a"
+            ],
+            [
+              "Waitress",
+              "Mesera"
+            ],
+            [
+              "Waiter",
+              "Mesero"
+            ],
+            [
+              "Lawyer",
+              "Abogado/a"
+            ]
+          ]
+        }
+      ],
+      "explain": "What do you do? pregunta por tu ocupación. Usa a antes de sonido consonántico y an antes de sonido vocálico: a teacher, an architect, an engineer. Police officer es una alternativa inclusiva a policeman.",
+      "dialog": [
+        "What do you do?",
+        "I'm a teacher. And you?",
+        "I'm an architect.",
+        "Are you an engineer?",
+        "No, I'm not. I'm an architect."
+      ],
+      "write": [
+        "What do you do?",
+        "What does a person in your family do?"
+      ],
+      "unit_id": "ESS-U03",
+      "academic_step": "Step 0",
+      "pages": [
+        22,
+        23,
+        24,
+        25,
+        26
+      ],
+      "source_pdf_pages": [
+        15,
+        16,
+        17,
+        18,
+        19
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Where are you from?",
+      "es": "Conexiones sin fronteras",
+      "goal": "Distingue países y nacionalidades.",
+      "groups": [
+        {
+          "title": "Countries & nationalities",
+          "words": [
+            [
+              "Canada",
+              "Canadian"
+            ],
+            [
+              "United States",
+              "American"
+            ],
+            [
+              "Italy",
+              "Italian"
+            ],
+            [
+              "Brazil",
+              "Brazilian"
+            ],
+            [
+              "Germany",
+              "German"
+            ],
+            [
+              "England",
+              "English"
+            ],
+            [
+              "United Kingdom",
+              "British"
+            ],
+            [
+              "Spain",
+              "Spanish"
+            ],
+            [
+              "Mexico",
+              "Mexican"
+            ],
+            [
+              "Colombia",
+              "Colombian"
+            ],
+            [
+              "Ecuador",
+              "Ecuadorian"
+            ],
+            [
+              "Chile",
+              "Chilean"
+            ],
+            [
+              "Peru",
+              "Peruvian"
+            ],
+            [
+              "Argentina",
+              "Argentinian / Argentine"
+            ],
+            [
+              "Australia",
+              "Australian"
+            ],
+            [
+              "El Salvador",
+              "Salvadoran / Salvadorian"
+            ],
+            [
+              "Venezuela",
+              "Venezuelan"
+            ],
+            [
+              "Panama",
+              "Panamanian"
+            ]
+          ]
+        }
+      ],
+      "explain": "Where are you from? → I’m from Colombia. What’s your nationality? → I’m Colombian. Los países y las nacionalidades llevan mayúscula. England y United Kingdom no son equivalentes.",
+      "dialog": [
+        "Hi! What's your name?",
+        "Hi, my name is Emily.",
+        "Where are you from?",
+        "I'm from the United States. I'm American. Where are you from?",
+        "I'm from Ecuador. I'm Ecuadorian.",
+        "It's nice to meet you!"
+      ],
+      "write": [
+        "What is your name? Where are you from?",
+        "Write your country and nationality."
+      ],
+      "unit_id": "ESS-U04",
+      "academic_step": "Step 0",
+      "pages": [
+        27,
+        28,
+        29,
+        30,
+        31
+      ],
+      "source_pdf_pages": [
+        20,
+        21,
+        22,
+        23
+      ]
+    },
+    {
+      "id": 5,
+      "title": "How's the weather?",
+      "es": "Cada estación, una experiencia",
+      "goal": "Describe el clima y la temperatura.",
+      "groups": [
+        {
+          "title": "Seasons",
+          "words": [
+            [
+              "Winter",
+              "Invierno"
+            ],
+            [
+              "Spring",
+              "Primavera"
+            ],
+            [
+              "Summer",
+              "Verano"
+            ],
+            [
+              "Fall / Autumn",
+              "Otoño"
+            ]
+          ]
+        },
+        {
+          "title": "Weather",
+          "words": [
+            [
+              "Sunny",
+              "Soleado"
+            ],
+            [
+              "Rainy",
+              "Lluvioso"
+            ],
+            [
+              "Windy",
+              "Ventoso"
+            ],
+            [
+              "Cloudy",
+              "Nublado"
+            ],
+            [
+              "Stormy",
+              "Tormentoso"
+            ],
+            [
+              "Snowy",
+              "Nevado"
+            ]
+          ]
+        },
+        {
+          "title": "Temperature",
+          "words": [
+            [
+              "Very hot",
+              "Muy caluroso"
+            ],
+            [
+              "Hot",
+              "Caluroso"
+            ],
+            [
+              "Warm",
+              "Cálido"
+            ],
+            [
+              "Cool",
+              "Fresco"
+            ],
+            [
+              "Cold",
+              "Frío"
+            ],
+            [
+              "Very cold",
+              "Muy frío"
+            ],
+            [
+              "Freezing",
+              "Helado"
+            ]
+          ]
+        }
+      ],
+      "explain": "How’s the weather? y What’s the weather like? preguntan por el clima. Usa It’s + adjetivo: It’s cold and rainy. Yesterday se refiere al pasado: It was warm yesterday. Las estaciones dependen del hemisferio.",
+      "dialog": [
+        "What's the weather like today?",
+        "It's hot and sunny.",
+        "What was the weather like yesterday?",
+        "It was warm and windy."
+      ],
+      "write": [
+        "What is the weather like today?",
+        "What was the weather like yesterday?"
+      ],
+      "unit_id": "ESS-U05",
+      "academic_step": "Step 0",
+      "pages": [
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38
+      ],
+      "source_pdf_pages": [
+        24,
+        25,
+        26,
+        27
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Let's go shopping!",
+      "es": "Tu estilo, en inglés",
+      "goal": "Nombra colores, ropa y accesorios.",
+      "groups": [
+        {
+          "title": "Colors",
+          "words": [
+            [
+              "Red",
+              "Rojo"
+            ],
+            [
+              "Blue",
+              "Azul"
+            ],
+            [
+              "Yellow",
+              "Amarillo"
+            ],
+            [
+              "Purple",
+              "Morado"
+            ],
+            [
+              "Orange",
+              "Naranja"
+            ],
+            [
+              "Green",
+              "Verde"
+            ],
+            [
+              "Black",
+              "Negro"
+            ],
+            [
+              "Brown",
+              "Marrón"
+            ],
+            [
+              "White",
+              "Blanco"
+            ],
+            [
+              "Pink",
+              "Rosado"
+            ],
+            [
+              "Light blue",
+              "Azul claro"
+            ],
+            [
+              "Gray / Grey",
+              "Gris"
+            ]
+          ]
+        },
+        {
+          "title": "Clothes",
+          "words": [
+            [
+              "Shorts",
+              "Pantalones cortos"
+            ],
+            [
+              "Dress",
+              "Vestido"
+            ],
+            [
+              "Jeans",
+              "Jeans"
+            ],
+            [
+              "Skirt",
+              "Falda"
+            ],
+            [
+              "Shoes",
+              "Zapatos"
+            ],
+            [
+              "T-shirt",
+              "Camiseta"
+            ],
+            [
+              "Socks",
+              "Calcetines"
+            ],
+            [
+              "Shirt",
+              "Camisa"
+            ],
+            [
+              "Sweater",
+              "Suéter"
+            ],
+            [
+              "Jacket",
+              "Chaqueta"
+            ],
+            [
+              "Sneakers",
+              "Zapatillas"
+            ],
+            [
+              "Boots",
+              "Botas"
+            ],
+            [
+              "Suit",
+              "Traje"
+            ],
+            [
+              "Pants",
+              "Pantalones"
+            ]
+          ]
+        },
+        {
+          "title": "Accessories",
+          "words": [
+            [
+              "Cap",
+              "Gorra"
+            ],
+            [
+              "Hat",
+              "Sombrero"
+            ],
+            [
+              "Purse",
+              "Bolso"
+            ],
+            [
+              "Scarf",
+              "Bufanda"
+            ],
+            [
+              "Bracelet",
+              "Pulsera"
+            ],
+            [
+              "Earrings",
+              "Aretes"
+            ],
+            [
+              "Wallet",
+              "Billetera"
+            ],
+            [
+              "Necklace",
+              "Collar"
+            ],
+            [
+              "Sunglasses",
+              "Gafas de sol"
+            ],
+            [
+              "Glasses",
+              "Gafas"
+            ],
+            [
+              "Belt",
+              "Cinturón"
+            ],
+            [
+              "Tie",
+              "Corbata"
+            ]
+          ]
+        }
+      ],
+      "explain": "Para describir ropa que alguien lleva puesta: I’m wearing…, He’s wearing…, She’s wearing… El color va antes de la prenda: a pink dress, black pants. Gray y grey son variantes correctas.",
+      "dialog": [
+        "What are you wearing?",
+        "I'm wearing a white T-shirt and blue jeans.",
+        "What is she wearing?",
+        "She's wearing a pink dress."
+      ],
+      "write": [
+        "What are you wearing today?",
+        "Describe an outfit for a cold day."
+      ],
+      "unit_id": "ESS-U06",
+      "academic_step": "Step 0",
+      "pages": [
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45
+      ],
+      "source_pdf_pages": [
+        28,
+        29,
+        30,
+        31
+      ]
+    },
+    {
+      "id": 7,
+      "title": "My family",
+      "es": "Las personas que importan",
+      "goal": "Habla de tu familia y sus relaciones.",
+      "groups": [
+        {
+          "title": "Family members",
+          "words": [
+            [
+              "Grandmother",
+              "Abuela"
+            ],
+            [
+              "Grandfather",
+              "Abuelo"
+            ],
+            [
+              "Mother",
+              "Madre"
+            ],
+            [
+              "Father",
+              "Padre"
+            ],
+            [
+              "Uncle",
+              "Tío"
+            ],
+            [
+              "Aunt",
+              "Tía"
+            ],
+            [
+              "Sister",
+              "Hermana"
+            ],
+            [
+              "Brother",
+              "Hermano"
+            ],
+            [
+              "Cousin",
+              "Primo/a"
+            ],
+            [
+              "Daughter",
+              "Hija"
+            ],
+            [
+              "Son",
+              "Hijo"
+            ],
+            [
+              "Wife",
+              "Esposa"
+            ],
+            [
+              "Husband",
+              "Esposo"
+            ],
+            [
+              "Grandson",
+              "Nieto"
+            ],
+            [
+              "Granddaughter",
+              "Nieta"
+            ],
+            [
+              "Siblings",
+              "Hermanos/as"
+            ],
+            [
+              "Parents",
+              "Padres"
+            ],
+            [
+              "Mother-in-law",
+              "Suegra"
+            ],
+            [
+              "Father-in-law",
+              "Suegro"
+            ],
+            [
+              "Brother-in-law",
+              "Cuñado"
+            ],
+            [
+              "Sister-in-law",
+              "Cuñada"
+            ],
+            [
+              "Nephew",
+              "Sobrino"
+            ],
+            [
+              "Niece",
+              "Sobrina"
+            ]
+          ]
+        }
+      ],
+      "explain": "Usa ’s para indicar relaciones: Anna is Leo’s mother. How many brothers or sisters do you have? pregunta cuántos hermanos tienes. Puedes describir una familia ficticia si lo prefieres.",
+      "dialog": [
+        "What's your mother's name?",
+        "Her name is Anna.",
+        "Do you have any brothers or sisters?",
+        "Yes, I have one sister.",
+        "Do you have any children?",
+        "No, I don't."
+      ],
+      "write": [
+        "What is your mother’s name?",
+        "How many brothers or sisters do you have?",
+        "Do you have any sons or daughters?"
+      ],
+      "unit_id": "ESS-U07",
+      "academic_step": "Step 0",
+      "pages": [
+        46,
+        47,
+        48,
+        49,
+        50
+      ],
+      "source_pdf_pages": [
+        32,
+        33,
+        34,
+        35
+      ]
+    },
+    {
+      "id": 8,
+      "title": "My body",
+      "es": "Conócete y exprésate",
+      "goal": "Nombra partes del cuerpo y molestias comunes.",
+      "groups": [
+        {
+          "title": "Parts of the body",
+          "words": [
+            [
+              "Head",
+              "Cabeza"
+            ],
+            [
+              "Neck",
+              "Cuello"
+            ],
+            [
+              "Shoulder",
+              "Hombro"
+            ],
+            [
+              "Back",
+              "Espalda"
+            ],
+            [
+              "Stomach / Tummy",
+              "Estómago / Barriga"
+            ],
+            [
+              "Arm",
+              "Brazo"
+            ],
+            [
+              "Hand",
+              "Mano"
+            ],
+            [
+              "Finger",
+              "Dedo de la mano"
+            ],
+            [
+              "Leg",
+              "Pierna"
+            ],
+            [
+              "Foot / Feet",
+              "Pie / Pies"
+            ],
+            [
+              "Toe",
+              "Dedo del pie"
+            ],
+            [
+              "Elbow",
+              "Codo"
+            ],
+            [
+              "Wrist",
+              "Muñeca"
+            ],
+            [
+              "Knee",
+              "Rodilla"
+            ]
+          ]
+        },
+        {
+          "title": "Parts of the face",
+          "words": [
+            [
+              "Face",
+              "Cara"
+            ],
+            [
+              "Eyebrow",
+              "Ceja"
+            ],
+            [
+              "Eye",
+              "Ojo"
+            ],
+            [
+              "Eyelash",
+              "Pestaña"
+            ],
+            [
+              "Nose",
+              "Nariz"
+            ],
+            [
+              "Mouth",
+              "Boca"
+            ],
+            [
+              "Ear",
+              "Oreja"
+            ],
+            [
+              "Cheek",
+              "Mejilla"
+            ],
+            [
+              "Forehead",
+              "Frente"
+            ],
+            [
+              "Tooth / Teeth",
+              "Diente / Dientes"
+            ],
+            [
+              "Chin",
+              "Mentón"
+            ],
+            [
+              "Tongue",
+              "Lengua"
+            ]
+          ]
+        },
+        {
+          "title": "Health vocabulary",
+          "words": [
+            [
+              "Headache",
+              "Dolor de cabeza"
+            ],
+            [
+              "Toothache",
+              "Dolor de muela"
+            ],
+            [
+              "Fever",
+              "Fiebre"
+            ],
+            [
+              "Flu",
+              "Gripe"
+            ],
+            [
+              "Stomachache",
+              "Dolor de estómago"
+            ],
+            [
+              "Sore throat",
+              "Dolor de garganta"
+            ],
+            [
+              "Cough",
+              "Tos"
+            ],
+            [
+              "Backache",
+              "Dolor de espalda"
+            ],
+            [
+              "Sunburn",
+              "Quemadura solar"
+            ],
+            [
+              "Fracture",
+              "Fractura"
+            ],
+            [
+              "Bruise",
+              "Moretón"
+            ],
+            [
+              "Rash",
+              "Sarpullido"
+            ]
+          ]
+        }
+      ],
+      "explain": "Usa I have a headache o I have a sore throat para expresar una molestia. Plurales irregulares: foot → feet, tooth → teeth. Hands and fingers se refiere a manos y dedos; feet and toes, a pies y dedos de los pies.",
+      "dialog": [
+        "How are you feeling?",
+        "I have a headache.",
+        "Do you have a sore throat?",
+        "No, I don't."
+      ],
+      "write": [
+        "Name six parts of the body.",
+        "Write two sentences using “I have…” and health vocabulary."
+      ],
+      "unit_id": "ESS-U08",
+      "academic_step": "Step 0",
+      "pages": [
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57
+      ],
+      "source_pdf_pages": [
+        36,
+        37,
+        38,
+        39,
+        40
+      ]
+    },
+    {
+      "id": 9,
+      "title": "My daily routine",
+      "es": "Un día en tu vida",
+      "goal": "Describe rutinas y di la hora.",
+      "groups": [
+        {
+          "title": "Daily activities",
+          "words": [
+            [
+              "Wake up",
+              "Despertarse"
+            ],
+            [
+              "Take a shower",
+              "Ducharse"
+            ],
+            [
+              "Have breakfast",
+              "Desayunar"
+            ],
+            [
+              "Brush my teeth",
+              "Cepillarme los dientes"
+            ],
+            [
+              "Work",
+              "Trabajar"
+            ],
+            [
+              "Watch TV",
+              "Ver televisión"
+            ],
+            [
+              "Listen to music",
+              "Escuchar música"
+            ],
+            [
+              "Play sports",
+              "Practicar deportes"
+            ],
+            [
+              "Walk the dog",
+              "Pasear al perro"
+            ],
+            [
+              "Have dinner",
+              "Cenar"
+            ],
+            [
+              "Clean the house",
+              "Limpiar la casa"
+            ],
+            [
+              "Go to bed",
+              "Acostarse"
+            ]
+          ]
+        },
+        {
+          "title": "More activities",
+          "words": [
+            [
+              "Exercise",
+              "Hacer ejercicio"
+            ],
+            [
+              "Take a nap",
+              "Tomar una siesta"
+            ],
+            [
+              "Read",
+              "Leer"
+            ],
+            [
+              "Get dressed",
+              "Vestirse"
+            ],
+            [
+              "Check email",
+              "Revisar el correo"
+            ],
+            [
+              "Go to the movies",
+              "Ir al cine"
+            ],
+            [
+              "Go dancing",
+              "Salir a bailar"
+            ],
+            [
+              "Visit friends",
+              "Visitar amigos"
+            ],
+            [
+              "Have lunch",
+              "Almorzar"
+            ],
+            [
+              "Brush my hair",
+              "Cepillarme el cabello"
+            ],
+            [
+              "Wash the dishes",
+              "Lavar los platos"
+            ],
+            [
+              "Put on makeup",
+              "Maquillarse"
+            ]
+          ]
+        },
+        {
+          "title": "Telling the time",
+          "words": [
+            [
+              "Twelve o'clock",
+              "12:00"
+            ],
+            [
+              "Half past one",
+              "1:30"
+            ],
+            [
+              "A quarter past two",
+              "2:15"
+            ],
+            [
+              "A quarter to four",
+              "3:45"
+            ],
+            [
+              "Five past ten",
+              "10:05"
+            ],
+            [
+              "Ten to eleven",
+              "10:50"
+            ]
+          ]
+        }
+      ],
+      "explain": "Usa presente simple para hábitos: I wake up at seven. Past indica minutos después de la hora; to, minutos para la siguiente. 13:30 puede decirse one thirty p.m. o half past one. A las 12:00 puede ser noon (mediodía) o midnight (medianoche), según el contexto.",
+      "dialog": [
+        "What time do you wake up?",
+        "I wake up at seven o'clock.",
+        "What time do you have lunch?",
+        "I have lunch at one p.m."
+      ],
+      "write": [
+        "Write your routine with seven times and activities.",
+        "What time do you go to bed?"
+      ],
+      "unit_id": "ESS-U09",
+      "academic_step": "Step 0",
+      "pages": [
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64
+      ],
+      "source_pdf_pages": [
+        41,
+        42,
+        43,
+        44,
+        45,
+        46
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Places in the city",
+      "es": "Explora tu ciudad",
+      "goal": "Reconoce lugares y pide indicaciones.",
+      "groups": [
+        {
+          "title": "Places in the city",
+          "words": [
+            [
+              "Bank",
+              "Banco"
+            ],
+            [
+              "Mall",
+              "Centro comercial"
+            ],
+            [
+              "Museum",
+              "Museo"
+            ],
+            [
+              "School",
+              "Escuela"
+            ],
+            [
+              "Pharmacy",
+              "Farmacia"
+            ],
+            [
+              "Restaurant",
+              "Restaurante"
+            ],
+            [
+              "Library",
+              "Biblioteca"
+            ],
+            [
+              "Supermarket",
+              "Supermercado"
+            ],
+            [
+              "Hospital",
+              "Hospital"
+            ],
+            [
+              "Church",
+              "Iglesia"
+            ],
+            [
+              "Gas station",
+              "Estación de servicio"
+            ],
+            [
+              "Gym",
+              "Gimnasio"
+            ],
+            [
+              "Movie theater",
+              "Cine"
+            ],
+            [
+              "Police station",
+              "Estación de policía"
+            ],
+            [
+              "Post office",
+              "Oficina de correos"
+            ],
+            [
+              "Factory",
+              "Fábrica"
+            ],
+            [
+              "Zoo",
+              "Zoológico"
+            ],
+            [
+              "Barbershop",
+              "Barbería"
+            ]
+          ]
+        },
+        {
+          "title": "Directions",
+          "words": [
+            [
+              "Turn left",
+              "Gira a la izquierda"
+            ],
+            [
+              "Turn right",
+              "Gira a la derecha"
+            ],
+            [
+              "Go straight",
+              "Sigue derecho"
+            ],
+            [
+              "Next to",
+              "Al lado de"
+            ],
+            [
+              "Opposite",
+              "Enfrente de"
+            ],
+            [
+              "Between",
+              "Entre"
+            ]
+          ]
+        }
+      ],
+      "explain": "Where’s the library? pregunta por un lugar. How do I get to the museum? pide indicaciones. Usa next to, opposite y between para ubicarlo. Go straight, then turn right at the corner.",
+      "dialog": [
+        "Excuse me, where's the library?",
+        "It's opposite the bank.",
+        "How do I get to the museum?",
+        "Turn right at the corner. It's next to the police station.",
+        "Thanks!",
+        "You're welcome."
+      ],
+      "write": [
+        "Write directions from a bank to a museum.",
+        "Describe two places in your neighborhood."
+      ],
+      "unit_id": "ESS-U10",
+      "academic_step": "Step 0",
+      "pages": [
+        65,
+        66,
+        67,
+        68,
+        69,
+        70
+      ],
+      "source_pdf_pages": [
+        47,
+        48,
+        49,
+        50,
+        51,
+        52
+      ]
+    },
+    {
+      "id": 11,
+      "title": "In my house",
+      "es": "Un lugar para ti",
+      "goal": "Describe habitaciones, muebles y electrodomésticos.",
+      "groups": [
+        {
+          "title": "Parts of the house",
+          "words": [
+            [
+              "Bedroom",
+              "Dormitorio"
+            ],
+            [
+              "Bathroom",
+              "Baño"
+            ],
+            [
+              "Kitchen",
+              "Cocina"
+            ],
+            [
+              "Living room",
+              "Sala"
+            ],
+            [
+              "Dining room",
+              "Comedor"
+            ],
+            [
+              "Garage",
+              "Garaje"
+            ],
+            [
+              "Basement",
+              "Sótano"
+            ],
+            [
+              "Pool",
+              "Piscina"
+            ],
+            [
+              "Attic",
+              "Ático"
+            ],
+            [
+              "Garden",
+              "Jardín"
+            ],
+            [
+              "Balcony",
+              "Balcón"
+            ],
+            [
+              "Stairs",
+              "Escaleras"
+            ]
+          ]
+        },
+        {
+          "title": "Furniture & fixtures",
+          "words": [
+            [
+              "Bed",
+              "Cama"
+            ],
+            [
+              "Wardrobe",
+              "Armario"
+            ],
+            [
+              "Bedside table",
+              "Mesa de noche"
+            ],
+            [
+              "Sofa",
+              "Sofá"
+            ],
+            [
+              "Armchair",
+              "Sillón"
+            ],
+            [
+              "Bookcase",
+              "Librero"
+            ],
+            [
+              "Table",
+              "Mesa"
+            ],
+            [
+              "Chair",
+              "Silla"
+            ],
+            [
+              "Desk",
+              "Escritorio"
+            ],
+            [
+              "Bathtub",
+              "Bañera"
+            ],
+            [
+              "Toilet",
+              "Inodoro"
+            ],
+            [
+              "Sink",
+              "Lavamanos / Fregadero"
+            ]
+          ]
+        },
+        {
+          "title": "Appliances",
+          "words": [
+            [
+              "Refrigerator",
+              "Refrigerador"
+            ],
+            [
+              "Stove",
+              "Estufa"
+            ],
+            [
+              "Microwave",
+              "Microondas"
+            ],
+            [
+              "Washing machine",
+              "Lavadora"
+            ],
+            [
+              "Iron",
+              "Plancha"
+            ],
+            [
+              "Blender",
+              "Licuadora"
+            ],
+            [
+              "Coffee maker",
+              "Cafetera"
+            ],
+            [
+              "Toaster",
+              "Tostadora"
+            ],
+            [
+              "Mixer",
+              "Batidora"
+            ],
+            [
+              "Vacuum cleaner",
+              "Aspiradora"
+            ],
+            [
+              "Rice cooker",
+              "Olla arrocera"
+            ],
+            [
+              "Air conditioner",
+              "Aire acondicionado"
+            ]
+          ]
+        }
+      ],
+      "explain": "There is se usa en singular; there are, en plural. There is a sofa in the living room. There are two bedrooms. Pregunta: How many bedrooms are there in your house? Sink puede estar en el baño o en la cocina.",
+      "dialog": [
+        "How many bedrooms are there in your house?",
+        "There are two bedrooms.",
+        "What's your favorite room?",
+        "My favorite room is the living room."
+      ],
+      "write": [
+        "How many bedrooms and bathrooms are there in your house?",
+        "What is your favorite room?",
+        "Classify: bed, stove, toilet, microwave, bedside table, bathtub, rice cooker, wardrobe and sink."
+      ],
+      "unit_id": "ESS-U11",
+      "academic_step": "Step 0",
+      "pages": [
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77
+      ],
+      "source_pdf_pages": [
+        53,
+        54,
+        55,
+        56,
+        57
+      ]
+    },
+    {
+      "id": 12,
+      "title": "All about me",
+      "es": "Tu historia en inglés",
+      "goal": "Integra información personal y descripciones.",
+      "groups": [
+        {
+          "title": "Personal information",
+          "words": [
+            [
+              "What's your name?",
+              "¿Cómo te llamas?"
+            ],
+            [
+              "Where are you from?",
+              "¿De dónde eres?"
+            ],
+            [
+              "What's your surname?",
+              "¿Cuál es tu apellido?"
+            ],
+            [
+              "Where do you live?",
+              "¿Dónde vives?"
+            ],
+            [
+              "What's your address?",
+              "¿Cuál es tu dirección?"
+            ],
+            [
+              "What's your phone number?",
+              "¿Cuál es tu teléfono?"
+            ],
+            [
+              "What's your email address?",
+              "¿Cuál es tu correo?"
+            ],
+            [
+              "How old are you?",
+              "¿Cuántos años tienes?"
+            ],
+            [
+              "When is your birthday?",
+              "¿Cuándo es tu cumpleaños?"
+            ],
+            [
+              "Are you married?",
+              "¿Estás casado/a?"
+            ],
+            [
+              "Do you have children?",
+              "¿Tienes hijos?"
+            ],
+            [
+              "What do you do?",
+              "¿A qué te dedicas?"
+            ],
+            [
+              "What do you like to do in your free time?",
+              "¿Qué te gusta hacer en tu tiempo libre?"
+            ]
+          ]
+        },
+        {
+          "title": "Words to describe",
+          "words": [
+            [
+              "Old",
+              "Mayor"
+            ],
+            [
+              "Middle-aged",
+              "De mediana edad"
+            ],
+            [
+              "Young",
+              "Joven"
+            ],
+            [
+              "Short",
+              "Bajo/a"
+            ],
+            [
+              "Tall",
+              "Alto/a"
+            ],
+            [
+              "Fat",
+              "Gordo/a: puede resultar ofensivo"
+            ],
+            [
+              "Thin",
+              "Delgado/a"
+            ],
+            [
+              "Long hair",
+              "Cabello largo"
+            ],
+            [
+              "Short hair",
+              "Cabello corto"
+            ],
+            [
+              "Curly hair",
+              "Cabello rizado"
+            ],
+            [
+              "Straight hair",
+              "Cabello liso"
+            ],
+            [
+              "Handsome",
+              "Guapo"
+            ],
+            [
+              "Pretty",
+              "Bonita"
+            ],
+            [
+              "Ugly",
+              "Feo/a: juicio que puede resultar ofensivo"
+            ],
+            [
+              "Freckles",
+              "Pecas"
+            ],
+            [
+              "Beard",
+              "Barba"
+            ],
+            [
+              "Mustache",
+              "Bigote"
+            ],
+            [
+              "Bald",
+              "Calvo/a"
+            ],
+            [
+              "Muscular",
+              "Musculoso/a"
+            ],
+            [
+              "Wrinkles",
+              "Arrugas"
+            ],
+            [
+              "Oval face",
+              "Cara ovalada"
+            ],
+            [
+              "Square face",
+              "Cara cuadrada"
+            ],
+            [
+              "Round face",
+              "Cara redonda"
+            ]
+          ]
+        }
+      ],
+      "explain": "Usa be para edad y características: I am twenty years old. She is tall. Usa have para rasgos: He has curly hair. Prioriza descripciones neutrales; fat y ugly aparecen en el original, pero pueden resultar hirientes. Puedes usar información ficticia para practicar.",
+      "dialog": [
+        "What do you like to do in your free time?",
+        "I like to read and listen to music.",
+        "How would you describe yourself?",
+        "I'm tall. I have brown eyes and curly hair."
+      ],
+      "write": [
+        "Introduce yourself: name, age, country, occupation and birthday.",
+        "Describe your appearance, your family and your favorite activities."
+      ],
+      "unit_id": "ESS-U12",
+      "academic_step": "Step 0",
+      "pages": [
+        78,
+        79,
+        80,
+        81,
+        82,
+        83
+      ],
+      "source_pdf_pages": [
+        58,
+        59,
+        60,
+        61,
+        62
+      ]
+    }
+  ]
+}

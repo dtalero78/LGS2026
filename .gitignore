@@ -92,4 +92,4 @@ jsconfig.json
 
 # Paquetes fuente de libros interactivos (PDF original con claves, solucionarios,
 # prototipos). Se suben a Spaces con scripts/upload-book-ess.js; nunca a git.
-Books/
+/Books/
