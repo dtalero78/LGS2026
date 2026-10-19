@@ -7,11 +7,12 @@
  *   - Borra el objeto anterior en Spaces (best-effort, si era de Spaces).
  *
  * Campos form-data: tipo ('advisor'|'usuario'), id, file.
- * Gated por MANTENIMIENTO.LGS_BUCKETS.EDITAR (SUPER_ADMIN/ADMIN bypass).
+ * Gated por MANTENIMIENTO.LGS_BUCKETS.EDITAR (SUPER_ADMIN/ADMIN bypass); las fotos de
+ * advisor aceptan también ACADEMICO.ADVISOR.EDITAR (edición desde la lista de Advisors).
  */
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
-import { requirePermission } from '@/lib/api-permissions';
-import { MantenimientoPermission } from '@/types/permissions';
+import { requirePermission, requireAnyPermission } from '@/lib/api-permissions';
+import { MantenimientoPermission, AcademicoPermission } from '@/types/permissions';
 import { ValidationError, NotFoundError } from '@/lib/errors';
 import { queryOne } from '@/lib/postgres';
 import { spacesClient, SPACES_BUCKET, SPACES_CDN, getPresignedVideoUrl } from '@/lib/spaces';
@@ -30,14 +31,18 @@ function keyFromStored(stored: string | null): string | null {
 }
 
 export const POST = handlerWithAuth(async (req, _ctx, session) => {
-  await requirePermission(session, MantenimientoPermission.LGS_BUCKETS_EDITAR);
-
   const form = await req.formData();
   const tipo = String(form.get('tipo') || '');
   const id = String(form.get('id') || '');
   const file = form.get('file') as File | null;
 
   if (tipo !== 'advisor' && tipo !== 'usuario') throw new ValidationError('tipo inválido (advisor|usuario)');
+  // Fotos de advisor: también quien edita advisors desde la lista (ACADEMICO.ADVISOR.EDITAR).
+  if (tipo === 'advisor') {
+    await requireAnyPermission(session, [MantenimientoPermission.LGS_BUCKETS_EDITAR, AcademicoPermission.ADVISOR_EDITAR]);
+  } else {
+    await requirePermission(session, MantenimientoPermission.LGS_BUCKETS_EDITAR);
+  }
   if (!id) throw new ValidationError('id requerido');
   if (!file) throw new ValidationError('Archivo requerido');
   if (!ALLOWED.includes(file.type)) throw new ValidationError(`Tipo no permitido: ${file.type}. Use JPG, PNG, WEBP o HEIC.`);

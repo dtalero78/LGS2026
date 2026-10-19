@@ -1,26 +1,37 @@
 import 'server-only';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
-import { requirePermission } from '@/lib/api-permissions';
-import { MantenimientoPermission } from '@/types/permissions';
+import { requireAnyPermission } from '@/lib/api-permissions';
+import { MantenimientoPermission, AcademicoPermission } from '@/types/permissions';
 import { query, queryOne } from '@/lib/postgres';
+import { getPresignedUrlEstable } from '@/lib/spaces';
 import { ValidationError, NotFoundError, ConflictError } from '@/lib/errors';
 
 /**
  * GET/PATCH /api/postgres/advisors/[id]
  *
  * Edición de los datos de un advisor (los mismos que captura /nuevo-advisor),
- * usada por el modal de /admin/lgs-buckets. Los datos viven en dos tablas:
+ * usada por el modal compartido AdvisorEditModal (/admin/lgs-buckets y la lista de
+ * Advisors). Los datos viven en dos tablas:
  *   - ADVISORS: primerNombre, primerApellido, email, zoom, telefono, pais,
  *               domicilioadvisor, fechaNacimiento
  *   - USUARIOS_ROLES: numberid (numeroId), celular, password (clave)
  *
- * La foto NO se edita aquí — tiene su propio botón "Reemplazar" en la card.
+ * La foto NO se edita aquí — va por POST /api/admin/lgs-buckets/replace.
  *
- * GET   gated por MANTENIMIENTO.LGS_BUCKETS.VER
- * PATCH gated por MANTENIMIENTO.LGS_BUCKETS.EDITAR
+ * GET   gated por MANTENIMIENTO.LGS_BUCKETS.VER    o ACADEMICO.ADVISOR.EDITAR
+ * PATCH gated por MANTENIMIENTO.LGS_BUCKETS.EDITAR o ACADEMICO.ADVISOR.EDITAR
  */
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** URL firmada de la foto (key de Spaces o URL del bucket); null si no hay o es legacy de Wix. */
+async function fotoFirmada(stored: string | null): Promise<string | null> {
+  const s = (stored || '').trim();
+  if (!s || s.startsWith('wix:')) return null;
+  const m = s.match(/digitaloceanspaces\.com\/(.+)$/i);
+  if (/^https?:\/\//i.test(s) && !m) return s;
+  try { return await getPresignedUrlEstable(m ? decodeURIComponent(m[1]) : s); } catch { return null; }
+}
 
 /** Resuelve el USUARIOS_ROLES vinculado al advisor (usuarioRolId → email). */
 async function findUsuarioRol(advisor: { usuarioRolId?: string | null; email?: string | null }) {
@@ -42,7 +53,7 @@ async function findUsuarioRol(advisor: { usuarioRolId?: string | null; email?: s
 }
 
 export const GET = handlerWithAuth(async (_req, ctx, session) => {
-  await requirePermission(session, MantenimientoPermission.LGS_BUCKETS);
+  await requireAnyPermission(session, [MantenimientoPermission.LGS_BUCKETS, AcademicoPermission.ADVISOR_EDITAR]);
   const id = ctx.params.id;
 
   const adv = await queryOne<any>(
@@ -69,12 +80,13 @@ export const GET = handlerWithAuth(async (_req, ctx, session) => {
       numeroId: ur?.numberid || '',
       esPlanta: adv.esPlanta === true,
       tieneUsuarioRol: !!ur,
+      fotoUrl: await fotoFirmada(adv.fotoAdvisor),
     },
   });
 });
 
 export const PATCH = handlerWithAuth(async (req, ctx, session) => {
-  await requirePermission(session, MantenimientoPermission.LGS_BUCKETS_EDITAR);
+  await requireAnyPermission(session, [MantenimientoPermission.LGS_BUCKETS_EDITAR, AcademicoPermission.ADVISOR_EDITAR]);
   const id = ctx.params.id;
   const body = await req.json();
 

@@ -1,25 +1,30 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { MagnifyingGlassIcon, UserIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon, UserIcon, PencilSquareIcon } from '@heroicons/react/24/outline'
+import { usePermissions } from '@/hooks/usePermissions'
+import { AcademicoPermission } from '@/types/permissions'
+import AdvisorEditModal from './AdvisorEditModal'
 
 /**
  * Lazy-loads a presigned URL for the advisor's photo from DO Spaces.
  * Falls back to initials if no photo or load error.
+ * `urlDirecta` (foto recién subida) tiene prioridad sobre la key.
  */
-function AdvisorAvatar({ fotoKey, initials }: { fotoKey: string | null | undefined; initials: string }) {
+function AdvisorAvatar({ fotoKey, urlDirecta, initials }: { fotoKey: string | null | undefined; urlDirecta?: string; initials: string }) {
   const [url, setUrl] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!fotoKey) return
+    if (!fotoKey || urlDirecta) return
     fetch(`/api/postgres/materials/presigned?key=${encodeURIComponent(fotoKey)}`)
       .then(r => r.json())
       .then(d => { if (d.signedUrl) setUrl(d.signedUrl) })
       .catch(() => {})
-  }, [fotoKey])
+  }, [fotoKey, urlDirecta])
 
-  if (url) {
-    return <img src={url} alt={initials} className="h-10 w-10 rounded-full object-cover" />
+  const src = urlDirecta || url
+  if (src) {
+    return <img src={src} alt={initials} className="h-10 w-10 rounded-full object-cover" />
   }
 
   return (
@@ -38,7 +43,10 @@ interface Advisor {
   numeroId?: string
   zoom?: string
   fotoAdvisor?: string | null
+  activo?: boolean | null
 }
+
+type FiltroEstado = 'activos' | 'inactivos' | 'todos'
 
 interface AdvisorsListProps {
   advisors: Advisor[]
@@ -46,27 +54,87 @@ interface AdvisorsListProps {
   error: string | null
   onRetry: () => void
   onAdvisorClick: (advisorId: string) => void
+  /** Refleja en la lista los datos guardados desde el modal de edición. */
+  onAdvisorUpdated?: (advisorId: string, cambios: Partial<Advisor>) => void
 }
+
+const esActivo = (a: Advisor) => a.activo !== false
 
 export default function AdvisorsList({
   advisors,
   loading,
   error,
   onRetry,
-  onAdvisorClick
+  onAdvisorClick,
+  onAdvisorUpdated,
 }: AdvisorsListProps) {
+  const { hasPermission } = usePermissions()
+  const puedeEditar = hasPermission(AcademicoPermission.ADVISOR_EDITAR)
   const [searchTerm, setSearchTerm] = useState('')
+  const [filtro, setFiltro] = useState<FiltroEstado>('activos')
+  const [editando, setEditando] = useState<Advisor | null>(null)
+  const [fotosNuevas, setFotosNuevas] = useState<Record<string, string>>({})
 
-  // Filtrar advisors basado en el término de búsqueda
-  const filteredAdvisors = advisors.filter(advisor => {
+  const nombreDe = (a: Advisor) => `${a.primerNombre || ''} ${a.primerApellido || ''}`.trim()
+  const nActivos = advisors.filter(esActivo).length
+  const nInactivos = advisors.length - nActivos
+
+  const porEstado = advisors.filter(a =>
+    filtro === 'todos' ? true : filtro === 'activos' ? esActivo(a) : !esActivo(a))
+
+  // Filtrar advisors basado en el estado y el término de búsqueda
+  const filteredAdvisors = porEstado.filter(advisor => {
     const searchLower = searchTerm.toLowerCase()
-    const fullName = `${advisor.primerNombre || ''} ${advisor.primerApellido || ''}`.toLowerCase()
+    const fullName = nombreDe(advisor).toLowerCase()
     return fullName.includes(searchLower) ||
            (advisor.email || '').toLowerCase().includes(searchLower)
   })
 
+  const opcionesEditar = [...porEstado].sort((a, b) => nombreDe(a).localeCompare(nombreDe(b), 'es'))
+
   return (
     <div className="space-y-6">
+      {/* Filtros: estado + editar advisor */}
+      <div className="flex flex-wrap items-center gap-2">
+        {([['activos', `Activos (${nActivos})`], ['inactivos', `Inactivos (${nInactivos})`], ['todos', `Todos (${advisors.length})`]] as const).map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setFiltro(k)}
+            className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+              filtro === k
+                ? k === 'inactivos' ? 'bg-red-600 border-red-600 text-white' : k === 'activos' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-primary-600 border-primary-600 text-white'
+                : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+
+        {puedeEditar && (
+          <div className="ml-auto flex items-center gap-2">
+            <PencilSquareIcon className="h-5 w-5 text-indigo-600" />
+            <select
+              aria-label="Editar advisor"
+              title="Editar advisor"
+              value=""
+              onChange={e => {
+                const a = advisors.find(x => x._id === e.target.value)
+                if (a) setEditando(a)
+              }}
+              className="min-w-[260px] rounded-md border border-gray-300 bg-white py-1.5 pl-3 pr-8 text-sm text-gray-700 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            >
+              <option value="">Editar perfil de un advisor…</option>
+              {opcionesEditar.map(a => (
+                <option key={a._id} value={a._id}>
+                  {nombreDe(a) || a.email || a._id}{esActivo(a) ? '' : ' (inactivo)'}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
       {/* Search Bar */}
       <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -121,7 +189,7 @@ export default function AdvisorsList({
                 Lista de Advisors
               </h3>
               <span className="text-sm text-gray-500">
-                {filteredAdvisors.length} de {advisors.length} advisor{filteredAdvisors.length !== 1 ? 's' : ''}
+                {filteredAdvisors.length} de {porEstado.length} advisor{porEstado.length !== 1 ? 's' : ''}
               </span>
             </div>
           </div>
@@ -133,7 +201,7 @@ export default function AdvisorsList({
                 No se encontraron advisors
               </h3>
               <p className="mt-1 text-sm text-gray-500">
-                {searchTerm ? 'Intenta con otro término de búsqueda.' : 'No hay advisors registrados en el sistema.'}
+                {searchTerm ? 'Intenta con otro término de búsqueda.' : 'No hay advisors con ese estado.'}
               </p>
             </div>
           ) : (
@@ -150,13 +218,18 @@ export default function AdvisorsList({
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Zoom
                     </th>
+                    {puedeEditar && (
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Acciones
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredAdvisors.map((advisor) => (
                     <tr
                       key={advisor._id}
-                      className="hover:bg-gray-50 cursor-pointer transition-colors"
+                      className={`hover:bg-gray-50 cursor-pointer transition-colors ${esActivo(advisor) ? '' : 'bg-red-50/40'}`}
                       onClick={() => onAdvisorClick(advisor._id)}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -164,12 +237,18 @@ export default function AdvisorsList({
                           <div className="h-10 w-10 flex-shrink-0">
                             <AdvisorAvatar
                               fotoKey={advisor.fotoAdvisor}
+                              urlDirecta={fotosNuevas[advisor._id]}
                               initials={`${(advisor.primerNombre?.[0] || '').toUpperCase()}${(advisor.primerApellido?.[0] || '').toUpperCase()}`}
                             />
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
+                            <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
                               {advisor.primerNombre} {advisor.primerApellido}
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                esActivo(advisor) ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                              }`}>
+                                {esActivo(advisor) ? 'Activo' : 'Inactivo'}
+                              </span>
                             </div>
                             <div className="text-sm text-gray-500">
                               ID: {advisor._id}
@@ -195,6 +274,17 @@ export default function AdvisorsList({
                           '-'
                         )}
                       </td>
+                      {puedeEditar && (
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setEditando(advisor) }}
+                            className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100"
+                          >
+                            <PencilSquareIcon className="h-4 w-4" /> Editar
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -202,6 +292,19 @@ export default function AdvisorsList({
             </div>
           )}
         </div>
+      )}
+
+      {editando && (
+        <AdvisorEditModal
+          advisorId={editando._id}
+          advisorNombre={nombreDe(editando)}
+          onClose={() => setEditando(null)}
+          onSaved={(id, _nombre, email, datos) => {
+            onAdvisorUpdated?.(id, { email, primerNombre: datos.primerNombre, primerApellido: datos.primerApellido, zoom: datos.zoom })
+            setEditando(null)
+          }}
+          onFotoChanged={(id, url) => setFotosNuevas(m => ({ ...m, [id]: url }))}
+        />
       )}
     </div>
   )

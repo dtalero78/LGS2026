@@ -556,6 +556,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     name: 'Columna "Estadísticas"',
     description: 'Ver estadísticas de rendimiento por advisor',
   },
+  {
+    code: AcademicoPermission.ADVISOR_EDITAR,
+    module: Module.ACADEMICO,
+    section: 'Advisors',
+    name: 'Editar advisor (datos y foto)',
+    description: 'Editar perfil del advisor desde la lista: datos personales, Zoom, clave y foto',
+  },
 
   // -- Página: Actualizar Material (/dashboard/academic/actualizar-material) --
   {

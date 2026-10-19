@@ -17,6 +17,8 @@ interface Advisor {
   telefono?: string
   numeroId?: string
   zoom?: string
+  activo?: boolean | null
+  fotoAdvisor?: string | null
 }
 
 type TabType = 'list' | 'statistics'
@@ -48,7 +50,8 @@ export default function AdvisorsPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({})
+        // Activos e inactivos: el filtro de estado vive en la lista (Estadísticas usa solo activos).
+        body: JSON.stringify({ includeInactive: true })
       })
 
       if (!response.ok) {
@@ -127,11 +130,12 @@ export default function AdvisorsPage() {
               error={error}
               onRetry={fetchAdvisors}
               onAdvisorClick={handleAdvisorClick}
+              onAdvisorUpdated={(id, cambios) => setAdvisors(arr => arr.map(a => a._id === id ? { ...a, ...cambios } : a))}
             />
           )}
 
           {activeTab === 'statistics' && (
-            <AdvisorsStatistics advisors={advisors} />
+            <AdvisorsStatistics advisors={advisors.filter(a => a.activo !== false)} />
           )}
         </div>
       </PermissionGuard>
