@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { Fragment, useState, useEffect, useCallback, useRef } from 'react'
 import { normalizeNumeroId } from '@/lib/numeroid-normalize';
 import { useParams, useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/layout/DashboardLayout'
@@ -795,15 +795,19 @@ export default function ContratoDetailPage() {
               color="bg-purple-50 text-purple-800"
             >
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                {/* Una referencia por bloque: nombre | parentesco y, debajo, su teléfono
+                    (la celda vacía junto al teléfono deja la Referencia 2 en su propia fila). */}
                 {CAMPOS_REFERENCIAS.map((field) => (
-                  <FieldDisplay
-                    key={field.campo}
-                    field={field}
-                    value={titular[field.campo]}
-                    editing={editing}
-                    editValue={editTitular[field.campo]}
-                    onEditChange={(campo, val) => setEditTitular(prev => ({ ...prev, [campo]: val }))}
-                  />
+                  <Fragment key={field.campo}>
+                    <FieldDisplay
+                      field={field}
+                      value={titular[field.campo]}
+                      editing={editing}
+                      editValue={editTitular[field.campo]}
+                      onEditChange={(campo, val) => setEditTitular(prev => ({ ...prev, [campo]: val }))}
+                    />
+                    {field.campo.startsWith('telefonoRef') && <div aria-hidden="true" />}
+                  </Fragment>
                 ))}
               </dl>
               {/* Observaciones */}
