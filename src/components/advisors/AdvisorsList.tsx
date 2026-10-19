@@ -69,6 +69,7 @@ export default function AdvisorsList({
   onAdvisorUpdated,
 }: AdvisorsListProps) {
   const { hasPermission } = usePermissions()
+  // Columna "Acciones" › botón Editar (datos, foto y estado) — permiso ACADEMICO.ADVISOR.EDITAR
   const puedeEditar = hasPermission(AcademicoPermission.ADVISOR_EDITAR)
   const [searchTerm, setSearchTerm] = useState('')
   const [filtro, setFiltro] = useState<FiltroEstado>('activos')
@@ -90,11 +91,9 @@ export default function AdvisorsList({
            (advisor.email || '').toLowerCase().includes(searchLower)
   })
 
-  const opcionesEditar = [...porEstado].sort((a, b) => nombreDe(a).localeCompare(nombreDe(b), 'es'))
-
   return (
     <div className="space-y-6">
-      {/* Filtros: estado + editar advisor */}
+      {/* Filtro por estado */}
       <div className="flex flex-wrap items-center gap-2">
         {([['activos', `Activos (${nActivos})`], ['inactivos', `Inactivos (${nInactivos})`], ['todos', `Todos (${advisors.length})`]] as const).map(([k, label]) => (
           <button
@@ -110,29 +109,6 @@ export default function AdvisorsList({
             {label}
           </button>
         ))}
-
-        {puedeEditar && (
-          <div className="ml-auto flex items-center gap-2">
-            <PencilSquareIcon className="h-5 w-5 text-indigo-600" />
-            <select
-              aria-label="Editar advisor"
-              title="Editar advisor"
-              value=""
-              onChange={e => {
-                const a = advisors.find(x => x._id === e.target.value)
-                if (a) setEditando(a)
-              }}
-              className="min-w-[260px] rounded-md border border-gray-300 bg-white py-1.5 pl-3 pr-8 text-sm text-gray-700 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-            >
-              <option value="">Editar perfil de un advisor…</option>
-              {opcionesEditar.map(a => (
-                <option key={a._id} value={a._id}>
-                  {nombreDe(a) || a.email || a._id}{esActivo(a) ? '' : ' (inactivo)'}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
       </div>
 
       {/* Search Bar */}

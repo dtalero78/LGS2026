@@ -560,8 +560,8 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     code: AcademicoPermission.ADVISOR_EDITAR,
     module: Module.ACADEMICO,
     section: 'Advisors',
-    name: 'Editar advisor (datos y foto)',
-    description: 'Editar perfil del advisor desde la lista: datos personales, Zoom, clave y foto',
+    name: 'Botón "Editar" advisor',
+    description: 'Botón Editar de la lista de advisors: datos personales, Zoom, clave, foto y Activar/Desactivar',
   },
 
   // -- Página: Actualizar Material (/dashboard/academic/actualizar-material) --

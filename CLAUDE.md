@@ -36,7 +36,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 20. Vista de agenda diaria
 21. Exportación Excel (CSV con UTF-8 BOM) de eventos con filtros
 22. Agenda Académica - Vista semanal de clases
-23. Lista de Advisors con estadísticas de rendimiento. Filtro Activos / Inactivos / Todos (*default* Activos; Estadísticas solo activos) y, con permiso `ACADEMICO.ADVISOR.EDITAR`, desplegable "Editar perfil de un advisor…" + botón Editar por fila → modal compartido [AdvisorEditModal](src/components/advisors/AdvisorEditModal.tsx) (datos de ADVISORS/USUARIOS_ROLES + foto; mismo modal que `/admin/lgs-buckets`)
+23. Lista de Advisors con estadísticas de rendimiento. Filtro Activos / Inactivos / Todos (*default* Activos; Estadísticas solo activos) y, con permiso `ACADEMICO.ADVISOR.EDITAR`, botón **Editar** por fila (columna Acciones) → modal compartido [AdvisorEditModal](src/components/advisors/AdvisorEditModal.tsx) (datos de ADVISORS/USUARIOS_ROLES + foto + Activar/Desactivar; mismo modal que `/admin/lgs-buckets`). Activar/Desactivar (`POST /api/postgres/advisors/[id]/estado`) cambia `ADVISORS.activo` y el login vinculado **solo si es rol ADVISOR**; Gestión Usuarios sincroniza la ficha al activar/desactivar una cuenta ADVISOR
 24. Creación de nuevos advisors (página pública `/nuevo-advisor` con wizard 3 pasos + creación automática de cuenta USUARIOS_ROLES)
 25. Detalle de advisor (calendario, estadísticas, eventos asignados)
 26. Panel Advisor personal (calendario y métricas propias filtradas por email)
