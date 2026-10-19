@@ -37,14 +37,14 @@ async function fotoFirmada(stored: string | null): Promise<string | null> {
 async function findUsuarioRol(advisor: { usuarioRolId?: string | null; email?: string | null }) {
   if (advisor.usuarioRolId) {
     const byId = await queryOne<any>(
-      `SELECT "_id","email","numberid","celular" FROM "USUARIOS_ROLES" WHERE "_id" = $1 LIMIT 1`,
+      `SELECT "_id","email","numberid","celular","activo","rol" FROM "USUARIOS_ROLES" WHERE "_id" = $1 LIMIT 1`,
       [advisor.usuarioRolId]
     );
     if (byId) return byId;
   }
   if (advisor.email) {
     return queryOne<any>(
-      `SELECT "_id","email","numberid","celular" FROM "USUARIOS_ROLES"
+      `SELECT "_id","email","numberid","celular","activo","rol" FROM "USUARIOS_ROLES"
         WHERE LOWER(TRIM("email")) = LOWER(TRIM($1)) LIMIT 1`,
       [advisor.email]
     );
@@ -58,13 +58,19 @@ export const GET = handlerWithAuth(async (_req, ctx, session) => {
 
   const adv = await queryOne<any>(
     `SELECT "_id","primerNombre","primerApellido","nombreCompleto","email","zoom",
-            "telefono","pais","domicilioadvisor","fechaNacimiento","fotoAdvisor","esPlanta","usuarioRolId"
+            "telefono","pais","domicilioadvisor","fechaNacimiento","fotoAdvisor","esPlanta","usuarioRolId","activo"
        FROM "ADVISORS" WHERE "_id" = $1 LIMIT 1`,
     [id]
   );
   if (!adv) throw new NotFoundError('Advisor', id);
 
   const ur = await findUsuarioRol(adv);
+  // Clases futuras asignadas (aviso antes de desactivarlo): por _id o por su email (legacy).
+  const fut = await queryOne<{ n: number }>(
+    `SELECT COUNT(*)::int AS n FROM "CALENDARIO" c
+      WHERE (c."advisor" = $1 OR LOWER(TRIM(c."advisor")) = LOWER(TRIM($2))) AND c."dia" >= NOW()`,
+    [id, adv.email || '']
+  );
 
   return successResponse({
     advisor: {
@@ -81,6 +87,10 @@ export const GET = handlerWithAuth(async (_req, ctx, session) => {
       esPlanta: adv.esPlanta === true,
       tieneUsuarioRol: !!ur,
       fotoUrl: await fotoFirmada(adv.fotoAdvisor),
+      activo: adv.activo !== false,
+      loginActivo: ur ? ur.activo !== false : null,
+      loginRol: ur?.rol || null,
+      clasesFuturas: fut?.n ?? 0,
     },
   });
 });

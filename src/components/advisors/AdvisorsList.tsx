@@ -304,6 +304,7 @@ export default function AdvisorsList({
             setEditando(null)
           }}
           onFotoChanged={(id, url) => setFotosNuevas(m => ({ ...m, [id]: url }))}
+          onEstadoChanged={(id, activo) => onAdvisorUpdated?.(id, { activo })}
         />
       )}
     </div>

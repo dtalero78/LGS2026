@@ -173,6 +173,18 @@ export const PATCH = handlerWithAuth(async (request: NextRequest, _ctx, session)
       );
   if (!res.rowCount) throw new NotFoundError('Usuario', id);
 
+  // Cuenta de un ADVISOR: su ficha (ADVISORS.activo) sigue al login, para que la lista
+  // de advisors y Lgs-Buckets no lo muestren activo con el login bloqueado (o al revés).
+  // Vinculada por usuarioRolId o, si no lo tiene, por email.
+  await query(
+    `UPDATE "ADVISORS" a SET "activo" = $1, "_updatedDate" = NOW()
+       FROM "USUARIOS_ROLES" u
+      WHERE u."_id" = $2 AND UPPER(COALESCE(u."rol",'')) = 'ADVISOR'
+        AND ( a."usuarioRolId" = u."_id"
+           OR (a."usuarioRolId" IS NULL AND LOWER(TRIM(a."email")) = LOWER(TRIM(u."email"))) )`,
+    [body.activo, id],
+  ).catch((e) => console.error('[users/consulta] no se pudo sincronizar ADVISORS.activo:', e?.message));
+
   return successResponse({ email: res.rows[0].email, activo: res.rows[0].activo, password: res.rows[0].password });
 });
 

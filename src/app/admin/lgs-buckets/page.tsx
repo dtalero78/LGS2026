@@ -478,6 +478,7 @@ export default function LgsBucketsPage() {
               onClose={() => setEditing(null)}
               onSaved={handleAdvisorSaved}
               onFotoChanged={(id, url, filename) => setAdvisors(arr => arr.map(it => it.id === id ? { ...it, url, filename } : it))}
+              onEstadoChanged={(id, activo) => setAdvisors(arr => arr.map(it => it.id === id ? { ...it, activo } : it))}
             />
           )}
         </div>

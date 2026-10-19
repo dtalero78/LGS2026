@@ -33,13 +33,15 @@ const EMPTY_FORM: AdvisorForm = {
   pais: '', zoom: '', domicilio: '', fechaNacimiento: '', esPlanta: false, clave: '',
 }
 
-export default function AdvisorEditModal({ advisorId, advisorNombre, onClose, onSaved, onFotoChanged, mostrarFoto = true }: {
+export default function AdvisorEditModal({ advisorId, advisorNombre, onClose, onSaved, onFotoChanged, onEstadoChanged, mostrarFoto = true }: {
   advisorId: string
   advisorNombre: string
   onClose: () => void
   onSaved: (id: string, nombre: string, email: string, datos: { primerNombre: string; primerApellido: string; zoom: string }) => void
   /** Se llama tras subir una foto nueva (url firmada para mostrarla de inmediato). */
   onFotoChanged?: (id: string, url: string, filename: string | null) => void
+  /** Se llama tras activar/desactivar al advisor (se guarda al instante). */
+  onEstadoChanged?: (id: string, activo: boolean) => void
   mostrarFoto?: boolean
 }) {
   const [form, setForm] = useState<AdvisorForm>(EMPTY_FORM)
@@ -50,13 +52,19 @@ export default function AdvisorEditModal({ advisorId, advisorNombre, onClose, on
   const [fotoUrl, setFotoUrl] = useState<string | null>(null)
   const [subiendo, setSubiendo] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [estado, setEstado] = useState<{ activo: boolean; loginActivo: boolean | null; loginRol: string | null; clasesFuturas: number }>({ activo: true, loginActivo: null, loginRol: null, clasesFuturas: 0 })
+  const [confirmarDesactivar, setConfirmarDesactivar] = useState(false)
+  const [cambiandoEstado, setCambiandoEstado] = useState(false)
 
   useEffect(() => {
     let active = true
     ;(async () => {
       setLoading(true)
       try {
-        const data = await api.get<{ advisor: AdvisorForm & { tieneUsuarioRol: boolean; fotoUrl: string | null } }>(`/api/postgres/advisors/${advisorId}`)
+        const data = await api.get<{ advisor: AdvisorForm & {
+          tieneUsuarioRol: boolean; fotoUrl: string | null
+          activo: boolean; loginActivo: boolean | null; loginRol: string | null; clasesFuturas: number
+        } }>(`/api/postgres/advisors/${advisorId}`)
         if (!active) return
         const a = data.advisor
         setForm({
@@ -67,6 +75,7 @@ export default function AdvisorEditModal({ advisorId, advisorNombre, onClose, on
         })
         setTieneUsuarioRol(a.tieneUsuarioRol)
         setFotoUrl(a.fotoUrl || null)
+        setEstado({ activo: a.activo !== false, loginActivo: a.loginActivo ?? null, loginRol: a.loginRol ?? null, clasesFuturas: a.clasesFuturas || 0 })
       } catch (err) {
         handleApiError(err, 'No se pudieron cargar los datos del advisor')
         if (active) onClose()
@@ -103,6 +112,34 @@ export default function AdvisorEditModal({ advisorId, advisorNombre, onClose, on
       toast.error(`No se pudo subir la foto: ${err?.message || ''}`)
     } finally {
       setSubiendo(false)
+    }
+  }
+
+  // El login solo se sincroniza si la cuenta es de rol ADVISOR (un coordinador/jefe que
+  // también figura como advisor conserva su acceso).
+  const loginEsAdvisor = tieneUsuarioRol && String(estado.loginRol || '').toUpperCase() === 'ADVISOR'
+
+  // Activa/desactiva al advisor (ficha + login) — se guarda al instante, aparte de "Guardar cambios".
+  const cambiarEstado = async (activo: boolean) => {
+    setCambiandoEstado(true)
+    try {
+      const res = await fetch(`/api/postgres/advisors/${advisorId}/estado`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activo }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json?.success) throw new Error(json?.details || json?.error || `Error ${res.status}`)
+      setEstado(e => ({ ...e, activo, loginActivo: json.loginActualizado ? activo : e.loginActivo }))
+      setConfirmarDesactivar(false)
+      onEstadoChanged?.(advisorId, activo)
+      toast.success(activo
+        ? `Advisor activado${json.loginActualizado ? ' · login habilitado' : ''}`
+        : `Advisor desactivado${json.loginActualizado ? ' · login bloqueado' : ''}`)
+    } catch (err: any) {
+      toast.error(`No se pudo cambiar el estado: ${err?.message || ''}`)
+    } finally {
+      setCambiandoEstado(false)
     }
   }
 
@@ -227,6 +264,66 @@ export default function AdvisorEditModal({ advisorId, advisorNombre, onClose, on
               disabled={!tieneUsuarioRol}
               placeholder={tieneUsuarioRol ? '••••' : ''}
             />
+
+            {/* Estado del advisor: ficha (ADVISORS) + login (USUARIOS_ROLES) en un solo paso */}
+            <div className={`rounded-md border p-3 ${estado.activo ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'}`}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900">
+                    Estado: <span className={estado.activo ? 'text-emerald-700' : 'text-red-700'}>{estado.activo ? 'Activo' : 'Inactivo'}</span>
+                  </p>
+                  <p className="text-[11px] text-gray-500">
+                    {!tieneUsuarioRol
+                      ? 'Sin cuenta de login asociada'
+                      : loginEsAdvisor
+                        ? <>Login: {estado.loginActivo === false ? <span className="text-red-700 font-medium">bloqueado</span> : <span className="text-emerald-700 font-medium">habilitado</span>}</>
+                        : <>Su login es de rol <strong>{estado.loginRol}</strong>: no se modifica desde aquí (solo la ficha de advisor).</>}
+                  </p>
+                </div>
+                {estado.activo ? (
+                  <button type="button" disabled={cambiandoEstado} onClick={() => setConfirmarDesactivar(true)}
+                    className="shrink-0 px-3 py-1.5 text-xs font-semibold text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50">
+                    Desactivar advisor
+                  </button>
+                ) : (
+                  <button type="button" disabled={cambiandoEstado} onClick={() => cambiarEstado(true)}
+                    className="shrink-0 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-50">
+                    {cambiandoEstado ? 'Activando…' : 'Activar advisor'}
+                  </button>
+                )}
+              </div>
+              {loginEsAdvisor && estado.loginActivo != null && estado.loginActivo !== estado.activo && (
+                <p className="mt-2 text-[11px] text-amber-800 bg-amber-100 rounded px-2 py-1">
+                  La ficha figura {estado.activo ? 'activa' : 'inactiva'} pero el login está {estado.loginActivo ? 'habilitado' : 'bloqueado'}.
+                  {estado.activo ? ' "Desactivar advisor" lo deja inactivo en ambos.' : ' "Activar advisor" deja ambos activos.'}
+                </p>
+              )}
+              {loginEsAdvisor && estado.activo && estado.loginActivo === false && (
+                <button type="button" disabled={cambiandoEstado} onClick={() => cambiarEstado(true)}
+                  className="mt-2 text-[11px] font-medium text-emerald-700 underline hover:no-underline disabled:opacity-50">
+                  Habilitar también su login
+                </button>
+              )}
+              {confirmarDesactivar && (
+                <div className="mt-3 rounded-md border border-red-300 bg-white p-2.5 space-y-2">
+                  <p className="text-xs text-gray-800">
+                    Al desactivarlo deja de aparecer como activo en la lista de advisors
+                    {loginEsAdvisor ? <> y <strong>se bloquea su login</strong>.</> : ' (su login no cambia).'}
+                    {estado.clasesFuturas > 0
+                      ? <> Tiene <strong className="text-red-700">{estado.clasesFuturas} clase(s) futura(s)</strong> asignada(s): <strong>no se mueven</strong>, reasígnelas a otro advisor desde la agenda.</>
+                      : ' No tiene clases futuras asignadas.'}
+                  </p>
+                  <div className="flex justify-end gap-2">
+                    <button type="button" onClick={() => setConfirmarDesactivar(false)} disabled={cambiandoEstado}
+                      className="px-2.5 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 disabled:opacity-50">Cancelar</button>
+                    <button type="button" onClick={() => cambiarEstado(false)} disabled={cambiandoEstado}
+                      className="px-2.5 py-1 text-xs font-semibold text-white bg-red-600 rounded hover:bg-red-700 disabled:opacity-50">
+                      {cambiandoEstado ? 'Desactivando…' : 'Sí, desactivar'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {error && (
               <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1.5">{error}</p>
