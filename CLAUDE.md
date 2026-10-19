@@ -92,6 +92,7 @@ LGS Admin Panel is a Next.js 14 administrative dashboard for "Let's Go Speak" la
 63. Filtrado por estado (Pendiente, Aprobado, Rechazado) y tipo
 64. Descarga y envío de PDF de contratos
 65. Paginación y búsqueda de aprobaciones
+65c. **Depuración de "Sin firmar"** (titular sin `aprobacion` ni firma): [scripts/purge-sin-firmar.js](scripts/purge-sin-firmar.js) borra definitivamente (revalida en vivo firma, aprobación, clases, ficha académica, pagos validados por persona y reserva KIDS; snapshot en `PURGE_LOG` tipo `SIN_FIRMAR_DEPURADO`) y [scripts/aprobar-sin-firmar.js](scripts/aprobar-sin-firmar.js) regulariza los que ya se cursaron (`--finalizar` / `--activar`, sin mensajes, `APROBACION_AUDIT` origen `SISTEMA`); ambos dry-run + `--motivo` obligatorio. Su consentimiento + contrato en Drive se genera con `/admin/regularizar-consentimientos` (Drive solo tiene credenciales en producción)
 65b. **Kids** (`/dashboard/aprobacion/kids`, permiso `APROBACION.KIDS.VER`): usuarios Kids por campaña / curso / salón (guía, horarios, inscritos, cupo); clic expande los inscritos (niño, ID, edad, contrato, apoderado, ID apoderado, email, teléfono). Pestañas **Matriculados** (Activos *default* / Inactivos / Todos) y **En reserva**, filtros campaña (*default* la EN_MATRICULA) / curso / salón / guía, CSV por pestaña. Fuente = KIDS2026 `GET /api/kids-intake/roster` (KIDS v13) → `kidsIntake.roster()`, cruzado en `GET /api/postgres/aprobacion/kids` con las fichas LGS; "En reserva" suma los niños de `KIDS_INSCRIPCIONES` que aún no tienen reserva en KIDS
 
 ### Gestión de Permisos (Admin)
@@ -1547,6 +1548,8 @@ interface ConsentData {
 | Filtro Advisors Chile (Mantenimiento › Contratos, TEMPORAL) | `/admin/filtro-advisors-chile` | SUPER_ADMIN/ADMIN |
 | Gestión › Ajustes (Recaudos) | `/dashboard/recaudos/gestion` (pestaña Ajustes) | RECAUDOS.AJUSTES.INSCRIPCION / PAGO / FACTURACION |
 | Usuarios en mora (Recaudos) | `/dashboard/recaudos/usuarios-mora` | RECAUDOS.USUARIOS_MORA.VER (botón Desbloquear: RECAUDOS.USUARIOS_MORA.DESBLOQUEAR) |
+| Lgs-Buckets (fotos en Spaces) | `/admin/lgs-buckets` | MANTENIMIENTO.LGS_BUCKETS.VER (reemplazar/editar: `.EDITAR`) — pestaña Advisors = **todos** (activos e inactivos, con o sin foto; filtro Todos/Activos/Inactivos); Usuarios = paginada (índice parcial `idx_academica_foto_spaces`, conteo solo con `conTotal=1`); clic en la foto = visor ampliado. Las fotos usan `getPresignedUrlEstable()` de [spaces.ts](src/lib/spaces.ts) (firma con la hora en punto → URL idéntica durante la hora y el navegador la cachea) |
+| Regularizar consentimientos | `/admin/regularizar-consentimientos` | SUPER_ADMIN/ADMIN — herramienta de un solo uso (2026-10-19) para los contratos "Sin firmar" aprobados por script: `autoApproveConsent` + contrato y anexo en Drive, sin WhatsApp |
 | Ticker Editor | `/admin/ticker` | SUPER_ADMIN only |
 | Banner Editor | `/admin/banner` | SUPER_ADMIN only |
 | Reglamentos (Mantenimiento › Avisos) | `/admin/reglamentos` | MANTENIMIENTO.AVISOS.REGLAMENTOS |
