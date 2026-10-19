@@ -216,7 +216,13 @@ export async function findPegados(opts?: { force?: boolean }): Promise<PegadosRe
        SELECT p2."contrato"
        FROM "PEOPLE" p2
        WHERE p2."numeroId" = a."numeroId"
-       ORDER BY CASE WHEN p2."tipoUsuario" = 'BENEFICIARIO' THEN 0 ELSE 1 END
+       ORDER BY (p2."_id" = a."usuarioId") DESC NULLS LAST,
+                  (p2."tipoUsuario" = 'BENEFICIARIO') DESC,
+                  (UPPER(COALESCE(p2."aprobacion",'')) IN ('APROBADO','APROBADA')) DESC,
+                  (UPPER(COALESCE(p2."estado",'')) NOT IN ('FINALIZADA','ANULADO')
+                    AND UPPER(COALESCE(p2."aprobacion",'')) NOT IN ('CONTRATO NULO','DEVUELTO','RECHAZADO','RETRACTADO')
+                    AND (p2."estadoInactivo" IS NOT TRUE OR p2."fechaOnHold" IS NOT NULL)) DESC,
+                  p2."_createdDate" DESC NULLS LAST
        LIMIT 1
      ) p ON true
      WHERE a."nivel" = ANY($1::text[])

@@ -635,7 +635,7 @@ SENCE_AMBIENTE=test_o_produccion
 - Algunos estudiantes tienen registros duplicados en PEOPLE (uno como BENEFICIARIO, otro como TITULAR) con el mismo `numeroId`
 - **Login**: `resolveStudentFromSession()` en `panel-estudiante.service.ts` prioriza BENEFICIARIO sobre TITULAR cuando comparten email, ya que el panel estudiante es para beneficiarios
 - **Beneficiario en varios contratos (borradores rehechos)**: `people.repository.findBeneficiarioByNumeroId(numeroId, preferId)` se llama con `ACADEMICA.usuarioId` y ordena: esa fila exacta → aprobada → viva → más reciente. Así el agendamiento y el login quedan en la fila del contrato al que está ligada la ficha académica (antes era un `LIMIT 1` no determinista). Lo usan `resolveStudentFromSession` y `inicializarNivel`
-- **ACADEMICA-PEOPLE JOIN**: `student.service.ts` prioriza BENEFICIARIO sobre TITULAR cuando hay duplicados con el mismo `numeroId` (ORDER BY tipoUsuario, BENEFICIARIO primero)
+- **ACADEMICA-PEOPLE JOIN**: los `LATERAL` que eligen la fila de PEOPLE de una ficha académica (`AcademicaRepository.findProfileById` / `searchWithPeople`, Usuarios Pegados) usan la MISMA prioridad que `findBeneficiarioByNumeroId`: la fila ligada (`ACADEMICA.usuarioId`) → BENEFICIARIO → aprobada → viva → más reciente. **Nunca** ordenar solo por "BENEFICIARIO primero": con borradores anulados del mismo documento la ficha mostraba el contrato ANULADO
 - **Bookings duplicados**: `student-booking.service.ts` valida contra TODOS los `_id` del estudiante en PEOPLE para evitar bookings duplicados cuando hay registros duplicados
 
 ### OnHold Edge Cases
