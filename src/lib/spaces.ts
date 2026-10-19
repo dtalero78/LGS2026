@@ -43,3 +43,16 @@ export async function getPresignedVideoUrl(
   const command = new GetObjectCommand({ Bucket: SPACES_BUCKET, Key: key });
   return getSignedUrl(spacesClient, command, { expiresIn: expiresInSeconds });
 }
+
+/**
+ * URL firmada ESTABLE: se firma con la hora en punto, así que durante toda esa hora
+ * la misma key produce la misma URL y el navegador reutiliza la imagen de su caché
+ * (una firma nueva en cada petición obliga a descargarla otra vez). Válida al menos
+ * 1 h (hasta 2 h desde la hora en punto). Para galerías de imágenes privadas.
+ */
+export async function getPresignedUrlEstable(key: string): Promise<string> {
+  const hora = new Date();
+  hora.setUTCMinutes(0, 0, 0);
+  const command = new GetObjectCommand({ Bucket: SPACES_BUCKET, Key: key });
+  return getSignedUrl(spacesClient, command, { expiresIn: 7200, signingDate: hora });
+}

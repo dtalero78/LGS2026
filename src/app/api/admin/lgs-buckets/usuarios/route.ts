@@ -1,15 +1,20 @@
 /**
- * API: /api/admin/lgs-buckets/usuarios?search=&page=&pageSize=  (GET)
+ * API: /api/admin/lgs-buckets/usuarios?search=&page=&pageSize=&conTotal=1  (GET)
  *
  * Lista las fotos de usuarios/estudiantes almacenadas en DO Spaces
  * (ACADEMICA.foto), paginadas y buscables, con presigned URL por foto.
  * Sólo lectura. Gated por MANTENIMIENTO.LGS_BUCKETS.VER.
+ *
+ * Costo: las dos consultas usan el índice parcial `idx_academica_foto_spaces`
+ * (primerApellido, primerNombre WHERE foto en Spaces) — ~1 ms la página y ~15 ms
+ * el conteo. El conteo solo corre con `conTotal=1` (primera página / búsqueda
+ * nueva); al paginar el cliente reutiliza el total que ya tiene.
  */
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { requirePermission } from '@/lib/api-permissions';
 import { MantenimientoPermission } from '@/types/permissions';
 import { queryOne, queryMany } from '@/lib/postgres';
-import { getPresignedVideoUrl } from '@/lib/spaces';
+import { getPresignedUrlEstable } from '@/lib/spaces';
 
 function keyFromStored(stored: string | null): string | null {
   const s = (stored || '').trim();
@@ -26,7 +31,7 @@ async function resolveUrl(stored: string | null): Promise<string | null> {
   if (/^https?:\/\//i.test(s) && !/digitaloceanspaces\.com/i.test(s)) return s;
   const key = keyFromStored(s);
   if (!key) return null;
-  try { return await getPresignedVideoUrl(key, 3600); } catch { return null; }
+  try { return await getPresignedUrlEstable(key); } catch { return null; }
 }
 
 export const GET = handlerWithAuth(async (req, _ctx, session) => {
@@ -53,10 +58,13 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
   }
   const where = `WHERE ${conds.join(' AND ')}`;
 
-  const totalRow = await queryOne<{ total: string }>(
-    `SELECT COUNT(*)::text AS total FROM "ACADEMICA" ${where}`, params
-  );
-  const total = parseInt(totalRow?.total ?? '0', 10) || 0;
+  let total: number | null = null;
+  if (searchParams.get('conTotal') === '1') {
+    const totalRow = await queryOne<{ total: string }>(
+      `SELECT COUNT(*)::text AS total FROM "ACADEMICA" ${where}`, params
+    );
+    total = parseInt(totalRow?.total ?? '0', 10) || 0;
+  }
 
   const rows = await queryMany<any>(
     `SELECT "_id", "primerNombre", "primerApellido", "numeroId", "email", "foto", "nivel", "step"

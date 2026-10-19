@@ -28,9 +28,12 @@ interface FotoItem {
   numeroId?: string
   nivel?: string
   step?: string
+  activo?: boolean
   filename: string | null
   url: string | null
 }
+
+type FiltroEstado = 'todos' | 'activos' | 'inactivos'
 
 const PAGE_SIZE = 24
 
@@ -53,12 +56,46 @@ async function descargar(url: string, filename: string) {
   }
 }
 
-function FotoCard({ item, tipo, canEdit, onReplaced, onEditData }: {
+/** Visor ampliado: la foto original completa (sin recortar) sobre la página. Esc o clic afuera cierra. */
+function FotoAmpliada({ item, onClose }: { item: FotoItem; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+  if (!item.url) return null
+  const fname = item.filename || `${item.nombre}.jpg`
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="relative max-w-5xl w-full flex flex-col items-center gap-3" onClick={e => e.stopPropagation()}>
+        <button type="button" onClick={onClose} title="Cerrar" className="absolute -top-2 right-0 text-white/80 hover:text-white">
+          <XMarkIcon className="h-7 w-7" />
+        </button>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={item.url} alt={item.nombre} className="max-h-[80vh] max-w-full object-contain rounded shadow-2xl bg-white" />
+        <div className="flex flex-wrap items-center justify-center gap-2 text-white">
+          <span className="text-sm font-semibold">{item.nombre}</span>
+          {item.numeroId ? <span className="text-xs text-white/70">ID {item.numeroId}</span> : null}
+          <button
+            type="button"
+            onClick={() => item.url && descargar(item.url, fname)}
+            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700"
+          >
+            <ArrowDownTrayIcon className="h-4 w-4" /> Descargar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function FotoCard({ item, tipo, canEdit, onReplaced, onEditData, onVer }: {
   item: FotoItem
   tipo: 'advisor' | 'usuario'
   canEdit: boolean
   onReplaced: (id: string, url: string, filename: string | null) => void
   onEditData?: () => void
+  onVer: () => void
 }) {
   const [broken, setBroken] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -89,16 +126,26 @@ function FotoCard({ item, tipo, canEdit, onReplaced, onEditData }: {
   }
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden bg-white flex flex-col">
-      <div className="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
+    <div className={`border rounded-lg overflow-hidden bg-white flex flex-col ${item.activo === false ? 'border-red-200' : 'border-gray-200'}`}>
+      <div className="relative aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
+        {tipo === 'advisor' && (
+          <span className={`absolute top-1.5 left-1.5 z-10 rounded-full px-2 py-0.5 text-[10px] font-semibold shadow-sm ${
+            item.activo === false ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'
+          }`}>
+            {item.activo === false ? 'Inactivo' : 'Activo'}
+          </span>
+        )}
         {item.url && !broken ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={item.url}
             alt={item.nombre}
-            className="w-full h-full object-cover"
+            className={`w-full h-full object-cover cursor-zoom-in hover:opacity-90 ${item.activo === false ? 'grayscale-[60%]' : ''}`}
+            title="Ver foto completa"
+            onClick={onVer}
             onError={() => setBroken(true)}
             loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="flex flex-col items-center text-gray-300">
@@ -163,7 +210,7 @@ function FotoCard({ item, tipo, canEdit, onReplaced, onEditData }: {
               onClick={() => inputRef.current?.click()}
               className="mt-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-[11px] font-medium text-amber-800 bg-amber-100 rounded hover:bg-amber-200 disabled:opacity-50"
             >
-              <ArrowUpTrayIcon className="h-3.5 w-3.5" /> {uploading ? 'Subiendo…' : 'Reemplazar'}
+              <ArrowUpTrayIcon className="h-3.5 w-3.5" /> {uploading ? 'Subiendo…' : item.url ? 'Reemplazar' : 'Subir foto'}
             </button>
           </>
         )}
@@ -371,15 +418,20 @@ export default function LgsBucketsPage() {
   // Advisors
   const [advisors, setAdvisors] = useState<FotoItem[]>([])
   const [advisorsLoaded, setAdvisorsLoaded] = useState(false)
+  const [filtroAdv, setFiltroAdv] = useState<FiltroEstado>('todos')
+  const [buscarAdv, setBuscarAdv] = useState('')
 
   // Usuarios
   const [usuarios, setUsuarios] = useState<FotoItem[]>([])
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
+  const saltarPaginaRef = useRef(false)
 
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState<FotoItem | null>(null)
+  const [viendo, setViendo] = useState<FotoItem | null>(null)
+  const cerrarVisor = useCallback(() => setViendo(null), [])
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const fetchAdvisors = useCallback(async () => {
@@ -403,10 +455,12 @@ export default function LgsBucketsPage() {
       if (search.trim()) qs.set('search', search.trim())
       qs.set('page', String(pageToUse))
       qs.set('pageSize', String(PAGE_SIZE))
-      const data = await api.get<{ usuarios: FotoItem[]; total: number }>(`/api/admin/lgs-buckets/usuarios?${qs.toString()}`)
+      // El conteo solo se pide al buscar / recargar; al paginar se reutiliza el que ya hay.
+      if (resetPage) qs.set('conTotal', '1')
+      const data = await api.get<{ usuarios: FotoItem[]; total: number | null }>(`/api/admin/lgs-buckets/usuarios?${qs.toString()}`)
       setUsuarios(data.usuarios || [])
-      setTotal(data.total || 0)
-      if (resetPage) setPage(1)
+      if (data.total != null) setTotal(data.total)
+      if (resetPage && page !== 1) { saltarPaginaRef.current = true; setPage(1) }
     } catch (err) {
       handleApiError(err, 'Error cargando fotos de usuarios')
     } finally {
@@ -424,13 +478,22 @@ export default function LgsBucketsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab])
 
-  // Paginación usuarios
+  // Paginación usuarios (no recarga cuando la búsqueda acaba de volver a la página 1)
   useEffect(() => {
+    if (saltarPaginaRef.current) { saltarPaginaRef.current = false; return }
     if (tab === 'usuarios') fetchUsuarios()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page])
 
-  const items = tab === 'advisors' ? advisors : usuarios
+  const nActivos = advisors.filter(a => a.activo !== false).length
+  const nInactivos = advisors.length - nActivos
+  const advisorsVisibles = advisors.filter(a => {
+    if (filtroAdv === 'activos' && a.activo === false) return false
+    if (filtroAdv === 'inactivos' && a.activo !== false) return false
+    const q = buscarAdv.trim().toLowerCase()
+    return !q || a.nombre.toLowerCase().includes(q) || a.email.toLowerCase().includes(q)
+  })
+  const items = tab === 'advisors' ? advisorsVisibles : usuarios
 
   const handleReplaced = (id: string, url: string, filename: string | null) => {
     const upd = (arr: FotoItem[]) => arr.map(it => it.id === id ? { ...it, url, filename } : it)
@@ -460,7 +523,7 @@ export default function LgsBucketsPage() {
             </div>
             <button
               type="button"
-              onClick={() => tab === 'advisors' ? fetchAdvisors() : fetchUsuarios()}
+              onClick={() => tab === 'advisors' ? fetchAdvisors() : fetchUsuarios(true)}
               disabled={loading}
               className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
@@ -485,6 +548,36 @@ export default function LgsBucketsPage() {
               </button>
             ))}
           </div>
+
+          {/* Filtros (advisors): estado + búsqueda local */}
+          {tab === 'advisors' && advisorsLoaded && (
+            <div className="flex flex-wrap items-center gap-2">
+              {([['todos', `Todos (${advisors.length})`], ['activos', `Activos (${nActivos})`], ['inactivos', `Inactivos (${nInactivos})`]] as const).map(([k, label]) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setFiltroAdv(k)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-full border ${
+                    filtroAdv === k
+                      ? k === 'inactivos' ? 'bg-red-600 border-red-600 text-white' : k === 'activos' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-indigo-600 border-indigo-600 text-white'
+                      : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+              <div className="relative flex-1 min-w-[200px] max-w-sm ml-auto">
+                <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={buscarAdv}
+                  onChange={e => setBuscarAdv(e.target.value)}
+                  placeholder="Buscar advisor por nombre o email…"
+                  className="w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded-md text-sm"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Búsqueda (solo usuarios) */}
           {tab === 'usuarios' && (
@@ -520,7 +613,7 @@ export default function LgsBucketsPage() {
             <p className="p-10 text-sm text-gray-400 italic text-center">Cargando…</p>
           ) : items.length === 0 ? (
             <p className="p-10 text-sm text-gray-400 italic text-center">
-              {tab === 'advisors' ? 'No hay fotos de advisors.' : 'No hay fotos de usuarios con ese filtro.'}
+              {tab === 'advisors' ? 'No hay advisors con ese filtro.' : 'No hay fotos de usuarios con ese filtro.'}
             </p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -532,6 +625,7 @@ export default function LgsBucketsPage() {
                   canEdit={canEdit}
                   onReplaced={handleReplaced}
                   onEditData={tab === 'advisors' && canEdit ? () => setEditing(it) : undefined}
+                  onVer={() => setViendo(it)}
                 />
               ))}
             </div>
@@ -564,6 +658,8 @@ export default function LgsBucketsPage() {
               </div>
             </div>
           )}
+
+          {viendo && <FotoAmpliada item={viendo} onClose={cerrarVisor} />}
 
           {editing && (
             <AdvisorEditModal

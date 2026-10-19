@@ -1,15 +1,16 @@
 /**
  * API: /api/postgres/admin/lgs-buckets/advisors  (GET)
  *
- * Lista las fotos de advisors almacenadas en DO Spaces (ADVISORS.fotoAdvisor),
- * con un presigned URL por foto para ver/descargar. Sólo lectura.
+ * Lista TODOS los advisors (activos e inactivos, con o sin foto) con su foto de
+ * DO Spaces (ADVISORS.fotoAdvisor) firmada para ver/descargar; los que no tienen
+ * foto salen igual para poder subirla con "Reemplazar". Sólo lectura.
  * Gated por MANTENIMIENTO.LGS_BUCKETS.VER (SUPER_ADMIN/ADMIN bypass).
  */
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { requirePermission } from '@/lib/api-permissions';
 import { MantenimientoPermission } from '@/types/permissions';
 import { queryMany } from '@/lib/postgres';
-import { getPresignedVideoUrl } from '@/lib/spaces';
+import { getPresignedUrlEstable } from '@/lib/spaces';
 
 /** Convierte el valor guardado (key de Spaces o URL CDN) a una key; null si no es de Spaces. */
 function keyFromStored(stored: string | null): string | null {
@@ -28,7 +29,7 @@ async function resolveUrl(stored: string | null): Promise<string | null> {
   if (/^https?:\/\//i.test(s) && !/digitaloceanspaces\.com/i.test(s)) return s;
   const key = keyFromStored(s);
   if (!key) return null;
-  try { return await getPresignedVideoUrl(key, 3600); } catch { return null; }
+  try { return await getPresignedUrlEstable(key); } catch { return null; }
 }
 
 export const GET = handlerWithAuth(async (_req, _ctx, session) => {
@@ -37,7 +38,6 @@ export const GET = handlerWithAuth(async (_req, _ctx, session) => {
   const rows = await queryMany<any>(
     `SELECT "_id", "nombreCompleto", "primerNombre", "primerApellido", "email", "fotoAdvisor", "activo"
      FROM "ADVISORS"
-     WHERE "fotoAdvisor" IS NOT NULL AND TRIM("fotoAdvisor") <> ''
      ORDER BY "nombreCompleto" NULLS LAST, "primerApellido" NULLS LAST`
   );
 
@@ -48,7 +48,7 @@ export const GET = handlerWithAuth(async (_req, _ctx, session) => {
       id: r._id,
       nombre: nombre || '(sin nombre)',
       email: r.email || '',
-      activo: r.activo,
+      activo: r.activo !== false,
       filename: key ? key.split('/').pop() : null,
       url: await resolveUrl(r.fotoAdvisor),
     };
