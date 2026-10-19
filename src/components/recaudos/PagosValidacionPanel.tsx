@@ -17,7 +17,7 @@
  * Al "Validar" ya NO se pide factura: el pago pasa a Facturación, donde el
  * modal pide el número de factura.
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { BanknotesIcon, BuildingLibraryIcon, CheckBadgeIcon, ArrowPathIcon, ArrowDownTrayIcon, MagnifyingGlassIcon, XMarkIcon, DocumentTextIcon, PaperClipIcon, ArrowTopRightOnSquareIcon, PencilSquareIcon } from '@heroicons/react/24/outline'
@@ -142,6 +142,9 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
   // Recibo/comprobante ya adjunto al pago → opción de reutilizarlo al facturar
   const [facturarDocs, setFacturarDocs] = useState<DocAdjunto[]>([])
   const [facturaReuse, setFacturaReuse] = useState(true)
+  // Lectura del # de factura con IA (solo propone; el usuario confirma con "Registrar Factura")
+  const [lecturaFactura, setLecturaFactura] = useState<{ estado: 'leyendo' | 'ok' | 'sin' | 'error'; numero?: string; texto: string } | null>(null)
+  const facturaModalIdRef = useRef<string | null>(null)
 
   // Edición de pago pendiente
   const [editModal, setEditModal] = useState<{ id: string; titular: string; numCuota: number | null } | null>(null)
@@ -256,12 +259,44 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
   }
 
   // ── Facturar (pestaña Facturación): registra el # de factura + adjunta el archivo ──
+  // Lee el # de factura del archivo y lo propone en el campo (sin pisar lo que ya se escribió).
+  const leerNumeroFactura = async (url: string) => {
+    const modalId = facturaModalIdRef.current
+    setLecturaFactura({ estado: 'leyendo', texto: 'Leyendo el número de factura del archivo…' })
+    try {
+      const { extraido } = await api.post<{ extraido: { numeroFactura: string | null; esFactura: boolean; tipoDocumento: string | null; confianza: number | null } }>(
+        '/api/postgres/recaudos/factura-numero/extraer', { url })
+      if (facturaModalIdRef.current !== modalId) return   // el modal se cerró o cambió
+      const n = extraido?.numeroFactura || ''
+      if (n) {
+        setFacturaInput(prev => (prev.trim() ? prev : n))
+        const conf = extraido.confianza != null ? ` · confianza ${Math.round(extraido.confianza * 100)}%` : ''
+        setLecturaFactura({ estado: 'ok', numero: n, texto: `Leído del archivo${extraido.tipoDocumento ? ` (${extraido.tipoDocumento})` : ''}: ${n}${conf}. Verifíquelo antes de registrar.` })
+      } else {
+        setLecturaFactura({ estado: 'sin', texto: extraido?.esFactura === false
+          ? 'El archivo no parece una factura (p. ej. es el comprobante de pago): escriba el número a mano.'
+          : 'No se encontró el número de factura en el archivo: escríbalo a mano.' })
+      }
+    } catch (e: any) {
+      if (facturaModalIdRef.current !== modalId) return
+      setLecturaFactura({ estado: 'error', texto: `No se pudo leer el archivo: ${e?.message || 'error'}` })
+    }
+  }
+
+  const cerrarFacturar = () => {
+    facturaModalIdRef.current = null
+    setFacturarModal(null); setFacturaInput(''); setFacturaFile(null); setFacturarDocs([]); setLecturaFactura(null)
+  }
+
   const openFacturar = (p: PagoRow) => {
-    setFacturaInput(''); setFacturaFile(null)
+    setFacturaInput(''); setFacturaFile(null); setLecturaFactura(null)
     const docs = Array.isArray(p.documentosAdjuntos) ? p.documentosAdjuntos : []
     setFacturarDocs(docs)
     setFacturaReuse(docs.length > 0)   // por defecto reutiliza el recibo ya subido si existe
+    facturaModalIdRef.current = p._id
     setFacturarModal({ id: p._id, idPeople: p.idPeople, numCuota: p.numCuota, titular: `${p.titular_primerNombre} ${p.titular_primerApellido}`.trim() })
+    // Un solo archivo adjunto → se lee de una vez; con varios, el usuario elige cuál leer.
+    if (docs.length === 1 && docs[0]?.url) leerNumeroFactura(docs[0].url)
   }
   // Sube el archivo de la factura a Spaces (mismo flujo que los documentos del pago).
   const subirFacturaArchivo = async (file: File) => {
@@ -278,6 +313,7 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
       const { publicUrl } = await res.json()
       setFacturaFile({ url: publicUrl, nombre: file.name, tipo: file.type, fechaSubida: new Date().toISOString() })
       toast.success('Archivo de factura adjuntado')
+      leerNumeroFactura(publicUrl)
     } catch (e: any) {
       toast.error(`Error subiendo el archivo: ${e?.message || ''}`)
     } finally {
@@ -314,7 +350,7 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
       })
       const usoRecibo = facturaReuse && facturarDocs.length > 0
       toast.success(`Factura ${factura} registrada${nuevoDoc ? ' con archivo adjunto' : usoRecibo ? ' (recibo ya adjunto)' : ''}`)
-      setFacturarModal(null); setFacturaInput(''); setFacturaFile(null); setFacturarDocs([])
+      cerrarFacturar()
       fetchPagos()
     } catch (err) {
       handleApiError(err, 'Error al registrar la factura')
@@ -964,7 +1000,7 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-gray-900">🧾 Facturar {facturarModal.numCuota === 0 ? 'Inscripción' : 'Pago'}</h3>
-              <button type="button" onClick={() => { setFacturarModal(null); setFacturaInput(''); setFacturaFile(null) }} title="Cerrar" className="text-gray-400 hover:text-gray-600"><XMarkIcon className="h-5 w-5" /></button>
+              <button type="button" onClick={cerrarFacturar} title="Cerrar" className="text-gray-400 hover:text-gray-600"><XMarkIcon className="h-5 w-5" /></button>
             </div>
             <p className="text-sm text-gray-600">
               Registre el <strong>número de factura</strong> del pago{facturarModal.numCuota != null ? (facturarModal.numCuota === 0 ? ' (inscripción)' : ` (cuota ${facturarModal.numCuota})`) : ''}
@@ -979,6 +1015,23 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
               {facturaInput.trim() && !validarNumeroFactura(facturaInput).ok && (
                 <p className="mt-1 text-xs text-red-600">{(validarNumeroFactura(facturaInput) as { error: string }).error}</p>
               )}
+              {lecturaFactura && (
+                <p className={`mt-1.5 text-xs flex items-start gap-1.5 ${
+                  lecturaFactura.estado === 'ok' ? 'text-emerald-700' : lecturaFactura.estado === 'leyendo' ? 'text-purple-700' : 'text-amber-700'
+                }`}>
+                  {lecturaFactura.estado === 'leyendo'
+                    ? <ArrowPathIcon className="h-3.5 w-3.5 mt-0.5 shrink-0 animate-spin" />
+                    : <DocumentTextIcon className="h-3.5 w-3.5 mt-0.5 shrink-0" />}
+                  <span>
+                    {lecturaFactura.texto}
+                    {lecturaFactura.estado === 'ok' && lecturaFactura.numero && facturaInput.trim() !== lecturaFactura.numero && (
+                      <button type="button" onClick={() => setFacturaInput(lecturaFactura.numero!)} className="ml-1 font-semibold underline hover:no-underline">
+                        Usar {lecturaFactura.numero}
+                      </button>
+                    )}
+                  </span>
+                </p>
+              )}
             </div>
             {facturarDocs.length > 0 ? (
               <div>
@@ -992,9 +1045,19 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                       {facturaReuse && (
                         <span className="block mt-1">
                           {facturarDocs.map((d, i) => (
-                            <a key={i} href={d.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline mr-3 truncate max-w-full">
-                              <PaperClipIcon className="h-3.5 w-3.5 shrink-0" /> {d.nombre || `Documento ${i + 1}`}
-                            </a>
+                            <span key={i} className="inline-flex items-center gap-1.5 mr-3 max-w-full">
+                              <a href={d.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline truncate">
+                                <PaperClipIcon className="h-3.5 w-3.5 shrink-0" /> {d.nombre || `Documento ${i + 1}`}
+                              </a>
+                              {/* Con varios archivos no se lee solo: el usuario elige cuál es la factura */}
+                              {facturarDocs.length > 1 && (
+                                <button type="button" onClick={(e) => { e.preventDefault(); leerNumeroFactura(d.url) }}
+                                  disabled={lecturaFactura?.estado === 'leyendo'}
+                                  className="text-[11px] font-medium text-purple-700 hover:underline disabled:opacity-50">
+                                  Leer # factura
+                                </button>
+                              )}
+                            </span>
                           ))}
                         </span>
                       )}
@@ -1042,7 +1105,7 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
               </div>
             )}
             <div className="flex items-center justify-end gap-3 pt-2">
-              <button type="button" onClick={() => { setFacturarModal(null); setFacturaInput(''); setFacturaFile(null); setFacturarDocs([]) }} disabled={facturando} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
+              <button type="button" onClick={cerrarFacturar} disabled={facturando} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
               <button type="button" onClick={handleFacturar} disabled={facturando || subiendoFactura || !validarNumeroFactura(facturaInput).ok} className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed">{facturando ? 'Registrando…' : 'Registrar Factura'}</button>
             </div>
           </div>

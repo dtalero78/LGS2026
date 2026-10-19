@@ -64,7 +64,11 @@ Reglas ESTRICTAS:
 - Si el archivo NO es un comprobante de pago, pon "confianza": 0 y todo lo demás null.
 - Responde ÚNICAMENTE el objeto JSON.`;
 
-async function callOpenAI(fileContent: any): Promise<ReciboExtraido> {
+/**
+ * Manda un archivo (content part de imagen o PDF) con un prompt a OpenAI y devuelve
+ * el objeto JSON de la respuesta. Compartido por "Leer recibo" y "Leer factura".
+ */
+export async function llamarOpenAIJson(prompt: string, fileContent: any, etiqueta = 'recibos'): Promise<any> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new ValidationError('OPENAI_API_KEY no está configurada en el entorno.');
 
@@ -77,11 +81,11 @@ async function callOpenAI(fileContent: any): Promise<ReciboExtraido> {
       model: OPENAI_MODEL,
       max_tokens: 1024,
       response_format: { type: 'json_object' },
-      messages: [{ role: 'user', content: [{ type: 'text', text: PROMPT }, fileContent] }],
+      messages: [{ role: 'user', content: [{ type: 'text', text: prompt }, fileContent] }],
     };
     response = await client.chat.completions.create(params);
   } catch (e: any) {
-    throw new ValidationError(`El extractor de recibos falló: ${e?.message || e}`);
+    throw new ValidationError(`El extractor de ${etiqueta} falló: ${e?.message || e}`);
   }
 
   const text = String(response?.choices?.[0]?.message?.content ?? '').trim();
@@ -90,9 +94,32 @@ async function callOpenAI(fileContent: any): Promise<ReciboExtraido> {
     .replace(/^```\s*/, '')
     .replace(/```\s*$/, '')
     .trim();
-  let parsed: any;
-  try { parsed = JSON.parse(jsonStr); }
+  try { return JSON.parse(jsonStr); }
   catch { throw new ValidationError('El extractor no devolvió un JSON válido.'); }
+}
+
+/** Convierte el archivo descargado en el content part que acepta OpenAI (PDF o imagen). */
+export function archivoComoContenidoIA(buf: Buffer, contentType: string | null, nombreOUrl: string): any {
+  const b64 = buf.toString('base64');
+  let mediaType = (contentType || '').split(';')[0].trim().toLowerCase();
+  if (!mediaType || mediaType === 'application/octet-stream') {
+    if (/\.pdf(\?|$)/i.test(nombreOUrl)) mediaType = 'application/pdf';
+    else if (/\.png(\?|$)/i.test(nombreOUrl)) mediaType = 'image/png';
+    else if (/\.(jpe?g)(\?|$)/i.test(nombreOUrl)) mediaType = 'image/jpeg';
+    else if (/\.webp(\?|$)/i.test(nombreOUrl)) mediaType = 'image/webp';
+    else mediaType = 'image/jpeg';
+  }
+  if (mediaType === 'application/pdf') {
+    // OpenAI acepta PDFs como content part de tipo "file" (base64 data URL).
+    return { type: 'file', file: { filename: 'documento.pdf', file_data: `data:application/pdf;base64,${b64}` } };
+  }
+  const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  const mt = allowed.includes(mediaType) ? mediaType : 'image/jpeg';
+  return { type: 'image_url', image_url: { url: `data:${mt};base64,${b64}` } };
+}
+
+async function callOpenAI(fileContent: any): Promise<ReciboExtraido> {
+  const parsed = await llamarOpenAIJson(PROMPT, fileContent, 'recibos');
 
   const num = (x: any) => (x === null || x === undefined || x === '' ? null : Number(x));
   return {
@@ -116,27 +143,7 @@ export async function extraerReciboDesdeUrl(url: string): Promise<ReciboExtraido
   if (!r.ok) throw new ValidationError(`No se pudo descargar el recibo (${r.status}).`);
   const buf = Buffer.from(await r.arrayBuffer());
   if (buf.length > 8 * 1024 * 1024) throw new ValidationError('El recibo supera el tamaño máximo (8MB).');
-  const b64 = buf.toString('base64');
-
-  let mediaType = (r.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
-  if (!mediaType || mediaType === 'application/octet-stream') {
-    if (/\.pdf(\?|$)/i.test(url)) mediaType = 'application/pdf';
-    else if (/\.png(\?|$)/i.test(url)) mediaType = 'image/png';
-    else if (/\.(jpe?g)(\?|$)/i.test(url)) mediaType = 'image/jpeg';
-    else if (/\.webp(\?|$)/i.test(url)) mediaType = 'image/webp';
-    else mediaType = 'image/jpeg';
-  }
-
-  let fileContent: any;
-  if (mediaType === 'application/pdf') {
-    // OpenAI acepta PDFs como content part de tipo "file" (base64 data URL).
-    fileContent = { type: 'file', file: { filename: 'recibo.pdf', file_data: `data:application/pdf;base64,${b64}` } };
-  } else {
-    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    const mt = allowed.includes(mediaType) ? mediaType : 'image/jpeg';
-    fileContent = { type: 'image_url', image_url: { url: `data:${mt};base64,${b64}` } };
-  }
-  return callOpenAI(fileContent);
+  return callOpenAI(archivoComoContenidoIA(buf, r.headers.get('content-type'), url));
 }
 
 // ── Guardado en FINANCIEROS ──────────────────────────────────────────────────
