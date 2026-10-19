@@ -2,6 +2,7 @@ import 'server-only';
 import { query } from '@/lib/postgres';
 import { ConflictError } from '@/lib/errors';
 import { normalizeNumeroIdList } from '@/lib/numeroid-normalize';
+import { liberarReservasKids } from '@/lib/kids-baja';
 
 /**
  * Invariante de negocio:
@@ -87,6 +88,12 @@ export async function anularBeneficiariosViejos(peopleIds: string[]): Promise<nu
         SET "estado" = 'ANULADO', "estadoInactivo" = true, "aprobacion" = 'Contrato nulo', "_updatedDate" = NOW()
       WHERE "_id" = ANY($1::text[])`,
     [peopleIds]
+  );
+  // Kids: el registro viejo también suelta su cupo en KIDS2026 (best-effort, no lanza).
+  await liberarReservasKids(
+    { beneficiarioIds: peopleIds },
+    'ANULADO',
+    'Re-matrícula: el documento pasó a un contrato nuevo',
   );
   return peopleIds.length;
 }

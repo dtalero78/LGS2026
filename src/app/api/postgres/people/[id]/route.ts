@@ -9,6 +9,7 @@ import { buildDynamicUpdate } from '@/lib/query-builder';
 import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
 import { registrarCambioAprobacion, assertPuedeRevertirAPendiente, nombreDe } from '@/lib/aprobacion-audit';
 import { inhabilitarContratoRetractado } from '@/lib/retractado';
+import { liberarReservasKids, motivoBajaKids } from '@/lib/kids-baja';
 
 /**
  * GET /api/postgres/people/[id]
@@ -610,6 +611,12 @@ export const PATCH = handlerWithAuth(async (
     beneficiariesInactivated = inactiveResult.rowCount || 0;
 
     console.log(`🔴 [PostgreSQL People] Estado "${body.aprobacion}" → ANULADO: titular + ${beneficiariesInactivated} beneficiarios`);
+
+    // Kids: libera el cupo de los beneficiarios Kids en KIDS2026 (best-effort, no lanza).
+    const motivoKids = motivoBajaKids(body.aprobacion);
+    if (motivoKids) {
+      await liberarReservasKids({ contrato: parsedPerson.contrato }, motivoKids, body.aprobacionMotivo ?? null);
+    }
   }
 
   // Retractado (2026-10-06): el cliente se retracta dentro del plazo legal. NO es

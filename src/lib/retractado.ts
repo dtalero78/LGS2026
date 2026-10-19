@@ -1,5 +1,6 @@
 import 'server-only';
 import { withTransaction } from '@/lib/postgres';
+import { liberarReservasKids } from '@/lib/kids-baja';
 
 /**
  * Contrato RETRACTADO (2026-10-06): el cliente se retractó dentro del plazo legal.
@@ -14,6 +15,14 @@ import { withTransaction } from '@/lib/postgres';
  * otro contrato (re-matrícula en curso).
  */
 export async function inhabilitarContratoRetractado(contrato: string): Promise<{ beneficiarios: number; fichas: number; logins: number }> {
+  const r = await inhabilitarEnLgs(contrato);
+  // Kids: el retracto también libera el cupo del niño en KIDS2026 (best-effort,
+  // después de guardar en LGS; nunca lanza).
+  await liberarReservasKids({ contrato }, 'RETRACTADO');
+  return r;
+}
+
+async function inhabilitarEnLgs(contrato: string): Promise<{ beneficiarios: number; fichas: number; logins: number }> {
   return withTransaction(async (client) => {
     const people = await client.query(
       `UPDATE "PEOPLE" SET "estadoInactivo" = true, "estado" = 'RETRACTADO', "_updatedDate" = NOW()

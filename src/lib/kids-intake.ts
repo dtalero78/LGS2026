@@ -213,6 +213,13 @@ export const kidsIntake = {
    */
   updateGuardian: (externalRef: string, datos: { titularEsApoderado: boolean; apoderado: KidsPersona | null; parentesco: string | null }) =>
     call<{ aplicado: boolean; apoderadoId: string; nombresConservados: boolean }>('POST', `/api/kids-intake/reservations/${encodeURIComponent(externalRef)}/apoderado`, datos),
+  /**
+   * Contrato ANULADO / RECHAZADO / RETRACTADO en LGS → KIDS inactiva el contrato y
+   * LIBERA el cupo (cancela la matrícula reservada o activa). Idempotente: `aplicado:
+   * false` si ya estaba inactivo. 404 = esa referencia no existe en KIDS.
+   */
+  cancelReservation: (externalRef: string, datos: { motivo: 'ANULADO' | 'RECHAZADO' | 'RETRACTADO'; detalle?: string | null }) =>
+    call<{ aplicado: boolean; estado: string; cupoLiberado: boolean }>('POST', `/api/kids-intake/reservations/${encodeURIComponent(externalRef)}/cancel`, datos),
   /** Beneficiario REACTIVADO en LGS → KIDS cierra la pausa que abrió LGS y reactiva el login. */
   reactivateReservation: (externalRef: string) =>
     call<{ aplicado: boolean; estado: string; motivo?: string }>('POST', `/api/kids-intake/reservations/${encodeURIComponent(externalRef)}/reactivate`, {}),

@@ -3,6 +3,7 @@ import { handlerWithStaffAuth, successResponse } from '@/lib/api-helpers';
 import { queryOne, withTransaction } from '@/lib/postgres';
 import { NotFoundError, ValidationError, ConflictError } from '@/lib/errors';
 import { registrarCambioAprobacion, nombreDe } from '@/lib/aprobacion-audit';
+import { liberarReservasKids } from '@/lib/kids-baja';
 
 /**
  * POST /api/postgres/contracts/anular-registro
@@ -80,6 +81,10 @@ export const POST = handlerWithStaffAuth(async (req, _ctx, session) => {
     }
     return previas.rows;
   });
+
+  // Kids: libera en KIDS2026 el cupo de los beneficiarios Kids anulados
+  // (best-effort, después de guardar; no lanza).
+  await liberarReservasKids({ beneficiarioIds: anulados.map((r: any) => r._id) }, 'ANULADO', motivo);
 
   // Auditoría (best-effort), una entrada por fila anulada.
   for (const r of anulados) {

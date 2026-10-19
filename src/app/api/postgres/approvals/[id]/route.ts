@@ -5,6 +5,7 @@ import { NotFoundError, ValidationError } from '@/lib/errors';
 import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { registrarCambioAprobacion, nombreDe } from '@/lib/aprobacion-audit';
 import { inhabilitarContratoRetractado } from '@/lib/retractado';
+import { liberarReservasKids, motivoBajaKids } from '@/lib/kids-baja';
 
 export const GET = handlerWithAuth(async (request, { params }) => {
   const result = await query(
@@ -84,6 +85,17 @@ export const PUT = handlerWithAuth(async (request, { params }, session) => {
   // Retractado: inhabilita a todo el contrato (misma regla que la ficha del titular).
   if (estadoFinal === 'Retractado' && actual.contrato) {
     await inhabilitarContratoRetractado(actual.contrato);
+  }
+
+  // Rechazado / Contrato nulo / Devuelto: libera el cupo de los Kids en KIDS2026
+  // (el retracto ya lo hace inhabilitarContratoRetractado). Del titular = todo el
+  // contrato; de un beneficiario = solo el suyo. Best-effort, no lanza.
+  const motivoKids = estadoFinal === 'Retractado' ? null : motivoBajaKids(estadoFinal);
+  if (motivoKids) {
+    await liberarReservasKids(
+      actual.tipoUsuario === 'TITULAR' ? { contrato: actual.contrato } : { beneficiarioIds: [params.id] },
+      motivoKids,
+    );
   }
 
   await registrarCambioAprobacion({
