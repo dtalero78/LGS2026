@@ -11,7 +11,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
-  ArrowPathIcon, ArrowDownTrayIcon, ChevronDownIcon, ChevronRightIcon, MagnifyingGlassIcon,
+  ArrowPathIcon, ArrowDownTrayIcon, ChevronDownIcon, ChevronRightIcon, ChevronLeftIcon, MagnifyingGlassIcon, FunnelIcon,
   XMarkIcon, ArrowTopRightOnSquareIcon, CalendarDaysIcon, TableCellsIcon, RectangleStackIcon,
 } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/layout/DashboardLayout'
@@ -37,7 +37,8 @@ interface Registro {
   plan: number | null; tipoPlan: string | null; inscripcionPagada: number | null; valorCuota: number | null
   saldo: number | null; totalPlan: number | null; fechaPrimeraCuota: string | null
   suscripcionPago: boolean; prixus: boolean; factura: string | null
-  aprobacion: string | null; estado: string | null; observaciones: string | null; pais: string | null
+  aprobacion: string; aprobacionFicha: string | null; firmado: boolean
+  estado: string | null; observaciones: string | null; pais: string | null
   titular: { nombre: string; documento: string; telefono: string; correo: string; direccion: string; ciudad: string }
   referencias: { nombre: string; telefono: string; parentesco: string }[]
   comercial: Record<'ejecutivo' | 'fullExecutive' | 'jefeGrupo' | 'gerente' | 'gerenteDivision' | 'salesManager' | 'filial' | 'origenMatricula', string>
@@ -48,10 +49,12 @@ const TODOS = '__todos__'
 const fmtF = (v?: string | null) => { const [y, m, d] = String(v || '').slice(0, 10).split('-'); return y && m && d ? `${d}/${m}/${y}` : '—' }
 const fmtFH = (v?: string | null) => v ? `${fmtF(v)} ${v.slice(11, 16)}` : '—'
 const fmtM = (n: number | null) => n === null ? '—' : `$${n.toLocaleString('es-CO', { maximumFractionDigits: 2 })}`
+/** Color del estado: Aprobado verde · Pendiente aprobación ámbar · Sin firmar gris · anulados/retractados rojo. */
 const estadoCls = (a: string | null) => {
   const s = String(a || '').toLowerCase()
   if (s.startsWith('aprobad')) return 'bg-green-100 text-green-800'
-  if (!s || s === 'pendiente') return 'bg-amber-100 text-amber-800'
+  if (s.startsWith('pendiente')) return 'bg-amber-100 text-amber-800'
+  if (s === 'sin firmar') return 'bg-slate-200 text-slate-700'
   return 'bg-red-100 text-red-800'
 }
 const resumenSsbb = (r: Registro) => {
@@ -91,7 +94,7 @@ const COLS: Col[] = [
   { key: 'c1', header: 'Fecha 1ª cuota', w: 104, titular: r => fmtF(r.fechaPrimeraCuota) },
   { key: 'susc', header: 'Suscripción de pago', w: 110, titular: r => r.suscripcionPago ? 'SI' : 'NO' },
   { key: 'fact', header: 'Factura/Bol', w: 110, titular: r => r.factura || '—' },
-  { key: 'aprob', header: 'Aprobación', w: 120, titular: r => <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${estadoCls(r.aprobacion)}`}>{r.aprobacion || 'Sin estado'}</span>, benef: b => b.aprobacion || '—' },
+  { key: 'aprob', header: 'Aprobación', w: 120, titular: r => <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${estadoCls(r.aprobacion)}`}>{r.aprobacion}</span>, benef: b => b.aprobacion || 'Pendiente' },
   { key: 'obs', header: 'Observaciones', w: 260, titular: r => <span className="line-clamp-2" title={r.observaciones || ''}>{r.observaciones || ''}</span> },
   { key: 'prog', header: 'Programa', w: 110, titular: r => resumenPrograma(r), benef: b => <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${b.programa === 'Kids' ? 'bg-fuchsia-100 text-fuchsia-800' : 'bg-indigo-100 text-indigo-800'}`}>{b.programa}</span> },
   { key: 'ssbb', header: 'Asistió SSBB', w: 96, titular: r => resumenSsbb(r), benef: b => b.welcome },
@@ -156,7 +159,10 @@ function Libro() {
   const [loading, setLoading] = useState(true)
   const [abiertos, setAbiertos] = useState<Set<string>>(new Set())
   const [detalle, setDetalle] = useState<string | null>(null)
-  const [f, setF] = useState({ semana: TODOS, pais: TODOS, estado: TODOS, ejecutivo: TODOS, filial: TODOS, conciliado: TODOS, factura: TODOS, q: '' })
+  const FILTROS_VACIOS = { semana: TODOS, pais: TODOS, estado: TODOS, ejecutivo: TODOS, filial: TODOS, conciliado: TODOS, factura: TODOS, q: '' }
+  const [f, setF] = useState(FILTROS_VACIOS)
+  // La vigencia no es un filtro de esta lista: "Limpiar filtros" la conserva.
+  const hayFiltros = Object.entries(f).some(([k, v]) => (k === 'q' ? String(v).trim() !== '' : v !== TODOS))
 
   const cargar = useCallback(async (vigenciaId?: string) => {
     setLoading(true)
@@ -170,7 +176,7 @@ function Libro() {
 
   const opciones = useMemo(() => ({
     paises: Array.from(new Set(registros.map(r => r.pais || '—'))).sort(),
-    estados: Array.from(new Set(registros.map(r => r.aprobacion || 'Sin estado'))).sort(),
+    estados: Array.from(new Set(registros.map(r => r.aprobacion))).sort(),
     ejecutivos: Array.from(new Set(registros.map(r => r.comercial.ejecutivo || '—'))).sort((a, b) => a.localeCompare(b, 'es')),
     filiales: Array.from(new Set(registros.map(r => r.comercial.filial || '—'))).sort((a, b) => a.localeCompare(b, 'es')),
   }), [registros])
@@ -181,7 +187,7 @@ function Libro() {
     return registros.filter(r =>
       (f.semana === TODOS || String(r.semana) === f.semana) &&
       (f.pais === TODOS || (r.pais || '—') === f.pais) &&
-      (f.estado === TODOS || (r.aprobacion || 'Sin estado') === f.estado) &&
+      (f.estado === TODOS || r.aprobacion === f.estado) &&
       (f.ejecutivo === TODOS || (r.comercial.ejecutivo || '—') === f.ejecutivo) &&
       (f.filial === TODOS || (r.comercial.filial || '—') === f.filial) &&
       (f.conciliado === TODOS || (f.conciliado === 'SI') === r.conciliado.si) &&
@@ -224,7 +230,7 @@ function Libro() {
       { header: 'Fecha 1ª cuota', accessor: x => x.b ? '' : fmtF(x.r.fechaPrimeraCuota) },
       { header: 'Suscripción de pago', accessor: x => x.b ? '' : (x.r.suscripcionPago ? 'SI' : 'NO') },
       { header: 'Factura/Bol', accessor: x => x.b ? '' : x.r.factura },
-      { header: 'Aprobación', accessor: x => x.b ? x.b.aprobacion : (x.r.aprobacion || 'Sin estado') },
+      { header: 'Aprobación', accessor: x => x.b ? (x.b.aprobacion || 'Pendiente') : x.r.aprobacion },
       { header: 'Observaciones', accessor: x => x.b ? '' : x.r.observaciones },
       { header: 'Programa', accessor: x => x.b ? x.b.programa : '' },
       { header: 'Asistió SSBB', accessor: x => x.b ? x.b.welcome : '' },
@@ -290,6 +296,11 @@ function Libro() {
           <span><b className="text-gray-700">{visibles.length}</b> contratos · <b className="text-gray-700">{visibles.reduce((s, r) => s + r.beneficiarios.length, 0)}</b> beneficiarios</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => setF(FILTROS_VACIOS)} disabled={!hayFiltros}
+            title="Quitar todos los filtros (conserva la vigencia)"
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40">
+            <FunnelIcon className="h-4 w-4" /> Limpiar filtros
+          </button>
           <button type="button" onClick={() => setAbiertos(todosAbiertos ? new Set() : new Set(conBenef.map(r => r.titularId)))}
             className="px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 bg-white hover:bg-gray-50">
             {todosAbiertos ? 'Colapsar beneficiarios' : 'Expandir beneficiarios'}
@@ -370,16 +381,20 @@ function Libro() {
       )}
 
       {detalle && (
-        <Detalle titularId={detalle} onClose={() => setDetalle(null)}
+        <Detalle titularId={detalle} ids={visibles.map(r => r.titularId)} onNavegar={setDetalle} onClose={() => setDetalle(null)}
           onCasillas={(id, c) => setRegistros(rs => rs.map(r => r.titularId === id ? { ...r, ...c } : r))} />
       )}
     </div>
   )
 }
 
-// ── Vista detallada ─────────────────────────────────────────────────────────────
-function Detalle({ titularId, onClose, onCasillas }: {
-  titularId: string; onClose: () => void
+// ── Vista detallada (ventana ampliada, dos columnas; pantalla completa en celular) ──
+function Detalle({ titularId, ids, onNavegar, onClose, onCasillas }: {
+  titularId: string
+  /** Contratos del filtro actual, en el orden de la hoja (para Anterior / Siguiente). */
+  ids: string[]
+  onNavegar: (id: string) => void
+  onClose: () => void
   onCasillas: (id: string, c: { suscripcionPago: boolean; prixus: boolean }) => void
 }) {
   const { hasPermission } = usePermissions()
@@ -387,9 +402,13 @@ function Detalle({ titularId, onClose, onCasillas }: {
   const [r, setR] = useState<Registro | null>(null)
   const [vig, setVig] = useState<Vigencia | null>(null)
   const [guardando, setGuardando] = useState(false)
+  const idx = ids.indexOf(titularId)
+  const anterior = idx > 0 ? ids[idx - 1] : null
+  const siguiente = idx >= 0 && idx < ids.length - 1 ? ids[idx + 1] : null
 
   useEffect(() => {
     let vivo = true
+    setR(null)
     api.get<{ registro: Registro; vigencia: Vigencia | null }>(`/api/postgres/libro-produccion/${titularId}`)
       .then(d => { if (vivo) { setR(d.registro); setVig(d.vigencia) } })
       .catch(e => { handleApiError(e, 'No se pudo cargar el contrato'); onClose() })
@@ -397,9 +416,15 @@ function Detalle({ titularId, onClose, onCasillas }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [titularId])
   useEffect(() => {
-    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    const k = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return
+      if (e.key === 'Escape') onClose()
+      else if (e.key === 'ArrowLeft' && anterior) onNavegar(anterior)
+      else if (e.key === 'ArrowRight' && siguiente) onNavegar(siguiente)
+    }
     window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k)
-  }, [onClose])
+  }, [onClose, onNavegar, anterior, siguiente])
 
   const marcar = async (campo: 'suscripcionPago' | 'prixus', valor: boolean) => {
     if (!r) return
@@ -416,103 +441,131 @@ function Detalle({ titularId, onClose, onCasillas }: {
     } catch (e: any) { toast.error(`No se pudo guardar: ${e?.message || ''}`) } finally { setGuardando(false) }
   }
 
-  const F = ({ l, v }: { l: string; v: React.ReactNode }) => (
-    <div><div className="text-[11px] uppercase tracking-wide text-gray-400">{l}</div><div className="text-sm text-gray-900 break-words">{v || '—'}</div></div>
+  const F = ({ l, v, full }: { l: string; v: React.ReactNode; full?: boolean }) => (
+    <div className={full ? 'col-span-full min-w-0' : 'min-w-0'}>
+      <div className="text-[11px] uppercase tracking-wide text-gray-400">{l}</div>
+      <div className="text-sm text-gray-900 break-words">{v || '—'}</div>
+    </div>
   )
   const Sec = ({ t, children }: { t: string; children: React.ReactNode }) => (
-    <div className="rounded-xl border border-gray-200 bg-white">
+    <section className="rounded-xl border border-gray-200 bg-white min-w-0">
       <div className="px-4 py-2 border-b border-gray-100 text-sm font-semibold text-gray-800">{t}</div>
-      <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-3">{children}</div>
-    </div>
+      <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-x-5 gap-y-3">{children}</div>
+    </section>
+  )
+  const BtnNav = ({ id, children, title }: { id: string | null; children: React.ReactNode; title: string }) => (
+    <button type="button" disabled={!id} onClick={() => id && onNavegar(id)} title={title}
+      className="inline-flex items-center gap-1 rounded-md bg-white/15 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-white/25 disabled:opacity-40">
+      {children}
+    </button>
   )
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center overflow-y-auto p-4" onClick={onClose}>
-      <div className="w-full max-w-5xl my-6 space-y-4" onClick={e => e.stopPropagation()}>
-        {!r ? (
-          <div className="rounded-xl bg-white p-12 text-center text-sm text-gray-400">Cargando…</div>
-        ) : (
-          <>
-            <div className="rounded-xl overflow-hidden shadow-lg">
-              <div className="bg-gradient-to-r from-indigo-600 to-indigo-500 px-5 py-4 flex items-start justify-between text-white">
-                <div>
-                  <div className="text-xs uppercase tracking-wide opacity-80">Contrato {r.contrato} · {r.pais || '—'}</div>
-                  <div className="text-xl font-bold">{r.titular.nombre}</div>
-                  <div className="text-xs opacity-90">
-                    {vig ? `${etiquetaVigencia(vig)} · Semana ${r.semana ? etiquetaSemana(r.semana) : '—'}` : 'Fuera de las vigencias configuradas'} · Ingreso {fmtFH(r.creadoLocal)}
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${estadoCls(r.aprobacion)}`}>{r.aprobacion || 'Sin estado'}</span>
-                  <button type="button" onClick={onClose} title="Cerrar" className="text-white/80 hover:text-white"><XMarkIcon className="h-6 w-6" /></button>
-                </div>
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center overflow-y-auto sm:p-4" onClick={onClose}>
+      <div className="w-full min-h-full sm:min-h-0 sm:max-w-[1400px] sm:my-4 bg-gray-50 sm:rounded-xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        {/* Encabezado fijo: contrato, estado, navegación */}
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-indigo-600 to-indigo-500 px-4 sm:px-5 py-3 text-white">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-xs uppercase tracking-wide opacity-80">
+                Contrato {r?.contrato || '…'} · {r?.pais || '—'}{idx >= 0 ? ` · ${idx + 1} de ${ids.length}` : ''}
               </div>
-              <div className="bg-white px-5 py-3 flex justify-end">
-                <a href={`/person/${r.titularId}`} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white">
-                  <ArrowTopRightOnSquareIcon className="h-4 w-4" /> Ver ficha completa
-                </a>
+              <div className="text-lg sm:text-xl font-bold truncate">{r?.titular.nombre || 'Cargando…'}</div>
+              {r && (
+                <div className="text-xs opacity-90">
+                  {vig ? `${etiquetaVigencia(vig)} · Semana ${r.semana ? etiquetaSemana(r.semana) : '—'}` : 'Fuera de las vigencias configuradas'} · Ingreso {fmtFH(r.creadoLocal)}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {r && <span className={`px-3 py-1 rounded-full text-xs font-semibold ${estadoCls(r.aprobacion)}`}>{r.aprobacion}</span>}
+              <button type="button" onClick={onClose} title="Cerrar (Esc)" className="text-white/80 hover:text-white"><XMarkIcon className="h-6 w-6" /></button>
+            </div>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <BtnNav id={anterior} title="Contrato anterior (←)"><ChevronLeftIcon className="h-4 w-4" /> Anterior</BtnNav>
+              <BtnNav id={siguiente} title="Contrato siguiente (→)">Siguiente <ChevronRightIcon className="h-4 w-4" /></BtnNav>
+            </div>
+            {r && (
+              <a href={`/person/${r.titularId}`} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white">
+                <ArrowTopRightOnSquareIcon className="h-4 w-4" /> Ver ficha completa
+              </a>
+            )}
+          </div>
+        </div>
+
+        {!r ? (
+          <div className="p-12 text-center text-sm text-gray-400">Cargando…</div>
+        ) : (
+          <div className="p-3 sm:p-5 space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+              <div className="grid gap-4 min-w-0">
+                <Sec t="Titular">
+                  <F l="Cédula" v={r.titular.documento} /><F l="Teléfono" v={r.titular.telefono} /><F l="País" v={r.pais} />
+                  <F l="Correo" v={r.titular.correo} full />
+                  <F l="Dirección" v={r.titular.direccion} /><F l="Ciudad" v={r.titular.ciudad} />
+                </Sec>
+                <Sec t="Plan">
+                  <F l="Plan (cuotas)" v={r.plan ?? '—'} /><F l="Tipo plan" v={r.tipoPlan} /><F l="Valor cuota" v={fmtM(r.valorCuota)} />
+                  <F l="Saldo" v={fmtM(r.saldo)} /><F l="Total plan" v={fmtM(r.totalPlan)} /><F l="Fecha 1ª cuota" v={fmtF(r.fechaPrimeraCuota)} />
+                </Sec>
+                <section className="rounded-xl border border-gray-200 bg-white min-w-0">
+                  <div className="px-4 py-2 border-b border-gray-100 text-sm font-semibold text-gray-800">Control</div>
+                  <div className="p-4 space-y-3">
+                    <div className="flex flex-wrap gap-6">
+                      {([['suscripcionPago', 'Suscripción de pago'], ['prixus', 'Prixus']] as const).map(([k, l]) => (
+                        <label key={k} className={`inline-flex items-center gap-2 text-sm ${puedeCasillas ? 'cursor-pointer' : 'opacity-80'}`}>
+                          <input type="checkbox" checked={r[k]} disabled={!puedeCasillas || guardando} onChange={e => marcar(k, e.target.checked)}
+                            className="h-4 w-4 rounded border-gray-300 text-indigo-600" />
+                          {l}
+                        </label>
+                      ))}
+                    </div>
+                    <F l="Observaciones" v={r.observaciones} />
+                  </div>
+                </section>
+              </div>
+              <div className="grid gap-4 min-w-0">
+                <Sec t="Pago de inscripción">
+                  <F l="Fecha de pago" v={fmtF(r.fechaPago)} /><F l="Forma de pago" v={r.formaPago} /><F l="Inscripción pagada" v={fmtM(r.inscripcionPagada)} />
+                  <F l="Conciliado" v={r.conciliado.si ? `SI · ${r.conciliado.por || ''} ${r.conciliado.fecha ? fmtF(r.conciliado.fecha) : ''}` : 'NO'} />
+                  <F l="Factura / boleta" v={r.factura} />
+                </Sec>
+                <Sec t="Comercial (escalera del día de la matrícula)">
+                  <F l="Ej. Training" v={r.comercial.ejecutivo} /><F l="Full Executive" v={r.comercial.fullExecutive} /><F l="Jefe de grupo" v={r.comercial.jefeGrupo} />
+                  <F l="Gerente" v={r.comercial.gerente} /><F l="Gerente división" v={r.comercial.gerenteDivision} /><F l="Sales Manager" v={r.comercial.salesManager} />
+                  <F l="Filial" v={r.comercial.filial} /><F l="Origen matrícula" v={r.comercial.origenMatricula} />
+                </Sec>
+                <Sec t="Referencias">
+                  {r.referencias.map((x, i) => (
+                    <Fragment key={i}><F l={`Referencia ${i + 1}`} v={x.nombre} /><F l="Teléfono" v={x.telefono} /><F l="Parentesco" v={x.parentesco} /></Fragment>
+                  ))}
+                </Sec>
               </div>
             </div>
 
-            <Sec t="Titular">
-              <F l="Cédula" v={r.titular.documento} /><F l="Teléfono" v={r.titular.telefono} /><F l="Correo" v={r.titular.correo} />
-              <F l="Dirección" v={r.titular.direccion} /><F l="Ciudad" v={r.titular.ciudad} /><F l="País" v={r.pais} />
-            </Sec>
-            <Sec t="Pago de inscripción">
-              <F l="Fecha de pago" v={fmtF(r.fechaPago)} /><F l="Forma de pago" v={r.formaPago} /><F l="Inscripción pagada" v={fmtM(r.inscripcionPagada)} />
-              <F l="Conciliado" v={r.conciliado.si ? `SI · ${r.conciliado.por || ''} ${r.conciliado.fecha ? fmtF(r.conciliado.fecha) : ''}` : 'NO'} />
-              <F l="Factura / boleta" v={r.factura} />
-            </Sec>
-            <Sec t="Plan">
-              <F l="Plan (cuotas)" v={`${r.plan ?? '—'}${r.tipoPlan ? ` · ${r.tipoPlan}` : ''}`} /><F l="Valor cuota" v={fmtM(r.valorCuota)} />
-              <F l="Saldo" v={fmtM(r.saldo)} /><F l="Total plan" v={fmtM(r.totalPlan)} /><F l="Fecha 1ª cuota" v={fmtF(r.fechaPrimeraCuota)} />
-            </Sec>
-            <Sec t="Comercial (escalera del día de la matrícula)">
-              <F l="Ej. Training" v={r.comercial.ejecutivo} /><F l="Full Executive" v={r.comercial.fullExecutive} /><F l="Jefe de grupo" v={r.comercial.jefeGrupo} />
-              <F l="Gerente" v={r.comercial.gerente} /><F l="Gerente división" v={r.comercial.gerenteDivision} /><F l="Sales Manager" v={r.comercial.salesManager} />
-              <F l="Filial" v={r.comercial.filial} /><F l="Origen matrícula" v={r.comercial.origenMatricula} />
-            </Sec>
-            <div className="rounded-xl border border-gray-200 bg-white">
-              <div className="px-4 py-2 border-b border-gray-100 text-sm font-semibold text-gray-800">Control</div>
-              <div className="p-4 space-y-3">
-                <div className="flex flex-wrap gap-6">
-                  {([['suscripcionPago', 'Suscripción de pago'], ['prixus', 'Prixus']] as const).map(([k, l]) => (
-                    <label key={k} className={`inline-flex items-center gap-2 text-sm ${puedeCasillas ? 'cursor-pointer' : 'opacity-80'}`}>
-                      <input type="checkbox" checked={r[k]} disabled={!puedeCasillas || guardando} onChange={e => marcar(k, e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300 text-indigo-600" />
-                      {l}
-                    </label>
-                  ))}
-                </div>
-                <F l="Observaciones" v={r.observaciones} />
-              </div>
-            </div>
-            <Sec t="Referencias">
-              {r.referencias.map((x, i) => (
-                <Fragment key={i}><F l={`Referencia ${i + 1}`} v={x.nombre} /><F l="Teléfono" v={x.telefono} /><F l="Parentesco" v={x.parentesco} /></Fragment>
-              ))}
-            </Sec>
-            <div>
-              <h3 className="text-sm font-semibold text-white mb-2">Beneficiarios ({r.beneficiarios.length})</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <section className="rounded-xl border border-gray-200 bg-white">
+              <div className="px-4 py-2 border-b border-gray-100 text-sm font-semibold text-gray-800">Beneficiarios ({r.beneficiarios.length})</div>
+              <div className="p-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                 {r.beneficiarios.map(b => (
-                  <div key={b.id} className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-                    <div className={`px-4 py-2 text-white flex items-center justify-between ${b.programa === 'Kids' ? 'bg-fuchsia-600' : 'bg-emerald-600'}`}>
+                  <div key={b.id} className="rounded-xl border border-gray-200 overflow-hidden min-w-0">
+                    <div className={`px-4 py-2 text-white flex items-center justify-between gap-2 ${b.programa === 'Kids' ? 'bg-fuchsia-600' : 'bg-emerald-600'}`}>
                       <span className="font-semibold truncate">{b.nombre}</span>
-                      <span className="text-[10px] font-bold bg-white/25 rounded-full px-2 py-0.5">{b.programa === 'Kids' ? '🧒 KIDS' : 'LGS'}</span>
+                      <span className="shrink-0 text-[10px] font-bold bg-white/25 rounded-full px-2 py-0.5">{b.programa === 'Kids' ? '🧒 KIDS' : 'LGS'}</span>
                     </div>
                     <div className="p-3 grid grid-cols-2 gap-2">
                       <F l="Cédula" v={b.documento} /><F l="Teléfono" v={b.telefono} />
-                      <div className="col-span-2"><F l="Correo" v={b.correo} /></div>
-                      <F l="Asistió SSBB" v={b.welcome} /><F l="Estado" v={b.aprobacion} />
+                      <F l="Correo" v={b.correo} full />
+                      <F l="Asistió SSBB" v={b.welcome} /><F l="Estado" v={b.aprobacion || 'Pendiente'} />
                     </div>
                   </div>
                 ))}
-                {!r.beneficiarios.length && <p className="text-sm text-white/80">Sin beneficiarios.</p>}
+                {!r.beneficiarios.length && <p className="text-sm text-gray-500">Sin beneficiarios.</p>}
               </div>
-            </div>
-          </>
+            </section>
+          </div>
         )}
       </div>
     </div>

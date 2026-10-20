@@ -37,6 +37,17 @@ const fmtLocal = (d: any): string | null => {
   return String(d).replace(' ', 'T').slice(0, 16);
 };
 const iso = (d: any): string | null => (d ? new Date(d).toISOString() : null);
+
+/**
+ * Estado del contrato en el libro = "Estado Actual" de la ficha (PEOPLE.aprobacion) cuando
+ * tiene un valor real; sin estado (vacío o "Pendiente") se distingue si ya firmó:
+ * firmado → "Pendiente aprobación", sin firma → "Sin firmar" (término del Centro de Aprobaciones).
+ */
+function estadoLibro(aprobacion: string | null, firmado: boolean): string {
+  const a = String(aprobacion || '').trim();
+  if (a && a.toLowerCase() !== 'pendiente') return a;
+  return firmado ? 'Pendiente aprobación' : 'Sin firmar';
+}
 const num = (v: any): number | null => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
 const nombre = (r: any) => [r.primerNombre, r.segundoNombre, r.primerApellido, r.segundoApellido]
   .map((s) => String(s || '').trim()).filter(Boolean).join(' ');
@@ -52,7 +63,9 @@ export interface RegistroLibro {
   plan: number | null; tipoPlan: string | null; tipoPlanId: string | null; inscripcionPagada: number | null; valorCuota: number | null;
   saldo: number | null; totalPlan: number | null; fechaPrimeraCuota: string | null;
   suscripcionPago: boolean; prixus: boolean; factura: string | null;
-  aprobacion: string | null; estado: string | null; observaciones: string | null; pais: string | null;
+  /** Estado mostrado: el "Estado Actual" de la ficha, o "Pendiente aprobación" / "Sin firmar" si aún no tiene estado. */
+  aprobacion: string; aprobacionFicha: string | null; firmado: boolean;
+  estado: string | null; observaciones: string | null; pais: string | null;
   titular: { nombre: string; documento: string; telefono: string; correo: string; direccion: string; ciudad: string };
   referencias: { nombre: string; telefono: string; parentesco: string }[];
   comercial: {
@@ -132,6 +145,7 @@ async function construir(
               p."referenciaDos", p."telefonoRefDos", p."parentezcoRefDos", p."asesor", p."asesorCreadorContrato",
               p."fullExecutive", p."jefeGrupo", p."gerente", p."gerenteDivision", p."salesManager", p."filial",
               p."origenMatricula", p."suscripcionPago", p."prixus", p."tipoPlanId",
+              (COALESCE(p."hashConsentimiento",'') <> '') AS firmado,
               to_char(p."fechaCreacion" AT TIME ZONE (${TZ_SQL}), 'YYYY-MM-DD"T"HH24:MI') AS creado_local
          FROM "PEOPLE" p
         WHERE p."tipoUsuario" = 'TITULAR' AND COALESCE(p."contrato",'') <> '' AND p."contrato" NOT LIKE 'PRB-%'
@@ -209,7 +223,9 @@ async function construir(
       suscripcionPago: t.suscripcionPago === true,
       prixus: t.prixus === true,
       factura: pg.numeroFactura || null,
-      aprobacion: t.aprobacion || null,
+      aprobacion: estadoLibro(t.aprobacion, t.firmado === true),
+      aprobacionFicha: t.aprobacion || null,
+      firmado: t.firmado === true,
       estado: t.estado || null,
       observaciones: t.observacionesContrato || null,
       pais: t.plataforma || null,
