@@ -240,10 +240,10 @@ function Libro() {
   }
 
   const Sel = ({ label, k, opts }: { label: string; k: keyof typeof f; opts: [string, string][] }) => (
-    <label className="text-xs text-gray-600">
+    <label className="text-xs text-gray-600 min-w-0">
       <span className="block mb-0.5">{label}</span>
       <select value={f[k]} onChange={e => setF(s => ({ ...s, [k]: e.target.value }))}
-        className="rounded-md border border-gray-300 bg-white py-1.5 pl-2 pr-7 text-sm text-gray-800">
+        className="w-full rounded-md border border-gray-300 bg-white py-1.5 pl-2 pr-7 text-sm text-gray-800">
         <option value={TODOS}>Todos</option>
         {opts.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
       </select>
@@ -251,12 +251,12 @@ function Libro() {
   )
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-white p-3">
-        <label className="text-xs text-gray-600">
+    <div className="space-y-3 min-w-0">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-8 items-end gap-3 rounded-lg border border-gray-200 bg-white p-3">
+        <label className="text-xs text-gray-600 min-w-0">
           <span className="block mb-0.5">Vigencia</span>
           <select value={vigencia?._id || ''} onChange={e => { setF(s => ({ ...s, semana: TODOS })); cargar(e.target.value) }}
-            className="rounded-md border border-indigo-300 bg-indigo-50 py-1.5 pl-2 pr-7 text-sm font-semibold text-indigo-900">
+            className="w-full rounded-md border border-indigo-300 bg-indigo-50 py-1.5 pl-2 pr-7 text-sm font-semibold text-indigo-900">
             {!vigencias.length && <option value="">Sin vigencias</option>}
             {vigencias.map(v => <option key={v._id} value={v._id}>{etiquetaVigencia(v)}</option>)}
           </select>
@@ -268,7 +268,7 @@ function Libro() {
         <Sel label="Filial" k="filial" opts={opciones.filiales.map(p => [p, p === '—' ? 'Sin filial' : p])} />
         <Sel label="Conciliado" k="conciliado" opts={[['SI', 'Sí'], ['NO', 'No']]} />
         <Sel label="Factura" k="factura" opts={[['CON', 'Con número'], ['SIN', 'Sin número / Admin']]} />
-        <label className="text-xs text-gray-600 flex-1 min-w-[220px]">
+        <label className="text-xs text-gray-600 min-w-0 col-span-2 sm:col-span-3 md:col-span-4 xl:col-span-8">
           <span className="block mb-0.5">Buscar</span>
           <span className="relative block">
             <MagnifyingGlassIcon className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -276,7 +276,14 @@ function Libro() {
               className="w-full rounded-md border border-gray-300 py-1.5 pl-7 pr-2 text-sm" />
           </span>
         </label>
-        <div className="flex items-center gap-2 ml-auto">
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+          {vigencia && <span>Vigencia <b className="text-gray-700">{etiquetaVigencia(vigencia)}</b>: {fmtFH(vigencia.inicio)} → {fmtFH(vigencia.fin)} (hora local de cada país)</span>}
+          <span><b className="text-gray-700">{visibles.length}</b> contratos · <b className="text-gray-700">{visibles.reduce((s, r) => s + r.beneficiarios.length, 0)}</b> beneficiarios</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           <button type="button" onClick={() => setAbiertos(todosAbiertos ? new Set() : new Set(conBenef.map(r => r.titularId)))}
             className="px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 bg-white hover:bg-gray-50">
             {todosAbiertos ? 'Colapsar beneficiarios' : 'Expandir beneficiarios'}
@@ -292,11 +299,6 @@ function Libro() {
             </button>
           )}
         </div>
-      </div>
-
-      <div className="flex flex-wrap gap-x-4 text-xs text-gray-500">
-        {vigencia && <span>Vigencia <b className="text-gray-700">{etiquetaVigencia(vigencia)}</b>: {fmtFH(vigencia.inicio)} → {fmtFH(vigencia.fin)} (hora local de cada país)</span>}
-        <span><b className="text-gray-700">{visibles.length}</b> contratos · <b className="text-gray-700">{visibles.reduce((s, r) => s + r.beneficiarios.length, 0)}</b> beneficiarios</span>
       </div>
 
       {loading ? (
