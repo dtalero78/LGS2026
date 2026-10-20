@@ -12,7 +12,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   ArrowPathIcon, ArrowDownTrayIcon, ChevronDownIcon, ChevronRightIcon, MagnifyingGlassIcon,
-  XMarkIcon, ArrowTopRightOnSquareIcon, CalendarDaysIcon, TableCellsIcon,
+  XMarkIcon, ArrowTopRightOnSquareIcon, CalendarDaysIcon, TableCellsIcon, RectangleStackIcon,
 } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
@@ -20,6 +20,7 @@ import { AprobacionPermission } from '@/types/permissions'
 import { usePermissions } from '@/hooks/usePermissions'
 import { api, handleApiError } from '@/hooks/use-api'
 import { exportToExcel } from '@/lib/export-excel'
+import PlanesTiposPanel from '@/components/aprobacion/PlanesTiposPanel'
 import {
   MESES, etiquetaVigencia, etiquetaSemana, semanasDeVigencia, type Vigencia,
 } from '@/lib/vigencias-comerciales'
@@ -72,7 +73,6 @@ const COLS: Col[] = [
   { key: 'ingreso', header: 'Fecha ingreso', w: 104, titular: r => fmtF(r.fechaIngreso) },
   { key: 'pago', header: 'Fecha de pago', w: 104, titular: r => fmtF(r.fechaPago) },
   { key: 'contrato', header: 'N° Contrato', w: 112, titular: r => r.contrato },
-  { key: 'plan', header: 'Plan', w: 56, titular: r => r.plan ?? '—' },
   { key: 'titular', header: 'Titular', w: 230, titular: r => r.titular.nombre, benef: b => b.nombre },
   { key: 'cedula', header: 'Cédula titular', w: 116, titular: r => r.titular.documento, benef: b => b.documento },
   { key: 'tel', header: 'Teléfono titular', w: 124, titular: r => r.titular.telefono, benef: b => b.telefono },
@@ -80,6 +80,8 @@ const COLS: Col[] = [
   { key: 'pais', header: 'País', w: 90, titular: r => r.pais || '—' },
   { key: 'dir', header: 'Dirección', w: 220, titular: r => r.titular.direccion },
   { key: 'ciudad', header: 'Ciudad', w: 130, titular: r => r.titular.ciudad },
+  { key: 'plan', header: 'Plan', w: 56, titular: r => r.plan ?? '—' },
+  { key: 'tipoPlan', header: 'Tipo plan', w: 120, titular: r => r.tipoPlan || '—' },
   { key: 'forma', header: 'Forma de pago', w: 170, titular: r => r.formaPago || '—' },
   { key: 'conc', header: 'Conciliado', w: 90, titular: r => r.conciliado.si ? 'SI' : 'NO' },
   { key: 'insc', header: 'Inscripción pagada', w: 120, titular: r => fmtM(r.inscripcionPagada) },
@@ -109,14 +111,15 @@ const COLS: Col[] = [
   { key: 'fil', header: 'Filial', w: 130, titular: r => r.comercial.filial },
   { key: 'ori', header: 'Origen matrícula', w: 190, titular: r => r.comercial.origenMatricula },
 ]
-const FIJAS = 8
+const FIJAS = COLS.findIndex(c => c.key === 'cedula') + 1 // inmovilizadas: Item → Cédula titular
 const LEFTS = COLS.reduce<number[]>((acc, c, i) => { acc.push(i === 0 ? 0 : acc[i - 1] + COLS[i - 1].w); return acc }, [])
 
 // ── Página ──────────────────────────────────────────────────────────────────────
 export default function LibroProduccionPage() {
   const { hasPermission } = usePermissions()
   const puedeVigencias = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_VIGENCIAS)
-  const [tab, setTab] = useState<'libro' | 'vigencias'>('libro')
+  const puedePlanes = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_PLANES)
+  const [tab, setTab] = useState<'libro' | 'vigencias' | 'planes'>('libro')
 
   return (
     <DashboardLayout>
@@ -127,14 +130,16 @@ export default function LibroProduccionPage() {
             <p className="text-sm text-gray-500">Contratos por vigencia comercial, con sus beneficiarios. Fuente: la plataforma (estado, pagos y plan en vivo).</p>
           </div>
           <div className="flex gap-2 border-b border-gray-200">
-            {([['libro', 'Libro', TableCellsIcon], ...(puedeVigencias ? [['vigencias', 'Vigencias', CalendarDaysIcon]] : [])] as const).map(([k, label, Icon]: any) => (
+            {([['libro', 'Libro', TableCellsIcon],
+              ...(puedeVigencias ? [['vigencias', 'Vigencias', CalendarDaysIcon]] : []),
+              ...(puedePlanes ? [['planes', 'Planes', RectangleStackIcon]] : [])] as const).map(([k, label, Icon]: any) => (
               <button key={k} type="button" onClick={() => setTab(k)}
                 className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px ${tab === k ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
                 <Icon className="h-4 w-4" /> {label}
               </button>
             ))}
           </div>
-          {tab === 'libro' ? <Libro /> : <Vigencias />}
+          {tab === 'libro' ? <Libro /> : tab === 'vigencias' ? <Vigencias /> : <PlanesTiposPanel />}
         </div>
       </PermissionGuard>
     </DashboardLayout>
@@ -201,7 +206,6 @@ function Libro() {
       { header: 'Fecha ingreso', accessor: x => fmtFH(x.r.creadoLocal) },
       { header: 'Fecha de pago', accessor: x => fmtF(x.r.fechaPago) },
       { header: 'N° Contrato', accessor: x => x.r.contrato },
-      { header: 'Plan', accessor: x => x.r.plan ?? '' },
       { header: 'Nombre', accessor: x => x.b ? x.b.nombre : x.r.titular.nombre },
       { header: 'Cédula', accessor: x => x.b ? x.b.documento : x.r.titular.documento },
       { header: 'Teléfono', accessor: x => x.b ? x.b.telefono : x.r.titular.telefono },
@@ -209,6 +213,8 @@ function Libro() {
       { header: 'País', accessor: x => x.r.pais },
       { header: 'Dirección', accessor: x => x.b ? '' : x.r.titular.direccion },
       { header: 'Ciudad', accessor: x => x.b ? '' : x.r.titular.ciudad },
+      { header: 'Plan', accessor: x => x.b ? '' : (x.r.plan ?? '') },
+      { header: 'Tipo plan', accessor: x => x.b ? '' : x.r.tipoPlan },
       { header: 'Forma de pago', accessor: x => x.b ? '' : x.r.formaPago },
       { header: 'Conciliado', accessor: x => x.b ? '' : (x.r.conciliado.si ? 'SI' : 'NO') },
       { header: 'Inscripción pagada', accessor: x => x.b ? '' : x.r.inscripcionPagada },

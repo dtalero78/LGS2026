@@ -49,7 +49,7 @@ export interface RegistroLibro {
   titularId: string; contrato: string; item: number; semana: number | null;
   creadoLocal: string | null; fechaIngreso: string | null; fechaPago: string | null;
   formaPago: string; conciliado: { si: boolean; por: string | null; fecha: string | null };
-  plan: number | null; tipoPlan: string | null; inscripcionPagada: number | null; valorCuota: number | null;
+  plan: number | null; tipoPlan: string | null; tipoPlanId: string | null; inscripcionPagada: number | null; valorCuota: number | null;
   saldo: number | null; totalPlan: number | null; fechaPrimeraCuota: string | null;
   suscripcionPago: boolean; prixus: boolean; factura: string | null;
   aprobacion: string | null; estado: string | null; observaciones: string | null; pais: string | null;
@@ -131,7 +131,7 @@ async function construir(
               p."observacionesContrato", p."referenciaUno", p."telefonoRefUno", p."parentezcoRefUno",
               p."referenciaDos", p."telefonoRefDos", p."parentezcoRefDos", p."asesor", p."asesorCreadorContrato",
               p."fullExecutive", p."jefeGrupo", p."gerente", p."gerenteDivision", p."salesManager", p."filial",
-              p."origenMatricula", p."suscripcionPago", p."prixus",
+              p."origenMatricula", p."suscripcionPago", p."prixus", p."tipoPlanId",
               to_char(p."fechaCreacion" AT TIME ZONE (${TZ_SQL}), 'YYYY-MM-DD"T"HH24:MI') AS creado_local
          FROM "PEOPLE" p
         WHERE p."tipoUsuario" = 'TITULAR' AND COALESCE(p."contrato",'') <> '' AND p."contrato" NOT LIKE 'PRB-%'
@@ -159,6 +159,11 @@ async function construir(
          FROM "PEOPLE" WHERE "contrato" = ANY($1) AND "tipoUsuario" = 'BENEFICIARIO'
         ORDER BY "contrato", "_createdDate"`, [contratos]),
   ]);
+
+  const tipoIds = Array.from(new Set(titulares.map((t) => t.tipoPlanId).filter(Boolean)));
+  const tipos = tipoIds.length
+    ? await queryMany<any>(`SELECT "_id","nombre" FROM "PLANES_TIPOS" WHERE "_id" = ANY($1)`, [tipoIds]) : [];
+  const tipoPor = new Map(tipos.map((x) => [x._id, x.nombre]));
 
   const benefIds = benefs.filter((b) => !b.kids).map((b) => b._id);
   const welcome = benefIds.length ? await queryMany<any>(
@@ -193,7 +198,9 @@ async function construir(
       formaPago: forma,
       conciliado: { si: pg.validado === true, por: pg.validadoPor || null, fecha: pg.fechaValidacion ? iso(pg.fechaValidacion)!.slice(0, 10) : null },
       plan: contado ? 1 : num(f.numeroCuotas),
-      tipoPlan: f.plan || null,
+      // Tipo del catálogo PLANES_TIPOS si el contrato lo tiene; si no, Crédito/Contado de FINANCIEROS.
+      tipoPlan: (t.tipoPlanId && tipoPor.get(t.tipoPlanId)) || f.plan || null,
+      tipoPlanId: t.tipoPlanId || null,
       inscripcionPagada: num(pg.valorPagado),
       valorCuota: num(f.valorCuota),
       saldo: num(f.saldo),
@@ -261,4 +268,60 @@ export async function actualizarCasillas(titularId: string, cambios: { suscripci
   if (!res.rowCount) throw new NotFoundError('Titular', titularId);
   console.log(`[libro-produccion] casillas ${titularId} ${JSON.stringify(cambios)} por ${actor}`);
   return res.rows[0];
+}
+
+// ── Catálogo de planes y tipos (por país) ─────────────────────────────────────
+
+export const PAISES_PLAN = ['Chile', 'Colombia', 'Ecuador', 'Perú'] as const;
+
+export interface TipoPlan {
+  _id: string; pais: string; cuotas: number; nombre: string;
+  inscripcion: number | null; valorCuota: number | null; total: number | null;
+  descripcion: string | null; activo: boolean; contratos: number;
+}
+
+export async function listarPlanes(pais?: string | null): Promise<TipoPlan[]> {
+  const rows = await queryMany<any>(
+    `SELECT t.*, (SELECT COUNT(*)::int FROM "PEOPLE" p WHERE p."tipoPlanId" = t."_id" AND p."tipoUsuario" = 'TITULAR') AS contratos
+       FROM "PLANES_TIPOS" t ${pais ? `WHERE t."pais" = $1` : ''}
+      ORDER BY t."pais", t."cuotas", t."nombre"`, pais ? [pais] : []);
+  return rows.map((r) => ({
+    _id: r._id, pais: r.pais, cuotas: r.cuotas, nombre: r.nombre,
+    inscripcion: num(r.inscripcion), valorCuota: num(r.valorCuota), total: num(r.total),
+    descripcion: r.descripcion || null, activo: r.activo !== false, contratos: r.contratos || 0,
+  }));
+}
+
+/** Crea (sin id) o actualiza (con id) un tipo de plan. Montos opcionales; nombre único por país+plan. */
+export async function guardarTipoPlan(datos: any, actor: string, id?: string) {
+  const pais = String(datos?.pais || '').trim();
+  const cuotas = Number(datos?.cuotas);
+  const nombreTipo = String(datos?.nombre || '').trim();
+  if (!PAISES_PLAN.includes(pais as any)) throw new ValidationError(`País inválido (${PAISES_PLAN.join(', ')}).`);
+  if (!Number.isInteger(cuotas) || cuotas < 1 || cuotas > 60) throw new ValidationError('El plan (número de cuotas) debe ser un entero entre 1 y 60.');
+  if (!nombreTipo) throw new ValidationError('El nombre del tipo de plan es obligatorio.');
+  const monto = (v: any) => {
+    if (v === null || v === undefined || v === '') return null;
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < 0) throw new ValidationError('Los montos deben ser números positivos.');
+    return n;
+  };
+  const vals = [pais, cuotas, nombreTipo, monto(datos?.inscripcion), monto(datos?.valorCuota), monto(datos?.total),
+    String(datos?.descripcion || '').trim() || null, datos?.activo !== false];
+  const dup = await queryOne<{ _id: string }>(
+    `SELECT "_id" FROM "PLANES_TIPOS" WHERE "pais" = $1 AND "cuotas" = $2 AND LOWER("nombre") = LOWER($3) AND "_id" <> $4`,
+    [pais, cuotas, nombreTipo, id || '']);
+  if (dup) throw new ValidationError(`Ya existe el tipo "${nombreTipo}" para el plan ${cuotas} en ${pais}.`);
+  if (id) {
+    const r = await query(
+      `UPDATE "PLANES_TIPOS" SET "pais"=$1,"cuotas"=$2,"nombre"=$3,"inscripcion"=$4,"valorCuota"=$5,"total"=$6,
+              "descripcion"=$7,"activo"=$8,"_updatedDate"=NOW() WHERE "_id"=$9 RETURNING "_id"`, [...vals, id]);
+    if (!r.rowCount) throw new NotFoundError('Tipo de plan', id);
+    return id;
+  }
+  const nuevo = ids.libro();
+  await query(
+    `INSERT INTO "PLANES_TIPOS" ("_id","pais","cuotas","nombre","inscripcion","valorCuota","total","descripcion","activo","creadoPor")
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, [nuevo, ...vals, actor]);
+  return nuevo;
 }

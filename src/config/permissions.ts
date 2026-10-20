@@ -1017,6 +1017,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Marcar o desmarcar Suscripción de pago y Prixus del titular (desde el libro y desde la ficha › Información general)',
   },
   {
+    code: AprobacionPermission.LIBRO_PRODUCCION_PLANES,
+    module: Module.APROBACION,
+    section: 'Libro de Producción',
+    name: 'Pestaña "Planes"',
+    description: 'Crear, editar y desactivar los planes y tipos de plan por país (catálogo que luego se elige en Crear Contrato)',
+  },
+  {
     code: AprobacionPermission.CENTRO_BORRAR,
     module: Module.APROBACION,
     section: 'Menú Aprobación',
