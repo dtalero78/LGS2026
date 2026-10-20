@@ -461,7 +461,7 @@ function Detalle({ titularId, ids, onNavegar, onClose, onCasillas }: {
   )
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center overflow-y-auto sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] bg-black/40 flex items-start justify-center overflow-y-auto sm:p-4" onClick={onClose}>
       <div className="w-full min-h-full sm:min-h-0 sm:max-w-[1400px] sm:my-4 bg-gray-50 sm:rounded-xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
         {/* Encabezado fijo: contrato, estado, navegación */}
         <div className="sticky top-0 z-10 bg-gradient-to-r from-indigo-600 to-indigo-500 px-4 sm:px-5 py-3 text-white">
