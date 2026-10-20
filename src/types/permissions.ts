@@ -418,6 +418,11 @@ export enum AprobacionPermission {
   CONTRATOS_APROBADOS_VER = 'APROBACION.CONTRATOS_APROBADOS.VER',
   // Consulta Kids: matriculados (activos/inactivos) y en reserva, por campaña/curso/salón
   KIDS_VER = 'APROBACION.KIDS.VER',
+  // Libro de Producción: hoja por vigencia comercial + vista detallada por contrato
+  LIBRO_PRODUCCION_VER = 'APROBACION.LIBRO_PRODUCCION.VER',
+  LIBRO_PRODUCCION_EXPORTAR = 'APROBACION.LIBRO_PRODUCCION.EXPORTAR',
+  LIBRO_PRODUCCION_VIGENCIAS = 'APROBACION.LIBRO_PRODUCCION.VIGENCIAS',
+  LIBRO_PRODUCCION_CASILLAS = 'APROBACION.LIBRO_PRODUCCION.CASILLAS',
 
   // Acción: borrar contrato NO aprobado + todos sus registros (cascade + snapshot en PURGE_LOG)
   CENTRO_BORRAR = 'APROBACION.CENTRO.BORRAR',

@@ -5,7 +5,7 @@ import { Person } from '@/types'
 import { formatDate } from '@/lib/utils'
 import { ArrowDownTrayIcon, ArrowUpTrayIcon, DocumentTextIcon, PhotoIcon, BanknotesIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
 import { PermissionGuard } from '@/components/permissions'
-import { PersonPermission, ComercialPermission } from '@/types/permissions'
+import { PersonPermission, ComercialPermission, AprobacionPermission } from '@/types/permissions'
 import { usePermissions } from '@/hooks/usePermissions'
 import { api, handleApiError } from '@/hooks/use-api'
 import toast from 'react-hot-toast'
@@ -288,6 +288,9 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
         </div>
       </div>
 
+      {/* Libro de Producción (solo titular): casillas manuales + escalera comercial del día de la matrícula */}
+      {(person as any).tipoUsuario === 'TITULAR' && <LibroProduccionTitular person={person} />}
+
       {/* Programa Kids (beneficiarios Kids) */}
       {esKids && (
         <div>
@@ -395,4 +398,68 @@ function getEstadoBadgeClass(estado: string): string {
     default:
       return 'badge-info'
   }
+}
+/**
+ * Bloque "Libro de Producción" de la ficha del titular: casillas Suscripción de pago y
+ * Prixus (PATCH /api/postgres/libro-produccion/[id]/casillas, permiso
+ * APROBACION.LIBRO_PRODUCCION.CASILLAS) y la escalera comercial del día de la
+ * matrícula (solo lectura; la llena el CRM al crear el contrato).
+ */
+function LibroProduccionTitular({ person }: { person: Person }) {
+  const p = person as any
+  const { hasPermission } = usePermissions()
+  const puede = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_CASILLAS as any)
+  const [casillas, setCasillas] = useState({ suscripcionPago: p.suscripcionPago === true, prixus: p.prixus === true })
+  const [guardando, setGuardando] = useState(false)
+
+  const marcar = async (campo: 'suscripcionPago' | 'prixus', valor: boolean) => {
+    setGuardando(true)
+    try {
+      const res = await fetch(`/api/postgres/libro-produccion/${person._id}/casillas`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [campo]: valor }),
+      })
+      const j = await res.json()
+      if (!res.ok || !j?.success) throw new Error(j?.details || j?.error || `Error ${res.status}`)
+      setCasillas({ suscripcionPago: j.casillas.suscripcionPago, prixus: j.casillas.prixus })
+      toast.success('Guardado')
+    } catch (e: any) {
+      toast.error(`No se pudo guardar: ${e?.message || ''}`)
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  const escalera: [string, string | null | undefined][] = [
+    ['Full Executive', p.fullExecutive], ['Jefe de grupo', p.jefeGrupo], ['Gerente', p.gerente],
+    ['Gerente división', p.gerenteDivision], ['Sales Manager', p.salesManager], ['Filial', p.filial],
+    ['Origen matrícula', p.origenMatricula],
+  ]
+  const conEscalera = escalera.some(([, v]) => v)
+
+  return (
+    <div className="rounded-lg border border-indigo-100 bg-indigo-50/40 p-4">
+      <h3 className="text-lg font-medium text-gray-900 mb-3">📒 Libro de Producción</h3>
+      <div className="flex flex-wrap gap-6 mb-3">
+        {([['suscripcionPago', 'Suscripción de pago'], ['prixus', 'Prixus']] as const).map(([k, l]) => (
+          <label key={k} className={`inline-flex items-center gap-2 text-sm text-gray-800 ${puede ? 'cursor-pointer' : 'opacity-80'}`}>
+            <input type="checkbox" checked={casillas[k]} disabled={!puede || guardando}
+              onChange={e => marcar(k, e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-indigo-600" />
+            {l}
+          </label>
+        ))}
+      </div>
+      {conEscalera ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-2">
+          {escalera.map(([l, v]) => (
+            <div key={l}>
+              <div className="text-xs font-medium text-gray-500">{l}</div>
+              <div className="text-sm text-gray-900">{v || '—'}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-gray-500">Escalera comercial sin registrar (la envía el CRM al crear el contrato).</p>
+      )}
+    </div>
+  )
 }

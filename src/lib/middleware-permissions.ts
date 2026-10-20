@@ -344,6 +344,10 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/dashboard/aprobacion/kids': [
     'APROBACION.KIDS.VER' as Permission,
   ],
+  // Aprobación → Libro de Producción (hoja, vista detallada y vigencias)
+  '/dashboard/aprobacion/libro-produccion': [
+    'APROBACION.LIBRO_PRODUCCION.VER' as Permission,
+  ],
 };
 
 /**
