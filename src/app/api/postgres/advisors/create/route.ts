@@ -91,11 +91,14 @@ export const POST = handler(async (request: Request) => {
   // Also create USUARIOS_ROLES entry so the advisor can log in
   const password = body.clave?.trim() || 'LGS2026';
   const inserted = await queryOne<{ _id: string }>(
-    `INSERT INTO "USUARIOS_ROLES" ("_id", "email", "password", "nombre", "rol", "activo", "numberid", "_createdDate", "_updatedDate")
-     VALUES ($1, $2, $3, $4, 'ADVISOR', true, $5, NOW(), NOW())
+    // celular y plataforma = los mismos teléfono y país del formulario (antes no se copiaban
+    // y la cuenta quedaba sin teléfono en Gestión Usuarios).
+    `INSERT INTO "USUARIOS_ROLES" ("_id", "email", "password", "nombre", "rol", "activo", "numberid", "celular", "plataforma", "_createdDate", "_updatedDate")
+     VALUES ($1, $2, $3, $4, 'ADVISOR', true, $5, $6, $7, NOW(), NOW())
      ON CONFLICT ("email") DO NOTHING
      RETURNING "_id"`,
-    [ids.advisor(), emailLower, password, nombreCompleto, numeroIdNorm]
+    [ids.advisor(), emailLower, password, nombreCompleto, numeroIdNorm,
+     body.telefono?.trim() || null, body.pais?.trim() || null]
   );
 
   // Relación formal ADVISORS -> USUARIOS_ROLES (análoga a ACADEMICA.usuarioId).

@@ -58,7 +58,8 @@ export const GET = handlerWithAuth(async (_req, ctx, session) => {
 
   const adv = await queryOne<any>(
     `SELECT "_id","primerNombre","primerApellido","nombreCompleto","email","zoom",
-            "telefono","pais","domicilioadvisor","fechaNacimiento","fotoAdvisor","esPlanta","usuarioRolId","activo"
+            "telefono","pais","domicilioadvisor","fechaNacimiento","fotoAdvisor","esPlanta","usuarioRolId","activo",
+            "zoomLiberado","zoomLiberadoEn"
        FROM "ADVISORS" WHERE "_id" = $1 LIMIT 1`,
     [id]
   );
@@ -91,6 +92,9 @@ export const GET = handlerWithAuth(async (_req, ctx, session) => {
       loginActivo: ur ? ur.activo !== false : null,
       loginRol: ur?.rol || null,
       clasesFuturas: fut?.n ?? 0,
+      // Sala de Zoom liberada al desactivarlo (consulta / recuperación).
+      zoomLiberado: adv.zoomLiberado || null,
+      zoomLiberadoEn: adv.zoomLiberadoEn ? new Date(adv.zoomLiberadoEn).toISOString() : null,
     },
   });
 });

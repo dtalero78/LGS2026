@@ -52,7 +52,10 @@ export default function AdvisorEditModal({ advisorId, advisorNombre, onClose, on
   const [fotoUrl, setFotoUrl] = useState<string | null>(null)
   const [subiendo, setSubiendo] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
-  const [estado, setEstado] = useState<{ activo: boolean; loginActivo: boolean | null; loginRol: string | null; clasesFuturas: number }>({ activo: true, loginActivo: null, loginRol: null, clasesFuturas: 0 })
+  const [estado, setEstado] = useState<{
+    activo: boolean; loginActivo: boolean | null; loginRol: string | null; clasesFuturas: number
+    zoomLiberado: string | null; zoomLiberadoEn: string | null
+  }>({ activo: true, loginActivo: null, loginRol: null, clasesFuturas: 0, zoomLiberado: null, zoomLiberadoEn: null })
   const [confirmarDesactivar, setConfirmarDesactivar] = useState(false)
   const [cambiandoEstado, setCambiandoEstado] = useState(false)
 
@@ -64,6 +67,7 @@ export default function AdvisorEditModal({ advisorId, advisorNombre, onClose, on
         const data = await api.get<{ advisor: AdvisorForm & {
           tieneUsuarioRol: boolean; fotoUrl: string | null
           activo: boolean; loginActivo: boolean | null; loginRol: string | null; clasesFuturas: number
+          zoomLiberado: string | null; zoomLiberadoEn: string | null
         } }>(`/api/postgres/advisors/${advisorId}`)
         if (!active) return
         const a = data.advisor
@@ -75,7 +79,10 @@ export default function AdvisorEditModal({ advisorId, advisorNombre, onClose, on
         })
         setTieneUsuarioRol(a.tieneUsuarioRol)
         setFotoUrl(a.fotoUrl || null)
-        setEstado({ activo: a.activo !== false, loginActivo: a.loginActivo ?? null, loginRol: a.loginRol ?? null, clasesFuturas: a.clasesFuturas || 0 })
+        setEstado({
+          activo: a.activo !== false, loginActivo: a.loginActivo ?? null, loginRol: a.loginRol ?? null, clasesFuturas: a.clasesFuturas || 0,
+          zoomLiberado: a.zoomLiberado ?? null, zoomLiberadoEn: a.zoomLiberadoEn ?? null,
+        })
       } catch (err) {
         handleApiError(err, 'No se pudieron cargar los datos del advisor')
         if (active) onClose()
@@ -130,7 +137,12 @@ export default function AdvisorEditModal({ advisorId, advisorNombre, onClose, on
       })
       const json = await res.json()
       if (!res.ok || !json?.success) throw new Error(json?.details || json?.error || `Error ${res.status}`)
-      setEstado(e => ({ ...e, activo, loginActivo: json.loginActualizado ? activo : e.loginActivo }))
+      setEstado(e => ({
+        ...e, activo, loginActivo: json.loginActualizado ? activo : e.loginActivo,
+        // Al desactivar, el servidor libera la sala de Zoom: se refleja en el formulario.
+        ...(!activo && form.zoom.trim() ? { zoomLiberado: form.zoom.trim(), zoomLiberadoEn: new Date().toISOString() } : {}),
+      }))
+      if (!activo) setForm(f => ({ ...f, zoom: '' }))
       setConfirmarDesactivar(false)
       onEstadoChanged?.(advisorId, activo)
       toast.success(activo
@@ -304,11 +316,19 @@ export default function AdvisorEditModal({ advisorId, advisorNombre, onClose, on
                   Habilitar también su login
                 </button>
               )}
+              {!estado.activo && estado.zoomLiberado && (
+                <p className="mt-2 text-[11px] text-gray-600 bg-white border border-gray-200 rounded px-2 py-1 break-all">
+                  Sala de Zoom liberada{estado.zoomLiberadoEn ? ` el ${new Date(estado.zoomLiberadoEn).toLocaleDateString('es-CO')}` : ''}: <span className="font-mono">{estado.zoomLiberado}</span>
+                </p>
+              )}
               {confirmarDesactivar && (
                 <div className="mt-3 rounded-md border border-red-300 bg-white p-2.5 space-y-2">
                   <p className="text-xs text-gray-800">
                     Al desactivarlo deja de aparecer como activo en la lista de advisors
                     {loginEsAdvisor ? <> y <strong>se bloquea su login</strong>.</> : ' (su login no cambia).'}
+                    {form.zoom.trim()
+                      ? <> Se <strong>libera su sala de Zoom</strong> para asignarla a otro advisor (el link queda guardado como referencia).</>
+                      : ''}
                     {estado.clasesFuturas > 0
                       ? <> Tiene <strong className="text-red-700">{estado.clasesFuturas} clase(s) futura(s)</strong> asignada(s): <strong>no se mueven</strong>, reasígnelas a otro advisor desde la agenda.</>
                       : ' No tiene clases futuras asignadas.'}

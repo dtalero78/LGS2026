@@ -32,7 +32,14 @@ export const POST = handlerWithAuth(async (req, ctx, session) => {
 
   const resultado = await withTransaction(async (client) => {
     await client.query(
-      `UPDATE "ADVISORS" SET "activo" = $1, "_updatedDate" = NOW() WHERE "_id" = $2`, [activo, id]
+      // Al desactivar se libera la sala de Zoom (zoom = NULL) para poder asignarla a otro
+      // advisor; el link queda guardado en zoomLiberado. Reactivar NO lo restaura.
+      `UPDATE "ADVISORS" SET "activo" = $1,
+              "zoomLiberado"   = CASE WHEN $1 = false AND COALESCE(TRIM("zoom"),'') <> '' THEN "zoom" ELSE "zoomLiberado" END,
+              "zoomLiberadoEn" = CASE WHEN $1 = false AND COALESCE(TRIM("zoom"),'') <> '' THEN NOW() ELSE "zoomLiberadoEn" END,
+              "zoom"           = CASE WHEN $1 = false THEN NULL ELSE "zoom" END,
+              "_updatedDate" = NOW()
+        WHERE "_id" = $2`, [activo, id]
     );
     // Cuenta de acceso: por usuarioRolId y, si no hay, por email — solo rol ADVISOR.
     const ur = await client.query(

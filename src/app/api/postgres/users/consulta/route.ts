@@ -177,7 +177,13 @@ export const PATCH = handlerWithAuth(async (request: NextRequest, _ctx, session)
   // de advisors y Lgs-Buckets no lo muestren activo con el login bloqueado (o al revés).
   // Vinculada por usuarioRolId o, si no lo tiene, por email.
   await query(
-    `UPDATE "ADVISORS" a SET "activo" = $1, "_updatedDate" = NOW()
+    // Al desactivar se libera también su sala de Zoom (queda en zoomLiberado), igual que
+    // POST /api/postgres/advisors/[id]/estado.
+    `UPDATE "ADVISORS" a SET "activo" = $1,
+            "zoomLiberado"   = CASE WHEN $1 = false AND COALESCE(TRIM(a."zoom"),'') <> '' THEN a."zoom" ELSE a."zoomLiberado" END,
+            "zoomLiberadoEn" = CASE WHEN $1 = false AND COALESCE(TRIM(a."zoom"),'') <> '' THEN NOW() ELSE a."zoomLiberadoEn" END,
+            "zoom"           = CASE WHEN $1 = false THEN NULL ELSE a."zoom" END,
+            "_updatedDate" = NOW()
        FROM "USUARIOS_ROLES" u
       WHERE u."_id" = $2 AND UPPER(COALESCE(u."rol",'')) = 'ADVISOR'
         AND ( a."usuarioRolId" = u."_id"
