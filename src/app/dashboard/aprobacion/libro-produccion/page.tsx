@@ -62,6 +62,16 @@ const resumenSsbb = (r: Registro) => {
   if (!lgs.length) return r.beneficiarios.length ? 'NA' : '—'
   return `${lgs.filter(b => b.welcome === 'SI').length}/${lgs.length}`
 }
+/** Sesión de bienvenida del contrato: true = todos los beneficiarios LGS asistieron; false = falta alguno; null = no aplica (solo Kids o sin beneficiarios). */
+const ssbbCompleto = (r: Registro): boolean | null => {
+  const lgs = r.beneficiarios.filter(b => b.programa === 'LGS')
+  return lgs.length ? lgs.every(b => b.welcome === 'SI') : null
+}
+/** Verde = asistió · Rojo = no ha asistido (o falta alguno) · Gris = no aplica. */
+function SsbbPill({ texto, ok }: { texto: string; ok: boolean | null }) {
+  const cls = ok === true ? 'bg-green-100 text-green-800' : ok === false ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-600'
+  return <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${cls}`}>{texto}</span>
+}
 const resumenPrograma = (r: Registro) => {
   const k = r.beneficiarios.filter(b => b.programa === 'Kids').length
   const l = r.beneficiarios.length - k
@@ -97,7 +107,7 @@ const COLS: Col[] = [
   { key: 'aprob', header: 'Aprobación', w: 120, titular: r => <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${estadoCls(r.aprobacion)}`}>{r.aprobacion}</span>, benef: b => b.aprobacion || 'Pendiente' },
   { key: 'obs', header: 'Observaciones', w: 260, titular: r => <span className="line-clamp-2" title={r.observaciones || ''}>{r.observaciones || ''}</span> },
   { key: 'prog', header: 'Programa', w: 110, titular: r => resumenPrograma(r), benef: b => <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${b.programa === 'Kids' ? 'bg-fuchsia-100 text-fuchsia-800' : 'bg-indigo-100 text-indigo-800'}`}>{b.programa}</span> },
-  { key: 'ssbb', header: 'Asistió SSBB', w: 96, titular: r => resumenSsbb(r), benef: b => b.welcome },
+  { key: 'ssbb', header: 'Asistió SSBB', w: 96, titular: r => <SsbbPill texto={resumenSsbb(r)} ok={ssbbCompleto(r)} />, benef: b => <SsbbPill texto={b.welcome} ok={b.welcome === 'SI' ? true : b.welcome === 'NA' ? null : false} /> },
   { key: 'prixus', header: 'Prixus', w: 70, titular: r => r.prixus ? 'SI' : 'NO' },
   { key: 'r1', header: 'Referencia 1', w: 170, titular: r => r.referencias[0]?.nombre },
   { key: 'r1t', header: 'Teléfono', w: 116, titular: r => r.referencias[0]?.telefono },
@@ -558,7 +568,8 @@ function Detalle({ titularId, ids, onNavegar, onClose, onCasillas }: {
                     <div className="p-3 grid grid-cols-2 gap-2">
                       <F l="Cédula" v={b.documento} /><F l="Teléfono" v={b.telefono} />
                       <F l="Correo" v={b.correo} full />
-                      <F l="Asistió SSBB" v={b.welcome} /><F l="Estado" v={b.aprobacion || 'Pendiente'} />
+                      <F l="Asistió SSBB" v={<SsbbPill texto={b.welcome === 'SI' ? 'Sí asistió' : b.welcome === 'NA' ? 'No aplica (Kids)' : 'No ha asistido'} ok={b.welcome === 'SI' ? true : b.welcome === 'NA' ? null : false} />} />
+                      <F l="Estado" v={b.aprobacion || 'Pendiente'} />
                     </div>
                   </div>
                 ))}
