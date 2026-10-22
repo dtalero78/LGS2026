@@ -517,6 +517,19 @@ export const PATCH = handlerWithAuth(async (
       if (r.rowCount) tablasSincronizadas.push('USUARIOS_ROLES (' + r.rowCount + ')');
     }
 
+    // ── USUARIOS_ROLES.celular — solo la cuenta ESTUDIANTE de ESTA persona ──
+    // Se identifica por documento (numberid), no por email: hermanos pueden
+    // compartir el correo del apoderado y no deben quedar con este celular.
+    if (syncingCelular && currentPerson.numeroId) {
+      const r = await client.query(
+        `UPDATE "USUARIOS_ROLES" SET "celular" = $1, "_updatedDate" = NOW()
+          WHERE "rol" = 'ESTUDIANTE'
+            AND UPPER(REPLACE(COALESCE("numberid", ''), '.', '')) IN (UPPER($2), UPPER($3))`,
+        [body.celular, currentPerson.numeroId, body.numeroId ?? currentPerson.numeroId],
+      );
+      if (r.rowCount) tablasSincronizadas.push('USUARIOS_ROLES.celular (' + r.rowCount + ')');
+    }
+
     // ── ACADEMICA_BOOKINGS — el nombre está DESNORMALIZADO en ~220k filas ──
     // Las consultas de asistencia lo leen con PRIORIDAD sobre ACADEMICA/PEOPLE
     // (COALESCE(ab."primerNombre", a."primerNombre", p."primerNombre")), así que
