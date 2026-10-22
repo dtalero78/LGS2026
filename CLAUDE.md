@@ -441,6 +441,8 @@ doctl databases firewalls list 08d65733-6811-420c-a0a1-a71d6b3b9c6d | awk -v ip=
   | xargs -I{} doctl databases firewalls remove 08d65733-6811-420c-a0a1-a71d6b3b9c6d --uuid {}
 ```
 
+**Si sigue dando `ETIMEDOUT` con la IP ya autorizada**: la red sale por **varias IP públicas** (NAT rotativo) — `api.ipify.org` puede devolver una y la conexión a la BD salir por otra (se ve con `curl http://portquiz.net:25060`). Solución: autorizar temporalmente el **rango /24** (`--rule ip_addr:A.B.C.0/24`) y removerlo al terminar.
+
 Conexión típica en los scripts: `new Client({ connectionString: DATABASE_URL.replace(/[?&]sslmode=[^&]*/g,''), ssl: { rejectUnauthorized: false } })`.
 
 ### Convención de scripts (`scripts/*.js`)
