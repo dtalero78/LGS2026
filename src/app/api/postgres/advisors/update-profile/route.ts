@@ -2,6 +2,7 @@ import 'server-only';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { query, queryOne } from '@/lib/postgres';
 import { ValidationError, NotFoundError } from '@/lib/errors';
+import { normalizarTelefono } from '@/lib/telefono';
 
 const ALPHANUMERIC = /^[a-zA-Z0-9]+$/;
 const EMAIL_REGEX   = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -49,11 +50,15 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   if (!userRole) throw new NotFoundError('Usuario', sessionEmail);
 
   // ── Find ADVISORS record by session email ─────────────────────────────────
-  const advisor = await queryOne<{ _id: string }>(
-    `SELECT "_id" FROM "ADVISORS" WHERE LOWER("email") = LOWER($1) LIMIT 1`,
+  const advisor = await queryOne<{ _id: string; pais: string | null }>(
+    `SELECT "_id", "pais" FROM "ADVISORS" WHERE LOWER("email") = LOWER($1) LIMIT 1`,
     [sessionEmail]
   );
   if (!advisor) throw new NotFoundError('Advisor', sessionEmail);
+
+  // Celular con indicativo (regla única de lib/telefono), según el país del advisor.
+  const celularNorm = normalizarTelefono(celular, advisor.pais);
+  if (!celularNorm) throw new ValidationError('El celular es requerido');
 
   // ── Hash password ─────────────────────────────────────────────────────────
   // Save password as plain text (system supports both bcrypt and plain text — auth-postgres.ts)
@@ -69,7 +74,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
          "perfilActualizado" = NOW(),
          "_updatedDate"      = NOW()
      WHERE "_id" = $5`,
-    [normalizedEmail, cleanId, hashedPassword, celular.trim(), userRole._id]
+    [normalizedEmail, cleanId, hashedPassword, celularNorm, userRole._id]
   );
 
   // ── Update ADVISORS ───────────────────────────────────────────────────────
@@ -84,7 +89,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
      WHERE "_id" = $6`,
     [
       normalizedEmail,
-      celular.trim(),
+      celularNorm,
       domicilio.trim(),
       fotoKey || null,
       fechaNacimiento?.trim() || null,

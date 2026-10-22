@@ -7,6 +7,7 @@ import { syncFinancieroSaldo } from '@/services/pagos-titulares.service';
 import { checkBeneficiarioUnico, anularBeneficiariosViejos } from '@/lib/beneficiario-unico';
 import { kidsIntake, validarSalonesDelPais } from '@/lib/kids-intake';
 import { buildKidsReservation, plataformaToCountryCode, toISODate, errorEdadCursoKids } from '@/lib/kids-mapping';
+import { normalizarTelefono } from '@/lib/telefono';
 import crypto from 'crypto';
 
 const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
@@ -147,6 +148,19 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   // En modo Empresa el titular no tiene apellido (la razón social va en primerNombre).
   if (!titular?.numeroId || !titular?.primerNombre || (!esEmpresa && !titular?.primerApellido)) {
     throw new ValidationError('titular with numeroId and primerNombre is required');
+  }
+
+  // Teléfonos con indicativo (regla única de lib/telefono): país de residencia del
+  // titular y, si no vino, la plataforma del contrato.
+  const paisTel = titular.pais || titular.plataforma;
+  for (const k of ['celular', 'telefono', 'telRefUno', 'telRefDos', 'replegalcel']) {
+    if (titular[k] !== undefined) titular[k] = normalizarTelefono(titular[k], paisTel);
+  }
+  for (const b of Array.isArray(beneficiarios) ? beneficiarios : []) {
+    if (b?.celular !== undefined) b.celular = normalizarTelefono(b.celular, paisTel);
+    if (b?.kidsData?.apoderadoTelefono !== undefined) {
+      b.kidsData.apoderadoTelefono = normalizarTelefono(b.kidsData.apoderadoTelefono, paisTel);
+    }
   }
 
   // tipoPlan (Contado / Credito / Colaborador) — se valida y propaga a 3 tablas

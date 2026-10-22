@@ -25,6 +25,7 @@ import { ValidationError, ConflictError } from '@/lib/errors';
 import { queryOne, withTransaction } from '@/lib/postgres';
 import { generateTempPassword } from '@/lib/gen-password';
 import crypto from 'crypto';
+import { normalizarTelefono } from '@/lib/telefono';
 
 // Roles que NO se crean por esta vía (tienen su propia opción en la página).
 const EXCLUDED_ROLES = new Set(['ESTUDIANTE', 'ADVISOR', 'COMERCIAL']);
@@ -42,9 +43,9 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   const nombre = (body?.nombre || '').trim();
   const apellido = (body?.apellido || '').trim() || null;
   const email = (body?.email || '').trim().toLowerCase();
-  const celular = (body?.celular || '').trim() || null;
   const numberid = (body?.numberid || '').trim().toUpperCase() || null;
   const plataforma = (body?.plataforma || '').trim() || null;
+  const celular = normalizarTelefono(body?.celular, plataforma);
   const esRecaudos = ROLES_RECAUDOS.has(rol.toUpperCase());
 
   // Monto mensual del ejecutivo de recaudos. Opcional: si no viene queda NULL y

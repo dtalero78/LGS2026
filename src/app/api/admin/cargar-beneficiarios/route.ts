@@ -5,11 +5,11 @@ import { MantenimientoPermission } from '@/types/permissions';
 import { query } from '@/lib/postgres';
 import { ids } from '@/lib/id-generator';
 import { NotFoundError, ValidationError } from '@/lib/errors';
+import { normalizarTelefono } from '@/lib/telefono';
 
 // Normaliza el documento igual que el resto de la plataforma: MAYÚSCULAS sin
 // puntos, guiones ni espacios (así '15.969.643-K' y '15969643K' son el mismo).
 const norm = (v: any) => String(v || '').toUpperCase().replace(/[.\s-]/g, '');
-const soloDigitos = (v: any) => String(v || '').replace(/\D/g, '') || null;
 
 type BenefInput = {
   primerNombre?: string; segundoNombre?: string;
@@ -107,7 +107,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
            "vigencia","fechaContrato","finalContrato","sence","kids","origen","_createdDate","_updatedDate")
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'BENEFICIARIO',$10,$11,false,$12,$13,$14,false,false,'POSTGRES',NOW(),NOW())`,
         [ids.person(), nid, b.primerNombre, b.segundoNombre || null, b.primerApellido || null, b.segundoApellido || null,
-         (b.email || '').trim() || null, soloDigitos(b.celular), titular._id, contrato, titular.plataforma || null,
+         (b.email || '').trim() || null, normalizarTelefono(b.celular, titular.plataforma), titular._id, contrato, titular.plataforma || null,
          titular.vigencia || null, titular.fechaContrato || null, titular.finalContrato || null]
       );
       insertados++; detalle.push({ numeroId: nid, nombre, estado: 'insertado' });

@@ -2,6 +2,7 @@ import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { ValidationError } from '@/lib/errors';
 import { query, queryOne } from '@/lib/postgres';
 import { ids } from '@/lib/id-generator';
+import { normalizarTelefono } from '@/lib/telefono';
 
 const ALLOWED_FIELDS = [
   'numeroId', 'primerNombre', 'segundoNombre', 'primerApellido', 'segundoApellido',
@@ -47,6 +48,9 @@ export const POST = handlerWithAuth(async (request) => {
           delete reg[from];
         }
       }
+
+      // Celular con indicativo (regla única de lib/telefono), según la plataforma.
+      if (reg.celular !== undefined) reg.celular = normalizarTelefono(reg.celular, reg.plataforma);
 
       const tipoUsuario = reg.tipoUsuario || 'BENEFICIARIO';
 

@@ -469,7 +469,8 @@ Conexión típica en los scripts: `new Client({ connectionString: DATABASE_URL.r
 ### WhatsApp Integration
 - **Provider**: Whapi.cloud API. **Toda la mensajería WhatsApp sale por Whapi** — no hay código Twilio en `src/` (ver "Plantillas Twilio" abajo)
 - **Implementation**: `src/lib/whatsapp.ts`
-- **Functions**: `formatPhoneNumber(raw)` validates/strips to digits, `sendWhatsAppMessage(toNumber, messageBody)` sends via Whapi
+- **Functions**: `formatPhoneNumber(raw)` validates/strips to digits (**no agrega indicativo**), `sendWhatsAppMessage(toNumber, messageBody)` sends via Whapi
+- **Teléfonos con indicativo (regla única)**: todo teléfono se guarda como dígitos **con** indicativo (56/57/593/51) vía `normalizarTelefono(valor, pais)` de [src/lib/telefono.ts](src/lib/telefono.ts), aplicada en el servidor de cada ruta que escribe teléfonos. **Todo código nuevo que guarde un teléfono debe llamarla.** Corrección de datos existentes: [scripts/normalizar-telefonos.js](scripts/normalizar-telefonos.js)
 - **Uses**: Envío de contratos PDF, mensajes de bienvenida, OTP para consentimiento, OTP de recuperar contraseña, envío masivo por plantillas, confirmación Exam. Intern.
 - **⚠️ Token**: `WHAPI_TOKEN` **NO está configurado en producción** — todo corre con los fallbacks hardcodeados del repo, y **hay dos distintos**, así que la plataforma **envía desde dos números**:
 

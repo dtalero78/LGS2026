@@ -8,6 +8,7 @@ import { ValidationError, ConflictError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
 import { queryOne, query } from '@/lib/postgres';
 import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
+import { normalizarTelefono } from '@/lib/telefono';
 
 /**
  * POST /api/postgres/people
@@ -85,9 +86,15 @@ export const POST = handlerWithStaffAuth(async (request) => {
     }
   }
 
+  // Teléfonos con indicativo (regla única de lib/telefono), según la plataforma.
+  if (body.celular !== undefined) body.celular = normalizarTelefono(body.celular, body.plataforma);
+  if (body.kidsData?.apoderadoTelefono !== undefined) {
+    body.kidsData.apoderadoTelefono = normalizarTelefono(body.kidsData.apoderadoTelefono, body.plataforma);
+  }
+
   const personId = ids.person();
 
-  const fields = ['_id', 'numeroId', 'primerNombre', 'primerApellido', 'tipoUsuario'];
+  const fields =['_id', 'numeroId', 'primerNombre', 'primerApellido', 'tipoUsuario'];
   const values: any[] = [personId, body.numeroId, body.primerNombre, body.primerApellido, body.tipoUsuario];
   let paramIndex = 6;
 

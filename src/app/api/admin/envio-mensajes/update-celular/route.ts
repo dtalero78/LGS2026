@@ -22,6 +22,7 @@ import { ValidationError, NotFoundError } from '@/lib/errors';
 import { query, queryOne } from '@/lib/postgres';
 import { normalizeNumeroId } from '@/lib/numeroid-normalize';
 import { formatPhoneNumber } from '@/lib/whatsapp';
+import { normalizarTelefono } from '@/lib/telefono';
 
 export const PATCH = handlerWithAuth(async (request, _ctx, session) => {
   await requirePermission(session, MantenimientoPermission.ENVIO_MENSAJES);
@@ -32,12 +33,9 @@ export const PATCH = handlerWithAuth(async (request, _ctx, session) => {
 
   const celular = String(body?.celular || '').trim();
   if (!celular) throw new ValidationError('celular requerido');
-  // formatPhoneNumber lanza si <10 dígitos
-  const celularClean = formatPhoneNumber(celular);
-
   // Verifico que el estudiante existe en ACADEMICA (con normalización)
-  const aca = await queryOne<{ _id: string; email: string | null; numeroId: string }>(
-    `SELECT "_id", "email", "numeroId"
+  const aca = await queryOne<{ _id: string; email: string | null; numeroId: string; plataforma: string | null }>(
+    `SELECT "_id", "email", "numeroId", "plataforma"
      FROM "ACADEMICA"
      WHERE UPPER(REGEXP_REPLACE(COALESCE("numeroId",''), '[.\\s\\-_]', '', 'g')) = $1
      ORDER BY CASE WHEN "tipoUsuario" = 'BENEFICIARIO' THEN 0 ELSE 1 END,
@@ -46,6 +44,9 @@ export const PATCH = handlerWithAuth(async (request, _ctx, session) => {
     [numeroIdNorm],
   );
   if (!aca) throw new NotFoundError('ACADEMICA', `numeroId=${numeroIdNorm}`);
+
+  // Con indicativo (regla única de lib/telefono); formatPhoneNumber lanza si <10 dígitos.
+  const celularClean = formatPhoneNumber(normalizarTelefono(celular, aca.plataforma) || '');
 
   // Update sincronizado — todos los registros que matcheen el numeroId normalizado
   const updatePeople = await query(

@@ -8,6 +8,7 @@ import { ids } from '@/lib/id-generator';
 import { kidsIntake, validarSalonesDelPais } from '@/lib/kids-intake';
 import { errorEdadCursoKids } from '@/lib/kids-mapping';
 import { actualizarApoderadoKids, asegurarReservaKids, matricularKids } from '@/lib/kids-reserva';
+import { normalizarTelefono } from '@/lib/telefono';
 
 /**
  * Estado, corrección y edición de la inscripción KIDS de un beneficiario Kids.
@@ -64,7 +65,7 @@ async function validarCurso(person: any, plataforma: string | null, kd: any) {
 async function guardarInscripcion(person: any, plataforma: string | null, insc: any | null, kd: any, conCurso: boolean) {
   const apoderado = [
     kd.apoderado || null, kd.apoderadoApellidos || null, kd.apoderadoDoc || null,
-    kd.apoderadoTelefono || null, kd.apoderadoMail || null, kd.parentesco || null,
+    normalizarTelefono(kd.apoderadoTelefono, plataforma), kd.apoderadoMail || null, kd.parentesco || null,
   ];
   if (insc && !conCurso) {
     await query(

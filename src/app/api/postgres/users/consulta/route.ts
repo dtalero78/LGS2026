@@ -6,6 +6,7 @@ import { ValidationError, NotFoundError, ConflictError } from '@/lib/errors';
 import { queryMany, queryOne, query } from '@/lib/postgres';
 import { generateTempPassword } from '@/lib/gen-password';
 import { ids } from '@/lib/id-generator';
+import { normalizarTelefono } from '@/lib/telefono';
 
 /**
  * Auditoría de ediciones/eliminaciones de cuentas de acceso. Tabla auto-creada
@@ -220,7 +221,8 @@ export const PUT = handlerWithAuth(async (request: NextRequest, _ctx, session) =
   for (const f of EDITABLE_FIELDS) {
     if (!(f in body)) continue;
     let v: string | null = body[f] == null ? '' : String(body[f]).trim();
-    if (f === 'celular')  v = v.replace(/\D/g, '');           // solo dígitos (para OTP)
+    // celular: solo dígitos y con indicativo (regla única de lib/telefono)
+    if (f === 'celular')  v = normalizarTelefono(v, body.plataforma ?? current.plataforma) ?? '';
     if (f === 'numberid') v = v.toUpperCase().replace(/[.\s]/g, ''); // canónico (RUT chileno, etc.)
     next[f] = v === '' ? null : v;
   }

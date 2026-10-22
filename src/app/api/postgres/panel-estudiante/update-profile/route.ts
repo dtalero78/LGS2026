@@ -2,6 +2,7 @@ import 'server-only';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { query, queryOne } from '@/lib/postgres';
 import { ValidationError, NotFoundError } from '@/lib/errors';
+import { normalizarTelefono } from '@/lib/telefono';
 
 /**
  * POST /api/postgres/panel-estudiante/update-profile
@@ -45,11 +46,14 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   }
 
   // Get USUARIOS_ROLES record
-  const userRole = await queryOne<{ _id: string }>(
-    `SELECT "_id" FROM "USUARIOS_ROLES" WHERE LOWER("email") = LOWER($1) LIMIT 1`,
+  const userRole = await queryOne<{ _id: string; plataforma: string | null }>(
+    `SELECT "_id", "plataforma" FROM "USUARIOS_ROLES" WHERE LOWER("email") = LOWER($1) LIMIT 1`,
     [sessionEmail]
   );
   if (!userRole) throw new NotFoundError('Usuario', sessionEmail);
+
+  // Celular con indicativo (regla única de lib/telefono), según la plataforma del alumno.
+  const celularNorm = normalizarTelefono(celular, userRole.plataforma);
 
   // Build USUARIOS_ROLES update
   const urFields: string[] = [
@@ -64,9 +68,9 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
     urFields.push(`"password" = $${idx++}`);
     urValues.push(password.trim());
   }
-  if (celular?.trim()) {
+  if (celularNorm) {
     urFields.push(`"celular" = $${idx++}`);
-    urValues.push(celular.trim());
+    urValues.push(celularNorm);
   }
 
   await query(
@@ -79,7 +83,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   const peopleValues: any[] = [sessionEmail, normalizedEmail];
   let pidx = 3;
 
-  if (celular?.trim())      { peopleFields.push(`"celular" = $${pidx++}`);       peopleValues.push(celular.trim()); }
+  if (celularNorm)      { peopleFields.push(`"celular" = $${pidx++}`);       peopleValues.push(celularNorm); }
   if (domicilio?.trim())    { peopleFields.push(`"domicilio" = $${pidx++}`);     peopleValues.push(domicilio.trim()); }
   if (ciudad?.trim())       { peopleFields.push(`"ciudad" = $${pidx++}`);        peopleValues.push(ciudad.trim()); }
   if (fechaNacimiento)      { peopleFields.push(`"fechaNacimiento" = $${pidx++}::date`); peopleValues.push(fechaNacimiento); }
@@ -95,7 +99,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   const acadValues: any[] = [sessionEmail, normalizedEmail];
   let aidx = 3;
 
-  if (celular?.trim())            { acadFields.push(`"celular" = $${aidx++}`);              acadValues.push(celular.trim()); }
+  if (celularNorm)            { acadFields.push(`"celular" = $${aidx++}`);              acadValues.push(celularNorm); }
   if (fotoUrl?.trim())            { acadFields.push(`"foto" = $${aidx++}`);                 acadValues.push(fotoUrl.trim()); }
   if (fechaNacimiento)            { acadFields.push(`"fechaNacimiento" = $${aidx++}::date`); acadValues.push(fechaNacimiento); }
   if (edad !== null)              { acadFields.push(`"edad" = $${aidx++}`);                  acadValues.push(edad); }

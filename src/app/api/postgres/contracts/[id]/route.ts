@@ -6,6 +6,9 @@ import { PeopleRepository } from '@/repositories/people.repository';
 import { FinancialRepository } from '@/repositories/financial.repository';
 import { getAsesorInfo } from '@/lib/asesor';
 import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
+import { normalizarTelefono } from '@/lib/telefono';
+
+const TELEFONO_FIELDS = ['celular', 'telefono', 'telefonoRefUno', 'telefonoRefDos'];
 
 // Fields editable on PEOPLE records (titular & beneficiarios)
 const PEOPLE_EDIT_FIELDS = [
@@ -132,7 +135,7 @@ export const PUT = handlerWithStaffAuth(async (
 
   // Verify the titular exists
   const existingTitular = await queryOne(
-    `SELECT "_id", "contrato", "aprobacion" FROM "PEOPLE" WHERE "_id" = $1`,
+    `SELECT "_id", "contrato", "aprobacion", "plataforma" FROM "PEOPLE" WHERE "_id" = $1`,
     [titularId]
   );
   if (!existingTitular) throw new NotFoundError('Titular', titularId);
@@ -145,6 +148,16 @@ export const PUT = handlerWithStaffAuth(async (
   if (aprobado && rol !== 'SUPER_ADMIN') {
     throw new ForbiddenError('Este contrato ya está aprobado: solo un Super Administrador puede modificarlo.');
   }
+
+  // Teléfonos con indicativo (regla única de lib/telefono), según la plataforma.
+  const paisTel = titularChanges?.plataforma ?? existingTitular.plataforma;
+  const normalizarTels = (o: any) => {
+    for (const k of TELEFONO_FIELDS) {
+      if (o && o[k] !== undefined) o[k] = normalizarTelefono(o[k], paisTel);
+    }
+  };
+  normalizarTels(titularChanges);
+  if (Array.isArray(beneficiariosChanges)) beneficiariosChanges.forEach(normalizarTels);
 
   const results: any = { titular: null, beneficiarios: [], financial: null };
 

@@ -4,6 +4,7 @@ import { requireAnyPermission } from '@/lib/api-permissions';
 import { MantenimientoPermission, AcademicoPermission } from '@/types/permissions';
 import { query, queryOne } from '@/lib/postgres';
 import { getPresignedUrlEstable } from '@/lib/spaces';
+import { normalizarTelefono } from '@/lib/telefono';
 import { ValidationError, NotFoundError, ConflictError } from '@/lib/errors';
 
 /**
@@ -122,8 +123,8 @@ export const PATCH = handlerWithAuth(async (req, ctx, session) => {
 
   const numeroIdNorm = body.numeroId?.trim().toUpperCase() || null;
   const zoomNorm = body.zoom?.trim() || null;
-  const telefono = body.telefono?.trim() || null;
   const pais = body.pais?.trim() || null;
+  const telefono = normalizarTelefono(body.telefono, pais);
   const domicilio = body.domicilio?.trim() || null;
   const fechaNacimiento = body.fechaNacimiento?.trim() || null;
   const esPlanta = body.esPlanta === true;

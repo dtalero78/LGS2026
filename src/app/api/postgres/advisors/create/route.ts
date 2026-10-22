@@ -4,6 +4,7 @@ import { ValidationError, ConflictError } from '@/lib/errors';
 import { AdvisorRepository } from '@/repositories/advisor.repository';
 import { ids } from '@/lib/id-generator';
 import { queryOne } from '@/lib/postgres';
+import { normalizarTelefono } from '@/lib/telefono';
 
 /**
  * POST /api/postgres/advisors/create
@@ -72,6 +73,8 @@ export const POST = handler(async (request: Request) => {
   }
 
   const nombreCompleto = [primerNombre, primerApellido].map(s => s.trim()).join(' ');
+  // Teléfono con indicativo (regla única de lib/telefono), según el país del formulario.
+  const telefonoNorm = normalizarTelefono(body.telefono, body.pais);
 
   const advisorId = ids.advisor();
   const advisor = await AdvisorRepository.create({
@@ -81,7 +84,7 @@ export const POST = handler(async (request: Request) => {
     nombreCompleto,
     email: email.trim().toLowerCase(),
     zoom: body.zoom?.trim() || undefined,
-    telefono: body.telefono?.trim() || undefined,
+    telefono: telefonoNorm || undefined,
     pais: body.pais?.trim() || undefined,
     domicilio: body.domicilio?.trim() || undefined,
     fotoAdvisor: body.fotoKey?.trim() || undefined,
@@ -98,7 +101,7 @@ export const POST = handler(async (request: Request) => {
      ON CONFLICT ("email") DO NOTHING
      RETURNING "_id"`,
     [ids.advisor(), emailLower, password, nombreCompleto, numeroIdNorm,
-     body.telefono?.trim() || null, body.pais?.trim() || null]
+     telefonoNorm, body.pais?.trim() || null]
   );
 
   // Relación formal ADVISORS -> USUARIOS_ROLES (análoga a ACADEMICA.usuarioId).

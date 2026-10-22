@@ -10,6 +10,7 @@ import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
 import { registrarCambioAprobacion, assertPuedeRevertirAPendiente, nombreDe } from '@/lib/aprobacion-audit';
 import { inhabilitarContratoRetractado } from '@/lib/retractado';
 import { liberarReservasKids, motivoBajaKids } from '@/lib/kids-baja';
+import { normalizarTelefono } from '@/lib/telefono';
 
 /**
  * GET /api/postgres/people/[id]
@@ -297,12 +298,18 @@ export const PATCH = handlerWithAuth(async (
     fechaContrato: string | null;
     primerNombre: string | null;
     primerApellido: string | null;
+    plataforma: string | null;
   }>(
     `SELECT "email", "numeroId", "tipoUsuario", "aprobacion", "estado", "contrato", "inicioContrato", "fechaContrato",
-            "primerNombre", "primerApellido" FROM "PEOPLE" WHERE "_id" = $1`,
+            "primerNombre", "primerApellido", "plataforma" FROM "PEOPLE" WHERE "_id" = $1`,
     [personId]
   );
   if (!currentPerson) throw new NotFoundError('Person', personId);
+
+  // Teléfonos con indicativo (regla única de lib/telefono), según la plataforma.
+  const paisTel = body.plataforma ?? currentPerson.plataforma;
+  if (body.celular !== undefined) body.celular = normalizarTelefono(body.celular, paisTel);
+  if (body.telefono !== undefined) body.telefono = normalizarTelefono(body.telefono, paisTel);
 
   // ── Permiso para editar el NÚMERO DE IDENTIFICACIÓN ──
   // Solo se exige si el valor REALMENTE cambia: otros flujos mandan el numeroId
