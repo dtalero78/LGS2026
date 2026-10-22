@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { requirePermission } from '@/lib/api-permissions';
 import { MantenimientoPermission } from '@/types/permissions';
-import { ValidationError, NotFoundError, ConflictError } from '@/lib/errors';
+import { ValidationError, NotFoundError, ConflictError, ForbiddenError } from '@/lib/errors';
 import { queryMany, queryOne, query } from '@/lib/postgres';
 import { generateTempPassword } from '@/lib/gen-password';
 import { ids } from '@/lib/id-generator';
@@ -73,6 +73,16 @@ export const GET = handlerWithAuth(async (request: NextRequest, _ctx, session) =
   const rol = (searchParams.get('rol') || '').trim();
   const search = (searchParams.get('search') || '').trim().toLowerCase();
 
+  // ?catalogo=1 → roles asignables (ROL_PERMISOS activos) para "Cambiar rol".
+  if (searchParams.get('catalogo')) {
+    const catalogo = await queryMany<{ rol: string; descripcion: string | null }>(
+      `SELECT "rol", "descripcion" FROM "ROL_PERMISOS"
+        WHERE COALESCE("activo", true) = true AND UPPER("rol") <> 'ESTUDIANTE'
+        ORDER BY "rol"`,
+    );
+    return successResponse({ catalogo });
+  }
+
   // Sin rol → lista de roles con conteo para el dropdown.
   if (!rol) {
     const roles = await queryMany<{ rol: string; total: number }>(
@@ -116,6 +126,10 @@ export const GET = handlerWithAuth(async (request: NextRequest, _ctx, session) =
  *       caracteres. Queda en la auditoría (sin registrar el valor). Devuelve la
  *       nueva clave para mostrarla en la consulta.
  *
+ *   (c) Cambiar de rol       → body { id, rol, motivo }  (motivo ≥10; no la propia
+ *       cuenta; ESTUDIANTE no entra ni sale; SUPER_ADMIN/ADMIN solo por SUPER_ADMIN;
+ *       el rol debe existir activo en ROL_PERMISOS). Rige al volver a iniciar sesión.
+ *
  *   (b) Activar / desactivar → body { id, activo: boolean }
  *       `activo=false` BLOQUEA el login y ADEMÁS regenera la clave (invalida la
  *       anterior). `activo=true` solo reactiva (no toca la clave).
@@ -154,6 +168,58 @@ export const PATCH = handlerWithAuth(async (request: NextRequest, _ctx, session)
       realizadoPorNombre: (session?.user as any)?.name ?? null,
     });
     return successResponse({ email: res.rows[0].email, password: res.rows[0].password, activo: res.rows[0].activo });
+  }
+
+  // ── (c) Cambiar de rol ──
+  if (typeof body?.rol === 'string') {
+    const nuevo = body.rol.trim();
+    const motivo = typeof body?.motivo === 'string' ? body.motivo.trim() : '';
+    if (!nuevo) throw new ValidationError('rol requerido');
+    if (motivo.length < 10) throw new ValidationError('Indica el motivo del cambio de rol (mínimo 10 caracteres).');
+
+    const before = await queryOne<{ email: string; rol: string }>(
+      `SELECT "email","rol" FROM "USUARIOS_ROLES" WHERE "_id" = $1`, [id],
+    );
+    if (!before) throw new NotFoundError('Usuario', id);
+    const actual = String(before.rol || '').toUpperCase();
+    const destino = nuevo.toUpperCase();
+    if (actual === destino) throw new ValidationError(`La cuenta ya tiene el rol ${before.rol}.`);
+
+    const yo = session?.user as any;
+    if (String(yo?.email || '').toLowerCase() === String(before.email || '').toLowerCase()) {
+      throw new ValidationError('No puedes cambiar el rol de tu propia cuenta.');
+    }
+    // Una cuenta de estudiante está ligada a su ficha académica; una de staff no debe
+    // convertirse en estudiante (ni al revés): esas cuentas se crean en su propio flujo.
+    if (actual === 'ESTUDIANTE' || destino === 'ESTUDIANTE') {
+      throw new ValidationError('Las cuentas de estudiante no cambian de rol: se crean desde su ficha o en "Crear cuenta".');
+    }
+    // Dar o quitar acceso total solo lo hace un SUPER_ADMIN.
+    const ADMINS = ['SUPER_ADMIN', 'ADMIN'];
+    if ((ADMINS.includes(actual) || ADMINS.includes(destino)) && String(yo?.role || '').toUpperCase() !== 'SUPER_ADMIN') {
+      throw new ForbiddenError('Solo un Super Administrador puede asignar o quitar los roles SUPER_ADMIN / ADMIN.');
+    }
+    const existe = await queryOne<{ rol: string }>(
+      `SELECT "rol" FROM "ROL_PERMISOS" WHERE UPPER("rol") = $1 AND COALESCE("activo", true) = true LIMIT 1`, [destino],
+    );
+    if (!existe && !ADMINS.includes(destino)) throw new ValidationError(`El rol ${nuevo} no existe o está inactivo.`);
+    const rolFinal = existe?.rol ?? destino;
+
+    const res = await query<{ email: string; rol: string }>(
+      `UPDATE "USUARIOS_ROLES" SET "rol" = $1, "_updatedDate" = NOW() WHERE "_id" = $2 RETURNING "email","rol"`,
+      [rolFinal, id],
+    );
+    await writeAudit({
+      accion: 'EDITAR',
+      usuarioRolId: id,
+      email: before.email ?? null,
+      rol: before.rol ?? null,
+      cambios: { rol: { from: before.rol ?? null, to: rolFinal } },
+      motivo,
+      realizadoPor: yo?.email ?? null,
+      realizadoPorNombre: yo?.name ?? null,
+    });
+    return successResponse({ email: res.rows[0].email, rol: res.rows[0].rol });
   }
 
   // ── (b) Activar / desactivar ──

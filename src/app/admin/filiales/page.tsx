@@ -14,7 +14,7 @@ import toast from 'react-hot-toast'
  * Permiso: MANTENIMIENTO.USUARIOS.CREAR_ROL (SUPER_ADMIN/ADMIN bypass).
  */
 
-const PLATAFORMAS = ['Chile', 'Colombia', 'Ecuador', 'Perú']
+const PLATAFORMAS = ['Chile', 'Colombia', 'Ecuador', 'Perú', 'Internacional']
 
 interface Filial { _id: string; nombre: string; plataforma: string }
 

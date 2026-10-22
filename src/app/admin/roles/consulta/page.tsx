@@ -5,7 +5,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions/PermissionGuard'
 import { MantenimientoPermission } from '@/types/permissions'
 import { exportToExcel } from '@/lib/export-excel'
-import { ArrowDownTrayIcon, EyeIcon, EyeSlashIcon, PencilSquareIcon, TrashIcon, KeyIcon } from '@heroicons/react/24/outline'
+import { ArrowDownTrayIcon, EyeIcon, EyeSlashIcon, PencilSquareIcon, TrashIcon, KeyIcon, ArrowsRightLeftIcon } from '@heroicons/react/24/outline'
 
 const PLATAFORMAS = ['Chile', 'Colombia', 'Ecuador', 'Perú', 'Internacional']
 
@@ -51,6 +51,13 @@ function ConsultaUserRol() {
   const [pwdShow, setPwdShow] = useState(true)
   const [pwdMotivo, setPwdMotivo] = useState('')
   const [isPwdSaving, setIsPwdSaving] = useState(false)
+
+  // Modal Cambiar rol
+  const [rolUser, setRolUser] = useState<UserRow | null>(null)
+  const [rolNuevo, setRolNuevo] = useState('')
+  const [rolMotivo, setRolMotivo] = useState('')
+  const [isRolSaving, setIsRolSaving] = useState(false)
+  const [catalogo, setCatalogo] = useState<{ rol: string; descripcion: string | null }[]>([])
 
   // Cargar roles (para el dropdown) al montar.
   useEffect(() => {
@@ -182,6 +189,40 @@ function ConsultaUserRol() {
       alert(e?.message || 'No se pudo cambiar la clave')
     } finally {
       setIsPwdSaving(false)
+    }
+  }
+
+  // ── Cambiar rol (motivo obligatorio + auditoría; rige al volver a iniciar sesión) ──
+  const openRol = (u: UserRow) => {
+    setRolUser(u); setRolNuevo(''); setRolMotivo('')
+    if (catalogo.length === 0) {
+      fetch('/api/postgres/users/consulta?catalogo=1')
+        .then(r => r.json())
+        .then(d => { if (d?.success) setCatalogo(d.catalogo || []) })
+        .catch(() => {})
+    }
+  }
+  const saveRol = async () => {
+    if (!rolUser || !rolNuevo) return
+    setIsRolSaving(true)
+    try {
+      const res = await fetch('/api/postgres/users/consulta', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: rolUser._id, rol: rolNuevo, motivo: rolMotivo.trim() }),
+      })
+      const d = await res.json()
+      if (!res.ok || !d?.success) throw new Error(d?.error || `Error ${res.status}`)
+      // Sale del listado si se está filtrando por el rol anterior.
+      setUsers(prev => rol !== '__ALL__'
+        ? prev.filter(x => x._id !== rolUser._id)
+        : prev.map(x => (x._id === rolUser._id ? { ...x, rol: d.rol } : x)))
+      setRolUser(null)
+      alert(`Rol cambiado a ${d.rol}. El usuario lo verá al volver a iniciar sesión.`)
+    } catch (e: any) {
+      alert(e?.message || 'No se pudo cambiar el rol')
+    } finally {
+      setIsRolSaving(false)
     }
   }
 
@@ -351,6 +392,16 @@ function ConsultaUserRol() {
                         >
                           <KeyIcon className="h-3.5 w-3.5" /> Clave
                         </button>
+                        {u.rol !== 'ESTUDIANTE' && (
+                          <button
+                            type="button"
+                            onClick={() => openRol(u)}
+                            title="Cambiar rol"
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                          >
+                            <ArrowsRightLeftIcon className="h-3.5 w-3.5" /> Rol
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => { setDeleteUser(u); setDeleteMotivo(''); setDeleteConfirm(false) }}
@@ -496,6 +547,51 @@ function ConsultaUserRol() {
               <button type="button" onClick={savePwd} disabled={isPwdSaving || pwdValue.trim().length < 4}
                 className="px-4 py-2 text-sm font-semibold text-white bg-amber-600 rounded-md hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed">
                 {isPwdSaving ? 'Guardando…' : 'Guardar clave'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Cambiar rol ── */}
+      {rolUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-indigo-600 px-6 py-4">
+              <h2 className="text-lg font-bold text-white">Cambiar rol</h2>
+              <p className="text-indigo-100 text-xs mt-0.5 break-all">{rolUser.email} · rol actual <b>{rolUser.rol}</b></p>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-xs text-indigo-800">
+                El usuario pasa a tener los permisos del rol nuevo y pierde los del anterior. Lo verá al
+                <b> volver a iniciar sesión</b>. Queda registrado en la auditoría.
+                {rolUser.rol === 'ADVISOR' && <> Su ficha de advisor no se modifica.</>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Rol nuevo</label>
+                <select value={rolNuevo} onChange={e => setRolNuevo(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  <option value="">{catalogo.length ? 'Seleccionar rol…' : 'Cargando roles…'}</option>
+                  {catalogo.filter(c => c.rol !== rolUser.rol).map(c => (
+                    <option key={c.rol} value={c.rol}>{c.rol}{c.descripcion ? ` — ${c.descripcion}` : ''}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Motivo <span className="text-red-500">*</span> <span className="text-xs text-gray-400">(mínimo 10 caracteres)</span></label>
+                <input type="text" value={rolMotivo} onChange={e => setRolMotivo(e.target.value)}
+                  placeholder="Ej: ascendido a líder comercial"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 border-t flex justify-end gap-2">
+              <button type="button" onClick={() => setRolUser(null)} disabled={isRolSaving}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50">
+                Cancelar
+              </button>
+              <button type="button" onClick={saveRol} disabled={isRolSaving || !rolNuevo || rolMotivo.trim().length < 10}
+                className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                {isRolSaving ? 'Guardando…' : 'Cambiar rol'}
               </button>
             </div>
           </div>
