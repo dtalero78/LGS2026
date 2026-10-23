@@ -13,6 +13,7 @@ import DocumentosReciboModal from '@/components/common/DocumentosReciboModal'
 interface Matricula {
   _id: string
   primerNombre: string
+  segundoNombre?: string
   primerApellido: string
   segundoApellido?: string
   numeroId: string
@@ -25,6 +26,7 @@ interface Matricula {
   hashConsentimiento?: string
   asesorAsignado?: string
   asesor?: string
+  jefeGrupo?: string | null
   _createdDate: Date
   fechaIngreso?: string | Date | null
   numBeneficiarios?: number
@@ -88,6 +90,9 @@ function categoriaBadge(cat?: string) {
 }
 
 const fmtDate = (v: any) => v ? new Date(v).toLocaleDateString() : ''
+// Fecha corta como en Gestión Contrato de Mosaico: "23 oct 2026".
+const fmtFechaCorta = (v: any) => { if (!v) return '—'; try { return new Date(v).toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' }) } catch { return String(v).slice(0, 10) } }
+const nombreTitular = (c: Matricula) => [c.primerNombre, c.segundoNombre, c.primerApellido, c.segundoApellido].filter(Boolean).join(' ').trim()
 const fmtDateTime = (v: any) => v ? new Date(v).toLocaleString() : ''
 const puedeBorrar = (m: Matricula) => m.categoria === 'Sin firmar'
 
@@ -156,9 +161,6 @@ export default function MatriculasPage() {
   useEffect(() => { paginate(getFiltered()); setSelected(new Set()) /* eslint-disable-next-line */ }, [all, searchApellido, filters.categoria, filters.plataforma, filters.asesor, filters.contrato, filters.fechaInicio, filters.fechaFin])
 
   const filtered = getFiltered()
-  // La columna "Documentos" (documentación + recibo) aparece si hay algún contrato
-  // Firmado sin aprobar en el resultado — así también funciona con "Todos los contratos".
-  const showDocsCol = filtered.some(c => c.categoria === 'Firmado sin aprobar')
   const plataformaOptions = useMemo(() => Array.from(new Set(all.map(c => (c.plataforma || '').trim()).filter(Boolean))).sort(), [all])
   const selectedRows = filtered.filter(c => selected.has(c.contrato) && puedeBorrar(c))
 
@@ -224,6 +226,7 @@ export default function MatriculasPage() {
                 { header: 'Contrato', accessor: (c) => c.contrato },
                 { header: 'Plataforma', accessor: (c) => c.plataforma },
                 { header: 'Asesor', accessor: (c) => c.asesorAsignado || '' },
+                { header: 'Líder', accessor: (c) => c.jefeGrupo || '' },
                 { header: 'Fecha Contrato', accessor: (c) => fmtDate(c._createdDate) },
                 { header: 'Celular', accessor: (c) => c.celular },
                 { header: 'Email', accessor: (c) => c.email },
@@ -319,15 +322,13 @@ export default function MatriculasPage() {
                   <thead className="bg-gray-50">
                     <tr>
                       {canDelete && <th className="px-4 py-3 w-10"><span className="sr-only">Seleccionar</span></th>}
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Titular</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contrato</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Contrato</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Aprobación</th>
-                      {showDocsCol && (
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Documentos</th>
-                      )}
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Titular</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Contrato</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fecha</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Contacto</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Estado</th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fecha aprobación</th>
+                      <th className="px-3 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -336,7 +337,7 @@ export default function MatriculasPage() {
                       return (
                         <tr key={c._id} className="hover:bg-gray-50">
                           {canDelete && (
-                            <td className="px-4 py-4">
+                            <td className="px-4 py-3">
                               <input type="checkbox" aria-label={`Seleccionar ${c.contrato}`}
                                 checked={selected.has(c.contrato)} disabled={!selectable}
                                 onChange={() => toggle(c.contrato)}
@@ -344,32 +345,37 @@ export default function MatriculasPage() {
                                 className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed" />
                             </td>
                           )}
-                          <td className="px-6 py-4 whitespace-nowrap cursor-pointer" onClick={() => window.open(`/dashboard/comercial/matriculas/${c._id}`, '_blank')}>
-                            <div className="flex items-center">
-                              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center"><User className="h-5 w-5 text-blue-600" /></div>
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-gray-900">{c.primerNombre} {c.primerApellido}</div>
-                                <div className="text-sm text-gray-500">{c.numeroId} {c.asesorAsignado ? `· ${c.asesorAsignado}` : ''}</div>
-                              </div>
+                          {/* Titular como Gestión Contrato de Mosaico: nombre en negrita y, debajo,
+                              ID · país · Asesor · Líder (etiquetados: son dos nombres seguidos). */}
+                          <td className="px-4 py-3 cursor-pointer" onClick={() => window.open(`/dashboard/comercial/matriculas/${c._id}`, '_blank')}
+                            title="Ver el resumen de la matrícula">
+                            <div className="flex flex-col">
+                              <b className="text-[13.5px] text-gray-900 uppercase">{nombreTitular(c) || '(sin nombre)'}</b>
+                              <span className="text-[11.5px] text-gray-500">
+                                ID {c.numeroId}{c.plataforma ? <> · {c.plataforma}</> : null}
+                                {c.asesorAsignado ? <> · Asesor <b className="font-medium text-gray-700">{c.asesorAsignado}</b></> : null}
+                                {c.jefeGrupo ? <> · Líder <b className="font-medium text-gray-700">{c.jefeGrupo}</b></> : null}
+                              </span>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900">{c.contrato}</div><div className="text-sm text-gray-500">{c.plataforma}</div></td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{fmtDate(c._createdDate)}</td>
-                          <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900">{c.celular}</div><div className="text-sm text-gray-500">{c.email}</div></td>
-                          <td className="px-6 py-4 whitespace-nowrap"><span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${categoriaBadge(c.categoria)}`}>{c.categoria || '—'}</span></td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{fmtDate(c.fechaIngreso)}</td>
-                          {showDocsCol && (
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {c.categoria === 'Firmado sin aprobar' ? (
-                                <button type="button" onClick={() => openDocModal(c)}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
-                                  <FileText className="w-3.5 h-3.5" /> Documentos y recibo
-                                </button>
-                              ) : (
-                                <span className="text-gray-300">—</span>
+                          <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-gray-700">{c.contrato || '—'}</td>
+                          <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-600">{fmtFechaCorta(c._createdDate)}</td>
+                          <td className="px-3 py-3 whitespace-nowrap"><div className="text-sm text-gray-900">{c.celular}</div><div className="text-xs text-gray-500">{c.email}</div></td>
+                          <td className="px-3 py-3 whitespace-nowrap"><span className={`inline-flex text-xs font-semibold rounded-full px-2.5 py-0.5 ${categoriaBadge(c.categoria)}`}>{c.categoria || 'Sin estado'}</span></td>
+                          <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-600">{c.fechaIngreso ? fmtFechaCorta(c.fechaIngreso) : '—'}</td>
+                          <td className="px-3 py-3">
+                            <div className="flex items-center justify-end gap-2">
+                              <button type="button" onClick={() => openDocModal(c)}
+                                title="Documentación y recibo de inscripción"
+                                className="px-2.5 py-1.5 rounded-lg border border-purple-300 text-purple-700 text-xs font-medium hover:bg-purple-50 whitespace-nowrap">📎 Documentos</button>
+                              {/* Un contrato aprobado ya salió de la gestión comercial (igual que en Mosaico). */}
+                              {c.categoria !== 'Aprobados' && (
+                                <a href={`/dashboard/comercial/contrato/${c._id}`} target="_blank" rel="noopener noreferrer"
+                                  title="Abrir el contrato: enviar el PDF, imprimir o corregir datos"
+                                  className="px-2.5 py-1.5 rounded-lg border border-purple-300 text-purple-700 text-xs font-medium hover:bg-purple-50 whitespace-nowrap">✎ Editar</a>
                               )}
-                            </td>
-                          )}
+                            </div>
+                          </td>
                         </tr>
                       )
                     })}

@@ -10,7 +10,8 @@ import { query } from '@/lib/postgres';
  * Lista TODOS los contratos (titulares) para el módulo Matrículas, con un campo
  * calculado `categoria` (estado de aprobación) para filtrar en el cliente:
  *   Aprobados / Rechazado / Pendiente / En revisión / Firmado sin aprobar / Sin firmar.
- * Incluye `asesorAsignado` (nombre del asesor) y `numBeneficiarios` (para el modal
+ * Incluye `asesorAsignado` (nombre del asesor), `jefeGrupo` (el Líder; hoy solo
+ * viene en los contratos cargados del Libro de Producción) y `numBeneficiarios` (para el modal
  * de borrado). Excluye PRB-. Gateado por COMERCIAL.MATRICULAS.VER.
  */
 export const GET = handlerWithAuth(async (_req, _ctx, session) => {
@@ -20,7 +21,7 @@ export const GET = handlerWithAuth(async (_req, _ctx, session) => {
     `SELECT p."_id", p."primerNombre", p."segundoNombre", p."primerApellido", p."segundoApellido",
             p."numeroId", p."contrato", p."celular", p."email", p."plataforma",
             p."aprobacion", p."estado", p."estadoInactivo", p."hashConsentimiento",
-            p."asesorAsignado", p."asesor", p."_createdDate", p."fechaIngreso",
+            p."asesorAsignado", p."asesor", p."_createdDate", p."fechaIngreso", p."jefeGrupo",
             COALESCE(bc."n", 0) AS "numBeneficiarios",
             CASE
               WHEN p."aprobacion" = 'Aprobado'      THEN 'Aprobados'
