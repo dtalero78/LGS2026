@@ -1,6 +1,6 @@
 import 'server-only';
 import { query, queryOne } from '@/lib/postgres';
-import { kidsIntake, KidsIntakeError } from '@/lib/kids-intake';
+import { kidsIntake } from '@/lib/kids-intake';
 import { apoderadoParaKids, buildKidsReservation, plataformaToCountryCode, toISODate } from '@/lib/kids-mapping';
 import { ValidationError } from '@/lib/errors';
 
@@ -14,8 +14,9 @@ const normDoc = (v: any) => String(v ?? '').toUpperCase().replace(/[^A-Z0-9]/g, 
  * - Si no se envió (KIDS falló al agregar el beneficiario, o se agregó antes de
  *   que existiera el envío), la crea ahora con los datos guardados en LGS:
  *   PEOPLE (niño y titular) + KIDS_INSCRIPCIONES (salón, curso, apoderado).
- * - Un 409 de KIDS significa que la reserva YA existe (idempotente por
- *   externalRef): se toma como enviada.
+ * - Si la reserva ya existe y está viva, KIDS responde 201 con sus ids (idempotente
+ *   por externalRef). Cualquier error, incluido un 409, es un rechazo: se guarda en
+ *   `errorKids` y NO se marca como enviada.
  *
  * Lanza Error con un mensaje legible si no se puede (sin salón, sin titular, KIDS caído).
  * Requiere la integración configurada (el caller lo verifica).
@@ -75,13 +76,14 @@ export async function asegurarReservaKids(insc: any, beneficiario: any): Promise
     contractId = r.contractId || null;
     enrollmentId = r.enrollmentId || null;
   } catch (e: any) {
-    // 409 = ya existe una reserva con ese externalRef → se usa la existente.
-    if (!(e instanceof KidsIntakeError && e.status === 409)) {
-      await query(`UPDATE "KIDS_INSCRIPCIONES" SET "errorKids"=$2, "_updatedDate"=NOW() WHERE "_id"=$1`,
-        [insc._id, String(e?.message || 'error').slice(0, 500)]).catch(() => null);
-      // ValidationError (400): la pantalla muestra el motivo real, no "Database error".
-      throw new ValidationError(`KIDS no aceptó la reserva: ${e?.message || 'error desconocido'}`);
-    }
+    // Un reintento de una reserva viva KIDS lo responde con 201 y sus ids, así que
+    // CUALQUIER error —incluido el 409— es un rechazo real: reserva cancelada con esa
+    // referencia, documento del niño en otro contrato, etc. Antes el 409 se tomaba como
+    // "ya existe" y la inscripción quedaba "enviada" sin reserva en KIDS (03-11176-26).
+    await query(`UPDATE "KIDS_INSCRIPCIONES" SET "errorKids"=$2, "_updatedDate"=NOW() WHERE "_id"=$1`,
+      [insc._id, String(e?.message || 'error').slice(0, 500)]).catch(() => null);
+    // ValidationError (400): la pantalla muestra el motivo real, no "Database error".
+    throw new ValidationError(`KIDS no aceptó la reserva: ${e?.message || 'error desconocido'}`);
   }
   await query(
     `UPDATE "KIDS_INSCRIPCIONES"
