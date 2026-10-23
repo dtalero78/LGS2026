@@ -436,7 +436,11 @@ export default function MatriculasPage() {
                               </div>
                             </td>
                             <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-gray-700">{c.contrato || '—'}</td>
-                            <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-600">{fmtFechaCorta(c._createdDate)}</td>
+                            {/* La hora importa aquí: el contrato sale de la lista 8 h después de creado. */}
+                            <td className="px-3 py-3 whitespace-nowrap">
+                              <div className="text-sm text-gray-600">{fmtFechaCorta(c._createdDate)}</div>
+                              <div className="text-xs font-medium text-red-600">{c._createdDate ? new Date(c._createdDate).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }) : ''}</div>
+                            </td>
                             <td className="px-3 py-3 whitespace-nowrap"><div className="text-sm text-gray-900">{c.celular}</div><div className="text-xs text-gray-500">{c.email}</div></td>
                             <td className="px-3 py-3 whitespace-nowrap"><span className={`inline-flex text-xs font-semibold rounded-full px-2.5 py-0.5 ${categoriaBadge(c.categoria)}`}>{c.categoria || 'Sin estado'}</span></td>
                             <td className="px-3 py-3 whitespace-nowrap text-right text-sm">
