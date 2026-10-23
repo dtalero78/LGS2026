@@ -413,31 +413,33 @@ export default function MatriculasPage() {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Titular</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contrato</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha creación</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Asesor</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Titular</th>
+                          <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Contrato</th>
+                          <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fecha</th>
+                          <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Contacto</th>
+                          <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Estado</th>
+                          <th className="px-3 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Acciones</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {enGestion.map(c => (
                           <tr key={c._id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center"><User className="h-5 w-5 text-blue-600" /></div>
-                                <div className="ml-4">
-                                  <div className="text-sm font-medium text-gray-900">{c.primerNombre} {c.primerApellido}</div>
-                                  <div className="text-sm text-gray-500">{c.numeroId}</div>
-                                </div>
+                            {/* Mismas celdas que Consulta: el asesor va en el subtexto del titular. */}
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col">
+                                <b className="text-[13.5px] text-gray-900 uppercase">{nombreTitular(c) || '(sin nombre)'}</b>
+                                <span className="text-[11.5px] text-gray-500">
+                                  ID {c.numeroId}{c.plataforma ? <> · {c.plataforma}</> : null}
+                                  {c.asesorAsignado ? <> · Asesor <b className="font-medium text-gray-700">{c.asesorAsignado}</b></> : null}
+                                  {c.jefeGrupo ? <> · Líder <b className="font-medium text-gray-700">{c.jefeGrupo}</b></> : null}
+                                </span>
                               </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900">{c.contrato}</div><div className="text-sm text-gray-500">{c.plataforma}</div></td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{fmtDateTime(c._createdDate)}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{c.asesorAsignado || '—'}</td>
-                            <td className="px-6 py-4 whitespace-nowrap"><span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${categoriaBadge(c.categoria)}`}>{c.categoria || '—'}</span></td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                            <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-gray-700">{c.contrato || '—'}</td>
+                            <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-600">{fmtFechaCorta(c._createdDate)}</td>
+                            <td className="px-3 py-3 whitespace-nowrap"><div className="text-sm text-gray-900">{c.celular}</div><div className="text-xs text-gray-500">{c.email}</div></td>
+                            <td className="px-3 py-3 whitespace-nowrap"><span className={`inline-flex text-xs font-semibold rounded-full px-2.5 py-0.5 ${categoriaBadge(c.categoria)}`}>{c.categoria || 'Sin estado'}</span></td>
+                            <td className="px-3 py-3 whitespace-nowrap text-right text-sm">
                               <div className="flex items-center justify-end gap-2">
                                 <a href={`/dashboard/comercial/contrato/${c._id}`} target="_blank" rel="noopener noreferrer"
                                   className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium">
