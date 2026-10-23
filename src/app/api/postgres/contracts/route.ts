@@ -8,6 +8,7 @@ import { checkBeneficiarioUnico, anularBeneficiariosViejos } from '@/lib/benefic
 import { kidsIntake, validarSalonesDelPais } from '@/lib/kids-intake';
 import { buildKidsReservation, plataformaToCountryCode, toISODate, errorEdadCursoKids } from '@/lib/kids-mapping';
 import { normalizarTelefono } from '@/lib/telefono';
+import { CRM_LADDER_COLUMNS, CRM_LADDER_KEYS, ladderFromEnvelope } from '@/lib/crm-bridge';
 import crypto from 'crypto';
 
 const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
@@ -131,7 +132,7 @@ function normalizeTipoPlan(v: any): TipoPlan | null {
 }
 
 export const POST = handlerWithAuth(async (request, _ctx, session) => {
-  const { titular, financial, beneficiarios, titularEsBeneficiario, sence, clientToday, esContratoPrueba } = await request.json();
+  const { titular, financial, beneficiarios, titularEsBeneficiario, sence, clientToday, esContratoPrueba, crmBridge } = await request.json();
   const esPrueba = esContratoPrueba === true;
   // Tipo de persona del titular (defensa server-side): 'Empresa' | 'Persona Natural'.
   const tipoPersona = String(titular?.tipoPersona || '').trim() === 'Empresa' ? 'Empresa' : 'Persona Natural';
@@ -255,6 +256,18 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
      titular.replegal || null, titular.replegalid || null, titular.replegalcel || null,
      titular.rubro || null, titular.replegalcargo || null, modulo]  // $29 asesorCreadorContrato, $30 sence, $31 tipoPersona, $32-34 rep. legal, $35 rubro, $36 cargo del representante, $37 modulo
   );
+  // Escalera comercial del día de la matrícula (Libro de Producción), sólo si vino
+  // firmada por el CRM (enlace v2) y es del asesor del contrato. Sin ella las
+  // columnas quedan NULL y se completan a mano, como antes.
+  const ladder = ladderFromEnvelope(crmBridge, String(titular.asesor || ''));
+  if (crmBridge && !ladder) console.warn(`[contracts] escalera del CRM descartada (firma inválida o de otro asesor) — contrato ${contrato}`);
+  if (ladder) {
+    const keys = CRM_LADDER_KEYS;
+    const sets = keys.map((k, i) => `"${CRM_LADDER_COLUMNS[k].col}" = $${i + 2}`).join(', ');
+    const vals = keys.map(k => ladder[k].trim().slice(0, CRM_LADDER_COLUMNS[k].max) || null);
+    const upd = await client.query(`UPDATE "PEOPLE" SET ${sets} WHERE "_id" = $1 RETURNING *`, [titularId, ...vals]);
+    titularResult.rows[0] = upd.rows[0];
+  }
   return { contrato, titularResult };
   });
 

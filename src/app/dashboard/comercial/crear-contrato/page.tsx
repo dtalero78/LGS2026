@@ -181,6 +181,19 @@ function CrearContratoContent() {
     medioPago: ''
   });
 
+  // Escalera comercial firmada que trae el enlace v2 del CRM (fe…ori + ts + token).
+  // Se reenvía tal cual al crear: el servidor verifica la firma y la guarda en el
+  // titular para el Libro de Producción. Sin token (entrada directa o enlace v1) no va.
+  const [crmBridge] = useState(() => {
+    const token = searchParams.get('token');
+    if (!token) return null;
+    const get = (k: string) => searchParams.get(k) || '';
+    return {
+      email: get('email'), ts: get('ts'), token,
+      fe: get('fe'), tm: get('tm'), ge: get('ge'), gd: get('gd'), s1: get('s1'), fil: get('fil'), ori: get('ori'),
+    };
+  });
+
   const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>([]);
   // Índice del beneficiario cuyo modal Kids está abierto (null = cerrado).
   const [kidsModalIndex, setKidsModalIndex] = useState<number | null>(null);
@@ -815,6 +828,7 @@ function CrearContratoContent() {
           sence: senceUsuario && titular.tipoPersona === 'Empresa' && titular.plataforma === 'Chile',
           clientToday,
           esContratoPrueba,
+          crmBridge,
         })
       });
 

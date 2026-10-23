@@ -1,29 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { encode } from 'next-auth/jwt'
-import crypto from 'crypto'
+import { CRM_LADDER_KEYS, CrmLadderKey, verifyCrmBridge } from '@/lib/crm-bridge'
 
-const CRM_BRIDGE_SECRET = process.env.CRM_BRIDGE_SECRET || ''
 const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || ''
 const BASE_URL = process.env.NEXTAUTH_URL || 'https://lgs-plataforma.com'
 const TOKEN_MAX_AGE_MS = 5 * 60 * 1000 // 5 minutes
-
-function verifyHmac(email: string, ts: string, token: string): boolean {
-  if (!CRM_BRIDGE_SECRET) return false
-  const expected = crypto
-    .createHmac('sha256', CRM_BRIDGE_SECRET)
-    .update(`${email}:${ts}`)
-    .digest('hex')
-  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(token))
-}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const email = searchParams.get('email')
   const ts = searchParams.get('ts')
   const token = searchParams.get('token')
-  // Advisor name forwarded by the CRM. NOT part of the HMAC (the signature
-  // stays `${email}:${ts}`); these only prefill the contract form and land in
-  // PEOPLE.asesorCreadorContrato, so they don't need to be signed.
+  // v2 = the link also carries the sales ladder (fe…ori), all of it signed.
+  // v1 links (no `v`) are still accepted so CRM and LGS can deploy in any order.
+  const isV2 = searchParams.get('v') === '2'
+  const ladder = isV2
+    ? (Object.fromEntries(CRM_LADDER_KEYS.map(k => [k, searchParams.get(k) ?? ''])) as Record<CrmLadderKey, string>)
+    : undefined
+  // Advisor name forwarded by the CRM. NOT part of the HMAC; it only prefills
+  // the (editable) PEOPLE.asesorCreadorContrato field.
   const nombre = searchParams.get('nombre') || ''
   const apellido = searchParams.get('apellido') || ''
   const redirect = searchParams.get('redirect') || '/dashboard/comercial/crear-contrato'
@@ -39,7 +34,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Verify HMAC signature
-  if (!verifyHmac(email, ts, token)) {
+  if (!verifyCrmBridge(email, ts, token, ladder)) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
   }
 
@@ -59,6 +54,13 @@ export async function GET(request: NextRequest) {
   redirectUrl.searchParams.set('email', email)
   if (nombre) redirectUrl.searchParams.set('nombre', nombre)
   if (apellido) redirectUrl.searchParams.set('apellido', apellido)
+  // The signed ladder rides on to the form untouched (with ts + token): the
+  // contract POST verifies the signature again before writing it to PEOPLE.
+  if (ladder) {
+    for (const k of CRM_LADDER_KEYS) redirectUrl.searchParams.set(k, ladder[k])
+    redirectUrl.searchParams.set('ts', ts)
+    redirectUrl.searchParams.set('token', token)
+  }
 
   const response = NextResponse.redirect(redirectUrl)
 
