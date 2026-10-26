@@ -183,7 +183,10 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
     if (condicionesCanje.length > 20) throw new ValidationError('Máximo 20 condiciones de canje.');
     if (condicionesCanje.some(c => c.length > 300)) throw new ValidationError('Cada condición del canje admite hasta 300 caracteres.');
     // Sin inscripción ni cuotas: nada que validar en Recaudos ni mora que calcular.
-    Object.assign(financial, { tipoPlan: 'Canje', pagoInscripcion: 0, numeroCuotas: 0, valorCuota: 0, saldo: 0, medioPago: 'Canje' });
+    // Fecha de pago = fecha del contrato (el día en que se crea, en la fecha local de quien lo crea).
+    const hoyCliente = typeof clientToday === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(clientToday)
+      ? clientToday : new Date().toISOString().slice(0, 10);
+    Object.assign(financial, { tipoPlan: 'Canje', pagoInscripcion: 0, numeroCuotas: 0, valorCuota: 0, saldo: 0, medioPago: 'Canje', fechaPago: hoyCliente });
   }
 
   // tipoPlan (Contado / Credito / Colaborador / Canje) — se valida y propaga a 3 tablas
