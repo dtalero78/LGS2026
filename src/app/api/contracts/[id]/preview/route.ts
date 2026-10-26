@@ -8,6 +8,7 @@ import { buildContractPdfHtml } from '@/lib/contract-pdf-html';
 import { esContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { getAsesorInfo } from '@/lib/asesor';
 import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
+import { buscarPlantillaContrato } from '@/lib/contract-template';
 
 const API2PDF_KEY = process.env.API2PDF_KEY || '';
 
@@ -53,16 +54,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
   // 4. Template de la plataforma (tabla "ContractTemplates", con fallback
   //    case-insensitive — mismo lookup que send-pdf / auto-approve).
-  let tpl = await queryOne<{ template: string }>(
-    `SELECT "template" FROM "ContractTemplates" WHERE "plataforma" = $1`,
-    [titular.plataforma],
-  );
-  if (!tpl) {
-    tpl = await queryOne<{ template: string }>(
-      `SELECT "template" FROM "ContractTemplates" WHERE LOWER("plataforma") = LOWER($1)`,
-      [titular.plataforma],
-    );
-  }
+  const tplTexto = await buscarPlantillaContrato(titular.plataforma, (titular as any).tipoContrato);
+  const tpl = tplTexto ? { template: tplTexto } : null;
   if (!tpl?.template) {
     return NextResponse.json(
       { error: `No hay plantilla de contrato para la plataforma "${titular.plataforma}"` },

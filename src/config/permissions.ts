@@ -901,6 +901,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Editar secciones del contrato: titular, referencias, beneficiarios, financiero',
   },
   {
+    code: ComercialPermission.CONTRATO_CANJE,
+    module: Module.COMERCIAL,
+    section: 'Crear Contrato',
+    name: "Botón 'CANJE'",
+    description: 'Crear contratos de canje (pagados con compromisos publicitarios): valor del programa, duración y condiciones escritas, sin inscripción ni cuotas',
+  },
+  {
     code: ComercialPermission.ENVIAR_PDF,
     module: Module.COMERCIAL,
     section: 'Detalle Contrato',
@@ -987,6 +994,20 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     section: 'Menú Aprobación',
     name: 'Ítem "Kids"',
     description: 'Ver la consulta de usuarios Kids (matriculados y en reserva) por campaña, curso y salón, y descargar CSV',
+  },
+  {
+    code: AprobacionPermission.CONTRATOS_CANJE_VER,
+    module: Module.APROBACION,
+    section: 'Contratos Canje',
+    name: 'Ítem "Contratos Canje"',
+    description: 'Ver la consulta de contratos de canje (valor del programa, duración, condiciones, firma y estado). Estos contratos no salen en el Centro de Aprobaciones',
+  },
+  {
+    code: AprobacionPermission.CONTRATOS_CANJE_APROBAR,
+    module: Module.APROBACION,
+    section: 'Contratos Canje',
+    name: 'Aprobar contratos de canje',
+    description: 'Aprobar un contrato de canje (titular y beneficiarios: ficha académica, acceso y bienvenida). También exigido al aprobar un canje desde la ficha',
   },
   {
     code: AprobacionPermission.LIBRO_PRODUCCION_VER,

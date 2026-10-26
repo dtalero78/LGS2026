@@ -45,10 +45,14 @@ export const PUT = handlerWithAuth(async (request, { params }, session) => {
   }
 
   const check = await query(
-    `SELECT "_id", "contrato", "aprobacion", "tipoUsuario", "primerNombre", "primerApellido"
+    `SELECT "_id", "contrato", "aprobacion", "tipoUsuario", "primerNombre", "primerApellido", "tipoContrato"
        FROM "PEOPLE" WHERE "_id" = $1`, [params.id]);
   if (check.rowCount === 0) throw new NotFoundError('Person');
   const actual = check.rows[0];
+
+  if (actual.tipoContrato === 'CANJE' && estadoFinal === 'Aprobado') {
+    throw new ValidationError('Los contratos de canje se aprueban en Aprobación › Contratos Canje.');
+  }
 
   // Un contrato YA APROBADO solo cambia de estado desde la ficha del titular
   // (Estado del Titular): ahí hay modal de advertencia, motivo obligatorio y las

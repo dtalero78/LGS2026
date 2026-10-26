@@ -8,6 +8,8 @@ import { sendWhatsAppMessage } from '@/lib/whatsapp';
 import { kidsIntake } from '@/lib/kids-intake';
 import { matricularKids } from '@/lib/kids-reserva';
 import { registrarCambioAprobacion, nombreDe, type OrigenAprobacion } from '@/lib/aprobacion-audit';
+import { requirePermission } from '@/lib/api-permissions';
+import { AprobacionPermission } from '@/types/permissions';
 
 interface KidsCredenciales { numeroId: string; nombre: string; username: string | null; password: string | null }
 interface ApproveResult {
@@ -330,10 +332,16 @@ export const POST = handlerWithAuth(async (
 
   // Get person to determine type (include inicioContrato for propagation to beneficiarios)
   const person = await queryOne(
-    `SELECT "_id", "tipoUsuario", "contrato", "aprobacion", "primerNombre", "primerApellido", "inicioContrato" FROM "PEOPLE" WHERE "_id" = $1`,
+    `SELECT "_id", "tipoUsuario", "contrato", "aprobacion", "primerNombre", "primerApellido", "inicioContrato", "tipoContrato" FROM "PEOPLE" WHERE "_id" = $1`,
     [personId]
   );
   if (!person) throw new NotFoundError('Person', personId);
+
+  // Contrato de canje: lo aprueba solo quien tiene el permiso de Contratos Canje
+  // (desde esa consulta o desde la ficha).
+  if (person.tipoContrato === 'CANJE') {
+    await requirePermission(session, AprobacionPermission.CONTRATOS_CANJE_APROBAR);
+  }
 
   // Contratos de prueba (PRB-): NADIE puede aprobarlos (tampoco SUPER_ADMIN).
   // Aprobar dispara efectos reales (WhatsApp al celular del registro,

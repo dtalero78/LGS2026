@@ -9,6 +9,8 @@ import { kidsIntake, validarSalonesDelPais } from '@/lib/kids-intake';
 import { buildKidsReservation, plataformaToCountryCode, toISODate, errorEdadCursoKids } from '@/lib/kids-mapping';
 import { normalizarTelefono } from '@/lib/telefono';
 import { CRM_LADDER_COLUMNS, CRM_LADDER_KEYS, ladderFromEnvelope } from '@/lib/crm-bridge';
+import { requirePermission } from '@/lib/api-permissions';
+import { ComercialPermission } from '@/types/permissions';
 import crypto from 'crypto';
 
 const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
@@ -123,7 +125,7 @@ async function generateContractNumber(plataforma: string, esPrueba: boolean, run
   return `${codigoPais}-${siguiente}-${anoActual}`;
 }
 
-const VALID_TIPO_PLAN = ['Contado', 'Credito', 'Colaborador', 'Empresa'] as const;
+const VALID_TIPO_PLAN = ['Contado', 'Credito', 'Colaborador', 'Empresa', 'Canje'] as const;
 type TipoPlan = typeof VALID_TIPO_PLAN[number];
 function normalizeTipoPlan(v: any): TipoPlan | null {
   if (!v) return null;
@@ -164,16 +166,38 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
     }
   }
 
-  // tipoPlan (Contado / Credito / Colaborador) — se valida y propaga a 3 tablas
+  // CANJE: contrato pagado con compromisos publicitarios (botón CANJE de Crear
+  // Contrato, permiso propio). Valor del programa informativo, sin inscripción ni
+  // cuotas, forma de pago 'Canje', duración que se digita (1 a 12 meses) y
+  // condiciones escritas a mano. Se imprime con la plantilla de canje del país.
+  const canje = financial?.canje === true;
+  let condicionesCanje: string[] = [];
+  if (canje) {
+    await requirePermission(session, ComercialPermission.CONTRATO_CANJE);
+    if (esPrueba) throw new ValidationError('Un contrato de prueba no puede ser de canje.');
+    if (financial?.modulo === true) throw new ValidationError('Un contrato CANJE no puede ser MODULO.');
+    if (!(parseMoney(financial?.totalPlan) > 0)) throw new ValidationError('Indica el valor del programa del canje.');
+    condicionesCanje = (Array.isArray(financial?.condicionesCanje) ? financial.condicionesCanje : [])
+      .map((c: any) => String(c ?? '').trim()).filter(Boolean);
+    if (!condicionesCanje.length) throw new ValidationError('Escribe al menos una condición del canje.');
+    if (condicionesCanje.length > 20) throw new ValidationError('Máximo 20 condiciones de canje.');
+    if (condicionesCanje.some(c => c.length > 300)) throw new ValidationError('Cada condición del canje admite hasta 300 caracteres.');
+    // Sin inscripción ni cuotas: nada que validar en Recaudos ni mora que calcular.
+    Object.assign(financial, { tipoPlan: 'Canje', pagoInscripcion: 0, numeroCuotas: 0, valorCuota: 0, saldo: 0, medioPago: 'Canje' });
+  }
+
+  // tipoPlan (Contado / Credito / Colaborador / Canje) — se valida y propaga a 3 tablas
   const tipoPlan = normalizeTipoPlan(financial?.tipoPlan);
   if (financial?.tipoPlan && !tipoPlan) {
     throw new ValidationError(`tipoPlan debe ser uno de: ${VALID_TIPO_PLAN.join(', ')}`);
   }
+  if (tipoPlan === 'Canje' && !canje) throw new ValidationError('El plan Canje solo se crea con el botón CANJE.');
 
-  // Vigencia del contrato nuevo: 3 a 12 meses (3 = MODULO).
+  // Vigencia del contrato nuevo: 3 a 12 meses (3 = MODULO); un CANJE, 1 a 12.
   const vigenciaNum = parseInt(String(financial?.vigencia ?? ''), 10);
-  if (!Number.isInteger(vigenciaNum) || vigenciaNum < 3 || vigenciaNum > 12) {
-    throw new ValidationError('La vigencia debe estar entre 3 y 12 meses');
+  const vigenciaMin = canje ? 1 : 3;
+  if (!Number.isInteger(vigenciaNum) || vigenciaNum < vigenciaMin || vigenciaNum > 12) {
+    throw new ValidationError(`La vigencia debe estar entre ${vigenciaMin} y 12 meses`);
   }
   // MODULO → PEOPLE.modulo (titular + beneficiarios); siempre con vigencia de 3 meses.
   const modulo = financial?.modulo === true;
@@ -266,6 +290,12 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
     const sets = keys.map((k, i) => `"${CRM_LADDER_COLUMNS[k].col}" = $${i + 2}`).join(', ');
     const vals = keys.map(k => ladder[k].trim().slice(0, CRM_LADDER_COLUMNS[k].max) || null);
     const upd = await client.query(`UPDATE "PEOPLE" SET ${sets} WHERE "_id" = $1 RETURNING *`, [titularId, ...vals]);
+    titularResult.rows[0] = upd.rows[0];
+  }
+  if (canje) {
+    const upd = await client.query(
+      `UPDATE "PEOPLE" SET "tipoContrato" = 'CANJE', "condicionesCanje" = $2::jsonb WHERE "_id" = $1 RETURNING *`,
+      [titularId, JSON.stringify(condicionesCanje)]);
     titularResult.rows[0] = upd.rows[0];
   }
   return { contrato, titularResult };
@@ -380,6 +410,13 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
        tipoPlan]
     );
     created.financiero = finResult.rows[0];
+  }
+
+  // Un CANJE no tiene inscripción: no se crea la cuota #0 (quedaría pendiente en
+  // Recaudos con valor 0). Sus beneficiarios llevan la misma marca que el titular.
+  if (canje) {
+    await query(`UPDATE "PEOPLE" SET "tipoContrato" = 'CANJE' WHERE "contrato" = $1 AND "tipoUsuario" = 'BENEFICIARIO'`, [contrato]);
+  } else if (financial && financial.totalPlan) {
 
     // 5. Crear registro inicial en PAGOS_TITULARES (cuota #0) — best effort.
     //    Cuota #0 representa el pago de inscripción realizado al firmar:

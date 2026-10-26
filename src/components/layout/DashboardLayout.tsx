@@ -95,6 +95,7 @@ const getNavigation = (userEmail: string, userRole: string) => [
       { name: 'Conversión Titular', href: '/dashboard/aprobacion/conversion-titular' },
       { name: 'Kids', href: '/dashboard/aprobacion/kids' },
       { name: 'Libro de Producción', href: '/dashboard/aprobacion/libro-produccion' },
+      { name: 'Contratos Canje', href: '/dashboard/aprobacion/contratos-canje' },
     ],
   },
   {
@@ -501,6 +502,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/dashboard/aprobacion/libro-produccion': [
       AprobacionPermission.LIBRO_PRODUCCION_VER,
     ],
+    // Aprobación → Contratos Canje (su propio permiso).
+    '/dashboard/aprobacion/contratos-canje': [
+      AprobacionPermission.CONTRATOS_CANJE_VER,
+    ],
   }
 
   // Mapeo de secciones del menú a los permisos requeridos (si el usuario tiene CUALQUIERA de estos permisos, ve la sección)
@@ -567,6 +572,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       AprobacionPermission.CONTRATOS_APROBADOS_VER,
       AprobacionPermission.KIDS_VER,
       AprobacionPermission.LIBRO_PRODUCCION_VER,
+      AprobacionPermission.CONTRATOS_CANJE_VER,
       AprobacionPermission.ACTUALIZAR,
       AprobacionPermission.EXPORTAR_CSV,
       AprobacionPermission.VER_CONTRATO,

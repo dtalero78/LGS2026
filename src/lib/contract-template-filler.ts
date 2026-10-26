@@ -202,6 +202,15 @@ export function fillContractTemplate(
         `Número de Identificación: ${titular?.numeroId || ''}`,
       ].join('\n');
 
+  /** Contrato CANJE: condiciones escritas en Crear Contrato, numeradas. */
+  let condicionesCanje: string[] = [];
+  try {
+    const raw = titular?.condicionesCanje;
+    const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (Array.isArray(arr)) condicionesCanje = arr.map((c: any) => String(c ?? '').trim()).filter(Boolean);
+  } catch { /* sin condiciones */ }
+  const condicionesCanjeText = condicionesCanje.map((c, i) => `${i + 1}. ${c}`).join('\n');
+
   // Build data map
   const data: Record<string, string> = {
     contrato: titular?.contrato || '',
@@ -255,6 +264,9 @@ export function fillContractTemplate(
     datosTitular: datosTitularText,
     referencias: referenciasText,
     nombreTitularFirma: nombreTitularFirmaText,
+    // Contrato CANJE (plantillas con tipoContract='Canje')
+    condicionesCanje: condicionesCanjeText,
+    vigencia: String(financial?.vigencia ?? titular?.vigencia ?? ''),
   };
 
   // Replace all {{key}} placeholders

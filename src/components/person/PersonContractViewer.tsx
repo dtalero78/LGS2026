@@ -58,7 +58,7 @@ export default function PersonContractViewer({ person }: Props) {
       const [contractData, templateRes, consentStatus] = await Promise.all([
         api.get(`/api/postgres/contracts/${titularId}`),
         api.get(
-          `/api/postgres/contracts/template?plataforma=${encodeURIComponent(person.plataforma || '')}`
+          `/api/postgres/contracts/template?plataforma=${encodeURIComponent(person.plataforma || '')}${(person as any).tipoContrato ? `&tipoContrato=${encodeURIComponent((person as any).tipoContrato)}` : ''}`
         ),
         api.get(`/api/consent/${titularId}/status`).catch(() => null as ConsentDisplay | null),
       ])

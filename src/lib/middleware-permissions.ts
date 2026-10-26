@@ -348,6 +348,10 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/dashboard/aprobacion/libro-produccion': [
     'APROBACION.LIBRO_PRODUCCION.VER' as Permission,
   ],
+  // Aprobación → Contratos Canje (consulta y aprobación de canjes)
+  '/dashboard/aprobacion/contratos-canje': [
+    'APROBACION.CONTRATOS_CANJE.VER' as Permission,
+  ],
 };
 
 /**

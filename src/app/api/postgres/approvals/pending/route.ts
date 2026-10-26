@@ -13,6 +13,8 @@ export const GET = handlerWithAuth(async () => {
      WHERE "tipoUsuario" = 'TITULAR'
        AND ("aprobacion" IS NULL OR "aprobacion" != 'Aprobado')
        AND COALESCE("contrato",'') NOT LIKE 'PRB-%'
+       -- Los contratos de canje se gestionan en Aprobación › Contratos Canje.
+       AND COALESCE("tipoContrato",'') <> 'CANJE'
      ORDER BY "_createdDate" DESC`
   );
 

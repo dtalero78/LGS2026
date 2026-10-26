@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
+import { usePermissions } from '@/hooks/usePermissions'
 import { ComercialPermission } from '@/types/permissions'
 import { ArrowLeftIcon, ArrowRightIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { COUNTRY_CODES } from '@/lib/country-codes'
@@ -120,6 +121,9 @@ export default function CrearContratoPage() {
 
 function CrearContratoContent() {
   const searchParams = useSearchParams();
+  // Botón CANJE: solo con permiso propio (el servidor también lo exige).
+  const { hasPermission } = usePermissions();
+  const puedeCanje = hasPermission(ComercialPermission.CONTRATO_CANJE);
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -172,14 +176,31 @@ function CrearContratoContent() {
     pagoInscripcion: 0,
     saldo: 0,
     numeroCuotas: 0,
-    tipoPlan: '' as '' | 'Contado' | 'Credito' | 'Colaborador' | 'Empresa',
+    tipoPlan: '' as '' | 'Contado' | 'Credito' | 'Colaborador' | 'Empresa' | 'Canje',
     valorCuota: 0,
     fechaPago: '',
     vigencia: '12',
     // MODULO: contrato de un módulo → vigencia fija de 3 meses (campo bloqueado).
     modulo: false,
-    medioPago: ''
+    medioPago: '',
+    // CANJE: contrato pagado con compromisos publicitarios. Valor del programa,
+    // duración (1–12 meses) y condiciones se escriben a mano; sin inscripción ni cuotas.
+    canje: false,
+    condicionesCanje: [] as string[],
   });
+
+  const activarCanje = (on: boolean) => {
+    setFinancial(f => on
+      ? { ...f, canje: true, modulo: false, tipoPlan: 'Canje', pagoInscripcion: 0, saldo: 0, numeroCuotas: 0,
+          valorCuota: 0, medioPago: 'Canje', vigencia: '', condicionesCanje: f.condicionesCanje?.length ? f.condicionesCanje : [''] }
+      : { ...f, canje: false, tipoPlan: '', medioPago: '', vigencia: '12', condicionesCanje: [] });
+  };
+  const setCondicion = (i: number, v: string) =>
+    setFinancial(f => ({ ...f, condicionesCanje: f.condicionesCanje.map((c, j) => (j === i ? v : c)) }));
+  const agregarCondicion = () =>
+    setFinancial(f => ({ ...f, condicionesCanje: [...f.condicionesCanje, ''] }));
+  const quitarCondicion = (i: number) =>
+    setFinancial(f => ({ ...f, condicionesCanje: f.condicionesCanje.length > 1 ? f.condicionesCanje.filter((_, j) => j !== i) : [''] }));
 
   // Escalera comercial firmada que trae el enlace v2 del CRM (fe…ori + ts + token).
   // Se reenvía tal cual al crear: el servidor verifica la firma y la guarda en el
@@ -295,7 +316,15 @@ function CrearContratoContent() {
       if (draft.financial) {
         // Borradores previos a MODULO: vigencia vacía o fuera de 3–12 → 12.
         const v = Number(draft.financial.vigencia)
-        setFinancial({ ...draft.financial, vigencia: v >= 3 && v <= 12 ? String(v) : '12', modulo: !!draft.financial.modulo })
+        const canje = draft.financial.canje === true
+        setFinancial({
+          ...draft.financial,
+          // Un CANJE conserva la duración digitada (1–12, puede estar vacía todavía).
+          vigencia: canje ? String(draft.financial.vigencia ?? '') : (v >= 3 && v <= 12 ? String(v) : '12'),
+          modulo: !!draft.financial.modulo,
+          canje,
+          condicionesCanje: Array.isArray(draft.financial.condicionesCanje) ? draft.financial.condicionesCanje : [],
+        })
       }
       if (draft.beneficiarios) setBeneficiarios(draft.beneficiarios)
       if (draft.titularBenefRespuesta === 'SI' || draft.titularBenefRespuesta === 'NO') {
@@ -512,6 +541,12 @@ function CrearContratoContent() {
                titular.parentezcoRefDos !== '' &&
                titular.telRefDos !== '';
       case 6:
+        if (financial.canje) {
+          // CANJE: valor del programa, duración 1–12 y al menos una condición escrita.
+          return financial.totalPlan > 0 &&
+                 Number(financial.vigencia) >= 1 && Number(financial.vigencia) <= 12 &&
+                 financial.condicionesCanje.some(c => c.trim() !== '');
+        }
         return financial.totalPlan > 0 &&
                financial.pagoInscripcion >= 0 &&
                financial.fechaPago !== '' &&
@@ -1684,7 +1719,94 @@ function CrearContratoContent() {
           {/* Step 6: Información financiera */}
           {currentStep === 6 && (
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold mb-4">Información Financiera</h2>
+              <div className="flex items-center justify-between mb-4 gap-3">
+                <h2 className="text-xl font-semibold">{financial.canje ? 'Contrato de Canje' : 'Información Financiera'}</h2>
+                {puedeCanje && (
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={!!financial.canje}
+                    disabled={esContratoPrueba}
+                    title={esContratoPrueba ? 'Un contrato de prueba no puede ser de canje' : 'Contrato pagado con compromisos publicitarios'}
+                    onClick={() => activarCanje(!financial.canje)}
+                    className="inline-flex items-center gap-2 text-xs font-semibold text-gray-700 disabled:opacity-40"
+                  >
+                    <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${financial.canje ? 'bg-fuchsia-600' : 'bg-gray-300'}`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${financial.canje ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                    </span>
+                    CANJE
+                  </button>
+                )}
+              </div>
+              {financial.canje ? (
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600 bg-fuchsia-50 border border-fuchsia-200 rounded-md px-3 py-2">
+                    El programa se paga con compromisos publicitarios: <b>sin inscripción ni cuotas</b>. Forma de pago: <b>Canje</b>.
+                    Se aprueba en <b>Aprobación › Contratos Canje</b>.
+                  </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="valorCanje" className="block text-sm font-medium text-gray-700 mb-1">Valor del programa *</label>
+                      <input
+                        id="valorCanje"
+                        type="text"
+                        value={financial.totalPlan ? formatNumber(financial.totalPlan) : ''}
+                        onChange={(e) => setFinancial({ ...financial, totalPlan: Number(e.target.value.replace(/\D/g, '')) || 0 })}
+                        placeholder="Valor del programa entregado en canje"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="duracionCanje" className="block text-sm font-medium text-gray-700 mb-1">
+                        Duración * <span className="text-xs text-gray-400">(meses, 1–12)</span>
+                      </label>
+                      <input
+                        id="duracionCanje"
+                        type="text"
+                        inputMode="numeric"
+                        value={financial.vigencia}
+                        onChange={(e) => setFinancial({ ...financial, vigencia: e.target.value.replace(/[^0-9]/g, '').slice(0, 2) })}
+                        onBlur={(e) => {
+                          const n = parseInt(e.target.value, 10)
+                          if (!isNaN(n) && n > 12) setFinancial({ ...financial, vigencia: '12' })
+                          if (!isNaN(n) && n < 1) setFinancial({ ...financial, vigencia: '' })
+                        }}
+                        placeholder="Meses"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="block text-sm font-medium text-gray-700">Condiciones del canje *</span>
+                      <button type="button" onClick={agregarCondicion}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-fuchsia-700 hover:text-fuchsia-900">
+                        <PlusIcon className="h-4 w-4" /> Agregar condición
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {financial.condicionesCanje.map((c, i) => (
+                        <div key={i} className="flex items-start gap-2">
+                          <span className="mt-2 w-6 text-right text-sm font-semibold text-gray-500">{i + 1}.</span>
+                          <textarea
+                            aria-label={`Condición ${i + 1}`}
+                            value={c}
+                            maxLength={300}
+                            rows={2}
+                            onChange={(e) => setCondicion(i, e.target.value)}
+                            placeholder="Escribe la condición"
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                          />
+                          <button type="button" onClick={() => quitarCondicion(i)} title="Quitar condición"
+                            className="mt-2 text-gray-400 hover:text-red-600">
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1850,6 +1972,7 @@ function CrearContratoContent() {
                   </select>
                 </div>
               </div>
+              )}
             </div>
           )}
 

@@ -393,7 +393,7 @@ export default function ContratoDetailPage() {
       setLoadingTemplate(true)
       setShowContractModal(true)
       const data = await api.get(
-        `/api/postgres/contracts/template?plataforma=${encodeURIComponent(titular.plataforma)}`
+        `/api/postgres/contracts/template?plataforma=${encodeURIComponent(titular.plataforma)}${(titular as any).tipoContrato ? `&tipoContrato=${encodeURIComponent((titular as any).tipoContrato)}` : ''}`
       )
       templateCacheRef.current = data.template
       const filled = fillContractTemplate(data.template, titular, beneficiarios, financial, consentStatus || undefined, asesorInfo)

@@ -4,6 +4,7 @@ import { NotFoundError } from '@/lib/errors';
 import { queryOne, queryMany } from '@/lib/postgres';
 import { getAsesorInfo } from '@/lib/asesor';
 import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
+import { buscarPlantillaContrato } from '@/lib/contract-template';
 
 export const GET = handler(async (_request, { params }) => {
   const titularId = params.id;
@@ -16,7 +17,8 @@ export const GET = handler(async (_request, { params }) => {
             "referenciaUno", "parentezcoRefUno", "telefonoRefUno",
             "referenciaDos", "parentezcoRefDos", "telefonoRefDos",
             "observacionesContrato", "consentimientoDeclarativo", "hashConsentimiento",
-            "medioPago", "ingresos", "empresa", "cargo"
+            "medioPago", "ingresos", "empresa", "cargo",
+            "tipoContrato", "condicionesCanje", "vigencia"
      FROM "PEOPLE" WHERE "_id" = $1`,
     [titularId]
   );
@@ -53,17 +55,8 @@ export const GET = handler(async (_request, { params }) => {
   // Load contract template
   let template: string | null = null;
   if (titular.plataforma) {
-    let tplRow = await queryOne(
-      `SELECT "template" FROM "ContractTemplates" WHERE "plataforma" = $1`,
-      [titular.plataforma]
-    );
-    if (!tplRow) {
-      tplRow = await queryOne(
-        `SELECT "template" FROM "ContractTemplates" WHERE LOWER("plataforma") = LOWER($1)`,
-        [titular.plataforma]
-      );
-    }
-    template = tplRow?.template || null;
+    // Por país y tipo de contrato (estándar o canje) — lib/contract-template.
+    template = await buscarPlantillaContrato(titular.plataforma, (titular as any).tipoContrato);
   }
 
   // Resolve asesor info (used at end of consent block in template).

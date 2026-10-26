@@ -7,6 +7,7 @@ import { esContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { getAsesorInfo } from '@/lib/asesor';
 import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
 import { archivarContratoEnDrive, buildContractFilename } from '@/lib/contract-drive';
+import { buscarPlantillaContrato } from '@/lib/contract-template';
 
 const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
 
@@ -44,16 +45,9 @@ export async function generarYArchivarContratoPdf(titularId: string) {
     : null;
 
   // Template del contrato por plataforma (con fallback case-insensitive)
-  let templateRow = await queryOne<{ template: string }>(
-    `SELECT "template" FROM "ContractTemplates" WHERE "plataforma" = $1`,
-    [titular.plataforma]
-  );
-  if (!templateRow) {
-    templateRow = await queryOne<{ template: string }>(
-      `SELECT "template" FROM "ContractTemplates" WHERE LOWER("plataforma") = LOWER($1)`,
-      [titular.plataforma]
-    );
-  }
+  // Por país y tipo de contrato (estándar o canje) — lib/contract-template.
+  const tplTexto = await buscarPlantillaContrato(titular.plataforma, titular.tipoContrato);
+  const templateRow = tplTexto ? { template: tplTexto } : null;
   if (!templateRow?.template) throw new NotFoundError('ContractTemplate', titular.plataforma);
 
   // Datos de consentimiento (si existen)
