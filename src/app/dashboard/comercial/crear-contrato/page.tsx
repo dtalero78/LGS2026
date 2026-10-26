@@ -484,7 +484,9 @@ function CrearContratoContent() {
   // En modo Empresa los pasos 4 y 5 no existen (p. ej. al retomar un borrador).
   useEffect(() => {
     if (esEmpresa && (currentStep === 4 || currentStep === 5)) setCurrentStep(6);
-  }, [esEmpresa, currentStep]);
+    // Canje: sin Referencias (paso 5).
+    else if (financial.canje && currentStep === 5) setCurrentStep(6);
+  }, [esEmpresa, financial.canje, currentStep]);
 
   // Validate current step
   // Email válido: contiene @ con texto antes/después + dominio con punto, y SIN
@@ -564,7 +566,8 @@ function CrearContratoContent() {
     }
     if (currentStep < 7) {
       // En modo Empresa se omiten los pasos 4 (Adicional) y 5 (Referencias): salta 3 → 6.
-      const next = (esEmpresa && currentStep === 3) ? 6 : currentStep + 1;
+      // En canje se omite el paso 5 (Referencias): salta 4 → 6.
+      const next = (esEmpresa && currentStep === 3) ? 6 : (financial.canje && currentStep === 4) ? 6 : currentStep + 1;
       setCurrentStep(next);
     }
   };
@@ -729,7 +732,7 @@ function CrearContratoContent() {
     setError('');
     if (currentStep > 1) {
       // En modo Empresa los pasos 4 y 5 están omitidos: 6 → 3.
-      const prev = (esEmpresa && currentStep === 6) ? 3 : currentStep - 1;
+      const prev = (esEmpresa && currentStep === 6) ? 3 : (financial.canje && currentStep === 6) ? 4 : currentStep - 1;
       setCurrentStep(prev);
     }
   };
@@ -976,6 +979,28 @@ function CrearContratoContent() {
             <h1 className="text-3xl font-bold text-gray-900">Crear Contrato</h1>
             <p className="mt-2 text-gray-600">Complete el formulario para crear un nuevo contrato</p>
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+          {/* Contrato de CANJE — fucsia; solo con permiso. Excluye al de prueba. */}
+          {puedeCanje && (
+            <label
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-colors select-none ${
+                esContratoPrueba ? 'opacity-40 cursor-not-allowed border-fuchsia-200 text-fuchsia-400 bg-white'
+                : financial.canje
+                  ? 'bg-fuchsia-100 border-fuchsia-500 text-fuchsia-800 shadow-sm cursor-pointer'
+                  : 'bg-white border-fuchsia-300 text-fuchsia-700 hover:bg-fuchsia-50 cursor-pointer'
+              }`}
+              title={esContratoPrueba ? 'Un contrato de prueba no puede ser de canje' : 'Contrato pagado con compromisos publicitarios: sin inscripción, cuotas ni referencias'}
+            >
+              <input
+                type="checkbox"
+                checked={!!financial.canje}
+                disabled={esContratoPrueba}
+                onChange={e => activarCanje(e.target.checked)}
+                className="h-4 w-4 rounded border-fuchsia-400 text-fuchsia-600 focus:ring-fuchsia-500"
+              />
+              <span className="text-sm font-semibold">🤝 Contrato de canje</span>
+            </label>
+          )}
           {/* Checkbox de contrato de prueba — naranja, prominente */}
           <label
             className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 cursor-pointer transition-colors select-none ${
@@ -988,12 +1013,20 @@ function CrearContratoContent() {
             <input
               type="checkbox"
               checked={esContratoPrueba}
+              disabled={!!financial.canje}
               onChange={e => setEsContratoPrueba(e.target.checked)}
               className="h-4 w-4 rounded border-orange-400 text-orange-600 focus:ring-orange-500"
             />
             <span className="text-sm font-semibold">🧪 Contrato de prueba</span>
           </label>
+          </div>
         </div>
+
+        {financial.canje && (
+          <div className="mb-4 bg-fuchsia-50 border-l-4 border-fuchsia-500 rounded-lg p-3 text-sm text-fuchsia-800">
+            <strong>Contrato de canje.</strong> Se paga con compromisos publicitarios: sin inscripción, cuotas ni referencias. En el paso Financiero se escriben el valor del programa, la duración y las condiciones. Se aprueba en <em>Aprobación › Contratos Canje</em>.
+          </div>
+        )}
 
         {/* Banner persistente cuando está marcado, para que el comercial no lo olvide */}
         {esContratoPrueba && (
@@ -1040,7 +1073,8 @@ function CrearContratoContent() {
           <div className="flex justify-between">
             {[1, 2, 3, 4, 5, 6, 7].map((step) => {
               // Empresa: Adicional (4) y Referencias (5) no aplican.
-              const skip4 = esEmpresa && (step === 4 || step === 5);
+              // Canje: Referencias (5) no aplica.
+              const skip4 = (esEmpresa && (step === 4 || step === 5)) || (!!financial.canje && step === 5);
               return (
               <div
                 key={step}
@@ -1721,28 +1755,11 @@ function CrearContratoContent() {
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-4 gap-3">
                 <h2 className="text-xl font-semibold">{financial.canje ? 'Contrato de Canje' : 'Información Financiera'}</h2>
-                {puedeCanje && (
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={!!financial.canje}
-                    disabled={esContratoPrueba}
-                    title={esContratoPrueba ? 'Un contrato de prueba no puede ser de canje' : 'Contrato pagado con compromisos publicitarios'}
-                    onClick={() => activarCanje(!financial.canje)}
-                    className="inline-flex items-center gap-2 text-xs font-semibold text-gray-700 disabled:opacity-40"
-                  >
-                    <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${financial.canje ? 'bg-fuchsia-600' : 'bg-gray-300'}`}>
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${financial.canje ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                    </span>
-                    CANJE
-                  </button>
-                )}
               </div>
               {financial.canje ? (
                 <div className="space-y-4">
                   <p className="text-sm text-gray-600 bg-fuchsia-50 border border-fuchsia-200 rounded-md px-3 py-2">
-                    El programa se paga con compromisos publicitarios: <b>sin inscripción ni cuotas</b>. Forma de pago: <b>Canje</b>.
-                    Se aprueba en <b>Aprobación › Contratos Canje</b>.
+                    Forma de pago: <b>Canje</b> (sin inscripción ni cuotas). Escribe el valor del programa, la duración y las condiciones que quedarán en el contrato.
                   </p>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
