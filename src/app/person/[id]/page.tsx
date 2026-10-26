@@ -133,6 +133,9 @@ async function PersonContent({ personId, initialTab }: { personId: string; initi
                   {personData.person.modulo === true && (
                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800" title="Contrato MODULO: vigencia fija de 3 meses">MODULO</span>
                   )}
+                  {personData.person.tipoContrato === 'CANJE' && (
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-fuchsia-100 text-fuchsia-800" title="Contrato de canje: pagado con compromisos publicitarios">🤝 CANJE</span>
+                  )}
                   <EstadoBadge estado={personData.person.estado} prefix="Estado: " />
                 </div>
               </div>

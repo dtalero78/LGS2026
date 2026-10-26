@@ -37,7 +37,7 @@ export const GET = handlerWithStaffAuth(async (_req, { params }, session) => {
             p."numeroId", p."contrato", p."plataforma", p."celular", p."email", p."domicilio",
             p."ciudad", p."fechaNacimiento", p."aprobacion", p."estado", p."hashConsentimiento",
             p."asesorAsignado", p."asesor", p."inicioContrato", p."fechaContrato", p."finalContrato",
-            p."vigencia", p."_createdDate", p."fechaIngreso"
+            p."vigencia", p."_createdDate", p."fechaIngreso", p."tipoContrato"
        FROM "PEOPLE" p WHERE p."_id" = $1 AND p."tipoUsuario" = 'TITULAR' LIMIT 1`,
     [id]
   );

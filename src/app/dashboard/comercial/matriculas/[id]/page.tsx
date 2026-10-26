@@ -15,6 +15,7 @@ interface Titular {
   aprobacion?: string; estado?: string; estadoMatricula?: string
   asesorAsignado?: string
   inicioContrato?: string | Date; finalContrato?: string | Date; vigencia?: string | number
+  tipoContrato?: string | null
 }
 interface Beneficiario {
   _id: string
@@ -98,6 +99,10 @@ export default function MatriculaDetallePage() {
                       <div className="text-xs uppercase tracking-wide opacity-80">Titular</div>
                       <div className="text-lg font-bold leading-tight">{nombre(titular)}</div>
                       <div className="text-xs opacity-90">ID {titular.numeroId} · {titular.contrato}</div>
+                      {titular.tipoContrato === 'CANJE' && (
+                        <span className="mt-1 inline-flex items-center bg-fuchsia-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full ring-1 ring-white/40"
+                          title="Contrato de canje: pagado con compromisos publicitarios">🤝 CANJE</span>
+                      )}
                     </div>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-semibold ${estadoBadge(titular.estadoMatricula)}`} title="Estado de la matrícula (aprobación)">
@@ -149,11 +154,17 @@ export default function MatriculaDetallePage() {
                               <div className="font-bold leading-tight truncate">{nombre(b)}</div>
                               <div className="text-[11px] opacity-90">ID {b.numeroId}</div>
                             </div>
-                            {b.kids && (
-                              <span className="ml-auto shrink-0 inline-flex items-center bg-fuchsia-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full ring-1 ring-white/40">
-                                🧒 KIDS
-                              </span>
-                            )}
+                            <div className="ml-auto shrink-0 flex flex-col items-end gap-1">
+                              {titular?.tipoContrato === 'CANJE' && (
+                                <span className="inline-flex items-center bg-fuchsia-700 text-white text-[10px] font-bold px-2 py-0.5 rounded-full ring-1 ring-white/40"
+                                  title="Contrato de canje: pagado con compromisos publicitarios">🤝 CANJE</span>
+                              )}
+                              {b.kids && (
+                                <span className="inline-flex items-center bg-fuchsia-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full ring-1 ring-white/40">
+                                  🧒 KIDS
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <div className="p-4 text-sm space-y-1.5 flex-1">
                             <Field label="Celular" value={b.celular || '—'} />

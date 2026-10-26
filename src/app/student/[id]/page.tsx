@@ -13,6 +13,7 @@ import { formatEtapaNivelStep } from '@/lib/etapas'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-postgres'
 import { filtroAplica, filtrarClasesPorAdvisorChile } from '@/lib/filtro-advisors-chile'
+import { queryOne } from '@/lib/postgres'
 
 // Force dynamic rendering to prevent page caching
 export const dynamic = 'force-dynamic'
@@ -72,6 +73,13 @@ async function StudentContent({ studentId }: { studentId: string }) {
 
     const suspendida = isAdminSuspended(student)
 
+    // Contrato de canje (PEOPLE.tipoContrato del titular): distintivo en el encabezado.
+    const esCanje = student.contrato
+      ? !!(await queryOne(
+          `SELECT 1 FROM "PEOPLE" WHERE "contrato" = $1 AND "tipoUsuario" = 'TITULAR' AND "tipoContrato" = 'CANJE' LIMIT 1`,
+          [student.contrato]).catch(() => null))
+      : false
+
     return (
       <div className="space-y-6">
         {/* Student Header */}
@@ -96,6 +104,11 @@ async function StudentContent({ studentId }: { studentId: string }) {
                 <span className="badge badge-info">
                   BENEFICIARIO
                 </span>
+                {esCanje && (
+                  <span className="badge bg-fuchsia-100 text-fuchsia-800" title="Contrato de canje: pagado con compromisos publicitarios">
+                    🤝 CANJE
+                  </span>
+                )}
                 {!student.existeEnAcademica && (
                   <span className="badge bg-red-100 text-red-700">
                     SIN REGISTRO ACADÉMICO
