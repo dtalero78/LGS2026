@@ -28,6 +28,7 @@ import {
 import { fillContractTemplate, type ConsentDisplay } from '@/lib/contract-template-filler'
 import { isContratoPrueba } from '@/components/common/ContratoPruebaBadge'
 import DocumentosReciboModal from '@/components/common/DocumentosReciboModal'
+import CondicionesCanjeModal from '@/components/comercial/CondicionesCanjeModal'
 
 // ── Field definitions ──
 
@@ -258,7 +259,7 @@ export default function ContratoDetailPage() {
   const [saving, setSaving] = useState(false)
   const [editing, setEditing] = useState(false)
   const [error, setError] = useState('')
-  const { isRole } = usePermissions()
+  const { isRole, hasPermission } = usePermissions()
 
   // Data
   const [titular, setTitular] = useState<any>(null)
@@ -293,6 +294,8 @@ export default function ContratoDetailPage() {
   // Documentación + Recibo de inscripción — modal unificado compartido
   // (mismo componente que /person/[id] y Matrículas)
   const [showDocReciboModal, setShowDocReciboModal] = useState(false)
+  // Contrato de CANJE: ver / corregir sus condiciones (modal propio).
+  const [showCondicionesCanje, setShowCondicionesCanje] = useState(false)
 
   // Consent status
   const [consentStatus, setConsentStatus] = useState<ConsentDisplay | null>(null)
@@ -666,6 +669,15 @@ export default function ContratoDetailPage() {
                 <PaperClipIcon className="h-4 w-4" />
                 Documentación y recibo
               </button>
+              {titular.tipoContrato === 'CANJE' && (
+                <button
+                  onClick={() => setShowCondicionesCanje(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-fuchsia-600 text-white rounded-md hover:bg-fuchsia-700 text-sm font-medium"
+                  title="Ver y corregir las condiciones del contrato de canje"
+                >
+                  🤝 Condiciones del canje
+                </button>
+              )}
               {!editing ? (
                 puedeEditarContrato ? (
                   <button
@@ -1086,6 +1098,18 @@ export default function ContratoDetailPage() {
           personId={titularId}
           subtitulo={`${fullName(titular)} · Contrato ${titular.contrato || '—'}`}
           onClose={() => setShowDocReciboModal(false)}
+        />
+
+        {/* ── Condiciones del canje (solo contratos CANJE) ── */}
+        <CondicionesCanjeModal
+          open={showCondicionesCanje}
+          titularId={titularId}
+          subtitulo={`${fullName(titular)} · Contrato ${titular.contrato || '—'}`}
+          condiciones={titular.condicionesCanje}
+          puedeEditar={hasPermission(ComercialPermission.CONTRATO_CANJE) && puedeEditarContrato}
+          firmado={!!titular.hashConsentimiento}
+          onClose={() => setShowCondicionesCanje(false)}
+          onSaved={(c) => setTitular((t: any) => ({ ...t, condicionesCanje: c }))}
         />
       </PermissionGuard>
 
