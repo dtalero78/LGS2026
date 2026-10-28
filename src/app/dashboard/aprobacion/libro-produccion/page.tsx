@@ -13,6 +13,7 @@ import toast from 'react-hot-toast'
 import {
   ArrowPathIcon, ArrowDownTrayIcon, ChevronDownIcon, ChevronRightIcon, ChevronLeftIcon, MagnifyingGlassIcon, FunnelIcon,
   XMarkIcon, ArrowTopRightOnSquareIcon, CalendarDaysIcon, TableCellsIcon, RectangleStackIcon,
+  ArrowsPointingOutIcon, ArrowUturnLeftIcon,
 } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
@@ -133,16 +134,43 @@ export default function LibroProduccionPage() {
   const puedeVigencias = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_VIGENCIAS)
   const puedePlanes = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_PLANES)
   const [tab, setTab] = useState<'libro' | 'vigencias' | 'planes'>('libro')
+  // Pantalla completa: la hoja cubre todo (sin sidebar ni encabezado) y, si el
+  // navegador lo permite, también entra en su modo de pantalla completa.
+  const [completa, setCompleta] = useState(false)
+  const abrirCompleta = () => {
+    setCompleta(true)
+    document.documentElement.requestFullscreen?.().catch(() => { /* la capa basta */ })
+  }
+  const volver = () => {
+    setCompleta(false)
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
+  }
+  useEffect(() => {
+    if (!completa) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [completa])
 
+  // La misma hoja pasa a cubrir la pantalla (no se vuelve a montar: conserva datos y filtros).
   return (
     <DashboardLayout>
       <PermissionGuard permission={AprobacionPermission.LIBRO_PRODUCCION_VER} showDefaultMessage>
-        <div className="space-y-4">
+        <div className={completa ? 'fixed inset-0 z-[60] bg-gray-50 overflow-auto p-4 space-y-3' : 'space-y-4'}>
+          {completa ? (
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="text-xl font-bold text-gray-900">Libro de Producción</h1>
+            <button type="button" onClick={volver}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700">
+              <ArrowUturnLeftIcon className="h-4 w-4" /> Volver
+            </button>
+          </div>
+          ) : (<>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Libro de Producción</h1>
             <p className="text-sm text-gray-500">Contratos por vigencia comercial, con sus beneficiarios. Fuente: la plataforma (estado, pagos y plan en vivo).</p>
           </div>
-          <div className="flex gap-2 border-b border-gray-200">
+          <div className="flex items-end gap-2 border-b border-gray-200">
             {([['libro', 'Libro', TableCellsIcon],
               ...(puedeVigencias ? [['vigencias', 'Vigencias', CalendarDaysIcon]] : []),
               ...(puedePlanes ? [['planes', 'Planes', RectangleStackIcon]] : [])] as const).map(([k, label, Icon]: any) => (
@@ -151,8 +179,15 @@ export default function LibroProduccionPage() {
                 <Icon className="h-4 w-4" /> {label}
               </button>
             ))}
+            {tab === 'libro' && (
+              <button type="button" onClick={abrirCompleta} title="Ver el libro en pantalla completa, sin el menú lateral"
+                className="ml-auto mb-1 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100">
+                <ArrowsPointingOutIcon className="h-4 w-4" /> Pantalla completa
+              </button>
+            )}
           </div>
-          {tab === 'libro' ? <Libro /> : tab === 'vigencias' ? <Vigencias /> : <PlanesTiposPanel />}
+          </>)}
+          {tab === 'libro' ? <Libro completa={completa} /> : tab === 'vigencias' ? <Vigencias /> : <PlanesTiposPanel />}
         </div>
       </PermissionGuard>
     </DashboardLayout>
@@ -160,7 +195,7 @@ export default function LibroProduccionPage() {
 }
 
 // ── Hoja ────────────────────────────────────────────────────────────────────────
-function Libro() {
+function Libro({ completa = false }: { completa?: boolean }) {
   const { hasPermission } = usePermissions()
   const puedeExportar = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_EXPORTAR)
   const [vigencias, setVigencias] = useState<Vigencia[]>([])
@@ -333,7 +368,7 @@ function Libro() {
       ) : !vigencias.length ? (
         <p className="p-10 text-center text-sm text-gray-500">No hay vigencias configuradas. Genere el calendario en la pestaña <b>Vigencias</b>.</p>
       ) : (
-        <div className="overflow-auto max-h-[70vh] rounded-lg border border-gray-300 bg-white">
+        <div className={`overflow-auto rounded-lg border border-gray-300 bg-white ${completa ? 'max-h-[calc(100vh-14rem)]' : 'max-h-[70vh]'}`}>
           <table className="border-separate border-spacing-0 text-xs" style={{ width: COLS.reduce((s, c) => s + c.w, 0) }}>
             <thead>
               <tr>
