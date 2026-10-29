@@ -49,14 +49,16 @@ interface Registro {
 
 const TODOS = '__todos__'
 const SIN_FIRMAR = 'Sin firmar' // estado que asigna el servicio al titular sin firma ni aprobación
+const ESTADO_LISTO = 'Firma, Documentos, pendiente aprobación' // firmado + "Dejar listo para aprobación"
 const fmtF = (v?: string | null) => { const [y, m, d] = String(v || '').slice(0, 10).split('-'); return y && m && d ? `${d}/${m}/${y}` : '—' }
 const fmtFH = (v?: string | null) => v ? `${fmtF(v)} ${v.slice(11, 16)}` : '—'
 const fmtM = (n: number | null) => n === null ? '—' : `$${n.toLocaleString('es-CO', { maximumFractionDigits: 2 })}`
-/** Color del estado: Aprobado verde · Pendiente aprobación ámbar · Sin firmar gris · anulados/retractados rojo. */
+/** Color del estado: Aprobado verde · Pendiente aprobación ámbar · listo para aprobación celeste · Sin firmar gris · anulados/retractados rojo. */
 const estadoCls = (a: string | null) => {
   const s = String(a || '').toLowerCase()
   if (s.startsWith('aprobad')) return 'bg-green-100 text-green-800'
   if (s.startsWith('pendiente')) return 'bg-amber-100 text-amber-800'
+  if (s === ESTADO_LISTO.toLowerCase()) return 'bg-sky-100 text-sky-800'
   if (s === 'sin firmar') return 'bg-slate-200 text-slate-700'
   return 'bg-red-100 text-red-800'
 }
@@ -204,7 +206,7 @@ function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; si
   const puedeExportar = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_EXPORTAR)
   // Casilla de la celda Item: Depurar (Libro, firmado sin aprobar) o Ratificar por correo (Por resolver).
   const puedeAccion = hasPermission(sinFirmar ? AprobacionPermission.LIBRO_PRODUCCION_RATIFICAR : AprobacionPermission.LIBRO_PRODUCCION_DEPURAR)
-  const conCasilla = (r: Registro) => puedeAccion && (sinFirmar || r.aprobacion === 'Pendiente aprobación')
+  const conCasilla = (r: Registro) => puedeAccion && (sinFirmar || r.aprobacion === 'Pendiente aprobación' || r.aprobacion === ESTADO_LISTO)
   const [accion, setAccion] = useState<string | null>(null)
   const [vigencias, setVigencias] = useState<Vigencia[]>([])
   const [vigencia, setVigencia] = useState<Vigencia | null>(null)

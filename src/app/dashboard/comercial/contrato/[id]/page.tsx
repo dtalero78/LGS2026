@@ -24,11 +24,13 @@ import {
   CalendarIcon,
   ShieldCheckIcon,
   PaperClipIcon,
+  CheckBadgeIcon,
 } from '@heroicons/react/24/outline'
 import { fillContractTemplate, type ConsentDisplay } from '@/lib/contract-template-filler'
 import { isContratoPrueba } from '@/components/common/ContratoPruebaBadge'
 import DocumentosReciboModal from '@/components/common/DocumentosReciboModal'
 import CondicionesCanjeModal from '@/components/comercial/CondicionesCanjeModal'
+import ListoAprobacionModal from '@/components/comercial/ListoAprobacionModal'
 
 // ── Field definitions ──
 
@@ -294,6 +296,7 @@ export default function ContratoDetailPage() {
   // Documentación + Recibo de inscripción — modal unificado compartido
   // (mismo componente que /person/[id] y Matrículas)
   const [showDocReciboModal, setShowDocReciboModal] = useState(false)
+  const [showListoModal, setShowListoModal] = useState(false)
   // Contrato de CANJE: ver / corregir sus condiciones (modal propio).
   const [showCondicionesCanje, setShowCondicionesCanje] = useState(false)
 
@@ -656,6 +659,7 @@ export default function ContratoDetailPage() {
               <button
                 onClick={openContractPreview}
                 disabled={loadingTemplate}
+                title="Ver contrato, proceso de finalización con el titular, envío para firma y envío de PDF"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 text-sm font-medium disabled:opacity-50"
               >
                 <EyeIcon className="h-4 w-4" />
@@ -664,7 +668,7 @@ export default function ContratoDetailPage() {
               <button
                 onClick={() => setShowDocReciboModal(true)}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-md hover:bg-emerald-200 text-sm font-medium"
-                title="Documentación del contrato y recibo de inscripción"
+                title="Subir documentos y recibo de pago de la inscripción"
               >
                 <PaperClipIcon className="h-4 w-4" />
                 Documentación y recibo
@@ -682,6 +686,7 @@ export default function ContratoDetailPage() {
                 puedeEditarContrato ? (
                   <button
                     onClick={startEditing}
+                    title="Opción para corregir datos del contrato, con excepción de la información financiera"
                     className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 text-sm font-medium"
                   >
                     <PencilIcon className="h-4 w-4" />
@@ -716,12 +721,34 @@ export default function ContratoDetailPage() {
                   </button>
                 </>
               )}
+              {titular.listoAprobacion === true ? (
+                <span
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-sky-100 text-sky-800 border border-sky-300 rounded-md text-sm font-medium"
+                  title={`Marcado por ${titular.listoAprobacionPor || '—'}${titular.listoAprobacionEn ? ' el ' + new Date(titular.listoAprobacionEn).toLocaleString('es-CO') : ''}`}
+                >
+                  <CheckBadgeIcon className="h-4 w-4" />
+                  Listo para aprobación
+                </span>
+              ) : !['aprobado', 'aprobada'].includes(String(titular.aprobacion || '').trim().toLowerCase()) && !isContratoPrueba(titular.contrato) && (
+                <PermissionGuard permission={ComercialPermission.DEJAR_LISTO_APROBACION}>
+                  <button
+                    type="button"
+                    onClick={() => setShowListoModal(true)}
+                    title="Confirmar que el contrato ya está firmado, con PDF generado, documentos y recibo subidos e información verificada"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-medium"
+                  >
+                    <CheckBadgeIcon className="h-4 w-4" />
+                    Dejar listo para aprobación
+                  </button>
+                </PermissionGuard>
+              )}
               {!consentStatus?.hasConsent && !isContratoPrueba(titular.contrato) && (
                 <PermissionGuard permission={ComercialPermission.APROBACION_AUTONOMA}>
                   <button
                     type="button"
                     onClick={autoApproveConsent}
                     disabled={approvingConsent}
+                    title="Opción de Superadmin"
                     className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium disabled:opacity-50"
                   >
                     <ShieldCheckIcon className="h-4 w-4" />
@@ -1091,6 +1118,16 @@ export default function ContratoDetailPage() {
             </div>
           )}
         </div>
+
+        {showListoModal && (
+          <ListoAprobacionModal
+            titularId={titularId}
+            contrato={titular.contrato}
+            firmado={!!consentStatus?.hasConsent}
+            onClose={() => setShowListoModal(false)}
+            onDone={(r) => { setShowListoModal(false); setTitular((t: any) => ({ ...t, ...r })) }}
+          />
+        )}
 
         {/* ── Documentación y recibo — modal unificado compartido ── */}
         <DocumentosReciboModal

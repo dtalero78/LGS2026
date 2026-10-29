@@ -908,6 +908,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Crear contratos de canje (pagados con compromisos publicitarios): valor del programa, duración y condiciones escritas, sin inscripción ni cuotas',
   },
   {
+    code: ComercialPermission.DEJAR_LISTO_APROBACION,
+    module: Module.COMERCIAL,
+    section: 'Crear Contrato',
+    name: "Botón 'Dejar listo para aprobación'",
+    description: 'En la pantalla del contrato, confirmar que ya está firmado, con PDF generado, documentos y recibo subidos e información verificada; el Libro de Producción lo muestra como "Firma, Documentos, pendiente aprobación"',
+  },
+  {
     code: ComercialPermission.ENVIAR_PDF,
     module: Module.COMERCIAL,
     section: 'Detalle Contrato',

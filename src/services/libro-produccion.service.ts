@@ -42,11 +42,14 @@ const iso = (d: any): string | null => (d ? new Date(d).toISOString() : null);
  * Estado del contrato en el libro = "Estado Actual" de la ficha (PEOPLE.aprobacion) cuando
  * tiene un valor real; sin estado (vacío o "Pendiente") se distingue si ya firmó:
  * firmado → "Pendiente aprobación", sin firma → "Sin firmar" (término del Centro de Aprobaciones).
+ * Firmado y marcado con "Dejar listo para aprobación" (PEOPLE.listoAprobacion) → ESTADO_LISTO.
  */
-function estadoLibro(aprobacion: string | null, firmado: boolean): string {
+export const ESTADO_LISTO = 'Firma, Documentos, pendiente aprobación';
+function estadoLibro(aprobacion: string | null, firmado: boolean, listo = false): string {
   const a = String(aprobacion || '').trim();
   if (a && a.toLowerCase() !== 'pendiente') return a;
-  return firmado ? 'Pendiente aprobación' : 'Sin firmar';
+  if (!firmado) return 'Sin firmar';
+  return listo ? ESTADO_LISTO : 'Pendiente aprobación';
 }
 const num = (v: any): number | null => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
 const nombre = (r: any) => [r.primerNombre, r.segundoNombre, r.primerApellido, r.segundoApellido]
@@ -144,7 +147,7 @@ async function construir(
               p."observacionesContrato", p."referenciaUno", p."telefonoRefUno", p."parentezcoRefUno",
               p."referenciaDos", p."telefonoRefDos", p."parentezcoRefDos", p."asesor", p."asesorCreadorContrato",
               p."fullExecutive", p."jefeGrupo", p."gerente", p."gerenteDivision", p."salesManager", p."filial",
-              p."origenMatricula", p."suscripcionPago", p."prixus", p."tipoPlanId",
+              p."origenMatricula", p."suscripcionPago", p."prixus", p."tipoPlanId", p."listoAprobacion",
               (COALESCE(p."hashConsentimiento",'') <> '') AS firmado,
               to_char(p."fechaCreacion" AT TIME ZONE (${TZ_SQL}), 'YYYY-MM-DD"T"HH24:MI') AS creado_local
          FROM "PEOPLE" p
@@ -223,7 +226,7 @@ async function construir(
       suscripcionPago: t.suscripcionPago === true,
       prixus: t.prixus === true,
       factura: pg.numeroFactura || null,
-      aprobacion: estadoLibro(t.aprobacion, t.firmado === true),
+      aprobacion: estadoLibro(t.aprobacion, t.firmado === true, t.listoAprobacion === true),
       aprobacionFicha: t.aprobacion || null,
       firmado: t.firmado === true,
       estado: t.estado || null,
