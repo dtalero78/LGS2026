@@ -13,7 +13,7 @@ import toast from 'react-hot-toast'
 import {
   ArrowPathIcon, ArrowDownTrayIcon, ChevronDownIcon, ChevronRightIcon, ChevronLeftIcon, MagnifyingGlassIcon, FunnelIcon,
   XMarkIcon, ArrowTopRightOnSquareIcon, CalendarDaysIcon, TableCellsIcon, RectangleStackIcon,
-  ArrowsPointingOutIcon, ArrowUturnLeftIcon,
+  ArrowsPointingOutIcon, ArrowUturnLeftIcon, PencilSquareIcon,
 } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
@@ -47,6 +47,7 @@ interface Registro {
 }
 
 const TODOS = '__todos__'
+const SIN_FIRMAR = 'Sin firmar' // estado que asigna el servicio al titular sin firma ni aprobación
 const fmtF = (v?: string | null) => { const [y, m, d] = String(v || '').slice(0, 10).split('-'); return y && m && d ? `${d}/${m}/${y}` : '—' }
 const fmtFH = (v?: string | null) => v ? `${fmtF(v)} ${v.slice(11, 16)}` : '—'
 const fmtM = (n: number | null) => n === null ? '—' : `$${n.toLocaleString('es-CO', { maximumFractionDigits: 2 })}`
@@ -133,7 +134,8 @@ export default function LibroProduccionPage() {
   const { hasPermission } = usePermissions()
   const puedeVigencias = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_VIGENCIAS)
   const puedePlanes = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_PLANES)
-  const [tab, setTab] = useState<'libro' | 'vigencias' | 'planes'>('libro')
+  const [tab, setTab] = useState<'libro' | 'sinFirmar' | 'vigencias' | 'planes'>('libro')
+  const esHoja = tab === 'libro' || tab === 'sinFirmar'
   // Pantalla completa: la hoja cubre todo (sin sidebar ni encabezado) y, si el
   // navegador lo permite, también entra en su modo de pantalla completa.
   const [completa, setCompleta] = useState(false)
@@ -159,7 +161,7 @@ export default function LibroProduccionPage() {
         <div className={completa ? 'fixed inset-0 z-[60] bg-gray-50 overflow-auto p-4 space-y-3' : 'space-y-4'}>
           {completa ? (
           <div className="flex items-center justify-between gap-3">
-            <h1 className="text-xl font-bold text-gray-900">Libro de Producción</h1>
+            <h1 className="text-xl font-bold text-gray-900">Libro de Producción{tab === 'sinFirmar' ? ' · Sin firmar' : ''}</h1>
             <button type="button" onClick={volver}
               className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700">
               <ArrowUturnLeftIcon className="h-4 w-4" /> Volver
@@ -172,6 +174,7 @@ export default function LibroProduccionPage() {
           </div>
           <div className="flex items-end gap-2 border-b border-gray-200">
             {([['libro', 'Libro', TableCellsIcon],
+              ['sinFirmar', 'Sin firmar', PencilSquareIcon],
               ...(puedeVigencias ? [['vigencias', 'Vigencias', CalendarDaysIcon]] : []),
               ...(puedePlanes ? [['planes', 'Planes', RectangleStackIcon]] : [])] as const).map(([k, label, Icon]: any) => (
               <button key={k} type="button" onClick={() => setTab(k)}
@@ -179,7 +182,7 @@ export default function LibroProduccionPage() {
                 <Icon className="h-4 w-4" /> {label}
               </button>
             ))}
-            {tab === 'libro' && (
+            {esHoja && (
               <button type="button" onClick={abrirCompleta} title="Ver el libro en pantalla completa, sin el menú lateral"
                 className="ml-auto mb-1 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100">
                 <ArrowsPointingOutIcon className="h-4 w-4" /> Pantalla completa
@@ -187,7 +190,7 @@ export default function LibroProduccionPage() {
             )}
           </div>
           </>)}
-          {tab === 'libro' ? <Libro completa={completa} /> : tab === 'vigencias' ? <Vigencias /> : <PlanesTiposPanel />}
+          {esHoja ? <Libro key={tab} completa={completa} sinFirmar={tab === 'sinFirmar'} /> : tab === 'vigencias' ? <Vigencias /> : <PlanesTiposPanel />}
         </div>
       </PermissionGuard>
     </DashboardLayout>
@@ -195,12 +198,16 @@ export default function LibroProduccionPage() {
 }
 
 // ── Hoja ────────────────────────────────────────────────────────────────────────
-function Libro({ completa = false }: { completa?: boolean }) {
+function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; sinFirmar?: boolean }) {
   const { hasPermission } = usePermissions()
   const puedeExportar = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_EXPORTAR)
   const [vigencias, setVigencias] = useState<Vigencia[]>([])
   const [vigencia, setVigencia] = useState<Vigencia | null>(null)
-  const [registros, setRegistros] = useState<Registro[]>([])
+  const [todos, setRegistros] = useState<Registro[]>([])
+  // Pestaña Libro = todo menos "Sin firmar"; pestaña Sin firmar = solo esos. El Item se numera por pestaña.
+  const registros = useMemo(() => todos
+    .filter(r => (r.aprobacion === SIN_FIRMAR) === sinFirmar)
+    .map((r, i) => ({ ...r, item: i + 1 })), [todos, sinFirmar])
   const [loading, setLoading] = useState(true)
   const [abiertos, setAbiertos] = useState<Set<string>>(new Set())
   const [detalle, setDetalle] = useState<string | null>(null)
@@ -293,7 +300,7 @@ function Libro({ completa = false }: { completa?: boolean }) {
       { header: 'Sales Manager', accessor: x => x.r.comercial.salesManager },
       { header: 'Filial', accessor: x => x.r.comercial.filial },
       { header: 'Origen matrícula', accessor: x => x.r.comercial.origenMatricula },
-    ], `libro-produccion-${vigencia ? etiquetaVigencia(vigencia).replace(' ', '-') : 'sin-vigencia'}`)
+    ], `libro-produccion-${sinFirmar ? 'sin-firmar-' : ''}${vigencia ? etiquetaVigencia(vigencia).replace(' ', '-') : 'sin-vigencia'}`)
   }
 
   const Sel = ({ label, k, opts }: { label: string; k: keyof typeof f; opts: [string, string][] }) => (
