@@ -723,7 +723,7 @@ export default function ContratoDetailPage() {
               )}
               {titular.listoAprobacion === true ? (
                 <span
-                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-sky-100 text-sky-800 border border-sky-300 rounded-md text-sm font-medium"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-yellow-100 text-yellow-900 border border-yellow-400 rounded-md text-sm font-medium"
                   title={`Marcado por ${titular.listoAprobacionPor || '—'}${titular.listoAprobacionEn ? ' el ' + new Date(titular.listoAprobacionEn).toLocaleString('es-CO') : ''}`}
                 >
                   <CheckBadgeIcon className="h-4 w-4" />
@@ -735,7 +735,7 @@ export default function ContratoDetailPage() {
                     type="button"
                     onClick={() => setShowListoModal(true)}
                     title="Confirmar que el contrato ya está firmado, con PDF generado, documentos y recibo subidos e información verificada"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-medium"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-400 text-yellow-950 rounded-md hover:bg-yellow-500 text-sm font-semibold"
                   >
                     <CheckBadgeIcon className="h-4 w-4" />
                     Dejar listo para aprobación

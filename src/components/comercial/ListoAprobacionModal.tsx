@@ -46,12 +46,12 @@ export default function ListoAprobacionModal({ titularId, contrato, firmado, onC
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div className="bg-sky-600 px-6 py-4 flex items-start justify-between gap-4">
+        <div className="bg-yellow-400 px-6 py-4 flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-lg font-bold text-white">Dejar listo para aprobación</h2>
-            <p className="text-sky-100 text-xs mt-0.5">Contrato {contrato}</p>
+            <h2 className="text-lg font-bold text-yellow-950">Dejar listo para aprobación</h2>
+            <p className="text-yellow-900 text-xs mt-0.5">Contrato {contrato}</p>
           </div>
-          <button type="button" onClick={onClose} title="Cerrar" className="text-white/80 hover:text-white">
+          <button type="button" onClick={onClose} title="Cerrar" className="text-yellow-900/70 hover:text-yellow-950">
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
@@ -67,7 +67,7 @@ export default function ListoAprobacionModal({ titularId, contrato, firmado, onC
               {PUNTOS.map((p) => (
                 <label key={p.k} className="flex items-start gap-2 rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50 cursor-pointer">
                   <input type="checkbox" checked={!!marcas[p.k]} onChange={(e) => setMarcas((m) => ({ ...m, [p.k]: e.target.checked }))}
-                    className="mt-0.5 accent-sky-600" />
+                    className="mt-0.5 accent-yellow-500" />
                   <span className="text-gray-800">{p.label}</span>
                 </label>
               ))}
@@ -82,7 +82,7 @@ export default function ListoAprobacionModal({ titularId, contrato, firmado, onC
           </button>
           {firmado && (
             <button type="button" onClick={confirmar} disabled={!todas || enviando}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-sky-600 rounded-md hover:bg-sky-700 disabled:opacity-50">
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-yellow-950 bg-yellow-400 rounded-md hover:bg-yellow-500 disabled:opacity-50">
               <CheckBadgeIcon className="h-4 w-4" />
               {enviando ? 'Guardando…' : 'Dejar listo para aprobación'}
             </button>
