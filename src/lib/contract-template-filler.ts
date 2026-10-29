@@ -97,7 +97,8 @@ export function fillContractTemplate(
     const fecha = c.timestampAcceptacion
       ? new Date(c.timestampAcceptacion).toLocaleString('es-CO')
       : '';
-    const tipo = c.tipoAprobacion === 'AUTOMATICA' ? ' (Aprobacion Automatica)' : '';
+    const tipo = c.tipoAprobacion === 'AUTOMATICA' ? ' (Aprobacion Automatica)'
+      : c.tipoAprobacion === 'CORREO' ? ' (Aceptacion por correo electronico)' : '';
 
     // La línea del correo solo se imprime si REALMENTE hay un email. En
     // contratos viejos `asesor` guarda el nombre (no un correo) y antes se
@@ -201,6 +202,10 @@ export function fillContractTemplate(
         `Nombre del titular: ${nombreCompletoTitular}`,
         `Número de Identificación: ${titular?.numeroId || ''}`,
       ].join('\n');
+  // Ratificación por correo (Libro de Producción › Sin firmar): constancia bajo el "SÍ, ACEPTO".
+  const aceptoPorCorreo = consentData?.hasConsent && (consentData.consent as any)?.tipoAprobacion === 'CORREO'
+    ? '\nAceptación realizada por medio de correo electrónico adjuntado a los documentos'
+    : '';
 
   /** Contrato CANJE: condiciones escritas en Crear Contrato, numeradas. */
   let condicionesCanje: string[] = [];
@@ -263,7 +268,7 @@ export function fillContractTemplate(
     // Bloques que cambian según persona natural / empresa
     datosTitular: datosTitularText,
     referencias: referenciasText,
-    nombreTitularFirma: nombreTitularFirmaText,
+    nombreTitularFirma: nombreTitularFirmaText + aceptoPorCorreo,
     // Contrato CANJE (plantillas con tipoContract='Canje')
     condicionesCanje: condicionesCanjeText,
     vigencia: String(financial?.vigencia ?? titular?.vigencia ?? ''),

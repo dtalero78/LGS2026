@@ -1045,6 +1045,20 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Crear, editar y desactivar los planes y tipos de plan por país (catálogo que luego se elige en Crear Contrato)',
   },
   {
+    code: AprobacionPermission.LIBRO_PRODUCCION_DEPURAR,
+    module: Module.APROBACION,
+    section: 'Libro de Producción',
+    name: 'Casilla "Depurar" (pestaña Libro)',
+    description: 'Borrar definitivamente un contrato firmado y NO aprobado creado por error: descarga primero sus documentos y recibos; regla de la Limpieza de Anulados (copia en PURGE_LOG, bloquea con pagos validados)',
+  },
+  {
+    code: AprobacionPermission.LIBRO_PRODUCCION_RATIFICAR,
+    module: Module.APROBACION,
+    section: 'Libro de Producción',
+    name: 'Casilla "Ratificar" (pestaña Sin firmar)',
+    description: 'Ratificar un contrato sin firmar con el correo "SÍ, ACEPTO" del titular: adjunta el correo, registra la firma por correo electrónico y archiva el contrato firmado',
+  },
+  {
     code: AprobacionPermission.CENTRO_BORRAR,
     module: Module.APROBACION,
     section: 'Menú Aprobación',

@@ -25,6 +25,8 @@ interface ConsentData {
   codigoOTPUtilizado: string;
   celularValidado: string;
   tipoAprobacion?: string;
+  /** Ratificación por correo: archivo del correo "SÍ, ACEPTO" adjunto a la documentación. */
+  evidenciaCorreo?: string;
 }
 
 // ── Helpers ──
@@ -156,6 +158,50 @@ export async function autoApproveConsent(
     codigoOTPUtilizado: 'AUTOMATICO',
     celularValidado: person.celular || '',
     tipoAprobacion: 'AUTOMATICA',
+  };
+
+  const hash = computeHash(consent);
+
+  await PeopleRepository.saveConsent(
+    titularId,
+    JSON.stringify(consent),
+    hash,
+    person.numeroId
+  );
+
+  return { hash, consent };
+}
+
+/**
+ * Ratificación por correo electrónico: el titular respondió "SÍ, ACEPTO" por correo
+ * (contrato que quedó sin firmar). Cuenta como firma: tipoAprobacion 'CORREO' y el
+ * contrato impreso lo indica junto al "SÍ, ACEPTO".
+ */
+export async function ratificarConsentPorCorreo(
+  titularId: string,
+  adminEmail: string,
+  adminName: string,
+  ipAddress: string,
+  userAgent: string,
+  evidenciaUrl: string
+) {
+  const person = await PeopleRepository.getConsentData(titularId);
+  if (!person) throw new NotFoundError('Titular', titularId);
+
+  if (person.hashConsentimiento) {
+    throw new ValidationError('Este contrato ya tiene consentimiento declarativo');
+  }
+
+  const consent: ConsentData = {
+    declaracionAceptada: true,
+    numeroDocumento: person.numeroId,
+    timestampAcceptacion: new Date().toISOString(),
+    ipAddress,
+    userAgent: `${userAgent} [Ratificado por: ${adminName} <${adminEmail}>]`,
+    codigoOTPUtilizado: 'CORREO',
+    celularValidado: person.celular || '',
+    tipoAprobacion: 'CORREO',
+    evidenciaCorreo: evidenciaUrl,
   };
 
   const hash = computeHash(consent);

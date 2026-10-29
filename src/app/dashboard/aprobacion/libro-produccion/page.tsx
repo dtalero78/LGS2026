@@ -22,6 +22,7 @@ import { usePermissions } from '@/hooks/usePermissions'
 import { api, handleApiError } from '@/hooks/use-api'
 import { exportToExcel } from '@/lib/export-excel'
 import PlanesTiposPanel from '@/components/aprobacion/PlanesTiposPanel'
+import LibroAccionModal from '@/components/aprobacion/LibroAccionModal'
 import {
   MESES, etiquetaVigencia, etiquetaSemana, semanasDeVigencia, type Vigencia,
 } from '@/lib/vigencias-comerciales'
@@ -83,7 +84,7 @@ const resumenPrograma = (r: Registro) => {
 // ── Columnas de la hoja (mismo orden del libro). Las 8 primeras quedan fijas. ──
 interface Col { key: string; header: string; w: number; titular: (r: Registro) => React.ReactNode; benef?: (b: Benef) => React.ReactNode }
 const COLS: Col[] = [
-  { key: 'item', header: 'Item', w: 56, titular: r => r.item },
+  { key: 'item', header: 'Item', w: 76, titular: r => r.item },
   { key: 'semana', header: 'Semana', w: 64, titular: r => r.semana ? etiquetaSemana(r.semana) : '—' },
   { key: 'ingreso', header: 'Fecha ingreso', w: 104, titular: r => fmtF(r.fechaIngreso) },
   { key: 'pago', header: 'Fecha de pago', w: 104, titular: r => fmtF(r.fechaPago) },
@@ -201,6 +202,10 @@ export default function LibroProduccionPage() {
 function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; sinFirmar?: boolean }) {
   const { hasPermission } = usePermissions()
   const puedeExportar = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_EXPORTAR)
+  // Casilla de la celda Item: Depurar (Libro, firmado sin aprobar) o Ratificar por correo (Sin firmar).
+  const puedeAccion = hasPermission(sinFirmar ? AprobacionPermission.LIBRO_PRODUCCION_RATIFICAR : AprobacionPermission.LIBRO_PRODUCCION_DEPURAR)
+  const conCasilla = (r: Registro) => puedeAccion && (sinFirmar || r.aprobacion === 'Pendiente aprobación')
+  const [accion, setAccion] = useState<string | null>(null)
   const [vigencias, setVigencias] = useState<Vigencia[]>([])
   const [vigencia, setVigencia] = useState<Vigencia | null>(null)
   const [todos, setRegistros] = useState<Registro[]>([])
@@ -403,6 +408,11 @@ function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; si
                                   {abierto ? <ChevronDownIcon className="h-3.5 w-3.5" /> : <ChevronRightIcon className="h-3.5 w-3.5" />}
                                 </button>
                               ) : <span className="w-3.5" />}
+                              {conCasilla(r) && (
+                                <input type="checkbox" checked={accion === r.titularId} onChange={() => setAccion(r.titularId)}
+                                  title={sinFirmar ? 'Ratificar con el correo "SÍ, ACEPTO"' : 'Depurar este contrato (firmado sin aprobar)'}
+                                  className={`mx-0.5 h-3.5 w-3.5 cursor-pointer rounded ${sinFirmar ? 'accent-emerald-600' : 'accent-red-600'}`} />
+                              )}
                               {r.item}
                             </span>
                           ) : c.key === 'contrato' || c.key === 'titular' ? (
@@ -430,6 +440,11 @@ function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; si
             </tbody>
           </table>
         </div>
+      )}
+
+      {accion && (
+        <LibroAccionModal titularId={accion} accion={sinFirmar ? 'ratificar' : 'depurar'}
+          onClose={() => setAccion(null)} onDone={() => { setAccion(null); cargar(vigencia?._id) }} />
       )}
 
       {detalle && (

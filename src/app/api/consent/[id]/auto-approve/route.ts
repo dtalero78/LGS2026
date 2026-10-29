@@ -3,18 +3,9 @@ import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { requirePermission } from '@/lib/api-permissions';
 import { ComercialPermission } from '@/types/permissions';
 import { autoApproveConsent } from '@/services/consent.service';
-import { query, queryOne, queryMany } from '@/lib/postgres';
+import { query, queryOne } from '@/lib/postgres';
 import { generateId } from '@/lib/id-generator';
-import { fillContractTemplate } from '@/lib/contract-template-filler';
-import { buildContractPdfHtml } from '@/lib/contract-pdf-html';
-import { generarYArchivarAnexoPdf } from '@/lib/anexo-pdf';
-import { esContratoPrueba } from '@/lib/contrato-prueba-guard';
-import { getAsesorInfo } from '@/lib/asesor';
-import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
-import { archivarContratoEnDrive, buildContractFilename } from '@/lib/contract-drive';
-import { buscarPlantillaContrato } from '@/lib/contract-template';
-
-const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
+import { archivarContratoFirmado } from '@/lib/contrato-firmado-drive';
 
 // One-time migration: ensure auditautoaprov table exists
 let auditTableReady = false;
@@ -56,13 +47,8 @@ export const POST = handlerWithAuth(async (request, { params }, session) => {
     ua
   );
 
-  // 2. Fetch contract data for audit + PDF
-  const titular = await queryOne(
-    `SELECT * FROM "PEOPLE" WHERE "_id" = $1`,
-    [params.id]
-  );
-
-  // 3. Write audit record
+  // 2. Write audit record
+  const titular = await queryOne(`SELECT "contrato" FROM "PEOPLE" WHERE "_id" = $1`, [params.id]);
   await ensureAuditTable();
   await query(
     `INSERT INTO "auditautoaprov"
@@ -79,90 +65,8 @@ export const POST = handlerWithAuth(async (request, { params }, session) => {
     ]
   );
 
-  // 4. Generate PDF and upload to Drive (non-blocking — errors don't fail the consent)
-  let driveUpload: any = null;
-  let pdfUrl: string | null = null;
-
-  try {
-    if (titular?.plataforma && titular?.contrato) {
-      const beneficiarios = await queryMany(
-        `SELECT * FROM "PEOPLE" WHERE "contrato" = $1 AND "_id" != $2 ORDER BY "_createdDate" ASC`,
-        [titular.contrato, params.id]
-      );
-      // Adjunta el detalle de KIDS_INSCRIPCIONES a los beneficiarios kids (para la plantilla).
-      await attachKidsInscripciones(titular.contrato, beneficiarios);
-
-      // FINANCIEROS se busca por "contrato" (mismo bug que send-pdf — la tabla no
-      // tiene titularId / esa columna legacy quedó NULL en la migración).
-      const financial = await queryOne(
-        `SELECT * FROM "FINANCIEROS" WHERE "contrato" = $1
-         ORDER BY "_createdDate" DESC LIMIT 1`,
-        [titular.contrato]
-      );
-
-      // Por país y tipo de contrato (estándar o canje) — lib/contract-template.
-      const tplTexto = await buscarPlantillaContrato(titular.plataforma, titular.tipoContrato);
-      const templateRow = tplTexto ? { template: tplTexto } : null;
-
-      if (templateRow?.template) {
-        const consentData = {
-          hasConsent: true,
-          consent: result.consent,
-          hash: result.hash,
-        };
-
-        const asesorInfo = await getAsesorInfo((titular as any).asesor, (titular as any).asesorCreadorContrato);
-        const contractText = fillContractTemplate(
-          templateRow.template,
-          titular,
-          beneficiarios,
-          financial,
-          consentData as any,
-          asesorInfo,
-        );
-
-        const htmlContent = buildContractPdfHtml(contractText, {
-          esPrueba: esContratoPrueba(titular?.contrato),
-          contrato: titular.contrato,
-          fecha: new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' }),
-        });
-
-        const pdfRes = await fetch('https://v2018.api2pdf.com/chrome/html', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': API2PDF_KEY,
-          },
-          body: JSON.stringify({
-            html: htmlContent,
-            options: { printBackground: true },
-          }),
-        });
-
-        if (pdfRes.ok) {
-          const pdfData = await pdfRes.json();
-          if (pdfData.success && pdfData.pdf) {
-            pdfUrl = pdfData.pdf;
-
-            // Archivar en Drive (según el interruptor: bsl o LGS) — sin WhatsApp
-            driveUpload = await archivarContratoEnDrive({
-              pdfUrl: pdfData.pdf,
-              titularId: params.id,
-              filename: buildContractFilename(titular as any),
-            });
-          }
-        }
-      }
-    }
-  } catch (pdfErr: any) {
-    console.warn('⚠️ [auto-approve] PDF/Drive upload failed (non-critical):', pdfErr.message);
-  }
-
-  // Anexo de constancia (ANEX-) — best-effort, no bloquea la respuesta.
-  generarYArchivarAnexoPdf(params.id).then(
-    (r) => console.log(`📎 [AutoApprove] Anexo: ${params.id} → ${r.ok ? 'archivado' : (r.skipped || r.error)}`),
-    (e) => console.error(`⚠️ [AutoApprove] No se pudo archivar el anexo (${params.id}):`, e?.message || e),
-  );
+  // 3. PDF firmado → Drive + anexo ANEX- (best-effort — lib/contrato-firmado-drive)
+  const { pdfUrl, driveUpload } = await archivarContratoFirmado(params.id, result);
 
   return successResponse({
     message: 'Consentimiento automático registrado exitosamente',

@@ -112,7 +112,7 @@ export function buildAnexoPdfHtml(d: AnexoData): string {
     ${fila('Documento', d.documento)}
     ${fila('Fecha y hora', d.fechaFirma)}
     ${fila('Celular verificado', d.celular)}
-    ${fila('Método de verificación', d.tipoAprobacion === 'AUTOMATICA' ? 'Aprobación directa' : 'WhatsApp · OTP')}
+    ${fila('Método de verificación', d.tipoAprobacion === 'AUTOMATICA' ? 'Aprobación directa' : d.tipoAprobacion === 'CORREO' ? 'Correo electrónico (adjunto a los documentos)' : 'WhatsApp · OTP')}
     ${d.hashMasked ? `<tr><td class="lbl">Sello de integridad (SHA-256)</td><td class="val hash">${esc(d.hashMasked)} <span style="font-family:Arial;font-size:8pt;color:#8a8a9c">(fragmento)</span></td></tr>` : ''}
   </table>
 
