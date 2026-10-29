@@ -295,6 +295,21 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
     const upd = await client.query(`UPDATE "PEOPLE" SET ${sets} WHERE "_id" = $1 RETURNING *`, [titularId, ...vals]);
     titularResult.rows[0] = upd.rows[0];
   }
+  // Filial elegida en el formulario (sin filial firmada por el CRM): solo una del
+  // catálogo FILIALES del país del contrato; obligatoria si ese país tiene filiales.
+  if (!ladder?.fil?.trim()) {
+    const fil = String(titular.filial || '').trim();
+    const cat = await client.query(
+      `SELECT "nombre" FROM "FILIALES" WHERE "activo" = true AND LOWER(TRIM("plataforma")) = LOWER(TRIM($1))`,
+      [titular.plataforma || '']);
+    const elegida = cat.rows.find((r: any) => String(r.nombre).trim().toLowerCase() === fil.toLowerCase());
+    if (fil && !elegida) throw new ValidationError(`La filial "${fil}" no pertenece a ${titular.plataforma}`);
+    if (!fil && cat.rows.length && !esPrueba) throw new ValidationError('Selecciona la filial del comercial (paso 2)');
+    if (elegida) {
+      const upd = await client.query(`UPDATE "PEOPLE" SET "filial" = $2 WHERE "_id" = $1 RETURNING *`, [titularId, elegida.nombre]);
+      titularResult.rows[0] = upd.rows[0];
+    }
+  }
   if (canje) {
     const upd = await client.query(
       `UPDATE "PEOPLE" SET "tipoContrato" = 'CANJE', "condicionesCanje" = $2::jsonb WHERE "_id" = $1 RETURNING *`,

@@ -152,6 +152,9 @@ function CrearContratoContent() {
     replegalid: '',
     replegalcel: '',
     plataforma: '',
+    // Filial del comercial (catálogo FILIALES del país). Si el contrato viene del CRM
+    // con escalera firmada, manda la de la firma (crmFilial) y este campo no se usa.
+    filial: '',
     fechaNacimiento: '',
     pais: 'Colombia',
     domicilio: '',
@@ -214,6 +217,34 @@ function CrearContratoContent() {
       fe: get('fe'), tm: get('tm'), ge: get('ge'), gd: get('gd'), s1: get('s1'), fil: get('fil'), ori: get('ori'),
     };
   });
+
+  // Filial: la firmada por el CRM manda; si no, se elige del catálogo del país del
+  // contrato (precargada con la filial registrada del asesor en EQUIPO_COMERCIAL).
+  const crmFilial = (crmBridge?.fil || '').trim();
+  const [filialesPais, setFilialesPais] = useState<string[] | null>(null);
+  useEffect(() => {
+    if (crmFilial || !titular.plataforma) { setFilialesPais(null); return; }
+    let vivo = true;
+    const qs = new URLSearchParams({ plataforma: titular.plataforma, asesor: titular.asesor || '' });
+    fetch(`/api/postgres/filiales?${qs}`)
+      .then(r => r.json())
+      .then(d => {
+        if (!vivo) return;
+        const lista: string[] = Array.isArray(d?.filiales) ? d.filiales : [];
+        setFilialesPais(lista);
+        // Solo filiales del país del contrato: si la elegida no es de este país se
+        // reemplaza por la del asesor (si es de este país) o se deja vacía.
+        setTitular(t => {
+          if (t.filial && lista.includes(t.filial)) return t;
+          const delAsesor = d?.filialAsesor && lista.find(f => f.toLowerCase() === String(d.filialAsesor).toLowerCase());
+          return { ...t, filial: delAsesor || '' };
+        });
+      })
+      .catch(() => { if (vivo) setFilialesPais([]); });
+    return () => { vivo = false; };
+  }, [crmFilial, titular.plataforma, titular.asesor]);
+  // Obligatoria cuando el país tiene filiales en el catálogo y no vino del CRM.
+  const filialOk = !!crmFilial || (filialesPais !== null && (!filialesPais.length || titular.filial !== ''));
 
   const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>([]);
   // Índice del beneficiario cuyo modal Kids está abierto (null = cerrado).
@@ -312,7 +343,7 @@ function CrearContratoContent() {
   const restoreDraft = () => {
     const draft = (window as any).__contractDraft
     if (draft) {
-      if (draft.titular) setTitular(draft.titular)
+      if (draft.titular) setTitular(t => ({ ...t, ...draft.titular }))
       if (draft.financial) {
         // Borradores previos a MODULO: vigencia vacía o fuera de 3–12 → 12.
         const v = Number(draft.financial.vigencia)
@@ -510,12 +541,14 @@ function CrearContratoContent() {
                  titular.replegal.trim() !== '' &&
                  titular.replegalcargo.trim() !== '' &&
                  titular.replegalid.trim() !== '' &&
-                 titular.replegalcel.trim() !== '';
+                 titular.replegalcel.trim() !== '' &&
+                 filialOk;
         }
         return titular.primerNombre !== '' &&
                titular.primerApellido !== '' &&
                titular.numeroId !== '' &&
                titular.plataforma !== '' &&
+               filialOk &&
                titularBenefRespuesta !== null; // SÍ/NO obligatorio
       case 3:
         if (esEmpresa) {
@@ -1340,6 +1373,32 @@ function CrearContratoContent() {
                     <option value="Perú">Perú</option>
                   </select>
                 </div>
+                {/* Filial del comercial: solo las del país elegido en Plataforma. */}
+                {titular.plataforma && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Filial{!crmFilial && filialesPais?.length ? ' *' : ''}
+                    </label>
+                    {crmFilial ? (
+                      <div className="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-md text-gray-800" title="Filial enviada por el CRM">
+                        {crmFilial} <span className="text-xs text-gray-500">· del CRM</span>
+                      </div>
+                    ) : filialesPais === null ? (
+                      <div className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm text-gray-400">Cargando filiales…</div>
+                    ) : filialesPais.length ? (
+                      <select
+                        value={titular.filial}
+                        onChange={(e) => setTitular({ ...titular, filial: e.target.value })}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${titular.filial ? 'border-gray-300' : 'border-amber-400'}`}
+                      >
+                        <option value="">Seleccionar filial de {titular.plataforma}…</option>
+                        {filialesPais.map(f => <option key={f} value={f}>{f}</option>)}
+                      </select>
+                    ) : (
+                      <div className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm text-gray-500">{titular.plataforma} no tiene filiales registradas.</div>
+                    )}
+                  </div>
+                )}
                 {/* ¿El titular será beneficiario? SÍ / NO — obligatorio (fila completa, antes del número de contrato).
                     SÍ = la antigua casilla marcada. En Empresa no aplica (queda en NO). */}
                 <div className="col-span-2">

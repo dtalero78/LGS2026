@@ -237,8 +237,15 @@ function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; si
     paises: Array.from(new Set(registros.map(r => r.pais || '—'))).sort(),
     estados: Array.from(new Set(registros.map(r => r.aprobacion))).sort(),
     ejecutivos: Array.from(new Set(registros.map(r => r.comercial.ejecutivo || '—'))).sort((a, b) => a.localeCompare(b, 'es')),
-    filiales: Array.from(new Set(registros.map(r => r.comercial.filial || '—'))).sort((a, b) => a.localeCompare(b, 'es')),
-  }), [registros])
+    // Filiales solo del país filtrado (Chile no muestra las de Ecuador o Colombia).
+    filiales: Array.from(new Set(registros
+      .filter(r => f.pais === TODOS || (r.pais || '—') === f.pais)
+      .map(r => r.comercial.filial || '—'))).sort((a, b) => a.localeCompare(b, 'es')),
+  }), [registros, f.pais])
+  // Al cambiar de país se suelta una filial que no es de ese país.
+  useEffect(() => {
+    if (f.filial !== TODOS && !opciones.filiales.includes(f.filial)) setF(s => ({ ...s, filial: TODOS }))
+  }, [opciones.filiales, f.filial])
   const semanas = vigencia ? semanasDeVigencia(vigencia) : []
 
   const visibles = useMemo(() => {
