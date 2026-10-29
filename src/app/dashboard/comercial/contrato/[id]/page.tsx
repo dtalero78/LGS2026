@@ -655,28 +655,28 @@ export default function ContratoDetailPage() {
                 Titular: {fullName(titular)} &middot; {titular.numeroId}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-stretch justify-end gap-2">
               <button
                 onClick={openContractPreview}
                 disabled={loadingTemplate}
                 title="Ver contrato, proceso de finalización con el titular, envío para firma y envío de PDF"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 text-sm font-medium disabled:opacity-50"
+                className="inline-flex items-center justify-center text-center leading-tight gap-2 w-48 min-h-[3rem] px-3 py-1.5 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 text-sm font-medium disabled:opacity-50"
               >
-                <EyeIcon className="h-4 w-4" />
+                <EyeIcon className="h-4 w-4 shrink-0" />
                 {loadingTemplate ? 'Cargando...' : 'Ver Contrato'}
               </button>
               <button
                 onClick={() => setShowDocReciboModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-md hover:bg-emerald-200 text-sm font-medium"
+                className="inline-flex items-center justify-center text-center leading-tight gap-2 w-48 min-h-[3rem] px-3 py-1.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-md hover:bg-emerald-200 text-sm font-medium"
                 title="Subir documentos y recibo de pago de la inscripción"
               >
-                <PaperClipIcon className="h-4 w-4" />
+                <PaperClipIcon className="h-4 w-4 shrink-0" />
                 Documentación y recibo
               </button>
               {titular.tipoContrato === 'CANJE' && (
                 <button
                   onClick={() => setShowCondicionesCanje(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-fuchsia-600 text-white rounded-md hover:bg-fuchsia-700 text-sm font-medium"
+                  className="inline-flex items-center justify-center text-center leading-tight gap-2 w-48 min-h-[3rem] px-3 py-1.5 bg-fuchsia-600 text-white rounded-md hover:bg-fuchsia-700 text-sm font-medium"
                   title="Ver y corregir las condiciones del contrato de canje"
                 >
                   🤝 Condiciones del canje
@@ -687,17 +687,17 @@ export default function ContratoDetailPage() {
                   <button
                     onClick={startEditing}
                     title="Opción para corregir datos del contrato, con excepción de la información financiera"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 text-sm font-medium"
+                    className="inline-flex items-center justify-center text-center leading-tight gap-2 w-48 min-h-[3rem] px-3 py-1.5 bg-primary-600 text-white rounded-md hover:bg-primary-700 text-sm font-medium"
                   >
-                    <PencilIcon className="h-4 w-4" />
+                    <PencilIcon className="h-4 w-4 shrink-0" />
                     Editar Contrato
                   </button>
                 ) : (
                   <span
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-500 rounded-md text-sm font-medium cursor-not-allowed"
+                    className="inline-flex items-center justify-center text-center leading-tight gap-2 w-48 min-h-[3rem] px-3 py-1.5 bg-gray-100 text-gray-500 rounded-md text-sm font-medium cursor-not-allowed"
                     title="Contrato aprobado: solo un Super Administrador puede modificarlo"
                   >
-                    <PencilIcon className="h-4 w-4" />
+                    <PencilIcon className="h-4 w-4 shrink-0" />
                     Aprobado · solo Super Admin edita
                   </span>
                 )
@@ -706,27 +706,27 @@ export default function ContratoDetailPage() {
                   <button
                     onClick={cancelEditing}
                     disabled={saving}
-                    className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm font-medium"
+                    className="inline-flex items-center justify-center text-center leading-tight gap-2 w-48 min-h-[3rem] px-3 py-1.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm font-medium"
                   >
-                    <XMarkIcon className="h-4 w-4" />
+                    <XMarkIcon className="h-4 w-4 shrink-0" />
                     Cancelar
                   </button>
                   <button
                     onClick={saveChanges}
                     disabled={saving}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium disabled:opacity-50"
+                    className="inline-flex items-center justify-center text-center leading-tight gap-2 w-48 min-h-[3rem] px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium disabled:opacity-50"
                   >
-                    <CheckIcon className="h-4 w-4" />
+                    <CheckIcon className="h-4 w-4 shrink-0" />
                     {saving ? 'Guardando...' : 'Guardar Cambios'}
                   </button>
                 </>
               )}
               {titular.listoAprobacion === true ? (
                 <span
-                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-yellow-100 text-yellow-900 border border-yellow-400 rounded-md text-sm font-medium"
+                  className="inline-flex items-center justify-center text-center leading-tight gap-2 w-48 min-h-[3rem] px-3 py-1.5 bg-yellow-100 text-yellow-900 border border-yellow-400 rounded-md text-sm font-medium"
                   title={`Marcado por ${titular.listoAprobacionPor || '—'}${titular.listoAprobacionEn ? ' el ' + new Date(titular.listoAprobacionEn).toLocaleString('es-CO') : ''}`}
                 >
-                  <CheckBadgeIcon className="h-4 w-4" />
+                  <CheckBadgeIcon className="h-4 w-4 shrink-0" />
                   Listo para aprobación
                 </span>
               ) : !['aprobado', 'aprobada'].includes(String(titular.aprobacion || '').trim().toLowerCase()) && !isContratoPrueba(titular.contrato) && (
@@ -735,9 +735,9 @@ export default function ContratoDetailPage() {
                     type="button"
                     onClick={() => setShowListoModal(true)}
                     title="Confirmar que el contrato ya está firmado, con PDF generado, documentos y recibo subidos e información verificada"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-400 text-yellow-950 rounded-md hover:bg-yellow-500 text-sm font-semibold"
+                    className="inline-flex items-center justify-center text-center leading-tight gap-2 w-48 min-h-[3rem] px-3 py-1.5 bg-yellow-400 text-yellow-950 rounded-md hover:bg-yellow-500 text-sm font-semibold"
                   >
-                    <CheckBadgeIcon className="h-4 w-4" />
+                    <CheckBadgeIcon className="h-4 w-4 shrink-0" />
                     Dejar listo para aprobación
                   </button>
                 </PermissionGuard>
@@ -749,9 +749,9 @@ export default function ContratoDetailPage() {
                     onClick={autoApproveConsent}
                     disabled={approvingConsent}
                     title="Opción de Superadmin"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium disabled:opacity-50"
+                    className="inline-flex items-center justify-center text-center leading-tight gap-2 w-48 min-h-[3rem] px-3 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium disabled:opacity-50"
                   >
-                    <ShieldCheckIcon className="h-4 w-4" />
+                    <ShieldCheckIcon className="h-4 w-4 shrink-0" />
                     {approvingConsent ? 'Aprobando...' : 'Auto-Aprobar Consentimiento'}
                   </button>
                 </PermissionGuard>
