@@ -91,7 +91,7 @@ export async function previsualizarDepuracion(titularId: string) {
     pagos: { total: pagos.length, validados: pagosValidados },
     otrosContratos: otros,
     depurable: firmado && sinEstado && pagosValidados === 0,
-    motivoNoDepurable: !firmado ? 'El contrato no está firmado (use Ratificar en la pestaña Sin firmar).'
+    motivoNoDepurable: !firmado ? 'El contrato no está firmado (use Ratificar en la pestaña Por resolver).'
       : !sinEstado ? `El contrato ya tiene estado "${titular.aprobacion}"; se gestiona desde la ficha.`
       : pagosValidados ? `Tiene ${pagosValidados} pago(s) validado(s) por Recaudos; no se depura desde aquí.` : null,
     ratificable: !firmado && sinEstado,

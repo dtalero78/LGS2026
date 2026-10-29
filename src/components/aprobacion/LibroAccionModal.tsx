@@ -9,7 +9,7 @@ import { api, handleApiError } from '@/hooks/use-api'
  * Libro de Producción › casillas de la celda Item.
  *  - depurar  (pestaña Libro, firmado sin aprobar): descargar documentos y recibos →
  *    motivo → borrar el contrato (POST …/depurar).
- *  - ratificar (pestaña Sin firmar): adjuntar el correo "SÍ, ACEPTO" → firma por
+ *  - ratificar (pestaña Por resolver): adjuntar el correo "SÍ, ACEPTO" → firma por
  *    correo electrónico (POST …/ratificar).
  * En ambos, si el titular tiene otros contratos se avisa y se exige confirmar.
  */
