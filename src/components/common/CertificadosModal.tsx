@@ -44,6 +44,8 @@ export default function CertificadosModal({ baseUrl, onClose }: { baseUrl: strin
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [verBloqueo, setVerBloqueo] = useState(false)
+  const [generando, setGenerando] = useState<Nivel | null>(null)
+  const [errorGen, setErrorGen] = useState<string | null>(null)
   const bloqueo = estado?.bloqueoMora ?? null
 
   useEffect(() => {
@@ -57,15 +59,40 @@ export default function CertificadosModal({ baseUrl, onClose }: { baseUrl: strin
     return () => { alive = false }
   }, [baseUrl])
 
-  const descargar = (nivel: Nivel) => {
+  const descargar = async (nivel: Nivel) => {
     // Bloqueo por mora: se explica la causa ANTES de generar (no se llama al servidor).
     if (bloqueo) { setVerBloqueo(true); return }
-    window.open(`${baseUrl}${baseUrl.includes('?') ? '&' : '?'}nivel=${nivel}`, '_blank', 'noopener,noreferrer')
-    // El certificado se genera UNA sola vez: al descargarlo, deshabilita el botón.
-    // (El servidor es la autoridad; al reabrir el modal se refleja el estado real.)
-    setEstado(prev => prev
-      ? { ...prev, niveles: { ...prev.niveles, [nivel]: { ...prev.niveles[nivel], yaGenerado: true } } }
-      : prev)
+    // El PDF se pide UNA vez y se trabaja sobre esa copia (blob): se guarda como .pdf y se
+    // abre desde ella. Antes se abría la URL del servidor y el "Guardar" del visor volvía
+    // a pedirla; en el panel del estudiante (una sola generación) esa 2ª petición devolvía
+    // el error en JSON y el navegador ofrecía guardar "certificado.json".
+    const visor = window.open('', '_blank') // se abre ya, dentro del clic, para que no lo bloquee el navegador
+    setGenerando(nivel); setErrorGen(null)
+    try {
+      const r = await fetch(`${baseUrl}${baseUrl.includes('?') ? '&' : '?'}nivel=${nivel}`, { credentials: 'include' })
+      if (!r.ok || !(r.headers.get('content-type') || '').includes('pdf')) {
+        const d = await r.json().catch(() => ({}))
+        throw new Error(d?.error || `No se pudo generar el certificado (${r.status})`)
+      }
+      const blob = await r.blob()
+      const nombre = /filename="([^"]+)"/.exec(r.headers.get('content-disposition') || '')?.[1] || `certificado-${nivel}.pdf`
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = nombre
+      document.body.appendChild(a); a.click(); a.remove()
+      if (visor) visor.location.href = url
+      setTimeout(() => URL.revokeObjectURL(url), 5 * 60_000)
+      // El certificado se genera UNA sola vez (panel estudiante): deshabilita el botón.
+      // (El servidor es la autoridad; al reabrir el modal se refleja el estado real.)
+      setEstado(prev => prev
+        ? { ...prev, niveles: { ...prev.niveles, [nivel]: { ...prev.niveles[nivel], yaGenerado: true } } }
+        : prev)
+    } catch (e: any) {
+      visor?.close()
+      setErrorGen(e?.message || 'No se pudo generar el certificado')
+    } finally {
+      setGenerando(null)
+    }
   }
 
   return (
@@ -102,7 +129,7 @@ export default function CertificadosModal({ baseUrl, onClose }: { baseUrl: strin
               const info = estado?.niveles?.[key]
               const aprobado = !!info?.aprobado
               const yaGenerado = !!info?.yaGenerado
-              const habilitado = aprobado && !yaGenerado
+              const habilitado = aprobado && !yaGenerado && !generando
               const leyenda = !aprobado
                 ? 'No ha aprobado el nivel, certificado no disponible'
                 : yaGenerado
@@ -118,7 +145,7 @@ export default function CertificadosModal({ baseUrl, onClose }: { baseUrl: strin
                     className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-semibold transition-colors ${habilitado ? cls : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
                   >
                     {habilitado ? <AcademicCapIcon className="h-5 w-5" /> : <LockClosedIcon className="h-4 w-4" />}
-                    {label}
+                    {generando === key ? `Generando ${label}…` : label}
                     {yaGenerado && aprobado && <span className="text-[11px] font-normal">· generado</span>}
                   </button>
                   {leyenda && (
@@ -136,6 +163,7 @@ export default function CertificadosModal({ baseUrl, onClose }: { baseUrl: strin
                 </div>
               )
             })}
+            {errorGen && <p className="text-xs text-red-600 text-center pt-1">{errorGen}</p>}
           </div>
         )}
       </div>
