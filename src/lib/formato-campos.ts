@@ -22,7 +22,14 @@ export function limpiarTexto(v: string): string {
   return v.replace(/\s+/g, ' ').trim();
 }
 
-const capitalizar = (w: string) => (w ? w.charAt(0).toLocaleUpperCase('es') + w.slice(1) : w);
+/** Mayúscula en la primera LETRA (salta signos iniciales: ",martínez" → ",Martínez"). */
+const capitalizar = (w: string) => {
+  for (let i = 0; i < w.length; i++) {
+    const ch = w.charAt(i);
+    if (ch.toLocaleLowerCase('es') !== ch.toLocaleUpperCase('es')) return w.slice(0, i) + ch.toLocaleUpperCase('es') + w.slice(i + 1);
+  }
+  return w;
+};
 
 /** "MARÍA DE LOS ÁNGELES o'neil-pérez" → "María de los Ángeles O'Neil-Pérez". */
 export function nombrePropio(v: string): string {
@@ -30,7 +37,8 @@ export function nombrePropio(v: string): string {
   return palabras
     .map((w, i) => (i > 0 && PARTICULAS.has(w))
       ? w
-      : w.split('-').map((parte) => parte.split("'").map(capitalizar).join("'")).join('-'))
+      // Mayúscula tras guion y tras apóstrofo, recto o tipográfico: O'Neil, O’Brien.
+      : w.split(/([-'’])/).map(capitalizar).join(''))
     .join(' ');
 }
 
