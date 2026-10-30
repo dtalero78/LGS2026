@@ -9,6 +9,7 @@ import { ids } from '@/lib/id-generator';
 import { queryOne, query } from '@/lib/postgres';
 import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { normalizarTelefono } from '@/lib/telefono';
+import { formatearPersona } from '@/lib/formato-campos';
 
 /**
  * POST /api/postgres/people
@@ -85,6 +86,9 @@ export const POST = handlerWithStaffAuth(async (request) => {
       );
     }
   }
+
+  // Formato de los datos (lib/formato-campos): Nombre Propio, email en minúsculas, etc.
+  Object.assign(body, formatearPersona(body, { empresa: body.tipoUsuario === 'TITULAR' && body.tipoPersona === 'Empresa' }));
 
   // Teléfonos con indicativo (regla única de lib/telefono), según la plataforma.
   if (body.celular !== undefined) body.celular = normalizarTelefono(body.celular, body.plataforma);

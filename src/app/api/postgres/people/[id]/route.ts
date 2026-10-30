@@ -11,6 +11,7 @@ import { registrarCambioAprobacion, assertPuedeRevertirAPendiente, nombreDe } fr
 import { inhabilitarContratoRetractado } from '@/lib/retractado';
 import { liberarReservasKids, motivoBajaKids } from '@/lib/kids-baja';
 import { normalizarTelefono } from '@/lib/telefono';
+import { formatearCambios } from '@/lib/formato-campos';
 
 /**
  * GET /api/postgres/people/[id]
@@ -305,6 +306,13 @@ export const PATCH = handlerWithAuth(async (
     [personId]
   );
   if (!currentPerson) throw new NotFoundError('Person', personId);
+
+  // Formato de los datos (lib/formato-campos), solo en los campos que de verdad cambian:
+  // un nombre antiguo reenviado igual no cuenta como cambio de nombre.
+  {
+    const actual = await queryOne<any>(`SELECT * FROM "PEOPLE" WHERE "_id" = $1`, [personId]);
+    Object.assign(body, formatearCambios(body, actual, { empresa: actual?.tipoUsuario === 'TITULAR' && actual?.tipoPersona === 'Empresa' }));
+  }
 
   // Teléfonos con indicativo (regla única de lib/telefono), según la plataforma.
   const paisTel = body.plataforma ?? currentPerson.plataforma;

@@ -6,6 +6,7 @@ import { query } from '@/lib/postgres';
 import { ids } from '@/lib/id-generator';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { normalizarTelefono } from '@/lib/telefono';
+import { formatearPersona } from '@/lib/formato-campos';
 
 // Normaliza el documento igual que el resto de la plataforma: MAYÚSCULAS sin
 // puntos, guiones ni espacios (así '15.969.643-K' y '15969643K' son el mismo).
@@ -92,7 +93,8 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   let insertados = 0, omitidos = 0, fallidos = 0;
   const vistos = new Set<string>(); // evita duplicados dentro del mismo lote
 
-  for (const b of validas) {
+  for (const fila of validas) {
+    const b = formatearPersona(fila); // formato de los datos (lib/formato-campos)
     const nid = norm(b.numeroId);
     const nombre = `${b.primerNombre || ''} ${b.primerApellido || ''}`.trim();
     if (existentes.has(nid) || vistos.has(nid)) {

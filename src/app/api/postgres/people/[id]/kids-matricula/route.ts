@@ -9,6 +9,7 @@ import { kidsIntake, validarSalonesDelPais } from '@/lib/kids-intake';
 import { errorEdadCursoKids } from '@/lib/kids-mapping';
 import { actualizarApoderadoKids, asegurarReservaKids, matricularKids } from '@/lib/kids-reserva';
 import { normalizarTelefono } from '@/lib/telefono';
+import { formatearApoderado } from '@/lib/formato-campos';
 
 /**
  * Estado, corrección y edición de la inscripción KIDS de un beneficiario Kids.
@@ -62,7 +63,8 @@ async function validarCurso(person: any, plataforma: string | null, kd: any) {
  * Guarda la inscripción (UPDATE de la existente o INSERT si no hay).
  * `conCurso=false` → solo apoderado/parentesco (la reserva ya está en KIDS).
  */
-async function guardarInscripcion(person: any, plataforma: string | null, insc: any | null, kd: any, conCurso: boolean) {
+async function guardarInscripcion(person: any, plataforma: string | null, insc: any | null, kdEntrada: any, conCurso: boolean) {
+  const kd = formatearApoderado(kdEntrada); // formato de los datos (lib/formato-campos)
   const apoderado = [
     kd.apoderado || null, kd.apoderadoApellidos || null, kd.apoderadoDoc || null,
     normalizarTelefono(kd.apoderadoTelefono, plataforma), kd.apoderadoMail || null, kd.parentesco || null,

@@ -3,6 +3,7 @@ import { ValidationError } from '@/lib/errors';
 import { query, queryOne } from '@/lib/postgres';
 import { ids } from '@/lib/id-generator';
 import { normalizarTelefono } from '@/lib/telefono';
+import { formatearPersona } from '@/lib/formato-campos';
 
 const ALLOWED_FIELDS = [
   'numeroId', 'primerNombre', 'segundoNombre', 'primerApellido', 'segundoApellido',
@@ -49,7 +50,8 @@ export const POST = handlerWithAuth(async (request) => {
         }
       }
 
-      // Celular con indicativo (regla única de lib/telefono), según la plataforma.
+      // Formato de los datos (lib/formato-campos) y celular con indicativo (lib/telefono).
+      Object.assign(reg, formatearPersona(reg));
       if (reg.celular !== undefined) reg.celular = normalizarTelefono(reg.celular, reg.plataforma);
 
       const tipoUsuario = reg.tipoUsuario || 'BENEFICIARIO';

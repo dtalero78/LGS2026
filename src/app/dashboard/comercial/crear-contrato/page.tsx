@@ -8,6 +8,7 @@ import { usePermissions } from '@/hooks/usePermissions'
 import { ComercialPermission } from '@/types/permissions'
 import { ArrowLeftIcon, ArrowRightIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { COUNTRY_CODES } from '@/lib/country-codes'
+import { formatearPersona } from '@/lib/formato-campos'
 import KidsBeneficiarioModal, { KidsData } from '@/components/comercial/KidsBeneficiarioModal'
 
 // Country prefixes — catálogo completo compartido (país de residencia + prefijo derivado).
@@ -643,6 +644,10 @@ function CrearContratoContent() {
     if (currentStep === 3) {
       calculateBalance();
     }
+    // Formato de los datos (lib/formato-campos) al salir de cada paso: el comercial ve cómo
+    // quedan (Nombre Propio, email en minúsculas…). El servidor aplica la misma regla al crear.
+    setTitular(t => formatearPersona(t, { empresa: esEmpresa }));
+    setBeneficiarios(bs => bs.map(b => formatearPersona(b)));
     if (currentStep < 7) {
       // En modo Empresa se omiten los pasos 4 (Adicional) y 5 (Referencias): salta 3 → 6.
       // En canje se omite el paso 5 (Referencias): salta 4 → 6.

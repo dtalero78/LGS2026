@@ -8,6 +8,7 @@ import { checkBeneficiarioUnico, anularBeneficiariosViejos } from '@/lib/benefic
 import { kidsIntake, validarSalonesDelPais } from '@/lib/kids-intake';
 import { buildKidsReservation, plataformaToCountryCode, toISODate, errorEdadCursoKids } from '@/lib/kids-mapping';
 import { normalizarTelefono } from '@/lib/telefono';
+import { formatearPersona } from '@/lib/formato-campos';
 import { CRM_LADDER_COLUMNS, CRM_LADDER_KEYS, ladderFromEnvelope } from '@/lib/crm-bridge';
 import { requirePermission } from '@/lib/api-permissions';
 import { ComercialPermission } from '@/types/permissions';
@@ -151,6 +152,13 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   // En modo Empresa el titular no tiene apellido (la razón social va en primerNombre).
   if (!titular?.numeroId || !titular?.primerNombre || (!esEmpresa && !titular?.primerApellido)) {
     throw new ValidationError('titular with numeroId and primerNombre is required');
+  }
+
+  // Formato de los datos (regla única de lib/formato-campos): nombres en Nombre Propio,
+  // email en minúsculas, etc. En Empresa la razón social (primerNombre) solo se limpia.
+  Object.assign(titular, formatearPersona(titular, { empresa: esEmpresa }));
+  for (const b of Array.isArray(beneficiarios) ? beneficiarios : []) {
+    if (b && typeof b === 'object') Object.assign(b, formatearPersona(b));
   }
 
   // Teléfonos con indicativo (regla única de lib/telefono): país de residencia del

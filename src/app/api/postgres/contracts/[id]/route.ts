@@ -7,6 +7,7 @@ import { FinancialRepository } from '@/repositories/financial.repository';
 import { getAsesorInfo } from '@/lib/asesor';
 import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
 import { normalizarTelefono } from '@/lib/telefono';
+import { formatearCambios } from '@/lib/formato-campos';
 
 const TELEFONO_FIELDS = ['celular', 'telefono', 'telefonoRefUno', 'telefonoRefDos'];
 
@@ -131,11 +132,12 @@ export const PUT = handlerWithStaffAuth(async (
 ) => {
   const titularId = params.id;
   const body = await request.json();
-  const { titular: titularChanges, beneficiarios: beneficiariosChanges, financial: financialChanges } = body;
+  const { beneficiarios: beneficiariosChanges, financial: financialChanges } = body;
+  let titularChanges = body.titular;
 
   // Verify the titular exists
   const existingTitular = await queryOne(
-    `SELECT "_id", "contrato", "aprobacion", "plataforma" FROM "PEOPLE" WHERE "_id" = $1`,
+    `SELECT * FROM "PEOPLE" WHERE "_id" = $1`,
     [titularId]
   );
   if (!existingTitular) throw new NotFoundError('Titular', titularId);
@@ -156,6 +158,8 @@ export const PUT = handlerWithStaffAuth(async (
       if (o && o[k] !== undefined) o[k] = normalizarTelefono(o[k], paisTel);
     }
   };
+  // Formato de los datos (lib/formato-campos), solo en los campos que de verdad cambian.
+  if (titularChanges) titularChanges = formatearCambios(titularChanges, existingTitular, { empresa: existingTitular.tipoPersona === 'Empresa' });
   normalizarTels(titularChanges);
   if (Array.isArray(beneficiariosChanges)) beneficiariosChanges.forEach(normalizarTels);
 
@@ -170,12 +174,12 @@ export const PUT = handlerWithStaffAuth(async (
   // 2. Update beneficiarios
   if (Array.isArray(beneficiariosChanges)) {
     for (const benChange of beneficiariosChanges) {
-      const { _id, ...fields } = benChange;
+      const { _id, ...cambios } = benChange;
       if (!_id) continue;
 
       // Verify this beneficiario belongs to the same contract
       const ben = await queryOne(
-        `SELECT "_id", "contrato" FROM "PEOPLE" WHERE "_id" = $1 AND "contrato" = $2`,
+        `SELECT * FROM "PEOPLE" WHERE "_id" = $1 AND "contrato" = $2`,
         [_id, existingTitular.contrato]
       );
       if (!ben) {
@@ -183,6 +187,7 @@ export const PUT = handlerWithStaffAuth(async (
         continue;
       }
 
+      const fields = formatearCambios(cambios, ben);
       const updated = await PeopleRepository.updateFields(_id, fields, PEOPLE_EDIT_FIELDS);
       if (updated) results.beneficiarios.push(updated);
     }

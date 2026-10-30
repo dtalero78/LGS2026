@@ -29,9 +29,13 @@ async function verifyUserPostgres(email: string, password: string) {
     console.log('🔍 [PostgreSQL] Buscando usuario:', email);
 
     const user = await queryOne<UserRole>(
+      // Sin distinguir mayúsculas (los correos nuevos se guardan en minúsculas — lib/formato-campos —
+      // y los antiguos pueden venir mezclados); si existe tal cual se escribió, gana ese.
       `SELECT "_id", "email", "password", "nombre", "rol", "activo"
        FROM "USUARIOS_ROLES"
-       WHERE "email" = $1`,
+       WHERE LOWER(TRIM("email")) = LOWER(TRIM($1))
+       ORDER BY ("email" = $1) DESC, "activo" DESC NULLS LAST
+       LIMIT 1`,
       [email]
     );
 
