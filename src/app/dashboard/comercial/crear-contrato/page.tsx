@@ -16,6 +16,47 @@ const COUNTRY_PREFIXES = [
   { country: "Otro", prefix: "" },
 ];
 
+/** Indicativo (solo dígitos) de un país del catálogo. */
+const prefijoDePais = (pais?: string) =>
+  (COUNTRY_PREFIXES.find(c => c.country === pais)?.prefix || '').replace(/[+\s]/g, '');
+/** Número con el indicativo del país elegido (sin ceros iniciales del número nacional). */
+const telConPrefijo = (pais: string | undefined, numero?: string) => {
+  const n = String(numero || '').replace(/\D/g, '').replace(/^0+/, '');
+  return n ? prefijoDePais(pais) + n : '';
+};
+
+/**
+ * Separa un teléfono guardado con indicativo en país + número nacional. Prueba primero el
+ * país del titular y luego los países LGS; si ninguno calza, lo deja tal cual con el país del titular.
+ */
+const separarTelefono = (valor: string, paisTitular: string): { pais: string; numero: string } => {
+  const d = valor.replace(/\D/g, '');
+  for (const pais of [paisTitular, 'Chile', 'Colombia', 'Ecuador', 'Perú']) {
+    const pre = prefijoDePais(pais);
+    if (pre && d.startsWith(pre) && d.length > pre.length + 6) return { pais, numero: d.slice(pre.length) };
+  }
+  return { pais: paisTitular, numero: d };
+};
+
+/** Selector de país del teléfono (referencias / beneficiarios). '' = país del titular. */
+function PaisTelefonoSelect({ value, paisTitular, onChange, compacto = false }: {
+  value?: string; paisTitular: string; onChange: (pais: string) => void; compacto?: boolean
+}) {
+  const actual = value || paisTitular;
+  return (
+    <select
+      value={actual}
+      onChange={(e) => onChange(e.target.value === paisTitular ? '' : e.target.value)}
+      title="País del teléfono (define el indicativo)"
+      className={`${compacto ? 'w-24 px-1 py-1 text-xs border-gray-200 rounded' : 'w-32 px-2 py-2 text-sm border-gray-300 rounded-md'} border bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500`}
+    >
+      {COUNTRY_PREFIXES.filter(c => c.prefix).map(c => (
+        <option key={c.country} value={c.country}>{c.country} ({c.prefix})</option>
+      ))}
+    </select>
+  );
+}
+
 // Payment method options by country
 const PAYMENT_OPTIONS: Record<string, { label: string; value: string }[]> = {
   "Colombia": [
@@ -105,6 +146,8 @@ interface Beneficiario {
   fechaNacimiento: string;
   email?: string;
   celular?: string;
+  /** País del celular (indicativo). Vacío = país del titular. */
+  paisCelular?: string;
   sence?: boolean; // Usuario SENCE (solo contratos de Chile)
   senceCode?: string; // Código SENCE del beneficiario (opcional, si sence)
   kids?: boolean; // Segmento/programa infantil (PEOPLE.kids)
@@ -169,6 +212,9 @@ function CrearContratoContent() {
     referenciaUno: '',
     parentezcoRefUno: '',
     telRefUno: '',
+    // País del teléfono de cada referencia (indicativo). Vacío = país del titular.
+    paisRefUno: '',
+    paisRefDos: '',
     referenciaDos: '',
     parentezcoRefDos: '',
     telRefDos: ''
@@ -719,11 +765,18 @@ function CrearContratoContent() {
       ['email', d.email], ['celular', d.celular ? sinPrefijo(d.celular) : ''], ['telefono', d.telefono],
       ['fechaNacimiento', fecha(d.fechaNacimiento)], ['domicilio', d.domicilio], ['ciudad', d.ciudad],
       ['genero', d.genero], ['empresa', d.empresa], ['cargo', d.cargo], ['ingresos', d.ingresos],
-      ['referenciaUno', d.referenciaUno], ['parentezcoRefUno', d.parentezcoRefUno], ['telRefUno', d.telefonoRefUno],
-      ['referenciaDos', d.referenciaDos], ['parentezcoRefDos', d.parentezcoRefDos], ['telRefDos', d.telefonoRefDos],
+      ['referenciaUno', d.referenciaUno], ['parentezcoRefUno', d.parentezcoRefUno],
+      ['referenciaDos', d.referenciaDos], ['parentezcoRefDos', d.parentezcoRefDos],
     ];
     let n = 0;
     const nuevo: any = { ...titular };
+    // Teléfonos de referencia: vienen guardados CON indicativo → país + número sin prefijo
+    // (si no, al crear se le antepondría el indicativo otra vez).
+    for (const [campo, paisCampo, valor] of [['telRefUno', 'paisRefUno', d.telefonoRefUno], ['telRefDos', 'paisRefDos', d.telefonoRefDos]] as const) {
+      if (!valor || String(nuevo[campo] ?? '').trim() !== '') continue;
+      const tel = separarTelefono(String(valor), titular.pais);
+      nuevo[campo] = tel.numero; nuevo[paisCampo] = tel.pais === titular.pais ? '' : tel.pais; n++;
+    }
     for (const [k, v] of mapa) {
       if (v !== null && v !== undefined && String(v).trim() !== '' && String(nuevo[k] ?? '').trim() === '') {
         nuevo[k] = String(v).trim(); n++;
@@ -884,13 +937,15 @@ function CrearContratoContent() {
           titular: {
             ...titular,
             celular: getPhonePrefix() + titular.celular,
+            telRefUno: telConPrefijo(titular.paisRefUno || titular.pais, titular.telRefUno),
+            telRefDos: telConPrefijo(titular.paisRefDos || titular.pais, titular.telRefDos),
             // Empresa: el país se toma de la plataforma (el paso 3 no pregunta país).
             pais: esEmpresa ? titular.plataforma : titular.pais
           },
           financial,
           beneficiarios: beneficiarios.map(b => ({
             ...b,
-            celular: b.celular ? getPhonePrefix() + b.celular : null
+            celular: b.celular ? telConPrefijo(b.paisCelular || titular.pais, b.celular) : null
           })),
           // Una empresa nunca es beneficiaria (no toma el programa).
           titularEsBeneficiario: esEmpresa ? false : titularEsBeneficiario,
@@ -1755,14 +1810,19 @@ function CrearContratoContent() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Teléfono *
+                        Teléfono * (+{prefijoDePais(titular.paisRefUno || titular.pais)})
                       </label>
-                      <input
-                        type="tel"
-                        value={titular.telRefUno}
-                        onChange={(e) => setTitular({...titular, telRefUno: e.target.value.replace(/\D/g, '')})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                      />
+                      <div className="flex gap-2">
+                        <PaisTelefonoSelect value={titular.paisRefUno} paisTitular={titular.pais}
+                          onChange={(pais) => setTitular({...titular, paisRefUno: pais})} />
+                        <input
+                          type="tel"
+                          value={titular.telRefUno}
+                          onChange={(e) => setTitular({...titular, telRefUno: e.target.value.replace(/\D/g, '')})}
+                          className="min-w-0 flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                          placeholder="Número sin prefijo"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1794,14 +1854,19 @@ function CrearContratoContent() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Teléfono *
+                        Teléfono * (+{prefijoDePais(titular.paisRefDos || titular.pais)})
                       </label>
-                      <input
-                        type="tel"
-                        value={titular.telRefDos}
-                        onChange={(e) => setTitular({...titular, telRefDos: e.target.value.replace(/\D/g, '')})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                      />
+                      <div className="flex gap-2">
+                        <PaisTelefonoSelect value={titular.paisRefDos} paisTitular={titular.pais}
+                          onChange={(pais) => setTitular({...titular, paisRefDos: pais})} />
+                        <input
+                          type="tel"
+                          value={titular.telRefDos}
+                          onChange={(e) => setTitular({...titular, telRefDos: e.target.value.replace(/\D/g, '')})}
+                          className="min-w-0 flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                          placeholder="Número sin prefijo"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2178,11 +2243,15 @@ function CrearContratoContent() {
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500" />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Celular * ({getPhonePrefix()})</label>
-                              <input type="tel" value={beneficiario.celular || ''}
-                                onChange={(e) => updateBeneficiario(index, 'celular', e.target.value.replace(/\D/g, ''))}
-                                placeholder="Número sin prefijo"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500" />
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Celular * (+{prefijoDePais(beneficiario.paisCelular || titular.pais)})</label>
+                              <div className="flex gap-2">
+                                <PaisTelefonoSelect value={beneficiario.paisCelular} paisTitular={titular.pais}
+                                  onChange={(pais) => updateBeneficiario(index, 'paisCelular', pais)} />
+                                <input type="tel" value={beneficiario.celular || ''}
+                                  onChange={(e) => updateBeneficiario(index, 'celular', e.target.value.replace(/\D/g, ''))}
+                                  placeholder="Número sin prefijo"
+                                  className="min-w-0 flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500" />
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -2204,7 +2273,7 @@ function CrearContratoContent() {
                           <th className="px-2 py-2 text-left">N° ID *</th>
                           <th className="px-2 py-2 text-left">Fecha nac.</th>
                           <th className="px-2 py-2 text-left">Email *</th>
-                          <th className="px-2 py-2 text-left">Celular * ({getPhonePrefix()})</th>
+                          <th className="px-2 py-2 text-left">País · Celular *</th>
                           {senceCol && <th className="px-2 py-2 text-left">SENCE</th>}
                           {senceCol && <th className="px-2 py-2 text-left">Cód. SENCE</th>}
                           <th className="px-2 py-2"></th>
@@ -2293,10 +2362,14 @@ function CrearContratoContent() {
                                 className="w-full min-w-[170px] px-2 py-1 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-400" />
                             </td>
                             <td className="px-1 py-1">
-                              <input type="tel" value={beneficiario.celular || ''}
-                                onChange={(e) => updateBeneficiario(index, 'celular', e.target.value.replace(/\D/g, ''))}
-                                placeholder="sin prefijo"
-                                className="w-full min-w-[120px] px-2 py-1 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-400" />
+                              <div className="flex gap-1">
+                                <PaisTelefonoSelect compacto value={beneficiario.paisCelular} paisTitular={titular.pais}
+                                  onChange={(pais) => updateBeneficiario(index, 'paisCelular', pais)} />
+                                <input type="tel" value={beneficiario.celular || ''}
+                                  onChange={(e) => updateBeneficiario(index, 'celular', e.target.value.replace(/\D/g, ''))}
+                                  placeholder="sin prefijo"
+                                  className="w-full min-w-[110px] px-2 py-1 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-primary-400" />
+                              </div>
                             </td>
                             {senceCol && (
                               <td className="px-2 py-1 text-center align-middle">
