@@ -12,6 +12,7 @@ import { api, handleApiError } from '@/hooks/use-api'
 import PagoTitularWizard from './PagoTitularWizard'
 import { fechaBaseContrato as calcFechaBaseContrato } from '@/lib/cambio-contado'
 import { calcularMora } from '@/lib/mora'
+import { asignarPagos, montoDe } from '@/lib/cuotas-pagos'
 
 interface PersonFinancialProps {
   person: Person
@@ -421,11 +422,18 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
   financial.plan = (person as any)?.plan || financial.plan || 'No disponible'
 
   // ── Derivados del listado de pagos para mostrar en "Información de Pagos" ──
-  // Cuotas pagadas REALES = pagos validados con numCuota > 0
-  // (la cuota #0 = inscripción NO cuenta como cuota pagada)
-  const cuotasPagadasReales = pagos
-    .filter((p: any) => p.validado === true && Number(p.numCuota) > 0)
-    .length
+  // Cuotas pagadas = cuotas COMPLETAS con los pagos validados (abonos sumados,
+  // el descuento completa la cuota). Regla única: src/lib/cuotas-pagos.ts.
+  const planCuotas = {
+    inscripcion: montoDe((financialData as any)?.pagoInscripcion),
+    valorCuota: montoDe((financialData as any)?.valorCuota),
+    numeroCuotas: parseInt((financialData as any)?.numeroCuotas) || 0,
+  }
+  const cuotasPagadasReales = asignarPagos({
+    ...planCuotas, pagos: pagos.filter((p: any) => p.validado === true),
+  }).cuotasCompletas
+  // Con todos los pagos registrados (validados o no): mora y "Abono parcial".
+  const asigRegistrados = asignarPagos({ ...planCuotas, pagos })
   // Estado Cartera: leído del registro cuota #0 (donde se guarda el tipo de
   // cartera del contrato). Default 'normal' si no hay cuota #0.
   const cuotaCero: any = pagos.find((p: any) => Number(p.numCuota) === 0)
@@ -459,9 +467,7 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
     const mora = calcularMora({
       fechaPago: fechaCorteRaw,
       numeroCuotas: financial?.cuotas,
-      cuotasRegistradas: new Set(
-        pagos.filter((p: any) => Number(p.numCuota) > 0).map((p: any) => Number(p.numCuota)),
-      ).size,
+      cuotasRegistradas: asigRegistrados.cuotasCompletas,
       saldo: (financialData as any)?.saldo,
     })
     if (!mora) return null
@@ -670,6 +676,14 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
               <p className="mt-1 text-sm text-gray-900 font-semibold">
                 {cuotasPagadasReales}{financial.cuotas ? ` / ${financial.cuotas}` : ''}
               </p>
+              {(() => {
+                const parcial = asigRegistrados.cuotas.find(c => c.n > 0 && !c.completa && c.cubierto > 0.5)
+                return parcial ? (
+                  <p className="mt-0.5 text-xs text-amber-700">
+                    Cuota {parcial.n}: abonado {formatCurrency(parcial.cubierto)}, faltan {formatCurrency(parcial.falta)}
+                  </p>
+                ) : null
+              })()}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Total del Plan</label>
@@ -784,8 +798,16 @@ export default function PersonFinancial({ person, financialData }: PersonFinanci
                           <tr key={p._id} className="hover:bg-gray-50">
                             <td className="px-3 py-2 text-center text-gray-900 font-medium">
                               {p.numCuota ?? '—'}
-                              {/* Las dos filas de un Pago doble (cuota #N y #N+1)
-                                  se marcan como adelanto para que se lean juntas. */}
+                              {p.numPago != null && (
+                                <span className="block text-[10px] font-normal text-gray-500 whitespace-nowrap">Pago N° {p.numPago}</span>
+                              )}
+                              {p.abono && (
+                                <span className="block mt-0.5 mx-auto w-fit px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800">
+                                  Abono
+                                </span>
+                              )}
+                              {/* Pago doble (retirado): las filas históricas se siguen
+                                  marcando como adelanto para que se lean juntas. */}
                               {p.pagoDoble && (
                                 <span className="block mt-0.5 mx-auto w-fit px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-100 text-indigo-800 whitespace-nowrap">
                                   Adelanto cuota

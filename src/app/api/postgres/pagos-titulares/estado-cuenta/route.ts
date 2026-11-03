@@ -8,6 +8,7 @@ import { PersonPermission } from '@/types/permissions';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { queryOne, queryMany } from '@/lib/postgres';
 import { buildEstadoCuentaPdf, type EstadoCuentaData, type EstadoCuentaMov } from '@/lib/estado-cuenta-pdf';
+import { asignarPagos, ordenarPagos } from '@/lib/cuotas-pagos';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,6 +39,8 @@ const num = (v: any): number => {
   const f = parseFloat(s);
   return isFinite(f) ? Math.round(f) : 0;
 };
+
+const fmtMoney = (n: number) => '$' + new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(Math.round(n || 0));
 
 const norm = (s: any): string =>
   String(s ?? '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -88,7 +91,7 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
 
   // 4. Pagos REGISTRADOS (validados o no)
   const pagos = await queryMany<any>(
-    `SELECT "numCuota","fechaPago","valorPagado","descuento","medioPago","banco","numeroReferencia","validado","inscripcion"
+    `SELECT "_id","numCuota","fechaPago","_createdDate","valorPagado","descuento","medioPago","banco","numeroReferencia","validado","inscripcion"
      FROM "PAGOS_TITULARES" WHERE "idPeople" = $1`,
     [idPeople],
   );
@@ -147,50 +150,20 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
     });
   }
 
-  // OJO: pg devuelve las columnas timestamptz como objetos Date, no string.
-  const tsOf = (v: any): number => {
-    const d = v instanceof Date ? v : new Date(v || 0);
-    const t = d.getTime();
-    return isNaN(t) ? 0 : t;
-  };
-  // Nº de cuota de un pago (0 = inscripción; los que no lo tienen caen a 0).
-  const cuotaDe = (p: any): number => {
-    let k = p.numCuota == null ? NaN : Number(p.numCuota);
-    if ((isNaN(k) || k < 0) && (p.inscripcion === true || num(p.inscripcion) > 0)) k = 0;
-    return isNaN(k) ? 0 : Math.max(0, k);
-  };
-
-  // Asignación: cada pago EMPIEZA a cubrir en SU cuota y DESBORDA hacia adelante
-  // (adelantos / cambio a contado). NUNCA rellena hacia atrás — así el estado por
-  // cuota coincide con el detalle de pagos: un abono parcial deja SU cuota parcial
-  // (no mueve el parcial a la última), y un pago de la cuota 9 no marca la 8.
-  const pagosOrden = [...pagos].sort((a, b) => {
-    const ka = cuotaDe(a), kb = cuotaDe(b);
-    return ka !== kb ? ka - kb : tsOf(a.fechaPago) - tsOf(b.fechaPago);
-  });
-  const cubiertoItem = new Array(items.length).fill(0);
-  const pagoDeItem: (any | null)[] = new Array(items.length).fill(null); // pago que tocó el ítem (propio o por desborde)
-  const pagoPropio: (any | null)[] = new Array(items.length).fill(null); // pago cuyo numCuota == ítem (fecha/canal reales)
-  for (const p of pagosOrden) {
-    const start = Math.min(cuotaDe(p), items.length - 1);
-    pagoPropio[start] = p; // último pago con ese numCuota (por el orden, el más reciente)
-    let restante = num(p.valorPagado) + num(p.descuento);
-    let i = start;
-    while (restante > 0.5 && i < items.length) {
-      const falta = items[i].valor - cubiertoItem[i];
-      if (falta <= 0.5) { i++; continue; }
-      const aplica = Math.min(restante, falta);
-      cubiertoItem[i] += aplica;
-      restante -= aplica;
-      if (!pagoDeItem[i]) pagoDeItem[i] = p;
-      if (cubiertoItem[i] >= items[i].valor - 0.5) i++;
-    }
-  }
+  // Asignación (regla única en src/lib/cuotas-pagos.ts): cada pago EMPIEZA a
+  // cubrir en SU cuota y DESBORDA hacia adelante; nunca rellena hacia atrás.
+  // El descuento completa la cuota igual que el efectivo.
+  const asig = asignarPagos({ inscripcion, valorCuota, numeroCuotas, pagos });
+  const pagoPorId = new Map(pagos.map(p => [p._id, p]));
+  const pagosOrden = ordenarPagos(pagos);
 
   const todos: EstadoCuentaMov[] = items.map((it, i) => {
-    const completo = cubiertoItem[i] >= it.valor - 0.5;
-    const parcial = !completo && cubiertoItem[i] > 0.5;
-    const p = pagoPropio[i] || pagoDeItem[i]; // preferir el pago propio de la cuota para fecha/canal
+    const c = asig.cuotas[i];
+    const completo = c ? c.completa : false;
+    const parcial = !completo && (c?.cubierto ?? 0) > 0.5;
+    // Fecha/canal = el último pago que tocó la cuota (el que la completó o el último abono).
+    const ultimo = c?.aportes.length ? c.aportes[c.aportes.length - 1] : null;
+    const p = ultimo ? pagoPorId.get(ultimo.pagoId) : null;
     let estado: EstadoCuentaMov['estado'];
     if (completo) estado = 'Pagado';
     else if (parcial) estado = 'Parcial';
@@ -201,12 +174,20 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
         estado = v0 < hoy0 ? 'En mora' : 'Por vencer';
       } else estado = 'Pendiente';
     }
+    // Etiqueta + detalle de abonos (solo si hubo más de un pago o quedó parcial).
+    let etiqueta: string | null = c?.etiqueta ?? null;
+    if (etiqueta === 'Abono parcial') etiqueta = `Abono parcial — pagado ${fmtMoney(c!.cubierto)}, faltan ${fmtMoney(c!.falta)}`;
+    const detalle = c && (c.aportes.length >= 2 || parcial)
+      ? c.aportes.map(a => ({ fecha: a.fechaPago ? new Date(a.fechaPago as any).toISOString() : null, monto: a.monto, descuento: a.descuento }))
+      : [];
     return {
       n: it.n, concepto: it.concepto, vence: it.vence,
       pago: p?.fechaPago || null,
       valor: it.valor,
       canal: p ? canalDe(p) : '—',
       estado,
+      etiqueta,
+      detalle,
     };
   });
 

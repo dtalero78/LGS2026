@@ -28,12 +28,10 @@ export const POST = handlerWithAuth(async (req, _ctx, session) => {
   const body = await req.json();
   const createdBy = (session.user as any)?.email || 'unknown';
 
-  // Pago doble: un solo valor capturado se parte en DOS filas (cuota #N y #N+1)
-  // con la misma fecha de pago. Devolvemos las dos; `pago` queda apuntando a la
-  // primera para no romper a los clientes que solo leen esa clave.
+  // El Pago doble se retiró (nov-2026): un pago que alcanza para dos cuotas se
+  // registra una sola vez y desborda solo a la siguiente (src/lib/cuotas-pagos.ts).
   if (body?.pagoDoble === true) {
-    const pagos = await pagosTitularesService.createPagoDoble(body, createdBy);
-    return successResponse({ pagos, pago: pagos[0] }, 201);
+    throw new ValidationError('El Pago doble ya no existe: registre un solo pago por el valor total; cubre las cuotas siguientes automáticamente.');
   }
 
   const pago = await pagosTitularesService.create(body, createdBy);

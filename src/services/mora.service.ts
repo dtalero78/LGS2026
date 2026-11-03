@@ -4,6 +4,7 @@ import { generateId } from '@/lib/id-generator';
 import { ConflictError, NotFoundError, ValidationError } from '@/lib/errors';
 import { AppConfigRepository } from '@/repositories/config.repository';
 import { calcularMora, parseMonto, type MoraCalculo } from '@/lib/mora';
+import { asignarPagos } from '@/lib/cuotas-pagos';
 
 /**
  * Mora de contratos: bloqueo de certificados + informe Recaudos › Usuarios en mora.
@@ -65,8 +66,26 @@ export interface UsuarioEnMora {
 // Documento normalizado (sin puntos/espacios/guiones, mayúsculas) — mismo criterio del resto de la plataforma.
 const NID = (col: string) => `UPPER(REGEXP_REPLACE(COALESCE(${col},''), '[.[:space:]_-]', '', 'g'))`;
 
-const SQL_FIN = `SELECT DISTINCT ON (f."contrato") f."contrato", f."fechaPago", f."numeroCuotas", f."valorCuota", f."saldo"
+const SQL_FIN = `SELECT DISTINCT ON (f."contrato") f."contrato", f."fechaPago", f."numeroCuotas", f."valorCuota", f."saldo", f."pagoInscripcion"
                    FROM "FINANCIEROS" f`;
+
+const SQL_PAGOS = `SELECT "_id","idPeople","numCuota","fechaPago","_createdDate","valorPagado","descuento","inscripcion"
+                     FROM "PAGOS_TITULARES"`;
+
+/**
+ * Cuotas COMPLETAS con los pagos registrados (validados o no), según la regla
+ * única de src/lib/cuotas-pagos.ts — dos abonos a la misma cuota cuentan una vez
+ * y una cuota a medias no cuenta. Se cuentan (no se exige que sean consecutivas
+ * desde la 1): las cuotas anteriores a ~mayo-2026 se pagaron fuera de la plataforma.
+ */
+function cuotasCompletas(fin: any, pagos: any[]): number {
+  return asignarPagos({
+    inscripcion: montoONull(fin.pagoInscripcion) ?? 0,
+    valorCuota: montoONull(fin.valorCuota) ?? 0,
+    numeroCuotas: parseInt(String(fin.numeroCuotas ?? 0), 10) || 0,
+    pagos,
+  }).cuotasCompletas;
+}
 
 function estadoContrato(r: any): UsuarioEnMora['estadoContrato'] {
   if (String(r.estado || '').toUpperCase() === 'FINALIZADA') return 'FINALIZADO';
@@ -106,9 +125,8 @@ export const moraService = {
         ORDER BY ("aprobacion" = 'Aprobado') DESC, "_createdDate" DESC LIMIT 1`, [contrato]);
     const fin = await queryOne<any>(`${SQL_FIN} WHERE f."contrato" = $1 ORDER BY f."contrato", f."_createdDate" DESC`, [contrato]);
     if (!tit || !fin) return { mora: null, titularId: tit?._id ?? null, valorCuota: null };
-    const reg = await queryOne<{ n: number }>(
-      `SELECT COUNT(DISTINCT "numCuota")::int n FROM "PAGOS_TITULARES" WHERE "idPeople" = $1 AND "numCuota" > 0`, [tit._id]);
-    const mora = calcularMora({ fechaPago: fin.fechaPago, numeroCuotas: fin.numeroCuotas, cuotasRegistradas: reg?.n ?? 0, saldo: fin.saldo });
+    const pagos = await queryMany<any>(`${SQL_PAGOS} WHERE "idPeople" = $1`, [tit._id]);
+    const mora = calcularMora({ fechaPago: fin.fechaPago, numeroCuotas: fin.numeroCuotas, cuotasRegistradas: cuotasCompletas(fin, pagos), saldo: fin.saldo });
     return { mora, titularId: tit._id, valorCuota: montoONull(fin.valorCuota) };
   },
 
@@ -157,9 +175,6 @@ export const moraService = {
          ORDER BY p."contrato", p."_createdDate" DESC
       ), fin AS (
         ${SQL_FIN} WHERE COALESCE(f."contrato",'') <> '' ORDER BY f."contrato", f."_createdDate" DESC
-      ), pag AS (
-        SELECT pt."idPeople", COUNT(DISTINCT pt."numCuota")::int AS registradas
-          FROM "PAGOS_TITULARES" pt WHERE pt."numCuota" > 0 GROUP BY pt."idPeople"
       ), acad AS (
         -- Ficha académica más reciente por documento normalizado (join en bloque, sin subconsultas por fila).
         SELECT DISTINCT ON (${NID('a."numeroId"')}) ${NID('a."numeroId"')} AS nid, a."nivel"
@@ -173,20 +188,30 @@ export const moraService = {
          WHERE x."tipoUsuario" <> 'TITULAR'
          GROUP BY x."contrato"
       )
-      SELECT tit.*, fin."fechaPago", fin."numeroCuotas", fin."valorCuota", fin."saldo", COALESCE(pag.registradas, 0) AS registradas,
+      SELECT tit.*, fin."fechaPago", fin."numeroCuotas", fin."valorCuota", fin."saldo", fin."pagoInscripcion",
              COALESCE(niv.niveles, '{}') AS niveles,
              d."_id" d_id, d."motivo" d_motivo, d."desbloqueadoPor" d_por, d."desbloqueadoPorNombre" d_por_nombre, d."_createdDate" d_fecha,
              COALESCE(NULLIF(TRIM(u."nombre"), ''), u."email") AS "gestorNombre"
         FROM tit
         JOIN fin ON fin."contrato" = tit."contrato"
-        LEFT JOIN pag ON pag."idPeople" = tit."_id"
         LEFT JOIN niv ON niv."contrato" = tit."contrato"
         LEFT JOIN "USUARIOS_ROLES" u ON u."_id" = tit."gestorRecaudo"
         LEFT JOIN "CERTIFICADO_DESBLOQUEOS" d ON d."contrato" = tit."contrato" AND d."activo"`);
 
+    // Pagos de todos los titulares del informe en una sola consulta.
+    const pagosPorTitular = new Map<string, any[]>();
+    const idsTit = rows.map(r => r._id);
+    if (idsTit.length) {
+      for (const p of await queryMany<any>(`${SQL_PAGOS} WHERE "idPeople" = ANY($1::text[])`, [idsTit])) {
+        const arr = pagosPorTitular.get(p.idPeople);
+        if (arr) arr.push(p); else pagosPorTitular.set(p.idPeople, [p]);
+      }
+    }
+
     const out: UsuarioEnMora[] = [];
     for (const r of rows) {
-      const mora = calcularMora({ fechaPago: r.fechaPago, numeroCuotas: r.numeroCuotas, cuotasRegistradas: r.registradas, saldo: r.saldo });
+      const registradas = cuotasCompletas(r, pagosPorTitular.get(r._id) ?? []);
+      const mora = calcularMora({ fechaPago: r.fechaPago, numeroCuotas: r.numeroCuotas, cuotasRegistradas: registradas, saldo: r.saldo });
       if (!mora || mora.estado !== 'EN_MORA') continue;
       const valorCuota = montoONull(r.valorCuota);
       out.push({

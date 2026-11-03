@@ -5,7 +5,8 @@
  *
  * Regla: el calendario de cuotas sale de FINANCIEROS (cuota k vence =
  * fechaPago + (k-1) meses, k = 1..numeroCuotas). Se compara el nº de cuotas
- * REGISTRADAS en PAGOS_TITULARES (numCuota > 0, validadas o no) contra las vencidas:
+ * COMPLETAS con los pagos de PAGOS_TITULARES (validados o no; abonos sumados con
+ * asignarPagos() de src/lib/cuotas-pagos.ts) contra las vencidas:
  *   - PAGADO:    saldo ≤ 0, o registradas ≥ vencidas hasta el corte de este mes
  *   - EN_TIEMPO: nada vencido aún, o registradas ≥ vencidas hasta hoy
  *   - EN_MORA:   registradas < vencidas hasta hoy

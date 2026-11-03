@@ -36,7 +36,14 @@ export interface PagoTitular {
   /** "Tipo Plan": 'Contado' | 'Credito' | 'Colaborador' | null (categórico, no numérico). */
   plan: string | null;
   vlrTotalProg: number | null;
+  /** Cuota donde EMPIEZA a aplicarse el pago (0 = inscripción). Se puede repetir:
+   *  dos abonos a la cuota 4 llevan cuota 4. Ver src/lib/cuotas-pagos.ts. */
   numCuota: number | null;
+  /** N° de pago: consecutivo por titular (1, 2, 3…), uno por recibo. Solo cuotas
+   *  (numCuota > 0); la inscripción queda en null. Lo asigna el INSERT. */
+  numPago: number | null;
+  /** true = el pago no completó solo su cuota (abono). Lo calcula el servidor. */
+  abono: boolean;
   valorCuota: number | null;
   valorPagado: number | null;
   /** "Valor Penalidad". Cuando `penalidad=true`, el valor de la cuota se guarda
@@ -113,7 +120,7 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
          "saldo", "descuento", "valorAplicado", "inscripcion", "medioPago", "numeroReferencia",
          "numeroFactura", "documentosAdjuntos", "validado", "createdBy",
          "vlrpenalidad", "penalidad", "cambioContado", "realizadopor", "pagoDoble",
-         "nota", "banco", "dosRecibos"
+         "nota", "banco", "dosRecibos", "abono", "numPago"
        ) VALUES (
          $1, $2, $3, $4, $5,
          $6, $7, $8, $9, $10,
@@ -121,7 +128,11 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
          $17, $18, $19, $20, $21, $22,
          $23, $24::jsonb, $25, $26,
          $27, $28, $29, $30, $31,
-         $32, $33, $34
+         $32, $33, $34, $35,
+         -- N° de pago consecutivo por titular (solo cuotas; la inscripción no lleva).
+         CASE WHEN COALESCE($13::int, 0) > 0
+              THEN (SELECT COALESCE(MAX("numPago"), 0) + 1 FROM "PAGOS_TITULARES" WHERE "idPeople" = $2)
+         END
        )
        RETURNING *`,
       [
@@ -159,6 +170,7 @@ class PagosTitularesRepositoryClass extends BaseRepository<PagoTitular> {
         data.nota ?? null,
         data.banco ?? null,
         data.dosRecibos ?? false,
+        data.abono ?? false,
       ]
     );
     return this.parse(row)!;

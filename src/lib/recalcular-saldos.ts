@@ -1,5 +1,6 @@
 import 'server-only';
 import type { PoolClient } from 'pg';
+import { asignarPagos } from '@/lib/cuotas-pagos';
 
 /**
  * Recalcula los saldos de un titular después de ajustar un pago YA VALIDADO
@@ -32,7 +33,8 @@ export async function recalcularSaldosTitular(
   const contrato: string | null = per?.contrato ?? null;
   if (!contrato) return { contrato: null, saldo: null };
   const fin = (await client.query(
-    `SELECT "_id", "totalPlan" FROM "FINANCIEROS" WHERE "contrato" = $1 LIMIT 1`, [contrato])).rows[0];
+    `SELECT "_id", "totalPlan", "valorCuota", "numeroCuotas", "pagoInscripcion"
+       FROM "FINANCIEROS" WHERE "contrato" = $1 LIMIT 1`, [contrato])).rows[0];
   if (!fin) return { contrato, saldo: null };
   const totalPlan = num(fin.totalPlan);
 
@@ -45,11 +47,16 @@ export async function recalcularSaldosTitular(
 
   let running = totalPlan;
   let pagado = 0;
-  let cuotasPagadas = 0;
+  // Cuotas COMPLETAS (src/lib/cuotas-pagos.ts), no filas de pago.
+  const cuotasPagadas = asignarPagos({
+    inscripcion: num(fin.pagoInscripcion),
+    valorCuota: num(fin.valorCuota),
+    numeroCuotas: parseInt(String(fin.numeroCuotas ?? 0), 10) || 0,
+    pagos,
+  }).cuotasCompletas;
   for (const p of pagos) {
     const aplicado = num(p.valorPagado) + num(p.descuento);
     pagado += aplicado;
-    if ((p.numCuota ?? 0) > 0) cuotasPagadas++;
     running = Math.max(0, running - aplicado);
     const saldo = Number(running.toFixed(2));
     const valorAplicado = num(p.valorPagado);

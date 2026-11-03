@@ -14,7 +14,8 @@ import 'server-only';
 import { PagosTitularesRepository, type PagoTitular } from '@/repositories/pagos-titulares.repository';
 import { PeopleRepository } from '@/repositories/people.repository';
 import { ids } from '@/lib/id-generator';
-import { query, queryOne } from '@/lib/postgres';
+import { query, queryOne, queryMany } from '@/lib/postgres';
+import { asignarPagos, simularPago } from '@/lib/cuotas-pagos';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { validarNumeroFactura } from '@/lib/numero-factura';
 import { computePlataformaScope, getSessionPlataforma, buildPlataformaWhereSql, type PlataformaScope } from '@/lib/recaudos-scope';
@@ -104,29 +105,31 @@ export async function syncFinancieroSaldo(idPeople: string): Promise<void> {
     if (!person || !(person as any).contrato) return;
     const contrato = (person as any).contrato as string;
 
-    // 2) Sumar pagos VALIDADOS del titular y contar cuotas pagadas (>0).
+    // 2) Pagos VALIDADOS del titular.
     //    - Sum: sólo valorPagado + descuento. La columna `inscripcion` ya está
     //      en valorPagado para cuota #0 (mismo valor) — sumarla doblaría.
-    //    - Count cuotasPagadas: validados con numCuota > 0
-    //      (la cuota #0 = inscripción NO cuenta como cuota pagada).
-    const sumRow = await queryOne<{ total: string; cuotas_pagadas: string }>(
-      `SELECT
-         COALESCE(SUM(COALESCE("valorPagado", 0) + COALESCE("descuento", 0)), 0)::text AS total,
-         COALESCE(SUM(CASE WHEN COALESCE("numCuota", 0) > 0 THEN 1 ELSE 0 END), 0)::text AS cuotas_pagadas
-       FROM "PAGOS_TITULARES"
-       WHERE "idPeople" = $1 AND "validado" = true`,
+    //    - cuotasPagadas = cuotas COMPLETAS (src/lib/cuotas-pagos.ts), no filas:
+    //      dos abonos a la misma cuota cuentan una sola vez.
+    const validados = await queryMany<any>(
+      `SELECT "_id","numCuota","fechaPago","_createdDate","valorPagado","descuento","inscripcion"
+         FROM "PAGOS_TITULARES" WHERE "idPeople" = $1 AND "validado" = true`,
       [idPeople]
     );
-    const totalValidado = parseFloat(sumRow?.total ?? '0') || 0;
-    const cuotasPagadas = parseInt(sumRow?.cuotas_pagadas ?? '0', 10) || 0;
+    const totalValidado = validados.reduce((s, p) => s + toNum(p.valorPagado) + toNum(p.descuento), 0);
 
-    // 3) Leer totalPlan del FINANCIEROS (texto legacy, hay que parsear)
-    const finRow = await queryOne<{ totalPlan: string | null }>(
-      `SELECT "totalPlan" FROM "FINANCIEROS" WHERE "contrato" = $1 LIMIT 1`,
+    // 3) Plan del FINANCIEROS (texto legacy, hay que parsear)
+    const finRow = await queryOne<{ totalPlan: string | null; valorCuota: string | null; numeroCuotas: any; pagoInscripcion: string | null }>(
+      `SELECT "totalPlan","valorCuota","numeroCuotas","pagoInscripcion" FROM "FINANCIEROS" WHERE "contrato" = $1 LIMIT 1`,
       [contrato]
     );
     if (!finRow) return;
     const totalPlan = toNum(finRow.totalPlan);
+    const cuotasPagadas = asignarPagos({
+      inscripcion: toNum(finRow.pagoInscripcion),
+      valorCuota: toNum(finRow.valorCuota),
+      numeroCuotas: parseInt(String(finRow.numeroCuotas ?? 0), 10) || 0,
+      pagos: validados,
+    }).cuotasCompletas;
 
     // 4) Calcular nuevo saldo (sin negativos)
     const nuevoSaldo = Math.max(0, totalPlan - totalValidado);
@@ -145,6 +148,28 @@ export async function syncFinancieroSaldo(idPeople: string): Promise<void> {
   } catch (err: any) {
     console.warn(`[pagos-titulares] syncFinancieroSaldo falló para ${idPeople}:`, err?.message || err);
   }
+}
+
+/**
+ * ¿El pago nuevo es un abono? (regla de src/lib/cuotas-pagos.ts). Best-effort:
+ * si no hay plan en FINANCIEROS no se puede saber y queda en false.
+ */
+async function esPagoAbono(
+  idPeople: string, contrato: string | undefined, numCuota: number, valorPagado: number, descuento: number,
+): Promise<boolean> {
+  if (!contrato || numCuota <= 0) return false;
+  const fin = await queryOne<any>(
+    `SELECT "valorCuota","numeroCuotas","pagoInscripcion" FROM "FINANCIEROS" WHERE "contrato" = $1 LIMIT 1`, [contrato]);
+  const valorCuota = toNum(fin?.valorCuota);
+  if (!fin || valorCuota <= 0) return false;
+  const pagos = await queryMany<any>(
+    `SELECT "_id","numCuota","fechaPago","_createdDate","valorPagado","descuento","inscripcion"
+       FROM "PAGOS_TITULARES" WHERE "idPeople" = $1`, [idPeople]);
+  const asig = asignarPagos({
+    inscripcion: toNum(fin.pagoInscripcion), valorCuota,
+    numeroCuotas: parseInt(String(fin.numeroCuotas ?? 0), 10) || 0, pagos,
+  });
+  return simularPago(asig, numCuota, valorPagado, descuento).esAbono;
 }
 
 export const pagosTitularesService = {
@@ -318,10 +343,10 @@ export const pagosTitularesService = {
   },
 
   /**
-   * Crea UN pago. `opts.saldoBase` permite encadenar: el pago doble pasa acá el
-   * saldo que dejó la primera cuota, para que la segunda no vuelva a partir del
-   * saldo de FINANCIEROS (que no cambia hasta validar y daría el mismo número
-   * en las dos filas).
+   * Crea UN pago. `numCuota` = cuota donde empieza a aplicarse; si alcanza para
+   * más, desborda a las siguientes (src/lib/cuotas-pagos.ts). `numPago` lo asigna
+   * el INSERT y `abono` se calcula aquí. `opts.saldoBase` permite fijar el saldo
+   * de partida (por defecto, FINANCIEROS.saldo).
    */
   async create(
     input: Partial<PagoTitular>,
@@ -346,8 +371,8 @@ export const pagosTitularesService = {
     }
 
     // Saldo del pago = "Saldo después de pago" en el wizard
-    // (= Saldo a la Fecha actual − Valor a Aplicar, donde Valor a Aplicar = Valor a Pagar).
-    // El descuento NO reduce el saldo (es informativo: "Valor Pagado Descuento").
+    // (= Saldo a la Fecha actual − Valor a Pagar − Descuento). El descuento
+    // completa la cuota igual que el efectivo, como en syncFinancieroSaldo.
     // Saldo a la Fecha lo obtenemos de FINANCIEROS.saldo (mantenido al día
     // por syncFinancieroSaldo). Para cuota#0 no aplica — esa fila se inserta
     // directamente en /api/postgres/contracts y /api/admin/migrar-contrato
@@ -367,7 +392,7 @@ export const pagosTitularesService = {
         saldoAFecha = toNum(finRow?.saldo);
       }
     }
-    const saldo = Math.max(0, saldoAFecha - valorPagadoNum);
+    const saldo = Math.max(0, saldoAFecha - valorPagadoNum - toNum(input.descuento));
 
     // Si el wizard no manda fechaReporte (clientes viejos), default hoy
     // local del server (la diferencia con la TZ del cliente es de ±1 día,
@@ -413,6 +438,11 @@ export const pagosTitularesService = {
       }
     }
 
+    // Abono (automático): el pago no completa solo su cuota, o la cuota ya tenía
+    // abonos. Se calcula con TODOS los pagos registrados (validados o no).
+    const abono = await esPagoAbono(input.idPeople, (titular as any).contrato, Number(input.numCuota) || 0,
+      valorPagadoNum, toNum(input.descuento));
+
     const fechaPagoFinal = input.fechaPago ?? new Date().toISOString().slice(0, 10);
     const realizadopor = esCambioContado
       ? resolveRealizadoPor(fechaBaseContrato(titular as any), fechaPagoFinal)
@@ -437,7 +467,8 @@ export const pagosTitularesService = {
       penalidad: esPenalidad,
       cambioContado: esCambioContado,
       realizadopor,
-      pagoDoble: input.pagoDoble === true,
+      pagoDoble: false, // Pago doble retirado (nov-2026): un pago grande desborda solo a la cuota siguiente
+      abono,
       nota: nota || null,
       valorPagado: input.valorPagado ?? null,
       saldo,
@@ -455,70 +486,6 @@ export const pagosTitularesService = {
     };
 
     return PagosTitularesRepository.create(data);
-  },
-
-  /**
-   * PAGO DOBLE — el operador captura UN valor y acá se parte en DOS registros
-   * con la MISMA fecha de pago: la cuota #N y la #N+1 (adelanto de la siguiente).
-   *
-   * Reglas:
-   *  - El valor se divide en dos; si es impar, el peso sobrante va a la PRIMERA
-   *    cuota, de modo que las dos mitades siempre suman el valor capturado.
-   *  - El DESCUENTO se aplica solo a la SEGUNDA cuota (así lo pidió negocio).
-   *  - El saldo se encadena: la segunda fila parte del saldo que dejó la primera.
-   *  - Ambas filas quedan con `pagoDoble=true` → la tabla las muestra como
-   *    "Adelanto cuota".
-   *
-   * No es una transacción SQL: `create` es un INSERT por fila. Si la segunda
-   * fallara, la primera queda registrada — se ve en la tabla como una cuota
-   * suelta sin su par y el error se devuelve al operador.
-   */
-  async createPagoDoble(
-    input: Partial<PagoTitular>,
-    createdBy: string,
-  ): Promise<PagoTitular[]> {
-    if (!input.idPeople) throw new ValidationError('idPeople es requerido');
-
-    const numCuota = Number(input.numCuota);
-    if (!Number.isFinite(numCuota) || numCuota < 1) {
-      throw new ValidationError('Pago doble requiere un # de cuota válido (1 o mayor)');
-    }
-
-    const total = toNum(input.valorPagado);
-    if (total <= 0) throw new ValidationError('Pago doble requiere un valor a pagar mayor a 0');
-
-    // Impar → el peso extra queda en la primera cuota; mitad1 + mitad2 === total.
-    const mitad1 = Math.ceil(total / 2);
-    const mitad2 = total - mitad1;
-
-    const titular = await PeopleRepository.findById(input.idPeople);
-    if (!titular) throw new NotFoundError('PEOPLE', input.idPeople);
-
-    let saldoAFecha = 0;
-    const contrato = (titular as any).contrato as string | undefined;
-    if (contrato) {
-      const finRow = await queryOne<{ saldo: string | null }>(
-        `SELECT "saldo" FROM "FINANCIEROS" WHERE "contrato" = $1 LIMIT 1`,
-        [contrato]
-      );
-      saldoAFecha = toNum(finRow?.saldo);
-    }
-
-    // Cuota #N — sin descuento.
-    const primero = await this.create(
-      { ...input, numCuota, valorPagado: mitad1, descuento: 0, pagoDoble: true },
-      createdBy,
-      { saldoBase: saldoAFecha },
-    );
-
-    // Cuota #N+1 — recibe el descuento y arranca del saldo que dejó la primera.
-    const segundo = await this.create(
-      { ...input, numCuota: numCuota + 1, valorPagado: mitad2, descuento: input.descuento ?? 0, pagoDoble: true },
-      createdBy,
-      { saldoBase: Math.max(0, saldoAFecha - mitad1) },
-    );
-
-    return [primero, segundo];
   },
 
   async update(id: string, body: Record<string, any>): Promise<PagoTitular> {

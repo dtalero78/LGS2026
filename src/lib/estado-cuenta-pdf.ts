@@ -20,6 +20,10 @@ export interface EstadoCuentaMov {
   valor: number;
   canal: string;
   estado: 'Pagado' | 'Parcial' | 'En mora' | 'Por vencer' | 'Pendiente' | 'Descuento';
+  /** Cómo se pagó (Pago normal, Pago con abonos, …). Ver src/lib/cuotas-pagos.ts. */
+  etiqueta?: string | null;
+  /** Abonos que la cubrieron (solo cuotas con 2+ pagos o parciales). */
+  detalle?: { fecha: string | null; monto: number; descuento: number }[];
 }
 
 export interface EstadoCuentaData {
@@ -352,13 +356,24 @@ function renderMovimientos(doc: any, data: EstadoCuentaData) {
     return;
   }
 
+  const subH = 13;
+  // Segunda línea: "Pago con abonos: 05/02/2026 $45.000 · 20/02/2026 $45.000 (desc. $5.000)"
+  const subLinea = (m: EstadoCuentaMov): string | null => {
+    if (!m.etiqueta) return null;
+    const abonos = (m.detalle || []).map(a =>
+      `${fmtDate(a.fecha)} ${money(a.monto)}${a.descuento > 0.5 ? ` (desc. ${money(a.descuento)})` : ''}`);
+    return abonos.length ? `${m.etiqueta}: ${abonos.join(' · ')}` : m.etiqueta;
+  };
+
   data.movimientos.forEach((m, idx) => {
-    if (y + rowH > bottomLimit) {
+    const sub = subLinea(m);
+    const alto = rowH + (sub ? subH : 0);
+    if (y + alto > bottomLimit) {
       doc.addPage();
       doc.y = MARGIN;
       y = tableHeader(doc);
     }
-    if (idx % 2 === 1) doc.rect(MARGIN, y, CONTENT_W, rowH).fill('#fafafa');
+    if (idx % 2 === 1) doc.rect(MARGIN, y, CONTENT_W, alto).fill('#fafafa');
 
     let x = MARGIN;
     const cell = (txt: string, w: number, align: 'left' | 'center' | 'right', bold = false, color = C.ink) => {
@@ -389,6 +404,20 @@ function renderMovimientos(doc: any, data: EstadoCuentaData) {
     doc.fillColor(C.ink);
 
     y += rowH;
+    if (sub) {
+      const subX = MARGIN + COLS[0].w + 5;
+      const subW = CONTENT_W - COLS[0].w - 10;
+      let s = sub;
+      doc.font('Helvetica-Oblique').fontSize(7);
+      if (doc.widthOfString(s) > subW) {
+        while (s.length > 1 && doc.widthOfString(s + '…') > subW) s = s.slice(0, -1);
+        s = s.replace(/\s+$/, '') + '…';
+      }
+      doc.fillColor(m.estado === 'Parcial' ? C.brandDark : C.green)
+        .text(s, subX, y - 2, { width: subW, lineBreak: false });
+      doc.fillColor(C.ink);
+      y += subH;
+    }
     doc.strokeColor(C.line).lineWidth(0.5).moveTo(MARGIN, y).lineTo(MARGIN + CONTENT_W, y).stroke();
   });
   doc.y = y + 14;
