@@ -233,10 +233,16 @@ export default function PermissionsAdminPage() {
     if (!selectedRole) { alert('Selecciona un rol para guardar cambios'); return; }
     try {
       setSaving(true);
-      const permissions = Object.entries(permissionState[selectedRole] || {})
+      const marcados = Object.entries(permissionState[selectedRole] || {})
         .filter(([_, value]) => value)
         .map(([key]) => key as Permission)
         .filter(p => p && (p as string) !== 'undefined');
+      // Conservar los permisos del rol que esta matriz no muestra (no están en el
+      // catálogo): antes se borraban en silencio al guardar.
+      const enCatalogo = new Set((data?.permissions || []).map(p => p.code as string));
+      const ocultos = (data?.matrix.find(m => m.role === selectedRole)?.permissions || [])
+        .filter(p => !enCatalogo.has(p as string)) as Permission[];
+      const permissions = [...new Set([...marcados, ...ocultos])];
 
       if (permissions.length === 0) {
         const confirmed = window.confirm(
@@ -252,7 +258,7 @@ export default function PermissionsAdminPage() {
       });
       const result = await response.json();
       if (result.success) {
-        alert(`Permisos de ${selectedRole} guardados (${permissions.length} permisos)`);
+        alert(`Permisos de ${selectedRole} guardados (${permissions.length} permisos).\n\nLos usuarios con ese rol que ya tienen la plataforma abierta deben recargar la página (F5) para ver el cambio en el menú.`);
         setHasChanges(false);
         loadPermissions();
       } else {

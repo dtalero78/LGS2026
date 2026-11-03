@@ -6,6 +6,7 @@
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { ForbiddenError } from '@/lib/errors';
 import { invalidatePermissionsCache } from '@/config/roles';
+import { invalidateApiPermissionsCache } from '@/lib/api-permissions';
 import { Role } from '@/types/permissions';
 
 export const POST = handlerWithAuth(async (req, _ctx, session) => {
@@ -20,6 +21,7 @@ export const POST = handlerWithAuth(async (req, _ctx, session) => {
 
   if (role) {
     invalidatePermissionsCache(role as Role);
+    invalidateApiPermissionsCache(role);
     console.log(`✅ Cache invalidado para rol: ${role} por usuario ${session.user?.email}`);
     return successResponse({
       message: `Cache invalidado para ${role}. Los nuevos permisos se cargarán en el próximo request.`
@@ -27,6 +29,7 @@ export const POST = handlerWithAuth(async (req, _ctx, session) => {
   }
 
   invalidatePermissionsCache();
+  invalidateApiPermissionsCache();
   console.log(`✅ Cache completo invalidado por usuario ${session.user?.email}`);
   return successResponse({
     message: 'Cache completo invalidado. Los nuevos permisos se cargarán en el próximo request.'

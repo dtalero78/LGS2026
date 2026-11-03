@@ -908,6 +908,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Crear contratos de canje (pagados con compromisos publicitarios): valor del programa, duración y condiciones escritas, sin inscripción ni cuotas',
   },
   {
+    code: ComercialPermission.SUBIR_RECIBO_INSCRIPCION,
+    module: Module.COMERCIAL,
+    section: 'Crear Contrato',
+    name: "Botón 'Subir recibo inscripción'",
+    description: 'Subir el recibo de pago de la inscripción del contrato (lo lee la IA y refleja los datos en FINANCIEROS); además requiere el interruptor leer_recibo_activo',
+  },
+  {
     code: ComercialPermission.DEJAR_LISTO_APROBACION,
     module: Module.COMERCIAL,
     section: 'Crear Contrato',

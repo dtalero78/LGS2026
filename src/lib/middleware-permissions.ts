@@ -12,7 +12,9 @@ interface CacheEntry {
 }
 
 const permissionsCache = new Map<Role, CacheEntry>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+// 1 minuto: el middleware corre en un proceso aparte (Edge) y la matriz de
+// permisos no puede limpiarle el caché; con 5 min un cambio tardaba en verse.
+const CACHE_TTL = 60 * 1000;
 
 /**
  * Carga los permisos de un rol desde PostgreSQL (con cache)
