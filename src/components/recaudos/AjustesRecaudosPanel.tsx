@@ -65,7 +65,7 @@ const SUBTABS: { key: Tipo; label: string; permiso: RecaudosPermission }[] = [
 ]
 
 const ETIQUETA: Record<string, string> = {
-  valorPagado: 'Valor pagado', descuento: 'Descuento', fechaPago: 'Fecha de pago',
+  numCuota: '# Cuota', valorPagado: 'Valor pagado', descuento: 'Descuento', fechaPago: 'Fecha de pago',
   medioPago: 'Medio de pago', banco: 'Banco', numeroReferencia: 'Referencia', numeroFactura: '# Factura',
 }
 
@@ -260,6 +260,7 @@ export default function AjustesRecaudosPanel() {
 
 function AjusteModal({ fila, tipo, onClose, onDone }: { fila: Fila; tipo: Tipo; onClose: () => void; onDone: () => void }) {
   const inicial = {
+    numCuota: String(fila.numCuota ?? ''),
     valorPagado: String(num(fila.valorPagado)),
     descuento: String(num(fila.descuento)),
     fechaPago: fila.fechaPago ? new Date(fila.fechaPago).toISOString().slice(0, 10) : '',
@@ -274,7 +275,11 @@ function AjusteModal({ fila, tipo, onClose, onDone }: { fila: Fila; tipo: Tipo; 
   const set = (k: keyof typeof inicial, v: string) => setForm(f => ({ ...f, [k]: v }))
   const campos: (keyof typeof inicial)[] = tipo === 'FACTURA'
     ? ['numeroFactura']
-    : ['valorPagado', 'descuento', 'fechaPago', 'medioPago', 'banco', 'numeroReferencia']
+    : tipo === 'PAGO'
+      ? ['numCuota', 'valorPagado', 'descuento', 'fechaPago', 'medioPago', 'banco', 'numeroReferencia']
+      : ['valorPagado', 'descuento', 'fechaPago', 'medioPago', 'banco', 'numeroReferencia']
+  // Un descuento de pocos pesos casi siempre es un dígito digitado en el campo equivocado.
+  const descuentoSospechoso = form.descuento !== inicial.descuento && num(form.descuento) > 0 && num(form.descuento) < 1000
   const cambios = Object.fromEntries(campos.filter(c => form[c] !== inicial[c]).map(c => [c, form[c]]))
   const hayCambios = Object.keys(cambios).length > 0
   const medios = mediosPagoPara(fila.plataforma || '')
@@ -316,6 +321,16 @@ function AjusteModal({ fila, tipo, onClose, onDone }: { fila: Fila; tipo: Tipo; 
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
+              {tipo === 'PAGO' && (
+                <div className="col-span-2">
+                  <label htmlFor="aj-cuota" className="block text-xs font-medium text-gray-700"># Cuota (cuota donde se aplica el pago)</label>
+                  <input id="aj-cuota" type="number" min="1" step="1" className={input} value={form.numCuota}
+                    onChange={e => set('numCuota', e.target.value.replace(/[^0-9]/g, ''))} />
+                  <div className="text-xs text-gray-400 mt-0.5">
+                    Dos abonos a la misma cuota llevan el mismo número; si el pago alcanza para más, cubre las siguientes solo.
+                  </div>
+                </div>
+              )}
               <div>
                 <label htmlFor="aj-valor" className="block text-xs font-medium text-gray-700">Valor pagado</label>
                 <input id="aj-valor" type="number" min="0" step="any" className={input} value={form.valorPagado} onChange={e => set('valorPagado', e.target.value)} />
@@ -323,6 +338,11 @@ function AjusteModal({ fila, tipo, onClose, onDone }: { fila: Fila; tipo: Tipo; 
               <div>
                 <label htmlFor="aj-desc" className="block text-xs font-medium text-gray-700">Descuento</label>
                 <input id="aj-desc" type="number" min="0" step="any" className={input} value={form.descuento} onChange={e => set('descuento', e.target.value)} />
+                {descuentoSospechoso && (
+                  <div className="text-xs font-medium text-amber-700 mt-0.5">
+                    ¿Descuento de {formatCurrency(num(form.descuento))}? Si quería cambiar la cuota, use el campo # Cuota.
+                  </div>
+                )}
               </div>
               <div>
                 <label htmlFor="aj-fecha" className="block text-xs font-medium text-gray-700">Fecha de pago</label>

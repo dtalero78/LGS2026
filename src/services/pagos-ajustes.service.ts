@@ -28,10 +28,12 @@ export const TIPOS_AJUSTE: TipoAjuste[] = ['INSCRIPCION', 'PAGO', 'FACTURA'];
 /** Campos que se pueden ajustar por tipo. */
 const CAMPOS: Record<TipoAjuste, string[]> = {
   INSCRIPCION: ['valorPagado', 'descuento', 'fechaPago', 'medioPago', 'banco', 'numeroReferencia'],
-  PAGO:        ['valorPagado', 'descuento', 'fechaPago', 'medioPago', 'banco', 'numeroReferencia'],
+  // numCuota = cuota donde se aplica el pago (src/lib/cuotas-pagos.ts); corrige
+  // abonos que se numeraron como cuotas distintas.
+  PAGO:        ['numCuota', 'valorPagado', 'descuento', 'fechaPago', 'medioPago', 'banco', 'numeroReferencia'],
   FACTURA:     ['numeroFactura'],
 };
-const NUMERICOS = new Set(['valorPagado', 'descuento']);
+const NUMERICOS = new Set(['valorPagado', 'descuento', 'numCuota']);
 
 interface SessionInfo { email: string | null; nombre: string | null; role: string }
 
@@ -49,6 +51,11 @@ async function scopeSql(session: SessionInfo, paramIndex: number) {
 }
 
 function normalizar(campo: string, valor: any): any {
+  if (campo === 'numCuota') {
+    const n = Number(valor);
+    if (!Number.isInteger(n) || n < 1) throw new ValidationError('# Cuota debe ser un número entero de 1 en adelante');
+    return n;
+  }
   if (NUMERICOS.has(campo)) {
     const n = Number(valor);
     if (!Number.isFinite(n) || n < 0) throw new ValidationError(`${campo} debe ser un número mayor o igual a 0`);
@@ -142,6 +149,14 @@ export const pagosAjustesService = {
       }
       const campos = Object.keys(despues);
       if (!campos.length) throw new ValidationError('No hay cambios para aplicar');
+      if ('numCuota' in despues && pago.contrato) {
+        const fin = (await client.query(
+          `SELECT "numeroCuotas" FROM "FINANCIEROS" WHERE "contrato" = $1 LIMIT 1`, [pago.contrato])).rows[0];
+        const total = Number(fin?.numeroCuotas) || 0;
+        if (total > 0 && despues.numCuota > total) {
+          throw new ValidationError(`El contrato tiene ${total} cuotas: la cuota #${despues.numCuota} no existe`);
+        }
+      }
 
       // En la inscripción, la columna `inscripcion` acompaña a valorPagado.
       const set: string[] = [];
