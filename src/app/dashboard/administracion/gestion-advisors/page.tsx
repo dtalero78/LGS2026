@@ -22,7 +22,7 @@ import TarifasPanel from '@/components/administracion/TarifasPanel'
 import AdvisorsPagoPanel from '@/components/administracion/AdvisorsPagoPanel'
 import DetalleAdvisorsPanel from '@/components/administracion/DetalleAdvisorsPanel'
 import ConsolidadoPanel from '@/components/administracion/ConsolidadoPanel'
-import { type Liquidacion, type CorteInfo, etiquetaPeriodo, corrPeriodo } from '@/components/administracion/liquidacion-tipos'
+import { type Liquidacion, type CorteInfo, MESES, etiquetaPeriodo, corrPeriodo } from '@/components/administracion/liquidacion-tipos'
 import { useSession } from 'next-auth/react'
 
 type Tab = 'consolidado' | 'detalle' | 'advisors' | 'tarifas'
@@ -86,8 +86,21 @@ export default function GestionAdvisorsPage() {
             {usaLiq && (
               <div className="flex items-center gap-1">
                 <button type="button" onClick={() => setPeriodo(p => corrPeriodo(p, -1))} className="p-1.5 rounded-md border border-gray-300 bg-white hover:bg-gray-50"><ChevronLeftIcon className="h-4 w-4" /></button>
-                <input type="month" value={periodo} max={mesActual} onChange={e => e.target.value && setPeriodo(e.target.value)}
-                  className="rounded-md border border-gray-300 px-2 py-1 text-sm" aria-label="Mes" />
+                {/* Mes y año con listas propias: el <input type="month"> no existe en Firefox/Safari
+                    (se ve como texto "2026-11"); así se ve igual en todos los navegadores. */}
+                <select value={periodo.slice(5, 7)} aria-label="Mes"
+                  onChange={e => { const p = `${periodo.slice(0, 4)}-${e.target.value}`; setPeriodo(p > mesActual ? mesActual : p) }}
+                  className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm">
+                  {MESES.map((m, i) => {
+                    const v = String(i + 1).padStart(2, '0')
+                    return <option key={v} value={v} disabled={`${periodo.slice(0, 4)}-${v}` > mesActual}>{m}</option>
+                  })}
+                </select>
+                <select value={periodo.slice(0, 4)} aria-label="Año"
+                  onChange={e => { const p = `${e.target.value}-${periodo.slice(5, 7)}`; setPeriodo(p > mesActual ? mesActual : p) }}
+                  className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm">
+                  {Array.from({ length: Number(mesActual.slice(0, 4)) - 2025 }, (_, i) => String(2026 + i)).map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
                 <button type="button" onClick={() => setPeriodo(p => corrPeriodo(p, 1))} disabled={periodo >= mesActual} className="p-1.5 rounded-md border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40"><ChevronRightIcon className="h-4 w-4" /></button>
                 <button type="button" onClick={cargar} disabled={loading} title="Recalcular" className="ml-1 p-1.5 rounded-md border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40">
                   <ArrowPathIcon className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
