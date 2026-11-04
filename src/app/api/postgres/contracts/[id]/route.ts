@@ -8,6 +8,7 @@ import { getAsesorInfo } from '@/lib/asesor';
 import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
 import { normalizarTelefono } from '@/lib/telefono';
 import { formatearCambios } from '@/lib/formato-campos';
+import { registrarEventoContrato, diffCampos } from '@/lib/contrato-eventos';
 
 const TELEFONO_FIELDS = ['celular', 'telefono', 'telefonoRefUno', 'telefonoRefDos'];
 
@@ -165,10 +166,20 @@ export const PUT = handlerWithStaffAuth(async (
 
   const results: any = { titular: null, beneficiarios: [], financial: null };
 
+  // Seguimiento del contrato: qué se editó, con su antes/después (best-effort).
+  const editables = (o: any, campos: string[]) => Object.fromEntries(Object.entries(o || {}).filter(([k]) => campos.includes(k)));
+  const registrar = (personaId: string, antes: any, cambios: any, campos: string[], seccion: string) => {
+    const d = diffCampos(antes, editables(cambios, campos));
+    return Object.keys(d).length
+      ? registrarEventoContrato({ personaId, categoria: 'MATRICULA', accion: `Contrato editado · ${seccion}`, detalle: Object.keys(d).join(', '), datos: { cambios: d }, session })
+      : Promise.resolve();
+  };
+
   // 1. Update titular
   if (titularChanges && Object.keys(titularChanges).length > 0) {
     const updated = await PeopleRepository.updateFields(titularId, titularChanges, PEOPLE_EDIT_FIELDS);
     results.titular = updated;
+    await registrar(titularId, existingTitular, titularChanges, PEOPLE_EDIT_FIELDS, 'titular');
   }
 
   // 2. Update beneficiarios
@@ -189,7 +200,10 @@ export const PUT = handlerWithStaffAuth(async (
 
       const fields = formatearCambios(cambios, ben);
       const updated = await PeopleRepository.updateFields(_id, fields, PEOPLE_EDIT_FIELDS);
-      if (updated) results.beneficiarios.push(updated);
+      if (updated) {
+        results.beneficiarios.push(updated);
+        await registrar(_id, ben, fields, PEOPLE_EDIT_FIELDS, 'beneficiario');
+      }
     }
   }
 
@@ -204,6 +218,7 @@ export const PUT = handlerWithStaffAuth(async (
         FINANCIAL_EDIT_FIELDS
       );
       results.financial = updated;
+      await registrar(titularId, existingFinancial, financialChanges, FINANCIAL_EDIT_FIELDS, 'financiero');
     }
   }
 

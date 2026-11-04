@@ -62,6 +62,8 @@ export enum PersonPermission {
   VER_CONTRATO = 'PERSON.INFO.VER_CONTRATO',
   /** Botón "Resumen" de la ficha (resumen de la matrícula), sin dar acceso a la página Matrículas. */
   RESUMEN = 'PERSON.INFO.RESUMEN',
+  /** Botón "Seguimiento": bitácora del contrato (ficha del titular y Libro de Producción). */
+  SEGUIMIENTO = 'PERSON.INFO.SEGUIMIENTO',
   VER_DOCUMENTACION = 'PERSON.INFO.VER_DOCUMENTACION',
   ADICION_DOCUMENTACION = 'PERSON.INFO.ADICION_DOCUMENTACION',
   ELIMINAR_DOCUMENTACION = 'PERSON.INFO.ELIMINAR_DOCUMENTACION',

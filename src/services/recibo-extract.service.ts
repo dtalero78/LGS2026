@@ -13,6 +13,7 @@
 import 'server-only';
 import { query, queryOne } from '@/lib/postgres';
 import { ValidationError, NotFoundError } from '@/lib/errors';
+import { registrarEventoContrato } from '@/lib/contrato-eventos';
 
 const FLAG_KEY = 'leer_recibo_activo';
 const OPENAI_MODEL = 'gpt-4o-mini';
@@ -260,6 +261,12 @@ export async function guardarReciboInscripcionEnPeople(opts: GuardarReciboInscri
     `UPDATE "PEOPLE" SET "reciboInscripcion" = $1::jsonb, "_updatedDate" = NOW() WHERE "_id" = $2`,
     [JSON.stringify(recibo), peopleId]
   );
+  // El campo guarda solo el último recibo: cada subida queda en el Seguimiento del contrato.
+  await registrarEventoContrato({
+    personaId: peopleId, categoria: 'PAGOS', accion: 'Recibo de inscripción subido',
+    detalle: [opts.dosRecibos ? 'Dos recibos' : opts.nombre, c?.monto ? `monto leído ${c.monto}` : null].filter(Boolean).join(' · '),
+    datos: { url: opts.url ?? null }, actor: opts.actor,
+  });
 
   const contrato = String(opts.contrato || '').trim();
   if (contrato) {

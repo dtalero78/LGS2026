@@ -5,6 +5,7 @@ import { toggleStatus } from '@/services/student.service';
 import { PeopleRepository } from '@/repositories/people.repository';
 import { ValidationError } from '@/lib/errors';
 import { previewInactivacion } from '@/lib/suspension-beneficiario';
+import { registrarEventoContrato } from '@/lib/contrato-eventos';
 
 /**
  * POST /api/postgres/students/[id]/toggle-status
@@ -42,6 +43,14 @@ export const POST = handlerWithStaffAuth(async (request, { params }, session) =>
     realizadoPor,
     realizadoPorNombre,
   });
+
+  // suspenddata solo guarda la última inactivación/reactivación: el historial va al Seguimiento.
+  if (result.statusChanged) {
+    await registrarEventoContrato({
+      personaId: params.id, categoria: 'VIGENCIA', accion: active ? 'Reactivado' : 'Inactivado',
+      detalle: motivo.trim(), session,
+    });
+  }
 
   return successResponse({
     message: result.statusChanged

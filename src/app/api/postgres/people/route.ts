@@ -1,4 +1,5 @@
 import { handlerWithStaffAuth, successResponse } from '@/lib/api-helpers';
+import { registrarEventoContrato } from '@/lib/contrato-eventos';
 import { AcademicaRepository } from '@/repositories/academica.repository';
 import { verificarDocumento } from '@/lib/verificacion-documento';
 import { kidsIntake, validarSalonesDelPais } from '@/lib/kids-intake';
@@ -17,7 +18,7 @@ import { formatearPersona } from '@/lib/formato-campos';
  * Create a new person (TITULAR or BENEFICIARIO).
  */
 // Solo staff: un ESTUDIANTE no crea personas.
-export const POST = handlerWithStaffAuth(async (request) => {
+export const POST = handlerWithStaffAuth(async (request, _ctx, session) => {
   const body = await request.json();
 
   if (!body.numeroId || !body.primerNombre || !body.primerApellido || !body.tipoUsuario) {
@@ -195,6 +196,13 @@ export const POST = handlerWithStaffAuth(async (request) => {
         kidsReserva = { ok: false, error: String(e?.message || 'error') };
       }
     }
+  }
+
+  if (body.tipoUsuario === 'BENEFICIARIO') {
+    await registrarEventoContrato({
+      personaId: personId, categoria: 'BENEFICIARIOS', accion: 'Beneficiario agregado',
+      detalle: `Documento ${body.numeroId}${body.kids === true ? ' · Kids' : ''}`, session,
+    });
   }
 
   return successResponse({ message: `${body.tipoUsuario} created successfully`, person, kidsReserva });

@@ -12,6 +12,7 @@ import { inhabilitarContratoRetractado } from '@/lib/retractado';
 import { liberarReservasKids, motivoBajaKids } from '@/lib/kids-baja';
 import { normalizarTelefono } from '@/lib/telefono';
 import { formatearCambios } from '@/lib/formato-campos';
+import { registrarEventoContrato, diffCampos } from '@/lib/contrato-eventos';
 
 /**
  * GET /api/postgres/people/[id]
@@ -309,10 +310,9 @@ export const PATCH = handlerWithAuth(async (
 
   // Formato de los datos (lib/formato-campos), solo en los campos que de verdad cambian:
   // un nombre antiguo reenviado igual no cuenta como cambio de nombre.
-  {
-    const actual = await queryOne<any>(`SELECT * FROM "PEOPLE" WHERE "_id" = $1`, [personId]);
-    Object.assign(body, formatearCambios(body, actual, { empresa: actual?.tipoUsuario === 'TITULAR' && actual?.tipoPersona === 'Empresa' }));
-  }
+  // `filaAntes` también alimenta el Seguimiento del contrato (antes/después de lo editado).
+  const filaAntes = await queryOne<any>(`SELECT * FROM "PEOPLE" WHERE "_id" = $1`, [personId]);
+  Object.assign(body, formatearCambios(body, filaAntes, { empresa: filaAntes?.tipoUsuario === 'TITULAR' && filaAntes?.tipoPersona === 'Empresa' }));
 
   // Teléfonos con indicativo (regla única de lib/telefono), según la plataforma.
   const paisTel = body.plataforma ?? currentPerson.plataforma;
@@ -689,6 +689,30 @@ export const PATCH = handlerWithAuth(async (
     });
   }
 
+  // Seguimiento del contrato (best-effort): la aprobación ya quedó en APROBACION_AUDIT;
+  // aquí van el gestor de recaudo y el resto de campos editados con su antes/después.
+  {
+    const { aprobacion: _a, estado: _e, gestorRecaudo, ...resto } = body;
+    if (Object.prototype.hasOwnProperty.call(body, 'gestorRecaudo') && (filaAntes?.gestorRecaudo || null) !== (gestorRecaudo || null)) {
+      const nombres = await queryMany<{ _id: string; nombre: string }>(
+        `SELECT "_id", TRIM(CONCAT_WS(' ', "nombre", "apellido")) AS nombre FROM "USUARIOS_ROLES" WHERE "_id" = ANY($1::text[])`,
+        [[filaAntes?.gestorRecaudo, gestorRecaudo].filter(Boolean)]);
+      const n = (id: string | null) => (id ? nombres.find(x => x._id === id)?.nombre || id : 'sin asignar');
+      await registrarEventoContrato({
+        personaId: personId, categoria: 'RECAUDOS', accion: 'Gestor de recaudo',
+        detalle: `${n(filaAntes?.gestorRecaudo || null)} → ${n(gestorRecaudo || null)}`, session,
+      });
+    }
+    const editables = Object.fromEntries(Object.entries(resto).filter(([k]) => PEOPLE_UPDATE_FIELDS.includes(k)));
+    const cambios = diffCampos(filaAntes, editables, ['documentacion', 'comentarios', 'consentimientoDeclarativo', 'hashConsentimiento']);
+    if (Object.keys(cambios).length) {
+      await registrarEventoContrato({
+        personaId: personId, categoria: 'MATRICULA', accion: 'Datos editados',
+        detalle: Object.keys(cambios).join(', '), datos: { cambios }, session,
+      });
+    }
+  }
+
   console.log('✅ [PostgreSQL People] Person updated successfully');
 
   return successResponse({ person: parsedPerson, beneficiariesInactivated });
@@ -710,7 +734,7 @@ export const DELETE = handlerWithAuth(async (
   const personId = params.id;
 
   const person = await queryOne(
-    `SELECT "_id", "numeroId", "tipoUsuario", "aprobacion", "contrato" FROM "PEOPLE" WHERE "_id" = $1`,
+    `SELECT "_id", "numeroId", "tipoUsuario", "aprobacion", "contrato", "titularId", "primerNombre", "primerApellido" FROM "PEOPLE" WHERE "_id" = $1`,
     [personId]
   );
 
@@ -744,6 +768,13 @@ export const DELETE = handlerWithAuth(async (
 
   // Delete from PEOPLE
   await query(`DELETE FROM "PEOPLE" WHERE "_id" = $1`, [personId]);
+
+  // La fila ya no existe: se pasan sus datos para que el Seguimiento la ubique.
+  await registrarEventoContrato({
+    personaId: personId, categoria: 'BENEFICIARIOS', accion: 'Beneficiario eliminado',
+    detalle: `${nombreDe(person) || ''} · documento ${person.numeroId || '—'}`, session,
+    persona: { titularId: person.titularId, contrato: person.contrato, nombre: nombreDe(person), tipoUsuario: 'BENEFICIARIO' },
+  });
 
   console.log('✅ [PostgreSQL People] Beneficiario deleted:', personId, reservaKids ? `(reserva KIDS ${reservaKids} se conserva)` : '');
 

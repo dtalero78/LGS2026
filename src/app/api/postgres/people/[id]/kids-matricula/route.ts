@@ -10,6 +10,7 @@ import { errorEdadCursoKids } from '@/lib/kids-mapping';
 import { actualizarApoderadoKids, asegurarReservaKids, matricularKids } from '@/lib/kids-reserva';
 import { normalizarTelefono } from '@/lib/telefono';
 import { formatearApoderado } from '@/lib/formato-campos';
+import { registrarEventoContrato } from '@/lib/contrato-eventos';
 
 /**
  * Estado, corrección y edición de la inscripción KIDS de un beneficiario Kids.
@@ -100,6 +101,13 @@ async function guardarInscripcion(person: any, plataforma: string | null, insc: 
   return id;
 }
 
+// Seguimiento del contrato: resumen legible del curso y del apoderado.
+const detalleKids = (kd: any) => [kd?.tipoCurso, kd?.salonNombre, kd?.horario].filter(Boolean).join(' · ');
+const detalleApoderado = (kd: any) => {
+  const n = [kd?.apoderado, kd?.apoderadoApellidos].filter(Boolean).join(' ').trim();
+  return n ? `Apoderado: ${n}${kd?.parentesco ? ` (${kd.parentesco})` : ''}` : '';
+};
+
 export const POST = handlerWithStaffAuth(async (request, { params }, session) => {
   await requirePermission(session, PersonPermission.APROBAR);
   if (!kidsIntake.isConfigured()) throw new ValidationError('La integración con KIDS2026 no está configurada.');
@@ -117,6 +125,7 @@ export const POST = handlerWithStaffAuth(async (request, { params }, session) =>
   }
 
   const inscId = await guardarInscripcion(person, plataforma, insc, kd, true);
+  await registrarEventoContrato({ personaId: params.id, categoria: 'KIDS', accion: 'Reserva / matrícula en KIDS', detalle: detalleKids(kd), session });
   const fila = await queryOne<any>(`SELECT * FROM "KIDS_INSCRIPCIONES" WHERE "_id" = $1`, [inscId]);
 
   // Beneficiario aún sin aprobar → solo queda RESERVADO (se matricula al aprobarlo).
@@ -140,6 +149,7 @@ export const PATCH = handlerWithStaffAuth(async (request, { params }, session) =
   // que se guardan aquí y se llevan a KIDS (antes quedaban solo en LGS).
   if (enKids) {
     await guardarInscripcion(person, plataforma, insc, kd, false);
+    await registrarEventoContrato({ personaId: params.id, categoria: 'KIDS', accion: 'Apoderado actualizado', detalle: detalleApoderado(kd), session });
     const estado = insc.aprobadoEnKids ? 'MATRICULADO' : 'RESERVADO';
     if (!kidsIntake.isConfigured() || !insc.kidsExternalRef) {
       return successResponse({ estado, mensaje: 'Datos del apoderado actualizados en LGS.' });
@@ -163,6 +173,7 @@ export const PATCH = handlerWithStaffAuth(async (request, { params }, session) =
   if (kd.classroomId && kd.tipoCurso) await validarCurso(person, plataforma, kd);
 
   const inscId = await guardarInscripcion(person, plataforma, insc, kd, true);
+  await registrarEventoContrato({ personaId: params.id, categoria: 'KIDS', accion: 'Datos Kids actualizados', detalle: [detalleKids(kd), detalleApoderado(kd)].filter(Boolean).join(' · '), session });
   if (!configurado || !kd.classroomId) return successResponse({ estado: 'GUARDADO', mensaje: 'Datos Kids guardados en LGS.' });
 
   // Mismo efecto que al agregar/aprobar: reserva; y matrícula si ya está aprobado

@@ -13,11 +13,12 @@ import toast from 'react-hot-toast'
 import {
   ArrowPathIcon, ArrowDownTrayIcon, ChevronDownIcon, ChevronRightIcon, ChevronLeftIcon, MagnifyingGlassIcon, FunnelIcon,
   XMarkIcon, ArrowTopRightOnSquareIcon, CalendarDaysIcon, TableCellsIcon, RectangleStackIcon,
-  ArrowsPointingOutIcon, ArrowUturnLeftIcon, PencilSquareIcon,
+  ArrowsPointingOutIcon, ArrowUturnLeftIcon, PencilSquareIcon, ClockIcon,
 } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
-import { AprobacionPermission } from '@/types/permissions'
+import { AprobacionPermission, PersonPermission } from '@/types/permissions'
+import SeguimientoContratoModal from '@/components/common/SeguimientoContratoModal'
 import { usePermissions } from '@/hooks/usePermissions'
 import { api, handleApiError } from '@/hooks/use-api'
 import { exportToExcel } from '@/lib/export-excel'
@@ -475,6 +476,8 @@ function Detalle({ titularId, ids, onNavegar, onClose, onCasillas }: {
 }) {
   const { hasPermission } = usePermissions()
   const puedeCasillas = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_CASILLAS)
+  const puedeSeguimiento = hasPermission(PersonPermission.SEGUIMIENTO as any)
+  const [verSeguimiento, setVerSeguimiento] = useState(false)
   const [r, setR] = useState<Registro | null>(null)
   const [vig, setVig] = useState<Vigencia | null>(null)
   const [guardando, setGuardando] = useState(false)
@@ -494,13 +497,14 @@ function Detalle({ titularId, ids, onNavegar, onClose, onCasillas }: {
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null
+      if (verSeguimiento) return // la ventana de Seguimiento maneja su propio Esc
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return
       if (e.key === 'Escape') onClose()
       else if (e.key === 'ArrowLeft' && anterior) onNavegar(anterior)
       else if (e.key === 'ArrowRight' && siguiente) onNavegar(siguiente)
     }
     window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k)
-  }, [onClose, onNavegar, anterior, siguiente])
+  }, [onClose, onNavegar, anterior, siguiente, verSeguimiento])
 
   const marcar = async (campo: 'suscripcionPago' | 'prixus', valor: boolean) => {
     if (!r) return
@@ -564,11 +568,20 @@ function Detalle({ titularId, ids, onNavegar, onClose, onCasillas }: {
               <BtnNav id={siguiente} title="Contrato siguiente (→)">Siguiente <ChevronRightIcon className="h-4 w-4" /></BtnNav>
             </div>
             {r && (
-              <a href={`/person/${r.titularId}`} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white">
-                <ArrowTopRightOnSquareIcon className="h-4 w-4" /> Ver ficha completa
-              </a>
+              <div className="flex items-center gap-2">
+                {puedeSeguimiento && (
+                  <button type="button" onClick={() => setVerSeguimiento(true)} title="Todo lo que ha pasado con el contrato: quién y cuándo"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-indigo-700 hover:bg-indigo-50">
+                    <ClockIcon className="h-4 w-4" /> Seguimiento
+                  </button>
+                )}
+                <a href={`/person/${r.titularId}`} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white">
+                  <ArrowTopRightOnSquareIcon className="h-4 w-4" /> Ver ficha completa
+                </a>
+              </div>
             )}
+            {verSeguimiento && r && <SeguimientoContratoModal personaId={r.titularId} onClose={() => setVerSeguimiento(false)} />}
           </div>
         </div>
 

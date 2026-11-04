@@ -6,6 +6,7 @@ import { NotFoundError, ValidationError } from '@/lib/errors';
 import { queryOne, queryMany } from '@/lib/postgres';
 import { spacesClient, SPACES_BUCKET } from '@/lib/spaces';
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { registrarEventoContrato } from '@/lib/contrato-eventos';
 
 // POST — append a document to PEOPLE.documentacion (requiere permiso de subir)
 export const POST = handlerWithAuth(async (request, { params }, session) => {
@@ -26,6 +27,8 @@ export const POST = handlerWithAuth(async (request, { params }, session) => {
      WHERE "_id" = $2`,
     [JSON.stringify([doc]), titularId]
   );
+
+  await registrarEventoContrato({ personaId: titularId, categoria: 'DOCUMENTOS', accion: 'Documento subido', detalle: nombre, datos: { url }, session });
 
   // Return updated list
   const updated = await queryOne(`SELECT "documentacion" FROM "PEOPLE" WHERE "_id" = $1`, [titularId]);
@@ -52,6 +55,11 @@ export const DELETE = handlerWithAuth(async (request, { params }, session) => {
     `UPDATE "PEOPLE" SET "documentacion" = $1::jsonb WHERE "_id" = $2`,
     [JSON.stringify(filtered), titularId]
   );
+
+  if (filtered.length < docs.length) {
+    const borrado = docs.find((d: any) => d.url === url);
+    await registrarEventoContrato({ personaId: titularId, categoria: 'DOCUMENTOS', accion: 'Documento eliminado', detalle: borrado?.nombre || url, session });
+  }
 
   // Delete from Spaces — extract key from URL
   try {

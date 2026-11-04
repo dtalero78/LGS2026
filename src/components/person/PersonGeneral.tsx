@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Person } from '@/types'
 import { formatDate } from '@/lib/utils'
-import { ArrowDownTrayIcon, ArrowUpTrayIcon, DocumentTextIcon, PhotoIcon, BanknotesIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
+import { ArrowDownTrayIcon, ArrowUpTrayIcon, DocumentTextIcon, PhotoIcon, BanknotesIcon, ClipboardDocumentListIcon, ClockIcon } from '@heroicons/react/24/outline'
 import { PermissionGuard } from '@/components/permissions'
 import { PersonPermission, ComercialPermission, AprobacionPermission } from '@/types/permissions'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -12,6 +12,7 @@ import toast from 'react-hot-toast'
 import PersonContractViewer from './PersonContractViewer'
 import SuspendidaBadge from '@/components/common/SuspendidaBadge'
 import DocumentosReciboModal from '@/components/common/DocumentosReciboModal'
+import SeguimientoContratoModal from '@/components/common/SeguimientoContratoModal'
 import StudentOnHold from '@/components/student/StudentOnHold'
 import ExtensionVigencia from '@/components/student/ExtensionVigencia'
 
@@ -27,6 +28,7 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
   const [showDocuments, setShowDocuments] = useState(false)
   const [showRecibo, setShowRecibo] = useState(false)
   const [showDocReciboModal, setShowDocReciboModal] = useState(false)
+  const [showSeguimiento, setShowSeguimiento] = useState(false)
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([])
 
   // Recibo de inscripción (PEOPLE.reciboInscripcion, INDEPENDIENTE de la documentación).
@@ -174,6 +176,16 @@ export default function PersonGeneral({ person, isSuspendida }: PersonGeneralPro
             Resumen
           </a>
         )}
+        {/* Seguimiento del contrato: bitácora de titular + beneficiarios (carga al abrir). */}
+        {hasPermission(PersonPermission.SEGUIMIENTO as any) && (
+          <button type="button" onClick={() => setShowSeguimiento(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white text-indigo-700 border border-indigo-300 rounded-md hover:bg-indigo-50 text-sm font-medium"
+            title="Ver todo lo que ha pasado con el contrato: quién y cuándo">
+            <ClockIcon className="h-4 w-4" />
+            Seguimiento
+          </button>
+        )}
+        {showSeguimiento && <SeguimientoContratoModal personaId={person._id} onClose={() => setShowSeguimiento(false)} />}
         <PermissionGuard permission={PersonPermission.VER_CONTRATO}>
           <PersonContractViewer person={person as any} />
         </PermissionGuard>

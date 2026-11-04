@@ -10,12 +10,13 @@ import { archivarContratoEnDrive, buildContractFilename } from '@/lib/contract-d
 import { esContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { whatsappConfigService } from '@/services/whatsapp-config.service';
 import { buscarPlantillaContrato } from '@/lib/contract-template';
+import { registrarEventoContrato } from '@/lib/contrato-eventos';
 
 const API2PDF_KEY = process.env.API2PDF_KEY || '9450b12a-4c5f-4e8e-a605-2b61fe4807f2';
 
 // Solo STAFF con sesión: antes era público y cualquiera con un _id podía disparar
 // el PDF (costo API2PDF) + WhatsApp al cliente + archivo en Drive, sin límite.
-export const POST = handlerWithStaffAuth(async (_request, { params }) => {
+export const POST = handlerWithStaffAuth(async (_request, { params }, session) => {
   const titularId = params.id;
 
   // 1. Load full contract data
@@ -147,6 +148,11 @@ export const POST = handlerWithStaffAuth(async (_request, { params }) => {
   }
 
   const whapiData = await whapiRes.json();
+
+  await registrarEventoContrato({
+    personaId: titularId, categoria: 'FIRMA', accion: 'PDF del contrato enviado por WhatsApp',
+    detalle: `Al ${phone}${uploadData?.ok ? ' · archivado en Drive' : ''}`, session,
+  });
 
   return successResponse({
     pdfUrl: tempPdfUrl,

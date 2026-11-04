@@ -153,6 +153,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Botón "Resumen" de la ficha (a la izquierda de "Ver Contrato"): abre el resumen de la matrícula con el titular y sus beneficiarios. No da acceso a la página Comercial › Matrículas. (También lo ven quienes tienen "Página Matrículas" + "Ver detalle de matrícula")',
   },
   {
+    code: PersonPermission.SEGUIMIENTO,
+    module: Module.PERSON,
+    section: 'Información General',
+    name: 'Botón "Seguimiento"',
+    description: 'Botón "Seguimiento" de la ficha del titular y del detalle del Libro de Producción: abre la bitácora del contrato (matrícula, documentos, firma, aprobación, beneficiarios, pagos y recaudos, OnHold/extensiones, académico, Kids y comentarios) con quién y cuándo hizo cada cosa',
+  },
+  {
     code: PersonPermission.EDITAR_NUMERO_ID,
     module: Module.PERSON,
     section: 'Información General',
