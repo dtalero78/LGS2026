@@ -19,6 +19,7 @@ import 'server-only';
 import { query, queryMany, queryOne, transaction } from '@/lib/postgres';
 import { ValidationError, NotFoundError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
+import { registrarEventoContrato, diffCampos } from '@/lib/contrato-eventos';
 import { armarVigenciasAnio, semanaDe, type Vigencia } from '@/lib/vigencias-comerciales';
 
 /** Expresión SQL de la zona horaria del país del contrato (alias p). Igual a zonaHorariaPais(). */
@@ -287,6 +288,76 @@ export async function actualizarCasillas(titularId: string, cambios: { suscripci
   if (!res.rowCount) throw new NotFoundError('Titular', titularId);
   console.log(`[libro-produccion] casillas ${titularId} ${JSON.stringify(cambios)} por ${actor}`);
   return res.rows[0];
+}
+
+// ── Ajuste de la escalera comercial (botón "Ajuste Escalera" del detalle) ─────────
+
+/** Campos editables: los de la escalera del CRM + el nombre del Ej. Training (asesorCreadorContrato). */
+export const CAMPOS_ESCALERA = {
+  asesorCreadorContrato: { l: 'Ej. Training', max: 150 },
+  fullExecutive: { l: 'Full Executive', max: 150 },
+  jefeGrupo: { l: 'Jefe de grupo', max: 150 },
+  gerente: { l: 'Gerente', max: 150 },
+  gerenteDivision: { l: 'Gerente división', max: 150 },
+  salesManager: { l: 'Sales Manager', max: 150 },
+  filial: { l: 'Filial', max: 150 },
+  origenMatricula: { l: 'Origen matrícula', max: 200 },
+} as const;
+type CampoEscalera = keyof typeof CAMPOS_ESCALERA;
+
+/** Valores actuales + sugerencias (los ya usados en titulares del mismo país) + filiales del catálogo. */
+export async function opcionesEscalera(titularId: string) {
+  const t = await queryOne<any>(
+    `SELECT "plataforma", ${Object.keys(CAMPOS_ESCALERA).map(c => `"${c}"`).join(',')} FROM "PEOPLE" WHERE "_id" = $1 AND "tipoUsuario" = 'TITULAR'`, [titularId]);
+  if (!t) throw new NotFoundError('Titular', titularId);
+  const campos = Object.keys(CAMPOS_ESCALERA).filter(c => c !== 'filial');
+  const usados = await queryMany<{ campo: string; valor: string }>(
+    `SELECT DISTINCT x.campo, x.valor FROM "PEOPLE" p,
+            LATERAL (VALUES ${campos.map(c => `('${c}', TRIM(p."${c}"))`).join(',')}) AS x(campo, valor)
+      WHERE p."tipoUsuario" = 'TITULAR' AND p."plataforma" = $1 AND COALESCE(x.valor, '') <> ''
+        AND p."_createdDate" > NOW() - INTERVAL '12 months'
+      ORDER BY 1, 2`, [t.plataforma]);
+  const filiales = (await queryMany<{ nombre: string }>(
+    `SELECT "nombre" FROM "FILIALES" WHERE "activo" = true AND LOWER(TRIM("plataforma")) = LOWER(TRIM($1)) ORDER BY 1`,
+    [t.plataforma || ''])).map(f => f.nombre);
+  const sugerencias: Record<string, string[]> = {};
+  for (const u of usados) (sugerencias[u.campo] ||= []).push(u.valor);
+  const actual = Object.fromEntries(Object.keys(CAMPOS_ESCALERA).map(c => [c, t[c] ?? '']));
+  return { pais: t.plataforma, actual, sugerencias, filiales };
+}
+
+/** Guarda la escalera del titular; motivo obligatorio; queda en el Seguimiento con antes/después. */
+export async function actualizarEscalera(titularId: string, datos: Record<string, any>, motivo: string, session: any) {
+  const m = String(motivo || '').trim();
+  if (m.length < 10) throw new ValidationError('Indica el motivo del ajuste (mínimo 10 caracteres).');
+  const antes = await queryOne<any>(
+    `SELECT "plataforma", ${Object.keys(CAMPOS_ESCALERA).map(c => `"${c}"`).join(',')} FROM "PEOPLE" WHERE "_id" = $1 AND "tipoUsuario" = 'TITULAR'`, [titularId]);
+  if (!antes) throw new NotFoundError('Titular', titularId);
+
+  const nuevos: Partial<Record<CampoEscalera, string | null>> = {};
+  for (const [c, def] of Object.entries(CAMPOS_ESCALERA) as [CampoEscalera, { l: string; max: number }][]) {
+    if (datos?.[c] === undefined) continue;
+    nuevos[c] = String(datos[c] ?? '').replace(/\s+/g, ' ').trim().slice(0, def.max) || null;
+  }
+  if (nuevos.filial) {
+    const f = await queryOne<{ nombre: string }>(
+      `SELECT "nombre" FROM "FILIALES" WHERE "activo" = true AND LOWER(TRIM("plataforma")) = LOWER(TRIM($1)) AND LOWER(TRIM("nombre")) = LOWER($2)`,
+      [antes.plataforma || '', nuevos.filial]);
+    if (!f) throw new ValidationError(`La filial "${nuevos.filial}" no pertenece a ${antes.plataforma}.`);
+    nuevos.filial = f.nombre;
+  }
+  const cambios = diffCampos(antes, nuevos);
+  if (!Object.keys(cambios).length) throw new ValidationError('No hay cambios en la escalera.');
+
+  const cols = Object.keys(cambios);
+  await query(
+    `UPDATE "PEOPLE" SET ${cols.map((c, i) => `"${c}" = $${i + 2}`).join(', ')}, "_updatedDate" = NOW() WHERE "_id" = $1`,
+    [titularId, ...cols.map(c => (nuevos as any)[c])]);
+  await registrarEventoContrato({
+    personaId: titularId, categoria: 'MATRICULA', accion: 'Ajuste de escalera comercial',
+    detalle: `${cols.map(c => CAMPOS_ESCALERA[c as CampoEscalera].l).join(', ')} · ${m}`, datos: { cambios }, session,
+  });
+  return { comercial: Object.fromEntries(Object.keys(CAMPOS_ESCALERA).map(c => [c, c in nuevos ? (nuevos as any)[c] : antes[c]])) };
 }
 
 // ── Catálogo de planes y tipos (por país) ─────────────────────────────────────

@@ -24,6 +24,7 @@ import { api, handleApiError } from '@/hooks/use-api'
 import { exportToExcel } from '@/lib/export-excel'
 import PlanesTiposPanel from '@/components/aprobacion/PlanesTiposPanel'
 import LibroAccionModal from '@/components/aprobacion/LibroAccionModal'
+import AjusteEscaleraModal from '@/components/aprobacion/AjusteEscaleraModal'
 import {
   MESES, etiquetaVigencia, etiquetaSemana, semanasDeVigencia, type Vigencia,
 } from '@/lib/vigencias-comerciales'
@@ -459,25 +460,29 @@ function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; si
 
       {detalle && (
         <Detalle titularId={detalle} ids={visibles.map(r => r.titularId)} onNavegar={setDetalle} onClose={() => setDetalle(null)}
-          onCasillas={(id, c) => setRegistros(rs => rs.map(r => r.titularId === id ? { ...r, ...c } : r))} />
+          onCasillas={(id, c) => setRegistros(rs => rs.map(r => r.titularId === id ? { ...r, ...c } : r))}
+          onComercial={(id, comercial) => setRegistros(rs => rs.map(r => r.titularId === id ? { ...r, comercial } : r))} />
       )}
     </div>
   )
 }
 
 // ── Vista detallada (ventana ampliada, dos columnas; pantalla completa en celular) ──
-function Detalle({ titularId, ids, onNavegar, onClose, onCasillas }: {
+function Detalle({ titularId, ids, onNavegar, onClose, onCasillas, onComercial }: {
   titularId: string
   /** Contratos del filtro actual, en el orden de la hoja (para Anterior / Siguiente). */
   ids: string[]
   onNavegar: (id: string) => void
   onClose: () => void
   onCasillas: (id: string, c: { suscripcionPago: boolean; prixus: boolean }) => void
+  onComercial: (id: string, comercial: Registro['comercial']) => void
 }) {
   const { hasPermission } = usePermissions()
   const puedeCasillas = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_CASILLAS)
   const puedeSeguimiento = hasPermission(PersonPermission.SEGUIMIENTO as any)
   const [verSeguimiento, setVerSeguimiento] = useState(false)
+  const puedeEscalera = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_ESCALERA)
+  const [verEscalera, setVerEscalera] = useState(false)
   const [r, setR] = useState<Registro | null>(null)
   const [vig, setVig] = useState<Vigencia | null>(null)
   const [guardando, setGuardando] = useState(false)
@@ -497,14 +502,14 @@ function Detalle({ titularId, ids, onNavegar, onClose, onCasillas }: {
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null
-      if (verSeguimiento) return // la ventana de Seguimiento maneja su propio Esc
+      if (verSeguimiento || verEscalera) return // esas ventanas manejan su propio Esc
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return
       if (e.key === 'Escape') onClose()
       else if (e.key === 'ArrowLeft' && anterior) onNavegar(anterior)
       else if (e.key === 'ArrowRight' && siguiente) onNavegar(siguiente)
     }
     window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k)
-  }, [onClose, onNavegar, anterior, siguiente, verSeguimiento])
+  }, [onClose, onNavegar, anterior, siguiente, verSeguimiento, verEscalera])
 
   const marcar = async (campo: 'suscripcionPago' | 'prixus', valor: boolean) => {
     if (!r) return
@@ -527,9 +532,9 @@ function Detalle({ titularId, ids, onNavegar, onClose, onCasillas }: {
       <div className="text-sm text-gray-900 break-words">{v || '—'}</div>
     </div>
   )
-  const Sec = ({ t, children }: { t: string; children: React.ReactNode }) => (
+  const Sec = ({ t, children, accion }: { t: string; children: React.ReactNode; accion?: React.ReactNode }) => (
     <section className="rounded-xl border border-gray-200 bg-white min-w-0">
-      <div className="px-4 py-2 border-b border-gray-100 text-sm font-semibold text-gray-800">{t}</div>
+      <div className="px-4 py-2 border-b border-gray-100 text-sm font-semibold text-gray-800 flex items-center justify-between gap-2">{t}{accion}</div>
       <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-x-5 gap-y-3">{children}</div>
     </section>
   )
@@ -582,6 +587,19 @@ function Detalle({ titularId, ids, onNavegar, onClose, onCasillas }: {
               </div>
             )}
             {verSeguimiento && r && <SeguimientoContratoModal personaId={r.titularId} onClose={() => setVerSeguimiento(false)} />}
+            {verEscalera && r && (
+              <AjusteEscaleraModal titularId={r.titularId} contrato={r.contrato} onClose={() => setVerEscalera(false)}
+                onGuardado={c => {
+                  const comercial = {
+                    ...r.comercial,
+                    ejecutivo: c.asesorCreadorContrato || r.comercial.ejecutivo,
+                    fullExecutive: c.fullExecutive || '', jefeGrupo: c.jefeGrupo || '', gerente: c.gerente || '',
+                    gerenteDivision: c.gerenteDivision || '', salesManager: c.salesManager || '',
+                    filial: c.filial || '', origenMatricula: c.origenMatricula || '',
+                  }
+                  setR({ ...r, comercial }); onComercial(r.titularId, comercial)
+                }} />
+            )}
           </div>
         </div>
 
@@ -622,7 +640,12 @@ function Detalle({ titularId, ids, onNavegar, onClose, onCasillas }: {
                   <F l="Conciliado" v={r.conciliado.si ? `SI · ${r.conciliado.por || ''} ${r.conciliado.fecha ? fmtF(r.conciliado.fecha) : ''}` : 'NO'} />
                   <F l="Factura / boleta" v={r.factura} />
                 </Sec>
-                <Sec t="Comercial (escalera del día de la matrícula)">
+                <Sec t="Comercial (escalera del día de la matrícula)" accion={puedeEscalera && (
+                  <button type="button" onClick={() => setVerEscalera(true)} title="Corregir la escalera comercial de este contrato"
+                    className="inline-flex items-center gap-1 rounded-md border border-indigo-300 bg-white px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-50">
+                    <PencilSquareIcon className="h-3.5 w-3.5" /> Ajuste Escalera
+                  </button>
+                )}>
                   <F l="Ej. Training" v={r.comercial.ejecutivo} /><F l="Full Executive" v={r.comercial.fullExecutive} /><F l="Jefe de grupo" v={r.comercial.jefeGrupo} />
                   <F l="Gerente" v={r.comercial.gerente} /><F l="Gerente división" v={r.comercial.gerenteDivision} /><F l="Sales Manager" v={r.comercial.salesManager} />
                   <F l="Filial" v={r.comercial.filial} /><F l="Origen matrícula" v={r.comercial.origenMatricula} />
