@@ -390,7 +390,9 @@ function CrearContratoContent() {
   const restoreDraft = () => {
     const draft = (window as any).__contractDraft
     if (draft) {
-      if (draft.titular) setTitular(t => ({ ...t, ...draft.titular }))
+      // Con enlace firmado del CRM, el asesor es el del enlace: un borrador de otra
+      // sesión no lo reemplaza (si no coinciden, el servidor descarta la escalera).
+      if (draft.titular) setTitular(t => ({ ...t, ...draft.titular, ...(crmBridge?.email ? { asesor: t.asesor } : {}) }))
       if (draft.financial) {
         // Borradores previos a MODULO: vigencia vacía o fuera de 3–12 → 12.
         const v = Number(draft.financial.vigencia)
@@ -945,7 +947,10 @@ function CrearContratoContent() {
             telRefUno: telConPrefijo(titular.paisRefUno || titular.pais, titular.telRefUno),
             telRefDos: telConPrefijo(titular.paisRefDos || titular.pais, titular.telRefDos),
             // Empresa: el país se toma de la plataforma (el paso 3 no pregunta país).
-            pais: esEmpresa ? titular.plataforma : titular.pais
+            pais: esEmpresa ? titular.plataforma : titular.pais,
+            // La filial que se muestra "del CRM" también viaja como elegida: si el servidor
+            // descarta la escalera firmada (otro asesor en el paso 1), la filial no se pierde.
+            filial: crmFilial || titular.filial,
           },
           financial,
           beneficiarios: beneficiarios.map(b => ({
@@ -1286,9 +1291,12 @@ function CrearContratoContent() {
                 <input
                   type="email"
                   value={titular.asesor}
+                  readOnly={!!crmBridge?.email}
+                  title={crmBridge?.email ? 'Viene del CRM: es el correo con el que se firmó el enlace' : undefined}
                   onChange={(e) => setTitular({...titular, asesor: e.target.value.replace(/\s/g, '')})}
                   className={
                     `w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 ` +
+                    (crmBridge?.email ? 'bg-gray-50 text-gray-600 ' : '') +
                     (titular.asesor !== '' && !isValidEmail(titular.asesor) ? 'border-red-400' : 'border-gray-300')
                   }
                   placeholder="correo@dominio.com"

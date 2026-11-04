@@ -295,7 +295,10 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   // firmada por el CRM (enlace v2) y es del asesor del contrato. Sin ella las
   // columnas quedan NULL y se completan a mano, como antes.
   const ladder = ladderFromEnvelope(crmBridge, String(titular.asesor || ''));
-  if (crmBridge && !ladder) console.warn(`[contracts] escalera del CRM descartada (firma inválida o de otro asesor) — contrato ${contrato}`);
+  if (crmBridge && !ladder) {
+    const delOtro = String(crmBridge?.email || '').trim().toLowerCase() !== String(titular.asesor || '').trim().toLowerCase();
+    console.warn(`[contracts] escalera del CRM descartada (${delOtro ? `enlace de ${crmBridge?.email}, asesor del contrato ${titular.asesor}` : 'firma inválida'}) — contrato ${contrato}`);
+  }
   if (ladder) {
     const keys = CRM_LADDER_KEYS;
     const sets = keys.map((k, i) => `"${CRM_LADDER_COLUMNS[k].col}" = $${i + 2}`).join(', ');
@@ -305,8 +308,12 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   }
   // Filial elegida en el formulario (sin filial firmada por el CRM): solo una del
   // catálogo FILIALES del país del contrato; obligatoria si ese país tiene filiales.
+  // Si la escalera se descartó, la filial que traía el enlace (la que el formulario
+  // mostró como "del CRM") vale como si se hubiera elegido: igual se valida contra el
+  // catálogo del país. Antes el contrato se bloqueaba con "Selecciona la filial" aunque
+  // en pantalla se viera la filial del CRM.
   if (!ladder?.fil?.trim()) {
-    const fil = String(titular.filial || '').trim();
+    const fil = String(titular.filial || '').trim() || String(crmBridge?.fil || '').trim();
     const cat = await client.query(
       `SELECT "nombre" FROM "FILIALES" WHERE "activo" = true AND LOWER(TRIM("plataforma")) = LOWER(TRIM($1))`,
       [titular.plataforma || '']);
