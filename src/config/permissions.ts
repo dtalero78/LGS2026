@@ -17,6 +17,7 @@ import {
   AprobacionPermission,
   MantenimientoPermission,
   RecaudosPermission,
+  AdministracionPermission,
 } from '@/types/permissions';
 
 // ============================================================================
@@ -1397,6 +1398,85 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     section: 'Ajustes',
     name: 'Ajustes › Facturación',
     description: 'Pestaña Ajustes del Centro de Validación (Gestión): corregir el número de factura de un pago ya facturado. Exige motivo y queda auditado en PAGOS_AJUSTES',
+  },
+
+  // ========== ADMINISTRACION MODULE (Menú Administración › Gestión Advisors) ==========
+  {
+    code: AdministracionPermission.GESTION_ADVISORS_VER,
+    module: Module.ADMINISTRACION,
+    section: 'Gestión Advisors',
+    name: 'Página "Gestión Advisors" (sidebar Administración)',
+    description: 'Acceso a /dashboard/administracion/gestion-advisors: pestañas Consolidado y Detalle Advisors (liquidación de horas LGS y KIDS por corte)',
+  },
+  {
+    code: AdministracionPermission.AJUSTAR,
+    module: Module.ADMINISTRACION,
+    section: 'Gestión Advisors',
+    name: 'Acción: Ajustar horas',
+    description: 'Crear ajustes de horas (±, múltiplos de 0,5, con motivo) por semana o total del corte, incluidas horas extra autorizadas de semiplanta. Pensado para ACADEMICO_JEFE',
+  },
+  {
+    code: AdministracionPermission.HORAS_OK,
+    module: Module.ADMINISTRACION,
+    section: 'Gestión Advisors',
+    name: 'Acción: Marcar "Horas OK"',
+    description: 'Confirmar que las horas del advisor en el corte están revisadas. Requisito para que Administración pueda verificar. Pensado para ACADEMICO_JEFE',
+  },
+  {
+    code: AdministracionPermission.FACTURA_DEVOLVER,
+    module: Module.ADMINISTRACION,
+    section: 'Gestión Advisors',
+    name: 'Acción: Devolver factura',
+    description: 'Devolver la factura/boleta al advisor con un comentario para que la reenvíe. Pensado para ADMINISTRACION (revisora)',
+  },
+  {
+    code: AdministracionPermission.VERIFICAR,
+    module: Module.ADMINISTRACION,
+    section: 'Gestión Advisors',
+    name: 'Acción: Verificar (listo para pago)',
+    description: 'Marcar el corte del advisor como VERIFICADO (exige Horas OK). Congela horas, tarifa y tipo de cambio. Pensado para ADMINISTRACION (revisora)',
+  },
+  {
+    code: AdministracionPermission.REGISTRAR_PAGO,
+    module: Module.ADMINISTRACION,
+    section: 'Gestión Advisors',
+    name: 'Acción: Registrar pago',
+    description: 'Marcar como PAGADO (fecha y referencia). Pensado para ADMINISTRACION_JEFE',
+  },
+  {
+    code: AdministracionPermission.CONSOLIDADO_IMPRIMIR,
+    module: Module.ADMINISTRACION,
+    section: 'Gestión Advisors',
+    name: 'Botón "Imprimir Consolidado" (PDF)',
+    description: 'Generar el PDF del Consolidado del mes (solo cuando todos los advisors están verificados)',
+  },
+  {
+    code: AdministracionPermission.CONSOLIDADO_EXPORTAR,
+    module: Module.ADMINISTRACION,
+    section: 'Gestión Advisors',
+    name: 'Botón "Descargar CSV"',
+    description: 'Descargar en CSV el Consolidado y el Detalle Advisors',
+  },
+  {
+    code: AdministracionPermission.VER_COMPENSACION,
+    module: Module.ADMINISTRACION,
+    section: 'Gestión Advisors',
+    name: 'Columna: valores y compensación',
+    description: 'Ver tarifas, valores a pagar y datos de planta/semiplanta (valor fijo, horas contratadas, gestión administrativa). Sin este permiso solo se ven horas',
+  },
+  {
+    code: AdministracionPermission.TARIFAS,
+    module: Module.ADMINISTRACION,
+    section: 'Gestión Advisors',
+    name: 'Pestaña "Tarifas"',
+    description: 'Crear y editar la tabla de tarifas por país, programa, tipo, categoría y concepto (con vigencia)',
+  },
+  {
+    code: AdministracionPermission.FICHA_PAGO,
+    module: Module.ADMINISTRACION,
+    section: 'Gestión Advisors',
+    name: 'Pestaña "Advisors" (ficha de pago)',
+    description: 'Editar de cada advisor: tipo (por horas/semiplanta/planta), categoría de tarifa, programa (LGS/KIDS), grupo de pago, valor fijo, horas contratadas y de gestión administrativa',
   },
 ];
 

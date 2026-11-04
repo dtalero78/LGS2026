@@ -20,6 +20,7 @@ export enum Module {
   APROBACION = 'APROBACION',
   MANTENIMIENTO = 'MANTENIMIENTO',
   RECAUDOS = 'RECAUDOS',
+  ADMINISTRACION = 'ADMINISTRACION',
 }
 
 /**
@@ -44,6 +45,8 @@ export enum Role {
   COORDINADOR_ACADEMICO = 'COORDINADOR_ACADEMICO',
   ACADEMICO_JEFE = 'ACADEMICO_JEFE',
   ADMINISTRACION_JEFE = 'ADMINISTRACION_JEFE',
+  // Revisora de facturas/boletas de advisors (Administración › Gestión Advisors)
+  ADMINISTRACION = 'ADMINISTRACION',
   ESTUDIANTE = 'ESTUDIANTE',
 }
 
@@ -411,6 +414,26 @@ export enum RecaudosPermission {
 }
 
 /**
+ * Permisos del módulo ADMINISTRACION (Menú Administración › Gestión Advisors).
+ * Flujo: ACADEMICO_JEFE revisa horas (AJUSTAR, HORAS_OK) → ADMINISTRACION revisa
+ * la factura (FACTURA_DEVOLVER, VERIFICAR) → ADMINISTRACION_JEFE paga.
+ * Spec: docs/specs/gestion-advisors.md
+ */
+export enum AdministracionPermission {
+  GESTION_ADVISORS_VER  = 'ADMINISTRACION.GESTION_ADVISORS.VER',
+  AJUSTAR               = 'ADMINISTRACION.GESTION_ADVISORS.AJUSTAR',
+  HORAS_OK              = 'ADMINISTRACION.GESTION_ADVISORS.HORAS_OK',
+  FACTURA_DEVOLVER      = 'ADMINISTRACION.GESTION_ADVISORS.FACTURA_DEVOLVER',
+  VERIFICAR             = 'ADMINISTRACION.GESTION_ADVISORS.VERIFICAR',
+  REGISTRAR_PAGO        = 'ADMINISTRACION.GESTION_ADVISORS.REGISTRAR_PAGO',
+  CONSOLIDADO_IMPRIMIR  = 'ADMINISTRACION.GESTION_ADVISORS.CONSOLIDADO_IMPRIMIR',
+  CONSOLIDADO_EXPORTAR  = 'ADMINISTRACION.GESTION_ADVISORS.CONSOLIDADO_EXPORTAR',
+  VER_COMPENSACION      = 'ADMINISTRACION.GESTION_ADVISORS.VER_COMPENSACION',
+  TARIFAS               = 'ADMINISTRACION.GESTION_ADVISORS.TARIFAS',
+  FICHA_PAGO            = 'ADMINISTRACION.GESTION_ADVISORS.FICHA_PAGO',
+}
+
+/**
  * Permisos del módulo APROBACION (Menú Aprobación)
  */
 export enum AprobacionPermission {
@@ -464,7 +487,8 @@ export type Permission =
   | AprobacionPermission
   | MantenimientoPermission
   | InformesPermission
-  | RecaudosPermission;
+  | RecaudosPermission
+  | AdministracionPermission;
 
 // ============================================================================
 // INTERFACES

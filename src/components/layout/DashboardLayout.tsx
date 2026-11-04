@@ -20,11 +20,12 @@ import {
   ChartBarIcon,
   WrenchScrewdriverIcon,
   BanknotesIcon,
+  BriefcaseIcon,
 } from '@heroicons/react/24/outline'
 import { cn } from '@/lib/utils'
 import SearchBar from '@/components/search/SearchBar'
 import { usePermissions } from '@/hooks/usePermissions'
-import { ServicioPermission, AcademicoPermission, InformesPermission, ComercialPermission, AprobacionPermission, MantenimientoPermission, RecaudosPermission, Permission } from '@/types/permissions'
+import { ServicioPermission, AcademicoPermission, InformesPermission, ComercialPermission, AprobacionPermission, MantenimientoPermission, RecaudosPermission, AdministracionPermission, Permission } from '@/types/permissions'
 
 const getNavigation = (userEmail: string, userRole: string) => [
   {
@@ -107,6 +108,13 @@ const getNavigation = (userEmail: string, userRole: string) => [
       { name: 'Asignación',   href: '/dashboard/recaudos/asignacion',   newTab: true },
       { name: 'Aprobaciones', href: '/dashboard/recaudos/aprobaciones', newTab: true },
       { name: 'Usuarios en mora', href: '/dashboard/recaudos/usuarios-mora', newTab: true },
+    ],
+  },
+  {
+    name: 'Administración',
+    icon: BriefcaseIcon,
+    children: [
+      { name: 'Gestión Advisors', href: '/dashboard/administracion/gestion-advisors', newTab: true },
     ],
   },
   {
@@ -475,6 +483,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     '/dashboard/recaudos/usuarios-mora': [
       RecaudosPermission.USUARIOS_MORA_VER,
     ],
+    // Administración
+    '/dashboard/administracion/gestion-advisors': [
+      AdministracionPermission.GESTION_ADVISORS_VER,
+    ],
     // Aprobación → Centro de Aprobaciones. CENTRO_VER es el permiso del ítem;
     // se conservan los de acción para no romper roles ya configurados.
     '/dashboard/aprobacion': [
@@ -586,6 +598,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       RecaudosPermission.ASIGNACION_VER,
       RecaudosPermission.APROBACIONES_VER,
       RecaudosPermission.USUARIOS_MORA_VER,
+    ],
+    'Administración': [
+      AdministracionPermission.GESTION_ADVISORS_VER,
     ],
   }
 

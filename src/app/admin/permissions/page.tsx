@@ -60,6 +60,10 @@ const MODULE_COLORS: Record<string, { bg: string; border: string; tag: string; t
     bg: 'bg-slate-50', border: 'border-slate-200', tag: 'bg-slate-100 text-slate-800',
     text: 'text-slate-900', accent: 'text-slate-600',
   },
+  [Module.ADMINISTRACION]: {
+    bg: 'bg-cyan-50', border: 'border-cyan-200', tag: 'bg-cyan-100 text-cyan-800',
+    text: 'text-cyan-900', accent: 'text-cyan-600',
+  },
 };
 
 const getModuleColors = (module: string) => {
@@ -77,6 +81,7 @@ const MODULE_DISPLAY_NAMES: Record<string, { title: string; subtitle: string }> 
   'COMERCIAL': { title: 'COMERCIAL', subtitle: 'Menú Comercial' },
   'APROBACION': { title: 'APROBACION', subtitle: 'Menú Aprobación' },
   'MANTENIMIENTO': { title: 'MANTENIMIENTO', subtitle: 'Menú Mantenimiento → Usuarios' },
+  'ADMINISTRACION': { title: 'ADMINISTRACION', subtitle: 'Menú Administración › Gestión Advisors' },
 };
 
 // Iconos para tipos de componente

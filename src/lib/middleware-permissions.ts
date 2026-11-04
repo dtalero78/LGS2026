@@ -324,6 +324,11 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
     'RECAUDOS.USUARIOS_MORA.VER' as Permission,
   ],
 
+  // Administración → Gestión Advisors (liquidación de horas)
+  '/dashboard/administracion/gestion-advisors': [
+    'ADMINISTRACION.GESTION_ADVISORS.VER' as Permission,
+  ],
+
   // Aprobación → Centro de Aprobaciones (CENTRO_VER + acción para roles ya configurados)
   '/dashboard/aprobacion': [
     'APROBACION.CENTRO.VER' as Permission,
