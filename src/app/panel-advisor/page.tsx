@@ -115,8 +115,12 @@ function PanelAdvisorContent() {
     if (advisorEmail) {
       loadAdvisor(advisorEmail)
     } else if (canPickOtherAdvisor && availableAdvisors.length > 0) {
-      // Usuario con permiso pero sin email en URL: auto-seleccionar el primero
-      const first = availableAdvisors[0]
+      // Usuario con permiso pero sin email en URL: si es un coordinador que
+      // también dicta clases (tiene ficha de advisor con su correo) abre SU
+      // panel; si no, el primero de la lista. El selector sigue disponible.
+      const myEmail = String(session?.user?.email || '').toLowerCase()
+      const propio = myEmail ? availableAdvisors.find(a => (a.email || '').toLowerCase() === myEmail) : undefined
+      const first = propio || availableAdvisors[0]
       if (first?.email) {
         router.replace(`/panel-advisor?email=${encodeURIComponent(first.email)}`)
       } else {
@@ -128,7 +132,7 @@ function PanelAdvisorContent() {
       setLoading(false)
     }
     // Si tiene permiso y availableAdvisors aún cargando, esperar al siguiente render
-  }, [advisorEmail, canPickOtherAdvisor, availableAdvisors, router])
+  }, [advisorEmail, canPickOtherAdvisor, availableAdvisors, router, session?.user?.email])
 
   function handleAdvisorChange(email: string) {
     if (!email) return

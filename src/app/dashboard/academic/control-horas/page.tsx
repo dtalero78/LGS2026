@@ -155,7 +155,11 @@ function ControlHorasContent() {
             esPlanta: a.esPlanta === true,
           }))
           setAdvisors(list)
-          if (list[0]) setAdvisorId(list[0]._id)
+          // Coordinador que también dicta clases (tiene ficha de advisor con su
+          // correo): abre su PROPIO Ctrl Horas; el selector sigue disponible.
+          const propio = list.find(a => (a.email || '').toLowerCase() === myEmail.toLowerCase())
+          const inicial = propio || list[0]
+          if (inicial) setAdvisorId(inicial._id)
         })
         .catch(() => { /* ignore */ })
     } else {
@@ -467,7 +471,7 @@ function ControlHorasContent() {
           inicial={currentAdvisor?.primerNombre?.[0]?.toUpperCase() || 'A'}
         />
         <div>
-          {role === 'ADVISOR' ? (
+          {role === 'ADVISOR' || (!!myEmail && (currentAdvisor?.email || '').toLowerCase() === myEmail.toLowerCase()) ? (
             <>
               <h1 className="text-2xl font-bold text-gray-900">
                 ¡Hola {currentAdvisor?.primerNombre || ''}!
