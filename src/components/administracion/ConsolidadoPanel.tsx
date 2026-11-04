@@ -15,7 +15,7 @@ import toast from 'react-hot-toast'
 import { ArrowDownTrayIcon, PrinterIcon, PencilSquareIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { exportToExcel } from '@/lib/export-excel'
 import {
-  type AdvisorLiq, type Liquidacion, type Pais, PAISES, MONEDA, TIPO_LABEL,
+  type AdvisorLiq, type Liquidacion, type Pais, type CorteInfo, PAISES, MONEDA, TIPO_LABEL,
   fmtH, fmtMoneda, enTresMonedas, etiquetaPeriodo,
 } from './liquidacion-tipos'
 
@@ -44,8 +44,8 @@ function Celda({ horas, usd, clp, cop, verValores, fuerte }: { horas: number; us
   )
 }
 
-export default function ConsolidadoPanel({ liq, loading, puedeExportar, puedeImprimir, puedeTipoCambio, onTipoCambio }: {
-  liq: Liquidacion | null; loading: boolean; puedeExportar: boolean; puedeImprimir: boolean; puedeTipoCambio: boolean; onTipoCambio: () => void
+export default function ConsolidadoPanel({ liq, cortes, bloqueoGrupo, loading, puedeExportar, puedeImprimir, puedeTipoCambio, onTipoCambio }: {
+  liq: Liquidacion | null; cortes: CorteInfo[]; bloqueoGrupo: boolean; loading: boolean; puedeExportar: boolean; puedeImprimir: boolean; puedeTipoCambio: boolean; onTipoCambio: () => void
 }) {
   const [filtro, setFiltro] = useState<Filtro>('Todos')
   const [editTc, setEditTc] = useState(false)
@@ -97,6 +97,9 @@ export default function ConsolidadoPanel({ liq, loading, puedeExportar, puedeImp
 
   const totalCol = (p: Pais) => FILAS.reduce((s, f) => ({ horas: s.horas + matriz[f.k][p].horas, usd: s.usd + matriz[f.k][p].usd }), { horas: 0, usd: 0 })
   const totalGeneral = cols.reduce((s, p) => { const t = totalCol(p); return { horas: s.horas + t.horas, usd: s.usd + t.usd } }, { horas: 0, usd: 0 })
+  const aLiquidar = cortes.filter(c => c.estado !== 'SIN_HORAS')
+  const verificados = aLiquidar.filter(c => c.estado === 'VERIFICADO' || c.estado === 'PAGADO').length
+  const todoVerificado = aLiquidar.length > 0 && verificados === aLiquidar.length
   const faltaTc = verValores && liq && (!liq.tipoCambio.COP || !liq.tipoCambio.CLP)
   const faltanTarifas = liq?.advisors.filter(a => a.valor?.faltanTarifas.length) || []
   const sinFijo = liq?.advisors.filter(a => a.tipoContratacion !== 'POR_HORAS' && a.valor && !a.valor.fijo) || []
@@ -154,8 +157,10 @@ export default function ConsolidadoPanel({ liq, loading, puedeExportar, puedeImp
             </button>
           )}
           {puedeImprimir && (
-            <button type="button" disabled title="Se habilita cuando todos los advisors del mes estén VERIFICADOS (flujo de verificación, Fase 4)"
-              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-sky-700 rounded-md opacity-40 cursor-not-allowed">
+            <button type="button" disabled={!todoVerificado}
+              onClick={() => window.open(`/api/postgres/administracion/consolidado/pdf?periodo=${liq.periodo}`, '_blank')}
+              title={todoVerificado ? 'Consolidado con los valores congelados al verificar' : `Se habilita cuando todos estén VERIFICADOS (${aLiquidar.length - verificados} pendientes)`}
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-sky-700 rounded-md hover:bg-sky-800 disabled:opacity-40 disabled:cursor-not-allowed">
               <PrinterIcon className="h-4 w-4" /> Imprimir PDF
             </button>
           )}
@@ -273,7 +278,7 @@ export default function ConsolidadoPanel({ liq, loading, puedeExportar, puedeImp
       <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
         <div className="px-4 py-2.5 border-b bg-gray-50">
           <div className="text-sm font-semibold text-gray-900">Pagos por grupo</div>
-          <div className="text-[11px] text-gray-500">Lo que se paga a los advisors de cada país en su moneda y corte. El estado de verificación y el bloqueo SIN FACTURA llegan con el flujo de facturas (Fase 4).</div>
+          <div className="text-[11px] text-gray-500">Lo que se paga a los advisors de cada país en su moneda y corte, con el avance de la verificación.{bloqueoGrupo ? ' Un advisor SIN FACTURA bloquea el pago de todo su grupo (no la impresión).' : ''}</div>
         </div>
         <table className="w-full text-sm">
           <thead>
@@ -281,6 +286,7 @@ export default function ConsolidadoPanel({ liq, loading, puedeExportar, puedeImp
               <th className="px-4 py-2 text-left">Grupo</th><th className="px-3 text-right">Advisors</th><th className="px-3 text-right">Horas</th>
               {verValores && <><th className="px-3 text-right">Moneda local</th><th className="px-3 text-right">USD</th></>}
               <th className="px-3 text-right">Por tipo</th>
+              <th className="px-3 text-left">Verificación</th>
             </tr>
           </thead>
           <tbody>
@@ -296,6 +302,19 @@ export default function ConsolidadoPanel({ liq, loading, puedeExportar, puedeImp
                 <td className="px-3 text-right text-[11px] text-gray-500 whitespace-nowrap">
                   {(['POR_HORAS', 'SEMIPLANTA', 'PLANTA'] as const).map(t => { const n = g.advisors.filter(a => a.tipoContratacion === t).length; return n ? `${TIPO_LABEL[t]} ${n}` : null }).filter(Boolean).join(' · ')}
                 </td>
+                <td className="px-3 text-[11px] whitespace-nowrap">{(() => {
+                  const corte = g.k === 'CO1' ? 'Q1' : g.k === 'CO2' ? 'Q2' : 'MES'
+                  const ids = new Set(g.advisors.map(a => a.advisorId))
+                  const cs = cortes.filter(c => c.corte === corte && ids.has(c.advisorId) && c.estado !== 'SIN_HORAS')
+                  const v = cs.filter(c => c.estado === 'VERIFICADO' || c.estado === 'PAGADO').length
+                  const p = cs.filter(c => c.estado === 'PAGADO').length
+                  const sf = cs.filter(c => c.estado === 'SIN_FACTURA').length
+                  return <span className="inline-flex flex-wrap gap-1">
+                    <span className="px-1.5 rounded bg-emerald-100 text-emerald-800 font-semibold">{v}/{cs.length} verificados</span>
+                    {p > 0 && <span className="px-1.5 rounded bg-emerald-700 text-white font-semibold">{p} pagados</span>}
+                    {sf > 0 && <span className="px-1.5 rounded bg-red-100 text-red-700 font-semibold">{sf} sin factura{bloqueoGrupo ? ' · pago bloqueado' : ''}</span>}
+                  </span>
+                })()}</td>
               </tr>
             ))}
           </tbody>

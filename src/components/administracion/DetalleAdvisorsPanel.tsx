@@ -9,11 +9,12 @@
  */
 
 import { useMemo, useState } from 'react'
+import CorteGestion, { type PermisosCorte } from './CorteGestion'
 import { ArrowDownTrayIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { exportToExcel } from '@/lib/export-excel'
 import { api, handleApiError } from '@/hooks/use-api'
 import {
-  type AdvisorLiq, type Liquidacion, type Pais, PAISES, COLUMNAS_TIPO, MONEDA, CORTE, TIPO_LABEL,
+  type AdvisorLiq, type Liquidacion, type Pais, type CorteInfo, PAISES, COLUMNAS_TIPO, MONEDA, CORTE, TIPO_LABEL, ESTADO_CORTE, CORTE_LABEL, claveCorte,
   fmtH, fmtMoneda, etiquetaPeriodo,
 } from './liquidacion-tipos'
 
@@ -22,7 +23,17 @@ const TIPO_CLS: Record<string, string> = {
   POR_HORAS: 'bg-sky-100 text-sky-800', SEMIPLANTA: 'bg-violet-100 text-violet-800', PLANTA: 'bg-emerald-100 text-emerald-800',
 }
 
-export default function DetalleAdvisorsPanel({ liq, loading, puedeExportar }: { liq: Liquidacion | null; loading: boolean; puedeExportar: boolean }) {
+export default function DetalleAdvisorsPanel({ liq, cortes, loading, puedeExportar, permisos, onCambio }: {
+  liq: Liquidacion | null; cortes: CorteInfo[]; loading: boolean; puedeExportar: boolean; permisos: PermisosCorte; onCambio: () => void
+}) {
+  const [pestana, setPestana] = useState<'corte' | 'eventos' | 'historial'>('corte')
+  const [historial, setHistorial] = useState<any[] | null>(null)
+  const cortesDe = (a: AdvisorLiq) => (a.cortes || []).map(c => cortes.find(x => x.advisorId === a.advisorId && x.programa === a.programaLiq && x.corte === c.corte)).filter(Boolean) as CorteInfo[]
+  const verHistorial = async (a: AdvisorLiq) => {
+    setPestana('historial'); setHistorial(null)
+    try { const d = await api.get<{ log: any[] }>(`/api/postgres/administracion/log?advisorId=${encodeURIComponent(a.advisorId)}&periodo=${liq!.periodo}`); setHistorial(d.log) }
+    catch (e) { handleApiError(e, 'No se pudo cargar el historial'); setHistorial([]) }
+  }
   const [hoja, setHoja] = useState<Hoja>('Todos')
   const [buscar, setBuscar] = useState('')
   const [verSemanas, setVerSemanas] = useState(true)
@@ -45,7 +56,7 @@ export default function DetalleAdvisorsPanel({ liq, loading, puedeExportar }: { 
   const tiposConDatos = COLUMNAS_TIPO.filter(c => visibles.some(a => a.porTipo[c.k] > 0))
 
   const abrir = async (a: AdvisorLiq) => {
-    setDetalle(a); setCargandoDet(true)
+    setDetalle(a); setCargandoDet(true); setPestana('corte')
     try {
       const d = await api.get<Liquidacion>(`/api/postgres/administracion/liquidacion?periodo=${liq!.periodo}&advisorId=${encodeURIComponent(a.advisorId)}`)
       const mismo = d.advisors.find(x => x.programaLiq === a.programaLiq)
@@ -110,6 +121,17 @@ export default function DetalleAdvisorsPanel({ liq, loading, puedeExportar }: { 
           {a.tipoContratacion !== 'POR_HORAS' && a.valor && !a.valor.fijo ? <div className="text-[10px] text-amber-600 font-normal">sin valor fijo</div> : null}
         </td>
       )}
+      <td className="px-3 whitespace-nowrap">
+        <div className="flex flex-col gap-0.5">
+          {cortesDe(a).map(c => (
+            <span key={c.corte} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${ESTADO_CORTE[c.estado].cls}`}
+              title={c.factura?.inconsistencias.length ? c.factura.inconsistencias.join(' · ') : undefined}>
+              {cortesDe(a).length > 1 && <span className="opacity-70">{CORTE_LABEL[c.corte]}</span>}
+              {ESTADO_CORTE[c.estado].l}{c.horasOk ? ' · ✓h' : ''}{c.factura?.inconsistencias.length ? ' ⚠' : ''}
+            </span>
+          ))}
+        </div>
+      </td>
     </tr>
   )
 
@@ -126,6 +148,7 @@ export default function DetalleAdvisorsPanel({ liq, loading, puedeExportar }: { 
         <td className="text-right tabular-nums px-2 font-semibold">{fmtH(s(a => a.porConcepto.FESTIVO))}</td>
         <td className="text-right tabular-nums px-2 font-bold">{fmtH(s(a => a.total))}</td>
         {verValores && <td className="text-right tabular-nums px-3 font-bold whitespace-nowrap">{moneda ? fmtMoneda(s(a => a.valor?.total || 0), moneda) : '—'}</td>}
+        <td className="px-3 text-[11px] whitespace-nowrap">{(() => { const cs = lista.flatMap(cortesDe).filter(c => c.estado !== 'SIN_HORAS'); const v = cs.filter(c => c.estado === 'VERIFICADO' || c.estado === 'PAGADO').length; return cs.length ? `${v}/${cs.length} verificados` : '' })()}</td>
       </tr>
     )
   }
@@ -140,6 +163,7 @@ export default function DetalleAdvisorsPanel({ liq, loading, puedeExportar }: { 
       <th className="px-2 text-right text-rose-600">Festivo h</th>
       <th className="px-2 text-right text-gray-800 bg-gray-100">Total h</th>
       {verValores && <th className="px-3 text-right text-sky-900">Valor ({MONEDA[pais]})</th>}
+      <th className="px-3 text-left">Estado</th>
     </tr>
   )
 
@@ -218,8 +242,37 @@ export default function DetalleAdvisorsPanel({ liq, loading, puedeExportar }: { 
               </div>
               <button type="button" onClick={() => setDetalle(null)} className="p-1 text-gray-500 hover:text-gray-800"><XMarkIcon className="h-5 w-5" /></button>
             </div>
+            <div className="flex gap-1 border-b px-4">
+              {([['corte', 'Corte y factura'], ['eventos', 'Eventos'], ['historial', 'Historial']] as const).map(([k, l]) => (
+                <button key={k} type="button" onClick={() => k === 'historial' ? verHistorial(detalle) : setPestana(k)}
+                  className={`px-3 py-2 text-xs font-semibold border-b-2 -mb-px ${pestana === k ? 'border-sky-700 text-sky-800' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>{l}</button>
+              ))}
+            </div>
             <div className="overflow-auto">
-              {cargandoDet ? <p className="p-8 text-center text-sm text-gray-400 italic">Cargando eventos…</p> : (
+              {pestana === 'corte' ? (
+                <CorteGestion a={detalle} cortes={cortesDe(detalle)} periodo={liq!.periodo} semanas={semanas} permisos={permisos} onCambio={onCambio} />
+              ) : pestana === 'historial' ? (
+                historial === null ? <p className="p-8 text-center text-sm text-gray-400 italic">Cargando historial…</p>
+                  : !historial.length ? <p className="p-8 text-center text-sm text-gray-500">Sin movimientos en el mes.</p> : (
+                  <table className="w-full text-xs">
+                    <thead className="sticky top-0 bg-gray-50 text-gray-500 uppercase tracking-wide">
+                      <tr><th className="px-3 py-2 text-left">Fecha</th><th className="text-left">Corte</th><th className="text-left">Acción</th><th className="text-left">Estado</th><th className="text-left">Quién</th><th className="text-left pr-3">Detalle</th></tr>
+                    </thead>
+                    <tbody>
+                      {historial.map((h, i) => (
+                        <tr key={i} className="border-b border-gray-100 align-top">
+                          <td className="px-3 py-1 whitespace-nowrap">{new Date(h._createdDate).toLocaleString('es-CO')}</td>
+                          <td>{h.programa ? `${h.programa} ${h.corte}` : '—'}</td>
+                          <td className="font-semibold">{h.accion}</td>
+                          <td className="whitespace-nowrap">{h.estadoAnterior ? `${h.estadoAnterior} → ${h.estadoNuevo}` : ''}</td>
+                          <td>{h.usuarioEmail} <span className="text-gray-400">{h.usuarioRol}</span></td>
+                          <td className="pr-3 max-w-[340px] text-gray-600 break-words">{h.detalle?.motivo || h.detalle?.comentario || h.detalle?.referencia || (h.detalle?.horas !== undefined ? `${h.detalle.horas} h` : '')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
+              ) : cargandoDet ? <p className="p-8 text-center text-sm text-gray-400 italic">Cargando eventos…</p> : (
                 <table className="w-full text-xs">
                   <thead className="sticky top-0 bg-gray-50 text-gray-500 uppercase tracking-wide">
                     <tr><th className="px-3 py-2 text-left">Fecha</th><th className="text-left">Hora</th><th className="text-left">Sem</th><th className="text-left">Tipo</th><th className="text-left">Evento</th>

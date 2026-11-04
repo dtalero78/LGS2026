@@ -26,7 +26,7 @@ import { grupoPagoDe, MONEDA_POR_PAIS, PAISES_PAGO } from '@/services/gestion-ad
 import { kidsIntake } from '@/lib/kids-intake';
 
 export type Pais = 'Chile' | 'Colombia' | 'Ecuador';
-export const TIPOS_CLASE = ['sesiones', 'jumps', 'training', 'clubes', 'welcome', 'essential', 'examen', 'otros', 'administrativas', 'kids'] as const;
+export const TIPOS_CLASE = ['sesiones', 'jumps', 'training', 'clubes', 'welcome', 'essential', 'examen', 'otros', 'administrativas', 'kids', 'ajustes'] as const;
 export type TipoClase = typeof TIPOS_CLASE[number];
 export type Concepto = 'NORMAL' | 'FESTIVO' | 'EXAM_INTERN';
 
@@ -117,12 +117,24 @@ export interface AdvisorLiq {
   quincenas: { q1: number; q2: number };
   total: number; reparto: PorPais;
   noPagadas: { canceladas: number; suspendidas: number; noAsistio: number };
+  /** Horas por concepto de cada quincena (Colombia factura por quincena). */
+  porConceptoQ: { q1: Record<Concepto, number>; q2: Record<Concepto, number> };
+  /** Horas extra autorizadas (semiplanta) y gestión administrativa informativa, por quincena. */
+  extras: { q1: number; q2: number };
+  gestionAdmin: number;
+  /** Suma neta de ajustes (horas) del mes. */
+  ajustes: number;
   valor: null | {
-    moneda: string; normal: number; festivo: number; exam: number; fijo: number; total: number;
+    moneda: string; normal: number; festivo: number; exam: number; extras: number; fijo: number; total: number;
     reparto: PorPais; tarifas: Partial<Record<Concepto, number>>; faltanTarifas: Concepto[];
   };
+  /** Cortes de pago: Colombia Q1 + Q2; Chile y Ecuador MES. */
+  cortes: { corte: Corte; horas: number; valor: number | null }[];
   eventos?: EventoLiq[];
 }
+
+export type Corte = 'MES' | 'Q1' | 'Q2';
+export const cortesDe = (pais: Pais): Corte[] => (pais === 'Colombia' ? ['Q1', 'Q2'] : ['MES']);
 
 export interface Liquidacion {
   periodo: string; parcial: boolean; semanas: Semana[]; advisors: AdvisorLiq[];
@@ -225,6 +237,8 @@ export async function calcularLiquidacion(periodo: string, opts: { verValores: b
         porTipo: ceroTipo(), porConcepto: { NORMAL: 0, FESTIVO: 0, EXAM_INTERN: 0 }, sinAsistentes: 0,
         semanas: semanas.map((s) => ({ n: s.n, total: 0, porTipo: ceroTipo() })), quincenas: { q1: 0, q2: 0 },
         total: 0, reparto: ceroPais(), noPagadas: { canceladas: 0, suspendidas: 0, noAsistio: 0 }, valor: null, _eventos: [],
+        porConceptoQ: { q1: { NORMAL: 0, FESTIVO: 0, EXAM_INTERN: 0 }, q2: { NORMAL: 0, FESTIVO: 0, EXAM_INTERN: 0 } },
+        extras: { q1: 0, q2: 0 }, gestionAdmin: 0, ajustes: 0, cortes: [],
       };
       res.set(clave, r);
     }
@@ -233,7 +247,8 @@ export async function calcularLiquidacion(periodo: string, opts: { verValores: b
   const sumar = (r: AdvisorLiq, fecha: string, tipo: TipoClase, concepto: Concepto, horas: number) => {
     r.porTipo[tipo] += horas; r.porConcepto[concepto] += horas; r.total += horas;
     const s = r.semanas[semanaDe(fecha) - 1]; s.total += horas; s.porTipo[tipo] += horas;
-    if (Number(fecha.slice(8, 10)) <= 15) r.quincenas.q1 += horas; else r.quincenas.q2 += horas;
+    const q = Number(fecha.slice(8, 10)) <= 15 ? 'q1' : 'q2';
+    r.quincenas[q] += horas; r.porConceptoQ[q][concepto] += horas;
   };
 
   for (const g of grupos.values()) {
@@ -341,6 +356,36 @@ export async function calcularLiquidacion(periodo: string, opts: { verValores: b
     if (enKids(a)) base(a, 'KIDS');
   }
 
+  // ── Ajustes (Académico): liquidable = plataforma + Σ ajustes. Por corte (Q1/Q2/MES). ──
+  const ajustes = await queryMany<any>(
+    `SELECT l."advisorId", l."programa", l."corte", a."alcance", TO_CHAR(a."semanaInicio", 'YYYY-MM-DD') AS "semanaInicio",
+            a."concepto", a."horas"
+       FROM "LIQ_ADVISOR_AJUSTES" a JOIN "LIQ_ADVISOR" l ON l."_id" = a."liqId"
+      WHERE l."periodo" = $1 ${opts.advisorId ? `AND l."advisorId" = $2` : ''}`,
+    opts.advisorId ? [periodo, opts.advisorId] : [periodo]);
+  for (const aj of ajustes) {
+    const a = advPorId.get(aj.advisorId); if (!a) continue;
+    const r = base(a, aj.programa === 'KIDS' ? 'KIDS' : 'LGS');
+    const h = Number(aj.horas) || 0; if (!h) continue;
+    r.ajustes += h;
+    const q: 'q1' | 'q2' = aj.corte === 'Q1' ? 'q1' : aj.corte === 'Q2' ? 'q2'
+      : (aj.semanaInicio && Number(aj.semanaInicio.slice(8, 10)) <= 15 ? 'q1' : 'q2');
+    if (aj.concepto === 'EXTRA_AUTORIZADA') { r.extras[q] += h; }
+    else if (aj.concepto === 'GESTION_ADMIN') { r.gestionAdmin += h; continue; } // informativo: no suma horas pagables
+    else {
+      const c: Concepto = aj.concepto === 'FESTIVO' ? 'FESTIVO' : aj.concepto === 'EXAM_INTERN' ? 'EXAM_INTERN' : 'NORMAL';
+      r.porConcepto[c] += h; r.porConceptoQ[q][c] += h;
+    }
+    r.porTipo.ajustes += h; r.total += h; r.quincenas[q] += h;
+    if (aj.alcance === 'SEMANA' && aj.semanaInicio) {
+      const s = r.semanas[semanaDe(aj.semanaInicio) - 1]; if (s) { s.total += h; s.porTipo.ajustes += h; }
+    }
+    // El ajuste se reparte entre países en la misma proporción que las horas del advisor.
+    const base0 = r.total - h;
+    if (base0 > 0) { const rep = { ...r.reparto }; for (const p of PAISES_PAGO) r.reparto[p as Pais] += h * (rep[p as Pais] / base0); }
+    else r.reparto[a.grupo as Pais] += h;
+  }
+
   // Valores
   if (opts.verValores) {
     const tarifas = await queryMany<any>(
@@ -372,17 +417,34 @@ export async function calcularLiquidacion(periodo: string, opts: { verValores: b
       const llevaFijo = r.programaLiq === 'LGS' || a?.programa === 'KIDS';
       const fijo = r.tipoContratacion === 'POR_HORAS' || !llevaFijo ? 0 : Number(a?.valorFijoMensual) || 0;
       const porHoras = r.tipoContratacion === 'POR_HORAS';
+      const semi = r.tipoContratacion === 'SEMIPLANTA';
       // Festivo: con recargo solo en los países que lo pagan (Colombia, por ahora, a tarifa normal).
-      // Semiplanta: el valor fijo cubre lo normal; las horas festivas de la plataforma se pagan aparte.
+      // Semiplanta: el valor fijo cubre lo normal; se pagan aparte las horas festivas de la
+      // plataforma y las horas EXTRA AUTORIZADAS (ajuste) a tarifa normal. Planta: solo el fijo.
       const tarifaFestivo = FESTIVO_CON_RECARGO[r.pais] ? (ts.FESTIVO || 0) : (ts.NORMAL || 0);
-      const normal = porHoras ? r.porConcepto.NORMAL * (ts.NORMAL || 0) : 0;
-      const festivo = (porHoras || r.tipoContratacion === 'SEMIPLANTA') ? r.porConcepto.FESTIVO * tarifaFestivo : 0;
-      const exam = porHoras ? r.porConcepto.EXAM_INTERN * (ts.EXAM_INTERN || 0) : 0;
-      const total = normal + festivo + exam + fijo;
+      const valorDe = (pc: Record<Concepto, number>, extras: number, conFijo: boolean) => {
+        const normal = porHoras ? pc.NORMAL * (ts.NORMAL || 0) : 0;
+        const festivo = porHoras || semi ? pc.FESTIVO * tarifaFestivo : 0;
+        const exam = porHoras ? pc.EXAM_INTERN * (ts.EXAM_INTERN || 0) : 0;
+        const ext = semi ? extras * (ts.NORMAL || 0) : 0;
+        const f = conFijo ? fijo : 0;
+        return { normal, festivo, exam, extras: ext, fijo: f, total: normal + festivo + exam + ext + f };
+      };
+      const v = valorDe(r.porConcepto, r.extras.q1 + r.extras.q2, true);
       const reparto = ceroPais();
-      for (const p of PAISES_PAGO) reparto[p as Pais] = r.total > 0 ? total * (r.reparto[p as Pais] / r.total) : (p === r.pais ? total : 0);
-      r.valor = { moneda, normal: r2(normal), festivo: r2(festivo), exam: r2(exam), fijo: r2(fijo), total: r2(total),
+      for (const p of PAISES_PAGO) reparto[p as Pais] = r.total > 0 ? v.total * (r.reparto[p as Pais] / r.total) : (p === r.pais ? v.total : 0);
+      r.valor = { moneda, normal: r2(v.normal), festivo: r2(v.festivo), exam: r2(v.exam), extras: r2(v.extras), fijo: r2(v.fijo), total: r2(v.total),
         reparto: { Chile: r2(reparto.Chile), Colombia: r2(reparto.Colombia), Ecuador: r2(reparto.Ecuador) }, tarifas: ts, faltanTarifas: faltan };
+      // Por quincena (Colombia): el fijo, si lo hubiera, va en la 2da.
+      r.cortes = cortesDe(r.pais).map((c) => c === 'MES'
+        ? { corte: c, horas: r2(r.total), valor: r2(v.total) }
+        : { corte: c, horas: r2(r.quincenas[c === 'Q1' ? 'q1' : 'q2']),
+            valor: r2(valorDe(r.porConceptoQ[c === 'Q1' ? 'q1' : 'q2'], r.extras[c === 'Q1' ? 'q1' : 'q2'], c === 'Q2').total) });
+    }
+  }
+  for (const r of res.values()) {
+    if (!r.cortes.length) {
+      r.cortes = cortesDe(r.pais).map((c) => ({ corte: c, horas: r2(c === 'MES' ? r.total : r.quincenas[c === 'Q1' ? 'q1' : 'q2']), valor: null }));
     }
   }
 

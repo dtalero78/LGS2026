@@ -22,7 +22,8 @@ import TarifasPanel from '@/components/administracion/TarifasPanel'
 import AdvisorsPagoPanel from '@/components/administracion/AdvisorsPagoPanel'
 import DetalleAdvisorsPanel from '@/components/administracion/DetalleAdvisorsPanel'
 import ConsolidadoPanel from '@/components/administracion/ConsolidadoPanel'
-import { type Liquidacion, etiquetaPeriodo, corrPeriodo } from '@/components/administracion/liquidacion-tipos'
+import { type Liquidacion, type CorteInfo, etiquetaPeriodo, corrPeriodo } from '@/components/administracion/liquidacion-tipos'
+import { useSession } from 'next-auth/react'
 
 type Tab = 'consolidado' | 'detalle' | 'advisors' | 'tarifas'
 
@@ -34,6 +35,15 @@ export default function GestionAdvisorsPage() {
   const puedeExportar = hasPermission(AdministracionPermission.CONSOLIDADO_EXPORTAR)
   const puedeImprimir = hasPermission(AdministracionPermission.CONSOLIDADO_IMPRIMIR)
   const [tab, setTab] = useState<Tab>('consolidado')
+  const { data: session } = useSession()
+  const permisos = {
+    ajustar: hasPermission(AdministracionPermission.AJUSTAR), horasOk: hasPermission(AdministracionPermission.HORAS_OK),
+    devolver: hasPermission(AdministracionPermission.FACTURA_DEVOLVER), verificar: hasPermission(AdministracionPermission.VERIFICAR),
+    pagar: hasPermission(AdministracionPermission.REGISTRAR_PAGO), reabrir: (session?.user as any)?.role === 'SUPER_ADMIN',
+    verValores: hasPermission(AdministracionPermission.VER_COMPENSACION),
+  }
+  const [cortes, setCortes] = useState<CorteInfo[]>([])
+  const [bloqueoGrupo, setBloqueoGrupo] = useState(true)
 
   const mesActual = new Date().toISOString().slice(0, 7)
   const [periodo, setPeriodo] = useState(mesActual)
@@ -43,7 +53,11 @@ export default function GestionAdvisorsPage() {
   const cargar = useCallback(async () => {
     setLoading(true)
     try {
-      setLiq(await api.get<Liquidacion>(`/api/postgres/administracion/liquidacion?periodo=${periodo}`))
+      const [l, c] = await Promise.all([
+        api.get<Liquidacion>(`/api/postgres/administracion/liquidacion?periodo=${periodo}`),
+        api.get<{ cortes: CorteInfo[]; bloqueoGrupo: boolean }>(`/api/postgres/administracion/cortes?periodo=${periodo}`),
+      ])
+      setLiq(l); setCortes(c.cortes || []); setBloqueoGrupo(c.bloqueoGrupo !== false)
     } catch (e) {
       handleApiError(e, 'No se pudo calcular la liquidación')
     } finally {
@@ -91,10 +105,10 @@ export default function GestionAdvisorsPage() {
             ))}
           </div>
           {tab === 'consolidado' && (
-            <ConsolidadoPanel liq={liq?.periodo === periodo ? liq : null} loading={loading} puedeExportar={puedeExportar}
+            <ConsolidadoPanel liq={liq?.periodo === periodo ? liq : null} cortes={cortes} bloqueoGrupo={bloqueoGrupo} loading={loading} puedeExportar={puedeExportar}
               puedeImprimir={puedeImprimir} puedeTipoCambio={puedeTarifas} onTipoCambio={cargar} />
           )}
-          {tab === 'detalle' && <DetalleAdvisorsPanel liq={liq?.periodo === periodo ? liq : null} loading={loading} puedeExportar={puedeExportar} />}
+          {tab === 'detalle' && <DetalleAdvisorsPanel liq={liq?.periodo === periodo ? liq : null} cortes={cortes} loading={loading} puedeExportar={puedeExportar} permisos={permisos} onCambio={cargar} />}
           {tab === 'advisors' && <AdvisorsPagoPanel puedeEditar={puedeFicha} />}
           {tab === 'tarifas' && verTarifas && <TarifasPanel puedeEditar={puedeTarifas} />}
         </div>

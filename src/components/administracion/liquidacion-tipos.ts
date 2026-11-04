@@ -5,7 +5,40 @@
 
 export type Pais = 'Chile' | 'Colombia' | 'Ecuador'
 export const PAISES: Pais[] = ['Chile', 'Colombia', 'Ecuador']
-export type TipoClase = 'sesiones' | 'jumps' | 'training' | 'clubes' | 'welcome' | 'essential' | 'examen' | 'otros' | 'administrativas' | 'kids'
+export type TipoClase = 'sesiones' | 'jumps' | 'training' | 'clubes' | 'welcome' | 'essential' | 'examen' | 'otros' | 'administrativas' | 'kids' | 'ajustes'
+export type Corte = 'MES' | 'Q1' | 'Q2'
+export type EstadoCorte = 'ABIERTO' | 'FACTURA_RECIBIDA' | 'DEVUELTA' | 'SIN_FACTURA' | 'SIN_HORAS' | 'VERIFICADO' | 'PAGADO'
+
+export const ESTADO_CORTE: Record<EstadoCorte, { l: string; cls: string }> = {
+  ABIERTO: { l: 'Abierto', cls: 'bg-gray-100 text-gray-700' },
+  FACTURA_RECIBIDA: { l: 'Factura recibida', cls: 'bg-sky-100 text-sky-800' },
+  DEVUELTA: { l: 'Devuelta', cls: 'bg-amber-100 text-amber-800' },
+  SIN_FACTURA: { l: 'Sin factura', cls: 'bg-red-100 text-red-700' },
+  SIN_HORAS: { l: 'Sin horas', cls: 'bg-gray-50 text-gray-400' },
+  VERIFICADO: { l: 'Verificado', cls: 'bg-emerald-100 text-emerald-800' },
+  PAGADO: { l: 'Pagado', cls: 'bg-emerald-700 text-white' },
+}
+export const CORTE_LABEL: Record<Corte, string> = { MES: 'Mes', Q1: '1ra Q', Q2: '2da Q' }
+export const CONCEPTOS_AJUSTE = [
+  { v: 'NORMAL', l: 'Horas normales' }, { v: 'FESTIVO', l: 'Festivo' }, { v: 'EXAM_INTERN', l: 'Exam. intern.' },
+  { v: 'SIN_ASISTENTES', l: 'Sin asistentes (½ h)' }, { v: 'EXTRA_AUTORIZADA', l: 'Extra autorizada (semiplanta)' },
+  { v: 'GESTION_ADMIN', l: 'Gestión administrativa (informativo)' },
+]
+
+export interface CorteInfo {
+  liqId: string | null; advisorId: string; programa: 'LGS' | 'KIDS'; corte: Corte
+  estado: EstadoCorte; requiereFactura: boolean; plazo: string; plazoReenvio: string | null
+  horas: number; valor: number | null; moneda: string
+  horasOk: boolean; horasOkPor: string | null
+  verificadoPor: string | null; verificadoEn: string | null; pagadoPor: string | null; pagadoEn: string | null; referenciaPago: string | null
+  snapshot: any; cambioTrasVerificar: boolean
+  factura: null | {
+    _id: string; nombre: string | null; tipo: string | null; estado: string; subidoEn: string; subidoPor: string | null
+    extraido: any; comentarioDevolucion: string | null; devueltaPor: string | null; devueltaEn: string | null; inconsistencias: string[]
+  }
+  ajustes: { _id: string; alcance: string; semanaInicio: string | null; concepto: string; horas: number; motivo: string; usuarioEmail: string | null; usuarioNombre: string | null; fecha: string }[]
+}
+export const claveCorte = (advisorId: string, programa: string, corte: string) => `${advisorId}|${programa}|${corte}`
 export type Concepto = 'NORMAL' | 'FESTIVO' | 'EXAM_INTERN'
 type PorTipo = Record<TipoClase, number>
 type PorPais = Record<Pais, number>
@@ -14,7 +47,7 @@ export const COLUMNAS_TIPO: { k: TipoClase; l: string }[] = [
   { k: 'sesiones', l: 'Sesiones' }, { k: 'jumps', l: 'Jumps' }, { k: 'training', l: 'Training' },
   { k: 'clubes', l: 'Clubes' }, { k: 'welcome', l: 'Welcome' }, { k: 'essential', l: 'ESS' },
   { k: 'examen', l: 'Exam.' }, { k: 'administrativas', l: 'Admin.' }, { k: 'otros', l: 'Otros' },
-  { k: 'kids', l: 'Sesiones Kids' },
+  { k: 'kids', l: 'Sesiones Kids' }, { k: 'ajustes', l: 'Ajustes' },
 ]
 
 export interface EventoLiq {
@@ -33,8 +66,11 @@ export interface AdvisorLiq {
   quincenas: { q1: number; q2: number }
   total: number; reparto: PorPais
   noPagadas: { canceladas: number; suspendidas: number; noAsistio: number }
+  porConceptoQ: { q1: Record<Concepto, number>; q2: Record<Concepto, number> }
+  extras: { q1: number; q2: number }; gestionAdmin: number; ajustes: number
+  cortes: { corte: Corte; horas: number; valor: number | null }[]
   valor: null | {
-    moneda: string; normal: number; festivo: number; exam: number; fijo: number; total: number
+    moneda: string; normal: number; festivo: number; exam: number; extras: number; fijo: number; total: number
     reparto: PorPais; tarifas: Partial<Record<Concepto, number>>; faltanTarifas: Concepto[]
   }
   eventos?: EventoLiq[]

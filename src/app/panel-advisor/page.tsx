@@ -392,6 +392,14 @@ function PanelAdvisorContent() {
             </p>
           </div>
 
+          {/* Mis horas y facturas: solo en el panel PROPIO (el del correo de la sesión). */}
+          {advisor?.email && String(advisor.email).toLowerCase() === String(session?.user?.email || '').toLowerCase() && (
+            <a href="/panel-advisor/mis-horas"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-white bg-sky-700 rounded-md hover:bg-sky-800">
+              Mis horas y facturas
+            </a>
+          )}
+
           {/* Selector de advisor — sólo visible para usuarios con permiso
               ACADEMICO.ADVISOR.LISTA_VER. Un ADVISOR sin este permiso ve
               únicamente su propio panel (email de la sesión, sin selector). */}
