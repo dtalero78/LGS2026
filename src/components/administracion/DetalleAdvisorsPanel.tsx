@@ -36,6 +36,7 @@ export default function DetalleAdvisorsPanel({ liq, cortes, loading, puedeExport
   }
   const [hoja, setHoja] = useState<Hoja>('Todos')
   const [buscar, setBuscar] = useState('')
+  const [tipo, setTipo] = useState('')
   const [verSemanas, setVerSemanas] = useState(true)
   const [detalle, setDetalle] = useState<AdvisorLiq | null>(null)
   const [cargandoDet, setCargandoDet] = useState(false)
@@ -47,8 +48,9 @@ export default function DetalleAdvisorsPanel({ liq, cortes, loading, puedeExport
     const q = buscar.trim().toLowerCase()
     return liq.advisors.filter(a =>
       (hoja === 'Todos' || (hoja === 'Kids' ? a.programaLiq === 'KIDS' : a.programaLiq === 'LGS' && a.pais === hoja)) &&
+      (!tipo || a.tipoContratacion === tipo) &&
       (!q || a.nombre.toLowerCase().includes(q)))
-  }, [liq, hoja, buscar])
+  }, [liq, hoja, buscar, tipo])
 
   const verValores = !!liq?.verValores
   const semanas = liq?.semanas || []
@@ -91,7 +93,7 @@ export default function DetalleAdvisorsPanel({ liq, cortes, loading, puedeExport
       { header: 'Canceladas', accessor: a => a.noPagadas.canceladas },
       { header: 'Suspendidas', accessor: a => a.noPagadas.suspendidas },
       { header: 'No asistió', accessor: a => a.noPagadas.noAsistio },
-    ], `detalle-advisors-${liq.periodo}${hoja === 'Todos' ? '' : '-' + hoja.toLowerCase()}`)
+    ], `detalle-advisors-${liq.periodo}${hoja === 'Todos' ? '' : '-' + hoja.toLowerCase()}${tipo ? '-' + tipo.toLowerCase() : ''}`)
   }
 
   const secciones: { programa: 'LGS' | 'KIDS'; pais: Pais }[] = [
@@ -176,7 +178,12 @@ export default function DetalleAdvisorsPanel({ liq, cortes, loading, puedeExport
             {h === 'Todos' ? 'Todos' : h === 'Kids' ? 'Kids · guías' : `${h} · ${MONEDA[h as Pais]}`}
           </button>
         ))}
-        <label className="ml-3 inline-flex items-center gap-1.5 text-xs text-gray-600">
+        <select value={tipo} onChange={e => setTipo(e.target.value)} aria-label="Tipo de contratación"
+          className="ml-3 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs">
+          <option value="">Todos los tipos</option>
+          {Object.entries(TIPO_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+        </select>
+        <label className="ml-1 inline-flex items-center gap-1.5 text-xs text-gray-600">
           <input type="checkbox" checked={verSemanas} onChange={e => setVerSemanas(e.target.checked)} className="h-3.5 w-3.5 rounded border-gray-300" /> Semanas
         </label>
         <div className="relative ml-auto">
