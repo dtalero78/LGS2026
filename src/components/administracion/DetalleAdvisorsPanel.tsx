@@ -29,10 +29,14 @@ export default function DetalleAdvisorsPanel({ liq, loading, puedeExportar }: { 
   const [detalle, setDetalle] = useState<AdvisorLiq | null>(null)
   const [cargandoDet, setCargandoDet] = useState(false)
 
+  // Hojas de país = advisors LGS de ese país; hoja Kids = guías (todas las plataformas);
+  // Todos = las secciones LGS por país + las de Kids.
   const visibles = useMemo(() => {
     if (!liq) return []
     const q = buscar.trim().toLowerCase()
-    return liq.advisors.filter(a => (hoja === 'Todos' || a.pais === hoja) && (!q || a.nombre.toLowerCase().includes(q)))
+    return liq.advisors.filter(a =>
+      (hoja === 'Todos' || (hoja === 'Kids' ? a.programaLiq === 'KIDS' : a.programaLiq === 'LGS' && a.pais === hoja)) &&
+      (!q || a.nombre.toLowerCase().includes(q)))
   }, [liq, hoja, buscar])
 
   const verValores = !!liq?.verValores
@@ -44,13 +48,15 @@ export default function DetalleAdvisorsPanel({ liq, loading, puedeExportar }: { 
     setDetalle(a); setCargandoDet(true)
     try {
       const d = await api.get<Liquidacion>(`/api/postgres/administracion/liquidacion?periodo=${liq!.periodo}&advisorId=${encodeURIComponent(a.advisorId)}`)
-      if (d.advisors[0]) setDetalle(d.advisors[0])
+      const mismo = d.advisors.find(x => x.programaLiq === a.programaLiq)
+      if (mismo) setDetalle(mismo)
     } catch (e) { handleApiError(e, 'No se pudieron cargar los eventos') } finally { setCargandoDet(false) }
   }
 
   const exportar = () => {
     if (!liq) return
     exportToExcel(visibles, [
+      { header: 'Programa', accessor: a => a.programaLiq },
       { header: 'País', accessor: a => a.pais },
       { header: 'Advisor', accessor: a => a.nombre },
       { header: 'Tipo', accessor: a => TIPO_LABEL[a.tipoContratacion] || a.tipoContratacion },
@@ -77,10 +83,13 @@ export default function DetalleAdvisorsPanel({ liq, loading, puedeExportar }: { 
     ], `detalle-advisors-${liq.periodo}${hoja === 'Todos' ? '' : '-' + hoja.toLowerCase()}`)
   }
 
-  const secciones: Pais[] = hoja === 'Todos' ? PAISES : PAISES.includes(hoja as Pais) ? [hoja as Pais] : []
+  const secciones: { programa: 'LGS' | 'KIDS'; pais: Pais }[] = [
+    ...(hoja === 'Todos' || PAISES.includes(hoja as Pais) ? PAISES.filter(p => hoja === 'Todos' || p === hoja).map(p => ({ programa: 'LGS' as const, pais: p })) : []),
+    ...(hoja === 'Todos' || hoja === 'Kids' ? PAISES.map(p => ({ programa: 'KIDS' as const, pais: p })) : []),
+  ]
 
   const fila = (a: AdvisorLiq) => (
-    <tr key={a.advisorId} onClick={() => abrir(a)} className="border-b border-gray-100 hover:bg-sky-50/60 cursor-pointer">
+    <tr key={`${a.advisorId}|${a.programaLiq}`} onClick={() => abrir(a)} className="border-b border-gray-100 hover:bg-sky-50/60 cursor-pointer">
       <td className="sticky left-0 bg-white px-3 py-1.5 min-w-[220px]">
         <div className={`font-medium ${a.activo ? 'text-gray-900' : 'text-red-700'}`}>{a.nombre}</div>
         <div className="flex gap-1 mt-0.5">
@@ -138,10 +147,9 @@ export default function DetalleAdvisorsPanel({ liq, loading, puedeExportar }: { 
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         {(['Todos', ...PAISES, 'Kids'] as Hoja[]).map(h => (
-          <button key={h} type="button" onClick={() => setHoja(h)} disabled={h === 'Kids'}
-            title={h === 'Kids' ? 'Kids se integra en la Fase 3 (horas desde KIDS2026)' : undefined}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-t-md border-b-2 ${hoja === h ? 'border-sky-700 text-sky-800 bg-sky-50' : 'border-transparent text-gray-500 hover:text-gray-700'} disabled:opacity-40 disabled:cursor-not-allowed`}>
-            {h === 'Todos' ? 'Todos' : h === 'Kids' ? 'Kids · pronto' : `${h} · ${MONEDA[h as Pais]}`}
+          <button key={h} type="button" onClick={() => setHoja(h)}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-t-md border-b-2 ${hoja === h ? (h === 'Kids' ? 'border-fuchsia-600 text-fuchsia-800 bg-fuchsia-50' : 'border-sky-700 text-sky-800 bg-sky-50') : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            {h === 'Todos' ? 'Todos' : h === 'Kids' ? 'Kids · guías' : `${h} · ${MONEDA[h as Pais]}`}
           </button>
         ))}
         <label className="ml-3 inline-flex items-center gap-1.5 text-xs text-gray-600">
@@ -159,22 +167,31 @@ export default function DetalleAdvisorsPanel({ liq, loading, puedeExportar }: { 
         )}
       </div>
 
+      {liq && (hoja === 'Todos' || hoja === 'Kids') && (!liq.kids.ok || liq.kids.sinGuia > 0 || liq.kids.guiaSinEnlace.length > 0) && (
+        <div className="rounded-lg border border-fuchsia-200 bg-fuchsia-50 px-4 py-2 text-xs text-fuchsia-900 space-y-0.5">
+          {!liq.kids.ok && <div>• KIDS no respondió ({liq.kids.error}); las horas de guías no están incluidas.</div>}
+          {liq.kids.sinGuia > 0 && <div>• {liq.kids.sinGuia} sesiones Kids del mes están en salones <b>sin guía asignada</b> en KIDS: no se le cargan a nadie hasta asignar la guía del salón.</div>}
+          {liq.kids.guiaSinEnlace.length > 0 && <div>• Guías de KIDS sin ficha enlazada en la pestaña Advisors: {liq.kids.guiaSinEnlace.map(g => `${g.username} (${g.sesiones} ses.)`).join(', ')}.</div>}
+        </div>
+      )}
+
       {loading && !liq ? (
         <p className="p-10 text-center text-sm text-gray-400 italic">Calculando horas…</p>
       ) : !liq || !secciones.length ? null : (
         <div className="overflow-auto max-h-[70vh] rounded-lg border border-gray-200 bg-white">
           <table className="w-full text-sm">
-            {secciones.map(pais => {
-              const lista = visibles.filter(a => a.pais === pais)
+            {secciones.map(({ programa, pais }) => {
+              const lista = visibles.filter(a => a.programaLiq === programa && a.pais === pais)
               if (!lista.length) return null
+              const kids = programa === 'KIDS'
               return (
-                <tbody key={pais} className="border-b-4 border-gray-200">
-                  <tr><td colSpan={99} className="sticky left-0 bg-sky-800 text-white px-3 py-1.5 text-xs font-bold tracking-wide">
-                    {pais.toUpperCase()} · {MONEDA[pais]} · corte {CORTE[pais]} · {etiquetaPeriodo(liq.periodo)}{liq.parcial ? ' (parcial)' : ''}
+                <tbody key={`${programa}-${pais}`} className="border-b-4 border-gray-200">
+                  <tr><td colSpan={99} className={`sticky left-0 ${kids ? 'bg-fuchsia-700' : 'bg-sky-800'} text-white px-3 py-1.5 text-xs font-bold tracking-wide`}>
+                    {kids ? 'KIDS · ' : ''}{pais.toUpperCase()} · {MONEDA[pais]} · corte {CORTE[pais]} · {etiquetaPeriodo(liq.periodo)}{liq.parcial ? ' (parcial)' : ''}
                   </td></tr>
                   {encabezado(pais)}
                   {lista.map(fila)}
-                  {subtotal(lista, `Subtotal ${pais}`, pais, 'bg-sky-50 border-t border-sky-200 text-sky-900')}
+                  {subtotal(lista, `Subtotal ${kids ? 'Kids ' : ''}${pais}`, pais, kids ? 'bg-fuchsia-50 border-t border-fuchsia-200 text-fuchsia-900' : 'bg-sky-50 border-t border-sky-200 text-sky-900')}
                 </tbody>
               )
             })}

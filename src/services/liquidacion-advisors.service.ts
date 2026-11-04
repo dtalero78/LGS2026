@@ -23,15 +23,18 @@ import { queryMany } from '@/lib/postgres';
 import { ValidationError } from '@/lib/errors';
 import FESTIVOS from '@/data/festivos.json';
 import { grupoPagoDe, MONEDA_POR_PAIS, PAISES_PAGO } from '@/services/gestion-advisors.service';
+import { kidsIntake } from '@/lib/kids-intake';
 
 export type Pais = 'Chile' | 'Colombia' | 'Ecuador';
-export const TIPOS_CLASE = ['sesiones', 'jumps', 'training', 'clubes', 'welcome', 'essential', 'examen', 'otros', 'administrativas'] as const;
+export const TIPOS_CLASE = ['sesiones', 'jumps', 'training', 'clubes', 'welcome', 'essential', 'examen', 'otros', 'administrativas', 'kids'] as const;
 export type TipoClase = typeof TIPOS_CLASE[number];
 export type Concepto = 'NORMAL' | 'FESTIVO' | 'EXAM_INTERN';
 
 const TZ: Record<Pais, string> = { Chile: 'America/Santiago', Colombia: 'America/Bogota', Ecuador: 'America/Guayaquil' };
 const CODIGO: Record<Pais, string> = { Chile: 'CL', Colombia: 'CO', Ecuador: 'EC' };
 const EXAMENES = new Set(['IELTS', 'TOEFL', 'B2FIRST', 'B2 FIRST']);
+/** Países donde la hora festiva lleva recargo (decisión 2026-11-03: Colombia, por ahora, a tarifa normal). */
+const FESTIVO_CON_RECARGO: Record<Pais, boolean> = { Chile: true, Colombia: false, Ecuador: true };
 /** Cuentas técnicas de ADVISORS que no son personas (bienvenidas, actividades, superadmin, coordinación). */
 const CUENTAS_SISTEMA = /advisorbienvenidas@|plataformalgsdigital@|superadmin@|academicoconsultalgs@|l\.merino@letsgospeak|super advisor|plataforma lgs|advisor welcome/i;
 
@@ -41,12 +44,12 @@ const ceroTipo = (): PorTipo => Object.fromEntries(TIPOS_CLASE.map((t) => [t, 0]
 const ceroPais = (): PorPais => ({ Chile: 0, Colombia: 0, Ecuador: 0 });
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
-/** País de pago de un alumno (Perú → Ecuador). */
+/** País de pago de un alumno (Perú → Ecuador). Acepta nombre de plataforma o código (CL/CO/EC/PE). */
 function paisAlumno(plataforma: string | null | undefined): Pais | null {
   const p = String(plataforma || '').toLowerCase();
-  if (p.startsWith('chile')) return 'Chile';
-  if (p.startsWith('colom')) return 'Colombia';
-  if (p.startsWith('ecua') || p.startsWith('per')) return 'Ecuador';
+  if (p.startsWith('chile') || p === 'cl') return 'Chile';
+  if (p.startsWith('colom') || p === 'co') return 'Colombia';
+  if (p.startsWith('ecua') || p.startsWith('per') || p === 'ec' || p === 'pe') return 'Ecuador';
   return null;
 }
 
@@ -105,6 +108,8 @@ export interface EventoLiq {
 }
 
 export interface AdvisorLiq {
+  /** Programa de ESTA liquidación: quien está en LGS y KIDS tiene una por programa. */
+  programaLiq: 'LGS' | 'KIDS';
   advisorId: string; nombre: string; email: string | null; activo: boolean;
   pais: Pais; tipoContratacion: string; categoriaTarifa: string; programa: string;
   porTipo: PorTipo; porConcepto: Record<Concepto, number>; sinAsistentes: number;
@@ -122,6 +127,8 @@ export interface AdvisorLiq {
 export interface Liquidacion {
   periodo: string; parcial: boolean; semanas: Semana[]; advisors: AdvisorLiq[];
   tipoCambio: { COP: number | null; CLP: number | null; fecha: string | null; fuente: string | null };
+  /** Estado de la integración KIDS: error si no respondió; sesiones sin guía asignada o con guía no enlazada. */
+  kids: { ok: boolean; error: string | null; sinGuia: number; guiaSinEnlace: { username: string; sesiones: number }[] };
 }
 
 const PERIODO_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -140,15 +147,16 @@ export async function calcularLiquidacion(periodo: string, opts: { verValores: b
   const advisors = await queryMany<any>(
     `SELECT "_id", COALESCE(NULLIF(TRIM("nombreCompleto"), ''), TRIM(CONCAT("primerNombre", ' ', "primerApellido"))) AS nombre,
             "email", "pais", COALESCE("activo", false) AS activo, "tipoContratacion", "categoriaTarifa", "programa", "grupoPago",
-            "valorFijoMensual"
-       FROM "ADVISORS" WHERE "programa" IN ('LGS', 'AMBOS') ${opts.advisorId ? `AND "_id" = $1` : ''}`,
+            "valorFijoMensual", "kidsUserId"
+       FROM "ADVISORS" WHERE "programa" IN ('LGS', 'AMBOS', 'KIDS') ${opts.advisorId ? `AND "_id" = $1` : ''}`,
     opts.advisorId ? [opts.advisorId] : []);
   const advPorId = new Map<string, any>();
   for (const a of advisors) { const g = grupoPagoDe(a); if (g) advPorId.set(a._id, { ...a, grupo: g as Pais }); }
-  const ids = Array.from(advPorId.keys());
-  if (!ids.length) return { periodo, parcial, semanas, advisors: [], tipoCambio: await tipoCambioDe(periodo) };
+  const enLgs = (a: any) => a.programa === 'LGS' || a.programa === 'AMBOS';
+  const enKids = (a: any) => a.programa === 'KIDS' || a.programa === 'AMBOS';
+  const ids = Array.from(advPorId.values()).filter(enLgs).map((a) => a._id);
 
-  const [eventos, admin, logs] = await Promise.all([
+  const [eventos, admin, logs] = !ids.length ? [[], [], []] as any[][] : await Promise.all([
     queryMany<any>(
       `SELECT c."_id", c."advisor", c."dia", c."hora", c."tipo", c."nivel", c."step", c."cicloId", c."eventoCompartidoId",
               COALESCE(c."sesionCerrada", false) AS cerrada,
@@ -207,17 +215,18 @@ export async function calcularLiquidacion(periodo: string, opts: { verValores: b
   }
 
   const res = new Map<string, AdvisorLiq & { _eventos: EventoLiq[] }>();
-  const base = (a: any) => {
-    let r = res.get(a._id);
+  const base = (a: any, programaLiq: 'LGS' | 'KIDS' = 'LGS') => {
+    const clave = `${a._id}|${programaLiq}`;
+    let r = res.get(clave);
     if (!r) {
       r = {
-        advisorId: a._id, nombre: a.nombre || a._id, email: a.email || null, activo: !!a.activo, pais: a.grupo,
+        programaLiq, advisorId: a._id, nombre: a.nombre || a._id, email: a.email || null, activo: !!a.activo, pais: a.grupo,
         tipoContratacion: a.tipoContratacion, categoriaTarifa: a.categoriaTarifa, programa: a.programa,
         porTipo: ceroTipo(), porConcepto: { NORMAL: 0, FESTIVO: 0, EXAM_INTERN: 0 }, sinAsistentes: 0,
         semanas: semanas.map((s) => ({ n: s.n, total: 0, porTipo: ceroTipo() })), quincenas: { q1: 0, q2: 0 },
         total: 0, reparto: ceroPais(), noPagadas: { canceladas: 0, suspendidas: 0, noAsistio: 0 }, valor: null, _eventos: [],
       };
-      res.set(a._id, r);
+      res.set(clave, r);
     }
     return r;
   };
@@ -276,8 +285,60 @@ export async function calcularLiquidacion(periodo: string, opts: { verValores: b
   // Todos los advisors ACTIVOS de la plataforma aparecen aunque no tengan horas en el
   // mes (la fuente real es la plataforma, no la hoja). Los inactivos, solo con actividad.
   // Se excluyen las cuentas de sistema (sin correo real) que no dictan clases.
+  // ── KIDS: sesiones de las guías desde KIDS2026 (1 sesión = 1 h; ½ h sin presentes para por horas) ──
+  const kids: Liquidacion['kids'] = { ok: true, error: null, sinGuia: 0, guiaSinEnlace: [] };
+  const guiasKids = new Map<string, any>();
+  for (const a of advPorId.values()) if (enKids(a) && a.kidsUserId) guiasKids.set(String(a.kidsUserId).toLowerCase(), a);
+  if (guiasKids.size || !opts.advisorId) {
+    try {
+      const finMesStr = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+      const { sesiones } = await kidsIntake.horasGuias(`${periodo}-01`, finMesStr);
+      const sinEnlace = new Map<string, number>();
+      for (const s of sesiones) {
+        if (!s.fecha?.startsWith(periodo)) continue;
+        if (!s.guiaUserId) { kids.sinGuia++; continue; }
+        const a = guiasKids.get(s.guiaUserId.toLowerCase());
+        if (!a) { const u = s.guiaUsername || s.guiaUserId; sinEnlace.set(u, (sinEnlace.get(u) || 0) + 1); continue; }
+        const r = base(a, 'KIDS');
+        const pres = ceroPais(); const insc = ceroPais(); let presT = 0; let inscT = 0;
+        for (const [cc, n] of Object.entries(s.presentes || {})) { const p = paisAlumno(cc); if (p) pres[p] += n; presT += n; }
+        for (const [cc, n] of Object.entries(s.inscritos || {})) { const p = paisAlumno(cc); if (p) insc[p] += n; inscT += n; }
+        const sinAsis = presT === 0;
+        const horas = sinAsis && a.tipoContratacion === 'POR_HORAS' ? 0.5 : 1;
+        const festivo = esFestivo(s.fecha, a.grupo as Pais);
+        const concepto: Concepto = festivo ? 'FESTIVO' : 'NORMAL';
+        const fuente = presT > 0 ? pres : inscT > 0 ? insc : null;
+        const tf = fuente ? PAISES_PAGO.reduce((t, p) => t + fuente[p as Pais], 0) : 0;
+        const reparto = ceroPais();
+        if (fuente && tf > 0) for (const p of PAISES_PAGO) reparto[p as Pais] = fuente[p as Pais] / tf;
+        else reparto[a.grupo as Pais] = 1;
+        sumar(r, s.fecha, 'kids', concepto, horas);
+        if (sinAsis) r.sinAsistentes++;
+        for (const p of PAISES_PAGO) r.reparto[p as Pais] += horas * reparto[p as Pais];
+        r._eventos.push({
+          eventoId: s.id, fecha: s.fecha,
+          hora: new Intl.DateTimeFormat('es-CO', { timeZone: TZ[a.grupo as Pais], hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(s.startsAt)),
+          semana: semanaDe(s.fecha), quincena: Number(s.fecha.slice(8, 10)) <= 15 ? 1 : 2,
+          tipo: 'kids', concepto, horas, titulo: `${s.salon} · ${s.tipoCurso}${s.marcadas ? '' : ' · asistencia sin marcar'}`,
+          inscritos: inscT, asistentes: presT, sinAsistentes: sinAsis, compartido: false, cerrada: s.marcadas > 0,
+          festivo, reparto,
+        });
+      }
+      kids.guiaSinEnlace = Array.from(sinEnlace.entries()).map(([username, sesiones]) => ({ username, sesiones }));
+    } catch (e: any) {
+      kids.ok = false;
+      kids.error = e?.message || 'KIDS no respondió';
+      console.warn('[liquidacion] KIDS horas-guias:', kids.error);
+    }
+  }
+
+  // Todos los advisors ACTIVOS de la plataforma aparecen aunque no tengan horas en el
+  // mes (la fuente real es la plataforma, no la hoja). Los inactivos, solo con actividad.
+  // Se excluyen las cuentas de sistema (sin correo real) que no dictan clases.
   for (const a of advPorId.values()) {
-    if (a.activo && !CUENTAS_SISTEMA.test(String(a.email || '')) && !CUENTAS_SISTEMA.test(String(a.nombre || ''))) base(a);
+    if (!a.activo || CUENTAS_SISTEMA.test(String(a.email || '')) || CUENTAS_SISTEMA.test(String(a.nombre || ''))) continue;
+    if (enLgs(a)) base(a, 'LGS');
+    if (enKids(a)) base(a, 'KIDS');
   }
 
   // Valores
@@ -285,12 +346,17 @@ export async function calcularLiquidacion(periodo: string, opts: { verValores: b
     const tarifas = await queryMany<any>(
       `SELECT DISTINCT ON ("pais", "programa", "tipo", "categoria", "concepto")
               "pais", "programa", "tipo", "categoria", "concepto", "valor", "moneda"
-         FROM "TARIFAS_ADVISOR" WHERE "activo" = true AND "programa" = 'LGS' AND "vigenteDesde" <= $1::date
+         FROM "TARIFAS_ADVISOR" WHERE "activo" = true AND "vigenteDesde" <= $1::date
         ORDER BY "pais", "programa", "tipo", "categoria", "concepto", "vigenteDesde" DESC`, [`${periodo}-01`]);
-    const tarifa = (pais: string, tipo: string, categoria: string, concepto: Concepto) => {
-      const t = tarifas.find((x) => x.pais === pais && x.tipo === tipo && x.categoria === categoria && x.concepto === concepto)
-        || tarifas.find((x) => x.pais === pais && x.tipo === tipo && x.categoria === 'ESTANDAR' && x.concepto === concepto);
-      return t ? Number(t.valor) : null;
+    // Kids sin tarifa propia usa la de LGS; categoría sin tarifa usa ESTANDAR.
+    const tarifa = (pais: string, programa: string, tipo: string, categoria: string, concepto: Concepto) => {
+      for (const prog of programa === 'KIDS' ? ['KIDS', 'LGS'] : ['LGS']) {
+        for (const cat of categoria === 'ESTANDAR' ? ['ESTANDAR'] : [categoria, 'ESTANDAR']) {
+          const t = tarifas.find((x) => x.pais === pais && x.programa === prog && x.tipo === tipo && x.categoria === cat && x.concepto === concepto);
+          if (t) return Number(t.valor);
+        }
+      }
+      return null;
     };
     for (const r of res.values()) {
       const a = advPorId.get(r.advisorId);
@@ -299,13 +365,18 @@ export async function calcularLiquidacion(periodo: string, opts: { verValores: b
       const ts: Partial<Record<Concepto, number>> = {};
       const faltan: Concepto[] = [];
       for (const c of ['NORMAL', 'FESTIVO', 'EXAM_INTERN'] as Concepto[]) {
-        const v = tarifa(r.pais, tipoTarifa, r.categoriaTarifa, c);
+        const v = tarifa(r.pais, r.programaLiq, tipoTarifa, r.categoriaTarifa, c);
         if (v === null) { if (r.porConcepto[c] > 0 && r.tipoContratacion === 'POR_HORAS') faltan.push(c); } else ts[c] = v;
       }
-      const fijo = r.tipoContratacion === 'POR_HORAS' ? 0 : Number(a?.valorFijoMensual) || 0;
+      // El valor fijo de quien está en los dos programas va en su liquidación LGS (una sola vez).
+      const llevaFijo = r.programaLiq === 'LGS' || a?.programa === 'KIDS';
+      const fijo = r.tipoContratacion === 'POR_HORAS' || !llevaFijo ? 0 : Number(a?.valorFijoMensual) || 0;
       const porHoras = r.tipoContratacion === 'POR_HORAS';
+      // Festivo: con recargo solo en los países que lo pagan (Colombia, por ahora, a tarifa normal).
+      // Semiplanta: el valor fijo cubre lo normal; las horas festivas de la plataforma se pagan aparte.
+      const tarifaFestivo = FESTIVO_CON_RECARGO[r.pais] ? (ts.FESTIVO || 0) : (ts.NORMAL || 0);
       const normal = porHoras ? r.porConcepto.NORMAL * (ts.NORMAL || 0) : 0;
-      const festivo = porHoras ? r.porConcepto.FESTIVO * (ts.FESTIVO || 0) : 0;
+      const festivo = (porHoras || r.tipoContratacion === 'SEMIPLANTA') ? r.porConcepto.FESTIVO * tarifaFestivo : 0;
       const exam = porHoras ? r.porConcepto.EXAM_INTERN * (ts.EXAM_INTERN || 0) : 0;
       const total = normal + festivo + exam + fijo;
       const reparto = ceroPais();
@@ -321,14 +392,61 @@ export async function calcularLiquidacion(periodo: string, opts: { verValores: b
     rest.reparto = { Chile: r2(rest.reparto.Chile), Colombia: r2(rest.reparto.Colombia), Ecuador: r2(rest.reparto.Ecuador) };
     out.push(opts.advisorId ? { ...rest, eventos: _eventos.sort((x, y) => (x.fecha + (x.hora || '')).localeCompare(y.fecha + (y.hora || ''))) } : rest);
   }
-  out.sort((x, y) => x.pais.localeCompare(y.pais) || x.nombre.localeCompare(y.nombre));
-  return { periodo, parcial, semanas, advisors: out, tipoCambio: await tipoCambioDe(periodo) };
+  out.sort((x, y) => x.programaLiq.localeCompare(y.programaLiq) || x.pais.localeCompare(y.pais) || x.nombre.localeCompare(y.nombre));
+  return { periodo, parcial, semanas, advisors: out, tipoCambio: await tipoCambioDe(periodo), kids };
 }
 
-/** Último tipo de cambio registrado hasta el fin del periodo (unidades por 1 USD). */
+/** Último intento de traer el tipo de cambio oficial por fecha (evita reintentar en cada carga). */
+const INTENTOS_TC = new Map<string, number>();
+
+/**
+ * Valor oficial de 1 USD vigente en una fecha: TRM de Colombia (datos.gov.co, vigente
+ * ese día) y dólar observado de Chile (mindicador.cl, último publicado ≤ fecha).
+ * Best-effort: si una fuente no responde devuelve null para esa moneda.
+ */
+async function tipoCambioOficial(fecha: string): Promise<{ COP: number | null; CLP: number | null }> {
+  const pedir = async (url: string) => {
+    const r = await fetch(url, { signal: AbortSignal.timeout(8000), cache: 'no-store' });
+    if (!r.ok) throw new Error(String(r.status));
+    return r.json();
+  };
+  const [cop, clp] = await Promise.all([
+    pedir(`https://www.datos.gov.co/resource/32sa-8pi3.json?$where=${encodeURIComponent(`vigenciadesde <= '${fecha}T00:00:00'`)}&$order=vigenciadesde%20DESC&$limit=1`)
+      .then((j: any[]) => (j?.[0]?.valor ? Number(j[0].valor) : null)).catch(() => null),
+    pedir(`https://mindicador.cl/api/dolar/${fecha.slice(0, 4)}`)
+      .then((j: any) => {
+        const x = (j?.serie || []).filter((s: any) => String(s.fecha).slice(0, 10) <= fecha)
+          .sort((a: any, b: any) => String(b.fecha).localeCompare(String(a.fecha)))[0];
+        return x ? Number(x.valor) : null;
+      }).catch(() => null),
+  ]);
+  return { COP: cop && cop > 0 ? cop : null, CLP: clp && clp > 0 ? clp : null };
+}
+
+/**
+ * Tipo de cambio del periodo = el vigente el ÚLTIMO DÍA del mes (mes en curso: hoy).
+ * Si aún no está guardado para esa fecha, se trae de la fuente oficial y se guarda;
+ * si la fuente no responde se usa el último registrado antes (incluido el manual).
+ */
 async function tipoCambioDe(periodo: string) {
   const [y, m] = periodo.split('-').map(Number);
-  const fin = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+  const finMes = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+  const hoy = new Date().toISOString().slice(0, 10);
+  const fin = finMes < hoy ? finMes : hoy;
+  const ya = await queryMany<any>(`SELECT "moneda" FROM "TIPO_CAMBIO" WHERE "fecha" = $1::date AND "moneda" IN ('COP', 'CLP')`, [fin]);
+  const faltan = ['COP', 'CLP'].filter((mon) => !ya.some((r) => r.moneda === mon));
+  const ultimoIntento = INTENTOS_TC.get(fin) || 0;
+  if (faltan.length && Date.now() - ultimoIntento > 30 * 60e3) {
+    INTENTOS_TC.set(fin, Date.now());
+    const of = await tipoCambioOficial(fin);
+    for (const mon of faltan) {
+      const v = of[mon as 'COP' | 'CLP'];
+      if (!v) continue;
+      await queryMany(
+        `INSERT INTO "TIPO_CAMBIO" ("fecha", "moneda", "valor", "fuente") VALUES ($1::date, $2, $3, $4) ON CONFLICT DO NOTHING`,
+        [fin, mon, v, mon === 'COP' ? 'TRM (datos.gov.co)' : 'Dólar observado (mindicador.cl)']);
+    }
+  }
   const rows = await queryMany<any>(
     `SELECT DISTINCT ON ("moneda") "moneda", "valor", TO_CHAR("fecha", 'YYYY-MM-DD') AS fecha, "fuente"
        FROM "TIPO_CAMBIO" WHERE "fecha" <= $1::date AND "moneda" IN ('COP', 'CLP')

@@ -5,7 +5,7 @@
 
 export type Pais = 'Chile' | 'Colombia' | 'Ecuador'
 export const PAISES: Pais[] = ['Chile', 'Colombia', 'Ecuador']
-export type TipoClase = 'sesiones' | 'jumps' | 'training' | 'clubes' | 'welcome' | 'essential' | 'examen' | 'otros' | 'administrativas'
+export type TipoClase = 'sesiones' | 'jumps' | 'training' | 'clubes' | 'welcome' | 'essential' | 'examen' | 'otros' | 'administrativas' | 'kids'
 export type Concepto = 'NORMAL' | 'FESTIVO' | 'EXAM_INTERN'
 type PorTipo = Record<TipoClase, number>
 type PorPais = Record<Pais, number>
@@ -14,6 +14,7 @@ export const COLUMNAS_TIPO: { k: TipoClase; l: string }[] = [
   { k: 'sesiones', l: 'Sesiones' }, { k: 'jumps', l: 'Jumps' }, { k: 'training', l: 'Training' },
   { k: 'clubes', l: 'Clubes' }, { k: 'welcome', l: 'Welcome' }, { k: 'essential', l: 'ESS' },
   { k: 'examen', l: 'Exam.' }, { k: 'administrativas', l: 'Admin.' }, { k: 'otros', l: 'Otros' },
+  { k: 'kids', l: 'Sesiones Kids' },
 ]
 
 export interface EventoLiq {
@@ -24,6 +25,7 @@ export interface EventoLiq {
 }
 
 export interface AdvisorLiq {
+  programaLiq: 'LGS' | 'KIDS'
   advisorId: string; nombre: string; email: string | null; activo: boolean
   pais: Pais; tipoContratacion: string; categoriaTarifa: string; programa: string
   porTipo: PorTipo; porConcepto: Record<Concepto, number>; sinAsistentes: number
@@ -43,6 +45,7 @@ export interface Liquidacion {
   semanas: { n: number; inicio: string; fin: string }[]
   advisors: AdvisorLiq[]
   tipoCambio: { COP: number | null; CLP: number | null; fecha: string | null; fuente: string | null }
+  kids: { ok: boolean; error: string | null; sinGuia: number; guiaSinEnlace: { username: string; sesiones: number }[] }
 }
 
 export const MONEDA: Record<Pais, 'CLP' | 'COP' | 'USD'> = { Chile: 'CLP', Colombia: 'COP', Ecuador: 'USD' }

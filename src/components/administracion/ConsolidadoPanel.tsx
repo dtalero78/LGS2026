@@ -21,9 +21,12 @@ import {
 
 type Filtro = 'Todos' | Pais
 const FILAS = [
-  { k: 'POR_HORAS', l: 'LGS · Advisors por horas' },
-  { k: 'SEMIPLANTA', l: 'LGS · Semiplanta (coordinadores)' },
-  { k: 'PLANTA', l: 'LGS · Planta' },
+  { k: 'LGS:POR_HORAS', l: 'LGS · Advisors por horas' },
+  { k: 'LGS:SEMIPLANTA', l: 'LGS · Semiplanta (coordinadores)' },
+  { k: 'LGS:PLANTA', l: 'LGS · Planta' },
+  { k: 'KIDS:POR_HORAS', l: 'KIDS · Guías por horas' },
+  { k: 'KIDS:SEMIPLANTA', l: 'KIDS · Semiplanta (coordinación)' },
+  { k: 'KIDS:PLANTA', l: 'KIDS · Planta' },
 ]
 
 function Celda({ horas, usd, clp, cop, verValores, fuerte }: { horas: number; usd: number | null; clp: number | null; cop: number | null; verValores: boolean; fuerte?: boolean }) {
@@ -58,7 +61,7 @@ export default function ConsolidadoPanel({ liq, loading, puedeExportar, puedeImp
     for (const f of FILAS) m[f.k] = { Chile: { horas: 0, usd: 0, sinTc: false }, Colombia: { horas: 0, usd: 0, sinTc: false }, Ecuador: { horas: 0, usd: 0, sinTc: false } }
     if (!liq) return m
     for (const a of liq.advisors) {
-      const fila = m[a.tipoContratacion] || m.POR_HORAS
+      const fila = m[`${a.programaLiq}:${a.tipoContratacion}`] || m[`${a.programaLiq}:POR_HORAS`]
       for (const p of PAISES) {
         fila[p].horas += a.reparto[p]
         if (a.valor) {
@@ -164,7 +167,12 @@ export default function ConsolidadoPanel({ liq, loading, puedeExportar, puedeImp
         <div className="rounded-xl bg-gradient-to-br from-sky-800 to-sky-600 p-4 text-white shadow-sm">
           <div className="text-xs uppercase tracking-wide opacity-80">Total a pagar · {etiquetaPeriodo(liq.periodo)}</div>
           <div className="mt-1 text-2xl font-bold tabular-nums">{verValores ? fmtMoneda(totalGeneral.usd, 'USD') : `${fmtH(totalGeneral.horas)} h`}</div>
-          {verValores && <div className="mt-1 text-[11px] opacity-90 tabular-nums">{fmtMoneda(usdA(totalGeneral.usd).clp, 'CLP')} CLP · {fmtMoneda(usdA(totalGeneral.usd).cop, 'COP')} COP</div>}
+          {verValores && (
+            <div className="mt-1.5 space-y-0.5 text-base font-semibold text-white tabular-nums leading-snug">
+              <div>{fmtMoneda(usdA(totalGeneral.usd).clp, 'CLP')} CLP</div>
+              <div>{fmtMoneda(usdA(totalGeneral.usd).cop, 'COP')} COP</div>
+            </div>
+          )}
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-4">
           <div className="text-xs uppercase tracking-wide text-gray-500">Horas liquidables</div>
@@ -204,7 +212,8 @@ export default function ConsolidadoPanel({ liq, loading, puedeExportar, puedeImp
           <div className="flex items-center gap-1 font-semibold"><ExclamationTriangleIcon className="h-4 w-4" /> Revisar antes de pagar</div>
           {faltaTc && <div>• Falta registrar el tipo de cambio {!liq.tipoCambio.COP && 'COP'} {!liq.tipoCambio.CLP && 'CLP'}: sin él no se convierten los valores a USD.</div>}
           {faltanTarifas.length > 0 && <div>• Sin tarifa para: {faltanTarifas.map(a => `${a.nombre} (${a.valor!.faltanTarifas.join(', ')})`).join('; ')}.</div>}
-          {sinFijo.length > 0 && <div>• Semiplanta/planta sin valor fijo mensual: {sinFijo.map(a => a.nombre).join(', ')} (pestaña Advisors).</div>}
+          {sinFijo.length > 0 && <div>• Semiplanta/planta sin valor fijo mensual: {sinFijo.filter(a => a.programaLiq === 'LGS' || a.programa === 'KIDS').map(a => a.nombre).join(', ')} (pestaña Advisors).</div>}
+          {liq.kids.sinGuia > 0 && <div>• {liq.kids.sinGuia} sesiones Kids en salones sin guía asignada en KIDS (no se cargan a nadie).</div>}
         </div>
       )}
 
@@ -226,6 +235,8 @@ export default function ConsolidadoPanel({ liq, loading, puedeExportar, puedeImp
             <tbody>
               {FILAS.map(f => {
                 const tot = cols.reduce((s, p) => ({ horas: s.horas + matriz[f.k][p].horas, usd: s.usd + matriz[f.k][p].usd }), { horas: 0, usd: 0 })
+                // Filas vacías de Kids (p. ej. sin planta) no se muestran.
+                if (f.k.startsWith('KIDS') && !f.k.endsWith('POR_HORAS') && tot.horas === 0 && tot.usd === 0) return null
                 return (
                   <tr key={f.k} className="border-b border-gray-100">
                     <td className="px-4 py-2 font-medium text-gray-800">{f.l}</td>
@@ -234,21 +245,23 @@ export default function ConsolidadoPanel({ liq, loading, puedeExportar, puedeImp
                   </tr>
                 )
               })}
-              <tr className="border-b border-gray-100 text-gray-400 italic">
-                <td className="px-4 py-2">KIDS · Guías</td>
-                <td colSpan={cols.length + (cols.length > 1 ? 1 : 0)} className="px-3 py-2 text-right text-xs">se integra en la Fase 3 (horas desde KIDS2026)</td>
-              </tr>
+              {!liq.kids.ok && (
+                <tr className="border-b border-gray-100 text-fuchsia-700 italic">
+                  <td className="px-4 py-2">KIDS</td>
+                  <td colSpan={cols.length + (cols.length > 1 ? 1 : 0)} className="px-3 py-2 text-right text-xs">KIDS no respondió: horas de guías no incluidas ({liq.kids.error})</td>
+                </tr>
+              )}
               <tr className="bg-sky-800 text-white">
                 <td className="px-4 py-2 font-bold">TOTAL</td>
                 {cols.map(p => { const t = totalCol(p); const v = usdA(t.usd); return (
                   <td key={p} className="px-3 py-2 text-right tabular-nums">
                     <div className="font-bold">{fmtH(t.horas)} h</div>
-                    {verValores && <div className="text-[11px] leading-tight"><div className="font-semibold">{fmtMoneda(v.usd, 'USD')}</div><div className="opacity-80">{fmtMoneda(v.clp, 'CLP')} CLP</div><div className="opacity-80">{fmtMoneda(v.cop, 'COP')} COP</div></div>}
+                    {verValores && <div className="mt-0.5 text-xs font-semibold text-white leading-snug"><div>{fmtMoneda(v.usd, 'USD')}</div><div>{fmtMoneda(v.clp, 'CLP')} CLP</div><div>{fmtMoneda(v.cop, 'COP')} COP</div></div>}
                   </td>) })}
                 {cols.length > 1 && (() => { const v = usdA(totalGeneral.usd); return (
                   <td className="px-3 py-2 text-right tabular-nums bg-sky-900">
                     <div className="font-bold">{fmtH(totalGeneral.horas)} h</div>
-                    {verValores && <div className="text-[11px] leading-tight"><div className="font-semibold">{fmtMoneda(v.usd, 'USD')}</div><div className="opacity-80">{fmtMoneda(v.clp, 'CLP')} CLP</div><div className="opacity-80">{fmtMoneda(v.cop, 'COP')} COP</div></div>}
+                    {verValores && <div className="mt-0.5 text-xs font-semibold text-white leading-snug"><div>{fmtMoneda(v.usd, 'USD')}</div><div>{fmtMoneda(v.clp, 'CLP')} CLP</div><div>{fmtMoneda(v.cop, 'COP')} COP</div></div>}
                   </td>) })()}
               </tr>
             </tbody>

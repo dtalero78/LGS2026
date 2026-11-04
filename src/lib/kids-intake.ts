@@ -59,6 +59,23 @@ export interface KidsRosterSalon {
   id: string; nombre: string; pais: string; activo: boolean; cupo: number; ocupados: number;
   guia: string | null; horario: KidsSlot[]; matriculas: KidsMatricula[];
 }
+/** Sesión de KIDS para la liquidación de guías (GET /api/kids-intake/horas-guias, KIDS v20). */
+export interface KidsSesionGuia {
+  id: string;
+  fecha: string;              // AAAA-MM-DD, fecha operativa del salón
+  startsAt: string;
+  duracionMin: number;
+  classroomId: string;
+  salon: string;
+  holidayCountry: string;     // CL | CO | EC | PE
+  tipoCurso: string;
+  guiaUserId: string | null;
+  guiaUsername: string | null;
+  inscritos: Record<string, number>; // por país del contrato (CL/CO/EC/PE)
+  presentes: Record<string, number>;
+  marcadas: number;
+}
+
 export interface KidsRosterCampania {
   id: string; nombre: string;
   /** EN_MATRICULA | ACTIVA | CERRADA */
@@ -169,6 +186,13 @@ export const kidsIntake = {
    * cualquier estado (contrato, niño, apoderado). Consulta Aprobación › Kids. KIDS v13+.
    */
   roster: () => call<{ campanias: KidsRosterCampania[] }>('GET', '/api/kids-intake/roster'),
+  /**
+   * Sesiones ya ocurridas entre dos fechas operativas (AAAA-MM-DD, inclusive) con la
+   * guía del salón e inscritos/presentes por país del contrato. Liquidación de guías
+   * (Administración › Gestión Advisors). KIDS v20+.
+   */
+  horasGuias: (desde: string, hasta: string) =>
+    call<{ sesiones: KidsSesionGuia[] }>('GET', `/api/kids-intake/horas-guias?desde=${desde}&hasta=${hasta}`),
   /** Crea la reserva (RESERVADA, retiene cupo). Idempotente por externalRef → 409 si ya existe. */
   createReservation: (input: KidsReservationInput) =>
     call<KidsReservationResult>('POST', '/api/kids-intake/reservations', input),
