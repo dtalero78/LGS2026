@@ -32,6 +32,8 @@ export type Concepto = 'NORMAL' | 'FESTIVO' | 'EXAM_INTERN';
 const TZ: Record<Pais, string> = { Chile: 'America/Santiago', Colombia: 'America/Bogota', Ecuador: 'America/Guayaquil' };
 const CODIGO: Record<Pais, string> = { Chile: 'CL', Colombia: 'CO', Ecuador: 'EC' };
 const EXAMENES = new Set(['IELTS', 'TOEFL', 'B2FIRST', 'B2 FIRST']);
+/** Cuentas técnicas de ADVISORS que no son personas (bienvenidas, actividades, superadmin, coordinación). */
+const CUENTAS_SISTEMA = /advisorbienvenidas@|plataformalgsdigital@|superadmin@|academicoconsultalgs@|l\.merino@letsgospeak|super advisor|plataforma lgs|advisor welcome/i;
 
 type PorTipo = Record<TipoClase, number>;
 type PorPais = Record<Pais, number>;
@@ -269,6 +271,13 @@ export async function calcularLiquidacion(periodo: string, opts: { verValores: b
     if (l.estado === 'Canceled') r.noPagadas.canceladas++;
     else if (l.estado === 'Suspended') r.noPagadas.suspendidas++;
     else if (l.estado === 'NoAsistio') r.noPagadas.noAsistio++;
+  }
+
+  // Todos los advisors ACTIVOS de la plataforma aparecen aunque no tengan horas en el
+  // mes (la fuente real es la plataforma, no la hoja). Los inactivos, solo con actividad.
+  // Se excluyen las cuentas de sistema (sin correo real) que no dictan clases.
+  for (const a of advPorId.values()) {
+    if (a.activo && !CUENTAS_SISTEMA.test(String(a.email || '')) && !CUENTAS_SISTEMA.test(String(a.nombre || ''))) base(a);
   }
 
   // Valores
