@@ -189,7 +189,14 @@ Migraciones en `scripts/` (idempotentes, dry-run por defecto). Nada de DDL en el
 | **4. Flujo** | Ajustes, panel advisor (Mis horas + Facturas), lectura IA, estados, plazos, bloqueo por grupo, verificar/pagar/reabrir, PDF y CSV, log → **noviembre 2026 en paralelo con la hoja** |
 | **5. Producción** | Ajustes finales con facturas reales de prueba → **diciembre 2026 paga el sistema** |
 
-## 7. Pendientes del usuario
+## 7. Hallazgos de la carga inicial (2026-11-03)
+- **Cuentas múltiples de una misma persona**: Dario Rubio (2 ADVISORS), Hernán Tenorio (2), y en KIDS Shirley y Verónica (usuario guía + coordinadora). La Fase 2 debe **sumar las cuentas de una persona en una sola liquidación** (p. ej. `ADVISORS.liquidaConId` → cuenta principal).
+- **KIDS aún no estabilizado** (decisión del usuario): guías y horas Kids se toman **de KIDS**; se cuadrará contra la hoja cuando KIDS termine de implementarse. En oct-2026 había 138 sesiones en salones sin guía y casi sin asistencia marcada (con la regla de ½ hora sin asistentes se pagaría la mitad).
+- Kids en la hoja: cada guía cobra con la **tarifa LGS de su país** (CL 5.570 CLP, CO 25.000 COP, EC 5 USD), festivo 1,5×.
+- INTERNACIONAL (Colombia) = normal 30.000 COP; festivo y exam. intern. iguales al estándar.
+- Carga: [cargar-gestion-advisors-hoja.js](../../scripts/cargar-gestion-advisors-hoja.js) (fichas, 7 guías KIDS creadas con su `kidsUserId`, 24 tarifas desde 2026-10-01).
+
+## 8. Pendientes del usuario
 - Cargar tarifas (incl. categoría INTERNACIONAL de Colombia).
 - Revisar tipo/categoría/grupo de cada advisor tras la carga inicial.
 - Conseguir facturas y boletas reales de prueba (CL, CO, EC, semiplanta).
