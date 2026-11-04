@@ -6,12 +6,14 @@
  * exam. intern.), con vigencia. Cambiar una tarifa desde una fecha = "Nueva vigencia"
  * (se conserva el historial; un corte usa la vigente al inicio del corte).
  * "Sin asistentes" no es tarifa: es 0,5 × NORMAL para los por horas.
+ * Editar corrige una tarifa; Borrar la elimina (los cortes verificados/pagados guardan su
+ * valor en el snapshot, así que solo cambian los abiertos).
  * Gate: ADMINISTRACION.GESTION_ADVISORS.TARIFAS (edición).
  */
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
-import { PlusIcon, PencilSquareIcon, ClockIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PencilSquareIcon, ClockIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { api, handleApiError } from '@/hooks/use-api'
 
 interface Tarifa {
@@ -83,6 +85,25 @@ export default function TarifasPanel({ puedeEditar }: { puedeEditar: boolean }) 
     }
   }
 
+  const borrar = async (t: Tarifa) => {
+    const concepto = CONCEPTOS.find(c => c.v === t.concepto)?.l || t.concepto
+    if (!window.confirm(`¿Borrar la tarifa ${concepto} de ${fmtV(t.valor, t.moneda)} vigente desde ${fmtF(t.vigenteDesde)}?\n\n` +
+      'Los cortes ya verificados o pagados no cambian. Los abiertos se recalculan con la tarifa que quede vigente.')) return
+    setGuardando(true)
+    try {
+      const res = await fetch(`/api/postgres/administracion/tarifas/${t._id}`, { method: 'DELETE' })
+      const j = await res.json()
+      if (!res.ok || !j?.success) throw new Error(j?.details || j?.error || `Error ${res.status}`)
+      toast.success('Tarifa borrada')
+      if (editando === t._id) setEditando(null)
+      cargar()
+    } catch (e: any) {
+      toast.error(e?.message || 'No se pudo borrar')
+    } finally {
+      setGuardando(false)
+    }
+  }
+
   // Por país: grupos programa × tipo × categoría; en cada concepto la vigente (la más reciente
   // con vigenteDesde ≤ hoy) y, si se pide, el historial.
   const grupos = useMemo(() => {
@@ -100,6 +121,19 @@ export default function TarifasPanel({ puedeEditar }: { puedeEditar: boolean }) 
       return { k, programa, tipo, categoria, porConcepto }
     })
   }, [tarifas, pais])
+
+  const acciones = (t: Tarifa) => (
+    <span className="inline-flex items-center gap-2">
+      <button type="button" onClick={() => editar(t)} disabled={guardando} title="Corregir esta tarifa"
+        className="inline-flex items-center gap-0.5 text-xs font-medium text-gray-600 hover:text-sky-700">
+        <PencilSquareIcon className="h-3.5 w-3.5" /> Editar
+      </button>
+      <button type="button" onClick={() => borrar(t)} disabled={guardando} title="Borrar esta tarifa"
+        className="inline-flex items-center gap-0.5 text-xs font-medium text-red-600 hover:text-red-800">
+        <TrashIcon className="h-3.5 w-3.5" /> Borrar
+      </button>
+    </span>
+  )
 
   const sel = (k: keyof Form, opciones: { v: string; l: string }[], label: string) => (
     <label className="text-xs text-gray-600">
@@ -136,7 +170,8 @@ export default function TarifasPanel({ puedeEditar }: { puedeEditar: boolean }) 
         </div>
       </div>
       <p className="text-xs text-gray-500">
-        Tarifas por hora de <b>{pais}</b> en {MONEDA[pais]}. Para cambiar un valor desde una fecha use <b>Nueva vigencia</b>: la anterior queda en el historial.
+        Tarifas por hora de <b>{pais}</b> en {MONEDA[pais]}. Para cambiar un valor desde una fecha use <b>Nueva vigencia</b>: la anterior queda en el historial. <b>Editar</b> corrige un valor mal digitado y <b>Borrar</b> elimina una tarifa
+        (los cortes ya verificados o pagados conservan su valor).
         <b> Sin asistentes</b> = 0,5 × Normal (solo advisors por horas). Kids sin tarifa propia usa la de LGS.
       </p>
 
@@ -169,6 +204,12 @@ export default function TarifasPanel({ puedeEditar }: { puedeEditar: boolean }) 
                 className="h-4 w-4 rounded border-gray-300" /> Activa
             </label>
             <div className="flex gap-2">
+              {editando && (
+                <button type="button" onClick={() => { const t = tarifas.find(x => x._id === editando); if (t) borrar(t) }} disabled={guardando}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-red-700 bg-white border border-red-300 rounded-md hover:bg-red-50">
+                  <TrashIcon className="h-4 w-4" /> Borrar
+                </button>
+              )}
               <button type="button" onClick={() => setEditando(null)} disabled={guardando}
                 className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Cancelar</button>
               <button type="button" onClick={() => enviar(form, editando || null)} disabled={guardando || form.valor === '' || !form.vigenteDesde}
@@ -205,17 +246,18 @@ export default function TarifasPanel({ puedeEditar }: { puedeEditar: boolean }) 
                     <td className="px-4 py-1.5 font-medium text-gray-900">{concepto.l}</td>
                     <td className="font-semibold tabular-nums">{vigente ? fmtV(vigente.valor, vigente.moneda) : <span className="text-red-600 text-xs">Sin tarifa vigente</span>}</td>
                     <td className="text-xs text-gray-500">{vigente ? fmtF(vigente.vigenteDesde) : '—'}</td>
-                    <td className="text-xs text-gray-500">{futura ? `${fmtV(futura.valor, futura.moneda)} desde ${fmtF(futura.vigenteDesde)}` : '—'}</td>
+                    <td className="text-xs text-gray-500">
+                      {futura ? <>
+                        {fmtV(futura.valor, futura.moneda)} desde {fmtF(futura.vigenteDesde)}
+                        {puedeEditar && <span className="ml-2">{acciones(futura)}</span>}
+                      </> : '—'}
+                    </td>
                     <td className="pr-3 text-right whitespace-nowrap">
                       {puedeEditar && (
                         <>
-                          {vigente && (
-                            <button type="button" onClick={() => editar(vigente)} title="Corregir esta tarifa" className="p-1 text-gray-500 hover:text-sky-700">
-                              <PencilSquareIcon className="h-4 w-4" />
-                            </button>
-                          )}
+                          {vigente && acciones(vigente)}
                           <button type="button" onClick={() => nueva({ programa: g.programa, tipo: g.tipo, categoria: g.categoria, concepto: concepto.v })}
-                            className="ml-1 inline-flex items-center gap-0.5 text-xs font-medium text-sky-700 hover:underline">
+                            className="ml-3 inline-flex items-center gap-0.5 text-xs font-medium text-sky-700 hover:underline">
                             <ClockIcon className="h-3.5 w-3.5" /> Nueva vigencia
                           </button>
                         </>
@@ -229,7 +271,7 @@ export default function TarifasPanel({ puedeEditar }: { puedeEditar: boolean }) 
                       <td>{fmtF(h.vigenteDesde)}</td>
                       <td>{h.creadoPor || ''}</td>
                       <td className="pr-3 text-right">
-                        {puedeEditar && <button type="button" onClick={() => editar(h)} className="text-xs text-gray-500 hover:underline">Editar</button>}
+                        {puedeEditar && acciones(h)}
                       </td>
                     </tr>
                   ))}

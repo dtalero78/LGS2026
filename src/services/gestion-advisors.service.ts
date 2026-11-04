@@ -96,6 +96,16 @@ export async function guardarTarifa(datos: any, actor: string, id?: string): Pro
   return nuevo;
 }
 
+/**
+ * Borra una tarifa (p. ej. cargada por error). Los cortes VERIFICADO/PAGADO no se afectan:
+ * guardan su valor en el snapshot; los abiertos se recalculan con la tarifa que quede vigente.
+ */
+export async function borrarTarifa(id: string, actor: string): Promise<void> {
+  const r = await query<any>(`DELETE FROM "TARIFAS_ADVISOR" WHERE "_id"=$1 RETURNING *`, [id]);
+  if (!r.rowCount) throw new NotFoundError('Tarifa', id);
+  console.log(`[gestion-advisors] tarifa ${id} borrada por ${actor}: ${JSON.stringify(r.rows[0])}`);
+}
+
 // ── Ficha de pago de los advisors ────────────────────────────────────────────
 
 export interface AdvisorPago {
