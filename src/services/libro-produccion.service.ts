@@ -360,6 +360,59 @@ export async function actualizarEscalera(titularId: string, datos: Record<string
   return { comercial: Object.fromEntries(Object.keys(CAMPOS_ESCALERA).map(c => [c, c in nuevos ? (nuevos as any)[c] : antes[c]])) };
 }
 
+/**
+ * "Leer correo" del Ajuste Escalera: la IA saca la "Escala de matrícula" del correo de la
+ * matrícula (texto pegado o captura). Solo PROPONE: el formulario se llena, la persona revisa
+ * y guarda con actualizarEscalera. El Sales Manager ya registrado no se propone cambiar
+ * (manda el del CRM); "Internacional" no es campo de la plataforma y se ignora.
+ */
+const PROMPT_ESCALERA = `Eres un extractor de datos de correos de matrícula de una academia de inglés.
+Del correo adjunto (texto o imagen) extrae la "escala de matrícula" y el número de contrato.
+Devuelve SOLO este JSON:
+{
+  "contrato": string|null,              // número de matrícula/contrato, p. ej. "01-16546-26"
+  "asesorCreadorContrato": string|null, // "Asesor training" / "Ej. Training" / "Asesor"
+  "fullExecutive": string|null,         // "Ejecutivo Full" / "Full Executive"
+  "jefeGrupo": string|null,             // "Jefe de Grupo" / "Team Manager"
+  "gerente": string|null,               // "Gerente"
+  "gerenteDivision": string|null,       // "Gerente Div" / "Gerente División"
+  "salesManager": string|null,          // "Sales" / "Sales Manager"
+  "filial": string|null,                // "Filial"
+  "origenMatricula": string|null        // "Origen" / "Origen matrícula" / campaña
+}
+Reglas: copia los nombres tal como aparecen (sin títulos como "Don"), null si un campo no aparece,
+NUNCA inventes. Ignora "Internacional" y la firma de quien envía el correo.`;
+
+const normContrato = (s: any) => String(s ?? '').replace(/\s+/g, '').toUpperCase();
+
+export async function leerEscaleraCorreo(titularId: string, entrada: { texto?: string; imagen?: string }) {
+  const t = await queryOne<any>(`SELECT "contrato", "salesManager" FROM "PEOPLE" WHERE "_id" = $1 AND "tipoUsuario" = 'TITULAR'`, [titularId]);
+  if (!t) throw new NotFoundError('Titular', titularId);
+  const texto = String(entrada?.texto || '').trim().slice(0, 20000);
+  const imagen = String(entrada?.imagen || '');
+  if (!texto && !imagen) throw new ValidationError('Pega el texto del correo o una captura.');
+  if (imagen && (!/^data:image\/(png|jpe?g|webp);base64,/i.test(imagen) || imagen.length > 7_000_000)) {
+    throw new ValidationError('La captura debe ser PNG, JPG o WEBP de hasta 5 MB.');
+  }
+  const contenido = imagen ? { type: 'image_url', image_url: { url: imagen } } : { type: 'text', text: `CORREO:\n${texto}` };
+  const { llamarOpenAIJson } = await import('@/services/recibo-extract.service');
+  const r = await llamarOpenAIJson(PROMPT_ESCALERA, contenido, 'correos');
+
+  const campos: Record<string, string> = {};
+  for (const c of Object.keys(CAMPOS_ESCALERA)) {
+    const v = String(r?.[c] ?? '').replace(/\s+/g, ' ').trim();
+    if (v) campos[c] = v;
+  }
+  const omitidos: string[] = [];
+  if (campos.salesManager && String(t.salesManager || '').trim()) { omitidos.push(`Sales Manager del correo: ${campos.salesManager}`); delete campos.salesManager; }
+  const contratoCorreo = r?.contrato ? normContrato(r.contrato) : null;
+  return {
+    contratoCorreo,
+    coincideContrato: contratoCorreo ? contratoCorreo === normContrato(t.contrato) : null,
+    campos, omitidos,
+  };
+}
+
 // ── Catálogo de planes y tipos (por país) ─────────────────────────────────────
 
 export const PAISES_PLAN = ['Chile', 'Colombia', 'Ecuador', 'Perú'] as const;
