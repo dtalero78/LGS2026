@@ -107,7 +107,7 @@ export default function AjusteEscaleraModal({ titularId, contrato, onClose, onGu
   }
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-3" onClick={onClose}>
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-3 text-left text-gray-900 normal-case font-normal" onClick={onClose}>
       <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-start justify-between border-b border-gray-200 px-5 py-3">
           <div>

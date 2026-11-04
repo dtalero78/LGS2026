@@ -27,6 +27,8 @@ export interface EventoContrato {
   actor?: string | null;
   /** Si la persona ya se borró (p. ej. beneficiario eliminado), pasar sus datos. */
   persona?: { titularId?: string | null; contrato?: string | null; nombre?: string | null; tipoUsuario?: string | null };
+  /** true = si falla se lanza el error (p. ej. un comentario escrito a mano); por defecto es best-effort. */
+  estricto?: boolean;
 }
 
 export async function registrarEventoContrato(e: EventoContrato): Promise<void> {
@@ -52,6 +54,7 @@ export async function registrarEventoContrato(e: EventoContrato): Promise<void> 
        e.categoria, e.accion, (e.detalle || '').trim() || null, e.datos ? JSON.stringify(e.datos) : null,
        u?.email ?? e.actor ?? null, u?.name ?? null, u?.role ?? null]);
   } catch (err: any) {
+    if (e.estricto) throw err;
     console.warn('⚠️ [contrato-eventos] no se pudo registrar:', err?.message || err);
   }
 }

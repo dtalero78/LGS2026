@@ -11,7 +11,10 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { XMarkIcon, MagnifyingGlassIcon, ArrowPathIcon, ClockIcon } from '@heroicons/react/24/outline'
+import toast from 'react-hot-toast'
 import { api, handleApiError } from '@/hooks/use-api'
+import { usePermissions } from '@/hooks/usePermissions'
+import { PersonPermission } from '@/types/permissions'
 
 interface Evento {
   id: string; fecha: string; soloFecha?: boolean; categoria: string; accion: string; detalle?: string | null
@@ -86,10 +89,30 @@ export default function SeguimientoContratoModal({ personaId, onClose }: { perso
       (!q || [e.accion, e.detalle, e.usuario, e.personaNombre].some(x => x && String(x).toLowerCase().includes(q))))
   }, [data, cats, persona, buscar])
 
+  // ── Comentar (permiso PERSON.INFO.SEGUIMIENTO_COMENTAR) ──
+  const { hasPermission } = usePermissions()
+  const puedeComentar = hasPermission(PersonPermission.SEGUIMIENTO_COMENTAR as any)
+  const [comentario, setComentario] = useState('')
+  const [sobre, setSobre] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const comentar = async () => {
+    setEnviando(true)
+    try {
+      setData(await api.post<Seguimiento>(`/api/postgres/people/${encodeURIComponent(personaId)}/seguimiento`,
+        { texto: comentario, personaId: sobre || undefined }))
+      setComentario('')
+      toast.success('Comentario agregado')
+    } catch (e) {
+      handleApiError(e, 'No se pudo guardar el comentario')
+    } finally {
+      setEnviando(false)
+    }
+  }
+
   const toggleCat = (c: string) => setCats(s => (s.includes(c) ? s.filter(x => x !== c) : [...s, c]))
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-2 sm:p-6" onClick={onClose}>
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-2 sm:p-6 text-left text-gray-900 normal-case font-normal" onClick={onClose}>
       <div className="flex max-h-full w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-3 border-b border-gray-200 px-5 py-3">
           <div>
@@ -133,6 +156,26 @@ export default function SeguimientoContratoModal({ personaId, onClose }: { perso
         )}
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
+          {data && puedeComentar && (
+            <div className="mb-4 rounded-lg border border-gray-200 bg-white p-3">
+              <textarea value={comentario} onChange={e => setComentario(e.target.value)} rows={2} maxLength={2000}
+                placeholder="Escribe un comentario de seguimiento…"
+                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm" />
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <select value={sobre} onChange={e => setSobre(e.target.value)} className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs">
+                  <option value="">Sobre el contrato (titular)</option>
+                  {data.personas.filter(p => p.tipoUsuario !== 'TITULAR').map(p => <option key={p._id} value={p._id}>Sobre {p.nombre} · beneficiario</option>)}
+                </select>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-gray-400">Queda con tu nombre, fecha y hora; no se puede editar.</span>
+                  <button type="button" onClick={comentar} disabled={enviando || comentario.trim().length < 3}
+                    className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+                    {enviando ? 'Guardando…' : 'Comentar'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           {loading && !data ? (
             <p className="py-10 text-center text-sm italic text-gray-400">Cargando seguimiento…</p>
           ) : !visibles.length ? (

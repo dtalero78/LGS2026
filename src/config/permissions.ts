@@ -160,6 +160,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Botón "Seguimiento" de la ficha del titular y del detalle del Libro de Producción: abre la bitácora del contrato (matrícula, documentos, firma, aprobación, beneficiarios, pagos y recaudos, OnHold/extensiones, académico, Kids y comentarios) con quién y cuándo hizo cada cosa',
   },
   {
+    code: PersonPermission.SEGUIMIENTO_COMENTAR,
+    module: Module.PERSON,
+    section: 'Información General',
+    name: '↳ Comentar en el Seguimiento',
+    description: 'Escribir comentarios en la ventana Seguimiento del contrato (sobre el contrato o sobre una persona). Quedan con quién y cuándo, y no se pueden editar ni borrar. Requiere también el botón "Seguimiento"',
+  },
+  {
     code: PersonPermission.EDITAR_NUMERO_ID,
     module: Module.PERSON,
     section: 'Información General',

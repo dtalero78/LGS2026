@@ -64,6 +64,8 @@ export enum PersonPermission {
   RESUMEN = 'PERSON.INFO.RESUMEN',
   /** Botón "Seguimiento": bitácora del contrato (ficha del titular y Libro de Producción). */
   SEGUIMIENTO = 'PERSON.INFO.SEGUIMIENTO',
+  /** Escribir comentarios en el Seguimiento del contrato. */
+  SEGUIMIENTO_COMENTAR = 'PERSON.INFO.SEGUIMIENTO_COMENTAR',
   VER_DOCUMENTACION = 'PERSON.INFO.VER_DOCUMENTACION',
   ADICION_DOCUMENTACION = 'PERSON.INFO.ADICION_DOCUMENTACION',
   ELIMINAR_DOCUMENTACION = 'PERSON.INFO.ELIMINAR_DOCUMENTACION',

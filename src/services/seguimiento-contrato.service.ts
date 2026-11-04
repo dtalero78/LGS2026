@@ -1,6 +1,7 @@
 import 'server-only';
 import { queryMany, queryOne } from '@/lib/postgres';
-import { NotFoundError } from '@/lib/errors';
+import { NotFoundError, ValidationError } from '@/lib/errors';
+import { registrarEventoContrato } from '@/lib/contrato-eventos';
 
 /**
  * Seguimiento del contrato: bitácora de todo lo que le pasó al contrato y a sus personas
@@ -66,6 +67,28 @@ async function leer<T extends Record<string, any> = any>(sql: string, params: an
     console.warn('⚠️ [seguimiento] fuente omitida:', e?.message || e);
     return [];
   }
+}
+
+/**
+ * Comentario escrito en la ventana Seguimiento: va a CONTRATO_EVENTOS (inmutable) con quién y
+ * cuándo. `personaId` opcional: una persona del MISMO contrato; si no, queda sobre el titular.
+ * A diferencia de los registros automáticos, aquí un fallo SÍ se informa al usuario.
+ */
+export async function comentarSeguimiento(id: string, texto: any, personaId: any, session: any): Promise<void> {
+  const t = String(texto ?? '').trim();
+  if (t.length < 3) throw new ValidationError('Escribe el comentario (mínimo 3 caracteres).');
+  if (t.length > 2000) throw new ValidationError('El comentario no puede pasar de 2.000 caracteres.');
+  const base = await queryOne<any>(`SELECT "_id","titularId","contrato","tipoUsuario" FROM "PEOPLE" WHERE "_id" = $1`, [id]);
+  if (!base) throw new NotFoundError('Persona', id);
+  const titularId = base.tipoUsuario === 'TITULAR' ? base._id : (base.titularId || base._id);
+  let destino = titularId;
+  if (personaId && personaId !== titularId) {
+    const p = await queryOne<{ _id: string }>(
+      `SELECT "_id" FROM "PEOPLE" WHERE "_id" = $1 AND ($2::text IS NOT NULL AND "contrato" = $2)`, [personaId, base.contrato || null]);
+    if (!p) throw new ValidationError('La persona elegida no pertenece a este contrato.');
+    destino = p._id;
+  }
+  await registrarEventoContrato({ personaId: destino, categoria: 'COMENTARIO', accion: 'Comentario de seguimiento', detalle: t, session, estricto: true });
 }
 
 export async function seguimientoContrato(personaId: string): Promise<SeguimientoContrato> {
@@ -151,7 +174,9 @@ export async function seguimientoContrato(personaId: string): Promise<Seguimient
       conTitular.length && `${conTitular.length} beneficiario(s)`,
       titular.filial && `Filial ${titular.filial}`, titular.origenMatricula && `Origen ${titular.origenMatricula}`,
     ].filter(Boolean).join(' · '),
-    usuario: titular.asesorCreadorContrato || titular.asesor, usuarioEmail: titular.asesor, personaId: titularId,
+    // Quien la creó es el correo del asesor (el nombre se resuelve abajo); asesorCreadorContrato
+    // es el Ej. Training y puede haberse corregido después con "Ajuste Escalera".
+    usuario: titular.asesor || titular.asesorCreadorContrato, usuarioEmail: titular.asesor, personaId: titularId,
   });
   for (const b of benef) {
     if (conTitular.includes(b) || accionesPorPersona.has(`${b._id}|Beneficiario agregado`)) continue;
@@ -343,17 +368,19 @@ export async function seguimientoContrato(personaId: string): Promise<Seguimient
       usuario: g.realizadoPorNombre || g.realizadoPor, usuarioEmail: g.realizadoPor, personaId: titularId });
   }
 
-  // Nombres legibles: los emails de quien hizo cada cosa → USUARIOS_ROLES (una consulta);
-  // el asesor del contrato sin login se nombra con asesorCreadorContrato.
+  // Nombres legibles: los emails de quien hizo cada cosa → USUARIOS_ROLES y, para los
+  // comerciales sin login, EQUIPO_COMERCIAL (una consulta cada uno).
   const emails = Array.from(new Set(ev.filter(e => e.usuario && e.usuario.includes('@')).map(e => e.usuario!.toLowerCase())));
   if (emails.length) {
-    const us = await leer<{ email: string; nombre: string }>(
-      `SELECT DISTINCT ON (LOWER("email")) LOWER("email") AS email, TRIM(CONCAT_WS(' ', "nombre", "apellido")) AS nombre
-         FROM "USUARIOS_ROLES" WHERE LOWER("email") = ANY($1::text[])`, [emails]);
-    const m = new Map(us.filter(u => u.nombre).map(u => [u.email, u.nombre]));
-    if (titular.asesor && titular.asesorCreadorContrato && !m.has(String(titular.asesor).toLowerCase())) {
-      m.set(String(titular.asesor).toLowerCase(), titular.asesorCreadorContrato);
-    }
+    const [us, eq] = await Promise.all([
+      leer<{ email: string; nombre: string }>(
+        `SELECT DISTINCT ON (LOWER("email")) LOWER("email") AS email, TRIM(CONCAT_WS(' ', "nombre", "apellido")) AS nombre
+           FROM "USUARIOS_ROLES" WHERE LOWER("email") = ANY($1::text[])`, [emails]),
+      leer<{ email: string; nombre: string }>(
+        `SELECT DISTINCT ON (LOWER(TRIM("correo"))) LOWER(TRIM("correo")) AS email, TRIM("nombre") AS nombre
+           FROM "EQUIPO_COMERCIAL" WHERE LOWER(TRIM("correo")) = ANY($1::text[])`, [emails]),
+    ]);
+    const m = new Map([...eq, ...us].filter(u => u.nombre).map(u => [u.email, u.nombre]));
     for (const e of ev) if (e.usuario && m.has(e.usuario.toLowerCase())) { e.usuarioEmail = e.usuarioEmail || e.usuario; e.usuario = m.get(e.usuario.toLowerCase())!; }
   }
 
