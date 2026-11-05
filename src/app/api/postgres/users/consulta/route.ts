@@ -147,10 +147,13 @@ export const PATCH = handlerWithAuth(async (request: NextRequest, _ctx, session)
   if (typeof body?.password === 'string') {
     const nueva = body.password.trim();
     if (nueva.length < 4) throw new ValidationError('La clave debe tener al menos 4 caracteres');
-    const before = await queryOne<{ email: string; rol: string }>(
-      `SELECT "email","rol" FROM "USUARIOS_ROLES" WHERE "_id" = $1`, [id],
+    const before = await queryOne<{ email: string; rol: string; origenCuenta: string | null }>(
+      `SELECT "email","rol","origenCuenta" FROM "USUARIOS_ROLES" WHERE "_id" = $1`, [id],
     );
     if (!before) throw new NotFoundError('Usuario', id);
+    if (before.origenCuenta === 'KIDS') {
+      throw new ValidationError('Es una cuenta de guía Kids: su clave se administra en KIDS (se refleja sola en LGS).');
+    }
     const res = await query<{ email: string; password: string; activo: boolean }>(
       `UPDATE "USUARIOS_ROLES" SET "password" = $1, "_updatedDate" = NOW() WHERE "_id" = $2
        RETURNING "email","password","activo"`,

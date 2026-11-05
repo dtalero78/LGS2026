@@ -13,6 +13,8 @@
  * - expire-contracts: Diariamente a las 11:00 PM Colombia (04:00 UTC)
  * - sync-nombrecompleto: Diariamente a las 00:00 Colombia (05:00 UTC) — genera/
  *   normaliza PEOPLE.nombreCompleto (contratos nuevos + desincronizados)
+ * - sync-guias-kids: Cada 15 minutos — usuario, clave y ficha de las guías de KIDS
+ *   se reflejan en LGS (USUARIOS_ROLES + ADVISORS)
  * - sence-envio-avance: Diariamente a las 23:00 hora Chile (America/Santiago),
  *   dentro de la ventana 22:00-00:00 que exige el instructivo de SENCE
  */
@@ -193,6 +195,24 @@ async function executeSyncNombreCompleto() {
 }
 
 /**
+ * Guías de KIDS → LGS (usuario, clave cifrada, estado y ficha)
+ */
+async function executeSyncGuiasKids() {
+  const timestamp = getLocalTimestamp();
+  try {
+    const response = await fetch(`${NEXTAUTH_URL}/api/cron/sync-guias-kids`, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${CRON_SECRET}`, 'Content-Type': 'application/json' }
+    });
+    const data = await response.json();
+    if (response.ok && data.success) console.log(`[${timestamp}] sync-guias-kids: ${data.message}`);
+    else console.error(`[${timestamp}] sync-guias-kids error: ${data.error || 'Unknown error'}`);
+  } catch (error) {
+    console.error(`[${timestamp}] sync-guias-kids error de conexion:`, error.message);
+  }
+}
+
+/**
  * Ejecuta el cron de envio nocturno de avance de alumnos SENCE a SIC
  */
 async function executeSenceEnvioAvance() {
@@ -254,6 +274,12 @@ cron.schedule('0 5 * * *', executeSyncNombreCompleto, {
   timezone: 'UTC'
 });
 
+// Guías de KIDS → LGS: cada 15 minutos
+cron.schedule('*/15 * * * *', executeSyncGuiasKids, {
+  scheduled: true,
+  timezone: 'UTC'
+});
+
 // Envio de avance SENCE: Diariamente a las 23:00 hora Chile (dentro de la
 // ventana 22:00-00:00 que exige el instructivo). Unica tarea con timezone
 // distinta a UTC porque el requisito de SENCE esta expresado en hora Chile.
@@ -273,6 +299,7 @@ console.log('   - reconcile-pegados: Diariamente a las 02:00 UTC (9:00 PM Colomb
 console.log('   - reactivate-onhold: Diariamente a las 03:00 UTC (10:00 PM Colombia)');
 console.log('   - expire-contracts: Diariamente a las 04:00 UTC (11:00 PM Colombia)');
 console.log('   - sync-nombrecompleto: Diariamente a las 05:00 UTC (00:00 Colombia)');
+console.log('   - sync-guias-kids: Cada 15 minutos');
 console.log(`   - sence-envio-avance: Diariamente a las 23:00 hora Chile (America/Santiago) [${SENCE_CRON_ENABLED ? 'ACTIVO' : 'SILENCIADO via SENCE_CRON_ENABLED=false'}]`);
 
 // Ejecutar inmediatamente si se pasa el argumento --run-now

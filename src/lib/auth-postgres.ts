@@ -24,23 +24,71 @@ interface UserRole {
  * Throws 'EXPIRED' if user is inactive due to expired contract.
  * Returns null for wrong password or user not found.
  */
-async function verifyUserPostgres(email: string, password: string) {
+/** Cuenta por correo o, para las guías de KIDS, por su usuario de KIDS. */
+function buscarCuenta(login: string) {
+  return queryOne<UserRole & { origenCuenta: string | null; kidsDebeCambiar: boolean | null }>(
+    // Sin distinguir mayúsculas (los correos nuevos se guardan en minúsculas — lib/formato-campos —
+    // y los antiguos pueden venir mezclados); si existe tal cual se escribió, gana ese.
+    `SELECT "_id", "email", "password", "nombre", "rol", "activo", "origenCuenta", "kidsDebeCambiar"
+     FROM "USUARIOS_ROLES"
+     WHERE LOWER(TRIM("email")) = LOWER(TRIM($1)) OR LOWER("username") = LOWER(TRIM($1))
+     ORDER BY ("email" = $1) DESC, "activo" DESC NULLS LAST
+     LIMIT 1`,
+    [login]
+  );
+}
+
+/** Clave contra el hash guardado: argon2id (cuentas de KIDS), bcrypt o texto plano (legacy). */
+async function claveValida(password: string, guardada: string | null | undefined): Promise<boolean> {
+  if (!guardada) return false;
+  if (guardada.startsWith('$argon2')) {
+    const { argon2Verify } = await import('hash-wasm');
+    try { return await argon2Verify({ password, hash: guardada }); } catch { return false; }
+  }
+  if (guardada.startsWith('$2a$') || guardada.startsWith('$2b$') || guardada.startsWith('$2y$')) {
+    console.log('🔐 [PostgreSQL] Verificando con bcrypt');
+    return bcrypt.compare(password, guardada);
+  }
+  console.log('⚠️ [PostgreSQL] Contraseña en texto plano');
+  return password === guardada;
+}
+
+/**
+ * Guía de KIDS que no entra: se le pide a KIDS solo esa cuenta (3,5 s máx.) por si cambió la
+ * clave o es nueva allá, y se reintenta una vez. Solo para cuentas de KIDS o inexistentes.
+ */
+const ultimaConsultaKids = new Map<string, number>()
+async function refrescarDesdeKids(login: string): Promise<boolean> {
+  // Una consulta por usuario por minuto: intentos repetidos no martillan a KIDS.
+  const k = login.trim().toLowerCase()
+  const ahora = Date.now()
+  if ((ultimaConsultaKids.get(k) || 0) > ahora - 60_000) return false
+  ultimaConsultaKids.set(k, ahora)
+  if (ultimaConsultaKids.size > 2000) ultimaConsultaKids.clear()
+  try {
+    const { kidsIntake } = await import('./kids-intake');
+    if (!kidsIntake.isConfigured()) return false;
+    const { sincronizarGuiasKids } = await import('./kids-guias-sync');
+    const r = await Promise.race([
+      sincronizarGuiasKids(login.trim()),
+      new Promise<null>(res => setTimeout(() => res(null), 3500)),
+    ]);
+    return Array.isArray(r) && r.some(x => x.estado === 'creada' || x.estado === 'actualizada');
+  } catch (e) {
+    console.warn('[auth] no se pudo consultar KIDS:', e instanceof Error ? e.message : e);
+    return false;
+  }
+}
+
+async function verifyUserPostgres(email: string, password: string, reintento = false): Promise<any> {
   try {
     console.log('🔍 [PostgreSQL] Buscando usuario:', email);
 
-    const user = await queryOne<UserRole>(
-      // Sin distinguir mayúsculas (los correos nuevos se guardan en minúsculas — lib/formato-campos —
-      // y los antiguos pueden venir mezclados); si existe tal cual se escribió, gana ese.
-      `SELECT "_id", "email", "password", "nombre", "rol", "activo"
-       FROM "USUARIOS_ROLES"
-       WHERE LOWER(TRIM("email")) = LOWER(TRIM($1))
-       ORDER BY ("email" = $1) DESC, "activo" DESC NULLS LAST
-       LIMIT 1`,
-      [email]
-    );
+    const user = await buscarCuenta(email);
 
     if (!user) {
       console.log('⚠️ [PostgreSQL] Usuario no encontrado');
+      if (!reintento && await refrescarDesdeKids(email)) return verifyUserPostgres(email, password, true);
       return null;
     }
 
@@ -51,9 +99,14 @@ async function verifyUserPostgres(email: string, password: string) {
       `SELECT "finalContrato" FROM "PEOPLE"
        WHERE LOWER("email") = LOWER($1) AND "finalContrato" IS NOT NULL
        ORDER BY "finalContrato" DESC LIMIT 1`,
-      [email]
+      [user.email || email]
     );
     const contractExpired = isContractExpired(peopleRecord?.finalContrato);
+
+    // Guía de KIDS inactiva aquí: puede haberse reactivado allá.
+    if (!user.activo && user.origenCuenta === 'KIDS' && !reintento && await refrescarDesdeKids(email)) {
+      return verifyUserPostgres(email, password, true);
+    }
 
     if (!user.activo) {
       console.log('⚠️ [PostgreSQL] Usuario inactivo — verificando motivo');
@@ -79,23 +132,15 @@ async function verifyUserPostgres(email: string, password: string) {
     });
 
     // Verify password
-    let isPasswordValid = false;
+    const isPasswordValid = await claveValida(password, user.password);
 
-    if (user.password) {
-      // Check if password is a bcrypt hash
-      if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$') || user.password.startsWith('$2y$')) {
-        console.log('🔐 [PostgreSQL] Verificando con bcrypt');
-        isPasswordValid = await bcrypt.compare(password, user.password);
-      } else {
-        // Plain text comparison (legacy support)
-        console.log('⚠️ [PostgreSQL] Contraseña en texto plano');
-        console.log('🔍 [PostgreSQL] Comparando:', {
-          inputLen: password.length,
-          dbLen: user.password.length,
-          match: password === user.password
-        });
-        isPasswordValid = password === user.password;
-      }
+    // Cuenta de KIDS: si la clave no sirve puede haber cambiado allá → se refresca y reintenta.
+    if (!isPasswordValid && user.origenCuenta === 'KIDS' && !reintento && await refrescarDesdeKids(email)) {
+      return verifyUserPostgres(email, password, true);
+    }
+    // KIDS exige cambiar la clave en el próximo ingreso: se hace allá antes de entrar aquí.
+    if (isPasswordValid && user.origenCuenta === 'KIDS' && user.kidsDebeCambiar) {
+      throw new Error('KIDS_CAMBIAR_CLAVE');
     }
 
     if (isPasswordValid) {
@@ -112,7 +157,7 @@ async function verifyUserPostgres(email: string, password: string) {
     }
   } catch (error) {
     // Re-throw our custom errors so authorize() can propagate them to the client
-    if (error instanceof Error && (error.message === 'BLOCKED' || error.message === 'EXPIRED')) {
+    if (error instanceof Error && (error.message === 'BLOCKED' || error.message === 'EXPIRED' || error.message === 'KIDS_CAMBIAR_CLAVE')) {
       throw error;
     }
     console.error('❌ [PostgreSQL] Error:', error instanceof Error ? error.message : String(error));

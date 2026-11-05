@@ -38,11 +38,15 @@ export const POST = handler(async (request) => {
   }
 
   // Verify user exists
-  const userRole = await queryOne<{ _id: string }>(
-    `SELECT "_id" FROM "USUARIOS_ROLES" WHERE LOWER("email") = $1 LIMIT 1`,
+  const userRole = await queryOne<{ _id: string; origenCuenta: string | null }>(
+    `SELECT "_id", "origenCuenta" FROM "USUARIOS_ROLES" WHERE LOWER("email") = $1 LIMIT 1`,
     [normalizedEmail]
   );
   if (!userRole) throw new NotFoundError('Usuario', normalizedEmail);
+  // Las guías Kids tienen la cuenta en KIDS (lib/kids-guias-sync): la clave se cambia allá.
+  if (userRole.origenCuenta === 'KIDS') {
+    throw new ValidationError('Tu cuenta de guía se administra en KIDS: cambia la clave en la plataforma KIDS.');
+  }
 
   // Update password in USUARIOS_ROLES (plain text — system supports both)
   await query(

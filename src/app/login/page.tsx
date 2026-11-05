@@ -12,13 +12,14 @@ import { LockClosedIcon, ExclamationTriangleIcon } from '@heroicons/react/24/out
 import AvisosLogin from '@/components/login/AvisosLogin'
 
 const loginSchema = z.object({
-  email: z.string().email('Email inválido'),
+  // Correo, o el usuario de KIDS para las guías Kids (sus cuentas nacen en KIDS).
+  email: z.string().trim().min(3, 'Escribe tu correo o usuario'),
   password: z.string().min(4, 'La contraseña debe tener al menos 4 caracteres'),
 })
 
 type LoginForm = z.infer<typeof loginSchema>
 
-type LoginErrorType = 'BLOCKED' | 'EXPIRED' | null
+type LoginErrorType = 'BLOCKED' | 'EXPIRED' | 'KIDS_CAMBIAR_CLAVE' | null
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -83,6 +84,8 @@ export default function LoginPage() {
           setLoginError('BLOCKED')
         } else if (result.error === 'EXPIRED') {
           setLoginError('EXPIRED')
+        } else if (result.error === 'KIDS_CAMBIAR_CLAVE') {
+          setLoginError('KIDS_CAMBIAR_CLAVE')
         } else {
           toast.error('Credenciales inválidas, verifique el usuario o la clave')
         }
@@ -149,6 +152,31 @@ export default function LoginPage() {
       </div>
     )}
 
+    {/* Guía de KIDS que debe cambiar su clave: se hace en KIDS (su cuenta nace allá). */}
+    {loginError === 'KIDS_CAMBIAR_CLAVE' && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-shrink-0 bg-amber-100 rounded-full p-2">
+              <LockClosedIcon className="h-6 w-6 text-amber-600" />
+            </div>
+            <h2 className="text-lg font-semibold text-gray-900">Cambia tu clave en KIDS</h2>
+          </div>
+          <p className="text-sm text-gray-600 mb-5">
+            Tu cuenta de guía se administra en la plataforma KIDS y allí debes cambiar la clave antes de entrar.
+            Hazlo en KIDS y vuelve a ingresar aquí con la clave nueva.
+          </p>
+          <button
+            type="button"
+            onClick={() => setLoginError(null)}
+            className="w-full py-2 px-4 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            Entendido
+          </button>
+        </div>
+      </div>
+    )}
+
     {/* Expired Contract Modal */}
     {loginError === 'EXPIRED' && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -194,12 +222,13 @@ export default function LoginPage() {
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
+                Email o usuario
               </label>
               <input
                 {...register('email')}
-                type="email"
-                autoComplete="email"
+                type="text"
+                autoComplete="username"
+                autoCapitalize="none"
                 className="input-field"
                 placeholder="tu@email.com"
               />

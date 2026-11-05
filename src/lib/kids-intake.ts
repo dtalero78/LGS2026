@@ -131,6 +131,15 @@ export interface KidsReservationStatus {
   programa?: { campania?: string; salon?: string; inicioPrograma?: string; matricula?: string; [k: string]: any } | null;
 }
 
+/** Guía de KIDS (GET /api/kids-intake/guias). */
+export interface KidsGuia {
+  guiaUserId: string; username: string; emailCuenta: string | null;
+  estado: 'ACTIVO' | 'INACTIVO' | 'BLOQUEADO'; passwordHash: string; debeCambiarPassword: boolean;
+  nombres: string | null; apellidos: string | null; docNumero: string | null; email: string | null;
+  telefono: string | null; pais: string | null; domicilio: string | null; fechaNacimiento: string | null;
+  zoomUrl: string | null; fotoFileId: string | null; actualizadoEn: string;
+}
+
 /** Error tipado de la puerta KIDS (lleva status HTTP y code del cuerpo). */
 export class KidsIntakeError extends Error {
   status?: number;
@@ -193,6 +202,23 @@ export const kidsIntake = {
    */
   horasGuias: (desde: string, hasta: string) =>
     call<{ sesiones: KidsSesionGuia[] }>('GET', `/api/kids-intake/horas-guias?desde=${desde}&hasta=${hasta}`),
+  /**
+   * Guías con su cuenta (usuario, hash argon2id de la clave, estado) y su ficha. KIDS es la
+   * fuente: LGS los refleja como advisors Kids (lib/kids-guias-sync.ts). `usuario` = username
+   * o correo de un solo guía. KIDS v21+.
+   */
+  guias: (usuario?: string) =>
+    call<{ guias: KidsGuia[] }>('GET', `/api/kids-intake/guias${usuario ? `?usuario=${encodeURIComponent(usuario)}` : ''}`),
+  /** Foto del guía (bytes + tipo) o null si no tiene. KIDS v21+. */
+  fotoGuia: async (guiaUserId: string): Promise<{ bytes: Buffer; mime: string } | null> => {
+    if (!isKidsIntakeConfigured()) return null;
+    const res = await fetch(`${BASE}/api/kids-intake/guias/${encodeURIComponent(guiaUserId)}/foto`, {
+      headers: { 'x-api-key': API_KEY }, cache: 'no-store',
+    });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new KidsIntakeError(`KIDS foto del guía HTTP ${res.status}`, res.status);
+    return { bytes: Buffer.from(await res.arrayBuffer()), mime: (res.headers.get('content-type') || 'image/jpeg').split(';')[0] };
+  },
   /** Crea la reserva (RESERVADA, retiene cupo). Idempotente por externalRef → 409 si ya existe. */
   createReservation: (input: KidsReservationInput) =>
     call<KidsReservationResult>('POST', '/api/kids-intake/reservations', input),
