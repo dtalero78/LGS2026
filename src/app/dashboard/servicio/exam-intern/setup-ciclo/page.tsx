@@ -122,7 +122,7 @@ export default function SetupCicloPage() {
 
   const loadAdvisors = useCallback(async () => {
     try {
-      const data = await api.get<{ advisors: Advisor[] }>('/api/postgres/advisors')
+      const data = await api.get<{ advisors: Advisor[] }>('/api/postgres/advisors?programa=LGS') // sin guías Kids
       setAdvisors((Array.isArray(data.advisors) ? data.advisors : []).filter(a => a.activo !== false))
     } catch { /* no bloquea la pantalla */ }
   }, [])

@@ -512,7 +512,8 @@ export default function AgendaSesionesPage() {
   const loadInitialData = async (targetDate: Date = new Date()) => {
     try {
       // Cargar advisors from PostgreSQL
-      const advisorsResponse = await fetch('/api/postgres/advisors')
+      // Solo advisors de adultos: las guías Kids no se asignan a sesiones LGS.
+      const advisorsResponse = await fetch('/api/postgres/advisors?programa=LGS')
 
       let advisorsData: Advisor[] = []
       if (advisorsResponse.ok) {

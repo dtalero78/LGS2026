@@ -114,7 +114,7 @@ export default function SesionesSinGestionPage() {
 
   // Cargar advisors activos para el dropdown
   useEffect(() => {
-    fetch('/api/postgres/advisors')
+    fetch('/api/postgres/advisors?programa=LGS') // sin guías Kids
       .then(r => r.json())
       .then(j => {
         const list = (j.advisors || j.data || j.items || []) as any[]

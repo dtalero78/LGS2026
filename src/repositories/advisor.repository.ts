@@ -12,7 +12,7 @@ import { buildDynamicUpdate } from '@/lib/query-builder';
 const ADVISOR_COLUMNS = `
   "_id", "email", "primerNombre", "primerApellido", "nombreCompleto",
   "pais", "zoom", "activo", "fotoAdvisor", "domicilioadvisor", "fechaNacimiento",
-  "esPlanta", "usuarioRolId", "cancelada", "noasistio", "_createdDate", "_updatedDate"
+  "esPlanta", "usuarioRolId", "cancelada", "noasistio", "programa", "_createdDate", "_updatedDate"
 `;
 
 // Advisor "ADVISOR WELCOME": su zoom es el link fijo de toda sesión WELCOME.
@@ -27,15 +27,20 @@ class AdvisorRepositoryClass extends BaseRepository {
   /**
    * Get all advisors, optionally including inactive ones
    */
-  async findAll(includeInactive: boolean = false) {
-    const whereClause = includeInactive
-      ? ''
-      : 'WHERE "activo" = true OR "activo" IS NULL';
+  /**
+   * programa (ADVISORS.programa, Gestión Advisors): 'LGS' = adultos (LGS, AMBOS o sin programa;
+   * excluye las guías solo Kids) · 'KIDS' = KIDS o AMBOS · sin valor = todos.
+   */
+  async findAll(includeInactive: boolean = false, programa?: 'LGS' | 'KIDS' | null) {
+    const conds: string[] = [];
+    if (!includeInactive) conds.push('("activo" = true OR "activo" IS NULL)');
+    if (programa === 'LGS') conds.push(`COALESCE("programa", 'LGS') <> 'KIDS'`);
+    if (programa === 'KIDS') conds.push(`"programa" IN ('KIDS', 'AMBOS')`);
 
     return queryMany(
       `SELECT ${ADVISOR_COLUMNS}
        FROM "ADVISORS"
-       ${whereClause}
+       ${conds.length ? `WHERE ${conds.join(' AND ')}` : ''}
        ORDER BY "nombreCompleto" ASC NULLS LAST`
     );
   }

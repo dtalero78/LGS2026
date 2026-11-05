@@ -292,7 +292,7 @@ export default function AgendaAcademicaPage() {
         const response = await fetch('/api/postgres/advisors', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
+          body: JSON.stringify({ programa: 'LGS' }) // sin guías Kids
         })
 
         if (response.ok) {

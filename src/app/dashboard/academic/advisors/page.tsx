@@ -19,18 +19,19 @@ interface Advisor {
   zoom?: string
   activo?: boolean | null
   fotoAdvisor?: string | null
+  /** ADVISORS.programa (Gestión Advisors): LGS / KIDS / AMBOS; vacío = LGS. */
+  programa?: string | null
 }
 
-type TabType = 'list' | 'statistics'
+type TabType = 'adultos' | 'kids' | 'statistics'
 
-const tabs = [
-  { id: 'list' as TabType, name: 'Lista de Advisors', icon: UsersIcon },
-  { id: 'statistics' as TabType, name: 'Estadísticas', icon: ChartBarIcon },
-]
+// Adultos = LGS (y AMBOS / sin programa) · Kids = guías KIDS (y AMBOS). Un AMBOS sale en las dos.
+const esKids = (a: Advisor) => a.programa === 'KIDS' || a.programa === 'AMBOS'
+const esAdultos = (a: Advisor) => a.programa !== 'KIDS'
 
 export default function AdvisorsPage() {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<TabType>('list')
+  const [activeTab, setActiveTab] = useState<TabType>('adultos')
   const [advisors, setAdvisors] = useState<Advisor[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -80,6 +81,14 @@ export default function AdvisorsPage() {
     router.push(`/advisor/${advisorId}`)
   }
 
+  const adultos = advisors.filter(esAdultos)
+  const kids = advisors.filter(esKids)
+  const tabs = [
+    { id: 'adultos' as TabType, name: `Advisors Adultos (${adultos.length})`, icon: UsersIcon },
+    { id: 'kids' as TabType, name: `Guías Kids (${kids.length})`, icon: UserIcon },
+    { id: 'statistics' as TabType, name: 'Estadísticas', icon: ChartBarIcon },
+  ]
+
   return (
     <DashboardLayout>
       <PermissionGuard permission={AcademicoPermission.LISTA_ADVISORS_VER}>
@@ -123,9 +132,10 @@ export default function AdvisorsPage() {
           </div>
 
           {/* Tab Content */}
-          {activeTab === 'list' && (
+          {(activeTab === 'adultos' || activeTab === 'kids') && (
             <AdvisorsList
-              advisors={advisors}
+              key={activeTab}
+              advisors={activeTab === 'kids' ? kids : adultos}
               loading={loading}
               error={error}
               onRetry={fetchAdvisors}
@@ -135,7 +145,8 @@ export default function AdvisorsPage() {
           )}
 
           {activeTab === 'statistics' && (
-            <AdvisorsStatistics advisors={advisors.filter(a => a.activo !== false)} />
+            // Las estadísticas salen de las sesiones LGS: solo advisors de adultos.
+            <AdvisorsStatistics advisors={adultos.filter(a => a.activo !== false)} />
           )}
         </div>
       </PermissionGuard>
