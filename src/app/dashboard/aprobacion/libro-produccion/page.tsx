@@ -13,7 +13,7 @@ import toast from 'react-hot-toast'
 import {
   ArrowPathIcon, ArrowDownTrayIcon, ChevronDownIcon, ChevronRightIcon, ChevronLeftIcon, MagnifyingGlassIcon, FunnelIcon,
   XMarkIcon, ArrowTopRightOnSquareIcon, CalendarDaysIcon, TableCellsIcon, RectangleStackIcon,
-  ArrowsPointingOutIcon, ArrowUturnLeftIcon, PencilSquareIcon, ClockIcon,
+  ArrowsPointingOutIcon, ArrowUturnLeftIcon, PencilSquareIcon, ClockIcon, PresentationChartBarIcon,
 } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
@@ -25,6 +25,7 @@ import { exportToExcel } from '@/lib/export-excel'
 import PlanesTiposPanel from '@/components/aprobacion/PlanesTiposPanel'
 import LibroAccionModal from '@/components/aprobacion/LibroAccionModal'
 import AjusteEscaleraModal from '@/components/aprobacion/AjusteEscaleraModal'
+import GestionComercialPanel from '@/components/aprobacion/GestionComercialPanel'
 import {
   MESES, etiquetaVigencia, etiquetaSemana, semanasDeVigencia, type Vigencia,
 } from '@/lib/vigencias-comerciales'
@@ -139,7 +140,8 @@ export default function LibroProduccionPage() {
   const { hasPermission } = usePermissions()
   const puedeVigencias = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_VIGENCIAS)
   const puedePlanes = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_PLANES)
-  const [tab, setTab] = useState<'libro' | 'sinFirmar' | 'vigencias' | 'planes'>('libro')
+  const puedeGestion = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_GESTION)
+  const [tab, setTab] = useState<'libro' | 'sinFirmar' | 'gestion' | 'vigencias' | 'planes'>('libro')
   const esHoja = tab === 'libro' || tab === 'sinFirmar'
   // Pantalla completa: la hoja cubre todo (sin sidebar ni encabezado) y, si el
   // navegador lo permite, también entra en su modo de pantalla completa.
@@ -180,6 +182,7 @@ export default function LibroProduccionPage() {
           <div className="flex items-end gap-2 border-b border-gray-200">
             {([['libro', 'Libro', TableCellsIcon],
               ['sinFirmar', 'Por resolver', PencilSquareIcon],
+              ...(puedeGestion ? [['gestion', 'Gestión', PresentationChartBarIcon]] : []),
               ...(puedeVigencias ? [['vigencias', 'Vigencias', CalendarDaysIcon]] : []),
               ...(puedePlanes ? [['planes', 'Planes', RectangleStackIcon]] : [])] as const).map(([k, label, Icon]: any) => (
               <button key={k} type="button" onClick={() => setTab(k)}
@@ -195,7 +198,9 @@ export default function LibroProduccionPage() {
             )}
           </div>
           </>)}
-          {esHoja ? <Libro key={tab} completa={completa} sinFirmar={tab === 'sinFirmar'} /> : tab === 'vigencias' ? <Vigencias /> : <PlanesTiposPanel />}
+          {esHoja ? <Libro key={tab} completa={completa} sinFirmar={tab === 'sinFirmar'} />
+            : tab === 'gestion' ? <GestionComercialPanel />
+            : tab === 'vigencias' ? <Vigencias /> : <PlanesTiposPanel />}
         </div>
       </PermissionGuard>
     </DashboardLayout>
@@ -640,10 +645,10 @@ function Detalle({ titularId, ids, onNavegar, onClose, onCasillas, onComercial }
                   <F l="Conciliado" v={r.conciliado.si ? `SI · ${r.conciliado.por || ''} ${r.conciliado.fecha ? fmtF(r.conciliado.fecha) : ''}` : 'NO'} />
                   <F l="Factura / boleta" v={r.factura} />
                 </Sec>
-                <Sec t="Comercial (escalera del día de la matrícula)" accion={puedeEscalera && (
-                  <button type="button" onClick={() => setVerEscalera(true)} title="Corregir la escalera comercial de este contrato"
+                <Sec t="Comercial (escala del día de la matrícula)" accion={puedeEscalera && (
+                  <button type="button" onClick={() => setVerEscalera(true)} title="Corregir la escala comercial de este contrato"
                     className="inline-flex items-center gap-1 rounded-md border border-indigo-300 bg-white px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-50">
-                    <PencilSquareIcon className="h-3.5 w-3.5" /> Ajuste Escalera
+                    <PencilSquareIcon className="h-3.5 w-3.5" /> Ajuste Escala
                   </button>
                 )}>
                   <F l="Ej. Training" v={r.comercial.ejecutivo} /><F l="Full Executive" v={r.comercial.fullExecutive} /><F l="Jefe de grupo" v={r.comercial.jefeGrupo} />

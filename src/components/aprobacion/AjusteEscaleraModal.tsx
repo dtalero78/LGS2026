@@ -33,7 +33,7 @@ export default function AjusteEscaleraModal({ titularId, contrato, onClose, onGu
   useEffect(() => {
     api.get<Opciones>(`/api/postgres/libro-produccion/${titularId}/escalera`)
       .then(d => { setOp(d); setForm({ ...d.actual }) })
-      .catch(e => { handleApiError(e, 'No se pudo cargar la escalera'); onClose() })
+      .catch(e => { handleApiError(e, 'No se pudo cargar la escala'); onClose() })
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', k)
     return () => window.removeEventListener('keydown', k)
@@ -96,7 +96,7 @@ export default function AjusteEscaleraModal({ titularId, contrato, onClose, onGu
       })
       const j = await res.json()
       if (!res.ok || !j?.success) throw new Error(j?.details || j?.error || `Error ${res.status}`)
-      toast.success('Escalera ajustada')
+      toast.success('Escala ajustada')
       onGuardado(j.comercial)
       onClose()
     } catch (e: any) {
@@ -111,8 +111,8 @@ export default function AjusteEscaleraModal({ titularId, contrato, onClose, onGu
       <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-start justify-between border-b border-gray-200 px-5 py-3">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Ajuste Escalera</h2>
-            <p className="text-xs text-gray-500">Contrato {contrato || '—'}{op?.pais ? ` · ${op.pais}` : ''} · escalera comercial del día de la matrícula</p>
+            <h2 className="text-lg font-semibold text-gray-900">Ajuste Escala</h2>
+            <p className="text-xs text-gray-500">Contrato {contrato || '—'}{op?.pais ? ` · ${op.pais}` : ''} · escala comercial del día de la matrícula</p>
           </div>
           <button type="button" onClick={onClose} className="rounded-md p-1 text-gray-500 hover:bg-gray-100"><XMarkIcon className="h-5 w-5" /></button>
         </div>
@@ -180,7 +180,7 @@ export default function AjusteEscaleraModal({ titularId, contrato, onClose, onGu
             <label className="block text-xs text-gray-600">
               <span className="mb-0.5 block">Motivo del ajuste * <span className="text-gray-400">(mínimo 10 caracteres; queda en el Seguimiento)</span></span>
               <textarea value={motivo} onChange={e => setMotivo(e.target.value)} rows={2}
-                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm" placeholder="Ej.: el enlace del CRM no trajo la escalera; confirmado con el jefe de grupo" />
+                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm" placeholder="Ej.: el enlace del CRM no trajo la escala; confirmado con el jefe de grupo" />
             </label>
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-500">{cambiados.length ? `${cambiados.length} campo(s) modificado(s)` : 'Sin cambios'}</span>

@@ -457,6 +457,8 @@ export enum AprobacionPermission {
   LIBRO_PRODUCCION_RATIFICAR = 'APROBACION.LIBRO_PRODUCCION.RATIFICAR',
   /** Botón "Ajuste Escalera" del detalle del libro (corregir la escalera comercial del titular). */
   LIBRO_PRODUCCION_ESCALERA = 'APROBACION.LIBRO_PRODUCCION.ESCALERA',
+  /** Pestaña "Gestión" (Gestión Comercial: resumen por semana/filial y por asesor y escala). */
+  LIBRO_PRODUCCION_GESTION = 'APROBACION.LIBRO_PRODUCCION.GESTION',
   // Contratos Canje: consulta propia (no salen en el Centro de Aprobaciones) + aprobar
   CONTRATOS_CANJE_VER = 'APROBACION.CONTRATOS_CANJE.VER',
   CONTRATOS_CANJE_APROBAR = 'APROBACION.CONTRATOS_CANJE.APROBAR',

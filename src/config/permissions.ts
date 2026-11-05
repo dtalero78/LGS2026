@@ -1067,11 +1067,18 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Marcar o desmarcar Suscripción de pago y Prixus del titular (desde el libro y desde la ficha › Información general)',
   },
   {
+    code: AprobacionPermission.LIBRO_PRODUCCION_GESTION,
+    module: Module.APROBACION,
+    section: 'Libro de Producción',
+    name: 'Pestaña "Gestión" (Gestión Comercial)',
+    description: 'Ver la pestaña Gestión del libro: resumen por semana y por filial (realizadas, aprobadas, rechazadas, devueltas, firmadas sin aprobar, pendientes) y resultados por asesor con su cargo en la escala, por año y mes comercial',
+  },
+  {
     code: AprobacionPermission.LIBRO_PRODUCCION_ESCALERA,
     module: Module.APROBACION,
     section: 'Libro de Producción',
-    name: 'Botón "Ajuste Escalera"',
-    description: 'Corregir la escalera comercial del contrato desde el detalle del libro (Ej. Training, Full Executive, Jefe de grupo, Gerente, Gerente división, Sales Manager, Filial del catálogo del país y Origen matrícula). Pide motivo y queda en el Seguimiento del contrato con el antes y el después',
+    name: 'Botón "Ajuste Escala"',
+    description: 'Corregir la escala comercial del contrato desde el detalle del libro (Ej. Training, Full Executive, Jefe de grupo, Gerente, Gerente división, Sales Manager, Filial del catálogo del país y Origen matrícula). Pide motivo y queda en el Seguimiento del contrato con el antes y el después',
   },
   {
     code: AprobacionPermission.LIBRO_PRODUCCION_PLANES,
