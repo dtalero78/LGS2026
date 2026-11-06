@@ -19,6 +19,17 @@ export const ESTADO_CORTE: Record<EstadoCorte, { l: string; cls: string }> = {
   PAGADO: { l: 'Pagado', cls: 'bg-emerald-700 text-white' },
 }
 export const CORTE_LABEL: Record<Corte, string> = { MES: 'Mes', Q1: '1ra Q', Q2: '2da Q' }
+export interface FacturaCorte {
+  _id: string; nombre: string | null; tipo: string | null; estado: string; subidoEn: string; subidoPor: string | null; concepto: string | null
+  extraido: any; comentarioDevolucion: string | null; devueltaPor: string | null; devueltaEn: string | null; inconsistencias: string[]
+}
+/** Qué cobra cada factura cuando un corte se cobra en varias (p. ej. horas normales + Exam. Intern.). */
+export const CONCEPTOS_FACTURA = [
+  { v: 'NORMAL', l: 'Horas normales' }, { v: 'EXAM_INTERN', l: 'Exam. Internacional' },
+  { v: 'FESTIVO', l: 'Festivos' }, { v: 'OTRO', l: 'Otro' },
+]
+export const MAX_FACTURAS_CORTE = 3
+
 export const CONCEPTOS_AJUSTE = [
   { v: 'NORMAL', l: 'Horas normales' }, { v: 'FESTIVO', l: 'Festivo' }, { v: 'EXAM_INTERN', l: 'Exam. intern.' },
   { v: 'SIN_ASISTENTES', l: 'Sin asistentes (½ h)' }, { v: 'EXTRA_AUTORIZADA', l: 'Extra autorizada (semiplanta)' },
@@ -32,10 +43,10 @@ export interface CorteInfo {
   horasOk: boolean; horasOkPor: string | null
   verificadoPor: string | null; verificadoEn: string | null; pagadoPor: string | null; pagadoEn: string | null; referenciaPago: string | null
   snapshot: any; cambioTrasVerificar: boolean
-  factura: null | {
-    _id: string; nombre: string | null; tipo: string | null; estado: string; subidoEn: string; subidoPor: string | null
-    extraido: any; comentarioDevolucion: string | null; devueltaPor: string | null; devueltaEn: string | null; inconsistencias: string[]
-  }
+  /** Factura más reciente del conjunto; sus inconsistencias son las del conjunto (sumas). */
+  factura: null | FacturaCorte
+  /** Todas las facturas vigentes del corte (se revisan sumadas). */
+  facturas: FacturaCorte[]
   ajustes: { _id: string; alcance: string; semanaInicio: string | null; concepto: string; horas: number; motivo: string; usuarioEmail: string | null; usuarioNombre: string | null; fecha: string }[]
 }
 export const claveCorte = (advisorId: string, programa: string, corte: string) => `${advisorId}|${programa}|${corte}`

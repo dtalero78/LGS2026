@@ -12,7 +12,7 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { CheckCircleIcon, DocumentArrowUpIcon, ArrowUturnLeftIcon, BanknotesIcon, LockOpenIcon, PlusIcon, ExclamationTriangleIcon, EyeIcon } from '@heroicons/react/24/outline'
 import {
-  type AdvisorLiq, type CorteInfo, ESTADO_CORTE, CORTE_LABEL, CONCEPTOS_AJUSTE, fmtH, fmtMoneda,
+  type AdvisorLiq, type CorteInfo, ESTADO_CORTE, CORTE_LABEL, CONCEPTOS_AJUSTE, CONCEPTOS_FACTURA, fmtH, fmtMoneda,
 } from './liquidacion-tipos'
 
 export interface PermisosCorte {
@@ -43,11 +43,25 @@ function UnCorte({ a, c, periodo, semanas, p, onCambio }: { a: AdvisorLiq; c: Co
     finally { setOcupado(false) }
   }
 
+  // Concepto de la próxima factura subida en su nombre (un corte admite varias).
+  const [conceptoNuevo, setConceptoNuevo] = useState('NORMAL')
+  const quitar = async (id: string) => {
+    if (!window.confirm('¿Quitar esta factura del corte?')) return
+    setOcupado(true)
+    try {
+      const res = await fetch(`/api/postgres/administracion/cortes/factura?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok || !j?.success) throw new Error(j?.details || j?.error || `Error ${res.status}`)
+      toast.success('Factura quitada'); onCambio()
+    } catch (e: any) { toast.error(e?.message || 'No se pudo quitar') } finally { setOcupado(false) }
+  }
+
   const subir = async (file: File) => {
     setOcupado(true)
     try {
       const fd = new FormData()
       fd.set('file', file); Object.entries(base).forEach(([k, v]) => fd.set(k, String(v)))
+      fd.set('concepto', conceptoNuevo); fd.set('modo', 'agregar')
       const res = await fetch('/api/postgres/administracion/cortes/factura', { method: 'POST', body: fd })
       const j = await res.json().catch(() => ({}))
       if (!res.ok || !j?.success) throw new Error(j?.details || j?.error || `Error ${res.status}`)
@@ -58,7 +72,7 @@ function UnCorte({ a, c, periodo, semanas, p, onCambio }: { a: AdvisorLiq; c: Co
   const motivoVerif = !c.horasOk ? 'Falta Horas OK de Académico'
     : c.requiereFactura && c.estado !== 'FACTURA_RECIBIDA' ? 'Falta la factura (o fue devuelta)'
     : c.valor === null && p.verValores ? 'Sin valor calculado (revise tarifas)' : null
-  const ext = c.factura?.extraido
+
 
   return (
     <div className={`rounded-lg border ${cerrado ? 'border-emerald-200 bg-emerald-50/40' : 'border-gray-200 bg-white'} p-4 space-y-3`}>
@@ -138,37 +152,59 @@ function UnCorte({ a, c, periodo, semanas, p, onCambio }: { a: AdvisorLiq; c: Co
       {c.requiereFactura ? (
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="font-semibold text-gray-700">Factura / boleta</span>
-            {c.factura ? (
-              <>
-                <a href={`/api/postgres/administracion/factura/${c.factura._id}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sky-700 hover:underline">
-                  <EyeIcon className="h-3.5 w-3.5" /> {c.factura.nombre || 'ver archivo'}
-                </a>
-                <span className="text-gray-400">subida {c.factura.subidoEn.slice(0, 10)} por {c.factura.subidoPor}</span>
-                {c.factura.estado === 'DEVUELTA' && <span className="text-amber-700">devuelta: “{c.factura.comentarioDevolucion}”</span>}
-              </>
-            ) : <span className="text-gray-400">sin subir</span>}
+            <span className="font-semibold text-gray-700">Factura{c.facturas.length > 1 ? `s (${c.facturas.length})` : ''} / boleta</span>
+            {!c.facturas.length && <span className="text-gray-400">sin subir</span>}
+            {c.factura?.estado === 'DEVUELTA' && <span className="text-amber-700">devuelta: “{c.factura.comentarioDevolucion}”</span>}
             {/* Guías Kids: la factura se sube en KIDS y llega sola aquí (lib/kids-facturas-guias). */}
             {c.programa === 'KIDS' && !cerrado && <span className="ml-auto text-[11px] text-fuchsia-700">La sube la guía en KIDS · Mis horas y facturas</span>}
             {(p.devolver || p.verificar) && !cerrado && c.programa !== 'KIDS' && (
-              <label className="ml-auto inline-flex items-center gap-1 cursor-pointer text-sky-700 hover:underline">
-                <DocumentArrowUpIcon className="h-4 w-4" /> Subir en su nombre
-                <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" disabled={ocupado}
-                  onChange={e => { const f = e.target.files?.[0]; if (f) subir(f); e.target.value = '' }} />
-              </label>
+              <span className="ml-auto inline-flex items-center gap-2">
+                <select value={conceptoNuevo} onChange={e => setConceptoNuevo(e.target.value)} aria-label="Concepto" className="rounded border border-gray-300 px-1.5 py-0.5 text-xs">
+                  {CONCEPTOS_FACTURA.map(x => <option key={x.v} value={x.v}>{x.l}</option>)}
+                </select>
+                <label className="inline-flex items-center gap-1 cursor-pointer text-sky-700 hover:underline">
+                  <DocumentArrowUpIcon className="h-4 w-4" /> {c.facturas.some(f => f.estado === 'RECIBIDA') ? 'Agregar en su nombre' : 'Subir en su nombre'}
+                  <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" disabled={ocupado}
+                    onChange={e => { const f = e.target.files?.[0]; if (f) subir(f); e.target.value = '' }} />
+                </label>
+              </span>
             )}
           </div>
           {c.factura && (
-            <div className="rounded-md bg-gray-50 border border-gray-200 px-3 py-2 text-xs space-y-1">
-              {ext ? (
-                <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-gray-700">
-                  <span>{ext.tipoDocumento || 'Documento'} {ext.numero ? `N° ${ext.numero}` : ''}</span>
-                  <span>fecha {ext.fecha || '—'}</span>
-                  <span>emisor {ext.emisor || '—'} ({ext.documentoEmisor || 'sin doc.'})</span>
-                  <span>horas {ext.horas ?? '—'}</span>
-                  {p.verValores && <span>bruto {ext.bruto !== null && ext.bruto !== undefined ? Number(ext.bruto).toLocaleString('es-CO') : '—'}{ext.retencion ? ` · ret. ${Number(ext.retencion).toLocaleString('es-CO')}` : ''}</span>}
+            <div className="rounded-md bg-gray-50 border border-gray-200 px-3 py-2 text-xs space-y-1.5">
+              {c.facturas.map(f => {
+                const ext = f.extraido
+                return (
+                  <div key={f._id} className="space-y-0.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {f.concepto && <span className="rounded bg-sky-100 px-1.5 py-0.5 font-semibold text-sky-800">{CONCEPTOS_FACTURA.find(x => x.v === f.concepto)?.l || f.concepto}</span>}
+                      <a href={`/api/postgres/administracion/factura/${f._id}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sky-700 hover:underline">
+                        <EyeIcon className="h-3.5 w-3.5" /> {f.nombre || 'ver archivo'}
+                      </a>
+                      <span className="text-gray-400">subida {f.subidoEn.slice(0, 10)} por {f.subidoPor}</span>
+                      {(p.devolver || p.verificar) && !cerrado && c.programa !== 'KIDS' && f.estado === 'RECIBIDA' && (
+                        <button type="button" disabled={ocupado} onClick={() => quitar(f._id)} className="ml-auto text-red-600 hover:underline">Quitar</button>
+                      )}
+                    </div>
+                    {ext ? (
+                      <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-gray-700 pl-1">
+                        <span>{ext.tipoDocumento || 'Documento'} {ext.numero ? `N° ${ext.numero}` : ''}</span>
+                        <span>fecha {ext.fecha || '—'}</span>
+                        <span>emisor {ext.emisor || '—'} ({ext.documentoEmisor || 'sin doc.'})</span>
+                        <span>horas {ext.horas ?? '—'}</span>
+                        {p.verValores && <span>bruto {ext.bruto !== null && ext.bruto !== undefined ? Number(ext.bruto).toLocaleString('es-CO') : '—'}{ext.retencion ? ` · ret. ${Number(ext.retencion).toLocaleString('es-CO')}` : ''}</span>}
+                      </div>
+                    ) : <div className="text-gray-500 pl-1">No se pudo leer con IA.</div>}
+                  </div>
+                )
+              })}
+              {c.facturas.length > 1 && (
+                <div className="flex flex-wrap gap-x-4 border-t border-gray-200 pt-1 font-semibold text-gray-800">
+                  <span>Total {c.facturas.length} facturas:</span>
+                  <span>horas {fmtH(c.facturas.reduce((t, f) => t + (Number(f.extraido?.horas) || 0), 0))} (plataforma {fmtH(c.horas)})</span>
+                  {p.verValores && <span>bruto {c.facturas.reduce((t, f) => t + (Number(f.extraido?.bruto) || 0), 0).toLocaleString('es-CO')}{c.valor !== null ? ` (esperado ${c.valor.toLocaleString('es-CO')})` : ''}</span>}
                 </div>
-              ) : <div className="text-gray-500">No se pudo leer con IA.</div>}
+              )}
               {c.factura.inconsistencias.length > 0 ? (
                 <ul className="text-red-700 list-disc pl-4">{c.factura.inconsistencias.map((i, k) => <li key={k}>{i}</li>)}</ul>
               ) : <div className="text-emerald-700 font-semibold">Cuadra con la plataforma.</div>}

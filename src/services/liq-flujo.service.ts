@@ -55,9 +55,15 @@ const sumarDias = (fecha: string, dias: number) => new Date(Date.parse(`${fecha}
 
 export interface FacturaInfo {
   _id: string; nombre: string | null; tipo: string | null; estado: string; subidoEn: string; subidoPor: string | null;
+  /** Concepto que cobra: NORMAL | EXAM_INTERN | FESTIVO | OTRO (null = factura única de antes). */
+  concepto: string | null;
   extraido: any; comentarioDevolucion: string | null; devueltaPor: string | null; devueltaEn: string | null;
   inconsistencias: string[];
 }
+
+/** Un corte admite hasta este número de facturas a la vez (p. ej. horas normales + Exam. Intern.). */
+export const MAX_FACTURAS_CORTE = 3;
+export const CONCEPTOS_FACTURA = ['NORMAL', 'EXAM_INTERN', 'FESTIVO', 'OTRO'] as const;
 export interface AjusteInfo {
   _id: string; alcance: string; semanaInicio: string | null; concepto: string; horas: number; motivo: string;
   usuarioEmail: string | null; usuarioNombre: string | null; fecha: string;
@@ -69,7 +75,11 @@ export interface CorteInfo {
   horasOk: boolean; horasOkPor: string | null;
   verificadoPor: string | null; verificadoEn: string | null; pagadoPor: string | null; pagadoEn: string | null; referenciaPago: string | null;
   snapshot: any; cambioTrasVerificar: boolean;
-  factura: FacturaInfo | null; ajustes: AjusteInfo[];
+  /** Factura más reciente del conjunto vigente; sus `inconsistencias` son las del CONJUNTO (sumas). */
+  factura: FacturaInfo | null;
+  /** Conjunto vigente: todas las facturas del corte que se revisan juntas (RECIBIDA/ACEPTADA, o las DEVUELTAS). */
+  facturas: FacturaInfo[];
+  ajustes: AjusteInfo[];
 }
 
 const clave = (advisorId: string, programa: string, corte: string) => `${advisorId}|${programa}|${corte}`;
@@ -88,7 +98,37 @@ async function documentosAdvisors(ids: string[]): Promise<Map<string, string | n
 
 const soloDigitos = (s: any) => String(s ?? '').replace(/[^0-9kK]/g, '').toUpperCase();
 
-/** Compara lo leído de la factura con lo que dice la plataforma (solo para revisores). */
+/**
+ * Compara el CONJUNTO de facturas del corte con la plataforma: cada una por separado
+ * (emisor, fecha, que sea factura) y la SUMA de horas y de valor bruto contra lo calculado.
+ * Así un advisor puede cobrar en dos facturas (p. ej. horas normales y Exam. Intern.).
+ */
+function inconsistenciasConjunto(facts: { nombre: string | null; extraido: any }[], corte: { periodo: string; corte: Corte; horas: number; valor: number | null }, doc: string | null): string[] {
+  if (facts.length <= 1) return facts.length ? inconsistencias(facts[0].extraido, corte, doc) : [];
+  const out: string[] = [];
+  for (const f of facts) {
+    const nombre = `«${f.nombre || 'factura'}»`;
+    for (const i of inconsistencias(f.extraido, { ...corte, horas: NaN, valor: null }, doc)) out.push(`${nombre}: ${i}`);
+  }
+  const conHoras = facts.filter((f) => f.extraido?.horas !== null && f.extraido?.horas !== undefined);
+  const sumaH = conHoras.reduce((t, f) => t + Number(f.extraido.horas), 0);
+  if (conHoras.length && Math.abs(sumaH - corte.horas) > 0.01) {
+    out.push(`Horas facturadas en total ${sumaH} (${facts.length} facturas) ≠ horas de la plataforma ${corte.horas}.`);
+  }
+  if (corte.valor !== null) {
+    const sinBruto = facts.filter((f) => f.extraido?.bruto === null || f.extraido?.bruto === undefined);
+    if (sinBruto.length) out.push(`No se leyó el valor bruto de ${sinBruto.map((f) => `«${f.nombre || 'factura'}»`).join(', ')}.`);
+    else {
+      const suma = facts.reduce((t, f) => t + Number(f.extraido.bruto), 0);
+      if (Math.abs(suma - corte.valor) > Math.max(1, corte.valor * 0.01)) {
+        out.push(`Valor bruto total ${suma.toLocaleString('es-CO')} (${facts.length} facturas) ≠ esperado ${corte.valor.toLocaleString('es-CO')} (horas × tarifa).`);
+      }
+    }
+  }
+  return out;
+}
+
+/** Compara lo leído de UNA factura con lo que dice la plataforma (horas NaN / valor null = no comparar totales). */
 function inconsistencias(ext: any, corte: { periodo: string; corte: Corte; horas: number; valor: number | null }, doc: string | null): string[] {
   if (!ext) return ['No se pudo leer la factura con IA: revisar a mano.'];
   const out: string[] = [];
@@ -102,7 +142,7 @@ function inconsistencias(ext: any, corte: { periodo: string; corte: Corte; horas
   else if (ext.fecha < r.desde || ext.fecha > sumarDias(plazoFactura(corte.periodo, corte.corte), 0)) {
     out.push(`Fecha ${ext.fecha} fuera del ${corte.corte === 'MES' ? 'mes' : 'corte'} (${r.desde} a ${r.hasta}, o hasta el plazo).`);
   }
-  if (ext.horas !== null && ext.horas !== undefined && Math.abs(Number(ext.horas) - corte.horas) > 0.01) {
+  if (!Number.isNaN(corte.horas) && ext.horas !== null && ext.horas !== undefined && Math.abs(Number(ext.horas) - corte.horas) > 0.01) {
     out.push(`Horas facturadas ${ext.horas} ≠ horas de la plataforma ${corte.horas}.`);
   }
   if (corte.valor !== null) {
@@ -133,8 +173,9 @@ export async function listarCortes(periodo: string, liq?: Liquidacion, advisorId
       advisorId ? [periodo, advisorId] : [periodo]),
   ]);
   const porClave = new Map(rows.map((r) => [clave(r.advisorId, r.programa, r.corte), r]));
-  const factPorClave = new Map<string, any>();
-  for (const f of facturas) { const k = clave(f.advisorId, f.programa, f.corte); if (!factPorClave.has(k)) factPorClave.set(k, f); }
+  // Todas las facturas no reemplazadas por corte (más reciente primero).
+  const factPorClave = new Map<string, any[]>();
+  for (const f of facturas) { const k = clave(f.advisorId, f.programa, f.corte); if (!factPorClave.has(k)) factPorClave.set(k, []); factPorClave.get(k)!.push(f); }
   const docs = await documentosAdvisors(Array.from(new Set(L.advisors.map((a) => a.advisorId))));
 
   const out: CorteInfo[] = [];
@@ -142,7 +183,11 @@ export async function listarCortes(periodo: string, liq?: Liquidacion, advisorId
     for (const c of a.cortes) {
       const k = clave(a.advisorId, a.programaLiq, c.corte);
       const row = porClave.get(k);
-      const f = factPorClave.get(k);
+      // Conjunto vigente: las recibidas/aceptadas; si no hay, las devueltas (para mostrar el motivo).
+      const todas = factPorClave.get(k) || [];
+      const vivas = todas.filter((x) => x.estado === 'RECIBIDA' || x.estado === 'ACEPTADA');
+      const conjunto = vivas.length ? vivas : todas.filter((x) => x.estado === 'DEVUELTA');
+      const f = vivas.find((x) => x.estado === 'RECIBIDA') || conjunto[0];
       const plazo = plazoFactura(periodo, c.corte);
       const requiereFactura = a.tipoContratacion !== 'PLANTA' && (a.tipoContratacion === 'SEMIPLANTA' || c.horas > 0);
       const plazoReenvio = f?.estado === 'DEVUELTA' && f.devueltaEn ? sumarDias(new Date(f.devueltaEn).toISOString().slice(0, 10), 2) : null;
@@ -163,12 +208,18 @@ export async function listarCortes(periodo: string, liq?: Liquidacion, advisorId
         referenciaPago: row?.referenciaPago || null,
         snapshot: snap,
         cambioTrasVerificar: !!snap && (Math.abs(Number(snap.horas) - c.horas) > 0.01 || (c.valor !== null && Math.abs(Number(snap.valor) - c.valor) > 0.5)),
-        factura: f ? {
-          _id: f._id, nombre: f.nombre, tipo: f.tipo, estado: f.estado, subidoEn: new Date(f.subidoEn).toISOString(), subidoPor: f.subidoPor,
-          extraido: f.extraido, comentarioDevolucion: f.comentarioDevolucion, devueltaPor: f.devueltaPor,
-          devueltaEn: f.devueltaEn ? new Date(f.devueltaEn).toISOString() : null,
-          inconsistencias: inconsistencias(f.extraido, { periodo, corte: c.corte, horas: c.horas, valor: c.valor }, docs.get(a.advisorId) || null),
-        } : null,
+        ...(() => {
+          const info = (x: any, inc: string[]): FacturaInfo => ({
+            _id: x._id, nombre: x.nombre, tipo: x.tipo, estado: x.estado, subidoEn: new Date(x.subidoEn).toISOString(), subidoPor: x.subidoPor,
+            concepto: x.concepto || null, extraido: x.extraido, comentarioDevolucion: x.comentarioDevolucion, devueltaPor: x.devueltaPor,
+            devueltaEn: x.devueltaEn ? new Date(x.devueltaEn).toISOString() : null, inconsistencias: inc,
+          });
+          const incConjunto = inconsistenciasConjunto(conjunto, { periodo, corte: c.corte, horas: c.horas, valor: c.valor }, docs.get(a.advisorId) || null);
+          return {
+            factura: f ? info(f, incConjunto) : null,
+            facturas: conjunto.map((x) => info(x, [])),
+          };
+        })(),
         ajustes: ajustes.filter((x) => clave(x.advisorId, x.programa, x.corte) === k).map((x) => ({
           _id: x._id, alcance: x.alcance, semanaInicio: x.semanaStr, concepto: x.concepto, horas: Number(x.horas), motivo: x.motivo,
           usuarioEmail: x.usuarioEmail, usuarioNombre: x.usuarioNombre, fecha: new Date(x._createdDate).toISOString(),
@@ -285,7 +336,19 @@ async function leerFacturaIA(buf: Buffer, contentType: string, nombre: string): 
  * Sube la factura/boleta de un corte. El advisor solo hasta el plazo (o 2 días tras una
  * devolución); el personal con permiso puede subirla en su nombre mientras no esté verificado.
  */
-export async function subirFactura(p: { advisorId: string; programa: 'LGS' | 'KIDS'; periodo: string; corte: Corte; archivo: { buf: Buffer; tipo: string; nombre: string } }, actor: Actor, opts: { esAdvisor: boolean }) {
+export async function subirFactura(p: {
+  advisorId: string; programa: 'LGS' | 'KIDS'; periodo: string; corte: Corte; archivo: { buf: Buffer; tipo: string; nombre: string };
+  /** Qué cobra esta factura (NORMAL, EXAM_INTERN, FESTIVO, OTRO). */
+  concepto?: string | null;
+  /**
+   * 'reemplazar' (por defecto): la nueva sustituye a todas las del corte (una sola factura).
+   * 'agregar': se suma a las recibidas (hasta MAX_FACTURAS_CORTE); tras una devolución abre un conjunto nuevo.
+   * Con `reemplazaId` sustituye solo esa factura.
+   */
+  modo?: 'reemplazar' | 'agregar'; reemplazaId?: string | null;
+}, actor: Actor, opts: { esAdvisor: boolean }) {
+  const concepto = p.concepto ? String(p.concepto).toUpperCase() : null;
+  if (concepto && !(CONCEPTOS_FACTURA as readonly string[]).includes(concepto)) throw new ValidationError('Concepto de factura inválido.');
   const ext = TIPOS_FACTURA[p.archivo.tipo];
   if (!ext) throw new ValidationError('Formato no permitido: suba PDF, JPG, PNG o WEBP.');
   if (p.archivo.buf.length > MAX_FACTURA) throw new ValidationError('El archivo supera 10 MB.');
@@ -296,14 +359,41 @@ export async function subirFactura(p: { advisorId: string; programa: 'LGS' | 'KI
   const liq = await asegurarLiq(p.advisorId, p.programa, p.periodo, p.corte);
   const key = `facturas-advisors/${p.periodo}/${p.advisorId}/${p.programa}-${p.corte}-${Date.now()}.${ext}`;
   await spacesClient.send(new PutObjectCommand({ Bucket: SPACES_BUCKET, Key: key, Body: p.archivo.buf, ContentType: p.archivo.tipo, ACL: 'private' }));
+  if (p.reemplazaId) {
+    const r = await queryOne<{ estado: string }>(`SELECT "estado" FROM "LIQ_ADVISOR_FACTURAS" WHERE "_id"=$1 AND "liqId"=$2`, [p.reemplazaId, liq._id]);
+    if (!r || !['RECIBIDA', 'DEVUELTA'].includes(r.estado)) throw new ConflictError('Esa factura ya no se puede reemplazar.');
+  } else if (p.modo === 'agregar') {
+    const n = await queryOne<{ n: string }>(`SELECT COUNT(*)::text AS n FROM "LIQ_ADVISOR_FACTURAS" WHERE "liqId"=$1 AND "estado"='RECIBIDA'`, [liq._id]);
+    if (Number(n?.n || 0) >= MAX_FACTURAS_CORTE) throw new ValidationError(`Máximo ${MAX_FACTURAS_CORTE} facturas por corte: reemplace o quite una.`);
+  }
   const extraido = await leerFacturaIA(p.archivo.buf, p.archivo.tipo, p.archivo.nombre);
-  await query(`UPDATE "LIQ_ADVISOR_FACTURAS" SET "estado"='REEMPLAZADA' WHERE "liqId"=$1 AND "estado" IN ('RECIBIDA','DEVUELTA')`, [liq._id]);
+  if (p.reemplazaId) {
+    await query(`UPDATE "LIQ_ADVISOR_FACTURAS" SET "estado"='REEMPLAZADA' WHERE "_id"=$1`, [p.reemplazaId]);
+  } else if (p.modo === 'agregar') {
+    // Tras una devolución, lo devuelto se reemplaza por el conjunto nuevo que se está subiendo.
+    await query(`UPDATE "LIQ_ADVISOR_FACTURAS" SET "estado"='REEMPLAZADA' WHERE "liqId"=$1 AND "estado"='DEVUELTA'`, [liq._id]);
+  } else {
+    await query(`UPDATE "LIQ_ADVISOR_FACTURAS" SET "estado"='REEMPLAZADA' WHERE "liqId"=$1 AND "estado" IN ('RECIBIDA','DEVUELTA')`, [liq._id]);
+  }
   const id = generateId('lfa');
   await query(
-    `INSERT INTO "LIQ_ADVISOR_FACTURAS" ("_id","liqId","url","nombre","tipo","extraido","estado","subidoPor") VALUES ($1,$2,$3,$4,$5,$6,'RECIBIDA',$7)`,
-    [id, liq._id, key, p.archivo.nombre.slice(0, 250), p.archivo.tipo, extraido ? JSON.stringify(extraido) : null, actor.email]);
-  await log(liq, 'FACTURA_SUBIDA', actor, { id, nombre: p.archivo.nombre, enNombreDe: !opts.esAdvisor, leida: !!extraido }, c.estado, 'FACTURA_RECIBIDA');
+    `INSERT INTO "LIQ_ADVISOR_FACTURAS" ("_id","liqId","url","nombre","tipo","extraido","estado","subidoPor","concepto") VALUES ($1,$2,$3,$4,$5,$6,'RECIBIDA',$7,$8)`,
+    [id, liq._id, key, p.archivo.nombre.slice(0, 250), p.archivo.tipo, extraido ? JSON.stringify(extraido) : null, actor.email, concepto]);
+  await log(liq, 'FACTURA_SUBIDA', actor, { id, nombre: p.archivo.nombre, concepto, modo: p.reemplazaId ? 'reemplazar-una' : p.modo || 'reemplazar', enNombreDe: !opts.esAdvisor, leida: !!extraido }, c.estado, 'FACTURA_RECIBIDA');
   return { id, extraido };
+}
+
+/** Quita una factura recibida del corte (p. ej. subida por error). El advisor solo las suyas; nunca con el corte verificado. */
+export async function quitarFactura(facturaId: string, actor: Actor, opts: { advisorId?: string }) {
+  const f = await queryOne<any>(
+    `SELECT f."_id", f."estado", f."nombre", l."_id" AS "liqId", l."advisorId", l."programa", l."periodo", l."corte", l."estado" AS "estadoLiq"
+       FROM "LIQ_ADVISOR_FACTURAS" f JOIN "LIQ_ADVISOR" l ON l."_id" = f."liqId" WHERE f."_id" = $1`, [facturaId]);
+  if (!f || (opts.advisorId && f.advisorId !== opts.advisorId)) throw new NotFoundError('Factura', facturaId);
+  if (f.programa === 'KIDS') throw new ValidationError('Las facturas de Kids se gestionan en la plataforma KIDS.');
+  if (CERRADOS.includes(f.estadoLiq)) throw new ConflictError('El corte ya está verificado: la factura no se puede quitar.');
+  if (f.estado !== 'RECIBIDA') throw new ConflictError('Solo se puede quitar una factura recibida.');
+  await query(`UPDATE "LIQ_ADVISOR_FACTURAS" SET "estado"='REEMPLAZADA' WHERE "_id"=$1`, [facturaId]);
+  await log({ _id: f.liqId, advisorId: f.advisorId }, 'FACTURA_QUITADA', actor, { id: facturaId, nombre: f.nombre });
 }
 
 export async function urlFactura(facturaId: string): Promise<{ url: string; advisorId: string }> {
@@ -318,9 +408,11 @@ export async function devolverFactura(p: { advisorId: string; programa: 'LGS' | 
   if (comentario.length < 10) throw new ValidationError('Explique al advisor qué debe corregir (mínimo 10 caracteres).');
   const c = await corteActual(p.advisorId, p.programa, p.periodo, p.corte);
   if (c.estado !== 'FACTURA_RECIBIDA' || !c.factura) throw new ConflictError('No hay una factura recibida para devolver.');
-  await query(`UPDATE "LIQ_ADVISOR_FACTURAS" SET "estado"='DEVUELTA', "comentarioDevolucion"=$2, "devueltaPor"=$3, "devueltaEn"=NOW() WHERE "_id"=$1`,
-    [c.factura._id, comentario, actor.email]);
-  await log({ _id: c.liqId, advisorId: p.advisorId }, 'FACTURA_DEVUELTA', actor, { facturaId: c.factura._id, comentario }, c.estado, 'DEVUELTA');
+  // Se devuelve el CONJUNTO (todas las recibidas del corte): el advisor sube de nuevo lo que corresponda.
+  const ids = c.facturas.filter((f) => f.estado === 'RECIBIDA').map((f) => f._id);
+  await query(`UPDATE "LIQ_ADVISOR_FACTURAS" SET "estado"='DEVUELTA', "comentarioDevolucion"=$2, "devueltaPor"=$3, "devueltaEn"=NOW() WHERE "_id" = ANY($1::text[])`,
+    [ids, comentario, actor.email]);
+  await log({ _id: c.liqId, advisorId: p.advisorId }, 'FACTURA_DEVUELTA', actor, { facturaIds: ids, comentario }, c.estado, 'DEVUELTA');
   await avisarKids(c.liqId, 'DEVUELTA', comentario);
 }
 
@@ -344,13 +436,14 @@ export async function verificar(p: { advisorId: string; programa: 'LGS' | 'KIDS'
     horas: c.horas, valor: c.valor, moneda: c.moneda, corte: p.corte, tipoContratacion: a.tipoContratacion, categoria: a.categoriaTarifa,
     porConcepto: p.corte === 'MES' ? a.porConcepto : a.porConceptoQ[p.corte === 'Q1' ? 'q1' : 'q2'],
     porTipo: a.porTipo, tarifas: a.valor?.tarifas, fijo: a.valor?.fijo, reparto: a.reparto, totalMes: a.total, valorMes: a.valor?.total,
-    tipoCambio: L.tipoCambio, factura: c.factura ? { id: c.factura._id, inconsistencias: c.factura.inconsistencias } : null,
+    tipoCambio: L.tipoCambio,
+    factura: c.factura ? { id: c.factura._id, ids: c.facturas.map((f) => f._id), inconsistencias: c.factura.inconsistencias } : null,
     congeladoEn: new Date().toISOString(),
   };
   await query(
     `UPDATE "LIQ_ADVISOR" SET "estado"='VERIFICADO', "snapshot"=$2, "valor"=$3, "moneda"=$4, "verificadoPor"=$5, "verificadoEn"=NOW(), "_updatedDate"=NOW() WHERE "_id"=$1`,
     [liq._id, JSON.stringify(snapshot), c.valor, c.moneda, actor.email]);
-  if (c.factura) await query(`UPDATE "LIQ_ADVISOR_FACTURAS" SET "estado"='ACEPTADA' WHERE "_id"=$1`, [c.factura._id]);
+  await query(`UPDATE "LIQ_ADVISOR_FACTURAS" SET "estado"='ACEPTADA' WHERE "liqId"=$1 AND "estado"='RECIBIDA'`, [liq._id]);
   await log(liq, 'VERIFICADO', actor, { horas: c.horas, valor: c.valor, moneda: c.moneda, inconsistencias: c.factura?.inconsistencias || [] }, c.estado, 'VERIFICADO');
   if (p.programa === 'KIDS') await avisarKids(liq._id, 'ACEPTADA');
 }

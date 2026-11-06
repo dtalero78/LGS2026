@@ -15,13 +15,14 @@ import { ChevronLeftIcon, ChevronRightIcon, DocumentArrowUpIcon, EyeIcon, ClockI
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { api, handleApiError } from '@/hooks/use-api'
 import {
-  COLUMNAS_TIPO, ESTADO_CORTE, CORTE_LABEL, CONCEPTOS_AJUSTE, fmtH, etiquetaPeriodo, corrPeriodo, type EstadoCorte, type Corte,
+  COLUMNAS_TIPO, ESTADO_CORTE, CORTE_LABEL, CONCEPTOS_AJUSTE, CONCEPTOS_FACTURA, MAX_FACTURAS_CORTE, fmtH, etiquetaPeriodo, corrPeriodo, type EstadoCorte, type Corte,
 } from '@/components/administracion/liquidacion-tipos'
 
 interface CorteAdv {
   programa: 'LGS' | 'KIDS'; corte: Corte; estado: EstadoCorte; requiereFactura: boolean; plazo: string; plazoReenvio: string | null; horas: number
   ajustes: { fecha: string; concepto: string; horas: number; motivo: string; alcance: string; semanaInicio: string | null }[]
   factura: null | { _id: string; nombre: string | null; estado: string; subidoEn: string; comentarioDevolucion: string | null }
+  facturas: { _id: string; nombre: string | null; estado: string; subidoEn: string; concepto: string | null; comentarioDevolucion: string | null }[]
 }
 interface Datos {
   periodo: string; parcial: boolean; semanas: { n: number; inicio: string; fin: string }[]
@@ -48,16 +49,33 @@ export default function MisHorasPage() {
   }, [periodo])
   useEffect(() => { cargar() }, [cargar])
 
-  const subir = async (c: CorteAdv, file: File) => {
+  // Concepto elegido para la próxima factura de cada corte.
+  const [conceptoSel, setConceptoSel] = useState<Record<string, string>>({})
+
+  /** agregar = suma una factura al corte; reemplazaId = sustituye esa factura. */
+  const subir = async (c: CorteAdv, file: File, op: { agregar?: boolean; reemplazaId?: string; concepto?: string | null }) => {
     setSubiendo(`${c.programa}-${c.corte}`)
     try {
       const fd = new FormData()
       fd.set('file', file); fd.set('programa', c.programa); fd.set('periodo', periodo); fd.set('corte', c.corte)
+      if (op.concepto) fd.set('concepto', op.concepto)
+      if (op.reemplazaId) fd.set('reemplazaId', op.reemplazaId)
+      else if (op.agregar) fd.set('modo', 'agregar')
       const res = await fetch('/api/postgres/panel-advisor/mis-horas/factura', { method: 'POST', body: fd })
       const j = await res.json().catch(() => ({}))
       if (!res.ok || !j?.success) throw new Error(j?.details || j?.error || `Error ${res.status}`)
       toast.success('Factura recibida. Administración la revisará.'); cargar()
     } catch (e: any) { handleApiError(e, e?.message || 'No se pudo subir la factura') } finally { setSubiendo(null) }
+  }
+
+  const quitar = async (id: string) => {
+    if (!window.confirm('¿Quitar esta factura del corte?')) return
+    try {
+      const res = await fetch(`/api/postgres/panel-advisor/mis-horas/factura?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok || !j?.success) throw new Error(j?.details || j?.error || `Error ${res.status}`)
+      toast.success('Factura quitada'); cargar()
+    } catch (e: any) { handleApiError(e, e?.message || 'No se pudo quitar la factura') }
   }
 
   const planta = d?.advisor.tipoContratacion === 'PLANTA'
@@ -147,39 +165,76 @@ export default function MisHorasPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-xs text-gray-500">Suba su factura o boleta (PDF o imagen) por cada corte. La fecha debe estar dentro del periodo y las horas deben coincidir con las de la plataforma. Una vez verificada no se puede reemplazar.</p>
+            <p className="text-xs text-gray-500">
+              Suba su factura o boleta (PDF o imagen) por cada corte. Puede cobrar el corte en <b>varias facturas</b> (hasta {MAX_FACTURAS_CORTE}, p. ej. una por horas normales y otra por Exam. Internacional): se revisan <b>sumadas</b> contra las horas de la plataforma.
+              La fecha debe estar dentro del periodo. Una vez verificadas no se pueden reemplazar.
+            </p>
             {d.cortes.filter(c => c.requiereFactura).length === 0 && <p className="p-6 text-center text-sm text-gray-500">No hay cortes por facturar en {etiquetaPeriodo(periodo)}.</p>}
             {d.cortes.filter(c => c.requiereFactura).map(c => {
               const cerrado = c.estado === 'VERIFICADO' || c.estado === 'PAGADO'
               const vencido = c.estado === 'SIN_FACTURA'
               const plazo = c.plazoReenvio && c.plazoReenvio > c.plazo ? c.plazoReenvio : c.plazo
               const k = `${c.programa}-${c.corte}`
+              const devueltas = c.estado === 'DEVUELTA'
+              const recibidas = c.facturas.filter(f => f.estado === 'RECIBIDA').length
+              const puedeSubir = !cerrado && !vencido && c.programa !== 'KIDS'
+              const concepto = conceptoSel[k] || 'NORMAL'
               return (
-                <div key={k} className="rounded-lg border border-gray-200 bg-white p-4 flex flex-wrap items-center gap-3">
-                  <div className="min-w-[180px]">
-                    <div className="text-sm font-semibold text-gray-900">{c.programa === 'KIDS' ? 'Kids' : 'LGS'} · {c.corte === 'MES' ? etiquetaPeriodo(periodo) : `${CORTE_LABEL[c.corte]} ${etiquetaPeriodo(periodo)}`}</div>
-                    <div className="text-xs text-gray-500">{fmtH(c.horas)} h · plazo {fFecha(plazo)}</div>
+                <div key={k} className="rounded-lg border border-gray-200 bg-white p-4 space-y-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="min-w-[180px]">
+                      <div className="text-sm font-semibold text-gray-900">{c.programa === 'KIDS' ? 'Kids' : 'LGS'} · {c.corte === 'MES' ? etiquetaPeriodo(periodo) : `${CORTE_LABEL[c.corte]} ${etiquetaPeriodo(periodo)}`}</div>
+                      <div className="text-xs text-gray-500">{fmtH(c.horas)} h · plazo {fFecha(plazo)}</div>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${ESTADO_CORTE[c.estado].cls}`}>{ESTADO_CORTE[c.estado].l}</span>
+                    {!cerrado && c.programa === 'KIDS' && <span className="ml-auto text-xs text-fuchsia-700 font-semibold">Súbela en la plataforma KIDS · Mis horas y facturas</span>}
+                    {cerrado && <span className="ml-auto text-xs text-emerald-700 font-semibold">Verificada — lista para pago</span>}
                   </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${ESTADO_CORTE[c.estado].cls}`}>{ESTADO_CORTE[c.estado].l}</span>
-                  {c.factura && (
-                    <a href={`/api/postgres/administracion/factura/${c.factura._id}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-sky-700 hover:underline">
-                      <EyeIcon className="h-3.5 w-3.5" /> {c.factura.nombre || 'Ver factura'} ({fFecha(c.factura.subidoEn)})
-                    </a>
+
+                  {c.facturas.length > 0 && (
+                    <ul className="divide-y divide-gray-100 rounded-md border border-gray-100">
+                      {c.facturas.map(f => (
+                        <li key={f._id} className="flex flex-wrap items-center gap-2 px-3 py-2 text-xs">
+                          {f.concepto && <span className="rounded bg-sky-50 px-1.5 py-0.5 font-semibold text-sky-800">{CONCEPTOS_FACTURA.find(x => x.v === f.concepto)?.l || f.concepto}</span>}
+                          <a href={`/api/postgres/administracion/factura/${f._id}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sky-700 hover:underline">
+                            <EyeIcon className="h-3.5 w-3.5" /> {f.nombre || 'Ver factura'}
+                          </a>
+                          <span className="text-gray-400">{fFecha(f.subidoEn)}{f.estado === 'DEVUELTA' ? ' · devuelta' : ''}</span>
+                          {puedeSubir && f.estado === 'RECIBIDA' && (
+                            <span className="ml-auto flex items-center gap-3">
+                              <label className={`cursor-pointer font-semibold text-sky-700 hover:underline ${subiendo === k ? 'pointer-events-none opacity-50' : ''}`}>
+                                Reemplazar
+                                <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden"
+                                  onChange={e => { const fl = e.target.files?.[0]; if (fl) subir(c, fl, { reemplazaId: f._id, concepto: f.concepto }); e.target.value = '' }} />
+                              </label>
+                              <button type="button" onClick={() => quitar(f._id)} className="font-semibold text-red-600 hover:underline">Quitar</button>
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
                   )}
-                  {c.estado === 'DEVUELTA' && c.factura?.comentarioDevolucion && (
-                    <div className="basis-full text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-1.5">Administración la devolvió: “{c.factura.comentarioDevolucion}”. Suba la corregida antes del {fFecha(plazo)}.</div>
+
+                  {devueltas && c.factura?.comentarioDevolucion && (
+                    <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-1.5">
+                      Administración {c.facturas.length > 1 ? 'las' : 'la'} devolvió: “{c.factura.comentarioDevolucion}”. Suba {c.facturas.length > 1 ? 'de nuevo sus facturas corregidas' : 'la corregida'} antes del {fFecha(plazo)}.
+                    </div>
                   )}
-                  {vencido && <div className="basis-full text-xs text-red-700">Venció el plazo para subir la factura. Comuníquese con Administración.</div>}
-                  {/* Guías Kids: su factura se sube en KIDS (Mis horas y facturas) y llega sola aquí. */}
-                  {!cerrado && c.programa === 'KIDS' && <span className="ml-auto text-xs text-fuchsia-700 font-semibold">Súbela en la plataforma KIDS · Mis horas y facturas</span>}
-                  {!cerrado && !vencido && c.programa !== 'KIDS' && (
-                    <label className={`ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-sky-700 rounded-md cursor-pointer hover:bg-sky-800 ${subiendo === k ? 'opacity-50 pointer-events-none' : ''}`}>
-                      <DocumentArrowUpIcon className="h-4 w-4" /> {subiendo === k ? 'Subiendo…' : c.factura ? 'Reemplazar factura' : 'Subir factura'}
-                      <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden"
-                        onChange={e => { const f = e.target.files?.[0]; if (f) subir(c, f); e.target.value = '' }} />
-                    </label>
+                  {vencido && <div className="text-xs text-red-700">Venció el plazo para subir la factura. Comuníquese con Administración.</div>}
+
+                  {puedeSubir && (devueltas || recibidas < MAX_FACTURAS_CORTE) && (
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <select value={concepto} onChange={e => setConceptoSel(s => ({ ...s, [k]: e.target.value }))} aria-label="Concepto de la factura"
+                        className="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs">
+                        {CONCEPTOS_FACTURA.map(x => <option key={x.v} value={x.v}>{x.l}</option>)}
+                      </select>
+                      <label className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-sky-700 rounded-md cursor-pointer hover:bg-sky-800 ${subiendo === k ? 'opacity-50 pointer-events-none' : ''}`}>
+                        <DocumentArrowUpIcon className="h-4 w-4" /> {subiendo === k ? 'Subiendo…' : recibidas > 0 ? 'Agregar otra factura' : 'Subir factura'}
+                        <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden"
+                          onChange={e => { const f = e.target.files?.[0]; if (f) subir(c, f, { agregar: true, concepto }); e.target.value = '' }} />
+                      </label>
+                    </div>
                   )}
-                  {cerrado && <span className="ml-auto text-xs text-emerald-700 font-semibold">Verificada — lista para pago</span>}
                 </div>
               )
             })}

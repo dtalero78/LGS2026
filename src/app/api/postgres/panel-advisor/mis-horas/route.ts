@@ -25,6 +25,8 @@ export const GET = handlerWithStaffAuth(async (req: NextRequest, _ctx, session) 
       horas: c.horas,
       ajustes: c.ajustes.map((x) => ({ fecha: x.fecha, concepto: x.concepto, horas: x.horas, motivo: x.motivo, alcance: x.alcance, semanaInicio: x.semanaInicio })),
       factura: c.factura ? { _id: c.factura._id, nombre: c.factura.nombre, estado: c.factura.estado, subidoEn: c.factura.subidoEn, comentarioDevolucion: c.factura.comentarioDevolucion } : null,
+      // Todas las facturas del corte (puede cobrar en varias, p. ej. horas normales + Exam. Intern.).
+      facturas: c.facturas.map((f) => ({ _id: f._id, nombre: f.nombre, estado: f.estado, subidoEn: f.subidoEn, concepto: f.concepto, comentarioDevolucion: f.comentarioDevolucion })),
     })),
   });
 });
