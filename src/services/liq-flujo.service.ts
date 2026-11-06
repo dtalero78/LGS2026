@@ -384,12 +384,13 @@ export async function subirFactura(p: {
 }
 
 /** Quita una factura recibida del corte (p. ej. subida por error). El advisor solo las suyas; nunca con el corte verificado. */
-export async function quitarFactura(facturaId: string, actor: Actor, opts: { advisorId?: string }) {
+export async function quitarFactura(facturaId: string, actor: Actor, opts: { advisorId?: string; desdeKids?: boolean }) {
   const f = await queryOne<any>(
     `SELECT f."_id", f."estado", f."nombre", l."_id" AS "liqId", l."advisorId", l."programa", l."periodo", l."corte", l."estado" AS "estadoLiq"
        FROM "LIQ_ADVISOR_FACTURAS" f JOIN "LIQ_ADVISOR" l ON l."_id" = f."liqId" WHERE f."_id" = $1`, [facturaId]);
   if (!f || (opts.advisorId && f.advisorId !== opts.advisorId)) throw new NotFoundError('Factura', facturaId);
-  if (f.programa === 'KIDS') throw new ValidationError('Las facturas de Kids se gestionan en la plataforma KIDS.');
+  // Las de Kids las quita la guía desde KIDS (llega por /api/kids-sync/factura-guia), no desde LGS.
+  if (f.programa === 'KIDS' && !opts.desdeKids) throw new ValidationError('Las facturas de Kids se gestionan en la plataforma KIDS.');
   if (CERRADOS.includes(f.estadoLiq)) throw new ConflictError('El corte ya está verificado: la factura no se puede quitar.');
   if (f.estado !== 'RECIBIDA') throw new ConflictError('Solo se puede quitar una factura recibida.');
   await query(`UPDATE "LIQ_ADVISOR_FACTURAS" SET "estado"='REEMPLAZADA' WHERE "_id"=$1`, [facturaId]);

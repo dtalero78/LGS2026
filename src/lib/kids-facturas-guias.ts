@@ -1,7 +1,7 @@
 import 'server-only';
 import { query, queryMany, queryOne } from '@/lib/postgres';
 import { kidsIntake, type EstadoFacturaKids, type KidsFacturaGuia } from '@/lib/kids-intake';
-import { subirFactura, listarCortes } from '@/services/liq-flujo.service';
+import { subirFactura, quitarFactura, listarCortes } from '@/services/liq-flujo.service';
 import type { Corte } from '@/services/liquidacion-advisors.service';
 
 /**
@@ -32,8 +32,18 @@ async function tomarFactura(f: KidsFacturaGuia): Promise<ResultadoFacturaKids> {
         WHERE a."kidsUserId" = $1 LIMIT 1`, [f.guiaUserId]);
     if (!adv) throw new Error('La guía aún no está registrada en LGS. Intente de nuevo en unos minutos.');
     const archivo = await kidsIntake.archivoFacturaGuia(f.id);
+    // Varias facturas por corte: el reemplazo de KIDS apunta a SU id → se traduce al de LGS.
+    // Si LGS nunca tomó la reemplazada (seguía enviándose), la nueva simplemente se agrega.
+    let modo: 'agregar' | 'reemplazar' = f.modo === 'agregar' ? 'agregar' : 'reemplazar';
+    let reemplazaId: string | null = null;
+    if (f.reemplazaId) {
+      const previa = await queryOne<{ _id: string }>(
+        `SELECT "_id" FROM "LIQ_ADVISOR_FACTURAS" WHERE "kidsFacturaId" = $1 AND "estado" IN ('RECIBIDA','DEVUELTA')`, [f.reemplazaId]);
+      if (previa) reemplazaId = previa._id; else modo = 'agregar';
+    }
     const r = await subirFactura(
-      { advisorId: adv._id, programa: 'KIDS', periodo: f.periodo, corte: f.corte as Corte, archivo: { buf: archivo.bytes, tipo: archivo.mime, nombre: f.nombre } },
+      { advisorId: adv._id, programa: 'KIDS', periodo: f.periodo, corte: f.corte as Corte, archivo: { buf: archivo.bytes, tipo: archivo.mime, nombre: f.nombre },
+        concepto: f.concepto || null, modo, reemplazaId },
       { email: adv.email || `kids:${f.username}`, nombre: adv.nombre || f.username, rol: 'GUIA_KIDS' },
       { esAdvisor: true });
     await query(`UPDATE "LIQ_ADVISOR_FACTURAS" SET "kidsFacturaId" = $2 WHERE "_id" = $1`, [r.id, f.id]);
@@ -57,16 +67,34 @@ export async function tomarFacturasKids(soloId?: string): Promise<ResultadoFactu
 }
 
 /**
+ * La guía quitó en KIDS una factura que LGS ya tomó: se retira también aquí (mismas
+ * reglas que en LGS: solo RECIBIDA y con el corte sin verificar). Si LGS no la tiene, ok.
+ */
+export async function quitarFacturaDesdeKids(kidsFacturaId: string): Promise<{ quitada: boolean }> {
+  const f = await queryOne<{ _id: string; estado: string }>(
+    `SELECT "_id", "estado" FROM "LIQ_ADVISOR_FACTURAS" WHERE "kidsFacturaId" = $1`, [kidsFacturaId]);
+  if (!f || f.estado === 'REEMPLAZADA') return { quitada: false };
+  await quitarFactura(f._id, { email: 'kids-sync', nombre: 'Guía (desde KIDS)', rol: 'GUIA_KIDS' }, { desdeKids: true });
+  return { quitada: true };
+}
+
+/** Estado de la factura en LGS que corresponde a cada estado que se informa a KIDS. */
+const ESTADO_LGS: Record<EstadoFacturaKids, string> = {
+  RECIBIDA: 'RECIBIDA', DEVUELTA: 'DEVUELTA', ACEPTADA: 'ACEPTADA', PAGADA: 'ACEPTADA', RECHAZADA: 'RECHAZADA',
+};
+
+/**
  * Devuelve a KIDS el estado de las facturas de un corte (best-effort, nunca frena la
- * operación de LGS). Se llama tras devolver, verificar, pagar o reabrir.
+ * operación de LGS). Se llama tras devolver, verificar, pagar o reabrir. Un corte puede
+ * tener varias facturas: se avisa a todas las que quedaron en ese estado.
  */
 export async function avisarEstadoFacturasKids(liqId: string | null, estado: EstadoFacturaKids, motivo?: string | null): Promise<void> {
   if (!liqId || !kidsIntake.isConfigured()) return;
   try {
     const filas = await queryMany<{ _id: string; kidsFacturaId: string }>(
       `SELECT "_id", "kidsFacturaId" FROM "LIQ_ADVISOR_FACTURAS"
-        WHERE "liqId" = $1 AND "kidsFacturaId" IS NOT NULL AND "estado" <> 'REEMPLAZADA'
-        ORDER BY "subidoEn" DESC LIMIT 1`, [liqId]);
+        WHERE "liqId" = $1 AND "kidsFacturaId" IS NOT NULL AND "estado" = $2
+        ORDER BY "subidoEn"`, [liqId, ESTADO_LGS[estado]]);
     for (const f of filas) {
       await kidsIntake.estadoFacturaGuia(f.kidsFacturaId, { estado, motivo: motivo ?? null, lgsFacturaId: f._id });
     }

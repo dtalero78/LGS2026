@@ -146,6 +146,8 @@ export type EstadoFacturaKids = 'RECIBIDA' | 'DEVUELTA' | 'RECHAZADA' | 'ACEPTAD
 export interface KidsFacturaGuia {
   id: string; guiaUserId: string; username: string; periodo: string; corte: 'MES' | 'Q1' | 'Q2';
   nombre: string; mime: string; subidaEn: string;
+  /** KIDS v23: un corte se puede cobrar en varias facturas (concepto + agregar / reemplazar una). */
+  concepto?: string | null; modo?: 'agregar' | 'reemplazar' | string | null; reemplazaId?: string | null;
 }
 
 /** Error tipado de la puerta KIDS (lleva status HTTP y code del cuerpo). */
