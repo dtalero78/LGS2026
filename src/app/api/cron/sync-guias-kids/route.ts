@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { recordCronRun } from '@/lib/cron-runs'
 import { sincronizarGuiasKids } from '@/lib/kids-guias-sync'
+import { tomarFacturasKids } from '@/lib/kids-facturas-guias'
 
 const CRON_SECRET = process.env.CRON_SECRET
 
@@ -17,16 +18,20 @@ export async function GET(request: NextRequest) {
   }
   try {
     let detalle: any[] = []
+    let facturas: any[] = []
     const result = await recordCronRun('sync-guias-kids', async () => {
       detalle = await sincronizarGuiasKids()
+      // Facturas que las guías subieron en KIDS y no llegaron por el aviso inmediato.
+      facturas = await tomarFacturasKids().catch((e) => { console.warn('Cron sync-guias-kids: facturas', e?.message); return [] })
       const ok = detalle.filter(d => d.estado === 'creada' || d.estado === 'actualizada').length
       const fallidas = detalle.filter(d => d.estado === 'error').length
-      return { processedCount: detalle.length, successCount: ok, failedCount: fallidas, metadata: { detalle } }
+      return { processedCount: detalle.length, successCount: ok, failedCount: fallidas, metadata: { detalle, facturas } }
     })
     return NextResponse.json({
       success: true,
-      message: `Guías KIDS: ${result.successCount} sincronizada(s), ${result.failedCount} con error, ${detalle.filter(d => d.estado === 'pendiente').length} pendiente(s)`,
+      message: `Guías KIDS: ${result.successCount} sincronizada(s), ${result.failedCount} con error, ${detalle.filter(d => d.estado === 'pendiente').length} pendiente(s) · facturas tomadas: ${facturas.length}`,
       detalle,
+      facturas,
       timestamp: new Date().toISOString(),
     })
   } catch (error) {

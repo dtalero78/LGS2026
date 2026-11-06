@@ -148,7 +148,9 @@ function UnCorte({ a, c, periodo, semanas, p, onCambio }: { a: AdvisorLiq; c: Co
                 {c.factura.estado === 'DEVUELTA' && <span className="text-amber-700">devuelta: “{c.factura.comentarioDevolucion}”</span>}
               </>
             ) : <span className="text-gray-400">sin subir</span>}
-            {(p.devolver || p.verificar) && !cerrado && (
+            {/* Guías Kids: la factura se sube en KIDS y llega sola aquí (lib/kids-facturas-guias). */}
+            {c.programa === 'KIDS' && !cerrado && <span className="ml-auto text-[11px] text-fuchsia-700">La sube la guía en KIDS · Mis horas y facturas</span>}
+            {(p.devolver || p.verificar) && !cerrado && c.programa !== 'KIDS' && (
               <label className="ml-auto inline-flex items-center gap-1 cursor-pointer text-sky-700 hover:underline">
                 <DocumentArrowUpIcon className="h-4 w-4" /> Subir en su nombre
                 <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" disabled={ocupado}

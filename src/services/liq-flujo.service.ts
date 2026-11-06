@@ -321,6 +321,13 @@ export async function devolverFactura(p: { advisorId: string; programa: 'LGS' | 
   await query(`UPDATE "LIQ_ADVISOR_FACTURAS" SET "estado"='DEVUELTA', "comentarioDevolucion"=$2, "devueltaPor"=$3, "devueltaEn"=NOW() WHERE "_id"=$1`,
     [c.factura._id, comentario, actor.email]);
   await log({ _id: c.liqId, advisorId: p.advisorId }, 'FACTURA_DEVUELTA', actor, { facturaId: c.factura._id, comentario }, c.estado, 'DEVUELTA');
+  await avisarKids(c.liqId, 'DEVUELTA', comentario);
+}
+
+/** Guías Kids: la factura vino de KIDS → se le devuelve el estado (import dinámico: evita ciclo). */
+async function avisarKids(liqId: string | null, estado: 'RECIBIDA' | 'DEVUELTA' | 'ACEPTADA' | 'PAGADA', motivo?: string) {
+  const { avisarEstadoFacturasKids } = await import('@/lib/kids-facturas-guias');
+  await avisarEstadoFacturasKids(liqId, estado, motivo);
 }
 
 export async function verificar(p: { advisorId: string; programa: 'LGS' | 'KIDS'; periodo: string; corte: Corte }, actor: Actor) {
@@ -345,6 +352,7 @@ export async function verificar(p: { advisorId: string; programa: 'LGS' | 'KIDS'
     [liq._id, JSON.stringify(snapshot), c.valor, c.moneda, actor.email]);
   if (c.factura) await query(`UPDATE "LIQ_ADVISOR_FACTURAS" SET "estado"='ACEPTADA' WHERE "_id"=$1`, [c.factura._id]);
   await log(liq, 'VERIFICADO', actor, { horas: c.horas, valor: c.valor, moneda: c.moneda, inconsistencias: c.factura?.inconsistencias || [] }, c.estado, 'VERIFICADO');
+  if (p.programa === 'KIDS') await avisarKids(liq._id, 'ACEPTADA');
 }
 
 export async function bloqueoPorGrupoActivo(): Promise<boolean> {
@@ -373,6 +381,7 @@ export async function registrarPago(p: { advisorId: string; programa: 'LGS' | 'K
     `UPDATE "LIQ_ADVISOR" SET "estado"='PAGADO', "pagadoPor"=$2, "pagadoEn"=$3::date, "referenciaPago"=$4, "_updatedDate"=NOW() WHERE "_id"=$1`,
     [c.liqId, actor.email, p.fecha, referencia]);
   await log({ _id: c.liqId, advisorId: p.advisorId }, 'PAGADO', actor, { fecha: p.fecha, referencia, valor: c.snapshot?.valor, moneda: c.snapshot?.moneda }, 'VERIFICADO', 'PAGADO');
+  if (p.programa === 'KIDS') await avisarKids(c.liqId, 'PAGADA');
 }
 
 export async function reabrir(p: { advisorId: string; programa: 'LGS' | 'KIDS'; periodo: string; corte: Corte; motivo: string }, actor: Actor) {
@@ -387,6 +396,7 @@ export async function reabrir(p: { advisorId: string; programa: 'LGS' | 'KIDS'; 
             "pagadoPor"=NULL, "pagadoEn"=NULL, "referenciaPago"=NULL, "_updatedDate"=NOW() WHERE "_id"=$1`, [liq._id]);
   await query(`UPDATE "LIQ_ADVISOR_FACTURAS" SET "estado"='RECIBIDA' WHERE "liqId"=$1 AND "estado"='ACEPTADA'`, [liq._id]);
   await log(liq, 'REABIERTO', actor, { motivo, snapshotAnterior: liq.snapshot, pago: liq.referenciaPago }, liq.estado, 'ABIERTO');
+  if (p.programa === 'KIDS') await avisarKids(liq._id, 'RECIBIDA');
 }
 
 export async function logDeAdvisor(advisorId: string, periodo: string) {

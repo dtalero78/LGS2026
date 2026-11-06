@@ -7,7 +7,7 @@ import { subirFactura } from '@/services/liq-flujo.service';
 
 /**
  * POST /api/postgres/administracion/cortes/factura  (multipart: file, advisorId, programa, periodo, corte)
- * Administración sube la factura EN NOMBRE del advisor (p. ej. guías Kids sin login en LGS).
+ * Administración sube la factura EN NOMBRE de un advisor LGS (las de Kids llegan desde KIDS).
  * Gate: FACTURA_DEVOLVER o VERIFICAR.
  */
 export const POST = handlerWithStaffAuth(async (req: NextRequest, _ctx, session) => {
@@ -15,6 +15,8 @@ export const POST = handlerWithStaffAuth(async (req: NextRequest, _ctx, session)
   const form = await req.formData();
   const file = form.get('file');
   if (!file || typeof file === 'string') throw new ValidationError('Adjunte el archivo de la factura.');
+  // Guías Kids: la sube la guía en KIDS y llega sola (lib/kids-facturas-guias).
+  if (form.get('programa') === 'KIDS') throw new ValidationError('La factura de Kids la sube la guía en la plataforma KIDS.');
   const u = (session?.user as any) || {};
   const res = await subirFactura({
     advisorId: String(form.get('advisorId') || ''), programa: form.get('programa') === 'KIDS' ? 'KIDS' : 'LGS',

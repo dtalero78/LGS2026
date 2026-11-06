@@ -170,7 +170,9 @@ export default function MisHorasPage() {
                     <div className="basis-full text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-3 py-1.5">Administración la devolvió: “{c.factura.comentarioDevolucion}”. Suba la corregida antes del {fFecha(plazo)}.</div>
                   )}
                   {vencido && <div className="basis-full text-xs text-red-700">Venció el plazo para subir la factura. Comuníquese con Administración.</div>}
-                  {!cerrado && !vencido && (
+                  {/* Guías Kids: su factura se sube en KIDS (Mis horas y facturas) y llega sola aquí. */}
+                  {!cerrado && c.programa === 'KIDS' && <span className="ml-auto text-xs text-fuchsia-700 font-semibold">Súbela en la plataforma KIDS · Mis horas y facturas</span>}
+                  {!cerrado && !vencido && c.programa !== 'KIDS' && (
                     <label className={`ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-sky-700 rounded-md cursor-pointer hover:bg-sky-800 ${subiendo === k ? 'opacity-50 pointer-events-none' : ''}`}>
                       <DocumentArrowUpIcon className="h-4 w-4" /> {subiendo === k ? 'Subiendo…' : c.factura ? 'Reemplazar factura' : 'Subir factura'}
                       <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden"

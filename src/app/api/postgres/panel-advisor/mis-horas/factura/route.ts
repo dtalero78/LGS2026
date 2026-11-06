@@ -15,6 +15,7 @@ export const POST = handlerWithStaffAuth(async (req: NextRequest, _ctx, session)
   const form = await req.formData();
   const file = form.get('file');
   if (!file || typeof file === 'string') throw new ValidationError('Adjunte el archivo de la factura.');
+  if (form.get('programa') === 'KIDS') throw new ValidationError('La factura de Kids se sube en la plataforma KIDS (Mis horas y facturas).');
   const { id } = await subirFactura({
     advisorId: adv._id, programa: form.get('programa') === 'KIDS' ? 'KIDS' : 'LGS',
     periodo: String(form.get('periodo') || ''), corte: String(form.get('corte') || '') as any,

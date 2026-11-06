@@ -140,6 +140,14 @@ export interface KidsGuia {
   zoomUrl: string | null; fotoFileId: string | null; actualizadoEn: string;
 }
 
+/** Estado de una factura de guía, tal como la ve la guía en KIDS. */
+export type EstadoFacturaKids = 'RECIBIDA' | 'DEVUELTA' | 'RECHAZADA' | 'ACEPTADA' | 'PAGADA';
+/** Factura de guía subida en KIDS (GET /api/kids-intake/facturas-guias). */
+export interface KidsFacturaGuia {
+  id: string; guiaUserId: string; username: string; periodo: string; corte: 'MES' | 'Q1' | 'Q2';
+  nombre: string; mime: string; subidaEn: string;
+}
+
 /** Error tipado de la puerta KIDS (lleva status HTTP y code del cuerpo). */
 export class KidsIntakeError extends Error {
   status?: number;
@@ -209,6 +217,21 @@ export const kidsIntake = {
    */
   guias: (usuario?: string) =>
     call<{ guias: KidsGuia[] }>('GET', `/api/kids-intake/guias${usuario ? `?usuario=${encodeURIComponent(usuario)}` : ''}`),
+  /** Facturas de guías subidas en KIDS que LGS aún no ha tomado (estado ENVIANDO). KIDS v22+. */
+  facturasGuiasPendientes: () =>
+    call<{ facturas: KidsFacturaGuia[] }>('GET', '/api/kids-intake/facturas-guias?pendientes=1'),
+  /** Archivo de una factura de guía (bytes + tipo). KIDS v22+. */
+  archivoFacturaGuia: async (id: string): Promise<{ bytes: Buffer; mime: string }> => {
+    if (!isKidsIntakeConfigured()) throw new KidsIntakeError('Integración KIDS no configurada.');
+    const res = await fetch(`${BASE}/api/kids-intake/facturas-guias/${encodeURIComponent(id)}/archivo`, {
+      headers: { 'x-api-key': API_KEY }, cache: 'no-store',
+    });
+    if (!res.ok) throw new KidsIntakeError(`KIDS archivo de factura HTTP ${res.status}`, res.status);
+    return { bytes: Buffer.from(await res.arrayBuffer()), mime: (res.headers.get('content-type') || 'application/pdf').split(';')[0] };
+  },
+  /** Le informa a KIDS el estado de una factura de guía en LGS (para que la guía lo vea). KIDS v22+. */
+  estadoFacturaGuia: (id: string, cuerpo: { estado: EstadoFacturaKids; motivo?: string | null; lgsFacturaId?: string | null }) =>
+    call<{ ok: boolean }>('POST', `/api/kids-intake/facturas-guias/${encodeURIComponent(id)}/estado`, cuerpo),
   /** Foto del guía (bytes + tipo) o null si no tiene. KIDS v21+. */
   fotoGuia: async (guiaUserId: string): Promise<{ bytes: Buffer; mime: string } | null> => {
     if (!isKidsIntakeConfigured()) return null;
