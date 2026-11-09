@@ -11,6 +11,7 @@
  *
  * Cada correo debe coincidir con exactamente 1 fila o el script se detiene.
  * Dry-run por defecto; --apply escribe en una transacción.
+ * --borrar [--apply]: elimina esos registros ya desactivados (respaldo JSON en docs/).
  */
 require('dotenv').config({ path: '.env.local', quiet: true });
 const { Client } = require('pg');
@@ -56,6 +57,28 @@ const DESACTIVAR = [
     return r.rows[0];
   };
   try {
+    // --borrar: elimina los registros de DESACTIVAR (ya inactivos), con respaldo en docs/.
+    if (process.argv.includes('--borrar')) {
+      const filas = [];
+      for (const [p] of DESACTIVAR) {
+        const r = await c.query(`SELECT * FROM "EQUIPO_COMERCIAL" WHERE LOWER(TRIM("correo")) = $1`, [p]);
+        if (!r.rows.length) { console.log(`  = ${p} ya no existe`); continue; }
+        if (r.rows[0].activo !== false) throw new Error(`${p} sigue activo: primero desactívelo`);
+        if (r.rows[0].usuarioRolId) throw new Error(`${p} tiene login enlazado (usuarioRolId): no se borra`);
+        filas.push(r.rows[0]);
+      }
+      console.table(filas.map((f) => ({ correo: f.correo, nombre: f.nombre, plataforma: f.plataforma })));
+      if (!APPLY) { console.log('(dry-run — use --borrar --apply para borrar)'); return; }
+      const bk = `docs/backup-equipo-comercial-borrados-${Date.now()}.json`;
+      require('fs').writeFileSync(bk, JSON.stringify(filas, null, 1));
+      await c.query('BEGIN');
+      try {
+        for (const f of filas) await c.query(`DELETE FROM "EQUIPO_COMERCIAL" WHERE "_id" = $1 AND "activo" = false`, [f._id]);
+        await c.query('COMMIT');
+      } catch (e) { await c.query('ROLLBACK'); throw e; }
+      console.log(`✅ ${filas.length} borrados. Respaldo: ${bk}`);
+      return;
+    }
     const plan = [];
     for (const [p, f] of FILIALES) {
       const e = await una(p);
