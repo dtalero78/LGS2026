@@ -59,7 +59,25 @@ const MOTIVOS: Record<Faltante, { label: string; ayuda: string; cls: string }> =
   RECIBO: { label: 'Sin recibo', ayuda: 'Sin recibo de inscripción', cls: 'bg-orange-100 text-orange-800' },
   DRIVE: { label: 'Sin Drive', ayuda: 'Sin contrato generado en el Drive', cls: 'bg-slate-200 text-slate-700' },
 }
-const textoMotivo = (r: { faltantes?: Faltante[] }) => (r.faltantes || []).map(k => MOTIVOS[k].label).join(', ')
+/** Aprobado (o ya FINALIZADA tras estar aprobado). */
+const esAprobado = (a: string) => /^(aprobad|finaliz)/i.test(String(a || '').trim())
+/** Sin estado en la ficha: "Sin firmar", "Pendiente aprobación" o listo para aprobación. */
+const esPendiente = (a: string) => a === SIN_FIRMAR || a === 'Pendiente aprobación' || a === ESTADO_LISTO
+/**
+ * Pestaña Libro: los Aprobados y los pendientes de aprobación COMPLETOS (firmados, con
+ * documentos y con recibo de inscripción). Todo lo demás va a Por resolver.
+ */
+const vaAlLibro = (r: { aprobacion: string; firmado: boolean; faltantes?: Faltante[] }) => {
+  if (esAprobado(r.aprobacion)) return true
+  const f = r.faltantes || []
+  return esPendiente(r.aprobacion) && r.firmado && !f.includes('DOCUMENTOS') && !f.includes('RECIBO')
+}
+/** Motivo de un contrato en Por resolver: un estado de anulación (nulo, devuelto…) o lo que le falta. */
+const motivosDe = (r: { aprobacion: string; faltantes?: Faltante[] }): { label: string; ayuda: string; cls: string }[] =>
+  !esAprobado(r.aprobacion) && !esPendiente(r.aprobacion)
+    ? [{ label: r.aprobacion, ayuda: `Estado del contrato: ${r.aprobacion}`, cls: 'bg-red-100 text-red-800' }]
+    : (r.faltantes || []).map(k => MOTIVOS[k])
+const textoMotivo = (r: { aprobacion: string; faltantes?: Faltante[] }) => motivosDe(r).map(m => m.label).join(', ')
 
 const TODOS = '__todos__'
 const SIN_FIRMAR = 'Sin firmar' // estado que asigna el servicio al titular sin firma ni aprobación
@@ -148,8 +166,8 @@ const COL_MOTIVO: Col = {
   key: 'motivo', header: 'Motivo', w: 250,
   titular: r => (
     <span className="flex flex-wrap gap-1">
-      {(r.faltantes || []).map(k => (
-        <span key={k} title={MOTIVOS[k].ayuda} className={`px-1.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${MOTIVOS[k].cls}`}>{MOTIVOS[k].label}</span>
+      {motivosDe(r).map(m => (
+        <span key={m.label} title={m.ayuda} className={`px-1.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${m.cls}`}>{m.label}</span>
       ))}
     </span>
   ),
@@ -243,17 +261,21 @@ export default function LibroProduccionPage() {
 function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; sinFirmar?: boolean }) {
   const { hasPermission } = usePermissions()
   const puedeExportar = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_EXPORTAR)
-  // Casilla de la celda Item: Depurar (Libro, firmado sin aprobar) o Ratificar por correo (Por resolver).
-  const puedeAccion = hasPermission(sinFirmar ? AprobacionPermission.LIBRO_PRODUCCION_RATIFICAR : AprobacionPermission.LIBRO_PRODUCCION_DEPURAR)
-  const conCasilla = (r: Registro) => puedeAccion && (sinFirmar || r.aprobacion === 'Pendiente aprobación' || r.aprobacion === ESTADO_LISTO)
+  // Casilla de la celda Item, por fila: Ratificar por correo (sin firmar) o Depurar (firmado sin aprobar).
+  const puedeRatificar = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_RATIFICAR)
+  const puedeDepurar = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_DEPURAR)
+  const accionDe = (r: Registro): 'ratificar' | 'depurar' | null =>
+    r.aprobacion === SIN_FIRMAR ? (puedeRatificar ? 'ratificar' : null)
+    : (r.aprobacion === 'Pendiente aprobación' || r.aprobacion === ESTADO_LISTO) && puedeDepurar ? 'depurar' : null
+  const conCasilla = (r: Registro) => accionDe(r) !== null
   const { cols: COLS, fijas: FIJAS, lefts: LEFTS } = sinFirmar ? LAYOUT_POR_RESOLVER : LAYOUT_LIBRO
-  const [accion, setAccion] = useState<string | null>(null)
+  const [accion, setAccion] = useState<{ id: string; tipo: 'ratificar' | 'depurar' } | null>(null)
   const [vigencias, setVigencias] = useState<Vigencia[]>([])
   const [vigencia, setVigencia] = useState<Vigencia | null>(null)
   const [todos, setRegistros] = useState<Registro[]>([])
-  // Pestaña Libro = todo menos "Sin firmar"; pestaña Por resolver = solo esos. El Item se numera por pestaña.
+  // Pestaña Libro = Aprobados + pendientes completos (firma, documentos, recibo); Por resolver = el resto. El Item se numera por pestaña.
   const registros = useMemo(() => todos
-    .filter(r => (r.aprobacion === SIN_FIRMAR) === sinFirmar)
+    .filter(r => vaAlLibro(r) !== sinFirmar)
     .map((r, i) => ({ ...r, item: i + 1 })), [todos, sinFirmar])
   const [loading, setLoading] = useState(true)
   const [abiertos, setAbiertos] = useState<Set<string>>(new Set())
@@ -459,9 +481,9 @@ function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; si
                                 </button>
                               ) : <span className="w-3.5" />}
                               {conCasilla(r) && (
-                                <input type="checkbox" checked={accion === r.titularId} onChange={() => setAccion(r.titularId)}
-                                  title={sinFirmar ? 'Ratificar con el correo "SÍ, ACEPTO"' : 'Depurar este contrato (firmado sin aprobar)'}
-                                  className={`mx-0.5 h-3.5 w-3.5 cursor-pointer rounded ${sinFirmar ? 'accent-emerald-600' : 'accent-red-600'}`} />
+                                <input type="checkbox" checked={accion?.id === r.titularId} onChange={() => setAccion({ id: r.titularId, tipo: accionDe(r)! })}
+                                  title={accionDe(r) === 'ratificar' ? 'Ratificar con el correo "SÍ, ACEPTO"' : 'Depurar este contrato (firmado sin aprobar)'}
+                                  className={`mx-0.5 h-3.5 w-3.5 cursor-pointer rounded ${accionDe(r) === 'ratificar' ? 'accent-emerald-600' : 'accent-red-600'}`} />
                               )}
                               {r.item}
                             </span>
@@ -493,7 +515,7 @@ function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; si
       )}
 
       {accion && (
-        <LibroAccionModal titularId={accion} accion={sinFirmar ? 'ratificar' : 'depurar'}
+        <LibroAccionModal titularId={accion.id} accion={accion.tipo}
           onClose={() => setAccion(null)} onDone={() => { setAccion(null); cargar(vigencia?._id) }} />
       )}
 
