@@ -29,7 +29,8 @@ import { api, handleApiError } from '@/hooks/use-api'
 import { usePermissions } from '@/hooks/usePermissions'
 import { exportToExcel } from '@/lib/export-excel'
 import AjustesRecaudosPanel from './AjustesRecaudosPanel'
-import RecibosDobles, { type ReciboArchivo, sumaLeida, fmtPesos } from '@/components/common/RecibosDobles'
+import RecibosDobles, { type ReciboArchivo, sumaLeida, fmtPesos, recibosAdjuntos } from '@/components/common/RecibosDobles'
+import { MAX_RECIBOS, errorCantidadRecibos, etiquetaRecibos } from '@/lib/recibos-multiples'
 
 interface DocAdjunto { url: string; nombre?: string | null; tipo?: string | null; fechaSubida?: string | null }
 
@@ -564,12 +565,20 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
     setReciboConfianza(e.confianza ?? null)
   }
   const sumaReciboDobles = sumaLeida(reciboDobles)
+  const reciboAdjuntos = recibosAdjuntos(reciboDobles)
+  // Varios recibos: el monto total se precarga con la suma leída (editable).
+  const onReciboDoblesChange = (r: (ReciboArchivo | null)[]) => {
+    setReciboDobles(r)
+    const suma = sumaLeida(r)
+    if (suma != null) setReciboForm(f => ({ ...f, monto: String(suma) }))
+  }
 
   const handleGuardarRecibo = async () => {
     if (!reciboModal?.contrato) { toast.error('Este pago no tiene contrato asociado'); return }
     if (reciboDos) {
-      if (!reciboDobles[0] || !reciboDobles[1]) { toast.error('Adjunta el recibo 1 y el recibo 2'); return }
-      if (!(Number(reciboForm.monto) > 0)) { toast.error('Digita el monto total del pago (los dos recibos juntos)'); return }
+      const err = errorCantidadRecibos(reciboAdjuntos.length)
+      if (err) { toast.error(err); return }
+      if (!(Number(reciboForm.monto) > 0)) { toast.error('Digita el monto total del pago (todos los recibos juntos)'); return }
     }
     setReciboGuardando(true)
     try {
@@ -579,9 +588,9 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
         ...(reciboDos ? {
           dosRecibos: true,
           montoManual: Number(reciboForm.monto),
-          recibos: reciboDobles.map(r => ({ url: r!.url, nombre: r!.nombre, tipo: r!.tipo ?? null, montoLeido: r!.montoLeido ?? null })),
+          recibos: reciboAdjuntos.map(r => ({ url: r.url, nombre: r.nombre, tipo: r.tipo ?? null, montoLeido: r.montoLeido ?? null, extraido: r.extraido ?? undefined })),
         } : {}),
-        url: reciboDos ? reciboDobles[0]!.url : reciboUrl,
+        url: reciboDos ? reciboAdjuntos[0].url : reciboUrl,
         campos: {
           medioPago: reciboForm.medioPago.trim() || null,
           fecha: reciboForm.fecha || null,
@@ -867,7 +876,7 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                         <td className="px-2 py-2 text-center align-top">
                           {p.reciboInscripcion?.dosRecibos && Array.isArray(p.reciboInscripcion.recibos) ? (
                             <div className="flex flex-col items-center gap-0.5"
-                              title={p.reciboInscripcion.montoManual ? `Dos recibos · total digitado $${Number(p.reciboInscripcion.montoManual).toLocaleString('es-CO')}` : 'Dos recibos'}>
+                              title={p.reciboInscripcion.montoManual ? `${etiquetaRecibos(p.reciboInscripcion.recibos.length)} · total $${Number(p.reciboInscripcion.montoManual).toLocaleString('es-CO')}` : etiquetaRecibos(p.reciboInscripcion.recibos.length)}>
                               {p.reciboInscripcion.recibos.map((r, i) => (
                                 <a key={i} href={r.url} target="_blank" rel="noopener noreferrer"
                                   className="inline-flex items-center gap-0.5 text-teal-700 hover:underline text-xs font-medium">
@@ -1281,10 +1290,10 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
                   onChange={() => { setReciboDos(d => !d); setReciboDobles([null, null]); setReciboUrl(null); setReciboFileName(''); setReciboForm(f => ({ ...f, monto: '' })) }}
                   disabled={reciboGuardando}
                   className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
-                El pago tiene dos recibos
+                El pago tiene varios recibos (hasta {MAX_RECIBOS})
               </label>
               {reciboDos && (
-                <RecibosDobles carpetaId={reciboModal.idPeople} recibos={reciboDobles} onChange={setReciboDobles}
+                <RecibosDobles carpetaId={reciboModal.idPeople} recibos={reciboDobles} onChange={onReciboDoblesChange}
                   leerConIA onLeido={onReciboDobleLeido} disabled={reciboGuardando} />
               )}
             </div>
@@ -1327,7 +1336,7 @@ export default function PagosValidacionPanel({ variant }: { variant: Variant }) 
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">
-                  {reciboDos ? <>Monto total (los dos recibos) <span className="text-red-500">*</span></> : 'Monto'}
+                  {reciboDos ? <>Monto total (todos los recibos) <span className="text-red-500">*</span></> : 'Monto'}
                 </label>
                 <input type="number" min={0} value={reciboForm.monto} onChange={e => setReciboForm(f => ({ ...f, monto: e.target.value.replace(/[^0-9.]/g, '') }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />

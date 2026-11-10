@@ -18,6 +18,7 @@ import { query, queryOne, queryMany } from '@/lib/postgres';
 import { asignarPagos, simularPago } from '@/lib/cuotas-pagos';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { validarNumeroFactura } from '@/lib/numero-factura';
+import { errorCantidadRecibos } from '@/lib/recibos-multiples';
 import { computePlataformaScope, getSessionPlataforma, buildPlataformaWhereSql, type PlataformaScope } from '@/lib/recaudos-scope';
 import { spacesClient, SPACES_BUCKET, SPACES_CDN } from '@/lib/spaces';
 import { fechaBaseContrato, resolveRealizadoPor } from '@/lib/cambio-contado';
@@ -424,17 +425,16 @@ export const pagosTitularesService = {
       );
     }
 
-    // Dos recibos: el pago se respalda con DOS comprobantes (recibo 1 y 2 en
-    // documentosAdjuntos) y el valor lo digita el operador. Se exige acá también.
+    // Varios recibos (2 a 5, nombre histórico dosRecibos): los comprobantes van en
+    // documentosAdjuntos marcados recibo 1..N y el operador confirma el valor total.
     const dosRecibos = input.dosRecibos === true;
     if (dosRecibos) {
       const docs = Array.isArray(input.documentosAdjuntos) ? input.documentosAdjuntos : [];
-      const tiene = (n: number) => docs.some((d: any) => Number(d?.recibo) === n && d?.url);
-      if (!tiene(1) || !tiene(2)) {
-        throw new ValidationError('Marcaste "El pago tiene dos recibos": adjunta el recibo 1 y el recibo 2');
-      }
+      const cantidad = docs.filter((d: any) => Number(d?.recibo) > 0 && d?.url).length;
+      const err = errorCantidadRecibos(cantidad);
+      if (err) throw new ValidationError(`Marcaste "El pago tiene varios recibos": ${err}`);
       if (valorPagadoNum <= 0) {
-        throw new ValidationError('Con dos recibos el valor del pago se digita a mano y debe ser mayor a 0');
+        throw new ValidationError('Con varios recibos el valor total del pago debe ser mayor a 0');
       }
     }
 

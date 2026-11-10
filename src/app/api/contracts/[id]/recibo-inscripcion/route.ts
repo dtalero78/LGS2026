@@ -5,6 +5,7 @@ import { ComercialPermission, Role } from '@/types/permissions';
 import { ForbiddenError, NotFoundError, ValidationError } from '@/lib/errors';
 import { queryOne } from '@/lib/postgres';
 import { esContratoPrueba } from '@/lib/contrato-prueba-guard';
+import { errorCantidadRecibos } from '@/lib/recibos-multiples';
 import { extraerReciboDesdeUrl, isLeerReciboActivo, guardarReciboInscripcionEnPeople } from '@/services/recibo-extract.service';
 
 /**
@@ -13,8 +14,8 @@ import { extraerReciboDesdeUrl, isLeerReciboActivo, guardarReciboInscripcionEnPe
  *   GET  /api/contracts/[id]/recibo-inscripcion  → { active, recibo, pagoInscripcion }
  *   POST /api/contracts/[id]/recibo-inscripcion  → sube+lee+guarda el recibo
  *        Body: { url, nombre?, tipo? }  (el archivo se sube antes por upload-url)
- *        Dos recibos: { dosRecibos: true, recibos: [{url,nombre,tipo},{...}], montoManual }
- *        → lee cada recibo con IA y guarda los dos + el monto TOTAL digitado.
+ *        Varios recibos (2 a 5): { dosRecibos: true, recibos: [{url,nombre,tipo,extraido?},…], montoManual }
+ *        → lee cada recibo con IA (si no viene ya leído) y guarda todos + el monto TOTAL confirmado.
  *
  * El recibo se guarda en PEOPLE."reciboInscripcion" (INDEPENDIENTE de la
  * documentación) y los datos leídos por IA se reflejan en FINANCIEROS.recibo*.
@@ -68,15 +69,17 @@ export const POST = handlerWithAuth(async (req: NextRequest, { params }, session
   const body = await req.json();
   const actor = (session?.user?.email as string) || 'desconocido';
 
-  // Dos recibos: se lee cada uno (un fallo de lectura no impide guardar) y el
-  // monto del pago es el digitado.
+  // Varios recibos (2 a 5): se usa lo que ya leyó el formulario o se lee aquí
+  // (un fallo de lectura no impide guardar); el monto es el total confirmado.
   if (body?.dosRecibos === true) {
     const archivos = Array.isArray(body?.recibos) ? body.recibos : [];
-    if (archivos.length !== 2 || archivos.some((r: any) => !String(r?.url || '').trim())) {
-      throw new ValidationError('Adjunta el recibo 1 y el recibo 2.');
-    }
+    const errCant = errorCantidadRecibos(archivos.length);
+    if (errCant) throw new ValidationError(errCant);
+    if (archivos.some((r: any) => !String(r?.url || '').trim())) throw new ValidationError('Hay un recibo sin archivo.');
     const extraidos = await Promise.all(
-      archivos.map((r: any) => extraerReciboDesdeUrl(String(r.url).trim()).catch(() => null)),
+      archivos.map((r: any) => (r?.extraido && typeof r.extraido === 'object')
+        ? Promise.resolve(r.extraido)
+        : extraerReciboDesdeUrl(String(r.url).trim()).catch(() => null)),
     );
     const recibos = archivos.map((r: any, i: number) => ({
       url: String(r.url).trim(), nombre: r?.nombre ?? null, tipo: r?.tipo ?? null, extraido: extraidos[i],

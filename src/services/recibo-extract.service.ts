@@ -14,6 +14,7 @@ import 'server-only';
 import { query, queryOne } from '@/lib/postgres';
 import { ValidationError, NotFoundError } from '@/lib/errors';
 import { registrarEventoContrato } from '@/lib/contrato-eventos';
+import { errorCantidadRecibos, etiquetaRecibos } from '@/lib/recibos-multiples';
 
 const FLAG_KEY = 'leer_recibo_activo';
 const OPENAI_MODEL = 'gpt-4o-mini';
@@ -232,14 +233,14 @@ export async function guardarReciboInscripcionEnPeople(opts: GuardarReciboInscri
   if (!peopleId) throw new ValidationError('peopleId es requerido.');
   const dos = opts.dosRecibos === true;
   if (dos) {
-    if (!Array.isArray(opts.recibos) || opts.recibos.length !== 2 || opts.recibos.some(r => !r?.url)) {
-      throw new ValidationError('Con dos recibos se deben adjuntar el recibo 1 y el recibo 2.');
-    }
+    const errCant = errorCantidadRecibos(Array.isArray(opts.recibos) ? opts.recibos.length : 0);
+    if (errCant) throw new ValidationError(errCant);
+    if (opts.recibos!.some(r => !r?.url)) throw new ValidationError('Hay un recibo sin archivo.');
     if (!(Number(opts.montoManual) > 0)) {
-      throw new ValidationError('Con dos recibos el monto del pago se digita a mano y debe ser mayor a 0.');
+      throw new ValidationError('Con varios recibos el monto total del pago debe ser mayor a 0.');
     }
   }
-  // Con dos recibos el monto que vale es el digitado (también en FINANCIEROS.reciboMonto).
+  // Con varios recibos el monto que vale es el confirmado por el operador (también en FINANCIEROS.reciboMonto).
   const c: Partial<ReciboExtraido> = dos ? { ...(opts.campos || {}), monto: Number(opts.montoManual) } : (opts.campos || {});
   const recibo: Record<string, any> = {
     url: opts.url ?? null,
@@ -264,7 +265,7 @@ export async function guardarReciboInscripcionEnPeople(opts: GuardarReciboInscri
   // El campo guarda solo el último recibo: cada subida queda en el Seguimiento del contrato.
   await registrarEventoContrato({
     personaId: peopleId, categoria: 'PAGOS', accion: 'Recibo de inscripción subido',
-    detalle: [opts.dosRecibos ? 'Dos recibos' : opts.nombre, c?.monto ? `monto leído ${c.monto}` : null].filter(Boolean).join(' · '),
+    detalle: [opts.dosRecibos ? etiquetaRecibos(opts.recibos?.length) : opts.nombre, c?.monto ? `monto leído ${c.monto}` : null].filter(Boolean).join(' · '),
     datos: { url: opts.url ?? null }, actor: opts.actor,
   });
 

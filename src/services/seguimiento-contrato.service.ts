@@ -2,6 +2,7 @@ import 'server-only';
 import { queryMany, queryOne } from '@/lib/postgres';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { registrarEventoContrato } from '@/lib/contrato-eventos';
+import { etiquetaRecibos } from '@/lib/recibos-multiples';
 
 /**
  * Seguimiento del contrato: bitácora de todo lo que le pasó al contrato y a sus personas
@@ -195,7 +196,7 @@ export async function seguimientoContrato(personaId: string): Promise<Seguimient
     const r = json(p.reciboInscripcion);
     if (r?.url && !urlsRegistradas.has(r.url)) {
       add({ id: `recibo-${p._id}`, fecha: r.subidoEn, categoria: 'PAGOS', accion: 'Recibo de inscripción subido',
-        detalle: [r.dosRecibos ? 'Dos recibos' : r.nombre, r.extraido?.monto && `monto leído ${money(r.extraido.monto)}`].filter(Boolean).join(' · '),
+        detalle: [r.dosRecibos ? etiquetaRecibos(Array.isArray(r.recibos) ? r.recibos.length : 2) : r.nombre, r.extraido?.monto && `monto leído ${money(r.extraido.monto)}`].filter(Boolean).join(' · '),
         usuario: r.subidoPor, usuarioEmail: r.subidoPor, personaId: p._id });
     }
   }

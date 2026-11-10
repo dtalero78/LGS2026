@@ -4,12 +4,13 @@ import { requirePermission, hasPermission } from '@/lib/api-permissions';
 import { PersonPermission } from '@/types/permissions';
 import { ForbiddenError, NotFoundError, ValidationError } from '@/lib/errors';
 import { queryOne } from '@/lib/postgres';
+import { errorCantidadRecibos } from '@/lib/recibos-multiples';
 import { guardarReciboEnFinanciero, guardarReciboInscripcionEnPeople, isLeerReciboActivo } from '@/services/recibo-extract.service';
 
 /**
  * POST /api/postgres/recaudos/inscripcion-recibo/guardar
  * Body: { contrato, idPeople?, url, campos: {medioPago,fecha,monto,referencia,banco,confianza} }
- *       Dos recibos: + { dosRecibos: true, recibos: [{url,nombre,tipo,montoLeido},{...}], montoManual }
+ *       Varios recibos (2 a 5): + { dosRecibos: true, recibos: [{url,nombre,tipo,montoLeido,extraido?},…], montoManual }
  * Guarda los datos confirmados por el operador en FINANCIEROS (columnas recibo*)
  * y, si hay archivo, también como recibo de inscripción del contrato
  * (PEOPLE."reciboInscripcion" del titular) — así se ve en la columna "Recibo insc.".
@@ -45,12 +46,16 @@ export const POST = handlerWithAuth(async (req: NextRequest, _ctx, session) => {
   if (!titular) throw new NotFoundError('Titular', `contrato ${contrato}`);
 
   const archivos = dosRecibos ? (Array.isArray(body?.recibos) ? body.recibos : []) : [];
-  if (dosRecibos && (archivos.length !== 2 || archivos.some((r: any) => !String(r?.url || '').trim()))) {
-    throw new ValidationError('Adjunta el recibo 1 y el recibo 2.');
+  if (dosRecibos) {
+    const err = errorCantidadRecibos(archivos.length);
+    if (err) throw new ValidationError(err);
+    if (archivos.some((r: any) => !String(r?.url || '').trim())) throw new ValidationError('Hay un recibo sin archivo.');
   }
   const recibos = archivos.map((r: any) => ({
     url: String(r.url).trim(), nombre: r?.nombre ?? null, tipo: r?.tipo ?? null,
-    extraido: r?.montoLeido != null ? { monto: Number(r.montoLeido) } : null,
+    extraido: r?.extraido && typeof r.extraido === 'object'
+      ? r.extraido
+      : (r?.montoLeido != null ? { monto: Number(r.montoLeido) } : null),
   }));
 
   await guardarReciboInscripcionEnPeople({
