@@ -242,7 +242,7 @@ function CrearContratoContent() {
   const activarCanje = (on: boolean) => {
     setFinancial(f => on
       ? { ...f, canje: true, modulo: false, tipoPlan: 'Canje', pagoInscripcion: 0, saldo: 0, numeroCuotas: 0,
-          valorCuota: 0, medioPago: 'Canje', vigencia: '', condicionesCanje: f.condicionesCanje?.length ? f.condicionesCanje : [''] }
+          valorCuota: 0, medioPago: 'Canje', vigencia: '3', condicionesCanje: f.condicionesCanje?.length ? f.condicionesCanje : [''] }
       : { ...f, canje: false, tipoPlan: '', medioPago: '', vigencia: '12', condicionesCanje: [] });
   };
   const setCondicion = (i: number, v: string) =>
