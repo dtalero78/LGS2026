@@ -38,7 +38,8 @@ interface Contrato {
   tipoUsuario: string
   aprobacion?: string
   hashConsentimiento?: string
-  documentacion?: string[]
+  documentacion?: any
+  tieneRecibo?: boolean
   _createdDate: Date
   fechaIngreso?: string | Date | null
   fechaProximaGestion?: Date
@@ -47,8 +48,17 @@ interface Contrato {
 interface FilterState {
   estado: string
   plataforma: string
+  documentos: '' | 'con' | 'sin'
   fechaInicio: Date | null
   fechaFin: Date | null
+}
+
+// Nº de documentos adjuntos del contrato (PEOPLE.documentacion, JSONB array;
+// tolera que llegue como string JSON). El recibo de inscripción va aparte.
+const contarDocumentos = (c: { documentacion?: any }): number => {
+  let d = c.documentacion
+  if (typeof d === 'string') { try { d = JSON.parse(d) } catch { return 0 } }
+  return Array.isArray(d) ? d.length : 0
 }
 
 const ESTADOS_APROBACION = [
@@ -75,6 +85,7 @@ export default function AprobacionPage() {
     // backlog operativo (contratos que el cliente ya firmó y esperan visto bueno).
     estado: 'Firmado sin aprobar',
     plataforma: '',
+    documentos: '',
     fechaInicio: null,
     fechaFin: null
   })
@@ -194,6 +205,10 @@ export default function AprobacionPage() {
       data = data.filter(c => (c.plataforma || '').toLowerCase().trim() === p)
     }
 
+    // Filtrar por documentos adjuntos
+    if (filters.documentos === 'con') data = data.filter(c => contarDocumentos(c) > 0)
+    else if (filters.documentos === 'sin') data = data.filter(c => contarDocumentos(c) === 0)
+
     // Filtrar por fechas
     if (filters.fechaInicio) {
       data = data.filter(c => new Date(c._createdDate) >= filters.fechaInicio!)
@@ -214,7 +229,7 @@ export default function AprobacionPage() {
       const filtered = getFilteredData()
       updatePagination(filtered)
     }
-  }, [searchApellido, filters.estado, filters.plataforma, filters.fechaInicio, filters.fechaFin])
+  }, [searchApellido, filters.estado, filters.plataforma, filters.documentos, filters.fechaInicio, filters.fechaFin])
 
   // Opciones de plataforma derivadas de los datos cargados (distintas, ordenadas).
   const plataformaOptions = Array.from(
@@ -397,6 +412,8 @@ export default function AprobacionPage() {
                 { header: 'Celular', accessor: (c) => c.celular },
                 { header: 'Email', accessor: (c) => c.email },
                 { header: 'Estado', accessor: (c) => getEstadoDisplay(c).text },
+                { header: 'Documentos', accessor: (c) => contarDocumentos(c) },
+                { header: 'Recibo inscripción', accessor: (c) => (c.tieneRecibo ? 'Sí' : 'No') },
                 { header: 'Fecha Contrato', accessor: (c) => new Date(c._createdDate).toLocaleDateString() },
               ], `aprobaciones-${new Date().toISOString().split('T')[0]}`)}
               disabled={getFilteredData().length === 0}
@@ -419,7 +436,7 @@ export default function AprobacionPage() {
         <div className="card p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
             {/* Búsqueda por apellido/nombre */}
-            <div className="lg:col-span-3">
+            <div className="lg:col-span-2">
               <label htmlFor="searchApellido" className="block text-sm font-medium text-gray-700 mb-1">
                 Buscar por nombre, ID o contrato
               </label>
@@ -472,8 +489,25 @@ export default function AprobacionPage() {
               </select>
             </div>
 
+            {/* Filtro de documentos */}
+            <div className="lg:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Documentos
+              </label>
+              <select
+                aria-label="Documentos"
+                value={filters.documentos}
+                onChange={(e) => setFilters(prev => ({ ...prev, documentos: e.target.value as FilterState['documentos'] }))}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Todos</option>
+                <option value="con">Con documentos</option>
+                <option value="sin">Sin documentos</option>
+              </select>
+            </div>
+
             {/* Rango de fechas */}
-            <div className="lg:col-span-5">
+            <div className="lg:col-span-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Rango de fechas
               </label>
@@ -518,7 +552,7 @@ export default function AprobacionPage() {
         {/* Información de resultados */}
         <div className="flex justify-between items-center">
           <h2 className="text-lg font-semibold">
-            {searchApellido || filters.estado || filters.plataforma || filters.fechaInicio || filters.fechaFin
+            {searchApellido || filters.estado || filters.plataforma || filters.documentos || filters.fechaInicio || filters.fechaFin
               ? `Registros filtrados (${getFilteredData().length})`
               : `Registros pendientes de aprobación (${allContratos.length})`
             }
@@ -596,6 +630,9 @@ export default function AprobacionPage() {
                       Contacto
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Documentos
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Estado
                     </th>
                   </tr>
@@ -649,6 +686,21 @@ export default function AprobacionPage() {
                           <div className="text-sm text-gray-500">{contrato.email}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
+                          {(() => {
+                            const n = contarDocumentos(contrato)
+                            return (
+                              <div className="flex flex-col gap-1">
+                                <span className={`px-2 py-0.5 inline-flex w-fit text-xs font-semibold rounded-full ${n > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-700'}`}>
+                                  {n > 0 ? `${n} documento${n === 1 ? '' : 's'}` : 'Sin documentos'}
+                                </span>
+                                <span className={`text-xs ${contrato.tieneRecibo ? 'text-green-700' : 'text-gray-400'}`}>
+                                  {contrato.tieneRecibo ? '✓ Recibo inscripción' : 'Sin recibo inscripción'}
+                                </span>
+                              </div>
+                            )
+                          })()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${estado.color}`}>
                             {estado.text}
                           </span>
@@ -680,7 +732,7 @@ export default function AprobacionPage() {
 
               {selectedContrato.documentacion && selectedContrato.documentacion.length > 0 ? (
                 <div className="grid grid-cols-2 gap-4 mb-4">
-                  {selectedContrato.documentacion.map((doc, index) => (
+                  {selectedContrato.documentacion.map((doc: any, index: number) => (
                     <div key={index} className="border rounded-lg p-3 flex items-center justify-between">
                       <span className="text-sm truncate flex-1">
                         Documento {index + 1}
