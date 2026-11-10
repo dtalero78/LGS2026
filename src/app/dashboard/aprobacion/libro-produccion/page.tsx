@@ -43,12 +43,23 @@ interface Registro {
   saldo: number | null; totalPlan: number | null; fechaPrimeraCuota: string | null
   suscripcionPago: boolean; prixus: boolean; factura: string | null
   aprobacion: string; aprobacionFicha: string | null; firmado: boolean
+  faltantes?: Faltante[]
   estado: string | null; observaciones: string | null; pais: string | null
   titular: { nombre: string; documento: string; telefono: string; correo: string; direccion: string; ciudad: string }
   referencias: { nombre: string; telefono: string; parentesco: string }[]
   comercial: Record<'ejecutivo' | 'fullExecutive' | 'jefeGrupo' | 'gerente' | 'gerenteDivision' | 'salesManager' | 'filial' | 'origenMatricula', string>
   beneficiarios: Benef[]
 }
+
+// Motivo (pestaña Por resolver): lo que le falta al contrato.
+type Faltante = 'FIRMA' | 'DOCUMENTOS' | 'RECIBO' | 'DRIVE'
+const MOTIVOS: Record<Faltante, { label: string; ayuda: string; cls: string }> = {
+  FIRMA: { label: 'Sin firmar', ayuda: 'No tiene consentimiento OTP de firma', cls: 'bg-red-100 text-red-800' },
+  DOCUMENTOS: { label: 'Sin documento', ayuda: 'Sin anexo de documentos', cls: 'bg-amber-100 text-amber-800' },
+  RECIBO: { label: 'Sin recibo', ayuda: 'Sin recibo de inscripción', cls: 'bg-orange-100 text-orange-800' },
+  DRIVE: { label: 'Sin Drive', ayuda: 'Sin contrato generado en el Drive', cls: 'bg-slate-200 text-slate-700' },
+}
+const textoMotivo = (r: { faltantes?: Faltante[] }) => (r.faltantes || []).map(k => MOTIVOS[k].label).join(', ')
 
 const TODOS = '__todos__'
 const SIN_FIRMAR = 'Sin firmar' // estado que asigna el servicio al titular sin firma ni aprobación
@@ -132,8 +143,29 @@ const COLS: Col[] = [
   { key: 'fil', header: 'Filial', w: 130, titular: r => r.comercial.filial },
   { key: 'ori', header: 'Origen matrícula', w: 190, titular: r => r.comercial.origenMatricula },
 ]
-const FIJAS = COLS.findIndex(c => c.key === 'cedula') + 1 // inmovilizadas: Item → Cédula titular
-const LEFTS = COLS.reduce<number[]>((acc, c, i) => { acc.push(i === 0 ? 0 : acc[i - 1] + COLS[i - 1].w); return acc }, [])
+// Columna Motivo: solo en "Por resolver", después de la Cédula (antes del Teléfono).
+const COL_MOTIVO: Col = {
+  key: 'motivo', header: 'Motivo', w: 250,
+  titular: r => (
+    <span className="flex flex-wrap gap-1">
+      {(r.faltantes || []).map(k => (
+        <span key={k} title={MOTIVOS[k].ayuda} className={`px-1.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${MOTIVOS[k].cls}`}>{MOTIVOS[k].label}</span>
+      ))}
+    </span>
+  ),
+}
+const COLS_POR_RESOLVER: Col[] = (() => {
+  const i = COLS.findIndex(c => c.key === 'cedula') + 1
+  return [...COLS.slice(0, i), COL_MOTIVO, ...COLS.slice(i)]
+})()
+/** Fijas = Item → Cédula titular; LEFTS = desplazamiento de cada columna fija. */
+const layout = (cols: Col[]) => ({
+  cols,
+  fijas: cols.findIndex(c => c.key === 'cedula') + 1,
+  lefts: cols.reduce<number[]>((acc, c, i) => { acc.push(i === 0 ? 0 : acc[i - 1] + cols[i - 1].w); return acc }, []),
+})
+const LAYOUT_LIBRO = layout(COLS)
+const LAYOUT_POR_RESOLVER = layout(COLS_POR_RESOLVER)
 
 // ── Página ──────────────────────────────────────────────────────────────────────
 export default function LibroProduccionPage() {
@@ -214,6 +246,7 @@ function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; si
   // Casilla de la celda Item: Depurar (Libro, firmado sin aprobar) o Ratificar por correo (Por resolver).
   const puedeAccion = hasPermission(sinFirmar ? AprobacionPermission.LIBRO_PRODUCCION_RATIFICAR : AprobacionPermission.LIBRO_PRODUCCION_DEPURAR)
   const conCasilla = (r: Registro) => puedeAccion && (sinFirmar || r.aprobacion === 'Pendiente aprobación' || r.aprobacion === ESTADO_LISTO)
+  const { cols: COLS, fijas: FIJAS, lefts: LEFTS } = sinFirmar ? LAYOUT_POR_RESOLVER : LAYOUT_LIBRO
   const [accion, setAccion] = useState<string | null>(null)
   const [vigencias, setVigencias] = useState<Vigencia[]>([])
   const [vigencia, setVigencia] = useState<Vigencia | null>(null)
@@ -287,6 +320,7 @@ function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; si
       { header: 'N° Contrato', accessor: x => x.r.contrato },
       { header: 'Nombre', accessor: x => x.b ? x.b.nombre : x.r.titular.nombre },
       { header: 'Cédula', accessor: x => x.b ? x.b.documento : x.r.titular.documento },
+      ...(sinFirmar ? [{ header: 'Motivo', accessor: (x: Fila) => x.b ? '' : textoMotivo(x.r) }] : []),
       { header: 'Teléfono', accessor: x => x.b ? x.b.telefono : x.r.titular.telefono },
       { header: 'Correo', accessor: x => x.b ? x.b.correo : x.r.titular.correo },
       { header: 'País', accessor: x => x.r.pais },
