@@ -293,6 +293,10 @@ export interface FilaGestion {
   anio: number; mes: number; semana: number | null; pais: string; filial: string; grupo: GrupoGestion;
   estado: string;
   escala: { ejTraining: string; fullExecutive: string; jefeGrupo: string; gerente: string; gerenteDivision: string; salesManager: string };
+  /** N° de contrato y _id del titular (lista de matrículas al pulsar un número). */
+  contrato: string; titularId: string;
+  /** Nombre del titular: solo si quien consulta tiene APROBACION.LIBRO_PRODUCCION.VER. */
+  titular?: string;
 }
 
 /**
@@ -300,7 +304,7 @@ export interface FilaGestion {
  * mes y semana de su vigencia, país, filial, grupo de estado y escala. Una sola consulta
  * (solo titulares; sin finanzas ni beneficiarios). Mismas reglas de vigencia que el libro.
  */
-export async function gestionComercial(anio: number, mes: number | null) {
+export async function gestionComercial(anio: number, mes: number | null, opts: { conTitular?: boolean } = {}) {
   const todas = await listarVigencias();
   const anios = Array.from(new Set(todas.map((v) => v.anio))).sort((a, b) => b - a);
   const vigs = todas.filter((v) => v.anio === anio && (!mes || v.mes === mes)).sort((a, b) => a.mes - b.mes);
@@ -309,7 +313,8 @@ export async function gestionComercial(anio: number, mes: number | null) {
 
   const rows = await queryMany<any>(
     `SELECT * FROM (
-       SELECT DISTINCT ON (p."contrato") p."plataforma", p."aprobacion", p."filial",
+       SELECT DISTINCT ON (p."contrato") p."_id" AS titular_id, p."contrato", p."plataforma", p."aprobacion", p."filial",
+              CONCAT_WS(' ', NULLIF(TRIM(p."primerNombre"),''), NULLIF(TRIM(p."segundoNombre"),''), NULLIF(TRIM(p."primerApellido"),''), NULLIF(TRIM(p."segundoApellido"),'')) AS titular_nombre,
               p."asesor", p."asesorCreadorContrato", p."fullExecutive", p."jefeGrupo", p."gerente", p."gerenteDivision", p."salesManager",
               (COALESCE(p."hashConsentimiento",'') <> '') AS firmado, p."listoAprobacion",
               to_char(p."fechaCreacion" AT TIME ZONE (${TZ_SQL}), 'YYYY-MM-DD"T"HH24:MI') AS creado_local
@@ -337,6 +342,8 @@ export async function gestionComercial(anio: number, mes: number | null) {
         jefeGrupo: limpio(t.jefeGrupo), gerente: limpio(t.gerente), gerenteDivision: limpio(t.gerenteDivision),
         salesManager: limpio(t.salesManager),
       },
+      contrato: t.contrato, titularId: t.titular_id,
+      ...(opts.conTitular ? { titular: limpio(t.titular_nombre) } : {}),
     });
   }
   return { anios, vigencias: vigs, filas };

@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { handlerWithStaffAuth, successResponse } from '@/lib/api-helpers';
-import { requirePermission } from '@/lib/api-permissions';
+import { requirePermission, hasPermission } from '@/lib/api-permissions';
 import { AprobacionPermission } from '@/types/permissions';
 import { gestionComercial } from '@/services/libro-produccion.service';
 
@@ -15,5 +15,7 @@ export const GET = handlerWithStaffAuth(async (req: NextRequest, _ctx, session) 
   const sp = new URL(req.url).searchParams;
   const anio = parseInt(sp.get('anio') || '', 10) || new Date().getFullYear();
   const mes = parseInt(sp.get('mes') || '', 10);
-  return successResponse(await gestionComercial(anio, mes >= 1 && mes <= 12 ? mes : null));
+  // El nombre del titular solo viaja a quien puede ver el Libro (los demás ven N° de contrato y asesor).
+  const conTitular = await hasPermission(session, AprobacionPermission.LIBRO_PRODUCCION_VER);
+  return successResponse(await gestionComercial(anio, mes >= 1 && mes <= 12 ? mes : null, { conTitular }));
 });

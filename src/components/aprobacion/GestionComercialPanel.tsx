@@ -11,7 +11,7 @@
  */
 
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import { ArrowPathIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
+import { ArrowPathIcon, ArrowDownTrayIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { api, handleApiError } from '@/hooks/use-api'
 import { exportToExcel } from '@/lib/export-excel'
 import { MESES, etiquetaSemana, semanasDeVigencia, type Vigencia } from '@/lib/vigencias-comerciales'
@@ -20,6 +20,9 @@ type Grupo = 'aprobada' | 'rechazada' | 'devuelta' | 'firmadaSinAprobar' | 'pend
 interface Fila {
   anio: number; mes: number; semana: number | null; pais: string; filial: string; grupo: Grupo; estado: string
   escala: Record<CargoKey, string>
+  contrato: string; titularId: string
+  /** Solo llega con permiso APROBACION.LIBRO_PRODUCCION.VER. */
+  titular?: string
 }
 type CargoKey = 'ejTraining' | 'fullExecutive' | 'jefeGrupo' | 'gerente' | 'gerenteDivision' | 'salesManager'
 const CARGOS: [CargoKey, string][] = [
@@ -41,8 +44,35 @@ const pct = (c: Conteo) => (c.total ? `${Math.round((c.aprobada / c.total) * 100
 /** Clave para agrupar un nombre escrito de varias formas (mayúsculas, tildes, espacios). */
 const clave = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
 
-function TablaConteo({ filas, titulo, primera }: { filas: { etiqueta: string; c: Conteo }[]; titulo?: string; primera: string }) {
-  const total = filas.reduce((t, f) => { (Object.keys(t) as (keyof Conteo)[]).forEach(k => { t[k] += f.c[k] }); return t }, vacio())
+type FilaPeriodo = { etiqueta: string; c: Conteo; lista: Fila[] }
+/** Celda pulsada: lo que se lista en la ventana de matrículas. */
+export interface Celda { titulo: string; filas: Fila[] }
+const delGrupo = (lista: Fila[], k: Grupo | 'total') => (k === 'total' ? lista : lista.filter(f => f.grupo === k))
+/** Texto al pasar el cursor por un número: N° de matrícula y asesor (Ej. Training). */
+const MAX_HOVER = 25
+const hoverDe = (lista: Fila[]) => {
+  const l = lista.slice(0, MAX_HOVER).map(f => `${f.contrato} · ${f.escala.ejTraining || 'sin asesor'}`)
+  if (lista.length > MAX_HOVER) l.push(`… y ${lista.length - MAX_HOVER} más (clic para ver todas)`)
+  return l.join('\n')
+}
+
+function TablaConteo({ filas, titulo, primera, contexto, onCelda }: {
+  filas: FilaPeriodo[]; titulo?: string; primera: string
+  /** Prefijo del título de la lista (p. ej. la filial). */
+  contexto?: string
+  onCelda?: (c: Celda) => void
+}) {
+  const todas = filas.flatMap(f => f.lista)
+  const total = contar(todas)
+  const celda = (lista: Fila[], k: Grupo | 'total', etiqueta: string, n: number, cls: string, label: string) => {
+    if (!n || !onCelda) return <span className={n ? cls : 'text-gray-300'}>{n}</span>
+    const sel = delGrupo(lista, k)
+    return (
+      <button type="button" title={hoverDe(sel)}
+        onClick={() => onCelda({ titulo: `${contexto ? contexto + ' · ' : ''}${etiqueta} · ${label}`, filas: sel })}
+        className={`${cls} rounded px-1 underline decoration-dotted underline-offset-2 hover:bg-indigo-50`}>{n}</button>
+    )
+  }
   return (
     <div className="overflow-x-auto">
       {titulo && <div className="px-3 pt-2 text-sm font-semibold text-gray-800">{titulo}</div>}
@@ -58,17 +88,73 @@ function TablaConteo({ filas, titulo, primera }: { filas: { etiqueta: string; c:
           {filas.map(f => (
             <tr key={f.etiqueta} className="border-b border-gray-100">
               <td className="px-3 py-1.5 font-medium text-gray-800">{f.etiqueta}</td>
-              {COLS.map(([k, , cls]) => <td key={k} className={`px-3 py-1.5 text-right tabular-nums ${f.c[k] ? cls : 'text-gray-300'}`}>{f.c[k]}</td>)}
+              {COLS.map(([k, l, cls]) => <td key={k} className="px-3 py-1.5 text-right tabular-nums">{celda(f.lista, k, f.etiqueta, f.c[k], cls, l)}</td>)}
               <td className="px-3 py-1.5 text-right tabular-nums text-gray-600">{pct(f.c)}</td>
             </tr>
           ))}
           <tr className="bg-indigo-50 font-bold">
             <td className="px-3 py-1.5 text-indigo-900">Total</td>
-            {COLS.map(([k, , cls]) => <td key={k} className={`px-3 py-1.5 text-right tabular-nums ${cls}`}>{total[k]}</td>)}
+            {COLS.map(([k, l, cls]) => <td key={k} className="px-3 py-1.5 text-right tabular-nums">{celda(todas, k, 'Total', total[k], cls, l)}</td>)}
             <td className="px-3 py-1.5 text-right tabular-nums text-indigo-900">{pct(total)}</td>
           </tr>
         </tbody>
       </table>
+    </div>
+  )
+}
+
+const ESTADO_CLS: Record<Grupo, string> = {
+  aprobada: 'bg-green-50 text-green-700', rechazada: 'bg-red-50 text-red-700', devuelta: 'bg-orange-50 text-orange-700',
+  firmadaSinAprobar: 'bg-amber-50 text-amber-700', pendiente: 'bg-slate-100 text-slate-600',
+}
+
+/** Ventana con la lista de matrículas de una celda (scroll); cada fila abre el contrato. */
+function ListaMatriculas({ celda, onClose, onAbrir }: { celda: Celda; onClose: () => void; onAbrir?: (titularId: string, ids: string[]) => void }) {
+  const conTitular = celda.filas.some(f => f.titular !== undefined)
+  const filas = [...celda.filas].sort((a, b) => a.contrato.localeCompare(b.contrato))
+  const ids = filas.map(f => f.titularId)
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-xl bg-white shadow-xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-start justify-between border-b px-5 py-3">
+          <div>
+            <h3 className="text-base font-bold text-gray-900">Matrículas ({filas.length})</h3>
+            <p className="text-xs text-gray-500">{celda.titulo}</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"><XMarkIcon className="h-5 w-5" /></button>
+        </div>
+        <div className="overflow-y-auto">
+          <table className="min-w-full text-sm">
+            <thead className="sticky top-0 bg-gray-50">
+              <tr className="text-[11px] uppercase tracking-wide text-gray-500">
+                <th className="px-3 py-2 text-left">#</th>
+                <th className="px-3 py-2 text-left">N° Contrato</th>
+                {conTitular && <th className="px-3 py-2 text-left">Titular</th>}
+                <th className="px-3 py-2 text-left">Asesor</th>
+                <th className="px-3 py-2 text-left">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filas.map((f, i) => (
+                <tr key={f.titularId} className="border-b border-gray-100">
+                  <td className="px-3 py-1.5 text-gray-400">{i + 1}</td>
+                  <td className="px-3 py-1.5 whitespace-nowrap">
+                    {onAbrir
+                      ? <button type="button" onClick={() => onAbrir(f.titularId, ids)} title="Abrir el contrato" className="font-medium text-indigo-700 hover:underline">{f.contrato}</button>
+                      : <span className="font-medium">{f.contrato}</span>}
+                  </td>
+                  {conTitular && <td className="px-3 py-1.5 text-gray-800">{f.titular || '—'}</td>}
+                  <td className="px-3 py-1.5 text-gray-600">{f.escala.ejTraining || '—'}</td>
+                  <td className="px-3 py-1.5"><span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${ESTADO_CLS[f.grupo]}`}>{f.estado || f.grupo}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex justify-end border-t px-5 py-3">
+          <button type="button" onClick={onClose} className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Cerrar</button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -78,7 +164,12 @@ const Lbl = ({ t, children }: { t: string; children: React.ReactNode }) => (
   <label className="text-xs text-gray-600"><span className="mb-0.5 block">{t}</span>{children}</label>
 )
 
-export default function GestionComercialPanel() {
+export default function GestionComercialPanel({ onAbrirContrato }: {
+  /** Abre el detalle del contrato del Libro (con Anterior/Siguiente sobre `ids`). */
+  onAbrirContrato?: (titularId: string, ids: string[]) => void
+} = {}) {
+  const [verFilial, setVerFilial] = useState<{ filial: string; pais: string; filas: Fila[] } | null>(null)
+  const [celdaAbierta, setCeldaAbierta] = useState<Celda | null>(null)
   const hoy = new Date()
   const [anio, setAnio] = useState(hoy.getFullYear())
   const [mes, setMes] = useState<number>(hoy.getMonth() + 1) // 0 = todos
@@ -107,13 +198,14 @@ export default function GestionComercialPanel() {
   useEffect(() => { if (filial && !filiales.includes(filial)) setFilial('') }, [filiales, filial])
 
   // Filas de la tabla principal: semanas del mes elegido, o meses si es "Todos".
-  const porPeriodo = (lista: Fila[]) => {
+  const porPeriodo = (lista: Fila[]): FilaPeriodo[] => {
+    const fp = (etiqueta: string, l: Fila[]) => ({ etiqueta, c: contar(l), lista: l })
     if (mes) {
       const v = data?.vigencias[0]
       const sem = v ? semanasDeVigencia(v) : []
-      return sem.map(s => ({ etiqueta: `Semana ${s.etiqueta} · ${s.inicio.slice(8, 10)}/${s.inicio.slice(5, 7)}`, c: contar(lista.filter(f => f.semana === s.numero)) }))
+      return sem.map(s => fp(`Semana ${s.etiqueta} · ${s.inicio.slice(8, 10)}/${s.inicio.slice(5, 7)}`, lista.filter(f => f.semana === s.numero)))
     }
-    return (data?.vigencias || []).map(v => ({ etiqueta: MESES[v.mes - 1], c: contar(lista.filter(f => f.mes === v.mes)) }))
+    return (data?.vigencias || []).map(v => fp(MESES[v.mes - 1], lista.filter(f => f.mes === v.mes)))
   }
 
   const cajasFilial = useMemo(() => {
@@ -239,7 +331,7 @@ export default function GestionComercialPanel() {
               <div className="border-b border-gray-100 px-4 py-2 text-sm font-semibold text-gray-800">
                 Resumen {periodo} · {pais || 'todas las plataformas'}
               </div>
-              <TablaConteo filas={porPeriodo(delPais)} primera={mes ? 'Semana' : 'Mes'} />
+              <TablaConteo filas={porPeriodo(delPais)} primera={mes ? 'Semana' : 'Mes'} contexto={pais || 'Todas las plataformas'} onCelda={setCeldaAbierta} />
             </section>
 
             <div className="flex flex-wrap items-end gap-3">
@@ -255,13 +347,17 @@ export default function GestionComercialPanel() {
               {cajasFilial.map(f => (
                 <section key={`${f.filial}|${f.pais}`} className="rounded-xl border border-gray-200 bg-white">
                   <div className="flex items-center justify-between border-b border-gray-100 px-4 py-2 text-sm">
-                    <span className="font-semibold text-gray-800">{f.filial}</span>
+                    <button type="button" onClick={() => setVerFilial(f)} title="Ver la tabla completa de la filial"
+                      className="font-semibold text-indigo-700 hover:underline">{f.filial}</button>
                     <span className="text-xs text-gray-500">{f.pais} · {f.filas.length} contrato(s)</span>
                   </div>
-                  <TablaConteo filas={porPeriodo(f.filas)} primera={mes ? 'Semana' : 'Mes'} />
+                  <TablaConteo filas={porPeriodo(f.filas)} primera={mes ? 'Semana' : 'Mes'} contexto={f.filial} onCelda={setCeldaAbierta} />
                 </section>
               ))}
             </div>
+            <p className="text-[11px] text-gray-400">
+              Pasa el cursor por un número para ver sus matrículas y asesor; haz clic en él para la lista completa. Clic en el nombre de una filial = su tabla completa.
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -336,6 +432,29 @@ export default function GestionComercialPanel() {
             </p>
           </div>
         )}
+
+      {verFilial && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={() => setVerFilial(null)}>
+          <div className="flex max-h-[90vh] w-full max-w-6xl flex-col rounded-xl bg-white shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between border-b px-5 py-3">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">{verFilial.filial}</h3>
+                <p className="text-xs text-gray-500">{verFilial.pais} · {periodo} · {verFilial.filas.length} contrato(s)</p>
+              </div>
+              <button type="button" onClick={() => setVerFilial(null)} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"><XMarkIcon className="h-5 w-5" /></button>
+            </div>
+            <div className="overflow-auto p-2">
+              <TablaConteo filas={porPeriodo(verFilial.filas)} primera={mes ? 'Semana' : 'Mes'} contexto={verFilial.filial} onCelda={setCeldaAbierta} />
+            </div>
+            <div className="flex items-center justify-between border-t px-5 py-3">
+              <span className="text-[11px] text-gray-400">Cursor sobre un número = matrículas y asesor · clic = lista completa</span>
+              <button type="button" onClick={() => setVerFilial(null)} className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {celdaAbierta && <ListaMatriculas celda={celdaAbierta} onClose={() => setCeldaAbierta(null)} onAbrir={onAbrirContrato} />}
     </div>
   )
 }

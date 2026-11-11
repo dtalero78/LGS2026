@@ -193,6 +193,7 @@ export default function LibroProduccionPage() {
   const puedeGestion = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_GESTION)
   const [tab, setTab] = useState<'libro' | 'sinFirmar' | 'gestion' | 'vigencias' | 'planes'>('libro')
   const esHoja = tab === 'libro' || tab === 'sinFirmar'
+  const [detalleGestion, setDetalleGestion] = useState<{ id: string; ids: string[] } | null>(null)
   // Pantalla completa: la hoja cubre todo (sin sidebar ni encabezado) y, si el
   // navegador lo permite, también entra en su modo de pantalla completa.
   const [completa, setCompleta] = useState(false)
@@ -249,9 +250,15 @@ export default function LibroProduccionPage() {
           </div>
           </>)}
           {esHoja ? <Libro key={tab} completa={completa} sinFirmar={tab === 'sinFirmar'} />
-            : tab === 'gestion' ? <GestionComercialPanel />
+            : tab === 'gestion' ? <GestionComercialPanel onAbrirContrato={(id, ids) => setDetalleGestion({ id, ids })} />
             : tab === 'vigencias' ? <Vigencias /> : <PlanesTiposPanel />}
         </div>
+        {/* Contrato abierto desde la lista de matrículas de la pestaña Gestión */}
+        {detalleGestion && (
+          <Detalle titularId={detalleGestion.id} ids={detalleGestion.ids}
+            onNavegar={id => setDetalleGestion(d => (d ? { ...d, id } : d))} onClose={() => setDetalleGestion(null)}
+            onCasillas={() => {}} onComercial={() => {}} />
+        )}
       </PermissionGuard>
     </DashboardLayout>
   )
