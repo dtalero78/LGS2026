@@ -637,7 +637,7 @@ function Detalle({ titularId, ids, onNavegar, onClose, onCasillas, onComercial }
               <div className="flex items-center gap-2">
                 {puedeSeguimiento && (
                   <button type="button" onClick={() => setVerSeguimiento(true)} title="Todo lo que ha pasado con el contrato: quién y cuándo"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-indigo-700 hover:bg-indigo-50">
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-400 text-gray-900 hover:bg-amber-500">
                     <ClockIcon className="h-4 w-4" /> Seguimiento
                   </button>
                 )}
