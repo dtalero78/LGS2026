@@ -1,7 +1,8 @@
 import 'server-only';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { query, queryOne, queryMany } from '@/lib/postgres';
-import { NotFoundError, ConflictError } from '@/lib/errors';
+import { NotFoundError, ConflictError, ValidationError } from '@/lib/errors';
+import { exigeComentarioEstado, comentarioValido, mensajeComentarioEstado } from '@/lib/comentario-aprobacion';
 import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { ids } from '@/lib/id-generator';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
@@ -33,7 +34,7 @@ async function approveOnePerson(
   personId: string,
   contrato: string | null,
   inicioContrato: string | null = null,
-  audit: { session: any; origen: OrigenAprobacion } | null = null
+  audit: { session: any; origen: OrigenAprobacion; motivo?: string | null } | null = null
 ): Promise<ApproveResult> {
   const person = await queryOne(
     `SELECT * FROM "PEOPLE" WHERE "_id" = $1`,
@@ -115,6 +116,7 @@ async function approveOnePerson(
       estadoAnterior: person.aprobacion,
       estadoNuevo: 'Aprobado',
       origen: audit.origen,
+      motivo: audit.motivo ?? null,
       session: audit.session,
     });
   }
@@ -352,10 +354,18 @@ export const POST = handlerWithAuth(async (
     throw new ConflictError('La persona ya está aprobada');
   }
 
+  // Comentario (lib/comentario-aprobacion): aprobar el contrato (titular) no lo pide —
+  // queda quién, fecha y hora—; aprobar un BENEFICIARIO sí (adición o reemplazo).
+  const body = await _request.json().catch(() => ({} as any));
+  const motivo = String(body?.motivo ?? '').trim() || null;
+  if (exigeComentarioEstado('Aprobado', person.tipoUsuario) && !comentarioValido(motivo)) {
+    throw new ValidationError(mensajeComentarioEstado('Aprobado'));
+  }
+
   const contrato = person.contrato;
 
   // Approve the person themselves
-  const mainResult = await approveOnePerson(personId, contrato, null, { session, origen: 'APROBAR' });
+  const mainResult = await approveOnePerson(personId, contrato, null, { session, origen: 'APROBAR', motivo });
 
   // ─── TITULAR: also approve all pending beneficiaries ───
   if (person.tipoUsuario === 'TITULAR' && contrato) {
@@ -466,7 +476,7 @@ export const POST = handlerWithAuth(async (
           estadoAnterior: titular.aprobacion,
           estadoNuevo: 'Aprobado',
           origen: 'APROBAR_CASCADA',
-          motivo: 'Titular auto-aprobado al aprobar un beneficiario',
+          motivo: ['Titular auto-aprobado al aprobar un beneficiario', motivo].filter(Boolean).join(' · '),
           session,
         });
       }

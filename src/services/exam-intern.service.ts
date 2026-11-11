@@ -23,6 +23,7 @@ import { sendWhatsAppMessage, formatPhoneNumber } from '@/lib/whatsapp';
 import { promoteToDoneAndBlock } from '@/services/special-nivel.service';
 import { ensureOnce } from '@/lib/ensure-once';
 import { sincronizarFinalTitularDe } from '@/lib/sync-final-titular';
+import { registrarCambioAprobacion, nombreDe } from '@/lib/aprobacion-audit';
 
 export type ExamPrueba = 'IELTS' | 'B2FIRST' | 'TOEFL';
 
@@ -208,8 +209,11 @@ export async function aplicarConfirmacion(
             finalContrato: string | null;
             extensionCount: number | null;
             extensionHistory: any;
+            aprobacion: string | null; contrato: string | null; tipoUsuario: string | null;
+            primerNombre: string | null; primerApellido: string | null;
           }>(
-            `SELECT "_id", "finalContrato", "extensionCount", "extensionHistory"
+            `SELECT "_id", "finalContrato", "extensionCount", "extensionHistory",
+                    "aprobacion", "contrato", "tipoUsuario", "primerNombre", "primerApellido"
              FROM "PEOPLE"
              WHERE "numeroId" = $1
              ORDER BY CASE WHEN "tipoUsuario" IN ('BENEFICIARIO','BENEFICIARIA') THEN 0 ELSE 1 END
@@ -279,6 +283,13 @@ export async function aplicarConfirmacion(
             peopleRow._id,
           ]
         );
+        // Cambio automático de aprobación (si no estaba Aprobado) → queda como "Sistema".
+        await registrarCambioAprobacion({
+          personId: peopleRow._id, contrato: peopleRow.contrato, tipoUsuario: peopleRow.tipoUsuario,
+          nombre: nombreDe(peopleRow), estadoAnterior: peopleRow.aprobacion, estadoNuevo: 'Aprobado',
+          origen: 'SISTEMA', actor: 'sistema',
+          motivo: `Automático: confirmación de examen internacional ${prueba}${ejecutadoPor ? ` (aplicada por ${ejecutadoPor})` : ''}`,
+        });
         // Opción A: el titular refleja la fecha final vigente de sus beneficiarios.
         await sincronizarFinalTitularDe(peopleRow._id, `Extensión por examen internacional ${prueba}`, ejecutadoPor);
       }

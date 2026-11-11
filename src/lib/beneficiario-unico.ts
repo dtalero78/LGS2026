@@ -3,6 +3,7 @@ import { query } from '@/lib/postgres';
 import { ConflictError } from '@/lib/errors';
 import { normalizeNumeroIdList } from '@/lib/numeroid-normalize';
 import { liberarReservasKids } from '@/lib/kids-baja';
+import { registrarCambioAprobacion, nombreDe } from '@/lib/aprobacion-audit';
 
 /**
  * Invariante de negocio:
@@ -83,12 +84,24 @@ export async function checkBeneficiarioUnico(
  */
 export async function anularBeneficiariosViejos(peopleIds: string[]): Promise<number> {
   if (!peopleIds.length) return 0;
+  // Estado anterior para la auditoría (cambio automático → queda como "Sistema").
+  const previas = await query(
+    `SELECT "_id","contrato","tipoUsuario","primerNombre","primerApellido","aprobacion" FROM "PEOPLE" WHERE "_id" = ANY($1::text[])`,
+    [peopleIds]
+  );
   await query(
     `UPDATE "PEOPLE"
         SET "estado" = 'ANULADO', "estadoInactivo" = true, "aprobacion" = 'Contrato nulo', "_updatedDate" = NOW()
       WHERE "_id" = ANY($1::text[])`,
     [peopleIds]
   );
+  for (const r of previas.rows as any[]) {
+    await registrarCambioAprobacion({
+      personId: r._id, contrato: r.contrato, tipoUsuario: r.tipoUsuario, nombre: nombreDe(r),
+      estadoAnterior: r.aprobacion, estadoNuevo: 'Contrato nulo', origen: 'SISTEMA', actor: 'sistema',
+      motivo: 'Automático: el documento pasó a un contrato nuevo (re-matrícula al crear contrato)',
+    });
+  }
   // Kids: el registro viejo también suelta su cupo en KIDS2026 (best-effort, no lanza).
   await liberarReservasKids(
     { beneficiarioIds: peopleIds },

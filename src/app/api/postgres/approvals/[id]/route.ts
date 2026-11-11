@@ -6,6 +6,7 @@ import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { registrarCambioAprobacion, nombreDe } from '@/lib/aprobacion-audit';
 import { inhabilitarContratoRetractado } from '@/lib/retractado';
 import { liberarReservasKids, motivoBajaKids } from '@/lib/kids-baja';
+import { exigeComentarioEstado, comentarioValido, mensajeComentarioEstado } from '@/lib/comentario-aprobacion';
 
 export const GET = handlerWithAuth(async (request, { params }) => {
   const result = await query(
@@ -27,7 +28,8 @@ const APROBACION_TO_ESTADO: Record<string, string> = {
 };
 
 export const PUT = handlerWithAuth(async (request, { params }, session) => {
-  const { estado } = await request.json();
+  const body = await request.json();
+  const { estado } = body || {};
   if (!estado) throw new ValidationError('estado is required');
 
   const validEstados = ['Aprobado', 'Rechazado', 'Pendiente', 'Contrato nulo', 'Devuelto', 'Retractado'];
@@ -62,6 +64,13 @@ export const PUT = handlerWithAuth(async (request, { params }, session) => {
     throw new ValidationError(
       'Este contrato ya está aprobado. Para cambiar su estado usa la ficha del titular (Estado del Titular), donde se registra el motivo.'
     );
+  }
+
+  // Comentario obligatorio salvo al aprobar el contrato (lib/comentario-aprobacion).
+  const motivo = String(body?.motivo ?? '').trim() || null;
+  if ((actual.aprobacion || null) !== estadoFinal
+      && exigeComentarioEstado(estadoFinal, actual.tipoUsuario) && !comentarioValido(motivo)) {
+    throw new ValidationError(mensajeComentarioEstado(estadoFinal));
   }
 
   // Contratos de prueba (PRB-): NADIE puede aprobarlos (tampoco SUPER_ADMIN).
@@ -110,6 +119,7 @@ export const PUT = handlerWithAuth(async (request, { params }, session) => {
     estadoAnterior: actual.aprobacion,
     estadoNuevo: estadoFinal,
     origen: 'PANTALLA_APROBACION',
+    motivo,
     session,
   });
 

@@ -8,6 +8,7 @@ import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { buildDynamicUpdate } from '@/lib/query-builder';
 import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
 import { registrarCambioAprobacion, assertPuedeRevertirAPendiente, nombreDe } from '@/lib/aprobacion-audit';
+import { exigeComentarioEstado, comentarioValido, mensajeComentarioEstado } from '@/lib/comentario-aprobacion';
 import { inhabilitarContratoRetractado } from '@/lib/retractado';
 import { liberarReservasKids, motivoBajaKids } from '@/lib/kids-baja';
 import { normalizarTelefono } from '@/lib/telefono';
@@ -346,6 +347,11 @@ export const PATCH = handlerWithAuth(async (
     body.aprobacion !== undefined && (body.aprobacion || null) !== (currentPerson.aprobacion || null);
   if (cambiaAprobacion && currentPerson.aprobacion === 'Aprobado' && aprobacionMotivo.length < 10) {
     throw new ValidationError('Para cambiar el estado de un contrato aprobado debes indicar el motivo (mínimo 10 caracteres).');
+  }
+  // Regla única (lib/comentario-aprobacion): todo cambio manual a un estado distinto de
+  // Aprobado (Rechazado, Devuelto, Contrato nulo, Pendiente, Retractado…) exige el motivo.
+  if (cambiaAprobacion && exigeComentarioEstado(body.aprobacion || null, currentPerson.tipoUsuario) && !comentarioValido(aprobacionMotivo)) {
+    throw new ValidationError(mensajeComentarioEstado(body.aprobacion || null));
   }
 
   // ── Validación de cambio de aprobación ──

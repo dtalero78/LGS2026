@@ -12,6 +12,8 @@ import { PersonPermission } from '@/types/permissions'
 import { COUNTRY_CODES } from '@/lib/country-codes'
 import { isContratoPrueba } from '@/components/common/ContratoPruebaBadge'
 import KidsBeneficiarioModal, { KidsData } from '@/components/comercial/KidsBeneficiarioModal'
+import ComentarioEstadoModal from '@/components/common/ComentarioEstadoModal'
+import { exigeComentarioEstado, comentarioValido, MIN_COMENTARIO_ESTADO } from '@/lib/comentario-aprobacion'
 
 interface PersonAdminProps {
   person: Person
@@ -402,7 +404,10 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     return motivos.join(' y ')
   })()
 
-  const handleApproveSpecificBeneficiary = async (beneficiaryId: string) => {
+  // Aprobar un beneficiario exige comentario (adición o reemplazo) — lib/comentario-aprobacion.
+  const [benefAprobar, setBenefAprobar] = useState<{ id: string; nombre: string } | null>(null)
+
+  const handleApproveSpecificBeneficiary = async (beneficiaryId: string, motivo: string) => {
     if (!beneficiaryId) return
 
     setApprovingBeneficiaries(prev => new Set(prev).add(beneficiaryId))
@@ -412,6 +417,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
       const response = await fetch(`/api/postgres/people/${beneficiaryId}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ motivo }),
       })
 
       const data = await response.json()
@@ -576,6 +582,8 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     if (!pendingEstado) return
     // Contrato ya aprobado: exige motivo (≥10) + confirmación explícita.
     if (originalEstado === 'Aprobado' && (estadoMotivo.trim().length < 10 || !estadoAck)) return
+    // Cualquier estado distinto de Aprobado exige el motivo (lib/comentario-aprobacion).
+    if (exigeComentarioEstado(pendingEstado, person.tipoUsuario) && !comentarioValido(estadoMotivo)) return
 
     console.log('=== CONFIRMACIÓN DE CAMBIO DE ESTADO INICIADA ===')
     console.log('Estado a aplicar:', pendingEstado)
@@ -592,6 +600,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         response = await fetch(`/api/postgres/people/${person._id}/approve`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ motivo: estadoMotivo.trim() || undefined }),
         })
         data = await response.json()
       } else {
@@ -1421,7 +1430,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                   {!esContratoDePrueba && ((!beneficiary.estado || beneficiary.estado === 'Pendiente') || approvingBeneficiaries.has(beneficiary._id)) && (
                     <PermissionGuard permission={PersonPermission.APROBAR}>
                       <button
-                        onClick={() => handleApproveSpecificBeneficiary(beneficiary._id)}
+                        onClick={() => setBenefAprobar({ id: beneficiary._id, nombre: `${beneficiary.nombre || ''} ${beneficiary.apellido || ''}`.trim() })}
                         disabled={approvingBeneficiaries.has(beneficiary._id)}
                         className="inline-flex items-center px-4 py-1.5 border border-black text-sm font-medium rounded text-black bg-white hover:bg-black hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
@@ -2310,7 +2319,12 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                   Queda solo un registro de referencia para consulta. Si el contrato podría reactivarse, no lo anule.
                 </div>
               )}
-              {originalEstado === 'Aprobado' && (
+              {pendingEstado === 'Aprobado' && originalEstado !== 'Aprobado' && (
+                <p className="mt-3 text-xs text-gray-600">
+                  Queda registrado en el Seguimiento quién aprobó, con fecha y hora.
+                </p>
+              )}
+              {(originalEstado === 'Aprobado' || exigeComentarioEstado(pendingEstado, person.tipoUsuario)) && (
                 <div className="mt-4 space-y-3">
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">
@@ -2320,14 +2334,16 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                       value={estadoMotivo}
                       onChange={(e) => setEstadoMotivo(e.target.value)}
                       rows={3}
-                      placeholder="Explica por qué se cambia el estado de un contrato aprobado (mínimo 10 caracteres)"
+                      placeholder={originalEstado === 'Aprobado'
+                        ? 'Explica por qué se cambia el estado de un contrato aprobado (mínimo 10 caracteres)'
+                        : `¿Por qué pasa a "${pendingEstado}"? (mínimo ${MIN_COMENTARIO_ESTADO} caracteres)`}
                       className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-red-400 focus:border-red-400"
                     />
-                    <p className={`text-[11px] mt-0.5 ${estadoMotivo.trim().length >= 10 ? 'text-gray-400' : 'text-red-500'}`}>
-                      {estadoMotivo.trim().length}/10 caracteres mínimos · queda en el historial de cambios con tu usuario.
+                    <p className={`text-[11px] mt-0.5 ${estadoMotivo.trim().length >= MIN_COMENTARIO_ESTADO ? 'text-gray-400' : 'text-red-500'}`}>
+                      {estadoMotivo.trim().length}/{MIN_COMENTARIO_ESTADO} caracteres mínimos · queda en el Seguimiento con tu usuario, fecha y hora.
                     </p>
                   </div>
-                  <label className="flex items-start gap-2 text-xs text-gray-700">
+                  {originalEstado === 'Aprobado' && <label className="flex items-start gap-2 text-xs text-gray-700">
                     <input
                       type="checkbox"
                       checked={estadoAck}
@@ -2335,7 +2351,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                       className="mt-0.5"
                     />
                     <span>Entiendo que estoy cambiando un contrato <strong>aprobado</strong> y que el cambio queda registrado a mi nombre.</span>
-                  </label>
+                  </label>}
                 </div>
               )}
               <p className="text-sm text-gray-500 mt-2">
@@ -2353,7 +2369,9 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
               </button>
               <button
                 onClick={confirmEstadoChange}
-                disabled={isUpdatingEstado || (originalEstado === 'Aprobado' && (estadoMotivo.trim().length < 10 || !estadoAck))}
+                disabled={isUpdatingEstado
+                  || (originalEstado === 'Aprobado' && (estadoMotivo.trim().length < 10 || !estadoAck))
+                  || (exigeComentarioEstado(pendingEstado, person.tipoUsuario) && !comentarioValido(estadoMotivo))}
                 className={`flex-1 border border-transparent rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center ${originalEstado === 'Aprobado' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}
               >
                 {isUpdatingEstado ? (
@@ -2368,6 +2386,17 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             </div>
           </div>
         </div>
+      )}
+
+      {/* Aprobar beneficiario — comentario obligatorio (adición o reemplazo) */}
+      {benefAprobar && (
+        <ComentarioEstadoModal
+          titulo={`Aprobar beneficiario: ${benefAprobar.nombre || 'beneficiario'}`}
+          descripcion="Indica el motivo: adición de un beneficiario nuevo, reemplazo de uno existente (¿a quién reemplaza?), etc."
+          estadoNuevo="Aprobado"
+          onClose={() => setBenefAprobar(null)}
+          onConfirm={async (c) => { const b = benefAprobar; setBenefAprobar(null); await handleApproveSpecificBeneficiary(b.id, c) }}
+        />
       )}
 
       {/* Suspensión Administrativa — Modal de Motivo */}
