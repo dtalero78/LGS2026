@@ -239,6 +239,10 @@ export default function KidsBeneficiarioModal({
     }
   }
   const apoderadoLocked = !titularEsEmpresa && kids.titularEsApoderado === true
+  // Contacto del apoderado-titular: editable al MODIFICAR un niño que ya está en
+  // KIDS (2026-11-12). Nombre y documento siguen siendo los del titular; el teléfono
+  // y el correo del apoderado se corrigen aquí y viajan a KIDS.
+  const contactoLocked = apoderadoLocked && !cursoFijo
 
   const guardar = () => {
     if (!form.primerNombre?.trim() || !form.primerApellido?.trim()) {
@@ -443,10 +447,16 @@ export default function KidsBeneficiarioModal({
               {/* Parentesco = relación del apoderado con el niño: no es un dato del titular,
                   así que sigue editable aunque el titular sea el apoderado. */}
               <Field label="Parentesco"><input value={kids.parentesco || ''} onChange={e => setK('parentesco', e.target.value)} className={inputCls} placeholder="Madre, padre, tutor…" /></Field>
-              <Field label="Teléfono"><input value={kids.apoderadoTelefono || ''} disabled={apoderadoLocked} onChange={e => setK('apoderadoTelefono', e.target.value.replace(/\D/g, ''))} className={`${inputCls} disabled:bg-gray-100`} placeholder="Solo dígitos" /></Field>
-              <Field label="Correo"><input value={kids.apoderadoMail || ''} disabled={apoderadoLocked} onChange={e => setK('apoderadoMail', e.target.value.replace(/\s/g, ''))} className={`${inputCls} disabled:bg-gray-100 font-mono`} placeholder="correo@dominio.com" /></Field>
+              <Field label="Teléfono"><input value={kids.apoderadoTelefono || ''} disabled={contactoLocked} onChange={e => setK('apoderadoTelefono', e.target.value.replace(/\D/g, ''))} className={`${inputCls} disabled:bg-gray-100`} placeholder="Solo dígitos" /></Field>
+              <Field label="Correo"><input value={kids.apoderadoMail || ''} disabled={contactoLocked} onChange={e => setK('apoderadoMail', e.target.value.replace(/\s/g, ''))} className={`${inputCls} disabled:bg-gray-100 font-mono`} placeholder="correo@dominio.com" /></Field>
             </div>
-            {apoderadoLocked && <p className="text-xs text-gray-400 mt-2">El apoderado tomará los datos del titular del contrato. Indique el parentesco con el niño.</p>}
+            {apoderadoLocked && (
+              <p className="text-xs text-gray-400 mt-2">
+                {contactoLocked
+                  ? 'El apoderado tomará los datos del titular del contrato. Indique el parentesco con el niño.'
+                  : 'El apoderado es el titular del contrato: su nombre y documento no se cambian aquí. El teléfono y el correo del apoderado sí, y se actualizan también en KIDS.'}
+              </p>
+            )}
           </div>
         </div>
 

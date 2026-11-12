@@ -100,7 +100,7 @@ export async function asegurarReservaKids(insc: any, beneficiario: any): Promise
  * regla que la reserva (`apoderadoParaKids`). Devuelve si KIDS conservó los
  * nombres de una persona compartida. Lanza ValidationError legible si falla.
  */
-export async function actualizarApoderadoKids(insc: any, beneficiario: any): Promise<{ nombresConservados: boolean }> {
+export async function actualizarApoderadoKids(insc: any, beneficiario: any): Promise<{ nombresConservados: boolean; esTitular: boolean }> {
   const ref = insc.kidsExternalRef;
   if (!ref) throw new ValidationError('El niño aún no tiene reserva en KIDS.');
   const contrato = insc.contrato || beneficiario.contrato;
@@ -118,9 +118,30 @@ export async function actualizarApoderadoKids(insc: any, beneficiario: any): Pro
   } catch (e: any) {
     throw new ValidationError(String(e?.message || 'Datos del apoderado incompletos'));
   }
+  // Titular = apoderado: "titularEsApoderado" a secas hacía que KIDS dejara el
+  // contacto que ya tenía, y el teléfono/correo corregidos aquí no llegaban
+  // (2026-11-12). Se manda al titular como persona —KIDS lo reconoce por su
+  // documento y conserva su nombre— con el contacto del APODERADO de la inscripción.
+  const esTitular = datos.titularEsApoderado;
+  if (datos.titularEsApoderado && (insc.apoderadoTelefono || insc.apoderadoMail)) {
+    const pais = plataformaToCountryCode(titular.plataforma || beneficiario.plataforma);
+    const base = buildKidsReservation({
+      externalRef: ref, countryCode: pais, inicio: '2000-01-01', finalContrato: '2000-01-01',
+      titular, beneficiario, kidsData: { titularEsApoderado: true },
+    }).titular;
+    datos = {
+      titularEsApoderado: false,
+      apoderado: {
+        ...base,
+        email: insc.apoderadoMail || base.email,
+        telefono: insc.apoderadoTelefono || base.telefono,
+      },
+      parentesco: datos.parentesco,
+    };
+  }
   try {
     const r = await kidsIntake.updateGuardian(ref, datos);
-    return { nombresConservados: r.nombresConservados === true };
+    return { nombresConservados: r.nombresConservados === true, esTitular };
   } catch (e: any) {
     throw new ValidationError(`KIDS no aceptó el cambio de apoderado: ${e?.message || 'error desconocido'}`);
   }

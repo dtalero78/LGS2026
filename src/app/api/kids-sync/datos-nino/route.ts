@@ -19,9 +19,8 @@ import { normalizarTelefono } from '@/lib/telefono';
  *    login NO se toca: es el de la familia y lo comparten hermanos y titular;
  *  - el APODERADO: si es una persona propia, sus campos en KIDS_INSCRIPCIONES
  *    (apoderado, apoderadoApellidos, apoderadoMail, apoderadoTelefono, parentesco);
- *    si es el TITULAR, solo su email y celular en PEOPLE (su nombre es dato del
- *    contrato), con su ACADEMICA y su login —este último solo si coincide su
- *    documento, para no mover la cuenta de otra persona con el mismo correo—.
+ *    si es el TITULAR, la misma copia en KIDS_INSCRIPCIONES con su teléfono y correo
+ *    de apoderado, sin nombre (es dato del contrato) y sin tocar su PEOPLE ni su login.
  *
  * Es un UPDATE directo: no vuelve a avisar a KIDS (sin eco).
  *
@@ -115,48 +114,24 @@ export const POST = handler(async (request) => {
       [insc.id, texto(ap.parentesco, 30)],
     );
 
-    if (!titularEsApoderado) {
-      const nombres = texto(ap.nombres, 60);
-      const apellidos = texto(ap.apellidos, 60);
-      if (!nombres || !apellidos) throw new ValidationError('Nombres y apellidos del apoderado son obligatorios');
-      await client.query(
-        `UPDATE "KIDS_INSCRIPCIONES"
-            SET "apoderado" = $2, "apoderadoApellidos" = $3, "apoderadoMail" = $4,
-                "apoderadoTelefono" = $5, "_updatedDate" = NOW()
-          WHERE "_id" = $1`,
-        [insc.id, nombres, apellidos, apEmail, apCelular],
-      );
-      tablas.push('KIDS_INSCRIPCIONES (apoderado)');
-      return;
+    // La copia del apoderado en la inscripción es la que muestran la ficha y el
+    // modal: se actualiza SIEMPRE, también cuando el apoderado es el titular
+    // (2026-11-12: antes ese caso solo tocaba PEOPLE del titular y la ficha seguía
+    // mostrando el teléfono viejo). Con el titular, su nombre no viaja —es dato del
+    // contrato— y su PEOPLE/login no se tocan: el contacto del apoderado vive aquí.
+    const nombres = titularEsApoderado ? null : texto(ap.nombres, 60);
+    const apellidos = titularEsApoderado ? null : texto(ap.apellidos, 60);
+    if (!titularEsApoderado && (!nombres || !apellidos)) {
+      throw new ValidationError('Nombres y apellidos del apoderado son obligatorios');
     }
-
-    // El apoderado ES el titular: solo su contacto (el nombre es del contrato).
-    if (titular === null) return;
     await client.query(
-      `UPDATE "PEOPLE" SET "email" = COALESCE($2, "email"), "celular" = COALESCE($3, "celular"),
-              "_updatedDate" = NOW()
+      `UPDATE "KIDS_INSCRIPCIONES"
+          SET "apoderado" = COALESCE($2, "apoderado"), "apoderadoApellidos" = COALESCE($3, "apoderadoApellidos"),
+              "apoderadoMail" = $4, "apoderadoTelefono" = $5, "_updatedDate" = NOW()
         WHERE "_id" = $1`,
-      [titular._id, apEmail, apCelular],
+      [insc.id, nombres, apellidos, apEmail, apCelular],
     );
-    tablas.push('PEOPLE (titular)');
-    if (titular.numeroId) {
-      const r = await client.query(
-        `UPDATE "ACADEMICA" SET "email" = COALESCE($2, "email"), "celular" = COALESCE($3, "celular"),
-                "_updatedDate" = NOW()
-          WHERE "numeroId" = $1`,
-        [titular.numeroId, apEmail, apCelular],
-      );
-      if (r.rowCount) tablas.push(`ACADEMICA titular (${r.rowCount})`);
-    }
-    if (apEmail && titular.email && apEmail !== titular.email.toLowerCase() && titular.numeroId) {
-      const u = await client.query(
-        `UPDATE "USUARIOS_ROLES" SET "email" = $2
-          WHERE LOWER("email") = LOWER($1)
-            AND UPPER(REPLACE(COALESCE("numberid", ''), '.', '')) = UPPER($3)`,
-        [titular.email, apEmail, titular.numeroId],
-      );
-      if (u.rowCount) tablas.push(`USUARIOS_ROLES titular (${u.rowCount})`);
-    }
+    tablas.push(titularEsApoderado ? 'KIDS_INSCRIPCIONES (apoderado = titular)' : 'KIDS_INSCRIPCIONES (apoderado)');
   });
 
   console.log(`[kids-sync/datos-nino] ${externalRef}: ${tablas.join(', ')}`);

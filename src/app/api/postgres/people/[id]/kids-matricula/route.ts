@@ -159,7 +159,9 @@ export const PATCH = handlerWithStaffAuth(async (request, { params }, session) =
       const r = await actualizarApoderadoKids(fila, person);
       return successResponse({
         estado,
-        mensaje: r.nombresConservados
+        mensaje: r.esTitular
+          ? 'Apoderado (el titular) actualizado en LGS y en KIDS: teléfono, correo y parentesco.'
+          : r.nombresConservados
           ? 'Apoderado actualizado en LGS y en KIDS. Ese documento ya era de una persona registrada en KIDS (apoderada de otro niño o titular): allá se conservó su nombre y se actualizaron correo y teléfono.'
           : 'Apoderado actualizado en LGS y en KIDS.',
       });
