@@ -16,8 +16,10 @@ export const GET = handlerWithStaffAuth(async (req: NextRequest) => {
   const correo = (sp.get('correo') || '').trim().toLowerCase();
   if (!correo) return successResponse({ encontrado: false, nombre: null, filial: null, plataforma: null });
 
-  const eq = await queryOne<{ nombre: string | null; filial: string | null; plataforma: string | null; activo: boolean | null }>(
-    `SELECT "nombre", "filial", "plataforma", "activo" FROM "EQUIPO_COMERCIAL"
+  const eq = await queryOne<any>(
+    `SELECT "nombre", "filial", "plataforma", "activo",
+            "fullExecutive", "jefeGrupo", "gerente", "gerenteDivision", "salesManager"
+       FROM "EQUIPO_COMERCIAL"
       WHERE LOWER(TRIM("correo")) = $1 LIMIT 1`, [correo]);
 
   const plataformaEq = (eq?.plataforma || '').trim();
@@ -32,5 +34,12 @@ export const GET = handlerWithStaffAuth(async (req: NextRequest) => {
     nombre: delPais ? nombreReal : null,
     filial: delPais ? (eq?.filial || '').trim() || null : null,
     plataforma: plataformaEq || null,
+    // Escala vigente que dejó el último contrato creado desde el CRM (null si aún no hay).
+    escala: delPais && eq && [eq.fullExecutive, eq.jefeGrupo, eq.gerente, eq.gerenteDivision, eq.salesManager].some(Boolean)
+      ? {
+          fullExecutive: eq.fullExecutive || null, jefeGrupo: eq.jefeGrupo || null, gerente: eq.gerente || null,
+          gerenteDivision: eq.gerenteDivision || null, salesManager: eq.salesManager || null,
+        }
+      : null,
   });
 });

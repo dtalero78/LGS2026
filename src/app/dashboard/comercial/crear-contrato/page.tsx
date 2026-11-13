@@ -297,12 +297,15 @@ function CrearContratoContent() {
   // firmado del CRM no se busca: el asesor ya viene verificado.
   const [asesorCrm, setAsesorCrm] = useState<{ estado: 'idle' | 'buscando' | 'encontrado' | 'no_encontrado'; modal: boolean; clave: string }>(
     { estado: 'idle', modal: false, clave: '' });
+  // Escala vigente del ejecutivo (la dejó su último contrato creado desde el CRM). Solo informativa.
+  const [escalaEjecutivo, setEscalaEjecutivo] = useState<Record<string, string | null> | null>(null);
   const ultimoNombreCrm = useRef('');
   useEffect(() => {
     if (crmBridge?.email) return;
     const correo = titular.asesor.trim().toLowerCase();
     if (!titular.plataforma || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
       setAsesorCrm(a => (a.estado === 'idle' ? a : { estado: 'idle', modal: false, clave: '' }));
+      setEscalaEjecutivo(null);
       return;
     }
     const clave = `${titular.plataforma}|${correo}`;
@@ -314,6 +317,7 @@ function CrearContratoContent() {
         .then(r => r.json())
         .then(d => {
           if (!vivo) return;
+          setEscalaEjecutivo(d?.escala || null);
           if (d?.encontrado && d?.nombre) {
             ultimoNombreCrm.current = d.nombre;
             setTitular(tt => ({ ...tt, asesorCreadorContrato: d.nombre }));
@@ -1397,6 +1401,19 @@ function CrearContratoContent() {
                 />
                 {asesorCrm.estado === 'encontrado' && (
                   <p className="text-xs text-green-600 mt-1">✓ Encontrado en el CRM</p>
+                )}
+                {escalaEjecutivo && (
+                  <div className="mt-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700">
+                    <div className="mb-1 font-semibold text-gray-800">Escala comercial</div>
+                    <dl className="grid grid-cols-1 gap-x-4 gap-y-0.5 sm:grid-cols-2">
+                      {([
+                        ['Full Executive', 'fullExecutive'], ['Jefe de grupo', 'jefeGrupo'], ['Gerente', 'gerente'],
+                        ['Gerente división', 'gerenteDivision'], ['Sales Manager', 'salesManager'],
+                      ] as const).map(([et, k]) => (
+                        <div key={k} className="flex gap-1"><dt className="text-gray-500">{et}:</dt><dd>{escalaEjecutivo[k] || '—'}</dd></div>
+                      ))}
+                    </dl>
+                  </div>
                 )}
                 {asesorCrm.estado === 'no_encontrado' && (
                   <p className="text-xs text-amber-600 mt-1">No está en el CRM: consulte a su líder, no olvide su filial y coloque su nombre completo.</p>

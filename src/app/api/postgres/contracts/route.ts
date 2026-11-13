@@ -67,6 +67,31 @@ async function upsertEquipoComercial(titular: any, contrato: string): Promise<vo
   }
 }
 
+/**
+ * Guarda en EQUIPO_COMERCIAL la escala vigente del ejecutivo cuando el contrato llega
+ * con el enlace firmado del CRM (misma verificación de firma que la escalera del
+ * contrato). Solo reemplaza si el CRM mandó algún cargo; cada contrato nuevo desde el
+ * CRM la actualiza. Best-effort (columnas: scripts/add-escala-equipo-comercial.js).
+ */
+async function guardarEscalaEquipo(crmBridge: any, titular: any): Promise<void> {
+  try {
+    const correo = String(titular?.asesor ?? '').trim().toLowerCase();
+    const ladder = ladderFromEnvelope(crmBridge, correo);
+    if (!ladder || !correo) return;
+    const v = (k: 'fe' | 'tm' | 'ge' | 'gd' | 's1') => ladder[k].trim().slice(0, CRM_LADDER_COLUMNS[k].max) || null;
+    const vals = [v('fe'), v('tm'), v('ge'), v('gd'), v('s1')];
+    if (!vals.some(Boolean)) return;
+    await query(
+      `UPDATE "EQUIPO_COMERCIAL"
+          SET "fullExecutive" = $2, "jefeGrupo" = $3, "gerente" = $4, "gerenteDivision" = $5,
+              "salesManager" = $6, "escalaActualizada" = NOW(), "_updatedDate" = NOW()
+        WHERE LOWER(TRIM("correo")) = $1`,
+      [correo, ...vals]);
+  } catch (err: any) {
+    console.warn('[contracts] escala de EQUIPO_COMERCIAL no se guardó:', err?.message || err);
+  }
+}
+
 function parseMoney(v: any): number {
   if (v === null || v === undefined || v === '') return 0;
   if (typeof v === 'number') return v;
@@ -558,6 +583,7 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
     } catch { /* best-effort */ }
   }
   await upsertEquipoComercial(titular, contrato);
+  await guardarEscalaEquipo(crmBridge, titular);
   if (asesorFueraDelCrm) {
     await registrarEventoContrato({
       personaId: titularId,
