@@ -392,7 +392,7 @@ function ConsultaUserRol() {
                         >
                           <KeyIcon className="h-3.5 w-3.5" /> Clave
                         </button>
-                        {u.rol !== 'ESTUDIANTE' && (
+                        {u.rol !== 'ESTUDIANTE' && u.rol !== 'ADVISOR' && (
                           <button
                             type="button"
                             onClick={() => openRol(u)}
@@ -572,7 +572,7 @@ function ConsultaUserRol() {
                 <select value={rolNuevo} onChange={e => setRolNuevo(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                   <option value="">{catalogo.length ? 'Seleccionar rol…' : 'Cargando roles…'}</option>
-                  {catalogo.filter(c => c.rol !== rolUser.rol).map(c => (
+                  {catalogo.filter(c => c.rol !== rolUser.rol && c.rol !== 'ESTUDIANTE' && c.rol !== 'ADVISOR').map(c => (
                     <option key={c.rol} value={c.rol}>{c.rol}{c.descripcion ? ` — ${c.descripcion}` : ''}</option>
                   ))}
                 </select>

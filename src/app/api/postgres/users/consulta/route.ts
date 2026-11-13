@@ -197,6 +197,10 @@ export const PATCH = handlerWithAuth(async (request: NextRequest, _ctx, session)
     if (actual === 'ESTUDIANTE' || destino === 'ESTUDIANTE') {
       throw new ValidationError('Las cuentas de estudiante no cambian de rol: se crean desde su ficha o en "Crear cuenta".');
     }
+    // Igual con ADVISOR: la cuenta está ligada a su ficha en ADVISORS (se crea en /nuevo-advisor).
+    if (actual === 'ADVISOR' || destino === 'ADVISOR') {
+      throw new ValidationError('Las cuentas de advisor no cambian de rol: se crean desde "Nuevo advisor" y su estado se gestiona en Advisors.');
+    }
     // Dar o quitar acceso total solo lo hace un SUPER_ADMIN.
     const ADMINS = ['SUPER_ADMIN', 'ADMIN'];
     if ((ADMINS.includes(actual) || ADMINS.includes(destino)) && String(yo?.role || '').toUpperCase() !== 'SUPER_ADMIN') {
