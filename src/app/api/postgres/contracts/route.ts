@@ -11,6 +11,7 @@ import { normalizarTelefono } from '@/lib/telefono';
 import { formatearPersona } from '@/lib/formato-campos';
 import { CRM_LADDER_COLUMNS, CRM_LADDER_KEYS, ladderFromEnvelope } from '@/lib/crm-bridge';
 import { requirePermission } from '@/lib/api-permissions';
+import { registrarEventoContrato } from '@/lib/contrato-eventos';
 import { ComercialPermission } from '@/types/permissions';
 import crypto from 'crypto';
 
@@ -539,7 +540,34 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   //    correo = titular.asesor (EMAIL) · nombre = titular.asesorCreadorContrato
   //    · plataforma = titular.plataforma.
   //    Best-effort: si falla, el contrato ya está creado y no se rompe.
+  //    Antes se comprueba si el asesor ya estaba en el CRM (equipo cargado): si no, el
+  //    contrato queda "sujeto a revisión" en su Seguimiento (CONTRATO_EVENTOS).
+  const correoAsesor = String(titular?.asesor ?? '').trim().toLowerCase();
+  let asesorFueraDelCrm = false;
+  if (!esPrueba && !crmBridge?.token && isEmail(correoAsesor)) {
+    try {
+      const pais = String(titular?.plataforma ?? '').trim().toLowerCase();
+      const r = await query(
+        `SELECT "plataforma" FROM "EQUIPO_COMERCIAL"
+          WHERE LOWER(TRIM("correo")) = $1 AND "activo" IS NOT FALSE
+            AND TRIM(COALESCE("nombre",'')) NOT IN ('', $2) LIMIT 1`,
+        [correoAsesor, NOMBRE_COMERCIAL_PLACEHOLDER]);
+      const fila = r.rows[0];
+      const plat = String(fila?.plataforma ?? '').trim().toLowerCase();
+      asesorFueraDelCrm = !fila || (!!plat && !!pais && plat !== pais);
+    } catch { /* best-effort */ }
+  }
   await upsertEquipoComercial(titular, contrato);
+  if (asesorFueraDelCrm) {
+    await registrarEventoContrato({
+      personaId: titularId,
+      categoria: 'MATRICULA',
+      accion: 'SUJETO_A_REVISION',
+      detalle: `El asesor ${correoAsesor} no existe en el CRM para ${titular?.plataforma || 'la plataforma elegida'}: el contrato queda sujeto a revisión.`,
+      datos: { etiqueta: 'Para aprobación', asesor: correoAsesor, plataforma: titular?.plataforma ?? null },
+      session,
+    });
+  }
 
   return successResponse({
     message: `Contrato ${contrato} creado exitosamente`,

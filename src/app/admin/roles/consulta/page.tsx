@@ -346,7 +346,7 @@ function ConsultaUserRol() {
                   <th className="px-4 py-2">Rol</th>
                   <th className="px-4 py-2">Plataforma</th>
                   <th className="px-4 py-2">Activo</th>
-                  <th className="px-4 py-2">Acciones</th>
+                  <th className="px-4 py-2 sticky right-0 bg-gray-50 shadow-[-6px_0_6px_-6px_rgba(0,0,0,0.15)]">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -374,7 +374,7 @@ function ConsultaUserRol() {
                         {savingId === u._id ? '…' : (u.activo === false ? 'No' : 'Sí')}
                       </button>
                     </td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2 sticky right-0 bg-white shadow-[-6px_0_6px_-6px_rgba(0,0,0,0.15)]">
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"

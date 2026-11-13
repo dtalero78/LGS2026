@@ -293,6 +293,45 @@ function CrearContratoContent() {
   // Obligatoria cuando el país tiene filiales en el catálogo y no vino del CRM.
   const filialOk = !!crmFilial || (filialesPais !== null && (!filialesPais.length || titular.filial !== ''));
 
+  // Búsqueda del ejecutivo en el CRM (EQUIPO_COMERCIAL) por país + correo. Con enlace
+  // firmado del CRM no se busca: el asesor ya viene verificado.
+  const [asesorCrm, setAsesorCrm] = useState<{ estado: 'idle' | 'buscando' | 'encontrado' | 'no_encontrado'; modal: boolean; clave: string }>(
+    { estado: 'idle', modal: false, clave: '' });
+  const ultimoNombreCrm = useRef('');
+  useEffect(() => {
+    if (crmBridge?.email) return;
+    const correo = titular.asesor.trim().toLowerCase();
+    if (!titular.plataforma || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+      setAsesorCrm(a => (a.estado === 'idle' ? a : { estado: 'idle', modal: false, clave: '' }));
+      return;
+    }
+    const clave = `${titular.plataforma}|${correo}`;
+    let vivo = true;
+    setAsesorCrm(a => ({ ...a, estado: 'buscando' }));
+    const t = setTimeout(() => {
+      const qs = new URLSearchParams({ plataforma: titular.plataforma, correo });
+      fetch(`/api/postgres/equipo-comercial/buscar?${qs}`)
+        .then(r => r.json())
+        .then(d => {
+          if (!vivo) return;
+          if (d?.encontrado && d?.nombre) {
+            ultimoNombreCrm.current = d.nombre;
+            setTitular(tt => ({ ...tt, asesorCreadorContrato: d.nombre }));
+            setAsesorCrm({ estado: 'encontrado', modal: false, clave });
+          } else {
+            // Si el nombre actual venía de otro correo del CRM, se limpia para escribirlo.
+            const previo = ultimoNombreCrm.current;
+            ultimoNombreCrm.current = '';
+            if (previo) setTitular(tt => (tt.asesorCreadorContrato === previo ? { ...tt, asesorCreadorContrato: '' } : tt));
+            // No está en el CRM: el nombre se escribe a mano y se avisa (una vez por combinación).
+            setAsesorCrm(a => ({ estado: 'no_encontrado', modal: a.clave !== clave, clave }));
+          }
+        })
+        .catch(() => { if (vivo) setAsesorCrm({ estado: 'no_encontrado', modal: false, clave }); });
+    }, 600);
+    return () => { vivo = false; clearTimeout(t); };
+  }, [titular.plataforma, titular.asesor, crmBridge]);
+
   const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>([]);
   // Índice del beneficiario cuyo modal Kids está abierto (null = cerrado).
   const [kidsModalIndex, setKidsModalIndex] = useState<number | null>(null);
@@ -578,9 +617,13 @@ function CrearContratoContent() {
       case 1:
         // Nombre del asesor + su email (válido). El email es la llave que
         // resuelve al comercial contra USUARIOS_ROLES.
-        return titular.asesorCreadorContrato.trim() !== '' &&
+        // Paso 1: plataforma, correo del asesor, filial y ejecutivo (buscado en el CRM).
+        return titular.plataforma !== '' &&
                titular.asesor !== '' &&
-               isValidEmail(titular.asesor);
+               isValidEmail(titular.asesor) &&
+               filialOk &&
+               asesorCrm.estado !== 'buscando' &&
+               titular.asesorCreadorContrato.trim() !== '';
       case 2:
         if (esEmpresa) {
           // Empresa: nombre empresa + RUT fiscal + rep. legal (los 3 campos).
@@ -590,14 +633,12 @@ function CrearContratoContent() {
                  titular.replegal.trim() !== '' &&
                  titular.replegalcargo.trim() !== '' &&
                  titular.replegalid.trim() !== '' &&
-                 titular.replegalcel.trim() !== '' &&
-                 filialOk;
+                 titular.replegalcel.trim() !== '';
         }
         return titular.primerNombre !== '' &&
                titular.primerApellido !== '' &&
                titular.numeroId !== '' &&
                titular.plataforma !== '' &&
-               filialOk &&
                titularBenefRespuesta !== null; // SÍ/NO obligatorio
       case 3:
         if (esEmpresa) {
@@ -1272,17 +1313,25 @@ function CrearContratoContent() {
                   Van separados a propósito: `asesor` (email) es la llave con la
                   que se resuelve el nombre del comercial contra USUARIOS_ROLES
                   (getAsesorInfo) para el contrato y la pestaña Financiera. */}
+              {/* Orden: Plataforma → Email → Filial → Ejecutivo (buscado en el CRM). */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Asesor creador del contrato *
+                  Plataforma *
                 </label>
-                <input
-                  type="text"
-                  value={titular.asesorCreadorContrato}
-                  onChange={(e) => setTitular({...titular, asesorCreadorContrato: e.target.value})}
+                <select
+                  value={titular.plataforma}
+                  onChange={(e) => {
+                    setTitular({...titular, plataforma: e.target.value})
+                    if (e.target.value !== 'Chile') setSenceUsuario(false) // SENCE es solo Chile
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Nombre del asesor"
-                />
+                >
+                  <option value="">Seleccionar...</option>
+                  <option value="Chile">Chile</option>
+                  <option value="Colombia">Colombia</option>
+                  <option value="Ecuador">Ecuador</option>
+                  <option value="Perú">Perú</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1307,6 +1356,77 @@ function CrearContratoContent() {
                   <p className="text-xs text-gray-400 mt-1">Se usa para identificar al comercial en el contrato y en la ficha del titular.</p>
                 )}
               </div>
+              {/* Filial del comercial: solo las del país elegido en Plataforma. */}
+              {titular.plataforma && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Filial{!crmFilial && filialesPais?.length ? ' *' : ''}
+                  </label>
+                  {crmFilial ? (
+                    <div className="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-md text-gray-800" title="Filial enviada por el CRM">
+                      {crmFilial} <span className="text-xs text-gray-500">· del CRM</span>
+                    </div>
+                  ) : filialesPais === null ? (
+                    <div className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm text-gray-400">Cargando filiales…</div>
+                  ) : filialesPais.length ? (
+                    <select
+                      value={titular.filial}
+                      onChange={(e) => setTitular({ ...titular, filial: e.target.value })}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${titular.filial ? 'border-gray-300' : 'border-amber-400'}`}
+                    >
+                      <option value="">Seleccionar filial de {titular.plataforma}…</option>
+                      {filialesPais.map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                  ) : (
+                    <div className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm text-gray-500">{titular.plataforma} no tiene filiales registradas.</div>
+                  )}
+                </div>
+              )}
+              {/* Ejecutivo: se busca en el CRM por país + correo. */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Ejecutivo (asesor creador del contrato) *
+                </label>
+                <input
+                  type="text"
+                  value={titular.asesorCreadorContrato}
+                  readOnly={asesorCrm.estado === 'encontrado' || !!crmBridge?.email}
+                  onChange={(e) => setTitular({...titular, asesorCreadorContrato: e.target.value})}
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${asesorCrm.estado === 'encontrado' || crmBridge?.email ? 'bg-gray-50 text-gray-700' : ''}`}
+                  placeholder={asesorCrm.estado === 'buscando' ? 'Buscando en el CRM…' : 'Nombre del ejecutivo'}
+                />
+                {asesorCrm.estado === 'encontrado' && (
+                  <p className="text-xs text-green-600 mt-1">✓ Encontrado en el CRM</p>
+                )}
+                {asesorCrm.estado === 'no_encontrado' && (
+                  <p className="text-xs text-amber-600 mt-1">No está en el CRM: consulte a su líder, no olvide su filial y coloque su nombre completo.</p>
+                )}
+              </div>
+
+              {/* Aviso: el correo no existe en el CRM */}
+              {asesorCrm.modal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                  <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+                    <h3 className="text-lg font-bold text-amber-700">⚠️ Asesor no encontrado en el CRM</h3>
+                    <p className="mt-3 text-sm text-gray-700">
+                      El correo <strong>{titular.asesor}</strong> no existe en el CRM para <strong>{titular.plataforma}</strong>.
+                    </p>
+                    <p className="mt-2 text-sm text-gray-700">
+                      <strong>Consulte a su líder</strong>, no olvide su <strong>filial</strong> y coloque su <strong>nombre completo</strong>.
+                      <br />Continue con el proceso.
+                    </p>
+                    <div className="mt-5 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setAsesorCrm(a => ({ ...a, modal: false }))}
+                        className="px-4 py-2 rounded-md bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700"
+                      >
+                        Entendido
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1422,51 +1542,7 @@ function CrearContratoContent() {
                     />
                   </div>
                 )}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Plataforma *
-                  </label>
-                  <select
-                    value={titular.plataforma}
-                    onChange={(e) => {
-                      setTitular({...titular, plataforma: e.target.value})
-                      if (e.target.value !== 'Chile') setSenceUsuario(false) // SENCE es solo Chile
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="">Seleccionar...</option>
-                    <option value="Chile">Chile</option>
-                    <option value="Colombia">Colombia</option>
-                    <option value="Ecuador">Ecuador</option>
-                    <option value="Perú">Perú</option>
-                  </select>
-                </div>
-                {/* Filial del comercial: solo las del país elegido en Plataforma. */}
-                {titular.plataforma && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Filial{!crmFilial && filialesPais?.length ? ' *' : ''}
-                    </label>
-                    {crmFilial ? (
-                      <div className="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-md text-gray-800" title="Filial enviada por el CRM">
-                        {crmFilial} <span className="text-xs text-gray-500">· del CRM</span>
-                      </div>
-                    ) : filialesPais === null ? (
-                      <div className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm text-gray-400">Cargando filiales…</div>
-                    ) : filialesPais.length ? (
-                      <select
-                        value={titular.filial}
-                        onChange={(e) => setTitular({ ...titular, filial: e.target.value })}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 ${titular.filial ? 'border-gray-300' : 'border-amber-400'}`}
-                      >
-                        <option value="">Seleccionar filial de {titular.plataforma}…</option>
-                        {filialesPais.map(f => <option key={f} value={f}>{f}</option>)}
-                      </select>
-                    ) : (
-                      <div className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm text-gray-500">{titular.plataforma} no tiene filiales registradas.</div>
-                    )}
-                  </div>
-                )}
+                {/* Plataforma y Filial se eligen ahora en el paso 1 (Asesor). */}
                 {/* ¿El titular será beneficiario? SÍ / NO — obligatorio (fila completa, antes del número de contrato).
                     SÍ = la antigua casilla marcada. En Empresa no aplica (queda en NO). */}
                 <div className="col-span-2">

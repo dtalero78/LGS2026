@@ -8,7 +8,7 @@
  * Pestaña Vigencias: generador anual del mes comercial (corte 9:00 hora local).
  */
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   ArrowPathIcon, ArrowDownTrayIcon, ChevronDownIcon, ChevronRightIcon, ChevronLeftIcon, MagnifyingGlassIcon, FunnelIcon,
@@ -302,6 +302,19 @@ function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; si
   }, [])
   useEffect(() => { cargar() }, [cargar])
 
+  // Barra de desplazamiento horizontal superior, sincronizada con la de la tabla.
+  const barraArriba = useRef<HTMLDivElement>(null)
+  const tablaScroll = useRef<HTMLDivElement>(null)
+  const sincronizando = useRef(false)
+  const sincronizar = (origen: 'arriba' | 'tabla') => {
+    if (sincronizando.current) { sincronizando.current = false; return }
+    const de = origen === 'arriba' ? barraArriba.current : tablaScroll.current
+    const a = origen === 'arriba' ? tablaScroll.current : barraArriba.current
+    if (!de || !a || a.scrollLeft === de.scrollLeft) return
+    sincronizando.current = true
+    a.scrollLeft = de.scrollLeft
+  }
+
   const opciones = useMemo(() => ({
     paises: Array.from(new Set(registros.map(r => r.pais || '—'))).sort(),
     estados: Array.from(new Set(registros.map(r => r.aprobacion))).sort(),
@@ -459,7 +472,13 @@ function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; si
       ) : !vigencias.length ? (
         <p className="p-10 text-center text-sm text-gray-500">No hay vigencias configuradas. Genere el calendario en la pestaña <b>Vigencias</b>.</p>
       ) : (
-        <div className={`overflow-auto rounded-lg border border-gray-300 bg-white ${completa ? 'max-h-[calc(100vh-14rem)]' : 'max-h-[70vh]'}`}>
+        <>
+        <div ref={barraArriba} onScroll={() => sincronizar('arriba')}
+          className="overflow-x-auto overflow-y-hidden rounded-t-lg border border-b-0 border-gray-300 bg-white" aria-hidden="true">
+          <div style={{ width: COLS.reduce((s, c) => s + c.w, 0), height: 1 }} />
+        </div>
+        <div ref={tablaScroll} onScroll={() => sincronizar('tabla')}
+          className={`overflow-auto rounded-b-lg border border-gray-300 bg-white ${completa ? 'max-h-[calc(100vh-14rem)]' : 'max-h-[70vh]'}`}>
           <table className="border-separate border-spacing-0 text-xs" style={{ width: COLS.reduce((s, c) => s + c.w, 0) }}>
             <thead>
               <tr>
@@ -519,6 +538,7 @@ function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; si
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {accion && (
