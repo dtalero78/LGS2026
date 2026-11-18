@@ -25,7 +25,12 @@ export const POST = handlerWithStaffAuth(async (req: NextRequest, ctx, session) 
   if (body?.documentosDescargados !== true) throw new ValidationError('Descarga primero los documentos y recibos del contrato');
 
   const prev = await previsualizarDepuracion(ctx.params.titularId);
-  if (!prev.depurable) throw new ValidationError(prev.motivoNoDepurable || 'Este contrato no se puede depurar');
+  // `remover` (pestaña Por resolver): también borra contratos SIN firmar, sin estado, sin pagos
+  // validados ni clases propias. Sin `remover` solo se depura lo firmado sin aprobar.
+  const remover = body?.remover === true;
+  if (remover ? !prev.removible : !prev.depurable) {
+    throw new ValidationError((remover ? prev.motivoNoRemovible : prev.motivoNoDepurable) || 'Este contrato no se puede depurar');
+  }
   if (prev.otrosContratos.length && body?.confirmarOtros !== true) {
     throw new ValidationError('El titular tiene otros contratos: confirma la depuración');
   }
@@ -39,14 +44,14 @@ export const POST = handlerWithStaffAuth(async (req: NextRequest, ctx, session) 
 
   const res = await withTransaction((client) => purgarContrato(client, contrato, {
     tipoPurga: 'LIBRO_DEPURACION',
-    motivo: `[Libro de Producción] ${motivo}`,
+    motivo: `[Libro de Producción${remover ? ' · Por resolver · removido' : ''}] ${motivo}`,
     actorEmail: (session?.user as any)?.email ?? 'desconocido',
     actorNombre: (session?.user as any)?.name ?? null,
     ip: (req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || '').split(',')[0].trim().slice(0, 45),
     userAgent: req.headers.get('user-agent') || '',
-    // Re-verifica con la fila bloqueada: sigue firmado y sin estado.
+    // Re-verifica con la fila bloqueada: sigue sin estado (y firmado, salvo al remover).
     verificar: async (c, titular) => !!(await c.query(
-      `SELECT 1 FROM "PEOPLE" p WHERE p."_id" = $1 AND COALESCE(p."hashConsentimiento",'') <> '' AND ${SIN_ESTADO_SQL}`,
+      `SELECT 1 FROM "PEOPLE" p WHERE p."_id" = $1 ${remover ? '' : `AND COALESCE(p."hashConsentimiento",'') <> ''`} AND ${SIN_ESTADO_SQL}`,
       [titular._id])).rowCount,
   }));
 

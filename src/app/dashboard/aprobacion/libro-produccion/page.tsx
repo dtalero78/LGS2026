@@ -271,12 +271,13 @@ function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; si
   // Casilla de la celda Item, por fila: Ratificar por correo (sin firmar) o Depurar (firmado sin aprobar).
   const puedeRatificar = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_RATIFICAR)
   const puedeDepurar = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_DEPURAR)
-  const accionDe = (r: Registro): 'ratificar' | 'depurar' | null =>
-    r.aprobacion === SIN_FIRMAR ? (puedeRatificar ? 'ratificar' : null)
+  const accionDe = (r: Registro): 'ratificar' | 'depurar' | 'remover' | null =>
+    // Sin firmar: Ratificar (con el correo) y, dentro de ese modal, Remover; sin permiso de ratificar, solo Remover.
+    r.aprobacion === SIN_FIRMAR ? (puedeRatificar ? 'ratificar' : puedeDepurar ? 'remover' : null)
     : (r.aprobacion === 'Pendiente aprobación' || r.aprobacion === ESTADO_LISTO) && puedeDepurar ? 'depurar' : null
   const conCasilla = (r: Registro) => accionDe(r) !== null
   const { cols: COLS, fijas: FIJAS, lefts: LEFTS } = sinFirmar ? LAYOUT_POR_RESOLVER : LAYOUT_LIBRO
-  const [accion, setAccion] = useState<{ id: string; tipo: 'ratificar' | 'depurar' } | null>(null)
+  const [accion, setAccion] = useState<{ id: string; tipo: 'ratificar' | 'depurar' | 'remover' } | null>(null)
   const [vigencias, setVigencias] = useState<Vigencia[]>([])
   const [vigencia, setVigencia] = useState<Vigencia | null>(null)
   const [todos, setRegistros] = useState<Registro[]>([])
@@ -508,7 +509,7 @@ function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; si
                               ) : <span className="w-3.5" />}
                               {conCasilla(r) && (
                                 <input type="checkbox" checked={accion?.id === r.titularId} onChange={() => setAccion({ id: r.titularId, tipo: accionDe(r)! })}
-                                  title={accionDe(r) === 'ratificar' ? 'Ratificar con el correo "SÍ, ACEPTO"' : 'Depurar este contrato (firmado sin aprobar)'}
+                                  title={accionDe(r) === 'ratificar' ? 'Ratificar con el correo "SÍ, ACEPTO" (o remover el contrato)' : accionDe(r) === 'remover' ? 'Remover este contrato y sus registros' : 'Depurar este contrato (firmado sin aprobar)'}
                                   className={`mx-0.5 h-3.5 w-3.5 cursor-pointer rounded ${accionDe(r) === 'ratificar' ? 'accent-emerald-600' : 'accent-red-600'}`} />
                               )}
                               {r.item}

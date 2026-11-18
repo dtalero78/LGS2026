@@ -81,6 +81,20 @@ export async function previsualizarDepuracion(titularId: string) {
   const firmado = estaFirmado(titular)
   const sinEstado = esSinEstado(titular.aprobacion)
   const pagosValidados = pagos.filter((p: any) => p.validado === true).length
+
+  // Clases de las personas de ESTE contrato que no están en otro contrato (las compartidas
+  // se conservan al borrar, así que no cuentan). Un contrato sin firmar con clases se
+  // gestiona desde la ficha, no se remueve desde aquí.
+  const clasesRow = await queryOne(
+    `WITH propios AS (
+       SELECT DISTINCT ${sqlNorm('p."numeroId"')} AS nid FROM "PEOPLE" p
+        WHERE p."contrato" = $1 AND COALESCE(p."numeroId",'') <> ''
+          AND NOT EXISTS (SELECT 1 FROM "PEOPLE" o
+                           WHERE ${sqlNorm('o."numeroId"')} = ${sqlNorm('p."numeroId"')} AND COALESCE(o."contrato",'') <> $1))
+     SELECT COUNT(*)::int AS n FROM "ACADEMICA_BOOKINGS" b
+       JOIN "ACADEMICA" a ON a."_id" = COALESCE(b."studentId", b."idEstudiante")
+      WHERE ${sqlNorm('a."numeroId"')} IN (SELECT nid FROM propios)`, [contrato])
+  const clases = Number(clasesRow?.n || 0)
   const nombre = [titular.primerNombre, titular.segundoNombre, titular.primerApellido, titular.segundoApellido]
     .map(s => String(s || '').trim()).filter(Boolean).join(' ')
 
@@ -94,6 +108,13 @@ export async function previsualizarDepuracion(titularId: string) {
     motivoNoDepurable: !firmado ? 'El contrato no está firmado (use Ratificar en la pestaña Por resolver).'
       : !sinEstado ? `El contrato ya tiene estado "${titular.aprobacion}"; se gestiona desde la ficha.`
       : pagosValidados ? `Tiene ${pagosValidados} pago(s) validado(s) por Recaudos; no se depura desde aquí.` : null,
+    // "Remover" (pestaña Por resolver): borra el contrato y sus registros, firmado o no, mientras
+    // no tenga estado, pagos validados ni clases propias.
+    clases,
+    removible: sinEstado && pagosValidados === 0 && clases === 0,
+    motivoNoRemovible: !sinEstado ? `El contrato ya tiene estado "${titular.aprobacion}"; se gestiona desde la ficha o la Limpieza de Anulados.`
+      : pagosValidados ? `Tiene ${pagosValidados} pago(s) validado(s) por Recaudos; no se remueve desde aquí.`
+      : clases ? `Sus beneficiarios tienen ${clases} clase(s) registrada(s); se gestiona desde la ficha.` : null,
     ratificable: !firmado && sinEstado,
     motivoNoRatificable: firmado ? 'El contrato ya está firmado.'
       : !sinEstado ? `El contrato ya tiene estado "${titular.aprobacion}".` : null,

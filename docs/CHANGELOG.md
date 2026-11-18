@@ -814,4 +814,5 @@ Las entradas sin commit (`local`) son cambios documentados antes de commitear.
 | `e565494` | Make dashboard charts interactive with tooltips, hover effects, and animations (iframe renderer) |
 | `3fe1bbb` | Use blob URL instead of doc.write to prevent duplicate variable declarations in charts iframe |
 | `54c3221` | Remove Top Students card from dashboard, infer booking type from CALENDARIO/step name |
-| `e111903` | Redesign dashboard charts as suggestion chips — individual on-demand generation instead of all-at-once |
+| `e111903` | Redesign dashboard charts as suggestion chips — individual on-demand generation instead of all-at-once || (pendiente) | **Libro de Producción › Por resolver: Remover contrato (2026-11-18)**: el modal de Ratificar (casilla de la celda Item de un contrato sin firmar) ofrece **Remover contrato** (permiso `.DEPURAR`): descarga de documentos y recibos, motivo ≥10 y borrado definitivo del contrato y sus registros con la regla de [purgar-contrato](../src/lib/purgar-contrato.ts) (`PURGE_LOG` `LIBRO_DEPURACION`, libera reservas KIDS, conserva ficha/login compartidos). Solo si no tiene estado, pagos validados ni clases propias de sus beneficiarios (`removible` en [libro-depuracion.ts](../src/lib/libro-depuracion.ts)); `POST …/depurar` acepta `remover:true`. |
+
