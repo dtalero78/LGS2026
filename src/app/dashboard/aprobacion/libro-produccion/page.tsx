@@ -330,6 +330,9 @@ function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; si
     if (f.filial !== TODOS && !opciones.filiales.includes(f.filial)) setF(s => ({ ...s, filial: TODOS }))
   }, [opciones.filiales, f.filial])
   const semanas = vigencia ? semanasDeVigencia(vigencia) : []
+  // Año: por defecto el de la vigencia cargada (la actual); el selector de vigencia muestra solo ese año.
+  const anios = useMemo(() => Array.from(new Set(vigencias.map(v => v.anio))).sort((a, b) => b - a), [vigencias])
+  const anioSel = vigencia?.anio ?? anios[0] ?? null
 
   const visibles = useMemo(() => {
     const q = f.q.trim().toLowerCase()
@@ -414,13 +417,28 @@ function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; si
 
   return (
     <div className="space-y-3 min-w-0">
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-8 items-end gap-3 rounded-lg border border-gray-200 bg-white p-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-9 items-end gap-3 rounded-lg border border-gray-200 bg-white p-3">
+        <label className="text-xs text-gray-600 min-w-0">
+          <span className="block mb-0.5">Año</span>
+          <select value={anioSel ?? ''}
+            onChange={e => {
+              const a = Number(e.target.value)
+              setF(s => ({ ...s, semana: TODOS }))
+              if (a === new Date().getFullYear()) { cargar(); return }   // el servidor elige la vigencia actual
+              const del = vigencias.filter(v => v.anio === a).sort((x, y) => y.mes - x.mes)
+              if (del[0]) cargar(del[0]._id)
+            }}
+            className="w-full rounded-md border border-indigo-300 bg-indigo-50 py-1.5 pl-2 pr-7 text-sm font-semibold text-indigo-900">
+            {!anios.length && <option value="">—</option>}
+            {anios.map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </label>
         <label className="text-xs text-gray-600 min-w-0">
           <span className="block mb-0.5">Vigencia</span>
           <select value={vigencia?._id || ''} onChange={e => { setF(s => ({ ...s, semana: TODOS })); cargar(e.target.value) }}
             className="w-full rounded-md border border-indigo-300 bg-indigo-50 py-1.5 pl-2 pr-7 text-sm font-semibold text-indigo-900">
             {!vigencias.length && <option value="">Sin vigencias</option>}
-            {vigencias.map(v => <option key={v._id} value={v._id}>{etiquetaVigencia(v)}</option>)}
+            {vigencias.filter(v => v.anio === anioSel).map(v => <option key={v._id} value={v._id}>{etiquetaVigencia(v)}</option>)}
           </select>
         </label>
         <Sel label="Semana" k="semana" opts={semanas.map(s => [String(s.numero), `${s.etiqueta} (${fmtF(s.inicio)})`])} />
