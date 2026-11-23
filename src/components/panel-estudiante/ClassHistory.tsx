@@ -17,6 +17,15 @@ function getTypeBadgeClass(tipoEvento: string): string {
   }
 }
 
+/** Pendiente: la clase es de hoy (hora local del alumno) o futura, no asistió y no la canceló. */
+function esPendiente(item: any): boolean {
+  if (item.asistencia || item.cancelo || !item.fechaEvento) return false
+  const d = new Date(item.fechaEvento)
+  const finDeHoy = new Date()
+  finDeHoy.setHours(23, 59, 59, 999)
+  return d.getTime() <= finDeHoy.getTime() ? d.toDateString() === new Date().toDateString() : true
+}
+
 export default function ClassHistory({ data, isLoading }: ClassHistoryProps) {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -76,7 +85,7 @@ export default function ClassHistory({ data, isLoading }: ClassHistoryProps) {
       if (d > end) return false
     }
     if (attendanceFilter === 'attended' && !item.asistencia) return false
-    if (attendanceFilter === 'not-attended' && item.asistencia) return false
+    if (attendanceFilter === 'not-attended' && (item.asistencia || esPendiente(item))) return false
     if (attendanceFilter === 'cancelled' && !item.cancelo) return false
     if (advisorFilter && item.advisor !== advisorFilter) return false
     return true
@@ -194,8 +203,8 @@ export default function ClassHistory({ data, isLoading }: ClassHistoryProps) {
                     </div>
                   </td>
                   <td className="table-cell">
-                    <span className={`badge ${item.asistencia ? 'badge-success' : 'badge-danger'}`}>
-                      {item.asistencia ? 'Sí' : 'No'}
+                    <span className={`badge ${item.asistencia ? 'badge-success' : esPendiente(item) ? 'badge-warning' : 'badge-danger'}`}>
+                      {item.asistencia ? 'Sí' : esPendiente(item) ? 'Pendiente' : 'No'}
                     </span>
                   </td>
                   <td className="table-cell text-center">

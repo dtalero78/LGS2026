@@ -17,6 +17,14 @@ interface StudentAcademicProps {
   filtroAdvisorsChile?: boolean
 }
 
+/** Pendiente: la clase es de hoy (hora local) o futura, no asistió y no la canceló. */
+function esPendiente(item: any): boolean {
+  if (item.asistencia || item.cancelo || !item.fechaEvento) return false
+  const ini = new Date()
+  ini.setHours(0, 0, 0, 0)
+  return new Date(item.fechaEvento).getTime() >= ini.getTime()
+}
+
 export default function StudentAcademic({ student, classes: initialClasses, view = 'attendance', filtroAdvisorsChile }: StudentAcademicProps) {
   const { data: session } = useSession()
   const { hasPermission, userRole } = usePermissions()
@@ -630,7 +638,7 @@ export default function StudentAcademic({ student, classes: initialClasses, view
 
     // Attendance filter
     if (attendanceFilter === 'attended' && !classItem.asistencia) return false
-    if (attendanceFilter === 'not-attended' && classItem.asistencia) return false
+    if (attendanceFilter === 'not-attended' && (classItem.asistencia || esPendiente(classItem))) return false
 
     // Advisor filter
     if (advisorFilter && classItem.advisor !== advisorFilter) return false
@@ -813,13 +821,13 @@ export default function StudentAcademic({ student, classes: initialClasses, view
                     )}
                   </td>
                   <td className="table-cell">
-                    <span className={`badge ${classItem.asistencia ? 'badge-success' : 'badge-danger'}`}>
-                      {classItem.asistencia ? 'Sí' : 'No'}
+                    <span className={`badge ${classItem.asistencia ? 'badge-success' : esPendiente(classItem) ? 'badge-warning' : 'badge-danger'}`}>
+                      {classItem.asistencia ? 'Sí' : esPendiente(classItem) ? 'Pendiente' : 'No'}
                     </span>
                   </td>
                   <td className="table-cell">
                     <span className={`badge ${classItem.participacion ? 'badge-success' : 'badge-warning'}`}>
-                      {classItem.participacion ? 'Sí' : 'No'}
+                      {classItem.participacion ? 'Sí' : esPendiente(classItem) ? 'Pendiente' : 'No'}
                     </span>
                   </td>
                   <td className="table-cell text-center">
