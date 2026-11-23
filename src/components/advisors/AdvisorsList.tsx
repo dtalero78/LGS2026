@@ -42,6 +42,7 @@ interface Advisor {
   telefono?: string
   numeroId?: string
   zoom?: string
+  domicilioadvisor?: string | null
   fotoAdvisor?: string | null
   activo?: boolean | null
 }
@@ -194,6 +195,9 @@ export default function AdvisorsList({
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Zoom
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Domicilio
+                    </th>
                     {puedeEditar && (
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Acciones
@@ -249,6 +253,9 @@ export default function AdvisorsList({
                         ) : (
                           '-'
                         )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900 max-w-xs">
+                        {advisor.domicilioadvisor?.trim() || '-'}
                       </td>
                       {puedeEditar && (
                         <td className="px-6 py-4 whitespace-nowrap text-right">
