@@ -15,7 +15,7 @@ interface BloqueoMora {
   diasMora: number
   valorAtrasado: number | null
 }
-interface Estado { nombre: string; numeroId: string; niveles: Record<Nivel, NivelInfo>; bloqueoMora?: BloqueoMora | null }
+interface Estado { nombre: string; numeroId: string; niveles: Record<Nivel, NivelInfo>; bloqueoMora?: BloqueoMora | null; claveActiva?: boolean }
 
 const fmtFecha = (iso: string | null) => {
   if (!iso) return ''
@@ -82,11 +82,6 @@ export default function CertificadosModal({ baseUrl, onClose }: { baseUrl: strin
       document.body.appendChild(a); a.click(); a.remove()
       if (visor) visor.location.href = url
       setTimeout(() => URL.revokeObjectURL(url), 5 * 60_000)
-      // El certificado se genera UNA sola vez (panel estudiante): deshabilita el botón.
-      // (El servidor es la autoridad; al reabrir el modal se refleja el estado real.)
-      setEstado(prev => prev
-        ? { ...prev, niveles: { ...prev.niveles, [nivel]: { ...prev.niveles[nivel], yaGenerado: true } } }
-        : prev)
     } catch (e: any) {
       visor?.close()
       setErrorGen(e?.message || 'No se pudo generar el certificado')
@@ -114,8 +109,8 @@ export default function CertificadosModal({ baseUrl, onClose }: { baseUrl: strin
           </p>
           <p>
             Su expedición está condicionada a la validación <strong>del estado de pagos</strong>, que
-            debe encontrarse al día. El certificado se genera en formato PDF, protegido con una
-            contraseña correspondiente al <strong>número de documento de identidad del usuario</strong>.
+            debe encontrarse al día. El certificado se genera en formato PDF{estado?.claveActiva ? (<>, protegido con una
+            contraseña correspondiente al <strong>número de documento de identidad del usuario</strong></>) : ''}.
           </p>
         </div>
 
@@ -128,13 +123,10 @@ export default function CertificadosModal({ baseUrl, onClose }: { baseUrl: strin
             {NIVELES.map(({ key, label, cls }) => {
               const info = estado?.niveles?.[key]
               const aprobado = !!info?.aprobado
-              const yaGenerado = !!info?.yaGenerado
-              const habilitado = aprobado && !yaGenerado && !generando
+              const habilitado = aprobado && !generando
               const leyenda = !aprobado
                 ? 'No ha aprobado el nivel, certificado no disponible'
-                : yaGenerado
-                  ? `Ya generaste este certificado${info?.generadoEn ? ` el ${fmtFechaHora(info.generadoEn)}` : ''} (solo se puede una vez)`
-                  : null
+                : null
               return (
                 <div key={key}>
                   <button
@@ -146,8 +138,7 @@ export default function CertificadosModal({ baseUrl, onClose }: { baseUrl: strin
                   >
                     {habilitado ? <AcademicCapIcon className="h-5 w-5" /> : <LockClosedIcon className="h-4 w-4" />}
                     {generando === key ? `Generando ${label}…` : label}
-                    {yaGenerado && aprobado && <span className="text-[11px] font-normal">· generado</span>}
-                  </button>
+                                      </button>
                   {leyenda && (
                     <p className="mt-0.5 text-[11px] text-gray-400 text-center">{leyenda}</p>
                   )}
@@ -155,7 +146,7 @@ export default function CertificadosModal({ baseUrl, onClose }: { baseUrl: strin
                     <p className="mt-0.5 text-[11px] text-red-600 text-center">Requiere estar al día en los pagos</p>
                   )}
                   {/* Panel admin: informa si el alumno ya lo generó desde su panel (no bloquea al staff). */}
-                  {!yaGenerado && aprobado && info?.generadoEn && (
+                  {aprobado && info?.generadoEn && (
                     <p className="mt-0.5 text-[11px] text-emerald-700 text-center">
                       El alumno lo generó el {fmtFechaHora(info.generadoEn)}
                     </p>

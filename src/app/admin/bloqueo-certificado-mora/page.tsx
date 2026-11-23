@@ -5,6 +5,46 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { PermissionGuard } from '@/components/permissions';
 import { MantenimientoPermission } from '@/types/permissions';
 
+function ClaveCard() {
+  const [active, setActive] = useState<boolean | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    fetch('/api/admin/certificado-clave').then(r => r.json()).then(d => setActive(!!d.active)).catch(() => setError('No se pudo cargar el estado'));
+  }, []);
+  const change = async (next: boolean) => {
+    if (saving || active === null) return;
+    if (next && !window.confirm('¿Activar la clave? Los PDF nuevos se protegerán con el número de documento del alumno.')) return;
+    setSaving(true); setError('');
+    try {
+      const res = await fetch('/api/admin/certificado-clave', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: next }) });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d?.error || `Error ${res.status}`);
+      setActive(!!d.active);
+    } catch (e: any) { setError(e?.message || 'No se pudo cambiar el estado'); } finally { setSaving(false); }
+  };
+  return (
+    <div className="mt-10 border-t border-gray-200 pt-6">
+      <h2 className="text-xl font-bold text-gray-900">Clave del PDF del certificado</h2>
+      <p className="mt-1 text-gray-600">
+        Con la clave <b>apagada</b> (por defecto) el certificado se descarga sin contraseña. Al encenderla, los PDF nuevos se cifran con el
+        número de documento del alumno. El cambio aplica en ≤1 minuto y no afecta los PDF ya descargados.
+      </p>
+      <div className="mt-4 flex items-center justify-between rounded-xl border-2 p-5 border-gray-200 bg-white">
+        <div className="text-base font-bold text-gray-900">
+          Estado: {active === null ? '…' : active ? <span className="text-red-600">Con clave</span> : <span className="text-gray-500">Sin clave</span>}
+        </div>
+        <button type="button" role="switch" aria-checked={active === true} aria-label="Clave del PDF del certificado"
+          onClick={() => change(!active)} disabled={saving || active === null}
+          className={`relative inline-flex h-8 w-14 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-60 ${active ? 'bg-red-600' : 'bg-gray-300'}`}>
+          <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${active ? 'translate-x-7' : 'translate-x-1'}`} />
+        </button>
+      </div>
+      {error && <div className="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+    </div>
+  );
+}
+
 function Content() {
   const [active, setActive] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
@@ -100,6 +140,7 @@ function Content() {
           </div>
         </>
       )}
+      <ClaveCard />
     </div>
   );
 }

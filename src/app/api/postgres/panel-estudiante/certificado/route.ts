@@ -20,7 +20,7 @@ export const GET = handlerWithAuth(async (req, _ctx, session) => {
 
   const nivel = new URL(req.url).searchParams.get('nivel') as NivelCertificado | null;
   if (nivel) {
-    // Panel estudiante: cada certificado se genera UNA sola vez (soloUna).
+    // Panel estudiante (sin límite de generaciones; `soloUna` solo marca el origen en el log).
     const { pdf, nombre } = await certificadoService.generar(academicaId, nivel, { soloUna: true, actor: session?.user?.email ?? null });
     const fname = `certificado-${nivel}-${(nombre || 'lgs').replace(/[^A-Za-z0-9]+/g, '-')}.pdf`;
     return new NextResponse(new Uint8Array(pdf), {

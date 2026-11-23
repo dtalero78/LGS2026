@@ -5,6 +5,23 @@ import { NotFoundError, ValidationError } from '@/lib/errors';
 import { BookingRepository } from '@/repositories/booking.repository';
 import { buildCertificadoPdf, type NivelCertificado } from '@/lib/certificado-pdf';
 import { moraService, type BloqueoMora } from '@/services/mora.service';
+import { AppConfigRepository } from '@/repositories/config.repository';
+
+// Interruptor: ¿el PDF sale con clave (= número de documento)? Default APAGADO (sin clave).
+const CLAVE_KEY = 'certificado_clave_activo';
+let claveCache: { value: boolean; expires: number } | null = null;
+export async function certificadoClaveActiva(): Promise<boolean> {
+  const now = Date.now();
+  if (claveCache && claveCache.expires > now) return claveCache.value;
+  const row = await AppConfigRepository.get(CLAVE_KEY);
+  const value = row?.value === 'true';
+  claveCache = { value, expires: now + 60_000 };
+  return value;
+}
+export async function setCertificadoClaveActiva(active: boolean, actor: string): Promise<void> {
+  await AppConfigRepository.set(CLAVE_KEY, active ? 'true' : 'false', '#ffffff', actor);
+  claveCache = null;
+}
 
 /**
  * Certificados de finalización de nivel del estudiante.
@@ -48,6 +65,8 @@ export interface CertificadoEstado {
   niveles: Record<NivelCertificado, { aprobado: boolean; fecha: string | null; yaGenerado: boolean; generadoEn: string | null }>;
   // Causa del bloqueo por mora (null = puede generar). Ver moraService.getBloqueoCertificado.
   bloqueoMora?: BloqueoMora | null;
+  // ¿El PDF sale con clave? (interruptor APP_CONFIG `certificado_clave_activo`, default apagado)
+  claveActiva?: boolean;
 }
 
 // ── Registro "certificado ya generado por el alumno" (límite de una vez) ──────
@@ -167,23 +186,22 @@ export const certificadoService = {
     const gen = await getGenerados(info.academicaId);
     for (const nivel of NIVELES_CERT) {
       info.niveles[nivel].generadoEn = gen.get(nivel) || null;
-      if (opts?.incluirGenerado) info.niveles[nivel].yaGenerado = gen.has(nivel);
+      // Sin límite de generaciones: `yaGenerado` ya no bloquea (siempre false).
     }
     const bloqueoMora = opts?.sinMora ? null : await moraService.getBloqueoCertificado(await contratoDelAlumno(info));
-    return { nombre: info.nombre, numeroId: info.numeroId, niveles: info.niveles, bloqueoMora };
+    return { nombre: info.nombre, numeroId: info.numeroId, niveles: info.niveles, bloqueoMora, claveActiva: await certificadoClaveActiva() };
   },
 
   /**
-   * `soloUna` (panel estudiante): bloquea la 2ª generación del mismo nivel y
-   * registra que ya se generó. Sin `soloUna` (panel admin): sin límite, no
-   * registra — el staff puede regenerar cuantas veces necesite.
+   * Sin límite de generaciones (panel estudiante y admin). Condiciones: nivel aprobado (Jump) y contrato
+   * al día (o desbloqueado por Recaudos). `soloUna` se conserva solo para marcar el ORIGEN en el log
+   * (ESTUDIANTE vs ADMIN); ya no bloquea ni registra "generado".
    */
   async generar(id: string, nivel: NivelCertificado, opts?: { soloUna?: boolean; actor?: string | null }): Promise<{ pdf: Buffer; nombre: string; numeroId: string }> {
     if (!NIVELES_CERT.includes(nivel)) throw new ValidationError('Nivel inválido');
     const info = await loadInfo(id);
     const n = info.niveles[nivel];
     if (!n?.aprobado) throw new ValidationError('El estudiante no ha aprobado el nivel; certificado no disponible.');
-    if (!info.numeroId) throw new ValidationError('El estudiante no tiene número de documento; no se puede proteger el PDF.');
     // Bloqueo por mora (solo si el interruptor está encendido y Recaudos no lo desbloqueó).
     const bloqueo = await moraService.getBloqueoCertificado(await contratoDelAlumno(info));
     if (bloqueo) {
@@ -191,12 +209,8 @@ export const certificadoService = {
         `Certificado bloqueado: el contrato ${bloqueo.contrato} tiene ${bloqueo.cuotasAtrasadas} cuota(s) vencida(s) sin pagar. ` +
         'Debe ponerse al día con los pagos o comunicarse con Recaudos.');
     }
-    if (opts?.soloUna) {
-      const gen = await getGenerados(info.academicaId);
-      if (gen.has(nivel)) throw new ValidationError('Este certificado ya fue generado. Solo puedes generarlo una vez.');
-    }
-    const pdf = await buildCertificadoPdf({ nivel, nombre: info.nombre, horas: HORAS, fecha: n.fecha, password: info.numeroId });
-    if (opts?.soloUna) await marcarGenerado(info.academicaId, info.numeroId, nivel, info.nombre);
+    const conClave = await certificadoClaveActiva();
+    const pdf = await buildCertificadoPdf({ nivel, nombre: info.nombre, horas: HORAS, fecha: n.fecha, password: conClave ? info.numeroId : '' });
     await registrarLog(info.academicaId, info.numeroId, nivel, info.nombre, opts?.soloUna ? 'ESTUDIANTE' : 'ADMIN', opts?.actor ?? null);
     return { pdf, nombre: info.nombre, numeroId: info.numeroId };
   },
