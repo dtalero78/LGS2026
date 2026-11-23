@@ -28,7 +28,7 @@ export const WHATSAPP_CANALES: Record<CanalId, {
 
 export type MessageTipo =
   | 'firma' | 'contrato_pdf' | 'solicitar_firma' | 'password'
-  | 'bienvenida_aprobar' | 'masivo' | 'exam_intern' | 'bienvenida' | 'reagendar';
+  | 'bienvenida_aprobar' | 'masivo' | 'exam_intern' | 'bienvenida' | 'reagendar' | 'kids';
 
 /** Catálogo de tipos de mensaje configurables + su canal por defecto. */
 export const MESSAGE_TIPOS: { key: MessageTipo; label: string; descripcion: string; default: CanalId }[] = [
@@ -41,6 +41,7 @@ export const MESSAGE_TIPOS: { key: MessageTipo; label: string; descripcion: stri
   { key: 'exam_intern',        label: 'Exam. Internacional',       descripcion: 'Confirmación de examen internacional', default: 'B' },
   { key: 'bienvenida',         label: 'Mensaje de Bienvenida',     descripcion: 'Bienvenida / crear solo perfil',       default: 'B' },
   { key: 'reagendar',          label: 'Reagendar',                 descripcion: 'Reagendar clase',                      default: 'B' },
+  { key: 'kids',               label: 'Mensajes de KIDS',          descripcion: 'Todo lo que envía la plataforma KIDS2026 (enlaces de perfil, claves, avisos)', default: 'B' },
 ];
 
 const KEY = 'whatsapp_canales';
@@ -107,6 +108,21 @@ export const whatsappConfigService = {
     await AppConfigRepository.set(KEY, JSON.stringify(next), '#ffffff', actor);
     cache = null;
     return next;
+  },
+
+  /**
+   * El canal por el que sale lo de KIDS2026 (tipo 'kids'), con su estado en vivo y el
+   * token: KIDS lo pide con la clave de servicio para enviar por el número que
+   * Contingencia le haya asignado. NO se expone fuera de /api/kids-sync.
+   */
+  async getCanalKids(): Promise<{
+    canal: CanalId; numero: string; nombre: string; token: string;
+    conectado: boolean; estado: string;
+  }> {
+    const canal = await this.getCanalDeTipo('kids');
+    const h = await checkHealth(canal);
+    const c = WHATSAPP_CANALES[canal];
+    return { canal, numero: c.numero, nombre: c.nombre, token: c.token, conectado: h.conectado, estado: h.estado };
   },
 
   /** Estado en vivo de ambos canales + el canal asignado a cada tipo. Sin tokens. */
