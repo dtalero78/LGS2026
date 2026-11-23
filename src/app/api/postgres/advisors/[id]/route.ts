@@ -59,7 +59,7 @@ export const GET = handlerWithAuth(async (_req, ctx, session) => {
 
   const adv = await queryOne<any>(
     `SELECT "_id","primerNombre","primerApellido","nombreCompleto","email","zoom",
-            "telefono","pais","domicilioadvisor","fechaNacimiento","fotoAdvisor","esPlanta","usuarioRolId","activo",
+            "telefono","pais","domicilioadvisor","ciudadadvisor","fechaNacimiento","fotoAdvisor","esPlanta","usuarioRolId","activo",
             "zoomLiberado","zoomLiberadoEn"
        FROM "ADVISORS" WHERE "_id" = $1 LIMIT 1`,
     [id]
@@ -84,6 +84,7 @@ export const GET = handlerWithAuth(async (_req, ctx, session) => {
       telefono: adv.telefono || ur?.celular || '',
       pais: adv.pais || '',
       domicilio: adv.domicilioadvisor || '',
+      ciudad: adv.ciudadadvisor || '',
       fechaNacimiento: adv.fechaNacimiento ? String(adv.fechaNacimiento).slice(0, 10) : '',
       numeroId: ur?.numberid || '',
       esPlanta: adv.esPlanta === true,
@@ -126,6 +127,7 @@ export const PATCH = handlerWithAuth(async (req, ctx, session) => {
   const pais = body.pais?.trim() || null;
   const telefono = normalizarTelefono(body.telefono, pais);
   const domicilio = body.domicilio?.trim() || null;
+  const ciudad = body.ciudad?.trim() || null;
   const fechaNacimiento = body.fechaNacimiento?.trim() || null;
   const esPlanta = body.esPlanta === true;
   const clave = (body.clave || '').trim();
@@ -196,9 +198,10 @@ export const PATCH = handlerWithAuth(async (req, ctx, session) => {
             "domicilioadvisor" = $8,
             "fechaNacimiento"  = $9,
             "esPlanta"         = $10,
+            "ciudadadvisor"    = $11,
             "_updatedDate"     = NOW()
-      WHERE "_id" = $11`,
-    [primerNombre, primerApellido, nombreCompleto, email, zoomNorm, telefono, pais, domicilio, fechaNacimiento, esPlanta, id]
+      WHERE "_id" = $12`,
+    [primerNombre, primerApellido, nombreCompleto, email, zoomNorm, telefono, pais, domicilio, fechaNacimiento, esPlanta, ciudad, id]
   );
 
   // ── Update USUARIOS_ROLES (si existe la cuenta vinculada) ──

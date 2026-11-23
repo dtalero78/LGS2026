@@ -23,6 +23,7 @@ interface AdvisorForm {
   pais: string
   zoom: string
   domicilio: string
+  ciudad: string
   fechaNacimiento: string
   esPlanta: boolean
   clave: string
@@ -30,7 +31,7 @@ interface AdvisorForm {
 
 const EMPTY_FORM: AdvisorForm = {
   primerNombre: '', primerApellido: '', email: '', numeroId: '', telefono: '',
-  pais: '', zoom: '', domicilio: '', fechaNacimiento: '', esPlanta: false, clave: '',
+  pais: '', zoom: '', domicilio: '', ciudad: '', fechaNacimiento: '', esPlanta: false, clave: '',
 }
 
 export default function AdvisorEditModal({ advisorId, advisorNombre, onClose, onSaved, onFotoChanged, onEstadoChanged, mostrarFoto = true }: {
@@ -74,7 +75,7 @@ export default function AdvisorEditModal({ advisorId, advisorNombre, onClose, on
         setForm({
           primerNombre: a.primerNombre || '', primerApellido: a.primerApellido || '',
           email: a.email || '', numeroId: a.numeroId || '', telefono: a.telefono || '',
-          pais: a.pais || '', zoom: a.zoom || '', domicilio: a.domicilio || '',
+          pais: a.pais || '', zoom: a.zoom || '', domicilio: a.domicilio || '', ciudad: a.ciudad || '',
           fechaNacimiento: a.fechaNacimiento || '', esPlanta: a.esPlanta === true, clave: '',
         })
         setTieneUsuarioRol(a.tieneUsuarioRol)
@@ -257,7 +258,10 @@ export default function AdvisorEditModal({ advisorId, advisorNombre, onClose, on
             </div>
             <Field label="Link de Zoom" value={form.zoom} onChange={v => set('zoom', v)} />
             <p className="text-[11px] text-gray-400 -mt-1">Al cambiar el Zoom se actualiza automáticamente en las clases futuras del advisor (eventos y bookings). No aplica a WELCOME.</p>
-            <Field label="Domicilio" value={form.domicilio} onChange={v => set('domicilio', v)} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Dirección (domicilio)" value={form.domicilio} onChange={v => set('domicilio', v)} />
+              <Field label="Ciudad" value={form.ciudad} onChange={v => set('ciudad', v)} />
+            </div>
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
                 type="checkbox"

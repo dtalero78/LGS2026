@@ -11,7 +11,7 @@ import { buildDynamicUpdate } from '@/lib/query-builder';
 
 const ADVISOR_COLUMNS = `
   "_id", "email", "primerNombre", "primerApellido", "nombreCompleto",
-  "pais", "zoom", "activo", "fotoAdvisor", "domicilioadvisor", "fechaNacimiento",
+  "pais", "zoom", "activo", "fotoAdvisor", "domicilioadvisor", "ciudadadvisor", "fechaNacimiento",
   "esPlanta", "usuarioRolId", "cancelada", "noasistio", "programa", "_createdDate", "_updatedDate"
 `;
 
