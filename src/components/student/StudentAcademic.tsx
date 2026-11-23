@@ -821,13 +821,13 @@ export default function StudentAcademic({ student, classes: initialClasses, view
                     )}
                   </td>
                   <td className="table-cell">
-                    <span className={`badge ${classItem.asistencia ? 'badge-success' : esPendiente(classItem) ? 'badge-warning' : 'badge-danger'}`}>
-                      {classItem.asistencia ? 'Sí' : esPendiente(classItem) ? 'Pendiente' : 'No'}
+                    <span className={`badge ${classItem.asistencia ? 'badge-success' : classItem.cancelo ? 'badge-danger' : esPendiente(classItem) ? 'badge-warning' : 'badge-danger'}`}>
+                      {classItem.asistencia ? 'Sí' : classItem.cancelo ? 'Cancelada' : esPendiente(classItem) ? 'Pendiente' : 'No'}
                     </span>
                   </td>
                   <td className="table-cell">
                     <span className={`badge ${classItem.participacion ? 'badge-success' : 'badge-warning'}`}>
-                      {classItem.participacion ? 'Sí' : esPendiente(classItem) ? 'Pendiente' : 'No'}
+                      {classItem.participacion ? 'Sí' : classItem.cancelo ? 'Cancelada' : esPendiente(classItem) ? 'Pendiente' : 'No'}
                     </span>
                   </td>
                   <td className="table-cell text-center">

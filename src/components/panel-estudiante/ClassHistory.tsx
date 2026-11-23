@@ -203,8 +203,8 @@ export default function ClassHistory({ data, isLoading }: ClassHistoryProps) {
                     </div>
                   </td>
                   <td className="table-cell">
-                    <span className={`badge ${item.asistencia ? 'badge-success' : esPendiente(item) ? 'badge-warning' : 'badge-danger'}`}>
-                      {item.asistencia ? 'Sí' : esPendiente(item) ? 'Pendiente' : 'No'}
+                    <span className={`badge ${item.asistencia ? 'badge-success' : item.cancelo ? 'badge-danger' : esPendiente(item) ? 'badge-warning' : 'badge-danger'}`}>
+                      {item.asistencia ? 'Sí' : item.cancelo ? 'Cancelada' : esPendiente(item) ? 'Pendiente' : 'No'}
                     </span>
                   </td>
                   <td className="table-cell text-center">
