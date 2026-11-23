@@ -10,6 +10,7 @@ import { buildKidsReservation, plataformaToCountryCode, toISODate, errorEdadCurs
 import { normalizarTelefono } from '@/lib/telefono';
 import { formatearPersona } from '@/lib/formato-campos';
 import { CRM_LADDER_COLUMNS, CRM_LADDER_KEYS, ladderFromEnvelope } from '@/lib/crm-bridge';
+import { completarEscala } from '@/lib/escala-comercial';
 import { requirePermission } from '@/lib/api-permissions';
 import { registrarEventoContrato } from '@/lib/contrato-eventos';
 import { ComercialPermission } from '@/types/permissions';
@@ -76,8 +77,9 @@ async function upsertEquipoComercial(titular: any, contrato: string): Promise<vo
 async function guardarEscalaEquipo(crmBridge: any, titular: any): Promise<void> {
   try {
     const correo = String(titular?.asesor ?? '').trim().toLowerCase();
-    const ladder = ladderFromEnvelope(crmBridge, correo);
-    if (!ladder || !correo) return;
+    const firmada = ladderFromEnvelope(crmBridge, correo);
+    if (!firmada || !correo) return;
+    const ladder = completarEscala(firmada);
     const v = (k: 'fe' | 'tm' | 'ge' | 'gd' | 's1') => ladder[k].trim().slice(0, CRM_LADDER_COLUMNS[k].max) || null;
     const vals = [v('fe'), v('tm'), v('ge'), v('gd'), v('s1')];
     if (!vals.some(Boolean)) return;
@@ -320,7 +322,9 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   // Escalera comercial del día de la matrícula (Libro de Producción), sólo si vino
   // firmada por el CRM (enlace v2) y es del asesor del contrato. Sin ella las
   // columnas quedan NULL y se completan a mano, como antes.
-  const ladder = ladderFromEnvelope(crmBridge, String(titular.asesor || ''));
+  const ladderFirmada = ladderFromEnvelope(crmBridge, String(titular.asesor || ''));
+  // Niveles vacíos entre el ejecutivo y su gerente se llenan con el gerente (escala-comercial.ts).
+  const ladder = ladderFirmada ? completarEscala(ladderFirmada) : null;
   if (crmBridge && !ladder) {
     const delOtro = String(crmBridge?.email || '').trim().toLowerCase() !== String(titular.asesor || '').trim().toLowerCase();
     console.warn(`[contracts] escalera del CRM descartada (${delOtro ? `enlace de ${crmBridge?.email}, asesor del contrato ${titular.asesor}` : 'firma inválida'}) — contrato ${contrato}`);
