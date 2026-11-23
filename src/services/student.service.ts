@@ -131,6 +131,8 @@ interface ToggleStatusOptions {
   motivo: string;
   realizadoPor: string;        // email of the admin executing the action
   realizadoPorNombre?: string; // optional display name
+  /** true = el cambio viene de KIDS: no se le avisa de vuelta (sin eco). */
+  desdeKids?: boolean;
 }
 
 export async function toggleStatus(id: string, active: boolean, opts: ToggleStatusOptions) {
@@ -185,8 +187,8 @@ export async function toggleStatus(id: string, active: boolean, opts: ToggleStat
   let efectos: ResultadoEfectos | null = null;
   try {
     efectos = wantInactive
-      ? await efectosInactivacion(person, opts.motivo)
-      : await efectosReactivacion(person);
+      ? await efectosInactivacion(person, opts.motivo, { sinKids: opts.desdeKids === true })
+      : await efectosReactivacion(person, { sinKids: opts.desdeKids === true });
     await query(
       `UPDATE "PEOPLE" SET "suspenddata" = COALESCE("suspenddata", '{}'::jsonb) || $2::jsonb WHERE "_id" = $1`,
       [id, JSON.stringify({ efectos })]

@@ -118,8 +118,9 @@ async function sincronizarKids(person: any, inactivar: boolean, motivo: string) 
 }
 
 /** Efectos de INACTIVAR (después de marcar PEOPLE). */
-export async function efectosInactivacion(person: any, motivo: string): Promise<ResultadoEfectos> {
-  const kids = await sincronizarKids(person, true, motivo);
+export async function efectosInactivacion(person: any, motivo: string, opts: { sinKids?: boolean } = {}): Promise<ResultadoEfectos> {
+  // sinKids: el cambio VIENE de KIDS (/api/kids-sync/estado): no se le avisa de vuelta (sin eco).
+  const kids = opts.sinKids ? null : await sincronizarKids(person, true, motivo);
   if (await sigueEstudiandoEnOtro(person)) {
     return { clasesCanceladas: 0, login: 'SIGUE_EN_OTRO_CONTRATO', kids };
   }
@@ -137,8 +138,8 @@ export async function efectosInactivacion(person: any, motivo: string): Promise<
 }
 
 /** Efectos de REACTIVAR (después de marcar PEOPLE). */
-export async function efectosReactivacion(person: any): Promise<ResultadoEfectos> {
-  const kids = await sincronizarKids(person, false, '');
+export async function efectosReactivacion(person: any, opts: { sinKids?: boolean } = {}): Promise<ResultadoEfectos> {
+  const kids = opts.sinKids ? null : await sincronizarKids(person, false, '');
   if (person.numeroId) {
     await query(`UPDATE "ACADEMICA" SET "estadoInactivo" = false, "_updatedDate" = NOW() WHERE ${N('"numeroId"')} = ${N('$1')}`, [person.numeroId]);
   }
