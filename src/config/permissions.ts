@@ -1258,6 +1258,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Acceso a /admin/envio-mensajes. Envío masivo de mensajes WhatsApp a usuarios filtrados',
   },
   {
+    code: MantenimientoPermission.ENVIO_MENSAJES_PERSONALIZADO,
+    module: Module.MANTENIMIENTO,
+    section: 'Usuarios',
+    name: 'Envío Mensajes › texto personalizado a inscritos de un evento',
+    description: 'En /admin/envio-mensajes › Por evento, permite escribir un mensaje libre (no de plantilla) a los inscritos de un evento. Sin este permiso solo se envían plantillas',
+  },
+  {
     code: MantenimientoPermission.CREAR_ROL,
     module: Module.MANTENIMIENTO,
     section: 'Usuarios',

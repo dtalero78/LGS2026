@@ -24,6 +24,13 @@ export interface RecipientContext {
   step?: string | null;
   plataforma?: string | null;
   contrato?: string | null;
+  // Datos del evento (envío "Por evento")
+  fechaEvento?: string | null;
+  horaEvento?: string | null;
+  tipoEvento?: string | null;
+  tituloEvento?: string | null;
+  advisor?: string | null;
+  linkZoom?: string | null;
 }
 
 /** Lista única de placeholders válidos — el editor de plantillas la usa para auto-sugerir. */
@@ -35,6 +42,12 @@ export const AVAILABLE_PLACEHOLDERS = [
   'plataforma',
   'contrato',
   'numeroId',
+  'fechaEvento',
+  'horaEvento',
+  'tipoEvento',
+  'tituloEvento',
+  'advisor',
+  'linkZoom',
 ] as const;
 
 export type PlaceholderKey = typeof AVAILABLE_PLACEHOLDERS[number];
@@ -48,6 +61,12 @@ function valueFor(ctx: RecipientContext, key: string): string {
     case 'plataforma':     return (ctx.plataforma ?? '').trim();
     case 'contrato':       return (ctx.contrato ?? '').trim();
     case 'numeroId':       return (ctx.numeroId ?? '').trim();
+    case 'fechaEvento':    return (ctx.fechaEvento ?? '').trim();
+    case 'horaEvento':     return (ctx.horaEvento ?? '').trim();
+    case 'tipoEvento':     return (ctx.tipoEvento ?? '').trim();
+    case 'tituloEvento':   return (ctx.tituloEvento ?? '').trim();
+    case 'advisor':        return (ctx.advisor ?? '').trim();
+    case 'linkZoom':       return (ctx.linkZoom ?? '').trim();
     default:               return ''; // placeholder desconocido → vacío
   }
 }

@@ -21,6 +21,7 @@ import {
 import toast from 'react-hot-toast'
 import { fillTemplate } from '@/lib/message-template-filler'
 import { normalizeNumeroId } from '@/lib/numeroid-normalize'
+import EnvioPorEvento from '@/components/mensajes/EnvioPorEvento'
 
 interface Template {
   _id: string
@@ -61,7 +62,7 @@ interface SendResult {
 
 const MAX_RECIPIENTS = 300
 
-type Mode = 'individual' | 'masivo'
+type Mode = 'individual' | 'masivo' | 'evento'
 
 /** Parsea un CSV simple: encabezado en la primera línea + datos. Acepta `,` o `;`. */
 function parseCsvNumeroIds(text: string): string[] {
@@ -338,7 +339,7 @@ export default function EnvioMensajesPage() {
               <div className="flex-1">
                 <h1 className="text-2xl font-bold text-gray-900">Envío de Mensajes WhatsApp</h1>
                 <p className="text-sm text-gray-500 mt-0.5">
-                  Envío individual o masivo usando plantillas predefinidas. Máximo {MAX_RECIPIENTS} destinatarios por operación.
+                  Envío individual, masivo o a los inscritos de un evento, con plantillas predefinidas. Máximo {MAX_RECIPIENTS} destinatarios por operación.
                 </p>
               </div>
               {mode && (
@@ -358,7 +359,7 @@ export default function EnvioMensajesPage() {
           {!mode && (
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Selecciona el tipo de envío</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <button
                   type="button"
                   onClick={() => setMode('individual')}
@@ -377,12 +378,23 @@ export default function EnvioMensajesPage() {
                   <h3 className="font-semibold text-gray-900 mb-1">Masivo</h3>
                   <p className="text-sm text-gray-500">Sube un CSV con la lista de IDs. Máx {MAX_RECIPIENTS} por operación.</p>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('evento')}
+                  className="text-left p-5 border-2 border-gray-200 rounded-2xl hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
+                >
+                  <ChatBubbleLeftRightIcon className="h-8 w-8 text-indigo-600 mb-2" />
+                  <h3 className="font-semibold text-gray-900 mb-1">Por evento</h3>
+                  <p className="text-sm text-gray-500">Escribe a los inscritos de una sesión, club o welcome, con plantilla o mensaje personalizado.</p>
+                </button>
               </div>
             </div>
           )}
 
+          {mode === 'evento' && <EnvioPorEvento templates={templates} />}
+
           {/* Paso 2: Plantilla */}
-          {mode && (
+          {mode && mode !== 'evento' && (
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
               <label htmlFor="plantilla-select" className="block text-sm font-medium text-gray-700 mb-2">
                 Plantilla del mensaje
