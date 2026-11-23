@@ -17,6 +17,7 @@ import 'server-only';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { ValidationError, ForbiddenError } from '@/lib/errors';
 import { queryOne } from '@/lib/postgres';
+import { RolPermisosRepository } from '@/repositories/roles.repository';
 import {
   listAdminEventsForAdvisorMonth,
   getAdminEventHoursAggregate,
@@ -36,8 +37,18 @@ export const GET = handlerWithAuth(async (request, { params }, session) => {
   const email = (session?.user as any)?.email;
   const role  = String((session?.user as any)?.role || '').toUpperCase();
 
-  // Coordinator/admin pueden ver cualquier advisor. El advisor solo el suyo.
-  if (!BYPASS_ROLES.has(role)) {
+  // Coordinator/admin o roles con ACADEMICO.CONTROL_HORAS.VER_TODOS (p. ej. SERVICIO_JEFE,
+  // ACADEMICO_JEFE) pueden ver cualquier advisor, igual que en el endpoint de control-horas.
+  // El advisor solo el suyo. Los permisos se leen directo de ROL_PERMISOS.
+  let veTodos = BYPASS_ROLES.has(role);
+  if (!veTodos) {
+    try {
+      const row = await RolPermisosRepository.findByRol(role);
+      const perms = Array.isArray((row as any)?.permisos) ? (row as any).permisos as string[] : [];
+      veTodos = perms.includes('ACADEMICO.CONTROL_HORAS.VER_TODOS');
+    } catch { /* sin permisos → solo el propio */ }
+  }
+  if (!veTodos) {
     const adv = await queryOne<{ _id: string }>(
       `SELECT "_id" FROM "ADVISORS" WHERE LOWER("email") = LOWER($1) LIMIT 1`,
       [email],
