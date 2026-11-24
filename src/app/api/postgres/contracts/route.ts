@@ -329,6 +329,28 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
     const delOtro = String(crmBridge?.email || '').trim().toLowerCase() !== String(titular.asesor || '').trim().toLowerCase();
     console.warn(`[contracts] escalera del CRM descartada (${delOtro ? `enlace de ${crmBridge?.email}, asesor del contrato ${titular.asesor}` : 'firma inválida'}) — contrato ${contrato}`);
   }
+  if (!ladder && !esPrueba) {
+    // Sin escalera firmada (p. ej. contrato directo por WhatsApp): se usa la escala guardada del
+    // ejecutivo en EQUIPO_COMERCIAL (la última que mandó el CRM). Solo los 5 niveles; filial/origen no.
+    try {
+      const eq = await client.query(
+        `SELECT "fullExecutive","jefeGrupo","gerente","gerenteDivision","salesManager" FROM "EQUIPO_COMERCIAL"
+          WHERE LOWER(TRIM("correo")) = $1 LIMIT 1`,
+        [String(titular.asesor || '').trim().toLowerCase()]);
+      const r = eq.rows[0];
+      if (r) {
+        const vals = [r.fullExecutive, r.jefeGrupo, r.gerente, r.gerenteDivision, r.salesManager].map((x: any) => String(x ?? '').trim() || null);
+        if (vals.some(Boolean)) {
+          const upd = await client.query(
+            `UPDATE "PEOPLE" SET "fullExecutive"=$2,"jefeGrupo"=$3,"gerente"=$4,"gerenteDivision"=$5,"salesManager"=$6 WHERE "_id"=$1 RETURNING *`,
+            [titularId, ...vals]);
+          titularResult.rows[0] = upd.rows[0];
+        }
+      }
+    } catch (err: any) {
+      console.warn('[contracts] escala guardada del ejecutivo no se aplicó:', err?.message || err);
+    }
+  }
   if (ladder) {
     const keys = CRM_LADDER_KEYS;
     const sets = keys.map((k, i) => `"${CRM_LADDER_COLUMNS[k].col}" = $${i + 2}`).join(', ');
