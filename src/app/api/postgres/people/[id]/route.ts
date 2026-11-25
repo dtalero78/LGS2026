@@ -510,6 +510,15 @@ export const PATCH = handlerWithAuth(async (
         s.v,
       );
       if (r.rowCount) tablasSincronizadas.push('ACADEMICA (' + r.rowCount + ')');
+    } else if (syncingNumeroId && body.numeroId) {
+      // El beneficiario se aprobó SIN documento: su ficha quedó con numeroId vacío y el match
+      // por el documento anterior no la encuentra. Se liga por usuarioId (caso Sebastián Canales).
+      const r = await client.query(
+        `UPDATE "ACADEMICA" SET "numeroId" = $2, "_updatedDate" = NOW()
+          WHERE "usuarioId" = $1 AND COALESCE("numeroId",'') = ''`,
+        [personId, body.numeroId],
+      );
+      if (r.rowCount) tablasSincronizadas.push('ACADEMICA (' + r.rowCount + ')');
     }
 
     // ── USUARIOS_ROLES — cuenta de login ──
