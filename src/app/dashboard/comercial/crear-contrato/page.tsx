@@ -938,7 +938,13 @@ function CrearContratoContent() {
       setShowBlankBenefWarning(true);
       return;
     }
-    // 2) Flujo normal de confirmación.
+    // 2) Todo beneficiario lleva documento (bloquea).
+    const sinDoc = beneficiarios.find(b => !(b.numeroId || '').trim());
+    if (sinDoc) {
+      setError(`El beneficiario ${`${sinDoc.primerNombre || ''} ${sinDoc.primerApellido || ''}`.trim() || 'sin nombre'} no tiene número de documento. Complétalo para continuar.`);
+      return;
+    }
+    // 3) Flujo normal de confirmación.
     continuarConfirmacion(beneficiarios);
   };
 

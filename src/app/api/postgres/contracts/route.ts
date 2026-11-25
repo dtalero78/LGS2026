@@ -181,6 +181,11 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   if (!titular?.numeroId || !titular?.primerNombre || (!esEmpresa && !titular?.primerApellido)) {
     throw new ValidationError('titular with numeroId and primerNombre is required');
   }
+  // Todo beneficiario lleva documento (antes se guardaban sin él y quedaban sin ficha académica).
+  const benefSinDoc = (Array.isArray(beneficiarios) ? beneficiarios : []).find((b: any) => !String(b?.numeroId ?? '').trim());
+  if (benefSinDoc) {
+    throw new ValidationError(`El beneficiario ${`${benefSinDoc.primerNombre || ''} ${benefSinDoc.primerApellido || ''}`.trim() || 'sin nombre'} no tiene número de documento`);
+  }
 
   // Formato de los datos (regla única de lib/formato-campos): nombres en Nombre Propio,
   // email en minúsculas, etc. En Empresa la razón social (primerNombre) solo se limpia.
@@ -406,6 +411,10 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
   }
 
   if (beneficiarios?.length) {
+    const sinDoc = beneficiarios.find((b: any) => !String(b?.numeroId ?? '').trim());
+    if (sinDoc) {
+      throw new ValidationError(`El beneficiario ${`${sinDoc.primerNombre || ''} ${sinDoc.primerApellido || ''}`.trim() || 'sin nombre'} no tiene número de documento`);
+    }
     allBeneficiarios.push(...beneficiarios);
   }
 

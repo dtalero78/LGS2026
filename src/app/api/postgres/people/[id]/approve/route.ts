@@ -59,6 +59,12 @@ async function approveOnePerson(
     };
   }
 
+  // Un beneficiario sin documento no se aprueba: su ficha ACADEMICA nacería con numeroId vacío
+  // y no se uniría con su ficha (caso Sebastián Canales). Debe completarse el documento primero.
+  if (person.tipoUsuario === 'BENEFICIARIO' && !String(person.numeroId ?? '').trim()) {
+    throw new ValidationError(`${person.primerNombre} ${person.primerApellido}: falta el número de documento. Complétalo en su ficha antes de aprobarlo.`);
+  }
+
   console.log(`🟢 [Approve] Aprobando ${person.tipoUsuario}: ${person.primerNombre} ${person.primerApellido} (${personId})`);
 
   // Use provided contrato or person's own
