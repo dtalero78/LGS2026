@@ -71,6 +71,9 @@ export interface RegistroLibro {
   aprobacion: string; aprobacionFicha: string | null; firmado: boolean;
   /** Lo que le falta al contrato (columna Motivo de "Por resolver"): firma OTP, documentos anexos, recibo de inscripción, contrato en Drive. */
   faltantes: ('FIRMA' | 'DOCUMENTOS' | 'RECIBO' | 'DRIVE')[];
+  /** Aviso "Revisar documentación" tras reemplazar a una persona desde el Resumen de Matrícula
+   *  (CONTRATO_EVENTOS); se apaga al subir un documento después. null = sin aviso. */
+  revisarDocumentacion: string | null;
   estado: string | null; observaciones: string | null; pais: string | null;
   titular: { nombre: string; documento: string; telefono: string; correo: string; direccion: string; ciudad: string };
   referencias: { nombre: string; telefono: string; parentesco: string }[];
@@ -166,7 +169,7 @@ async function construir(
   if (!titulares.length) return [];
 
   const contratos = titulares.map((t) => t.contrato);
-  const [fins, pagos, benefs] = await Promise.all([
+  const [fins, pagos, benefs, revisar] = await Promise.all([
     queryMany<any>(
       `SELECT DISTINCT ON ("contrato") "contrato","totalPlan","valorCuota","pagoInscripcion","numeroCuotas","saldo","fechaPago","plan"
          FROM "FINANCIEROS" WHERE "contrato" = ANY($1) ORDER BY "contrato", "_updatedDate" DESC NULLS LAST`, [contratos]),
@@ -181,7 +184,16 @@ async function construir(
               "celular","email","kids","aprobacion"
          FROM "PEOPLE" WHERE "contrato" = ANY($1) AND "tipoUsuario" = 'BENEFICIARIO'
         ORDER BY "contrato", "_createdDate"`, [contratos]),
+    // Aviso del reemplazo (mismo criterio que el Resumen de Matrícula).
+    queryMany<any>(
+      `SELECT DISTINCT ON (e."contrato") e."contrato", e."detalle"
+         FROM "CONTRATO_EVENTOS" e
+        WHERE e."contrato" = ANY($1) AND e."accion" = 'Revisar documentación (reemplazo)'
+          AND e."_createdDate" > COALESCE((SELECT MAX(d."_createdDate") FROM "CONTRATO_EVENTOS" d
+                WHERE d."contrato" = e."contrato" AND d."accion" = 'Documento subido'), 'epoch'::timestamptz)
+        ORDER BY e."contrato", e."_createdDate" DESC`, [contratos]).catch(() => [] as any[]),
   ]);
+  const revisarPor = new Map(revisar.map((x: any) => [x.contrato, x.detalle as string]));
 
   const tipoIds = Array.from(new Set(titulares.map((t) => t.tipoPlanId).filter(Boolean)));
   const tipos = tipoIds.length
@@ -241,6 +253,7 @@ async function construir(
         ...(t.con_recibo === true ? [] : ['RECIBO' as const]),
         ...(t.con_drive === true ? [] : ['DRIVE' as const]),
       ],
+      revisarDocumentacion: revisarPor.get(t.contrato) || null,
       estado: t.estado || null,
       observaciones: t.observacionesContrato || null,
       pais: t.plataforma || null,

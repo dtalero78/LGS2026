@@ -44,6 +44,8 @@ interface Registro {
   suscripcionPago: boolean; prixus: boolean; factura: string | null
   aprobacion: string; aprobacionFicha: string | null; firmado: boolean
   faltantes?: Faltante[]
+  /** "Revisar documentación" tras un reemplazo de persona (Resumen de Matrícula). */
+  revisarDocumentacion?: string | null
   estado: string | null; observaciones: string | null; pais: string | null
   titular: { nombre: string; documento: string; telefono: string; correo: string; direccion: string; ciudad: string }
   referencias: { nombre: string; telefono: string; parentesco: string }[]
@@ -72,12 +74,17 @@ const vaAlLibro = (r: { aprobacion: string; firmado: boolean; faltantes?: Faltan
   const f = r.faltantes || []
   return esPendiente(r.aprobacion) && r.firmado && !f.includes('DOCUMENTOS') && !f.includes('RECIBO')
 }
+/** Aviso tras reemplazar a una persona desde el Resumen de Matrícula (se apaga al subir un documento). */
+const REVISAR_DOC = { label: 'Revisar documentación', cls: 'bg-orange-100 text-orange-800 ring-1 ring-orange-300' }
+type ConMotivo = { aprobacion: string; faltantes?: Faltante[]; revisarDocumentacion?: string | null }
 /** Motivo de un contrato en Por resolver: un estado de anulación (nulo, devuelto…) o lo que le falta. */
-const motivosDe = (r: { aprobacion: string; faltantes?: Faltante[] }): { label: string; ayuda: string; cls: string }[] =>
-  !esAprobado(r.aprobacion) && !esPendiente(r.aprobacion)
+const motivosDe = (r: ConMotivo): { label: string; ayuda: string; cls: string }[] => [
+  ...(!esAprobado(r.aprobacion) && !esPendiente(r.aprobacion)
     ? [{ label: r.aprobacion, ayuda: `Estado del contrato: ${r.aprobacion}`, cls: 'bg-red-100 text-red-800' }]
-    : (r.faltantes || []).map(k => MOTIVOS[k])
-const textoMotivo = (r: { aprobacion: string; faltantes?: Faltante[] }) => motivosDe(r).map(m => m.label).join(', ')
+    : (r.faltantes || []).map(k => MOTIVOS[k])),
+  ...(r.revisarDocumentacion ? [{ ...REVISAR_DOC, ayuda: r.revisarDocumentacion }] : []),
+]
+const textoMotivo = (r: ConMotivo) => motivosDe(r).map(m => m.label).join(', ')
 
 const TODOS = '__todos__'
 const SIN_FIRMAR = 'Sin firmar' // estado que asigna el servicio al titular sin firma ni aprobación
@@ -122,7 +129,9 @@ const COLS: Col[] = [
   { key: 'semana', header: 'Semana', w: 64, titular: r => r.semana ? etiquetaSemana(r.semana) : '—' },
   { key: 'ingreso', header: 'Fecha ingreso', w: 104, titular: r => fmtF(r.fechaIngreso) },
   { key: 'pago', header: 'Fecha de pago', w: 104, titular: r => fmtF(r.fechaPago) },
-  { key: 'contrato', header: 'N° Contrato', w: 112, titular: r => r.contrato },
+  { key: 'contrato', header: 'N° Contrato', w: 112, titular: r => r.revisarDocumentacion
+      ? <span className="inline-flex items-center gap-1" title={`Revisar documentación: ${r.revisarDocumentacion}`}>{r.contrato}<span className={`px-1 rounded text-[10px] font-bold ${REVISAR_DOC.cls}`}>⚠ Doc</span></span>
+      : r.contrato },
   { key: 'titular', header: 'Titular', w: 230, titular: r => r.titular.nombre, benef: b => b.nombre },
   { key: 'cedula', header: 'Cédula titular', w: 116, titular: r => r.titular.documento, benef: b => b.documento },
   { key: 'tel', header: 'Teléfono titular', w: 124, titular: r => r.titular.telefono, benef: b => b.telefono },
