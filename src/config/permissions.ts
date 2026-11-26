@@ -227,7 +227,14 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     module: Module.PERSON,
     section: 'Administración',
     name: 'Dropdown "Estado Actual"',
-    description: 'Cambiar estado: Aprobado, Contrato nulo, Devuelto, Pendiente, Rechazado',
+    description: 'Cambiar estado: Aprobado, Pendiente aprobación, Pendiente Comercial, Rechazado, Retractado (Contrato nulo exige además MARCAR_CONTRATO_NULO)',
+  },
+  {
+    code: PersonPermission.MARCAR_CONTRATO_NULO,
+    module: Module.PERSON,
+    section: 'Administración',
+    name: '↳ Marcar "Contrato nulo"',
+    description: 'Permite marcar un contrato (sin aprobar) como Contrato nulo, con confirmación: el contrato podrá borrarse con sus registros en la Limpieza de Anulados. Pensado para el equipo de Aprobación.',
   },
   {
     code: PersonPermission.APROBAR,

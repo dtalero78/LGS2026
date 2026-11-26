@@ -75,6 +75,8 @@ export enum PersonPermission {
   ELIMINAR_DOCUMENTACION = 'PERSON.INFO.ELIMINAR_DOCUMENTACION',
   CAMBIO_CELULAR = 'PERSON.INFO.CAMBIO_CELULAR',
   CAMBIAR_ESTADO = 'PERSON.INFO.CAMBIAR_ESTADO',
+  /** Marcar "Contrato nulo" (Aprobación): el contrato podrá borrarse con sus registros. */
+  MARCAR_CONTRATO_NULO = 'PERSON.INFO.MARCAR_CONTRATO_NULO',
   MODIFICAR = 'PERSON.INFO.MODIFICAR',
   /** Editar nombres/apellidos del beneficiario. Se propaga a 6 tablas. */
   EDITAR_NOMBRE = 'PERSON.INFO.EDITAR_NOMBRE',

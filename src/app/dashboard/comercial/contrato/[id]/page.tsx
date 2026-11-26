@@ -31,6 +31,7 @@ import { isContratoPrueba } from '@/components/common/ContratoPruebaBadge'
 import DocumentosReciboModal from '@/components/common/DocumentosReciboModal'
 import CondicionesCanjeModal from '@/components/comercial/CondicionesCanjeModal'
 import ListoAprobacionModal from '@/components/comercial/ListoAprobacionModal'
+import { estadoVisible, requisitosFaltantes, LISTO_APROBACION, REQUISITOS_INCOMPLETOS, PENDIENTE_COMERCIAL, REQUISITO_LABEL } from '@/lib/estado-aprobacion'
 
 // ── Field definitions ──
 
@@ -721,27 +722,28 @@ export default function ContratoDetailPage() {
                   </button>
                 </>
               )}
-              {titular.listoAprobacion === true ? (
-                <span
-                  className="inline-flex items-center justify-center text-center leading-tight gap-2 w-48 min-h-[3rem] px-3 py-1.5 bg-yellow-100 text-yellow-900 border border-yellow-400 rounded-md text-sm font-medium"
-                  title={`Marcado por ${titular.listoAprobacionPor || '—'}${titular.listoAprobacionEn ? ' el ' + new Date(titular.listoAprobacionEn).toLocaleString('es-CO') : ''}`}
-                >
-                  <CheckBadgeIcon className="h-4 w-4 shrink-0" />
-                  Listo para aprobación
-                </span>
-              ) : !['aprobado', 'aprobada'].includes(String(titular.aprobacion || '').trim().toLowerCase()) && !isContratoPrueba(titular.contrato) && (
-                <PermissionGuard permission={ComercialPermission.DEJAR_LISTO_APROBACION}>
-                  <button
-                    type="button"
-                    onClick={() => setShowListoModal(true)}
-                    title="Confirmar que el contrato ya está firmado, con PDF generado, documentos y recibo subidos e información verificada"
-                    className="inline-flex items-center justify-center text-center leading-tight gap-2 w-48 min-h-[3rem] px-3 py-1.5 bg-yellow-400 text-yellow-950 rounded-md hover:bg-yellow-500 text-sm font-semibold"
+              {/* Estado de aprobación calculado (lib/estado-aprobacion): reemplaza al antiguo
+                  botón "Dejar listo para aprobación". */}
+              {(() => {
+                const falt = requisitosFaltantes(titular)
+                const est = estadoVisible(titular.aprobacion, falt)
+                const cls = est === 'Aprobado' ? 'bg-green-100 text-green-900 border-green-400'
+                  : est === LISTO_APROBACION ? 'bg-sky-100 text-sky-900 border-sky-400'
+                  : est === REQUISITOS_INCOMPLETOS ? 'bg-orange-100 text-orange-900 border-orange-400'
+                  : est === PENDIENTE_COMERCIAL ? 'bg-amber-100 text-amber-900 border-amber-400'
+                  : 'bg-red-100 text-red-900 border-red-400'
+                return (
+                  <span
+                    className={`inline-flex flex-col items-center justify-center text-center leading-tight w-48 min-h-[3rem] px-3 py-1.5 border rounded-md text-sm font-semibold ${cls}`}
+                    title={est === REQUISITOS_INCOMPLETOS ? 'Falta: ' + falt.map(k => REQUISITO_LABEL[k]).join(', ') : 'Estado de aprobación'}
                   >
-                    <CheckBadgeIcon className="h-4 w-4 shrink-0" />
-                    Dejar listo para aprobación
-                  </button>
-                </PermissionGuard>
-              )}
+                    <span className="inline-flex items-center gap-1.5"><CheckBadgeIcon className="h-4 w-4 shrink-0" />{est}</span>
+                    {est === REQUISITOS_INCOMPLETOS && (
+                      <span className="text-[11px] font-normal">{falt.map(k => REQUISITO_LABEL[k]).join(' · ')}</span>
+                    )}
+                  </span>
+                )
+              })()}
               {!consentStatus?.hasConsent && !isContratoPrueba(titular.contrato) && (
                 <PermissionGuard permission={ComercialPermission.APROBACION_AUTONOMA}>
                   <button

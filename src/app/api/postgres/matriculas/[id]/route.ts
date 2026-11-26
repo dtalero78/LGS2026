@@ -5,6 +5,7 @@ import { ComercialPermission, PersonPermission } from '@/types/permissions';
 import { query, queryOne } from '@/lib/postgres';
 import { NotFoundError } from '@/lib/errors';
 import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
+import { estadoVisible, requisitosFaltantes, REQUISITO_LABEL } from '@/lib/estado-aprobacion';
 
 /**
  * GET /api/postgres/matriculas/[id]
@@ -38,14 +39,19 @@ export const GET = handlerWithStaffAuth(async (_req, { params }, session) => {
             p."ciudad", p."fechaNacimiento", p."aprobacion", p."estado", p."hashConsentimiento",
             p."asesorAsignado", p."asesor", p."inicioContrato", p."fechaContrato", p."finalContrato",
             p."vigencia", p."_createdDate", p."fechaIngreso", p."tipoContrato",
-            p."telefono", p."genero", p."cargo", p."empresa", p."ingresos", p."tipoPersona"
+            p."telefono", p."genero", p."cargo", p."empresa", p."ingresos", p."tipoPersona",
+            (CASE WHEN jsonb_typeof(p."documentacion") = 'array' THEN jsonb_array_length(p."documentacion") ELSE 0 END) > 0 AS "conDocs",
+            (p."reciboInscripcion" IS NOT NULL) AS "conRecibo",
+            (COALESCE(p."driveFileId",'') <> '') AS "conDrive"
        FROM "PEOPLE" p WHERE p."_id" = $1 AND p."tipoUsuario" = 'TITULAR' LIMIT 1`,
     [id]
   );
   if (!titular) throw new NotFoundError('Titular', id);
 
-  const rawAprob = (titular.aprobacion || '').toString().trim();
-  const estadoMatricula = rawAprob || 'Sin aprobar';
+  // Estado de la matrícula: el guardado o, sin estado, el calculado por requisitos
+  // («Listo para aprobación» / «Requisitos incompletos») — lib/estado-aprobacion.
+  const faltantes = requisitosFaltantes(titular);
+  const estadoMatricula = estadoVisible(titular.aprobacion, faltantes);
 
   // Beneficiarios del contrato + perfil académico (LATERAL para evitar duplicados;
   // prefiere el registro BENEFICIARIO cuando hay ACADEMICA duplicada por numeroId).
@@ -104,7 +110,7 @@ export const GET = handlerWithStaffAuth(async (_req, { params }, session) => {
 
   return successResponse({
     alertas,
-    titular: { ...titular, firmado, estadoMatricula },
+    titular: { ...titular, firmado, estadoMatricula, faltantes: faltantes.map(k => REQUISITO_LABEL[k]) },
     beneficiarios: benef,
     totalBeneficiarios: benef.length,
   });

@@ -160,6 +160,11 @@ export async function actualizarPersona(personId: string, body: any, session: Se
     await assertPuedeRevertirAPendiente(currentPerson);
   }
 
+  // ── Contrato nulo: permiso propio (equipo de Aprobación) — lib/estado-aprobacion ──
+  if (body.aprobacion === 'Contrato nulo' && currentPerson.aprobacion !== 'Contrato nulo') {
+    await requirePermission(session, PersonPermission.MARCAR_CONTRATO_NULO);
+  }
+
   // ── Cambio de aprobación de un contrato YA APROBADO: motivo obligatorio ──
   // Queda en APROBACION_AUDIT (quién/cuándo/de→a/motivo). `aprobacionMotivo` no es
   // columna de PEOPLE: se saca del body antes del UPDATE dinámico.
@@ -183,7 +188,7 @@ export async function actualizarPersona(personId: string, body: any, session: Se
   //   - 'Pendiente' y 'Retractado' SÍ se permiten (con alerta en frontend).
   // Pre-aprobación cualquier transición es libre.
   if (body.aprobacion && currentPerson.aprobacion === 'Aprobado') {
-    const blockedPostApproval = ['Contrato nulo', 'Devuelto', 'Rechazado'];
+    const blockedPostApproval = ['Contrato nulo', 'Devuelto', 'Rechazado', 'Pendiente Comercial'];
     if (blockedPostApproval.includes(body.aprobacion)) {
       // Chequeos de contexto: estado operativo + beneficiarios académicos
       const estadoActual = currentPerson.estado ?? '';
@@ -208,8 +213,8 @@ export async function actualizarPersona(personId: string, body: any, session: Se
 
       throw new ValidationError(
         `No se puede cambiar la aprobación a "${body.aprobacion}" después de aprobar el contrato. ` +
-        `Estados "Contrato nulo", "Devuelto" y "Rechazado" sólo aplican antes de aprobar. ` +
-        `Usa "Retractado" si necesitas anular post-aprobación.` +
+        `Estados "Contrato nulo", "Pendiente Comercial" y "Rechazado" sólo aplican antes de aprobar. ` +
+        `Usa "Pendiente aprobación" (contrato reciente) o "Retractado".` +
         (reasons.length ? ` Además: el contrato ${reasons.join(' y ')}.` : '')
       );
     }
@@ -248,6 +253,7 @@ export async function actualizarPersona(personId: string, body: any, session: Se
     const APROBACION_TO_ESTADO: Record<string, string> = {
       'Aprobado':       'ACTIVA',
       'Pendiente':      'PENDIENTE',
+      'Pendiente Comercial': 'PENDIENTE',
       'Retractado':     'RETRACTADO',
       'Contrato nulo':  'ANULADO',
       'Devuelto':       'ANULADO',

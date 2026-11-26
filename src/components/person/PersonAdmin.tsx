@@ -14,6 +14,7 @@ import { isContratoPrueba } from '@/components/common/ContratoPruebaBadge'
 import KidsBeneficiarioModal, { KidsData } from '@/components/comercial/KidsBeneficiarioModal'
 import ComentarioEstadoModal from '@/components/common/ComentarioEstadoModal'
 import { exigeComentarioEstado, comentarioValido, MIN_COMENTARIO_ESTADO } from '@/lib/comentario-aprobacion'
+import { OPCIONES_ESTADO, PENDIENTE_COMERCIAL, LISTO_APROBACION, REQUISITO_LABEL, requisitosFaltantes, estadoVisible } from '@/lib/estado-aprobacion'
 
 interface PersonAdminProps {
   person: Person
@@ -363,18 +364,24 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     }
   ]
 
+  // Estados del selector (regla única en lib/estado-aprobacion). "Pendiente" se muestra
+  // como "Pendiente aprobación"; "Devuelto" ya no se ofrece (solo aparece si el contrato
+  // lo tiene); "Contrato nulo" exige el permiso propio MARCAR_CONTRATO_NULO.
+  const canContratoNulo = hasPermission(PersonPermission.MARCAR_CONTRATO_NULO)
+  const etiquetaEstado = (v: string) => OPCIONES_ESTADO.find(o => o.valor === v)?.etiqueta || v
+  const iconoEstado = (v: string) => OPCIONES_ESTADO.find(o => o.valor === v)?.icono || (v === 'Devuelto' ? '🔁' : '')
   const estadoOptions = [
-    'Aprobado',
-    'Contrato nulo',
-    'Devuelto',
-    'Pendiente',
-    'Rechazado',
-    'Retractado',
+    ...OPCIONES_ESTADO.map(o => o.valor)
+      .filter(v => v !== 'Contrato nulo' || canContratoNulo || originalEstado === 'Contrato nulo'),
+    ...(originalEstado === 'Devuelto' ? ['Devuelto'] : []),
   ]
+  // Estado visible: el guardado o, sin estado, "Listo para aprobación" / "Requisitos incompletos".
+  const faltantesTitular = requisitosFaltantes(person)
+  const estadoVisibleActual = estadoVisible(selectedEstado, faltantesTitular)
 
   // Estados que SOLO aplican antes de aprobar.
   // Post-aprobación el backend rechaza estos cambios con 400 + mensaje.
-  const PRE_APPROVAL_ONLY = ['Contrato nulo', 'Devuelto', 'Rechazado']
+  const PRE_APPROVAL_ONLY = ['Contrato nulo', 'Devuelto', 'Rechazado', PENDIENTE_COMERCIAL]
   // Estados post-aprobación que requieren confirmación simple (sin bloqueo)
   const SIMPLE_CONFIRM_POST_APPROVAL = ['Pendiente', 'Retractado']
 
@@ -491,8 +498,8 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     if (originalEstado === 'Aprobado' && PRE_APPROVAL_ONLY.includes(newEstado)) {
       alert(
         `No se puede cambiar a "${newEstado}" después de aprobar el contrato.\n\n` +
-        `Estos estados (Contrato nulo, Devuelto, Rechazado) sólo aplican antes de aprobar.\n` +
-        `Usa "Retractado" si necesitas anular el contrato post-aprobación.`
+        `Estos estados (Contrato nulo, Pendiente Comercial, Rechazado) sólo aplican antes de aprobar.\n` +
+        `Usa "Pendiente aprobación" (contrato reciente) o "Retractado".`
       )
       // Volver a sincronizar el dropdown con el estado real
       setSelectedEstado(originalEstado as any)
@@ -503,7 +510,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     // (dentro del mes de inicio Y todos los beneficiarios aún en WELCOME/sin nivel).
     if (originalEstado === 'Aprobado' && newEstado === 'Pendiente' && !puedePendiente) {
       alert(
-        `No se puede pasar a "Pendiente": ${motivoBloqueoPendiente}.\n\n` +
+        `No se puede pasar a "Pendiente aprobación": ${motivoBloqueoPendiente}.\n\n` +
         `Revertir la aprobación solo es posible mientras el contrato esté dentro del mes ` +
         `de inicio y los beneficiarios sigan en WELCOME o sin nivel.`
       )
@@ -582,6 +589,8 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     if (!pendingEstado) return
     // Contrato ya aprobado: exige motivo (≥10) + confirmación explícita.
     if (originalEstado === 'Aprobado' && (estadoMotivo.trim().length < 10 || !estadoAck)) return
+    // Contrato nulo: confirmación explícita (podrá borrarse con sus registros).
+    if (pendingEstado === 'Contrato nulo' && !estadoAck) return
     // Cualquier estado distinto de Aprobado exige el motivo (lib/comentario-aprobacion).
     if (exigeComentarioEstado(pendingEstado, person.tipoUsuario) && !comentarioValido(estadoMotivo)) return
 
@@ -1278,13 +1287,8 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                         originalEstado === 'Aprobado' && estado === 'Pendiente' && !puedePendiente
                       return (
                         <option key={estado} value={estado} disabled={pendienteBloqueado}>
-                          {estado === 'Aprobado' && '✅ '}
-                          {estado === 'Contrato nulo' && '⚪ '}
-                          {estado === 'Devuelto' && '🔄 '}
-                          {estado === 'Pendiente' && '⏳ '}
-                          {estado === 'Rechazado' && '❌ '}
-                          {estado === 'Retractado' && '↩️ '}
-                          {estado}
+                          {iconoEstado(estado)} {etiquetaEstado(estado)}
+                          {estado === 'Devuelto' && ' (estado antiguo)'}
                           {pendienteBloqueado && ' (bloqueado)'}
                         </option>
                       )
@@ -1295,10 +1299,20 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                 <div>
                   <span className="text-sm font-medium text-gray-700">Estado Visible:</span>
                   <div className="mt-1">
-                    <span className={`badge ${getEstadoBadgeClass(selectedEstado)}`}>
-                      {selectedEstado}
+                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                      estadoVisibleActual === 'Aprobado' ? 'bg-green-100 text-green-800'
+                      : estadoVisibleActual === LISTO_APROBACION ? 'bg-sky-100 text-sky-800'
+                      : estadoVisibleActual === PENDIENTE_COMERCIAL ? 'bg-amber-100 text-amber-800'
+                      : estadoVisibleActual === 'Requisitos incompletos' ? 'bg-orange-100 text-orange-800'
+                      : 'bg-red-100 text-red-800'}`}>
+                      {estadoVisibleActual}
                     </span>
                   </div>
+                  {estadoVisibleActual === 'Requisitos incompletos' && (
+                    <div className="mt-1 text-xs text-orange-800">
+                      Falta: {faltantesTitular.map(k => REQUISITO_LABEL[k]).join(' · ')}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -2292,10 +2306,27 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                 </span>{' '}
                 a{' '}
                 <span className="font-medium text-gray-900">
-                  {pendingEstado}
+                  {etiquetaEstado(pendingEstado)}
                 </span>
                 ?
               </p>
+              {pendingEstado === 'Contrato nulo' && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-300 rounded text-xs text-red-800">
+                  <strong>⚠ Contrato nulo:</strong> el contrato <strong>{person.contrato}</strong> se inactiva (titular y
+                  beneficiarios) y <strong>podrá borrarse definitivamente con todos sus registros</strong> en la Limpieza de Anulados.
+                  Si el problema lo puede corregir Comercial, use <strong>Pendiente Comercial</strong>.
+                  <label className="flex items-start gap-2 mt-2">
+                    <input type="checkbox" checked={estadoAck} onChange={(e) => setEstadoAck(e.target.checked)} className="mt-0.5" />
+                    <span>Confirmo que este contrato es nulo y que podrá borrarse con sus registros.</span>
+                  </label>
+                </div>
+              )}
+              {pendingEstado === PENDIENTE_COMERCIAL && (
+                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+                  El contrato vuelve a <strong>Comercial</strong> para corregir lo indicado en el motivo. No se inactiva a nadie
+                  y se puede volver a aprobar.
+                </div>
+              )}
               {originalEstado === 'Aprobado' && pendingEstado === 'Pendiente' && (
                 <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-xs text-red-800">
                   <strong>🔒 Se bloqueará el login de los beneficiarios.</strong> Pasar a{' '}
@@ -2312,7 +2343,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                   que el contrato no tenga OnHold o extensión en curso antes de confirmar.
                 </div>
               )}
-              {['Contrato nulo', 'Devuelto', 'Rechazado'].includes(pendingEstado) && (
+              {['Devuelto', 'Rechazado'].includes(pendingEstado) && (
                 <div className="mt-3 p-3 bg-gray-100 border border-gray-300 rounded text-xs text-gray-800">
                   <strong>🗑️ Depuración semanal:</strong> los contratos anulados (<em>{pendingEstado}</em>) se
                   <strong> borran definitivamente cada semana</strong> desde <em>Mantenimiento › Contratos › Limpieza de Anulados</em>.
@@ -2371,6 +2402,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                 onClick={confirmEstadoChange}
                 disabled={isUpdatingEstado
                   || (originalEstado === 'Aprobado' && (estadoMotivo.trim().length < 10 || !estadoAck))
+                  || (pendingEstado === 'Contrato nulo' && !estadoAck)
                   || (exigeComentarioEstado(pendingEstado, person.tipoUsuario) && !comentarioValido(estadoMotivo))}
                 className={`flex-1 border border-transparent rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center ${originalEstado === 'Aprobado' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}
               >

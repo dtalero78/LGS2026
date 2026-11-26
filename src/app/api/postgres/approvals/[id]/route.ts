@@ -1,4 +1,6 @@
 import 'server-only';
+import { requirePermission } from '@/lib/api-permissions';
+import { PersonPermission } from '@/types/permissions';
 import { handlerWithAuth, successResponse } from '@/lib/api-helpers';
 import { query } from '@/lib/postgres';
 import { NotFoundError, ValidationError } from '@/lib/errors';
@@ -21,6 +23,7 @@ export const GET = handlerWithAuth(async (request, { params }) => {
 const APROBACION_TO_ESTADO: Record<string, string> = {
   'Aprobado':       'ACTIVA',
   'Pendiente':      'PENDIENTE',
+  'Pendiente Comercial': 'PENDIENTE',
   'Retractado':     'RETRACTADO',
   'Contrato nulo':  'ANULADO',
   'Devuelto':       'ANULADO',
@@ -32,7 +35,7 @@ export const PUT = handlerWithAuth(async (request, { params }, session) => {
   const { estado } = body || {};
   if (!estado) throw new ValidationError('estado is required');
 
-  const validEstados = ['Aprobado', 'Rechazado', 'Pendiente', 'Contrato nulo', 'Devuelto', 'Retractado'];
+  const validEstados = ['Aprobado', 'Rechazado', 'Pendiente', 'Pendiente Comercial', 'Contrato nulo', 'Retractado'];
   // Accept both uppercase API format and display format
   const estadoMap: Record<string, string> = {
     'APROBADO': 'Aprobado',
@@ -51,6 +54,11 @@ export const PUT = handlerWithAuth(async (request, { params }, session) => {
        FROM "PEOPLE" WHERE "_id" = $1`, [params.id]);
   if (check.rowCount === 0) throw new NotFoundError('Person');
   const actual = check.rows[0];
+
+  // Contrato nulo: permiso propio (lib/estado-aprobacion).
+  if (estadoFinal === 'Contrato nulo' && actual.aprobacion !== 'Contrato nulo') {
+    await requirePermission(session, PersonPermission.MARCAR_CONTRATO_NULO);
+  }
 
   if (actual.tipoContrato === 'CANJE' && estadoFinal === 'Aprobado') {
     throw new ValidationError('Los contratos de canje se aprueban en Aprobación › Contratos Canje.');

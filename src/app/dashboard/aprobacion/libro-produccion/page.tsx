@@ -8,6 +8,7 @@
  * Pestaña Vigencias: generador anual del mes comercial (corte 9:00 hora local).
  */
 
+import { LISTO_APROBACION, REQUISITOS_INCOMPLETOS } from '@/lib/estado-aprobacion'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
@@ -59,21 +60,18 @@ const MOTIVOS: Record<Faltante, { label: string; ayuda: string; cls: string }> =
   FIRMA: { label: 'Sin firmar', ayuda: 'No tiene consentimiento OTP de firma', cls: 'bg-red-100 text-red-800' },
   DOCUMENTOS: { label: 'Sin documento', ayuda: 'Sin anexo de documentos', cls: 'bg-amber-100 text-amber-800' },
   RECIBO: { label: 'Sin recibo', ayuda: 'Sin recibo de inscripción', cls: 'bg-orange-100 text-orange-800' },
-  DRIVE: { label: 'Sin Drive', ayuda: 'Sin contrato generado en el Drive', cls: 'bg-slate-200 text-slate-700' },
+  DRIVE: { label: 'Sin PDF en Drive', ayuda: 'Sin contrato generado en el Drive', cls: 'bg-slate-200 text-slate-700' },
 }
 /** Aprobado (o ya FINALIZADA tras estar aprobado). */
 const esAprobado = (a: string) => /^(aprobad|finaliz)/i.test(String(a || '').trim())
-/** Sin estado en la ficha: "Sin firmar", "Pendiente aprobación" o listo para aprobación. */
-const esPendiente = (a: string) => a === SIN_FIRMAR || a === 'Pendiente aprobación' || a === ESTADO_LISTO
+/** Sin estado en la ficha: el sistema lo calcula (lib/estado-aprobacion). */
+const esPendiente = (a: string) => a === ESTADO_LISTO || a === REQ_INCOMPLETOS
 /**
- * Pestaña Libro: los Aprobados y los pendientes de aprobación COMPLETOS (firmados, con
- * documentos y con recibo de inscripción). Todo lo demás va a Por resolver.
+ * Pestaña Libro: los Aprobados y los «Listo para aprobación» (firmados, con documentos,
+ * recibo de inscripción y PDF en Drive). Todo lo demás va a Por resolver.
  */
-const vaAlLibro = (r: { aprobacion: string; firmado: boolean; faltantes?: Faltante[] }) => {
-  if (esAprobado(r.aprobacion)) return true
-  const f = r.faltantes || []
-  return esPendiente(r.aprobacion) && r.firmado && !f.includes('DOCUMENTOS') && !f.includes('RECIBO')
-}
+const vaAlLibro = (r: { aprobacion: string; firmado: boolean; faltantes?: Faltante[] }) =>
+  esAprobado(r.aprobacion) || r.aprobacion === ESTADO_LISTO
 /** Aviso tras reemplazar a una persona desde el Resumen de Matrícula (se apaga al subir un documento). */
 const REVISAR_DOC = { label: 'Revisar documentación', cls: 'bg-orange-100 text-orange-800 ring-1 ring-orange-300' }
 type ConMotivo = { aprobacion: string; faltantes?: Faltante[]; revisarDocumentacion?: string | null }
@@ -87,18 +85,18 @@ const motivosDe = (r: ConMotivo): { label: string; ayuda: string; cls: string }[
 const textoMotivo = (r: ConMotivo) => motivosDe(r).map(m => m.label).join(', ')
 
 const TODOS = '__todos__'
-const SIN_FIRMAR = 'Sin firmar' // estado que asigna el servicio al titular sin firma ni aprobación
-const ESTADO_LISTO = 'Firma, Documentos, pendiente aprobación' // firmado + "Dejar listo para aprobación"
+const ESTADO_LISTO = LISTO_APROBACION // sin estado y con todos los requisitos
+const REQ_INCOMPLETOS = REQUISITOS_INCOMPLETOS // sin estado y le falta algún requisito
 const fmtF = (v?: string | null) => { const [y, m, d] = String(v || '').slice(0, 10).split('-'); return y && m && d ? `${d}/${m}/${y}` : '—' }
 const fmtFH = (v?: string | null) => v ? `${fmtF(v)} ${v.slice(11, 16)}` : '—'
 const fmtM = (n: number | null) => n === null ? '—' : `$${n.toLocaleString('es-CO', { maximumFractionDigits: 2 })}`
-/** Color del estado: Aprobado verde · Pendiente aprobación ámbar · listo para aprobación celeste · Sin firmar gris · anulados/retractados rojo. */
+/** Color del estado: Aprobado verde · Listo para aprobación celeste · Requisitos incompletos naranja · Pendiente Comercial ámbar · anulados/retractados rojo. */
 const estadoCls = (a: string | null) => {
   const s = String(a || '').toLowerCase()
   if (s.startsWith('aprobad')) return 'bg-green-100 text-green-800'
-  if (s.startsWith('pendiente')) return 'bg-amber-100 text-amber-800'
   if (s === ESTADO_LISTO.toLowerCase()) return 'bg-sky-100 text-sky-800'
-  if (s === 'sin firmar') return 'bg-slate-200 text-slate-700'
+  if (s === REQ_INCOMPLETOS.toLowerCase()) return 'bg-orange-100 text-orange-800'
+  if (s.startsWith('pendiente')) return 'bg-amber-100 text-amber-800'
   return 'bg-red-100 text-red-800'
 }
 const resumenSsbb = (r: Registro) => {
@@ -282,8 +280,9 @@ function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; si
   const puedeDepurar = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_DEPURAR)
   const accionDe = (r: Registro): 'ratificar' | 'depurar' | 'remover' | null =>
     // Sin firmar: Ratificar (con el correo) y, dentro de ese modal, Remover; sin permiso de ratificar, solo Remover.
-    r.aprobacion === SIN_FIRMAR ? (puedeRatificar ? 'ratificar' : puedeDepurar ? 'remover' : null)
-    : (r.aprobacion === 'Pendiente aprobación' || r.aprobacion === ESTADO_LISTO) && puedeDepurar ? 'depurar' : null
+    !esPendiente(r.aprobacion) ? null
+    : !r.firmado ? (puedeRatificar ? 'ratificar' : puedeDepurar ? 'remover' : null)
+    : puedeDepurar ? 'depurar' : null
   const conCasilla = (r: Registro) => accionDe(r) !== null
   const { cols: COLS, fijas: FIJAS, lefts: LEFTS } = sinFirmar ? LAYOUT_POR_RESOLVER : LAYOUT_LIBRO
   const [accion, setAccion] = useState<{ id: string; tipo: 'ratificar' | 'depurar' | 'remover' } | null>(null)

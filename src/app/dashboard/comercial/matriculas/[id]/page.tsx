@@ -19,6 +19,7 @@ interface Titular {
   inicioContrato?: string | Date; finalContrato?: string | Date; vigencia?: string | number
   tipoContrato?: string | null
   firmado?: boolean
+  faltantes?: string[]
   telefono?: string; genero?: string; cargo?: string; empresa?: string; ingresos?: string
 }
 interface Beneficiario {
@@ -52,6 +53,9 @@ const fmtFecha = (v: any) => {
 function estadoBadge(estado?: string) {
   const e = (estado || '').toLowerCase()
   if (e.includes('aprobado') || e.includes('aprobada')) return 'bg-green-100 text-green-800'
+  if (e.startsWith('listo')) return 'bg-sky-100 text-sky-800'
+  if (e.startsWith('requisitos')) return 'bg-orange-100 text-orange-800'
+  if (e.includes('pendiente comercial')) return 'bg-amber-100 text-amber-800'
   if (e.includes('firmado')) return 'bg-orange-100 text-orange-800'
   if (e.includes('pendiente')) return 'bg-yellow-100 text-yellow-800'
   if (e.includes('revisión') || e.includes('revision')) return 'bg-blue-100 text-blue-800'
@@ -145,7 +149,7 @@ export default function MatriculaDetallePage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${estadoBadge(titular.estadoMatricula)}`} title="Estado de la matrícula (aprobación)">
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${estadoBadge(titular.estadoMatricula)}`} title={titular.faltantes?.length && titular.estadoMatricula === 'Requisitos incompletos' ? 'Falta: ' + titular.faltantes.join(', ') : 'Estado de la matrícula (aprobación)'}>
                       {titular.estadoMatricula}
                     </span>
                     {editarMenu(titular, true)}

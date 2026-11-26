@@ -16,6 +16,7 @@
  */
 
 import 'server-only';
+import { LISTO_APROBACION, estadoVisible, requisitosFaltantes, type Requisito } from '@/lib/estado-aprobacion';
 import { query, queryMany, queryOne, transaction } from '@/lib/postgres';
 import { ValidationError, NotFoundError } from '@/lib/errors';
 import { ids } from '@/lib/id-generator';
@@ -41,16 +42,12 @@ const iso = (d: any): string | null => (d ? new Date(d).toISOString() : null);
 
 /**
  * Estado del contrato en el libro = "Estado Actual" de la ficha (PEOPLE.aprobacion) cuando
- * tiene un valor real; sin estado (vacío o "Pendiente") se distingue si ya firmó:
- * firmado → "Pendiente aprobación", sin firma → "Sin firmar" (término del Centro de Aprobaciones).
- * Firmado y marcado con "Dejar listo para aprobación" (PEOPLE.listoAprobacion) → ESTADO_LISTO.
+ * tiene un valor real; sin estado (vacío o "Pendiente") se CALCULA (lib/estado-aprobacion):
+ * «Listo para aprobación» (firmado, documentos, recibo y PDF en Drive) o «Requisitos incompletos».
  */
-export const ESTADO_LISTO = 'Firma, Documentos, pendiente aprobación';
-function estadoLibro(aprobacion: string | null, firmado: boolean, listo = false): string {
-  const a = String(aprobacion || '').trim();
-  if (a && a.toLowerCase() !== 'pendiente') return a;
-  if (!firmado) return 'Sin firmar';
-  return listo ? ESTADO_LISTO : 'Pendiente aprobación';
+export const ESTADO_LISTO = LISTO_APROBACION;
+function estadoLibro(aprobacion: string | null, faltantes: Requisito[]): string {
+  return estadoVisible(aprobacion, faltantes);
 }
 const num = (v: any): number | null => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
 const nombre = (r: any) => [r.primerNombre, r.segundoNombre, r.primerApellido, r.segundoApellido]
@@ -67,7 +64,7 @@ export interface RegistroLibro {
   plan: number | null; tipoPlan: string | null; tipoPlanId: string | null; inscripcionPagada: number | null; valorCuota: number | null;
   saldo: number | null; totalPlan: number | null; fechaPrimeraCuota: string | null;
   suscripcionPago: boolean; prixus: boolean; factura: string | null;
-  /** Estado mostrado: el "Estado Actual" de la ficha, o "Pendiente aprobación" / "Sin firmar" si aún no tiene estado. */
+  /** Estado mostrado: el "Estado Actual" de la ficha, o «Listo para aprobación» / «Requisitos incompletos» si aún no tiene estado. */
   aprobacion: string; aprobacionFicha: string | null; firmado: boolean;
   /** Lo que le falta al contrato (columna Motivo de "Por resolver"): firma OTP, documentos anexos, recibo de inscripción, contrato en Drive. */
   faltantes: ('FIRMA' | 'DOCUMENTOS' | 'RECIBO' | 'DRIVE')[];
@@ -218,6 +215,9 @@ async function construir(
   for (const b of benefs) { if (!benefPor.has(b.contrato)) benefPor.set(b.contrato, []); benefPor.get(b.contrato)!.push(b); }
 
   return titulares.map((t, i) => {
+    const faltantes = requisitosFaltantes({
+      firmado: t.firmado === true, conDocs: t.con_docs === true, conRecibo: t.con_recibo === true, conDrive: t.con_drive === true,
+    });
     const f = finPor.get(t.contrato) || {};
     const pg = pagoPor.get(t.contrato) || {};
     const forma = [pg.medioPago, pg.banco, pg.numeroReferencia].map((s: any) => String(s || '').trim()).filter(Boolean).join(' · ');
@@ -244,15 +244,10 @@ async function construir(
       suscripcionPago: t.suscripcionPago === true,
       prixus: t.prixus === true,
       factura: pg.numeroFactura || null,
-      aprobacion: estadoLibro(t.aprobacion, t.firmado === true, t.listoAprobacion === true),
+      aprobacion: estadoLibro(t.aprobacion, faltantes),
       aprobacionFicha: t.aprobacion || null,
       firmado: t.firmado === true,
-      faltantes: [
-        ...(t.firmado === true ? [] : ['FIRMA' as const]),
-        ...(t.con_docs === true ? [] : ['DOCUMENTOS' as const]),
-        ...(t.con_recibo === true ? [] : ['RECIBO' as const]),
-        ...(t.con_drive === true ? [] : ['DRIVE' as const]),
-      ],
+      faltantes,
       revisarDocumentacion: revisarPor.get(t.contrato) || null,
       estado: t.estado || null,
       observaciones: t.observacionesContrato || null,
@@ -330,6 +325,9 @@ export async function gestionComercial(anio: number, mes: number | null, opts: {
               CONCAT_WS(' ', NULLIF(TRIM(p."primerNombre"),''), NULLIF(TRIM(p."segundoNombre"),''), NULLIF(TRIM(p."primerApellido"),''), NULLIF(TRIM(p."segundoApellido"),'')) AS titular_nombre,
               p."asesor", p."asesorCreadorContrato", p."fullExecutive", p."jefeGrupo", p."gerente", p."gerenteDivision", p."salesManager",
               (COALESCE(p."hashConsentimiento",'') <> '') AS firmado, p."listoAprobacion",
+              (CASE WHEN jsonb_typeof(p."documentacion") = 'array' THEN jsonb_array_length(p."documentacion") ELSE 0 END) > 0 AS con_docs,
+              (p."reciboInscripcion" IS NOT NULL) AS con_recibo,
+              (COALESCE(p."driveFileId",'') <> '') AS con_drive,
               to_char(p."fechaCreacion" AT TIME ZONE (${TZ_SQL}), 'YYYY-MM-DD"T"HH24:MI') AS creado_local
          FROM "PEOPLE" p
         WHERE p."tipoUsuario" = 'TITULAR' AND COALESCE(p."contrato",'') <> '' AND p."contrato" NOT LIKE 'PRB-%'
@@ -349,7 +347,9 @@ export async function gestionComercial(anio: number, mes: number | null, opts: {
       anio: v.anio, mes: v.mes, semana: semanaDe(v, t.creado_local),
       pais: limpio(t.plataforma) || 'Sin país', filial: limpio(t.filial) || 'Sin filial',
       grupo: grupoGestion(t.aprobacion, t.firmado === true),
-      estado: estadoLibro(t.aprobacion, t.firmado === true, t.listoAprobacion === true),
+      estado: estadoLibro(t.aprobacion, requisitosFaltantes({
+        firmado: t.firmado === true, conDocs: t.con_docs === true, conRecibo: t.con_recibo === true, conDrive: t.con_drive === true,
+      })),
       escala: {
         ejTraining: limpio(t.asesorCreadorContrato || t.asesor), fullExecutive: limpio(t.fullExecutive),
         jefeGrupo: limpio(t.jefeGrupo), gerente: limpio(t.gerente), gerenteDivision: limpio(t.gerenteDivision),
