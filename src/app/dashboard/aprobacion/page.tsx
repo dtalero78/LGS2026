@@ -69,7 +69,7 @@ const ESTADOS_APROBACION = [
   { value: 'Rechazado', label: 'Rechazado', color: 'bg-red-100 text-red-800' },
   { value: 'Pendiente', label: 'Pendiente', color: 'bg-yellow-100 text-yellow-800' },
   { value: 'En revisión', label: 'En revisión', color: 'bg-blue-100 text-blue-800' },
-  { value: 'Firmado sin aprobar', label: 'Firmado sin aprobar (incluye Sí acepto)', color: 'bg-orange-100 text-orange-800' },
+  { value: 'Firmado sin aprobar', label: 'Firmado y Sí acepto sin aprobar', color: 'bg-orange-100 text-orange-800' },
   { value: 'Sí acepto sin aprobar', label: 'Sí acepto sin aprobar', color: 'bg-violet-100 text-violet-800' },
   { value: 'Sin firmar', label: 'Sin firmar', color: 'bg-gray-100 text-gray-800' }
 ]
@@ -84,7 +84,7 @@ export default function AprobacionPage() {
   const [allContratos, setAllContratos] = useState<Contrato[]>([])
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState<FilterState>({
-    // Default = "Firmado sin aprobar" para que el aprobador entre directo al
+    // Default = "Firmado y Sí acepto sin aprobar" (firmados por OTP + ratificados por correo) para que el aprobador entre directo al
     // backlog operativo (contratos que el cliente ya firmó y esperan visto bueno).
     estado: 'Firmado sin aprobar',
     plataforma: '',
