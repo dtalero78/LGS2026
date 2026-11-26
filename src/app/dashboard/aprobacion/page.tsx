@@ -38,6 +38,8 @@ interface Contrato {
   tipoUsuario: string
   aprobacion?: string
   hashConsentimiento?: string
+  /** Firma reemplazada por el correo «SÍ, ACEPTO» (Ratificar). */
+  siAcepto?: boolean
   documentacion?: any
   tieneRecibo?: boolean
   _createdDate: Date
@@ -67,7 +69,8 @@ const ESTADOS_APROBACION = [
   { value: 'Rechazado', label: 'Rechazado', color: 'bg-red-100 text-red-800' },
   { value: 'Pendiente', label: 'Pendiente', color: 'bg-yellow-100 text-yellow-800' },
   { value: 'En revisión', label: 'En revisión', color: 'bg-blue-100 text-blue-800' },
-  { value: 'Firmado sin aprobar', label: 'Firmado sin aprobar', color: 'bg-orange-100 text-orange-800' },
+  { value: 'Firmado sin aprobar', label: 'Firmado sin aprobar (incluye Sí acepto)', color: 'bg-orange-100 text-orange-800' },
+  { value: 'Sí acepto sin aprobar', label: 'Sí acepto sin aprobar', color: 'bg-violet-100 text-violet-800' },
   { value: 'Sin firmar', label: 'Sin firmar', color: 'bg-gray-100 text-gray-800' }
 ]
 
@@ -192,6 +195,8 @@ export default function AprobacionPage() {
     if (filters.estado) {
       if (filters.estado === 'Firmado sin aprobar') {
         data = data.filter(c => c.hashConsentimiento && !c.aprobacion)
+      } else if (filters.estado === 'Sí acepto sin aprobar') {
+        data = data.filter(c => c.hashConsentimiento && c.siAcepto && !c.aprobacion)
       } else if (filters.estado === 'Sin firmar') {
         data = data.filter(c => !c.hashConsentimiento && !c.aprobacion)
       } else {
@@ -238,7 +243,9 @@ export default function AprobacionPage() {
 
   // Obtener estado display
   const getEstadoDisplay = (contrato: Contrato) => {
-    if (contrato.hashConsentimiento && !contrato.aprobacion) {
+    if (contrato.hashConsentimiento && contrato.siAcepto && !contrato.aprobacion) {
+      return { text: 'Sí acepto sin aprobar', color: 'bg-violet-100 text-violet-800' }
+    } else if (contrato.hashConsentimiento && !contrato.aprobacion) {
       return { text: 'Firmado sin aprobar', color: 'bg-orange-100 text-orange-800' }
     } else if (contrato.aprobacion) {
       const estado = ESTADOS_APROBACION.find(e => e.value === contrato.aprobacion)

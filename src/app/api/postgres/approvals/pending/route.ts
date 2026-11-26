@@ -8,6 +8,8 @@ export const GET = handlerWithAuth(async () => {
     `SELECT "_id", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido",
             "numeroId", "contrato", "celular", "email", "plataforma", "tipoUsuario",
             "aprobacion", "hashConsentimiento", "documentacion",
+            -- Ratificado con el correo «SÍ, ACEPTO» (Libro › Por resolver › Ratificar).
+            (COALESCE("consentimientoDeclarativo"::text,'') LIKE '%"tipoAprobacion":"CORREO"%') AS "siAcepto",
             ("reciboInscripcion" IS NOT NULL) AS "tieneRecibo",
             "_createdDate", "fechaCreacion", "fechaIngreso"
      FROM "PEOPLE"
