@@ -352,6 +352,10 @@ export enum ComercialPermission {
   MATRICULAS_VER = 'COMERCIAL.MATRICULAS.VER',
   MATRICULAS_BORRAR = 'COMERCIAL.MATRICULAS.BORRAR',
   MATRICULAS_DETALLE = 'COMERCIAL.MATRICULAS.DETALLE',
+  /** Resumen de matrícula › Editar › Corregir datos (titular/beneficiario). */
+  MATRICULAS_CORREGIR = 'COMERCIAL.MATRICULAS.CORREGIR',
+  /** Resumen de matrícula › Editar › Reemplazar persona (titular sin aprobar / beneficiario). */
+  MATRICULAS_REEMPLAZAR = 'COMERCIAL.MATRICULAS.REEMPLAZAR',
 
   // Cursos Kids (consulta del catálogo de KIDS2026: campaña en matrícula, cursos y cupos)
   CURSOS_KIDS_VER = 'COMERCIAL.CURSOS_KIDS.VER',

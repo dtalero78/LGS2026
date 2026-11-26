@@ -37,7 +37,8 @@ export const GET = handlerWithStaffAuth(async (_req, { params }, session) => {
             p."numeroId", p."contrato", p."plataforma", p."celular", p."email", p."domicilio",
             p."ciudad", p."fechaNacimiento", p."aprobacion", p."estado", p."hashConsentimiento",
             p."asesorAsignado", p."asesor", p."inicioContrato", p."fechaContrato", p."finalContrato",
-            p."vigencia", p."_createdDate", p."fechaIngreso", p."tipoContrato"
+            p."vigencia", p."_createdDate", p."fechaIngreso", p."tipoContrato",
+            p."telefono", p."genero", p."cargo", p."empresa", p."ingresos", p."tipoPersona"
        FROM "PEOPLE" p WHERE p."_id" = $1 AND p."tipoUsuario" = 'TITULAR' LIMIT 1`,
     [id]
   );
@@ -51,14 +52,17 @@ export const GET = handlerWithStaffAuth(async (_req, { params }, session) => {
   const benef = (await query(
     `SELECT p."_id", p."primerNombre", p."segundoNombre", p."primerApellido", p."segundoApellido",
             p."numeroId", p."celular", p."email", p."plataforma", p."fechaNacimiento", p."tipoUsuario",
-            p."kids", p."contrato",
+            p."kids", p."contrato", p."telefono", p."domicilio", p."ciudad", p."genero",
+            p."aprobacion", p."estadoInactivo",
             a."_id" AS "academicaId", a."nivel", a."step", a."foto",
             a."estadoInactivo" AS "academicaInactivo"
        FROM "PEOPLE" p
        LEFT JOIN LATERAL (
          SELECT "_id","nivel","step","foto","estadoInactivo"
-         FROM "ACADEMICA" WHERE "numeroId" = p."numeroId"
-         ORDER BY (CASE WHEN "tipoUsuario" = 'BENEFICIARIO' THEN 0 ELSE 1 END)
+         FROM "ACADEMICA"
+         WHERE ("numeroId" = p."numeroId" AND COALESCE(p."numeroId", '') <> '') OR "usuarioId" = p."_id"
+         ORDER BY ("usuarioId" = p."_id") DESC NULLS LAST,
+                  (CASE WHEN "tipoUsuario" = 'BENEFICIARIO' THEN 0 ELSE 1 END)
          LIMIT 1
        ) a ON true
       WHERE p."contrato" = $1 AND p."tipoUsuario" <> 'TITULAR'
@@ -74,8 +78,33 @@ export const GET = handlerWithStaffAuth(async (_req, { params }, session) => {
   // a los beneficiarios kids, para mostrarlo en la tarjeta.
   await attachKidsInscripciones(titular.contrato, benef);
 
+  // Avisos del botón Editar (CONTRATO_EVENTOS): identidad corregida después de la firma
+  // (se apaga si luego se anuló la firma por un reemplazo) y documentación por revisar
+  // tras un reemplazo (se apaga al subir un documento después).
+  const ev = await queryOne<{ corregidoTrasFirma: string | null; revisarDocumentacion: string | null }>(
+    `SELECT
+       (SELECT MAX("_createdDate") FROM "CONTRATO_EVENTOS"
+         WHERE "contrato" = $1 AND "accion" = 'Datos corregidos después de la firma'
+           AND "_createdDate" > COALESCE((SELECT MAX("_createdDate") FROM "CONTRATO_EVENTOS"
+                 WHERE "contrato" = $1 AND "accion" = 'Firma anulada por reemplazo'), 'epoch'::timestamptz)
+       )::text AS "corregidoTrasFirma",
+       (SELECT "detalle" FROM "CONTRATO_EVENTOS"
+         WHERE "contrato" = $1 AND "accion" = 'Revisar documentación (reemplazo)'
+           AND "_createdDate" > COALESCE((SELECT MAX("_createdDate") FROM "CONTRATO_EVENTOS"
+                 WHERE "contrato" = $1 AND "accion" = 'Documento subido'), 'epoch'::timestamptz)
+         ORDER BY "_createdDate" DESC LIMIT 1) AS "revisarDocumentacion"`,
+    [titular.contrato]
+  ).catch(() => null);
+  const firmado = String(titular.hashConsentimiento || '').trim() !== '';
+  const alertas = {
+    corregidoTrasFirma: firmado && !!ev?.corregidoTrasFirma,
+    revisarDocumentacion: ev?.revisarDocumentacion || null,
+  };
+  delete titular.hashConsentimiento;
+
   return successResponse({
-    titular: { ...titular, estadoMatricula },
+    alertas,
+    titular: { ...titular, firmado, estadoMatricula },
     beneficiarios: benef,
     totalBeneficiarios: benef.length,
   });

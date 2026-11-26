@@ -11,17 +11,19 @@ import { useState } from 'react'
 import { MIN_COMENTARIO_ESTADO } from '@/lib/comentario-aprobacion'
 
 export default function ComentarioEstadoModal({
-  titulo, descripcion, estadoNuevo, placeholder, confirmarTexto, onConfirm, onClose,
+  titulo, descripcion, estadoNuevo, placeholder, confirmarTexto, textoInicial, onConfirm, onClose,
 }: {
   titulo: string
   descripcion?: React.ReactNode
   estadoNuevo: string
   placeholder?: string
   confirmarTexto?: string
+  /** Texto precargado (p. ej. "Reemplaza a …" de un reemplazo hecho desde el Resumen). */
+  textoInicial?: string
   onConfirm: (comentario: string) => Promise<void> | void
   onClose: () => void
 }) {
-  const [texto, setTexto] = useState('')
+  const [texto, setTexto] = useState(textoInicial || '')
   const [enviando, setEnviando] = useState(false)
   const largo = texto.trim().length
   const ok = largo >= MIN_COMENTARIO_ESTADO

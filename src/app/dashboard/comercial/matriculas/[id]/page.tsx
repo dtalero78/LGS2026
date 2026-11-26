@@ -5,7 +5,9 @@ import { useParams, useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
 import { ComercialPermission, PersonPermission } from '@/types/permissions'
-import { ArrowLeft, ExternalLink, User, AlertCircle, GraduationCap, Users } from 'lucide-react'
+import { ArrowLeft, ExternalLink, User, AlertCircle, GraduationCap, Users, Pencil, ChevronDown, AlertTriangle } from 'lucide-react'
+import { usePermissions } from '@/hooks/usePermissions'
+import EditarPersonaMatriculaModal, { ModoEdicion } from '@/components/comercial/EditarPersonaMatriculaModal'
 
 interface Titular {
   _id: string
@@ -16,6 +18,8 @@ interface Titular {
   asesorAsignado?: string
   inicioContrato?: string | Date; finalContrato?: string | Date; vigencia?: string | number
   tipoContrato?: string | null
+  firmado?: boolean
+  telefono?: string; genero?: string; cargo?: string; empresa?: string; ingresos?: string
 }
 interface Beneficiario {
   _id: string
@@ -25,6 +29,8 @@ interface Beneficiario {
   tienePerfilAcademico?: boolean
   kids?: boolean
   kidsInscripcion?: KidsInscripcion | null
+  aprobacion?: string | null; estadoInactivo?: boolean
+  telefono?: string; domicilio?: string; ciudad?: string; genero?: string
 }
 interface KidsInscripcion {
   campaign?: string; tipoCurso?: string; salonNombre?: string; horario?: string
@@ -34,7 +40,14 @@ interface KidsInscripcion {
 
 const nombre = (p: any) => `${p.primerNombre || ''} ${p.primerApellido || ''}`.trim()
 const inicial = (p: any) => (p.primerNombre || p.primerApellido || '?').charAt(0).toUpperCase()
-const fmtFecha = (v: any) => { if (!v) return '—'; const d = new Date(v); return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('es', { day: '2-digit', month: '2-digit', year: 'numeric' }) }
+// Fechas puras (DATE) llegan como medianoche UTC: se muestra la fecha del texto para no
+// correrse un día en zonas al oeste de UTC (antes 11/03 se veía 10/03).
+const fmtFecha = (v: any) => {
+  if (!v) return '—'
+  const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`
+  const d = new Date(v); return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('es', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
 
 function estadoBadge(estado?: string) {
   const e = (estado || '').toLowerCase()
@@ -55,19 +68,45 @@ export default function MatriculaDetallePage() {
   const [titular, setTitular] = useState<Titular | null>(null)
   const [beneficiarios, setBeneficiarios] = useState<Beneficiario[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [alertas, setAlertas] = useState<{ corregidoTrasFirma?: boolean; revisarDocumentacion?: string | null }>({})
+  const [edicion, setEdicion] = useState<{ persona: any; esTitular: boolean; modo: ModoEdicion } | null>(null)
+  const [recarga, setRecarga] = useState(0)
+
+  const { hasPermission } = usePermissions()
+  const canCorregir = hasPermission(ComercialPermission.MATRICULAS_CORREGIR)
+  const canReemplazar = hasPermission(ComercialPermission.MATRICULAS_REEMPLAZAR)
 
   useEffect(() => {
     if (!id) return
     ;(async () => {
-      setLoading(true)
+      if (recarga === 0) setLoading(true)
       try {
         const r = await fetch(`/api/postgres/matriculas/${id}`, { cache: 'no-store' })
         const j = await r.json()
         if (!r.ok) { setError(j?.error || 'No se pudo cargar la matrícula'); return }
-        setTitular(j.titular); setBeneficiarios(j.beneficiarios || [])
+        setTitular(j.titular); setBeneficiarios(j.beneficiarios || []); setAlertas(j.alertas || {})
       } catch { setError('Error al cargar la matrícula') } finally { setLoading(false) }
     })()
-  }, [id])
+  }, [id, recarga])
+
+  const contratoAprobado = String(titular?.aprobacion || '').toUpperCase().startsWith('APROBAD')
+  const editarMenu = (persona: any, esTitular: boolean) => {
+    if (!canCorregir && !canReemplazar) return null
+    const aprobadoPersona = String(persona?.aprobacion || '').toUpperCase().startsWith('APROBAD')
+    const bloqueoReemplazo = esTitular && contratoAprobado
+      ? 'Contrato aprobado: el titular no se cambia, se hace un reemplazo de contrato.'
+      : null
+    return (
+      <EditarMenu
+        kids={!!persona?.kids}
+        canCorregir={canCorregir}
+        canReemplazar={canReemplazar}
+        bloqueoReemplazo={bloqueoReemplazo}
+        etiquetaReemplazo={!esTitular && aprobadoPersona ? 'Reemplazar (queda inactivo, histórico)' : 'Reemplazar persona'}
+        onElegir={(modo) => setEdicion({ persona: { ...persona, contrato: titular?.contrato }, esTitular, modo })}
+      />
+    )
+  }
 
   return (
     <DashboardLayout>
@@ -105,16 +144,33 @@ export default function MatriculaDetallePage() {
                       )}
                     </div>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${estadoBadge(titular.estadoMatricula)}`} title="Estado de la matrícula (aprobación)">
-                    {titular.estadoMatricula}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${estadoBadge(titular.estadoMatricula)}`} title="Estado de la matrícula (aprobación)">
+                      {titular.estadoMatricula}
+                    </span>
+                    {editarMenu(titular, true)}
+                  </div>
                 </div>
+                {(alertas.corregidoTrasFirma || alertas.revisarDocumentacion) && (
+                  <div className="px-5 pt-4 space-y-2">
+                    {alertas.corregidoTrasFirma && (
+                      <div className="flex items-start gap-2 rounded-lg bg-yellow-50 border border-yellow-300 px-3 py-2 text-xs text-yellow-900">
+                        <AlertTriangle className="h-4 w-4 shrink-0" /> Datos corregidos después de la firma (nombre, documento, nacimiento o género). El detalle está en el Seguimiento del contrato.
+                      </div>
+                    )}
+                    {alertas.revisarDocumentacion && (
+                      <div className="flex items-start gap-2 rounded-lg bg-orange-50 border border-orange-300 px-3 py-2 text-xs text-orange-900">
+                        <AlertTriangle className="h-4 w-4 shrink-0" /> Revisar documentación: {alertas.revisarDocumentacion}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3 text-sm">
                   <Field label="Documento" value={titular.numeroId} />
                   <Field label="Plataforma" value={titular.plataforma} />
                   <Field label="Asesor" value={titular.asesorAsignado || '—'} />
-                  <Field label="Celular" value={titular.celular} />
-                  <Field label="Email" value={titular.email} />
+                  <Field label="Celular" value={titular.celular || '—'} />
+                  <Field label="Email" value={titular.email || '—'} />
                   <Field label="Fecha de nacimiento" value={fmtFecha(titular.fechaNacimiento)} />
                   <Field label="Domicilio" value={titular.domicilio || '—'} />
                   <Field label="Ciudad" value={titular.ciudad || '—'} />
@@ -164,6 +220,10 @@ export default function MatriculaDetallePage() {
                                   🧒 KIDS
                                 </span>
                               )}
+                              {b.estadoInactivo && (
+                                <span className="inline-flex items-center bg-gray-700 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">INACTIVO</span>
+                              )}
+                              {editarMenu(b, false)}
                             </div>
                           </div>
                           <div className="p-4 text-sm space-y-1.5 flex-1">
@@ -229,6 +289,16 @@ export default function MatriculaDetallePage() {
             </>
           )}
         </div>
+        {edicion && (
+          <EditarPersonaMatriculaModal
+            persona={edicion.persona}
+            esTitular={edicion.esTitular}
+            modo={edicion.modo}
+            firmado={!!titular?.firmado}
+            onClose={() => setEdicion(null)}
+            onSaved={() => { setEdicion(null); setRecarga(n => n + 1) }}
+          />
+        )}
       </PermissionGuard>
     </DashboardLayout>
   )
@@ -239,6 +309,49 @@ function Field({ label, value }: { label: string; value: string }) {
     <div>
       <div className="text-[11px] uppercase tracking-wide text-gray-400">{label}</div>
       <div className="text-gray-800 break-words">{value}</div>
+    </div>
+  )
+}
+
+/** Botón "Editar ▾" de cada tarjeta: Corregir datos / Reemplazar persona. */
+function EditarMenu({ kids, canCorregir, canReemplazar, bloqueoReemplazo, etiquetaReemplazo, onElegir }: {
+  kids: boolean; canCorregir: boolean; canReemplazar: boolean
+  bloqueoReemplazo: string | null; etiquetaReemplazo: string; onElegir: (m: ModoEdicion) => void
+}) {
+  const [abierto, setAbierto] = useState(false)
+  const base = 'bg-white/20 hover:bg-white/30 text-white ring-1 ring-white/40'
+  if (kids) {
+    return (
+      <span title="Los beneficiarios Kids se sincronizan con KIDS: gestiónelo desde su ficha."
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold opacity-60 cursor-not-allowed ${base}`}>
+        <Pencil className="h-3 w-3" /> Editar
+      </span>
+    )
+  }
+  return (
+    <div className="relative">
+      <button type="button" onClick={() => setAbierto(a => !a)} onBlur={() => setTimeout(() => setAbierto(false), 150)}
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold ${base}`}>
+        <Pencil className="h-3 w-3" /> Editar <ChevronDown className="h-3 w-3" />
+      </button>
+      {abierto && (
+        <div className="absolute right-0 mt-1 w-64 bg-white rounded-lg shadow-lg ring-1 ring-black/10 z-20 py-1 text-sm text-gray-800">
+          {canCorregir && (
+            <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => { setAbierto(false); onElegir('corregir') }}
+              className="w-full text-left px-3 py-2 hover:bg-indigo-50">✏️ Corregir datos</button>
+          )}
+          {canReemplazar && (
+            bloqueoReemplazo ? (
+              <div className="px-3 py-2 text-gray-400 cursor-not-allowed" title={bloqueoReemplazo}>🔁 Reemplazar persona
+                <div className="text-[10px] leading-tight">{bloqueoReemplazo}</div>
+              </div>
+            ) : (
+              <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => { setAbierto(false); onElegir('reemplazar') }}
+                className="w-full text-left px-3 py-2 text-red-700 hover:bg-red-50">🔁 {etiquetaReemplazo}</button>
+            )
+          )}
+        </div>
+      )}
     </div>
   )
 }

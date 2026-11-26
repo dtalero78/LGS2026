@@ -405,7 +405,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
   })()
 
   // Aprobar un beneficiario exige comentario (adición o reemplazo) — lib/comentario-aprobacion.
-  const [benefAprobar, setBenefAprobar] = useState<{ id: string; nombre: string } | null>(null)
+  const [benefAprobar, setBenefAprobar] = useState<{ id: string; nombre: string; textoInicial?: string } | null>(null)
 
   const handleApproveSpecificBeneficiary = async (beneficiaryId: string, motivo: string) => {
     if (!beneficiaryId) return
@@ -1430,7 +1430,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
                   {!esContratoDePrueba && ((!beneficiary.estado || beneficiary.estado === 'Pendiente') || approvingBeneficiaries.has(beneficiary._id)) && (
                     <PermissionGuard permission={PersonPermission.APROBAR}>
                       <button
-                        onClick={() => setBenefAprobar({ id: beneficiary._id, nombre: `${beneficiary.nombre || ''} ${beneficiary.apellido || ''}`.trim() })}
+                        onClick={() => setBenefAprobar({ id: beneficiary._id, nombre: `${beneficiary.nombre || ''} ${beneficiary.apellido || ''}`.trim(), textoInicial: (beneficiary as any).reemplazaA || undefined })}
                         disabled={approvingBeneficiaries.has(beneficiary._id)}
                         className="inline-flex items-center px-4 py-1.5 border border-black text-sm font-medium rounded text-black bg-white hover:bg-black hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >

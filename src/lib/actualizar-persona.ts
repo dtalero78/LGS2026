@@ -1,0 +1,555 @@
+import 'server-only';
+import { Session } from 'next-auth';
+import { query, queryOne, queryMany, parseJsonbFields, withTransaction } from '@/lib/postgres';
+import { requirePermission } from '@/lib/api-permissions';
+import { PersonPermission } from '@/types/permissions';
+import { NotFoundError, ValidationError } from '@/lib/errors';
+import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
+import { buildDynamicUpdate } from '@/lib/query-builder';
+import { registrarCambioAprobacion, assertPuedeRevertirAPendiente, nombreDe } from '@/lib/aprobacion-audit';
+import { exigeComentarioEstado, comentarioValido, mensajeComentarioEstado } from '@/lib/comentario-aprobacion';
+import { inhabilitarContratoRetractado } from '@/lib/retractado';
+import { liberarReservasKids, motivoBajaKids } from '@/lib/kids-baja';
+import { normalizarTelefono } from '@/lib/telefono';
+import { formatearCambios } from '@/lib/formato-campos';
+import { registrarEventoContrato, diffCampos } from '@/lib/contrato-eventos';
+
+/**
+ * Edición de una persona de PEOPLE con propagación de identidad (ACADEMICA,
+ * USUARIOS_ROLES, ACADEMICA_BOOKINGS, FINANCIEROS, STEP_OVERRIDES) en UNA
+ * transacción. Antes vivía dentro de PATCH /api/postgres/people/[id]; se
+ * extrajo para que la reuse la corrección desde el Resumen de Matrícula
+ * (POST /api/postgres/matriculas/[id]/editar).
+ *
+ * OJO: la propagación sigue a la MISMA persona (por su documento/email
+ * anteriores). Sirve para CORREGIR datos, no para reemplazar a alguien por otro.
+ */
+export interface ActualizarPersonaOpts {
+  /** Acción con la que queda en el Seguimiento (default "Datos editados"). */
+  accionSeguimiento?: string;
+  /** Datos extra para el evento del Seguimiento (p. ej. etiqueta). */
+  datosSeguimiento?: Record<string, unknown>;
+}
+
+/**
+ * Campos de NOMBRE. Se tratan aparte del resto porque viven replicados en
+ * varias tablas y su edición va detrás de un permiso propio.
+ */
+export const CAMPOS_NOMBRE = ['primerNombre', 'segundoNombre', 'primerApellido', 'segundoApellido'] as const;
+
+// Allowed fields for PATCH updates
+export const PEOPLE_UPDATE_FIELDS = [
+  'primerNombre',
+  'segundoNombre',
+  'primerApellido',
+  'segundoApellido',
+  'numeroId',
+  'email',
+  'celular',
+  'telefono',
+  'fechaNacimiento',
+  'domicilio',
+  'ciudad',
+  'nivel',
+  'step',
+  'nivelParalelo',
+  'stepParalelo',
+  'plataforma',
+  'estadoInactivo',
+  'estado',
+  'aprobacion',
+  'observaciones',
+  'vigencia',
+  'finalContrato',
+  'inicioCurso',
+  'gestorRecaudo',
+  // Datos personales/laborales (corrección desde el Resumen de Matrícula).
+  'genero',
+  'cargo',
+  'empresa',
+  'ingresos',
+];
+
+export async function actualizarPersona(personId: string, body: any, session: Session, opts: ActualizarPersonaOpts = {}) {
+  console.log('🔄 [PostgreSQL People] Updating person:', personId);
+
+  // ── Validación de plan (Tipo Plan en PEOPLE.plan) ──
+  // Solo se aceptan: 'Contado', 'Credito', 'Colaborador', null o '' (limpiar).
+  if (body.plan !== undefined && body.plan !== null && body.plan !== '') {
+    const VALID_PLAN = ['Contado', 'Credito', 'Colaborador'];
+    if (!VALID_PLAN.includes(String(body.plan).trim())) {
+      throw new ValidationError(`plan debe ser uno de: ${VALID_PLAN.join(', ')}`);
+    }
+  }
+
+  // ── Contratos de prueba (PRB-): NADIE puede aprobarlos (tampoco SUPER_ADMIN) ──
+  // Defensa en profundidad: la UI enruta "Aprobado" por /people/[id]/approve,
+  // pero por esta vía también se puede setear `aprobacion`.
+  if (String(body.aprobacion ?? '').trim() === 'Aprobado') {
+    const target = await queryOne<{ contrato: string | null }>(
+      `SELECT "contrato" FROM "PEOPLE" WHERE "_id" = $1`, [personId],
+    );
+    assertNoEsContratoPrueba(target?.contrato, 'aprobar el contrato');
+  }
+
+  // ── Normalización de numeroId ──
+  // Es la llave PEOPLE ↔ ACADEMICA ↔ USUARIOS_ROLES.numberid: se guarda siempre
+  // en MAYÚSCULAS y sin puntos/espacios/guiones bajos (misma convención que el
+  // resto del sistema). No puede quedar vacío.
+  if (body.numeroId !== undefined) {
+    const norm = String(body.numeroId).toUpperCase().replace(/[.\s_]/g, '').trim();
+    if (!norm) throw new ValidationError('El número de identificación no puede quedar vacío');
+    body.numeroId = norm;
+  }
+
+  // ── Permiso para editar NOMBRES ──
+  // Cambiar el nombre reescribe ~220k filas de ACADEMICA_BOOKINGS y el nombre
+  // del login, así que va detrás de su propio permiso (no del genérico
+  // MODIFICAR, que cubre el contacto). SUPER_ADMIN/ADMIN bypasean dentro de
+  // requirePermission.
+  if (CAMPOS_NOMBRE.some((c) => body[c] !== undefined)) {
+    await requirePermission(session, PersonPermission.EDITAR_NOMBRE);
+  }
+
+  // Fetch current person before update (needed for old email to update USUARIOS_ROLES)
+  const currentPerson = await queryOne<{
+    email: string | null;
+    numeroId: string | null;
+    tipoUsuario: string | null;
+    aprobacion: string | null;
+    estado: string | null;
+    contrato: string | null;
+    inicioContrato: string | null;
+    fechaContrato: string | null;
+    primerNombre: string | null;
+    primerApellido: string | null;
+    plataforma: string | null;
+  }>(
+    `SELECT "email", "numeroId", "tipoUsuario", "aprobacion", "estado", "contrato", "inicioContrato", "fechaContrato",
+            "primerNombre", "primerApellido", "plataforma" FROM "PEOPLE" WHERE "_id" = $1`,
+    [personId]
+  );
+  if (!currentPerson) throw new NotFoundError('Person', personId);
+
+  // Formato de los datos (lib/formato-campos), solo en los campos que de verdad cambian:
+  // un nombre antiguo reenviado igual no cuenta como cambio de nombre.
+  // `filaAntes` también alimenta el Seguimiento del contrato (antes/después de lo editado).
+  const filaAntes = await queryOne<any>(`SELECT * FROM "PEOPLE" WHERE "_id" = $1`, [personId]);
+  Object.assign(body, formatearCambios(body, filaAntes, { empresa: filaAntes?.tipoUsuario === 'TITULAR' && filaAntes?.tipoPersona === 'Empresa' }));
+
+  // Teléfonos con indicativo (regla única de lib/telefono), según la plataforma.
+  const paisTel = body.plataforma ?? currentPerson.plataforma;
+  if (body.celular !== undefined) body.celular = normalizarTelefono(body.celular, paisTel);
+  if (body.telefono !== undefined) body.telefono = normalizarTelefono(body.telefono, paisTel);
+
+  // ── Permiso para editar el NÚMERO DE IDENTIFICACIÓN ──
+  // Solo se exige si el valor REALMENTE cambia: otros flujos mandan el numeroId
+  // sin tocarlo (viene del formulario completo) y no deberían quedar bloqueados.
+  if (body.numeroId !== undefined && body.numeroId !== currentPerson.numeroId) {
+    await requirePermission(session, PersonPermission.EDITAR_NUMERO_ID);
+  }
+
+  // ── Aprobado → Pendiente: solo si el contrato está FRESCO ──
+  // Regla (bloqueo con OR): solo se permite revertir a "Pendiente" si el contrato
+  // sigue DENTRO del mes desde el inicio del contrato Y TODOS los beneficiarios
+  // están en WELCOME o sin nivel. Basta que UNA condición falle (mes cumplido O
+  // algún beneficiario avanzó de WELCOME) para BLOQUEAR el cambio.
+  // Base de la ventana: `inicioContrato` (firma) con fallback a `fechaContrato`
+  // (contratos POSTGRES aprobados por admin sin firma OTP no tienen inicioContrato).
+  if (body.aprobacion === 'Pendiente' && currentPerson.aprobacion === 'Aprobado' && currentPerson.tipoUsuario === 'TITULAR') {
+    await assertPuedeRevertirAPendiente(currentPerson);
+  }
+
+  // ── Cambio de aprobación de un contrato YA APROBADO: motivo obligatorio ──
+  // Queda en APROBACION_AUDIT (quién/cuándo/de→a/motivo). `aprobacionMotivo` no es
+  // columna de PEOPLE: se saca del body antes del UPDATE dinámico.
+  const aprobacionMotivo = String(body.aprobacionMotivo ?? '').trim();
+  delete body.aprobacionMotivo;
+  const cambiaAprobacion =
+    body.aprobacion !== undefined && (body.aprobacion || null) !== (currentPerson.aprobacion || null);
+  if (cambiaAprobacion && currentPerson.aprobacion === 'Aprobado' && aprobacionMotivo.length < 10) {
+    throw new ValidationError('Para cambiar el estado de un contrato aprobado debes indicar el motivo (mínimo 10 caracteres).');
+  }
+  // Regla única (lib/comentario-aprobacion): todo cambio manual a un estado distinto de
+  // Aprobado (Rechazado, Devuelto, Contrato nulo, Pendiente, Retractado…) exige el motivo.
+  if (cambiaAprobacion && exigeComentarioEstado(body.aprobacion || null, currentPerson.tipoUsuario) && !comentarioValido(aprobacionMotivo)) {
+    throw new ValidationError(mensajeComentarioEstado(body.aprobacion || null));
+  }
+
+  // ── Validación de cambio de aprobación ──
+  // Una vez aprobado un contrato:
+  //   - 'Contrato nulo' / 'Devuelto' / 'Rechazado' quedan BLOQUEADOS
+  //     (esos estados sólo aplican pre-aprobación).
+  //   - 'Pendiente' y 'Retractado' SÍ se permiten (con alerta en frontend).
+  // Pre-aprobación cualquier transición es libre.
+  if (body.aprobacion && currentPerson.aprobacion === 'Aprobado') {
+    const blockedPostApproval = ['Contrato nulo', 'Devuelto', 'Rechazado'];
+    if (blockedPostApproval.includes(body.aprobacion)) {
+      // Chequeos de contexto: estado operativo + beneficiarios académicos
+      const estadoActual = currentPerson.estado ?? '';
+      const reasons: string[] = [];
+      if (estadoActual === 'On Hold')         reasons.push('está en OnHold');
+      if (estadoActual === 'CON EXTENSION')   reasons.push('tiene una extensión activa');
+
+      let benefAcademica = 0;
+      if (currentPerson.contrato) {
+        const benefRow = await queryOne<{ count: string }>(
+          `SELECT COUNT(*)::text AS count
+           FROM "ACADEMICA" a
+           JOIN "PEOPLE" p ON p."numeroId" = a."numeroId" AND p."tipoUsuario" = 'BENEFICIARIO'
+           WHERE p."contrato" = $1`,
+          [currentPerson.contrato]
+        );
+        benefAcademica = parseInt(benefRow?.count ?? '0', 10) || 0;
+      }
+      if (benefAcademica > 0) {
+        reasons.push(`tiene ${benefAcademica} beneficiario(s) con registro académico creado`);
+      }
+
+      throw new ValidationError(
+        `No se puede cambiar la aprobación a "${body.aprobacion}" después de aprobar el contrato. ` +
+        `Estados "Contrato nulo", "Devuelto" y "Rechazado" sólo aplican antes de aprobar. ` +
+        `Usa "Retractado" si necesitas anular post-aprobación.` +
+        (reasons.length ? ` Además: el contrato ${reasons.join(' y ')}.` : '')
+      );
+    }
+  }
+
+  // Validate gestorRecaudo assignment:
+  //   - Only allowed on TITULAR rows
+  //   - Value must reference an existing USUARIOS_ROLES._id with rol IN
+  //     ('RECAUDO_ASIST', 'RECAUDOS_JEFE') and activo=true.
+  //   - null/empty clears the assignment (allowed).
+  if (Object.prototype.hasOwnProperty.call(body, 'gestorRecaudo')) {
+    if (currentPerson.tipoUsuario !== 'TITULAR') {
+      throw new ValidationError('Solo se puede asignar gestor de recaudo a TITULARES');
+    }
+    const value = body.gestorRecaudo;
+    if (value !== null && value !== '') {
+      const user = await queryOne<{ rol: string; activo: boolean }>(
+        `SELECT "rol", "activo" FROM "USUARIOS_ROLES" WHERE "_id" = $1`,
+        [value]
+      );
+      if (!user) throw new ValidationError(`Usuario no encontrado: ${value}`);
+      if (!user.activo) throw new ValidationError('El usuario seleccionado no está activo');
+      if (!['RECAUDO_ASIST', 'RECAUDOS_JEFE'].includes(user.rol)) {
+        throw new ValidationError(`Rol inválido para gestor de recaudo: ${user.rol}`);
+      }
+    } else {
+      // Normalize empty string to null for clearing
+      body.gestorRecaudo = null;
+    }
+  }
+
+  // Auto-mapear aprobacion → estado operativo si el caller no envió estado
+  // explícito. Aprobado=ACTIVA, Pendiente=PENDIENTE, Retractado=RETRACTADO,
+  // Contrato nulo/Devuelto/Rechazado=ANULADO.
+  if (body.aprobacion && body.estado === undefined) {
+    const APROBACION_TO_ESTADO: Record<string, string> = {
+      'Aprobado':       'ACTIVA',
+      'Pendiente':      'PENDIENTE',
+      'Retractado':     'RETRACTADO',
+      'Contrato nulo':  'ANULADO',
+      'Devuelto':       'ANULADO',
+      'Rechazado':      'ANULADO',
+    };
+    const mapped = APROBACION_TO_ESTADO[body.aprobacion as string];
+    if (mapped) body.estado = mapped;
+  }
+
+  const built = buildDynamicUpdate('PEOPLE', body, PEOPLE_UPDATE_FIELDS);
+  if (!built) throw new ValidationError('No valid fields to update');
+
+  // Add person ID as last parameter
+  built.values.push(personId);
+
+  // ── PEOPLE + propagación de identidad, TODO en UNA transacción ──
+  // El `numeroId` y los nombres viven REPLICADOS en varias tablas. Si PEOPLE se
+  // actualizara y la propagación fallara a mitad de camino, el vínculo
+  // PEOPLE ↔ ACADEMICA ↔ login quedaría roto y las listas de asistencia
+  // seguirían mostrando el dato viejo. O pasan todos los UPDATE, o no pasa
+  // ninguno.
+  //
+  // El WHERE usa siempre el valor ANTERIOR (currentPerson): es el único con el
+  // que todavía se pueden encontrar las filas a actualizar.
+  const syncingEmail = body.email && body.email !== currentPerson.email;
+  const syncingCelular = body.celular !== undefined;
+  const syncingNumeroId = body.numeroId !== undefined && body.numeroId !== currentPerson.numeroId;
+  const syncingFechaNac = body.fechaNacimiento !== undefined;
+  const syncingNombre = CAMPOS_NOMBRE.some((c) => body[c] !== undefined);
+
+  const tablasSincronizadas: string[] = [];
+
+  const result = await withTransaction(async (client) => {
+    const updated = (await client.query(built.query, built.values)).rows[0];
+    if (!updated) throw new NotFoundError('Person', personId);
+
+    // Los `_id` de ACADEMICA se resuelven ANTES de tocar nada: si el numeroId
+    // cambia, después ya no habría forma de encontrarlos por el valor anterior.
+    const academicaIds: string[] = currentPerson.numeroId
+      ? (await client.query(
+          'SELECT "_id" FROM "ACADEMICA" WHERE "numeroId" = $1',
+          [currentPerson.numeroId],
+        )).rows.map((r: { _id: string }) => r._id)
+      : [];
+
+    // Helper: arma "col" = $n acumulando valores en orden.
+    const setter = () => {
+      const f: string[] = [];
+      const v: unknown[] = [];
+      return {
+        f, v,
+        add(col: string, val: unknown) { f.push('"' + col + '" = $' + (f.length + 1)); v.push(val); },
+      };
+    };
+
+    // ── PEOPLE.nombreCompleto ──
+    // Campo derivado. Solo se recalcula donde YA existía (9.261 filas lo usan);
+    // no se inventa en registros que nunca lo tuvieron.
+    if (syncingNombre) {
+      await client.query(
+        `UPDATE "PEOPLE"
+            SET "nombreCompleto" = NULLIF(TRIM(CONCAT_WS(' ', "primerNombre", "segundoNombre", "primerApellido", "segundoApellido")), ''),
+                "_updatedDate" = NOW()
+          WHERE "_id" = $1 AND COALESCE("nombreCompleto", '') <> ''`,
+        [personId],
+      );
+    }
+
+    // ── ACADEMICA — ficha académica (match por el numeroId ANTERIOR) ──
+    if ((syncingEmail || syncingCelular || syncingNumeroId || syncingFechaNac || syncingNombre) && currentPerson.numeroId) {
+      const s = setter();
+      if (syncingEmail) s.add('email', body.email);
+      if (syncingCelular) s.add('celular', body.celular);
+      if (syncingNumeroId) s.add('numeroId', body.numeroId);
+      if (syncingFechaNac) s.add('fechaNacimiento', body.fechaNacimiento || null);
+      // Se toman los valores YA GUARDADOS en PEOPLE (no los del body): si solo
+      // llegó primerNombre, el resto conserva su valor real en vez de borrarse.
+      if (syncingNombre) for (const c of CAMPOS_NOMBRE) s.add(c, updated[c] || null);
+      s.v.push(currentPerson.numeroId);
+      const r = await client.query(
+        'UPDATE "ACADEMICA" SET ' + s.f.join(', ') + ', "_updatedDate" = NOW() WHERE "numeroId" = $' + s.v.length,
+        s.v,
+      );
+      if (r.rowCount) tablasSincronizadas.push('ACADEMICA (' + r.rowCount + ')');
+    } else if (syncingNumeroId && body.numeroId) {
+      // El beneficiario se aprobó SIN documento: su ficha quedó con numeroId vacío y el match
+      // por el documento anterior no la encuentra. Se liga por usuarioId (caso Sebastián Canales).
+      const r = await client.query(
+        `UPDATE "ACADEMICA" SET "numeroId" = $2, "_updatedDate" = NOW()
+          WHERE "usuarioId" = $1 AND COALESCE("numeroId",'') = ''`,
+        [personId, body.numeroId],
+      );
+      if (r.rowCount) tablasSincronizadas.push('ACADEMICA (' + r.rowCount + ')');
+    }
+
+    // ── USUARIOS_ROLES — cuenta de login ──
+    // Un solo UPDATE matcheando por el email ANTERIOR: en dos pasos, el segundo
+    // ya no encontraría la fila. Guarda el nombre en 2 columnas planas, no en 4.
+    if ((syncingEmail || syncingNumeroId || syncingNombre) && currentPerson.email) {
+      const s = setter();
+      if (syncingEmail) s.add('email', body.email);
+      if (syncingNumeroId) s.add('numberid', body.numeroId);
+      if (syncingNombre) {
+        s.add('nombre', [updated.primerNombre, updated.segundoNombre].filter(Boolean).join(' ').trim() || null);
+        s.add('apellido', [updated.primerApellido, updated.segundoApellido].filter(Boolean).join(' ').trim() || null);
+      }
+      s.v.push(currentPerson.email);
+      const r = await client.query(
+        'UPDATE "USUARIOS_ROLES" SET ' + s.f.join(', ') + ' WHERE LOWER("email") = LOWER($' + s.v.length + ')',
+        s.v,
+      );
+      if (r.rowCount) tablasSincronizadas.push('USUARIOS_ROLES (' + r.rowCount + ')');
+    }
+
+    // ── USUARIOS_ROLES.celular — solo la cuenta ESTUDIANTE de ESTA persona ──
+    // Se identifica por documento (numberid), no por email: hermanos pueden
+    // compartir el correo del apoderado y no deben quedar con este celular.
+    if (syncingCelular && currentPerson.numeroId) {
+      const r = await client.query(
+        `UPDATE "USUARIOS_ROLES" SET "celular" = $1, "_updatedDate" = NOW()
+          WHERE "rol" = 'ESTUDIANTE'
+            AND UPPER(REPLACE(COALESCE("numberid", ''), '.', '')) IN (UPPER($2), UPPER($3))`,
+        [body.celular, currentPerson.numeroId, body.numeroId ?? currentPerson.numeroId],
+      );
+      if (r.rowCount) tablasSincronizadas.push('USUARIOS_ROLES.celular (' + r.rowCount + ')');
+    }
+
+    // ── ACADEMICA_BOOKINGS — el nombre está DESNORMALIZADO en ~220k filas ──
+    // Las consultas de asistencia lo leen con PRIORIDAD sobre ACADEMICA/PEOPLE
+    // (COALESCE(ab."primerNombre", a."primerNombre", p."primerNombre")), así que
+    // sin esto las listas seguirían mostrando el nombre viejo. Además varios
+    // informes agrupan POR NOMBRE: dejarlo a medias parte al alumno en dos filas.
+    // Match ancho porque la cobertura de llaves es despareja: idEstudiante 99,9%,
+    // numeroId 98%, studentId 49%.
+    if ((syncingNombre || syncingNumeroId) && (currentPerson.numeroId || academicaIds.length)) {
+      const s = setter();
+      if (syncingNombre) {
+        s.add('primerNombre', updated.primerNombre || null);
+        s.add('primerApellido', updated.primerApellido || null);
+      }
+      if (syncingNumeroId) s.add('numeroId', body.numeroId);
+      s.v.push(currentPerson.numeroId);
+      const pNum = '$' + s.v.length;
+      s.v.push(academicaIds);
+      const pIds = '$' + s.v.length;
+      const r = await client.query(
+        'UPDATE "ACADEMICA_BOOKINGS" SET ' + s.f.join(', ') +
+        ' WHERE "numeroId" = ' + pNum +
+        '    OR "idEstudiante" = ANY(' + pIds + '::text[])' +
+        '    OR "studentId" = ANY(' + pIds + '::text[])',
+        s.v,
+      );
+      if (r.rowCount) tablasSincronizadas.push('ACADEMICA_BOOKINGS (' + r.rowCount + ')');
+    }
+
+    // ── FINANCIEROS — nombre del titular en el registro del contrato ──
+    // Solo toca la fila si el numeroId coincide (o sea, si esta persona ES el
+    // titular). No se lee para mostrar el nombre, pero se mantiene coherente.
+    if ((syncingNombre || syncingNumeroId) && currentPerson.numeroId) {
+      const s = setter();
+      if (syncingNombre) {
+        s.add('primerNombre', updated.primerNombre || null);
+        s.add('primerApellido', updated.primerApellido || null);
+      }
+      if (syncingNumeroId) s.add('numeroId', body.numeroId);
+      s.v.push(currentPerson.numeroId);
+      const r = await client.query(
+        'UPDATE "FINANCIEROS" SET ' + s.f.join(', ') + ' WHERE "numeroId" = $' + s.v.length,
+        s.v,
+      );
+      if (r.rowCount) tablasSincronizadas.push('FINANCIEROS (' + r.rowCount + ')');
+    }
+
+    // ── STEP_OVERRIDES — overrides manuales de step ──
+    // OJO: esta tabla NO tiene columna numeroId (solo los nombres y las llaves
+    // studentId/academicaId). Intentar setearla rompe TODO el PATCH.
+    if (syncingNombre && academicaIds.length) {
+      const s = setter();
+      s.add('primerNombre', updated.primerNombre || null);
+      s.add('primerApellido', updated.primerApellido || null);
+      s.v.push(academicaIds);
+      const r = await client.query(
+        'UPDATE "STEP_OVERRIDES" SET ' + s.f.join(', ') +
+        ' WHERE "studentId" = ANY($' + s.v.length + '::text[])' +
+        '    OR "academicaId" = ANY($' + s.v.length + '::text[])',
+        s.v,
+      );
+      if (r.rowCount) tablasSincronizadas.push('STEP_OVERRIDES (' + r.rowCount + ')');
+    }
+
+    return updated;
+  });
+
+  if (tablasSincronizadas.length) {
+    console.log('🔄 [PostgreSQL People] Identidad propagada a: ' + tablasSincronizadas.join(', '));
+  }
+
+  // Parse JSONB fields
+  const parsedPerson = parseJsonbFields(result, [
+    'onHoldHistory',
+    'extensionHistory',
+  ]);
+
+  // If estado changed to Contrato nulo / Devuelto / Rechazado → inactivate titular + beneficiaries
+  const INACTIVE_STATES = ['Contrato nulo', 'Devuelto', 'Rechazado'];
+  let beneficiariesInactivated = 0;
+
+  if (body.aprobacion && INACTIVE_STATES.includes(body.aprobacion) && parsedPerson.contrato) {
+    // Titular: estadoInactivo=true + estado=ANULADO (el estado del titular ya
+    // quedó ANULADO vía el mapeo de body.estado; lo reafirmamos por consistencia).
+    await query(
+      `UPDATE "PEOPLE" SET "estadoInactivo" = true, "estado" = 'ANULADO', "_updatedDate" = NOW() WHERE "_id" = $1`,
+      [personId]
+    );
+    parsedPerson.estadoInactivo = true;
+    parsedPerson.estado = 'ANULADO';
+
+    // Beneficiarios del contrato: estadoInactivo=true + estado=ANULADO (antes
+    // solo se inactivaban; el `estado` quedaba sin sincronizar).
+    const inactiveResult = await query(
+      `UPDATE "PEOPLE"
+       SET "estadoInactivo" = true, "estado" = 'ANULADO', "_updatedDate" = NOW()
+       WHERE "contrato" = $1 AND "tipoUsuario" = 'BENEFICIARIO'`,
+      [parsedPerson.contrato]
+    );
+    beneficiariesInactivated = inactiveResult.rowCount || 0;
+
+    console.log(`🔴 [PostgreSQL People] Estado "${body.aprobacion}" → ANULADO: titular + ${beneficiariesInactivated} beneficiarios`);
+
+    // Kids: libera el cupo de los beneficiarios Kids en KIDS2026 (best-effort, no lanza).
+    const motivoKids = motivoBajaKids(body.aprobacion);
+    if (motivoKids) {
+      await liberarReservasKids({ contrato: parsedPerson.contrato }, motivoKids, body.aprobacionMotivo ?? null);
+    }
+  }
+
+  // Retractado (2026-10-06): el cliente se retracta dentro del plazo legal. NO es
+  // un contrato nulo: conserva su estado RETRACTADO (y su pestaña propia en la
+  // Limpieza de Anulados), pero inhabilita a TODOS: titular + beneficiarios en
+  // PEOPLE, sus fichas ACADEMICA y su acceso (USUARIOS_ROLES ESTUDIANTE).
+  if (body.aprobacion === 'Retractado' && parsedPerson.contrato) {
+    const r = await inhabilitarContratoRetractado(parsedPerson.contrato);
+    parsedPerson.estadoInactivo = true;
+    parsedPerson.estado = 'RETRACTADO';
+    beneficiariesInactivated = r.beneficiarios;
+    console.log(`↩️ [PostgreSQL People] Retractado: titular + ${r.beneficiarios} beneficiarios, ${r.fichas} fichas, ${r.logins} accesos inhabilitados`);
+  }
+
+  // Aprobado → Pendiente: BLOQUEA SOLO el login de los beneficiarios (activo=false
+  // en USUARIOS_ROLES). El titular NO se toca y NADIE se inactiva en PEOPLE/ACADEMICA.
+  // Es reversible: al re-aprobar (/approve) se reactiva el login de los beneficiarios.
+  if (body.aprobacion === 'Pendiente' && currentPerson.aprobacion === 'Aprobado' && parsedPerson.contrato) {
+    const r = await query(
+      `UPDATE "USUARIOS_ROLES" SET "activo" = false
+        WHERE LOWER("email") IN (
+          SELECT LOWER("email") FROM "PEOPLE"
+           WHERE "contrato" = $1 AND "tipoUsuario" = 'BENEFICIARIO' AND "email" IS NOT NULL
+        )`,
+      [parsedPerson.contrato]
+    );
+    console.log(`🔒 [PostgreSQL People] Aprobado→Pendiente: login bloqueado de ${r.rowCount || 0} beneficiario(s)`);
+  }
+
+  // Auditoría del cambio de aprobación (best-effort; el UPDATE ya quedó hecho).
+  if (cambiaAprobacion) {
+    await registrarCambioAprobacion({
+      personId,
+      contrato: currentPerson.contrato,
+      tipoUsuario: currentPerson.tipoUsuario,
+      nombre: nombreDe(currentPerson),
+      estadoAnterior: currentPerson.aprobacion,
+      estadoNuevo: body.aprobacion,
+      origen: 'FICHA_ESTADO_TITULAR',
+      motivo: aprobacionMotivo,
+      session,
+    });
+  }
+
+  // Seguimiento del contrato (best-effort): la aprobación ya quedó en APROBACION_AUDIT;
+  // aquí van el gestor de recaudo y el resto de campos editados con su antes/después.
+  {
+    const { aprobacion: _a, estado: _e, gestorRecaudo, ...resto } = body;
+    if (Object.prototype.hasOwnProperty.call(body, 'gestorRecaudo') && (filaAntes?.gestorRecaudo || null) !== (gestorRecaudo || null)) {
+      const nombres = await queryMany<{ _id: string; nombre: string }>(
+        `SELECT "_id", TRIM(CONCAT_WS(' ', "nombre", "apellido")) AS nombre FROM "USUARIOS_ROLES" WHERE "_id" = ANY($1::text[])`,
+        [[filaAntes?.gestorRecaudo, gestorRecaudo].filter(Boolean)]);
+      const n = (id: string | null) => (id ? nombres.find(x => x._id === id)?.nombre || id : 'sin asignar');
+      await registrarEventoContrato({
+        personaId: personId, categoria: 'RECAUDOS', accion: 'Gestor de recaudo',
+        detalle: `${n(filaAntes?.gestorRecaudo || null)} → ${n(gestorRecaudo || null)}`, session,
+      });
+    }
+    const editables = Object.fromEntries(Object.entries(resto).filter(([k]) => PEOPLE_UPDATE_FIELDS.includes(k)));
+    const cambios = diffCampos(filaAntes, editables, ['documentacion', 'comentarios', 'consentimientoDeclarativo', 'hashConsentimiento']);
+    if (Object.keys(cambios).length) {
+      await registrarEventoContrato({
+        personaId: personId, categoria: 'MATRICULA', accion: opts.accionSeguimiento || 'Datos editados',
+        detalle: Object.keys(cambios).join(', '), datos: { cambios, ...(opts.datosSeguimiento || {}) }, session,
+      });
+    }
+  }
+
+  console.log('✅ [PostgreSQL People] Person updated successfully');
+  return { person: parsedPerson, beneficiariesInactivated };
+}

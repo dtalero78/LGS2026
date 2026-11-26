@@ -1002,6 +1002,20 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Acceso a la vista de resumen de una matrícula (/dashboard/comercial/matriculas/[id]): tarjeta del titular con el estado de la matrícula + tarjetas de beneficiarios con su estado de perfil académico (nivel/step o "sin perfil").',
   },
   {
+    code: ComercialPermission.MATRICULAS_CORREGIR,
+    module: Module.COMERCIAL,
+    section: 'Matrículas',
+    name: '↳↳ Corregir datos (Resumen de matrícula)',
+    description: 'Botón "Editar › Corregir datos" en el Resumen de matrícula: corrige identidad, contacto y datos laborales del titular o de un beneficiario, propagando a todas las tablas. Nombre y documento exigen además PERSON.INFO.EDITAR_NOMBRE / EDITAR_NUMERO_ID. Queda en el Seguimiento.',
+  },
+  {
+    code: ComercialPermission.MATRICULAS_REEMPLAZAR,
+    module: Module.COMERCIAL,
+    section: 'Matrículas',
+    name: '↳↳ Reemplazar persona (Resumen de matrícula)',
+    description: 'Botón "Editar › Reemplazar" en el Resumen de matrícula: cambia al titular (solo contratos SIN aprobar; anula la firma) o reemplaza un beneficiario (sin aprobar: se sobrescribe; aprobado: se crea el nuevo SIN APROBAR y el anterior queda inactivo como histórico). Motivo obligatorio.',
+  },
+  {
     code: ComercialPermission.CURSOS_KIDS_VER,
     module: Module.COMERCIAL,
     section: 'Cursos Kids',
