@@ -14,6 +14,7 @@ Las entradas sin commit (`local`) son cambios documentados antes de commitear.
 
 | Commit | Description |
 |---|---|
+| (pendiente) | **PDF del contrato tras cambios de personas (2026-11-27)**: agregar, eliminar o reemplazar un beneficiario y reemplazar al titular regeneran el PDF del contrato y lo archivan en el Drive (reemplaza al anterior), con aviso [CambioContratoModal] (resumen + "enviar el contrato nuevo al titular"). Reemplazar a un beneficiario sin aprobar **ya no anula la firma**; solo el reemplazo del titular la anula (hay que solicitar firma nueva). Corrige que, tras reemplazar al titular, «Descargar PDF» encontrara y volviera a ligar el PDF viejo. |
 | (pendiente) | **Libro de Producción › Gestión · subpestaña «Consultar y comparar» (2026-11-27)**: consulta por asesor (persona · cargo), filial o país con los seis estados, Generadas y % Aprob.; «+ Comparar» hasta 4 del mismo tipo (mejor valor resaltado), lista de matrículas por selección y pestaña **Contra vigencias** (período actual contra otra vigencia, con diferencia). Tipos y columnas de Gestión movidos a `gestion-comun.ts`. |
 | (pendiente) | **Libro de Producción › Gestión · sin contratos CANJE (2026-11-27)**: `gestionComercial()` excluye `tipoContrato='CANJE'` (tienen su pestaña propia); no cuentan en ninguna columna ni en el % de aprobación. |
 | (pendiente) | **Libro de Producción › Gestión · columna Retractadas (2026-11-27)**: los Retractados salen de «Pendientes» a su propia columna, entre Devueltas y Pendientes (grupo `retractada` en `grupoGestion()`). |

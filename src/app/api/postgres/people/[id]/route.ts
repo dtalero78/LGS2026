@@ -6,6 +6,7 @@ import { NotFoundError, ValidationError } from '@/lib/errors';
 import { attachKidsInscripciones } from '@/lib/kids-inscripciones';
 import { nombreDe } from '@/lib/aprobacion-audit';
 import { registrarEventoContrato } from '@/lib/contrato-eventos';
+import { regenerarPdfTrasCambio } from '@/lib/regenerar-pdf-cambio';
 import { actualizarPersona } from '@/lib/actualizar-persona';
 
 /**
@@ -276,5 +277,9 @@ export const DELETE = handlerWithAuth(async (
 
   console.log('✅ [PostgreSQL People] Beneficiario deleted:', personId, reservaKids ? `(reserva KIDS ${reservaKids} se conserva)` : '');
 
-  return successResponse({ deleted: true, personId, reservaKids });
+  // Cambiaron las personas del contrato → PDF nuevo en el Drive (lib/regenerar-pdf-cambio).
+  if (person.contrato) {
+    regenerarPdfTrasCambio({ titularId: person.titularId || null, contrato: person.contrato, motivo: `Beneficiario eliminado: ${nombreDe(person) || person.numeroId}`, session });
+  }
+  return successResponse({ deleted: true, personId, reservaKids, pdfRegenerado: !!person.contrato });
 });

@@ -299,6 +299,7 @@ export default function MatriculaDetallePage() {
             esTitular={edicion.esTitular}
             modo={edicion.modo}
             firmado={!!titular?.firmado}
+            titularId={titular?._id}
             onClose={() => setEdicion(null)}
             onSaved={() => { setEdicion(null); setRecarga(n => n + 1) }}
           />

@@ -19,6 +19,7 @@ import toast from 'react-hot-toast'
 import { X, AlertTriangle, Lock } from 'lucide-react'
 import { usePermissions } from '@/hooks/usePermissions'
 import { PersonPermission } from '@/types/permissions'
+import CambioContratoModal, { type CambioContrato } from '@/components/common/CambioContratoModal'
 
 export type ModoEdicion = 'corregir' | 'reemplazar'
 
@@ -30,6 +31,8 @@ interface Props {
   firmado: boolean
   onClose: () => void
   onSaved: () => void
+  /** _id del titular del contrato (enlace "Ir al contrato" del aviso de cambio). */
+  titularId?: string | null
 }
 
 const CAMPOS_IDENTIDAD = ['primerNombre', 'segundoNombre', 'primerApellido', 'segundoApellido', 'numeroId', 'fechaNacimiento', 'genero']
@@ -41,7 +44,9 @@ const fechaInput = (v: any): string => {
   return m ? `${m[1]}-${m[2]}-${m[3]}` : ''
 }
 
-export default function EditarPersonaMatriculaModal({ persona, esTitular, modo, firmado, onClose, onSaved }: Props) {
+export default function EditarPersonaMatriculaModal({ persona, esTitular, modo, firmado, onClose, onSaved, titularId }: Props) {
+  // Tras un reemplazo: aviso con el resumen (el servidor regenera el PDF del contrato).
+  const [cambio, setCambio] = useState<CambioContrato | null>(null)
   const { hasPermission } = usePermissions()
   const canNombre = modo === 'reemplazar' || hasPermission(PersonPermission.EDITAR_NOMBRE)
   const canDoc = modo === 'reemplazar' || hasPermission(PersonPermission.EDITAR_NUMERO_ID)
@@ -87,7 +92,16 @@ export default function EditarPersonaMatriculaModal({ persona, esTitular, modo, 
       if (d.aviso) toast(d.aviso, { icon: '⚠️', duration: 9000 })
       if (modo === 'corregir') toast.success(d.corregidoTrasFirma ? 'Datos corregidos (quedó la marca de corrección después de la firma)' : 'Datos corregidos')
       else if (d.tipo === 'BENEFICIARIO_APROBADO') toast.success('Nuevo beneficiario creado (sin aprobar). Apruébelo desde la ficha.')
-      else toast.success(d.firmaAnulada ? 'Persona reemplazada. La firma se anuló: envíe el contrato a firma de nuevo.' : 'Persona reemplazada')
+      else toast.success(d.firmaAnulada ? 'Persona reemplazada. La firma se anuló: solicite una firma nueva.' : 'Persona reemplazada')
+      if (modo === 'reemplazar' && d.pdfRegenerado) {
+        setCambio({
+          titulo: esTitular ? 'Titular reemplazado' : 'Beneficiario reemplazado',
+          resumen: `${d.resumen || ''} Motivo: ${motivo.trim()}`.trim(),
+          contrato: persona?.contrato, titularId: esTitular ? persona._id : (titularId || persona?.titularId || null),
+          firmaAnulada: !!d.firmaAnulada,
+        })
+        return
+      }
       onSaved()
     } catch {
       toast.error('Error de conexión')
@@ -113,6 +127,8 @@ export default function EditarPersonaMatriculaModal({ persona, esTitular, modo, 
   const titulo = modo === 'corregir'
     ? `Corregir datos — ${esTitular ? 'Titular' : 'Beneficiario'}`
     : `Reemplazar ${esTitular ? 'titular' : 'beneficiario'}`
+
+  if (cambio) return <CambioContratoModal cambio={cambio} onClose={() => { setCambio(null); onSaved() }} />
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
@@ -140,7 +156,7 @@ export default function EditarPersonaMatriculaModal({ persona, esTitular, modo, 
                   El nuevo beneficiario entra al mismo contrato como <b>SIN APROBAR</b> y se aprueba desde la ficha, como siempre.</p>
               ) : (
                 <p>Se sobrescriben los datos de {nombreActual} con los de la persona nueva. Pagos, financieros, documentación y referencias se conservan.
-                  {firmado ? <> <b>La firma del contrato se anula</b>: habrá que enviarlo a firma de nuevo.</> : null}</p>
+                  {esTitular && firmado ? <> <b>La firma del contrato se anula</b>: habrá que solicitar una firma nueva.</> : null}</p>
               )}
             </div>
           )}

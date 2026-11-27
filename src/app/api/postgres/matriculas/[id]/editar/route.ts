@@ -12,6 +12,7 @@ import { normalizarTelefono } from '@/lib/telefono';
 import { assertNoEsContratoPrueba } from '@/lib/contrato-prueba-guard';
 import { toggleStatus } from '@/services/student.service';
 import { ids } from '@/lib/id-generator';
+import { regenerarPdfTrasCambio } from '@/lib/regenerar-pdf-cambio';
 
 /**
  * POST /api/postgres/matriculas/[id]/editar   ([id] = PEOPLE._id de la persona)
@@ -31,7 +32,9 @@ import { ids } from '@/lib/id-generator';
  *     - Beneficiario sin aprobar: se sobrescribe el mismo registro.
  *     - Beneficiario aprobado: se crea el nuevo (SIN APROBAR, mismo contrato) y el
  *       anterior se INACTIVA (toggleStatus) y queda como histórico.
- *     Sobrescribir anula la firma del contrato (lo firmado nombraba a otra persona);
+ *     Reemplazar al TITULAR anula la firma (hay que solicitarla de nuevo). Reemplazar un
+ *     beneficiario conserva la firma (2026-11-27). En todos los reemplazos se vuelve a
+ *     generar el PDF del contrato y se archiva en el Drive (lib/regenerar-pdf-cambio);
  *     pagos, financieros, documentación y referencias se conservan. NO se propaga a
  *     las tablas de la persona anterior: su ficha académica sin clases se borra
  *     (como al eliminar un beneficiario) y si ya tiene clases se bloquea.
@@ -225,8 +228,10 @@ export const POST = handlerWithStaffAuth(async (request, { params }, session) =>
       personaId: persona._id, categoria: 'BENEFICIARIOS', accion: 'Beneficiario reemplazado (inactivo, histórico)',
       detalle: `Reemplazado por ${nombreNuevo} · ${motivo}`, datos: { reemplazadoPor: nuevoId, motivo }, session,
     });
+    regenerarPdfTrasCambio({ titularId: titular._id, motivo: `Beneficiario reemplazado: ${nombreAnterior} → ${nombreNuevo}`, session });
     return successResponse({
-      ok: true, modo, tipo: 'BENEFICIARIO_APROBADO', nuevoId, inactivado,
+      ok: true, modo, tipo: 'BENEFICIARIO_APROBADO', nuevoId, inactivado, pdfRegenerado: true,
+      resumen: `Se agregó a ${nombreNuevo} como beneficiario (sin aprobar) y ${nombreAnterior} quedó inactivo como histórico.`,
       aviso: errorInactivar
         ? `El nuevo beneficiario quedó creado, pero no se pudo inactivar a ${nombreAnterior}: ${errorInactivar}. Inactívelo desde la ficha.`
         : null,
@@ -264,15 +269,19 @@ export const POST = handlerWithStaffAuth(async (request, { params }, session) =>
       await client.query(`UPDATE "PAGOS_TITULARES" SET "numeroId" = $2 WHERE "idPeople" = $1`, [persona._id, nueva.numeroId]);
     }
 
-    // Firma anulada: lo firmado nombraba a otra persona. Hay que volver a enviarlo a firma.
-    await client.query(
-      `UPDATE "PEOPLE" SET "consentimientoDeclarativo" = NULL, "hashConsentimiento" = NULL,
-              "numeroDocumentoVerificado" = NULL, "driveFileId" = NULL,
-              "listoAprobacion" = false, "listoAprobacionPor" = NULL, "listoAprobacionEn" = NULL,
-              "_updatedDate" = NOW()
-        WHERE "_id" = $1`,
-      [titular._id]);
+    // Titular reemplazado: la firma nombraba a otra persona → se anula y hay que
+    // solicitarla de nuevo. Un beneficiario reemplazado conserva la firma (2026-11-27).
+    if (esTitular) {
+      await client.query(
+        `UPDATE "PEOPLE" SET "consentimientoDeclarativo" = NULL, "hashConsentimiento" = NULL,
+                "numeroDocumentoVerificado" = NULL, "driveFileId" = NULL,
+                "listoAprobacion" = false, "listoAprobacionPor" = NULL, "listoAprobacionEn" = NULL,
+                "_updatedDate" = NOW()
+          WHERE "_id" = $1`,
+        [titular._id]);
+    }
   });
+  const firmaAnulada = esTitular && firmado;
 
   await registrarEventoContrato({
     personaId: persona._id, categoria: esTitular ? 'MATRICULA' : 'BENEFICIARIOS',
@@ -281,7 +290,7 @@ export const POST = handlerWithStaffAuth(async (request, { params }, session) =>
     datos: { cambios: Object.fromEntries(Object.keys(antes).map(k => [k, { antes: antes[k], despues: nueva[k] ?? null }])), motivo, etiqueta: 'Reemplazo desde Resumen' },
     session,
   });
-  if (firmado) {
+  if (firmaAnulada) {
     await registrarEventoContrato({
       personaId: titular._id, categoria: 'FIRMA', accion: 'Firma anulada por reemplazo',
       detalle: `Se reemplazó a ${nombreAnterior}: el contrato debe firmarse de nuevo.`, session,
@@ -292,5 +301,11 @@ export const POST = handlerWithStaffAuth(async (request, { params }, session) =>
     detalle: `Se reemplazó a ${nombreAnterior} por ${nombreNuevo}: revise que la documentación corresponda.`, session,
   });
 
-  return successResponse({ ok: true, modo, tipo: esTitular ? 'TITULAR' : 'BENEFICIARIO', firmaAnulada: firmado });
+  // PDF nuevo con los datos actuales (reemplaza al anterior en el Drive): al titular
+  // sin firma; al beneficiario, con la firma que se conserva.
+  regenerarPdfTrasCambio({ titularId: titular._id, motivo: `${esTitular ? 'Titular' : 'Beneficiario'} reemplazado: ${nombreAnterior} → ${nombreNuevo}`, session });
+  return successResponse({
+    ok: true, modo, tipo: esTitular ? 'TITULAR' : 'BENEFICIARIO', firmaAnulada, pdfRegenerado: true,
+    resumen: `${esTitular ? 'Titular' : 'Beneficiario'}: ${nombreAnterior} → ${nombreNuevo}.`,
+  });
 });

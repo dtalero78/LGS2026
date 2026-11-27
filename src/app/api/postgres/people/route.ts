@@ -1,5 +1,6 @@
 import { handlerWithStaffAuth, successResponse } from '@/lib/api-helpers';
 import { registrarEventoContrato } from '@/lib/contrato-eventos';
+import { regenerarPdfTrasCambio } from '@/lib/regenerar-pdf-cambio';
 import { AcademicaRepository } from '@/repositories/academica.repository';
 import { verificarDocumento } from '@/lib/verificacion-documento';
 import { kidsIntake, validarSalonesDelPais } from '@/lib/kids-intake';
@@ -198,12 +199,19 @@ export const POST = handlerWithStaffAuth(async (request, _ctx, session) => {
     }
   }
 
+  let pdfRegenerado = false;
   if (body.tipoUsuario === 'BENEFICIARIO') {
     await registrarEventoContrato({
       personaId: personId, categoria: 'BENEFICIARIOS', accion: 'Beneficiario agregado',
       detalle: `Documento ${body.numeroId}${body.kids === true ? ' · Kids' : ''}`, session,
     });
+    // Cambiaron las personas del contrato → PDF nuevo en el Drive (lib/regenerar-pdf-cambio).
+    const contratoBen = (person as any)?.contrato || body.contrato;
+    if (contratoBen) {
+      regenerarPdfTrasCambio({ contrato: contratoBen, motivo: `Beneficiario agregado: ${[body.primerNombre, body.primerApellido].filter(Boolean).join(' ')} (${body.numeroId})`, session });
+      pdfRegenerado = true;
+    }
   }
 
-  return successResponse({ message: `${body.tipoUsuario} created successfully`, person, kidsReserva });
+  return successResponse({ message: `${body.tipoUsuario} created successfully`, person, kidsReserva, pdfRegenerado });
 });

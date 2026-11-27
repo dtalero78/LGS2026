@@ -13,6 +13,7 @@ import { COUNTRY_CODES } from '@/lib/country-codes'
 import { isContratoPrueba } from '@/components/common/ContratoPruebaBadge'
 import KidsBeneficiarioModal, { KidsData } from '@/components/comercial/KidsBeneficiarioModal'
 import ComentarioEstadoModal from '@/components/common/ComentarioEstadoModal'
+import CambioContratoModal, { type CambioContrato } from '@/components/common/CambioContratoModal'
 import { exigeComentarioEstado, comentarioValido, MIN_COMENTARIO_ESTADO } from '@/lib/comentario-aprobacion'
 import { OPCIONES_ESTADO, PENDIENTE_COMERCIAL, LISTO_APROBACION, REQUISITO_LABEL, requisitosFaltantes, estadoVisible } from '@/lib/estado-aprobacion'
 
@@ -546,6 +547,9 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
     setSuspendMotivo('')
   }
 
+  // Aviso tras agregar / eliminar un beneficiario: el servidor regenera el PDF del contrato.
+  const [cambioContrato, setCambioContrato] = useState<CambioContrato | null>(null)
+
   const confirmDeleteBeneficiary = async () => {
     if (!beneficiaryToDelete) return
 
@@ -564,6 +568,12 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
         )
         setShowDeleteModal(false)
         setBeneficiaryToDelete(null)
+        if (data.pdfRegenerado) {
+          setCambioContrato({
+            titulo: 'Beneficiario eliminado', contrato: person.contrato, titularId: person._id,
+            resumen: `Se eliminó a ${[beneficiaryToDelete.nombre, beneficiaryToDelete.apellido].filter(Boolean).join(' ')} (documento ${beneficiaryToDelete.numeroId || '—'}) del contrato.`,
+          })
+        }
         if (data.reservaKids) {
           alert(
             `Beneficiario eliminado de LGS.\n\n⚠️ Su reserva en KIDS (${data.reservaKids}) sigue ocupando el cupo del salón. ` +
@@ -1086,6 +1096,12 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
             academicaId: null,
           }
           setCurrentBeneficiaries(prev => [...prev, newBen])
+          if (result.pdfRegenerado) {
+            setCambioContrato({
+              titulo: 'Beneficiario agregado', contrato: person.contrato, titularId: person._id,
+              resumen: `Se agregó a ${[created.primerNombre, created.primerApellido].filter(Boolean).join(' ')} (documento ${created.numeroId}) como beneficiario${created.kids === true ? ' Kids' : ''}, pendiente de aprobación.`,
+            })
+          }
 
           // Kid: confirma la reserva en KIDS (si falló, al aprobarlo se reintenta).
           if (result.kidsReserva) {
@@ -1194,6 +1210,7 @@ export default function PersonAdmin({ person, beneficiaries }: PersonAdminProps)
 
   return (
     <div className="space-y-8">
+      {cambioContrato && <CambioContratoModal cambio={cambioContrato} onClose={() => setCambioContrato(null)} />}
       {/* Acciones (Contract-wide Actions) */}
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">⚙️ Acciones</h3>

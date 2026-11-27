@@ -7,6 +7,7 @@ import { ids } from '@/lib/id-generator';
 import { NotFoundError, ValidationError } from '@/lib/errors';
 import { normalizarTelefono } from '@/lib/telefono';
 import { formatearPersona } from '@/lib/formato-campos';
+import { regenerarPdfTrasCambio } from '@/lib/regenerar-pdf-cambio';
 
 // Normaliza el documento igual que el resto de la plataforma: MAYÚSCULAS sin
 // puntos, guiones ni espacios (así '15.969.643-K' y '15969643K' son el mismo).
@@ -118,5 +119,9 @@ export const POST = handlerWithAuth(async (request, _ctx, session) => {
     }
   }
 
-  return successResponse({ contrato, insertados, omitidos, fallidos, detalle });
+  // Cambiaron las personas del contrato → PDF nuevo en el Drive (lib/regenerar-pdf-cambio).
+  if (insertados > 0) {
+    regenerarPdfTrasCambio({ titularId: titular._id, motivo: `${insertados} beneficiario(s) cargado(s) desde Mantenimiento`, session });
+  }
+  return successResponse({ contrato, insertados, omitidos, fallidos, detalle, pdfRegenerado: insertados > 0 });
 });
