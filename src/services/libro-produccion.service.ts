@@ -315,15 +315,22 @@ export async function libroPapelera() {
 
 // ── Gestión Comercial (pestaña "Gestión" del libro) ───────────────────────────
 
-/** Grupo de estado para los conteos de Gestión Comercial. */
+/**
+ * Grupo de estado para los conteos de Gestión Comercial (estados de lib/estado-aprobacion):
+ *   aprobada          = Aprobado / FINALIZADA
+ *   firmadaSinAprobar = sin estado y firmado (OTP o «Sí acepto»): Listo para aprobación o Requisitos incompletos
+ *   rechazada         = Rechazado
+ *   devuelta          = Pendiente Comercial (devuelto a Comercial para corregir) + Devuelto antiguo
+ *   pendiente         = sin firmar, Contrato nulo, Retractado u otro estado
+ */
 export type GrupoGestion = 'aprobada' | 'rechazada' | 'devuelta' | 'firmadaSinAprobar' | 'pendiente';
 function grupoGestion(aprobacion: string | null, firmado: boolean): GrupoGestion {
   const a = String(aprobacion || '').trim().toLowerCase();
   if (a.startsWith('aprobad') || a.startsWith('finaliz')) return 'aprobada';
   if (a.startsWith('rechaz')) return 'rechazada';
-  if (a.startsWith('devuel')) return 'devuelta';
+  if (a.startsWith('devuel') || a === 'pendiente comercial') return 'devuelta';
   if ((!a || a === 'pendiente') && firmado) return 'firmadaSinAprobar';
-  return 'pendiente'; // sin firmar, contrato nulo, retractado u otro estado
+  return 'pendiente';
 }
 
 export interface FilaGestion {

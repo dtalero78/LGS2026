@@ -3,8 +3,8 @@
 /**
  * Libro de Producción › pestaña "Gestión" (Gestión Comercial).
  * Filtros globales Año y Mes comercial (Todos o uno) para las dos subpestañas:
- *  - Resumen: tabla por semana (o por mes si es "Todos") con realizadas, aprobadas, rechazadas,
- *    devueltas, firmadas sin aprobar y pendientes; debajo, una caja por filial (filtro País/Filial).
+ *  - Resumen: tabla por semana (o por mes si es "Todos") con aprobadas, firmadas sin aprobar,
+ *    rechazadas, devueltas (Pendiente Comercial), pendientes y generadas; debajo, una caja por filial.
  *  - Por asesor: cada persona de la escala con su cargo (Ej. Training … Sales Manager), filtros
  *    País / Filial / Cargo / Asesor, de mayor a menor.
  * Datos: GET /api/postgres/libro-produccion/gestion (permiso APROBACION.LIBRO_PRODUCCION.GESTION).
@@ -29,13 +29,15 @@ const CARGOS: [CargoKey, string][] = [
   ['ejTraining', 'Ej. Training'], ['fullExecutive', 'Full Executive'], ['jefeGrupo', 'Jefe de grupo'],
   ['gerente', 'Gerente'], ['gerenteDivision', 'Gerente división'], ['salesManager', 'Sales Manager'],
 ]
-const COLS: [Grupo | 'total', string, string][] = [
-  ['total', 'Realizadas', 'text-gray-900'],
-  ['aprobada', 'Aprobadas', 'text-green-700'],
-  ['rechazada', 'Rechazadas', 'text-red-700'],
-  ['devuelta', 'Devueltas', 'text-orange-700'],
-  ['firmadaSinAprobar', 'Firmadas sin aprobar', 'text-amber-700'],
-  ['pendiente', 'Pendientes (otro estado)', 'text-slate-600'],
+// Orden acordado 2026-11-27: Aprobadas, Firmadas sin aprobar, Rechazadas, Devueltas, Pendientes, Generadas.
+// El 4.º elemento es la ayuda del encabezado (estados de lib/estado-aprobacion).
+const COLS: [Grupo | 'total', string, string, string][] = [
+  ['aprobada', 'Aprobadas', 'text-green-700', 'Aprobado o Finalizado'],
+  ['firmadaSinAprobar', 'Firmadas sin aprobar', 'text-amber-700', 'Sin estado y firmado (código OTP o «Sí acepto»): Listo para aprobación o Requisitos incompletos'],
+  ['rechazada', 'Rechazadas', 'text-red-700', 'Rechazado'],
+  ['devuelta', 'Devueltas', 'text-orange-700', 'Pendiente Comercial (devuelto a Comercial para corregir) y Devuelto antiguo'],
+  ['pendiente', 'Pendientes', 'text-slate-600', 'Sin firmar, Contrato nulo, Retractado u otro estado'],
+  ['total', 'Generadas', 'text-gray-900', 'Todos los contratos creados en el período (suma de las columnas anteriores)'],
 ]
 type Conteo = Record<Grupo | 'total', number>
 const vacio = (): Conteo => ({ total: 0, aprobada: 0, rechazada: 0, devuelta: 0, firmadaSinAprobar: 0, pendiente: 0 })
@@ -80,8 +82,8 @@ function TablaConteo({ filas, titulo, primera, contexto, onCelda }: {
         <thead>
           <tr className="border-b text-[11px] uppercase tracking-wide text-gray-500">
             <th className="px-3 py-2 text-left">{primera}</th>
-            {COLS.map(([k, l]) => <th key={k} className="px-3 py-2 text-right">{l}</th>)}
-            <th className="px-3 py-2 text-right">% Aprob.</th>
+            {COLS.map(([k, l, , ayuda]) => <th key={k} title={ayuda} className="px-3 py-2 text-right cursor-help">{l}</th>)}
+            <th title="Aprobadas ÷ Generadas" className="px-3 py-2 text-right cursor-help">% Aprob.</th>
           </tr>
         </thead>
         <tbody>
@@ -284,7 +286,7 @@ export default function GestionComercialPanel({ onAbrirContrato }: {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Gestión Comercial</h2>
-          <p className="text-xs text-gray-500">Contratos por mes comercial (vigencias), sin contratos de prueba. "Pendientes" = sin firmar, anulados, retractados u otro estado.</p>
+          <p className="text-xs text-gray-500">Contratos por mes comercial (vigencias), sin contratos de prueba. "Devueltas" = Pendiente Comercial; "Pendientes" = sin firmar, Contrato nulo, Retractado u otro estado. Pase el cursor por un encabezado para ver qué cuenta.</p>
         </div>
         <div className="flex flex-wrap items-end gap-2">
           <Lbl t="Año">
@@ -395,8 +397,8 @@ export default function GestionComercialPanel({ onAbrirContrato }: {
                     <th className="px-3 py-2 text-left">Asesor</th>
                     <th className="px-3 py-2 text-left">Cargo</th>
                     <th className="px-3 py-2 text-left">Filial</th>
-                    {COLS.map(([k, l]) => <th key={k} className="px-3 py-2 text-right">{l}</th>)}
-                    <th className="px-3 py-2 text-right">% Aprob.</th>
+                    {COLS.map(([k, l, , ayuda]) => <th key={k} title={ayuda} className="px-3 py-2 text-right cursor-help">{l}</th>)}
+                    <th title="Aprobadas ÷ Generadas" className="px-3 py-2 text-right cursor-help">% Aprob.</th>
                     <th className="px-3 py-2 text-left">Escala</th>
                   </tr>
                 </thead>
