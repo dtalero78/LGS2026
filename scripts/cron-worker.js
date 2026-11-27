@@ -13,6 +13,8 @@
  * - expire-contracts: Diariamente a las 11:00 PM Colombia (04:00 UTC)
  * - sync-nombrecompleto: Diariamente a las 00:00 Colombia (05:00 UTC) — genera/
  *   normaliza PEOPLE.nombreCompleto (contratos nuevos + desincronizados)
+ * - papelera-libro: Diariamente a las 01:00 Colombia (06:00 UTC) — Papelera del Libro de
+ *   Producción (devuelve, envía a los 15 días en Por resolver y borra a los 30 en la papelera)
  * - sync-guias-kids: Cada 15 minutos — usuario, clave y ficha de las guías de KIDS
  *   se reflejan en LGS (USUARIOS_ROLES + ADVISORS)
  * - sence-envio-avance: Diariamente a las 23:00 hora Chile (America/Santiago),
@@ -195,6 +197,25 @@ async function executeSyncNombreCompleto() {
 }
 
 /**
+ * Papelera del Libro de Producción (devolver / enviar / borrar a los 30 días)
+ */
+async function executePapeleraLibro() {
+  const timestamp = getLocalTimestamp();
+  console.log(`\n[${timestamp}] Ejecutando papelera-libro...`);
+  try {
+    const response = await fetch(`${NEXTAUTH_URL}/api/cron/papelera-libro`, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${CRON_SECRET}`, 'Content-Type': 'application/json' }
+    });
+    const data = await response.json();
+    if (response.ok && data.success) console.log(`[${timestamp}] Completado: ${data.message}`);
+    else console.error(`[${timestamp}] Error: ${data.error || 'Unknown error'}`);
+  } catch (error) {
+    console.error(`[${timestamp}] Error de conexion:`, error.message);
+  }
+}
+
+/**
  * Guías de KIDS → LGS (usuario, clave cifrada, estado y ficha)
  */
 async function executeSyncGuiasKids() {
@@ -274,6 +295,12 @@ cron.schedule('0 5 * * *', executeSyncNombreCompleto, {
   timezone: 'UTC'
 });
 
+// Papelera del Libro de Producción: Diariamente a las 06:00 UTC (01:00 Colombia)
+cron.schedule('0 6 * * *', executePapeleraLibro, {
+  scheduled: true,
+  timezone: 'UTC'
+});
+
 // Guías de KIDS → LGS: cada 15 minutos
 cron.schedule('*/15 * * * *', executeSyncGuiasKids, {
   scheduled: true,
@@ -299,6 +326,7 @@ console.log('   - reconcile-pegados: Diariamente a las 02:00 UTC (9:00 PM Colomb
 console.log('   - reactivate-onhold: Diariamente a las 03:00 UTC (10:00 PM Colombia)');
 console.log('   - expire-contracts: Diariamente a las 04:00 UTC (11:00 PM Colombia)');
 console.log('   - sync-nombrecompleto: Diariamente a las 05:00 UTC (00:00 Colombia)');
+console.log('   - papelera-libro: Diariamente a las 06:00 UTC (01:00 Colombia)');
 console.log('   - sync-guias-kids: Cada 15 minutos');
 console.log(`   - sence-envio-avance: Diariamente a las 23:00 hora Chile (America/Santiago) [${SENCE_CRON_ENABLED ? 'ACTIVO' : 'SILENCIADO via SENCE_CRON_ENABLED=false'}]`);
 

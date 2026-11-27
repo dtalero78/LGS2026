@@ -14,7 +14,7 @@ import toast from 'react-hot-toast'
 import {
   ArrowPathIcon, ArrowDownTrayIcon, ChevronDownIcon, ChevronRightIcon, ChevronLeftIcon, MagnifyingGlassIcon, FunnelIcon,
   XMarkIcon, ArrowTopRightOnSquareIcon, CalendarDaysIcon, TableCellsIcon, RectangleStackIcon,
-  ArrowsPointingOutIcon, ArrowUturnLeftIcon, PencilSquareIcon, ClockIcon, PresentationChartBarIcon, NoSymbolIcon,
+  ArrowsPointingOutIcon, ArrowUturnLeftIcon, PencilSquareIcon, ClockIcon, PresentationChartBarIcon, NoSymbolIcon, TrashIcon,
 } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
@@ -49,6 +49,8 @@ interface Registro {
   revisarDocumentacion?: string | null
   /** Último paso a «Rechazado» (APROBACION_AUDIT): fecha, motivo y quién. null = sin registro. */
   rechazo?: { fecha: string | null; motivo: string | null; por: string | null } | null
+  /** Entró a la Papelera (hora Bogotá); null = no está en la Papelera. */
+  papeleraEn?: string | null
   estado: string | null; observaciones: string | null; pais: string | null
   titular: { nombre: string; documento: string; telefono: string; correo: string; direccion: string; ciudad: string }
   referencias: { nombre: string; telefono: string; parentesco: string }[]
@@ -79,9 +81,17 @@ const vaAlLibro = (r: { aprobacion: string }) => {
   const a = String(r.aprobacion || '').trim().toLowerCase()
   return esAprobado(r.aprobacion) || r.aprobacion === ESTADO_LISTO || a === 'pendiente comercial' || a === 'retractado'
 }
-type Vista = 'libro' | 'resolver' | 'rechazados'
-const vistaDe = (r: { aprobacion: string }): Vista =>
-  esRechazado(r.aprobacion) ? 'rechazados' : vaAlLibro(r) ? 'libro' : 'resolver'
+type Vista = 'libro' | 'resolver' | 'rechazados' | 'papelera'
+const vistaDe = (r: { aprobacion: string; papeleraEn?: string | null }): Vista =>
+  r.papeleraEn ? 'papelera' : esRechazado(r.aprobacion) ? 'rechazados' : vaAlLibro(r) ? 'libro' : 'resolver'
+/** Papelera: el cron la llena a los 15 días en Por resolver y borra a los 30 días dentro (services/libro-papelera). */
+const BORRADO_DIAS = 30
+const fechaBorrado = (papeleraEn?: string | null) => {
+  if (!papeleraEn) return null
+  const d = new Date(papeleraEn.slice(0, 10) + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + BORRADO_DIAS)
+  return d.toISOString().slice(0, 10)
+}
+const diasPara = (ymd: string | null) => ymd ? Math.ceil((new Date(ymd + 'T12:00:00Z').getTime() - Date.now()) / 86400000) : null
 /** Aviso tras reemplazar a una persona desde el Resumen de Matrícula (se apaga al subir un documento). */
 const REVISAR_DOC = { label: 'Revisar documentación', cls: 'bg-orange-100 text-orange-800 ring-1 ring-orange-300' }
 type ConMotivo = { aprobacion: string; faltantes?: Faltante[]; revisarDocumentacion?: string | null }
@@ -214,15 +224,39 @@ const layout = (cols: Col[]) => ({
 const LAYOUT_LIBRO = layout(COLS)
 const LAYOUT_POR_RESOLVER = layout(COLS_POR_RESOLVER)
 const LAYOUT_RECHAZADOS = layout(COLS_RECHAZADOS)
+// Pestaña Papelera: las de Por resolver + cuándo entró y cuándo se borra.
+const COLS_PAPELERA: Col[] = (() => {
+  const i = COLS_POR_RESOLVER.findIndex(c => c.key === 'motivo') + 1
+  return [...COLS_POR_RESOLVER.slice(0, i),
+    { key: 'papDesde', header: 'En papelera desde', w: 124, titular: r => fmtFH(r.papeleraEn || null) },
+    { key: 'papBorra', header: 'Se borra el', w: 130, titular: r => {
+        const f = fechaBorrado(r.papeleraEn); const d = diasPara(f)
+        return <span className={d !== null && d <= 5 ? 'font-semibold text-red-700' : ''}>{fmtF(f)}{d !== null ? ` (${d <= 0 ? 'hoy' : `${d} d`})` : ''}</span>
+      } },
+    ...COLS_POR_RESOLVER.slice(i)]
+})()
+const LAYOUT_PAPELERA = layout(COLS_PAPELERA)
 
 // ── Página ──────────────────────────────────────────────────────────────────────
 export default function LibroProduccionPage() {
-  const { hasPermission } = usePermissions()
+  const { hasPermission, isLoading: permisosCargando } = usePermissions()
   const puedeVigencias = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_VIGENCIAS)
   const puedePlanes = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_PLANES)
   const puedeGestion = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_GESTION)
-  const [tab, setTab] = useState<'libro' | 'sinFirmar' | 'rechazados' | 'gestion' | 'vigencias' | 'planes'>('libro')
-  const esHoja = tab === 'libro' || tab === 'sinFirmar' || tab === 'rechazados'
+  // Cada pestaña tiene su permiso (SUPER_ADMIN/ADMIN ven todas).
+  type Tab = 'libro' | 'sinFirmar' | 'rechazados' | 'papelera' | 'gestion' | 'vigencias' | 'planes'
+  const TABS: [Tab, string, any][] = [
+    ...(hasPermission(AprobacionPermission.LIBRO_PRODUCCION_LIBRO) ? [['libro', 'Libro', TableCellsIcon] as [Tab, string, any]] : []),
+    ...(hasPermission(AprobacionPermission.LIBRO_PRODUCCION_POR_RESOLVER) ? [['sinFirmar', 'Por resolver', PencilSquareIcon] as [Tab, string, any]] : []),
+    ...(hasPermission(AprobacionPermission.LIBRO_PRODUCCION_RECHAZADOS) ? [['rechazados', 'Rechazados', NoSymbolIcon] as [Tab, string, any]] : []),
+    ...(hasPermission(AprobacionPermission.LIBRO_PRODUCCION_PAPELERA) ? [['papelera', 'Papelera', TrashIcon] as [Tab, string, any]] : []),
+    ...(puedeGestion ? [['gestion', 'Gestión', PresentationChartBarIcon] as [Tab, string, any]] : []),
+    ...(puedeVigencias ? [['vigencias', 'Vigencias', CalendarDaysIcon] as [Tab, string, any]] : []),
+    ...(puedePlanes ? [['planes', 'Planes', RectangleStackIcon] as [Tab, string, any]] : []),
+  ]
+  const [tabSel, setTab] = useState<Tab | null>(null)
+  const tab: Tab | null = tabSel && TABS.some(t => t[0] === tabSel) ? tabSel : (TABS[0]?.[0] ?? null)
+  const esHoja = tab === 'libro' || tab === 'sinFirmar' || tab === 'rechazados' || tab === 'papelera'
   const [detalleGestion, setDetalleGestion] = useState<{ id: string; ids: string[] } | null>(null)
   // Pantalla completa: la hoja cubre todo (sin sidebar ni encabezado) y, si el
   // navegador lo permite, también entra en su modo de pantalla completa.
@@ -249,7 +283,7 @@ export default function LibroProduccionPage() {
         <div className={completa ? 'fixed inset-0 z-[60] bg-gray-50 overflow-auto p-4 space-y-3' : 'space-y-4'}>
           {completa ? (
           <div className="flex items-center justify-between gap-3">
-            <h1 className="text-xl font-bold text-gray-900">Libro de Producción{tab === 'sinFirmar' ? ' · Por resolver' : tab === 'rechazados' ? ' · Rechazados' : ''}</h1>
+            <h1 className="text-xl font-bold text-gray-900">Libro de Producción{tab === 'sinFirmar' ? ' · Por resolver' : tab === 'rechazados' ? ' · Rechazados' : tab === 'papelera' ? ' · Papelera' : ''}</h1>
             <button type="button" onClick={volver}
               className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700">
               <ArrowUturnLeftIcon className="h-4 w-4" /> Volver
@@ -261,12 +295,7 @@ export default function LibroProduccionPage() {
             <p className="text-sm text-gray-500">Contratos por vigencia comercial, con sus beneficiarios. Fuente: la plataforma (estado, pagos y plan en vivo).</p>
           </div>
           <div className="flex items-end gap-2 border-b border-gray-200">
-            {([['libro', 'Libro', TableCellsIcon],
-              ['sinFirmar', 'Por resolver', PencilSquareIcon],
-              ['rechazados', 'Rechazados', NoSymbolIcon],
-              ...(puedeGestion ? [['gestion', 'Gestión', PresentationChartBarIcon]] : []),
-              ...(puedeVigencias ? [['vigencias', 'Vigencias', CalendarDaysIcon]] : []),
-              ...(puedePlanes ? [['planes', 'Planes', RectangleStackIcon]] : [])] as const).map(([k, label, Icon]: any) => (
+            {TABS.map(([k, label, Icon]) => (
               <button key={k} type="button" onClick={() => setTab(k)}
                 className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px ${tab === k ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
                 <Icon className="h-4 w-4" /> {label}
@@ -280,7 +309,8 @@ export default function LibroProduccionPage() {
             )}
           </div>
           </>)}
-          {esHoja ? <Libro key={tab} completa={completa} vista={tab === 'sinFirmar' ? 'resolver' : tab === 'rechazados' ? 'rechazados' : 'libro'} />
+          {!tab ? (permisosCargando ? null : <p className="p-10 text-center text-sm text-gray-500">No tienes permiso para ninguna pestaña del libro.</p>)
+            : esHoja ? <Libro key={tab} completa={completa} vista={tab === 'sinFirmar' ? 'resolver' : tab === 'rechazados' ? 'rechazados' : tab === 'papelera' ? 'papelera' : 'libro'} />
             : tab === 'gestion' ? <GestionComercialPanel onAbrirContrato={(id, ids) => setDetalleGestion({ id, ids })} />
             : tab === 'vigencias' ? <Vigencias /> : <PlanesTiposPanel />}
         </div>
@@ -298,18 +328,25 @@ export default function LibroProduccionPage() {
 // ── Hoja ────────────────────────────────────────────────────────────────────────
 function Libro({ completa = false, vista = 'libro' }: { completa?: boolean; vista?: Vista }) {
   const sinFirmar = vista === 'resolver'
+  const enPapelera = vista === 'papelera'
   const { hasPermission } = usePermissions()
   const puedeExportar = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_EXPORTAR)
+  const puedeBorrarPapelera = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_PAPELERA_BORRAR)
+  // Papelera: selección múltiple (casilla por fila) para Restaurar / Borrar / CSV.
+  const [sel, setSel] = useState<Set<string>>(new Set())
+  const [borrar, setBorrar] = useState(false)
+  const [procesando, setProcesando] = useState(false)
+  const toggleSel = (id: string) => setSel(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
   // Casilla de la celda Item, por fila: Ratificar por correo (sin firmar) o Depurar (firmado sin aprobar).
   const puedeRatificar = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_RATIFICAR)
   const puedeDepurar = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_DEPURAR)
   const accionDe = (r: Registro): 'ratificar' | 'depurar' | 'remover' | null =>
     // Sin firmar: Ratificar (con el correo) y, dentro de ese modal, Remover; sin permiso de ratificar, solo Remover.
-    !esPendiente(r.aprobacion) ? null
+    enPapelera || !esPendiente(r.aprobacion) ? null
     : !r.firmado ? (puedeRatificar ? 'ratificar' : puedeDepurar ? 'remover' : null)
     : puedeDepurar ? 'depurar' : null
   const conCasilla = (r: Registro) => accionDe(r) !== null
-  const { cols: COLS, fijas: FIJAS, lefts: LEFTS } = sinFirmar ? LAYOUT_POR_RESOLVER : vista === 'rechazados' ? LAYOUT_RECHAZADOS : LAYOUT_LIBRO
+  const { cols: COLS, fijas: FIJAS, lefts: LEFTS } = sinFirmar ? LAYOUT_POR_RESOLVER : vista === 'rechazados' ? LAYOUT_RECHAZADOS : enPapelera ? LAYOUT_PAPELERA : LAYOUT_LIBRO
   const [accion, setAccion] = useState<{ id: string; tipo: 'ratificar' | 'depurar' | 'remover' } | null>(null)
   const [vigencias, setVigencias] = useState<Vigencia[]>([])
   const [vigencia, setVigencia] = useState<Vigencia | null>(null)
@@ -329,11 +366,12 @@ function Libro({ completa = false, vista = 'libro' }: { completa?: boolean; vist
   const cargar = useCallback(async (vigenciaId?: string) => {
     setLoading(true)
     try {
-      const qs = vigenciaId ? `?vigenciaId=${encodeURIComponent(vigenciaId)}` : ''
+      // La Papelera no depende de la vigencia: trae todos los contratos que están en ella.
+      const qs = enPapelera ? '?papelera=1' : vigenciaId ? `?vigenciaId=${encodeURIComponent(vigenciaId)}` : ''
       const d = await api.get<{ vigencias: Vigencia[]; vigencia: Vigencia | null; registros: Registro[] }>(`/api/postgres/libro-produccion${qs}`)
-      setVigencias(d.vigencias || []); setVigencia(d.vigencia); setRegistros(d.registros || []); setAbiertos(new Set())
+      setVigencias(d.vigencias || []); setVigencia(d.vigencia); setRegistros(d.registros || []); setAbiertos(new Set()); setSel(new Set())
     } catch (e) { handleApiError(e, 'No se pudo cargar el Libro de Producción') } finally { setLoading(false) }
-  }, [])
+  }, [enPapelera])
   useEffect(() => { cargar() }, [cargar])
 
   // Barra de desplazamiento horizontal superior, sincronizada con la de la tabla.
@@ -382,13 +420,25 @@ function Libro({ completa = false, vista = 'libro' }: { completa?: boolean; vist
   }, [registros, f])
 
   const toggle = (id: string) => setAbiertos(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const todosSel = visibles.length > 0 && visibles.every(r => sel.has(r.titularId))
+  const restaurar = async () => {
+    if (!window.confirm(`¿Restaurar ${sel.size} contrato(s) a Por resolver? Tendrán 15 días más antes de volver a la Papelera.`)) return
+    setProcesando(true)
+    try {
+      const d = await api.post<{ restaurados: string[] }>('/api/postgres/libro-produccion/papelera', { accion: 'restaurar', titularIds: Array.from(sel) })
+      toast.success(`${d.restaurados.length} contrato(s) restaurado(s)`)
+      cargar()
+    } catch (e) { handleApiError(e, 'No se pudo restaurar') } finally { setProcesando(false) }
+  }
   const conBenef = visibles.filter(r => r.beneficiarios.length)
   const todosAbiertos = conBenef.length > 0 && conBenef.every(r => abiertos.has(r.titularId))
 
   const exportar = () => {
     // Una fila por titular y una por beneficiario (columna Tipo), con las mismas columnas de la hoja.
     type Fila = { r: Registro; b: Benef | null }
-    const filas: Fila[] = visibles.flatMap(r => [{ r, b: null }, ...r.beneficiarios.map(b => ({ r, b }))])
+    // En la Papelera: los seleccionados (o todos los visibles si no hay selección).
+    const base = enPapelera && sel.size ? visibles.filter(r => sel.has(r.titularId)) : visibles
+    const filas: Fila[] = base.flatMap(r => [{ r, b: null }, ...r.beneficiarios.map(b => ({ r, b }))])
     const txt = (v: any) => (v === null || v === undefined || typeof v === 'object' ? '' : v)
     exportToExcel<Fila>(filas, [
       { header: 'Tipo', accessor: x => x.b ? 'BENEFICIARIO' : 'TITULAR' },
@@ -400,6 +450,10 @@ function Libro({ completa = false, vista = 'libro' }: { completa?: boolean; vist
       { header: 'Nombre', accessor: x => x.b ? x.b.nombre : x.r.titular.nombre },
       { header: 'Cédula', accessor: x => x.b ? x.b.documento : x.r.titular.documento },
       ...(sinFirmar ? [{ header: 'Motivo', accessor: (x: Fila) => x.b ? '' : textoMotivo(x.r) }] : []),
+      ...(enPapelera ? [
+        { header: 'En papelera desde', accessor: (x: Fila) => x.b ? '' : fmtFH(x.r.papeleraEn || null) },
+        { header: 'Se borra el', accessor: (x: Fila) => x.b ? '' : fmtF(fechaBorrado(x.r.papeleraEn)) },
+      ] : []),
       ...(vista === 'rechazados' ? [
         { header: 'Fecha rechazo', accessor: (x: Fila) => x.b ? '' : (x.r.rechazo?.fecha ? fmtFH(x.r.rechazo.fecha) : 'Sin registro') },
         { header: 'Motivo del rechazo', accessor: (x: Fila) => x.b ? '' : (x.r.rechazo?.motivo || 'Sin registro') },
@@ -439,7 +493,7 @@ function Libro({ completa = false, vista = 'libro' }: { completa?: boolean; vist
       { header: 'Sales Manager', accessor: x => x.r.comercial.salesManager },
       { header: 'Filial', accessor: x => x.r.comercial.filial },
       { header: 'Origen matrícula', accessor: x => x.r.comercial.origenMatricula },
-    ], `libro-produccion-${sinFirmar ? 'por-resolver-' : vista === 'rechazados' ? 'rechazados-' : ''}${vigencia ? etiquetaVigencia(vigencia).replace(' ', '-') : 'sin-vigencia'}`)
+    ], enPapelera ? `libro-produccion-papelera-${new Date().toISOString().slice(0, 10)}` : `libro-produccion-${sinFirmar ? 'por-resolver-' : vista === 'rechazados' ? 'rechazados-' : ''}${vigencia ? etiquetaVigencia(vigencia).replace(' ', '-') : 'sin-vigencia'}`)
   }
 
   const Sel = ({ label, k, opts }: { label: string; k: keyof typeof f; opts: [string, string][] }) => (
@@ -456,6 +510,7 @@ function Libro({ completa = false, vista = 'libro' }: { completa?: boolean; vist
   return (
     <div className="space-y-3 min-w-0">
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-9 items-end gap-3 rounded-lg border border-gray-200 bg-white p-3">
+        {!enPapelera && <>
         <label className="text-xs text-gray-600 min-w-0">
           <span className="block mb-0.5">Año</span>
           <select value={anioSel ?? ''}
@@ -480,6 +535,7 @@ function Libro({ completa = false, vista = 'libro' }: { completa?: boolean; vist
           </select>
         </label>
         <Sel label="Semana" k="semana" opts={semanas.map(s => [String(s.numero), `${s.etiqueta} (${fmtF(s.inicio)})`])} />
+        </>}
         <Sel label="País" k="pais" opts={opciones.paises.map(p => [p, p])} />
         <Sel label="Aprobación" k="estado" opts={opciones.estados.map(p => [p, p])} />
         <Sel label="Ejecutivo" k="ejecutivo" opts={opciones.ejecutivos.map(p => [p, p])} />
@@ -498,7 +554,8 @@ function Libro({ completa = false, vista = 'libro' }: { completa?: boolean; vist
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
-          {vigencia && <span>Vigencia <b className="text-gray-700">{etiquetaVigencia(vigencia)}</b>: {fmtFH(vigencia.inicio)} → {fmtFH(vigencia.fin)} (hora local de cada país)</span>}
+          {enPapelera && <span>Contratos con 15 días o más en <b className="text-gray-700">Por resolver</b>, sin pagos validados ni clases. El sistema los borra a los <b className="text-red-700">{BORRADO_DIAS} días</b> de entrar.</span>}
+          {!enPapelera && vigencia && <span>Vigencia <b className="text-gray-700">{etiquetaVigencia(vigencia)}</b>: {fmtFH(vigencia.inicio)} → {fmtFH(vigencia.fin)} (hora local de cada país)</span>}
           <span><b className="text-gray-700">{visibles.length}</b> contratos · <b className="text-gray-700">{visibles.reduce((s, r) => s + r.beneficiarios.length, 0)}</b> beneficiarios</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -515,10 +572,28 @@ function Libro({ completa = false, vista = 'libro' }: { completa?: boolean; vist
             className="p-2 rounded-md border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50">
             <ArrowPathIcon className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
+          {enPapelera && (
+            <button type="button" onClick={() => setSel(todosSel ? new Set() : new Set(visibles.map(r => r.titularId)))} disabled={!visibles.length}
+              className="px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40">
+              {todosSel ? 'Quitar selección' : 'Seleccionar todos'}
+            </button>
+          )}
+          {enPapelera && puedeBorrarPapelera && (<>
+            <button type="button" onClick={restaurar} disabled={!sel.size || procesando}
+              title="Devolver a Por resolver (15 días más antes de volver a la Papelera)"
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 disabled:opacity-40">
+              <ArrowUturnLeftIcon className="h-4 w-4" /> Restaurar{sel.size ? ` (${sel.size})` : ''}
+            </button>
+            <button type="button" onClick={() => setBorrar(true)} disabled={!sel.size || procesando}
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-40">
+              <TrashIcon className="h-4 w-4" /> Borrar{sel.size ? ` (${sel.size})` : ''}
+            </button>
+          </>)}
           {puedeExportar && (
             <button type="button" onClick={exportar} disabled={!visibles.length}
+              title={enPapelera ? 'Descarga los seleccionados, o todos si no hay selección' : undefined}
               className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50">
-              <ArrowDownTrayIcon className="h-4 w-4" /> Exportar Excel
+              <ArrowDownTrayIcon className="h-4 w-4" /> {enPapelera ? `Descargar CSV${sel.size ? ` (${sel.size})` : ''}` : 'Exportar Excel'}
             </button>
           )}
         </div>
@@ -526,7 +601,7 @@ function Libro({ completa = false, vista = 'libro' }: { completa?: boolean; vist
 
       {loading ? (
         <p className="p-10 text-center text-sm text-gray-400 italic">Cargando…</p>
-      ) : !vigencias.length ? (
+      ) : !enPapelera && !vigencias.length ? (
         <p className="p-10 text-center text-sm text-gray-500">No hay vigencias configuradas. Genere el calendario en la pestaña <b>Vigencias</b>.</p>
       ) : (
         <>
@@ -563,6 +638,11 @@ function Libro({ completa = false, vista = 'libro' }: { completa?: boolean; vist
                                   {abierto ? <ChevronDownIcon className="h-3.5 w-3.5" /> : <ChevronRightIcon className="h-3.5 w-3.5" />}
                                 </button>
                               ) : <span className="w-3.5" />}
+                              {enPapelera && (
+                                <input type="checkbox" checked={sel.has(r.titularId)} onChange={() => toggleSel(r.titularId)}
+                                  title="Seleccionar para Restaurar, Borrar o Descargar CSV"
+                                  className="mx-0.5 h-3.5 w-3.5 cursor-pointer rounded accent-red-600" />
+                              )}
                               {conCasilla(r) && (
                                 <input type="checkbox" checked={accion?.id === r.titularId} onChange={() => setAccion({ id: r.titularId, tipo: accionDe(r)! })}
                                   title={accionDe(r) === 'ratificar' ? 'Ratificar con el correo "SÍ, ACEPTO" (o remover el contrato)' : accionDe(r) === 'remover' ? 'Remover este contrato y sus registros' : 'Depurar este contrato (firmado sin aprobar)'}
@@ -590,12 +670,27 @@ function Libro({ completa = false, vista = 'libro' }: { completa?: boolean; vist
                 )
               })}
               {!visibles.length && (
-                <tr><td colSpan={COLS.length} className="p-8 text-center text-sm text-gray-400">No hay contratos con esos filtros.</td></tr>
+                <tr><td colSpan={COLS.length} className="p-8 text-center text-sm text-gray-400">{enPapelera && !registros.length ? 'La Papelera está vacía.' : 'No hay contratos con esos filtros.'}</td></tr>
               )}
             </tbody>
           </table>
         </div>
         </>
+      )}
+
+      {borrar && (
+        <BorrarPapeleraModal cantidad={sel.size} contratos={visibles.filter(r => sel.has(r.titularId)).map(r => r.contrato)}
+          onClose={() => setBorrar(false)}
+          onConfirmar={async (motivo) => {
+            setProcesando(true)
+            try {
+              const d = await api.post<{ borrados: string[]; omitidos: { contrato: string; razon: string }[] }>(
+                '/api/postgres/libro-produccion/papelera', { accion: 'borrar', titularIds: Array.from(sel), motivo, confirmado: true })
+              toast.success(`${d.borrados.length} contrato(s) borrado(s)`)
+              if (d.omitidos.length) toast.error(`No se borraron: ${d.omitidos.map(o => `${o.contrato} — ${o.razon}`).join('; ')}`, { duration: 9000 })
+              setBorrar(false); cargar()
+            } catch (e) { handleApiError(e, 'No se pudo borrar') } finally { setProcesando(false) }
+          }} />
       )}
 
       {accion && (
@@ -919,6 +1014,47 @@ function Vigencias() {
       </div>
       <div className="text-xs text-gray-500">
         Años configurados: {Array.from(new Set(vigencias.map(v => v.anio))).sort().join(', ') || 'ninguno'}
+      </div>
+    </div>
+  )
+}
+
+// ── Papelera: confirmación de borrado definitivo ──────────────────────────────────
+function BorrarPapeleraModal({ cantidad, contratos, onClose, onConfirmar }: {
+  cantidad: number; contratos: string[]; onClose: () => void; onConfirmar: (motivo: string) => Promise<void>
+}) {
+  const [motivo, setMotivo] = useState('')
+  const [ok, setOk] = useState(false)
+  const [enviando, setEnviando] = useState(false)
+  const valido = motivo.trim().length >= 10 && ok
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-lg rounded-lg bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-red-200 bg-red-50 px-4 py-3 rounded-t-lg">
+          <h2 className="flex items-center gap-2 text-base font-bold text-red-800"><TrashIcon className="h-5 w-5" /> Borrar {cantidad} contrato(s) de la Papelera</h2>
+          <button type="button" onClick={onClose} className="text-gray-500 hover:text-gray-700"><XMarkIcon className="h-5 w-5" /></button>
+        </div>
+        <div className="space-y-3 p-4 text-sm">
+          <p className="text-gray-700">Se borran definitivamente el contrato, sus beneficiarios, financieros, pagos no validados y fichas académicas sin clases (las compartidas con otro contrato se conservan). Queda copia en el registro de depuraciones. Antes de borrar se vuelve a revisar que no tengan pagos validados ni clases.</p>
+          <p className="max-h-24 overflow-auto rounded bg-gray-50 p-2 font-mono text-xs text-gray-700">{contratos.join(', ')}</p>
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-gray-700">Motivo (mínimo 10 caracteres)</span>
+            <textarea value={motivo} onChange={e => setMotivo(e.target.value)} rows={3}
+              className="w-full rounded-md border border-gray-300 p-2 text-sm" placeholder="Ej.: contratos abandonados sin firma ni pago" />
+          </label>
+          <label className="flex items-start gap-2 text-xs text-red-800">
+            <input type="checkbox" checked={ok} onChange={e => setOk(e.target.checked)} className="mt-0.5 accent-red-600" />
+            Entiendo que se borran el contrato y sus registros, y que no se puede deshacer.
+          </label>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-gray-200 px-4 py-3">
+          <button type="button" onClick={onClose} className="px-3 py-1.5 text-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50">Cancelar</button>
+          <button type="button" disabled={!valido || enviando}
+            onClick={async () => { setEnviando(true); try { await onConfirmar(motivo.trim()) } finally { setEnviando(false) } }}
+            className="px-3 py-1.5 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-40">
+            {enviando ? 'Borrando…' : 'Borrar definitivamente'}
+          </button>
+        </div>
       </div>
     </div>
   )

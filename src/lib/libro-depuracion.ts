@@ -32,6 +32,24 @@ function urlsDe(raw: unknown): { url: string; nombre: string }[] {
   })
 }
 
+/**
+ * Clases registradas de las personas de ESTE contrato que no están en otro contrato
+ * (las compartidas se conservan al borrar, así que no cuentan). Con clases, el contrato
+ * no se remueve ni pasa a la Papelera del Libro.
+ */
+export async function contarClasesPropias(contrato: string): Promise<number> {
+  const row = await queryOne(
+    `WITH propios AS (
+       SELECT DISTINCT ${sqlNorm('p."numeroId"')} AS nid FROM "PEOPLE" p
+        WHERE p."contrato" = $1 AND COALESCE(p."numeroId",'') <> ''
+          AND NOT EXISTS (SELECT 1 FROM "PEOPLE" o
+                           WHERE ${sqlNorm('o."numeroId"')} = ${sqlNorm('p."numeroId"')} AND COALESCE(o."contrato",'') <> $1))
+     SELECT COUNT(*)::int AS n FROM "ACADEMICA_BOOKINGS" b
+       JOIN "ACADEMICA" a ON a."_id" = COALESCE(b."studentId", b."idEstudiante")
+      WHERE ${sqlNorm('a."numeroId"')} IN (SELECT nid FROM propios)`, [contrato])
+  return Number(row?.n || 0)
+}
+
 export async function previsualizarDepuracion(titularId: string) {
   const titular = await queryOne(
     `SELECT "_id","contrato","numeroId","primerNombre","segundoNombre","primerApellido","segundoApellido",
@@ -85,16 +103,7 @@ export async function previsualizarDepuracion(titularId: string) {
   // Clases de las personas de ESTE contrato que no están en otro contrato (las compartidas
   // se conservan al borrar, así que no cuentan). Un contrato sin firmar con clases se
   // gestiona desde la ficha, no se remueve desde aquí.
-  const clasesRow = await queryOne(
-    `WITH propios AS (
-       SELECT DISTINCT ${sqlNorm('p."numeroId"')} AS nid FROM "PEOPLE" p
-        WHERE p."contrato" = $1 AND COALESCE(p."numeroId",'') <> ''
-          AND NOT EXISTS (SELECT 1 FROM "PEOPLE" o
-                           WHERE ${sqlNorm('o."numeroId"')} = ${sqlNorm('p."numeroId"')} AND COALESCE(o."contrato",'') <> $1))
-     SELECT COUNT(*)::int AS n FROM "ACADEMICA_BOOKINGS" b
-       JOIN "ACADEMICA" a ON a."_id" = COALESCE(b."studentId", b."idEstudiante")
-      WHERE ${sqlNorm('a."numeroId"')} IN (SELECT nid FROM propios)`, [contrato])
-  const clases = Number(clasesRow?.n || 0)
+  const clases = await contarClasesPropias(contrato)
   const nombre = [titular.primerNombre, titular.segundoNombre, titular.primerApellido, titular.segundoApellido]
     .map(s => String(s || '').trim()).filter(Boolean).join(' ')
 

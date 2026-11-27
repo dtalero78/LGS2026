@@ -73,6 +73,8 @@ export interface RegistroLibro {
   revisarDocumentacion: string | null;
   /** Último paso a «Rechazado» (APROBACION_AUDIT): fecha, motivo y quién. null = sin registro (rechazos antiguos). */
   rechazo: { fecha: string | null; motivo: string | null; por: string | null } | null;
+  /** Fecha (hora Bogotá) en que entró a la Papelera del libro; null = no está en la Papelera. */
+  papeleraEn: string | null;
   estado: string | null; observaciones: string | null; pais: string | null;
   titular: { nombre: string; documento: string; telefono: string; correo: string; direccion: string; ciudad: string };
   referencias: { nombre: string; telefono: string; parentesco: string }[];
@@ -135,14 +137,16 @@ export async function generarVigenciasAnio(anio: number, inicioEnero: string, fi
 // ── Libro ────────────────────────────────────────────────────────────────────
 
 async function construir(
-  filtro: { vigencia: Vigencia } | { titularId: string },
+  filtro: { vigencia: Vigencia } | { titularId: string } | { papelera: true },
 ): Promise<RegistroLibro[]> {
   const porVig = 'vigencia' in filtro;
-  const params: any[] = porVig ? [filtro.vigencia.inicio, filtro.vigencia.fin] : [filtro.titularId];
+  const params: any[] = porVig ? [filtro.vigencia.inicio, filtro.vigencia.fin] : 'titularId' in filtro ? [filtro.titularId] : [];
   const where = porVig
     ? `p."fechaCreacion" >= ($1::timestamp AT TIME ZONE 'UTC') - INTERVAL '1 day'
        AND p."fechaCreacion" <  ($2::timestamp AT TIME ZONE 'UTC') + INTERVAL '1 day'`
-    : `p."contrato" = (SELECT "contrato" FROM "PEOPLE" WHERE "_id" = $1)`;
+    : 'titularId' in filtro
+      ? `p."contrato" = (SELECT "contrato" FROM "PEOPLE" WHERE "_id" = $1)`
+      : `p."papeleraEn" IS NOT NULL`;
 
   const titulares = await queryMany<any>(
     `SELECT * FROM (
@@ -153,6 +157,7 @@ async function construir(
               p."referenciaDos", p."telefonoRefDos", p."parentezcoRefDos", p."asesor", p."asesorCreadorContrato",
               p."fullExecutive", p."jefeGrupo", p."gerente", p."gerenteDivision", p."salesManager", p."filial",
               p."origenMatricula", p."suscripcionPago", p."prixus", p."tipoPlanId",
+              to_char(p."papeleraEn" AT TIME ZONE 'America/Bogota', 'YYYY-MM-DD"T"HH24:MI') AS papelera_en,
               (COALESCE(p."hashConsentimiento",'') <> '') AS firmado,
               (CASE WHEN jsonb_typeof(p."documentacion") = 'array' THEN jsonb_array_length(p."documentacion") ELSE 0 END) > 0 AS con_docs,
               (p."reciboInscripcion" IS NOT NULL) AS con_recibo,
@@ -263,6 +268,7 @@ async function construir(
       faltantes,
       revisarDocumentacion: revisarPor.get(t.contrato) || null,
       rechazo: rechazoPor.get(t._id) || null,
+      papeleraEn: t.papelera_en || null,
       estado: t.estado || null,
       observaciones: t.observacionesContrato || null,
       pais: t.plataforma || null,
@@ -296,6 +302,11 @@ export async function libroDeVigencia(vigenciaId?: string | null) {
   if (vigenciaId && !vigencia) throw new NotFoundError('Vigencia', vigenciaId);
   const registros = vigencia ? await construir({ vigencia }) : [];
   return { vigencias, vigencia: vigencia || null, registros };
+}
+
+/** Pestaña Papelera: todos los contratos en la Papelera, sin importar la vigencia. */
+export async function libroPapelera() {
+  return { vigencias: await listarVigencias(), vigencia: null, registros: await construir({ papelera: true }) };
 }
 
 // ── Gestión Comercial (pestaña "Gestión" del libro) ───────────────────────────
