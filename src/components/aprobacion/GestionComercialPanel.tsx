@@ -5,6 +5,7 @@
  * Filtros globales Año y Mes comercial (Todos o uno) para las dos subpestañas:
  *  - Resumen: tabla por semana (o por mes si es "Todos") con aprobadas, firmadas sin aprobar,
  *    rechazadas, devueltas (Pendiente Comercial), pendientes y generadas; debajo, una caja por filial.
+ *  - Consultar y comparar: ConsultarGestion (asesor·cargo / filial / país, hasta 4, y contra otra vigencia).
  *  - Por asesor: cada persona de la escala con su cargo (Ej. Training … Sales Manager), filtros
  *    País / Filial / Cargo / Asesor, de mayor a menor.
  * Datos: GET /api/postgres/libro-produccion/gestion (permiso APROBACION.LIBRO_PRODUCCION.GESTION).
@@ -16,36 +17,11 @@ import { api, handleApiError } from '@/hooks/use-api'
 import { exportToExcel } from '@/lib/export-excel'
 import { MESES, etiquetaSemana, semanasDeVigencia, type Vigencia } from '@/lib/vigencias-comerciales'
 
-type Grupo = 'aprobada' | 'rechazada' | 'devuelta' | 'retractada' | 'firmadaSinAprobar' | 'pendiente'
-interface Fila {
-  anio: number; mes: number; semana: number | null; pais: string; filial: string; grupo: Grupo; estado: string
-  escala: Record<CargoKey, string>
-  contrato: string; titularId: string
-  /** Solo llega con permiso APROBACION.LIBRO_PRODUCCION.VER. */
-  titular?: string
-}
-type CargoKey = 'ejTraining' | 'fullExecutive' | 'jefeGrupo' | 'gerente' | 'gerenteDivision' | 'salesManager'
-const CARGOS: [CargoKey, string][] = [
-  ['ejTraining', 'Ej. Training'], ['fullExecutive', 'Full Executive'], ['jefeGrupo', 'Jefe de grupo'],
-  ['gerente', 'Gerente'], ['gerenteDivision', 'Gerente división'], ['salesManager', 'Sales Manager'],
-]
-// Orden acordado 2026-11-27: Aprobadas, Firmadas sin aprobar, Rechazadas, Devueltas, Pendientes, Generadas.
-// El 4.º elemento es la ayuda del encabezado (estados de lib/estado-aprobacion).
-const COLS: [Grupo | 'total', string, string, string][] = [
-  ['aprobada', 'Aprobadas', 'text-green-700', 'Aprobado o Finalizado'],
-  ['firmadaSinAprobar', 'Firmadas sin aprobar', 'text-amber-700', 'Sin estado y firmado (código OTP o «Sí acepto»): Listo para aprobación o Requisitos incompletos'],
-  ['rechazada', 'Rechazadas', 'text-red-700', 'Rechazado'],
-  ['devuelta', 'Devueltas', 'text-orange-700', 'Pendiente Comercial (devuelto a Comercial para corregir) y Devuelto antiguo'],
-  ['retractada', 'Retractadas', 'text-rose-700', 'Retractado (usó la cláusula de retracto)'],
-  ['pendiente', 'Pendientes', 'text-slate-600', 'Sin firmar, Contrato nulo u otro estado'],
-  ['total', 'Generadas', 'text-gray-900', 'Todos los contratos creados en el período (suma de las columnas anteriores)'],
-]
-type Conteo = Record<Grupo | 'total', number>
-const vacio = (): Conteo => ({ total: 0, aprobada: 0, rechazada: 0, devuelta: 0, retractada: 0, firmadaSinAprobar: 0, pendiente: 0 })
-const contar = (filas: Fila[]) => filas.reduce((c, f) => { c.total++; c[f.grupo]++; return c }, vacio())
-const pct = (c: Conteo) => (c.total ? `${Math.round((c.aprobada / c.total) * 100)}%` : '—')
-/** Clave para agrupar un nombre escrito de varias formas (mayúsculas, tildes, espacios). */
-const clave = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+import {
+  CARGOS, COLS, ESTADO_CLS, clave, contar, pct,
+  type CargoKey, type Conteo, type Fila, type Grupo,
+} from './gestion-comun'
+import ConsultarGestion from './ConsultarGestion'
 
 type FilaPeriodo = { etiqueta: string; c: Conteo; lista: Fila[] }
 /** Celda pulsada: lo que se lista en la ventana de matrículas. */
@@ -106,11 +82,6 @@ function TablaConteo({ filas, titulo, primera, contexto, onCelda }: {
   )
 }
 
-const ESTADO_CLS: Record<Grupo, string> = {
-  aprobada: 'bg-green-50 text-green-700', rechazada: 'bg-red-50 text-red-700', devuelta: 'bg-orange-50 text-orange-700',
-  retractada: 'bg-rose-50 text-rose-700',
-  firmadaSinAprobar: 'bg-amber-50 text-amber-700', pendiente: 'bg-slate-100 text-slate-600',
-}
 
 /** Ventana con la lista de matrículas de una celda (scroll); cada fila abre el contrato. */
 function ListaMatriculas({ celda, onClose, onAbrir }: { celda: Celda; onClose: () => void; onAbrir?: (titularId: string, ids: string[]) => void }) {
@@ -179,7 +150,7 @@ export default function GestionComercialPanel({ onAbrirContrato }: {
   const [mes, setMes] = useState<number>(hoy.getMonth() + 1) // 0 = todos
   const [data, setData] = useState<{ anios: number[]; vigencias: Vigencia[]; filas: Fila[] } | null>(null)
   const [loading, setLoading] = useState(false)
-  const [sub, setSub] = useState<'resumen' | 'asesor'>('resumen')
+  const [sub, setSub] = useState<'resumen' | 'asesor' | 'consultar'>('resumen')
 
   const cargar = async () => {
     setLoading(true)
@@ -266,6 +237,7 @@ export default function GestionComercialPanel({ onAbrirContrato }: {
 
   const periodo = `${mes ? MESES[mes - 1] + ' ' : ''}${anio}`
   const exportar = () => {
+    if (sub === 'consultar') return
     if (sub === 'asesor') {
       exportToExcel(asesores, [
         { header: 'Asesor', accessor: a => a.nombre },
@@ -305,7 +277,8 @@ export default function GestionComercialPanel({ onAbrirContrato }: {
           <button type="button" onClick={cargar} disabled={loading} title="Actualizar" className="mb-0.5 rounded-md border border-gray-300 bg-white p-2 hover:bg-gray-50 disabled:opacity-40">
             <ArrowPathIcon className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          <button type="button" onClick={exportar} disabled={!filas.length}
+          <button type="button" onClick={exportar} disabled={!filas.length || sub === 'consultar'}
+            title={sub === 'consultar' ? 'En Consultar y comparar use el botón Excel de la comparación' : undefined}
             className="mb-0.5 inline-flex items-center gap-1 rounded-md bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-40">
             <ArrowDownTrayIcon className="h-4 w-4" /> Excel
           </button>
@@ -313,7 +286,7 @@ export default function GestionComercialPanel({ onAbrirContrato }: {
       </div>
 
       <div className="flex gap-2 border-b border-gray-200">
-        {([['resumen', 'Resumen por semana y filial'], ['asesor', 'Por asesor y escala']] as const).map(([k, l]) => (
+        {([['resumen', 'Resumen por semana y filial'], ['asesor', 'Por asesor y escala'], ['consultar', 'Consultar y comparar']] as const).map(([k, l]) => (
           <button key={k} type="button" onClick={() => setSub(k)}
             className={`-mb-px border-b-2 px-3 py-1.5 text-sm font-medium ${sub === k ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>{l}</button>
         ))}
@@ -363,6 +336,8 @@ export default function GestionComercialPanel({ onAbrirContrato }: {
               Pasa el cursor por un número para ver sus matrículas y asesor; haz clic en él para la lista completa. Clic en el nombre de una filial = su tabla completa.
             </p>
           </div>
+        ) : sub === 'consultar' ? (
+          <ConsultarGestion filas={filas} anio={anio} mes={mes} anios={data?.anios || []} onCelda={setCeldaAbierta} onAbrir={onAbrirContrato} />
         ) : (
           <div className="space-y-3">
             <div className="flex flex-wrap items-end gap-3">

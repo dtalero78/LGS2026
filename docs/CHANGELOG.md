@@ -14,6 +14,7 @@ Las entradas sin commit (`local`) son cambios documentados antes de commitear.
 
 | Commit | Description |
 |---|---|
+| (pendiente) | **Libro de Producción › Gestión · subpestaña «Consultar y comparar» (2026-11-27)**: consulta por asesor (persona · cargo), filial o país con los seis estados, Generadas y % Aprob.; «+ Comparar» hasta 4 del mismo tipo (mejor valor resaltado), lista de matrículas por selección y pestaña **Contra vigencias** (período actual contra otra vigencia, con diferencia). Tipos y columnas de Gestión movidos a `gestion-comun.ts`. |
 | (pendiente) | **Libro de Producción › Gestión · sin contratos CANJE (2026-11-27)**: `gestionComercial()` excluye `tipoContrato='CANJE'` (tienen su pestaña propia); no cuentan en ninguna columna ni en el % de aprobación. |
 | (pendiente) | **Libro de Producción › Gestión · columna Retractadas (2026-11-27)**: los Retractados salen de «Pendientes» a su propia columna, entre Devueltas y Pendientes (grupo `retractada` en `grupoGestion()`). |
 | (pendiente) | **Libro de Producción › Gestión · columnas con los estados nuevos (2026-11-27)**: orden Aprobadas, Firmadas sin aprobar, Rechazadas, Devueltas, Pendientes y **Generadas** (antes «Realizadas», ahora al final). «Devueltas» cuenta Pendiente Comercial además del Devuelto antiguo (antes caía en Pendientes); «Pendientes» = sin firmar, Contrato nulo, Retractado u otro. Encabezados con ayuda al pasar el cursor. |
