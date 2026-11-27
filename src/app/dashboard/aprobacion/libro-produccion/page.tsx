@@ -253,10 +253,11 @@ export default function LibroProduccionPage() {
     ...(hasPermission(AprobacionPermission.LIBRO_PRODUCCION_POR_RESOLVER) ? [['sinFirmar', 'Por resolver', PencilSquareIcon] as [Tab, string, any]] : []),
     ...(hasPermission(AprobacionPermission.LIBRO_PRODUCCION_RECHAZADOS) ? [['rechazados', 'Rechazados', NoSymbolIcon] as [Tab, string, any]] : []),
     ...(hasPermission(AprobacionPermission.LIBRO_PRODUCCION_CANJE) ? [['canje', 'Canje', HandRaisedIcon] as [Tab, string, any]] : []),
-    ...(hasPermission(AprobacionPermission.LIBRO_PRODUCCION_PAPELERA) ? [['papelera', 'Papelera', TrashIcon] as [Tab, string, any]] : []),
     ...(puedeGestion ? [['gestion', 'Gestión', PresentationChartBarIcon] as [Tab, string, any]] : []),
     ...(puedeVigencias ? [['vigencias', 'Vigencias', CalendarDaysIcon] as [Tab, string, any]] : []),
     ...(puedePlanes ? [['planes', 'Planes', RectangleStackIcon] as [Tab, string, any]] : []),
+    // La Papelera va siempre al final.
+    ...(hasPermission(AprobacionPermission.LIBRO_PRODUCCION_PAPELERA) ? [['papelera', 'Papelera', TrashIcon] as [Tab, string, any]] : []),
   ]
   const [tabSel, setTab] = useState<Tab | null>(null)
   const tab: Tab | null = tabSel && TABS.some(t => t[0] === tabSel) ? tabSel : (TABS[0]?.[0] ?? null)
