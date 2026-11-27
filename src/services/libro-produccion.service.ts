@@ -71,6 +71,8 @@ export interface RegistroLibro {
   /** Aviso "Revisar documentación" tras reemplazar a una persona desde el Resumen de Matrícula
    *  (CONTRATO_EVENTOS); se apaga al subir un documento después. null = sin aviso. */
   revisarDocumentacion: string | null;
+  /** Último paso a «Rechazado» (APROBACION_AUDIT): fecha, motivo y quién. null = sin registro (rechazos antiguos). */
+  rechazo: { fecha: string | null; motivo: string | null; por: string | null } | null;
   estado: string | null; observaciones: string | null; pais: string | null;
   titular: { nombre: string; documento: string; telefono: string; correo: string; direccion: string; ciudad: string };
   referencias: { nombre: string; telefono: string; parentesco: string }[];
@@ -150,7 +152,7 @@ async function construir(
               p."observacionesContrato", p."referenciaUno", p."telefonoRefUno", p."parentezcoRefUno",
               p."referenciaDos", p."telefonoRefDos", p."parentezcoRefDos", p."asesor", p."asesorCreadorContrato",
               p."fullExecutive", p."jefeGrupo", p."gerente", p."gerenteDivision", p."salesManager", p."filial",
-              p."origenMatricula", p."suscripcionPago", p."prixus", p."tipoPlanId", p."listoAprobacion",
+              p."origenMatricula", p."suscripcionPago", p."prixus", p."tipoPlanId",
               (COALESCE(p."hashConsentimiento",'') <> '') AS firmado,
               (CASE WHEN jsonb_typeof(p."documentacion") = 'array' THEN jsonb_array_length(p."documentacion") ELSE 0 END) > 0 AS con_docs,
               (p."reciboInscripcion" IS NOT NULL) AS con_recibo,
@@ -166,7 +168,8 @@ async function construir(
   if (!titulares.length) return [];
 
   const contratos = titulares.map((t) => t.contrato);
-  const [fins, pagos, benefs, revisar] = await Promise.all([
+  const rechazadosIds = titulares.filter((t) => String(t.aprobacion || '').trim().toLowerCase() === 'rechazado').map((t) => t._id);
+  const [fins, pagos, benefs, revisar, rechazos] = await Promise.all([
     queryMany<any>(
       `SELECT DISTINCT ON ("contrato") "contrato","totalPlan","valorCuota","pagoInscripcion","numeroCuotas","saldo","fechaPago","plan"
          FROM "FINANCIEROS" WHERE "contrato" = ANY($1) ORDER BY "contrato", "_updatedDate" DESC NULLS LAST`, [contratos]),
@@ -189,7 +192,17 @@ async function construir(
           AND e."_createdDate" > COALESCE((SELECT MAX(d."_createdDate") FROM "CONTRATO_EVENTOS" d
                 WHERE d."contrato" = e."contrato" AND d."accion" = 'Documento subido'), 'epoch'::timestamptz)
         ORDER BY e."contrato", e."_createdDate" DESC`, [contratos]).catch(() => [] as any[]),
+    // Pestaña Rechazados: el último cambio del titular a «Rechazado» (APROBACION_AUDIT).
+    rechazadosIds.length ? queryMany<any>(
+      `SELECT DISTINCT ON ("personId") "personId", "motivo", "usuarioNombre", "usuarioEmail",
+              to_char("_createdDate" AT TIME ZONE 'America/Bogota', 'YYYY-MM-DD"T"HH24:MI') AS fecha
+         FROM "APROBACION_AUDIT"
+        WHERE "personId" = ANY($1) AND LOWER(TRIM("estadoNuevo")) = 'rechazado'
+        ORDER BY "personId", "_createdDate" DESC`, [rechazadosIds]).catch(() => [] as any[]) : Promise.resolve([] as any[]),
   ]);
+  const rechazoPor = new Map(rechazos.map((x: any) => [x.personId, {
+    fecha: x.fecha || null, motivo: x.motivo || null, por: x.usuarioNombre || x.usuarioEmail || null,
+  }]));
   const revisarPor = new Map(revisar.map((x: any) => [x.contrato, x.detalle as string]));
 
   const tipoIds = Array.from(new Set(titulares.map((t) => t.tipoPlanId).filter(Boolean)));
@@ -249,6 +262,7 @@ async function construir(
       firmado: t.firmado === true,
       faltantes,
       revisarDocumentacion: revisarPor.get(t.contrato) || null,
+      rechazo: rechazoPor.get(t._id) || null,
       estado: t.estado || null,
       observaciones: t.observacionesContrato || null,
       pais: t.plataforma || null,

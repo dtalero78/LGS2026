@@ -14,7 +14,7 @@ import toast from 'react-hot-toast'
 import {
   ArrowPathIcon, ArrowDownTrayIcon, ChevronDownIcon, ChevronRightIcon, ChevronLeftIcon, MagnifyingGlassIcon, FunnelIcon,
   XMarkIcon, ArrowTopRightOnSquareIcon, CalendarDaysIcon, TableCellsIcon, RectangleStackIcon,
-  ArrowsPointingOutIcon, ArrowUturnLeftIcon, PencilSquareIcon, ClockIcon, PresentationChartBarIcon,
+  ArrowsPointingOutIcon, ArrowUturnLeftIcon, PencilSquareIcon, ClockIcon, PresentationChartBarIcon, NoSymbolIcon,
 } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
@@ -47,6 +47,8 @@ interface Registro {
   faltantes?: Faltante[]
   /** "Revisar documentación" tras un reemplazo de persona (Resumen de Matrícula). */
   revisarDocumentacion?: string | null
+  /** Último paso a «Rechazado» (APROBACION_AUDIT): fecha, motivo y quién. null = sin registro. */
+  rechazo?: { fecha: string | null; motivo: string | null; por: string | null } | null
   estado: string | null; observaciones: string | null; pais: string | null
   titular: { nombre: string; documento: string; telefono: string; correo: string; direccion: string; ciudad: string }
   referencias: { nombre: string; telefono: string; parentesco: string }[]
@@ -66,12 +68,20 @@ const MOTIVOS: Record<Faltante, { label: string; ayuda: string; cls: string }> =
 const esAprobado = (a: string) => /^(aprobad|finaliz)/i.test(String(a || '').trim())
 /** Sin estado en la ficha: el sistema lo calcula (lib/estado-aprobacion). */
 const esPendiente = (a: string) => a === ESTADO_LISTO || a === REQ_INCOMPLETOS
+/** Rechazado: pestaña propia (con fecha, motivo y quién), nunca va a la Papelera. */
+const esRechazado = (a: string) => String(a || '').trim().toLowerCase() === 'rechazado'
 /**
- * Pestaña Libro: los Aprobados y los «Listo para aprobación» (firmados, con documentos,
- * recibo de inscripción y PDF en Drive). Todo lo demás va a Por resolver.
+ * Pestaña Libro: Aprobados (y Finalizados), «Listo para aprobación» (firmado o «Sí acepto»,
+ * documentos, recibo y PDF en Drive), Pendiente Comercial y Retractados.
+ * Rechazados → su pestaña. Todo lo demás (requisitos incompletos, Contrato nulo, Devuelto) → Por resolver.
  */
-const vaAlLibro = (r: { aprobacion: string; firmado: boolean; faltantes?: Faltante[] }) =>
-  esAprobado(r.aprobacion) || r.aprobacion === ESTADO_LISTO
+const vaAlLibro = (r: { aprobacion: string }) => {
+  const a = String(r.aprobacion || '').trim().toLowerCase()
+  return esAprobado(r.aprobacion) || r.aprobacion === ESTADO_LISTO || a === 'pendiente comercial' || a === 'retractado'
+}
+type Vista = 'libro' | 'resolver' | 'rechazados'
+const vistaDe = (r: { aprobacion: string }): Vista =>
+  esRechazado(r.aprobacion) ? 'rechazados' : vaAlLibro(r) ? 'libro' : 'resolver'
 /** Aviso tras reemplazar a una persona desde el Resumen de Matrícula (se apaga al subir un documento). */
 const REVISAR_DOC = { label: 'Revisar documentación', cls: 'bg-orange-100 text-orange-800 ring-1 ring-orange-300' }
 type ConMotivo = { aprobacion: string; faltantes?: Faltante[]; revisarDocumentacion?: string | null }
@@ -183,6 +193,18 @@ const COLS_POR_RESOLVER: Col[] = (() => {
   const i = COLS.findIndex(c => c.key === 'cedula') + 1
   return [...COLS.slice(0, i), COL_MOTIVO, ...COLS.slice(i)]
 })()
+// Pestaña Rechazados: fecha, motivo y quién lo rechazó, después de la Cédula.
+const SIN_REGISTRO = <span className="italic text-gray-400">Sin registro</span>
+const COLS_RECHAZO: Col[] = [
+  { key: 'rechFecha', header: 'Fecha rechazo', w: 120, titular: r => r.rechazo?.fecha ? fmtFH(r.rechazo.fecha) : SIN_REGISTRO },
+  { key: 'rechMotivo', header: 'Motivo del rechazo', w: 300, titular: r => r.rechazo?.motivo
+      ? <span className="line-clamp-3" title={r.rechazo.motivo}>{r.rechazo.motivo}</span> : SIN_REGISTRO },
+  { key: 'rechPor', header: 'Rechazado por', w: 170, titular: r => r.rechazo?.por || SIN_REGISTRO },
+]
+const COLS_RECHAZADOS: Col[] = (() => {
+  const i = COLS.findIndex(c => c.key === 'cedula') + 1
+  return [...COLS.slice(0, i), ...COLS_RECHAZO, ...COLS.slice(i)]
+})()
 /** Fijas = Item → Cédula titular; LEFTS = desplazamiento de cada columna fija. */
 const layout = (cols: Col[]) => ({
   cols,
@@ -191,6 +213,7 @@ const layout = (cols: Col[]) => ({
 })
 const LAYOUT_LIBRO = layout(COLS)
 const LAYOUT_POR_RESOLVER = layout(COLS_POR_RESOLVER)
+const LAYOUT_RECHAZADOS = layout(COLS_RECHAZADOS)
 
 // ── Página ──────────────────────────────────────────────────────────────────────
 export default function LibroProduccionPage() {
@@ -198,8 +221,8 @@ export default function LibroProduccionPage() {
   const puedeVigencias = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_VIGENCIAS)
   const puedePlanes = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_PLANES)
   const puedeGestion = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_GESTION)
-  const [tab, setTab] = useState<'libro' | 'sinFirmar' | 'gestion' | 'vigencias' | 'planes'>('libro')
-  const esHoja = tab === 'libro' || tab === 'sinFirmar'
+  const [tab, setTab] = useState<'libro' | 'sinFirmar' | 'rechazados' | 'gestion' | 'vigencias' | 'planes'>('libro')
+  const esHoja = tab === 'libro' || tab === 'sinFirmar' || tab === 'rechazados'
   const [detalleGestion, setDetalleGestion] = useState<{ id: string; ids: string[] } | null>(null)
   // Pantalla completa: la hoja cubre todo (sin sidebar ni encabezado) y, si el
   // navegador lo permite, también entra en su modo de pantalla completa.
@@ -226,7 +249,7 @@ export default function LibroProduccionPage() {
         <div className={completa ? 'fixed inset-0 z-[60] bg-gray-50 overflow-auto p-4 space-y-3' : 'space-y-4'}>
           {completa ? (
           <div className="flex items-center justify-between gap-3">
-            <h1 className="text-xl font-bold text-gray-900">Libro de Producción{tab === 'sinFirmar' ? ' · Por resolver' : ''}</h1>
+            <h1 className="text-xl font-bold text-gray-900">Libro de Producción{tab === 'sinFirmar' ? ' · Por resolver' : tab === 'rechazados' ? ' · Rechazados' : ''}</h1>
             <button type="button" onClick={volver}
               className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700">
               <ArrowUturnLeftIcon className="h-4 w-4" /> Volver
@@ -240,6 +263,7 @@ export default function LibroProduccionPage() {
           <div className="flex items-end gap-2 border-b border-gray-200">
             {([['libro', 'Libro', TableCellsIcon],
               ['sinFirmar', 'Por resolver', PencilSquareIcon],
+              ['rechazados', 'Rechazados', NoSymbolIcon],
               ...(puedeGestion ? [['gestion', 'Gestión', PresentationChartBarIcon]] : []),
               ...(puedeVigencias ? [['vigencias', 'Vigencias', CalendarDaysIcon]] : []),
               ...(puedePlanes ? [['planes', 'Planes', RectangleStackIcon]] : [])] as const).map(([k, label, Icon]: any) => (
@@ -256,7 +280,7 @@ export default function LibroProduccionPage() {
             )}
           </div>
           </>)}
-          {esHoja ? <Libro key={tab} completa={completa} sinFirmar={tab === 'sinFirmar'} />
+          {esHoja ? <Libro key={tab} completa={completa} vista={tab === 'sinFirmar' ? 'resolver' : tab === 'rechazados' ? 'rechazados' : 'libro'} />
             : tab === 'gestion' ? <GestionComercialPanel onAbrirContrato={(id, ids) => setDetalleGestion({ id, ids })} />
             : tab === 'vigencias' ? <Vigencias /> : <PlanesTiposPanel />}
         </div>
@@ -272,7 +296,8 @@ export default function LibroProduccionPage() {
 }
 
 // ── Hoja ────────────────────────────────────────────────────────────────────────
-function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; sinFirmar?: boolean }) {
+function Libro({ completa = false, vista = 'libro' }: { completa?: boolean; vista?: Vista }) {
+  const sinFirmar = vista === 'resolver'
   const { hasPermission } = usePermissions()
   const puedeExportar = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_EXPORTAR)
   // Casilla de la celda Item, por fila: Ratificar por correo (sin firmar) o Depurar (firmado sin aprobar).
@@ -284,15 +309,15 @@ function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; si
     : !r.firmado ? (puedeRatificar ? 'ratificar' : puedeDepurar ? 'remover' : null)
     : puedeDepurar ? 'depurar' : null
   const conCasilla = (r: Registro) => accionDe(r) !== null
-  const { cols: COLS, fijas: FIJAS, lefts: LEFTS } = sinFirmar ? LAYOUT_POR_RESOLVER : LAYOUT_LIBRO
+  const { cols: COLS, fijas: FIJAS, lefts: LEFTS } = sinFirmar ? LAYOUT_POR_RESOLVER : vista === 'rechazados' ? LAYOUT_RECHAZADOS : LAYOUT_LIBRO
   const [accion, setAccion] = useState<{ id: string; tipo: 'ratificar' | 'depurar' | 'remover' } | null>(null)
   const [vigencias, setVigencias] = useState<Vigencia[]>([])
   const [vigencia, setVigencia] = useState<Vigencia | null>(null)
   const [todos, setRegistros] = useState<Registro[]>([])
-  // Pestaña Libro = Aprobados + pendientes completos (firma, documentos, recibo); Por resolver = el resto. El Item se numera por pestaña.
+  // Cada contrato cae en una sola pestaña (vistaDe). El Item se numera por pestaña.
   const registros = useMemo(() => todos
-    .filter(r => vaAlLibro(r) !== sinFirmar)
-    .map((r, i) => ({ ...r, item: i + 1 })), [todos, sinFirmar])
+    .filter(r => vistaDe(r) === vista)
+    .map((r, i) => ({ ...r, item: i + 1 })), [todos, vista])
   const [loading, setLoading] = useState(true)
   const [abiertos, setAbiertos] = useState<Set<string>>(new Set())
   const [detalle, setDetalle] = useState<string | null>(null)
@@ -375,6 +400,11 @@ function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; si
       { header: 'Nombre', accessor: x => x.b ? x.b.nombre : x.r.titular.nombre },
       { header: 'Cédula', accessor: x => x.b ? x.b.documento : x.r.titular.documento },
       ...(sinFirmar ? [{ header: 'Motivo', accessor: (x: Fila) => x.b ? '' : textoMotivo(x.r) }] : []),
+      ...(vista === 'rechazados' ? [
+        { header: 'Fecha rechazo', accessor: (x: Fila) => x.b ? '' : (x.r.rechazo?.fecha ? fmtFH(x.r.rechazo.fecha) : 'Sin registro') },
+        { header: 'Motivo del rechazo', accessor: (x: Fila) => x.b ? '' : (x.r.rechazo?.motivo || 'Sin registro') },
+        { header: 'Rechazado por', accessor: (x: Fila) => x.b ? '' : (x.r.rechazo?.por || 'Sin registro') },
+      ] : []),
       { header: 'Teléfono', accessor: x => x.b ? x.b.telefono : x.r.titular.telefono },
       { header: 'Correo', accessor: x => x.b ? x.b.correo : x.r.titular.correo },
       { header: 'País', accessor: x => x.r.pais },
@@ -409,7 +439,7 @@ function Libro({ completa = false, sinFirmar = false }: { completa?: boolean; si
       { header: 'Sales Manager', accessor: x => x.r.comercial.salesManager },
       { header: 'Filial', accessor: x => x.r.comercial.filial },
       { header: 'Origen matrícula', accessor: x => x.r.comercial.origenMatricula },
-    ], `libro-produccion-${sinFirmar ? 'por-resolver-' : ''}${vigencia ? etiquetaVigencia(vigencia).replace(' ', '-') : 'sin-vigencia'}`)
+    ], `libro-produccion-${sinFirmar ? 'por-resolver-' : vista === 'rechazados' ? 'rechazados-' : ''}${vigencia ? etiquetaVigencia(vigencia).replace(' ', '-') : 'sin-vigencia'}`)
   }
 
   const Sel = ({ label, k, opts }: { label: string; k: keyof typeof f; opts: [string, string][] }) => (

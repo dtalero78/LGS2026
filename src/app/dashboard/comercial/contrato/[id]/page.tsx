@@ -30,7 +30,6 @@ import { fillContractTemplate, type ConsentDisplay } from '@/lib/contract-templa
 import { isContratoPrueba } from '@/components/common/ContratoPruebaBadge'
 import DocumentosReciboModal from '@/components/common/DocumentosReciboModal'
 import CondicionesCanjeModal from '@/components/comercial/CondicionesCanjeModal'
-import ListoAprobacionModal from '@/components/comercial/ListoAprobacionModal'
 import { estadoVisible, requisitosFaltantes, LISTO_APROBACION, REQUISITOS_INCOMPLETOS, PENDIENTE_COMERCIAL, REQUISITO_LABEL } from '@/lib/estado-aprobacion'
 
 // ── Field definitions ──
@@ -297,7 +296,6 @@ export default function ContratoDetailPage() {
   // Documentación + Recibo de inscripción — modal unificado compartido
   // (mismo componente que /person/[id] y Matrículas)
   const [showDocReciboModal, setShowDocReciboModal] = useState(false)
-  const [showListoModal, setShowListoModal] = useState(false)
   // Contrato de CANJE: ver / corregir sus condiciones (modal propio).
   const [showCondicionesCanje, setShowCondicionesCanje] = useState(false)
 
@@ -1120,16 +1118,6 @@ export default function ContratoDetailPage() {
             </div>
           )}
         </div>
-
-        {showListoModal && (
-          <ListoAprobacionModal
-            titularId={titularId}
-            contrato={titular.contrato}
-            firmado={!!consentStatus?.hasConsent}
-            onClose={() => setShowListoModal(false)}
-            onDone={(r) => { setShowListoModal(false); setTitular((t: any) => ({ ...t, ...r })) }}
-          />
-        )}
 
         {/* ── Documentación y recibo — modal unificado compartido ── */}
         <DocumentosReciboModal
