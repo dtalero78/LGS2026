@@ -321,14 +321,16 @@ export async function libroPapelera() {
  *   firmadaSinAprobar = sin estado y firmado (OTP o «Sí acepto»): Listo para aprobación o Requisitos incompletos
  *   rechazada         = Rechazado
  *   devuelta          = Pendiente Comercial (devuelto a Comercial para corregir) + Devuelto antiguo
- *   pendiente         = sin firmar, Contrato nulo, Retractado u otro estado
+ *   retractada        = Retractado (cláusula de retracto)
+ *   pendiente         = sin firmar, Contrato nulo u otro estado
  */
-export type GrupoGestion = 'aprobada' | 'rechazada' | 'devuelta' | 'firmadaSinAprobar' | 'pendiente';
+export type GrupoGestion = 'aprobada' | 'rechazada' | 'devuelta' | 'retractada' | 'firmadaSinAprobar' | 'pendiente';
 function grupoGestion(aprobacion: string | null, firmado: boolean): GrupoGestion {
   const a = String(aprobacion || '').trim().toLowerCase();
   if (a.startsWith('aprobad') || a.startsWith('finaliz')) return 'aprobada';
   if (a.startsWith('rechaz')) return 'rechazada';
   if (a.startsWith('devuel') || a === 'pendiente comercial') return 'devuelta';
+  if (a.startsWith('retract')) return 'retractada';
   if ((!a || a === 'pendiente') && firmado) return 'firmadaSinAprobar';
   return 'pendiente';
 }

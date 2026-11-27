@@ -16,7 +16,7 @@ import { api, handleApiError } from '@/hooks/use-api'
 import { exportToExcel } from '@/lib/export-excel'
 import { MESES, etiquetaSemana, semanasDeVigencia, type Vigencia } from '@/lib/vigencias-comerciales'
 
-type Grupo = 'aprobada' | 'rechazada' | 'devuelta' | 'firmadaSinAprobar' | 'pendiente'
+type Grupo = 'aprobada' | 'rechazada' | 'devuelta' | 'retractada' | 'firmadaSinAprobar' | 'pendiente'
 interface Fila {
   anio: number; mes: number; semana: number | null; pais: string; filial: string; grupo: Grupo; estado: string
   escala: Record<CargoKey, string>
@@ -36,11 +36,12 @@ const COLS: [Grupo | 'total', string, string, string][] = [
   ['firmadaSinAprobar', 'Firmadas sin aprobar', 'text-amber-700', 'Sin estado y firmado (código OTP o «Sí acepto»): Listo para aprobación o Requisitos incompletos'],
   ['rechazada', 'Rechazadas', 'text-red-700', 'Rechazado'],
   ['devuelta', 'Devueltas', 'text-orange-700', 'Pendiente Comercial (devuelto a Comercial para corregir) y Devuelto antiguo'],
-  ['pendiente', 'Pendientes', 'text-slate-600', 'Sin firmar, Contrato nulo, Retractado u otro estado'],
+  ['retractada', 'Retractadas', 'text-rose-700', 'Retractado (usó la cláusula de retracto)'],
+  ['pendiente', 'Pendientes', 'text-slate-600', 'Sin firmar, Contrato nulo u otro estado'],
   ['total', 'Generadas', 'text-gray-900', 'Todos los contratos creados en el período (suma de las columnas anteriores)'],
 ]
 type Conteo = Record<Grupo | 'total', number>
-const vacio = (): Conteo => ({ total: 0, aprobada: 0, rechazada: 0, devuelta: 0, firmadaSinAprobar: 0, pendiente: 0 })
+const vacio = (): Conteo => ({ total: 0, aprobada: 0, rechazada: 0, devuelta: 0, retractada: 0, firmadaSinAprobar: 0, pendiente: 0 })
 const contar = (filas: Fila[]) => filas.reduce((c, f) => { c.total++; c[f.grupo]++; return c }, vacio())
 const pct = (c: Conteo) => (c.total ? `${Math.round((c.aprobada / c.total) * 100)}%` : '—')
 /** Clave para agrupar un nombre escrito de varias formas (mayúsculas, tildes, espacios). */
@@ -107,6 +108,7 @@ function TablaConteo({ filas, titulo, primera, contexto, onCelda }: {
 
 const ESTADO_CLS: Record<Grupo, string> = {
   aprobada: 'bg-green-50 text-green-700', rechazada: 'bg-red-50 text-red-700', devuelta: 'bg-orange-50 text-orange-700',
+  retractada: 'bg-rose-50 text-rose-700',
   firmadaSinAprobar: 'bg-amber-50 text-amber-700', pendiente: 'bg-slate-100 text-slate-600',
 }
 
@@ -286,7 +288,7 @@ export default function GestionComercialPanel({ onAbrirContrato }: {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Gestión Comercial</h2>
-          <p className="text-xs text-gray-500">Contratos por mes comercial (vigencias), sin contratos de prueba. "Devueltas" = Pendiente Comercial; "Pendientes" = sin firmar, Contrato nulo, Retractado u otro estado. Pase el cursor por un encabezado para ver qué cuenta.</p>
+          <p className="text-xs text-gray-500">Contratos por mes comercial (vigencias), sin contratos de prueba. "Devueltas" = Pendiente Comercial; "Pendientes" = sin firmar, Contrato nulo u otro estado. Pase el cursor por un encabezado para ver qué cuenta.</p>
         </div>
         <div className="flex flex-wrap items-end gap-2">
           <Lbl t="Año">
@@ -416,7 +418,7 @@ export default function GestionComercialPanel({ onAbrirContrato }: {
                       </tr>
                     </Fragment>
                   ))}
-                  {!asesores.length && <tr><td colSpan={12} className="p-8 text-center text-sm text-gray-500">Sin datos con estos filtros.</td></tr>}
+                  {!asesores.length && <tr><td colSpan={COLS.length + 6} className="p-8 text-center text-sm text-gray-500">Sin datos con estos filtros.</td></tr>}
                   {asesores.length > 0 && (
                     <tr className="bg-indigo-50 font-bold">
                       <td colSpan={4} className="px-3 py-1.5 text-indigo-900">Total contratos (sin repetir)</td>
