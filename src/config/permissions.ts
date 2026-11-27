@@ -1130,6 +1130,13 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     description: 'Ver la pestaña Rechazados con la fecha, el motivo y quién rechazó cada contrato',
   },
   {
+    code: AprobacionPermission.LIBRO_PRODUCCION_CANJE,
+    module: Module.APROBACION,
+    section: 'Libro de Producción',
+    name: 'Pestaña "Canje"',
+    description: 'Ver la pestaña Canje: contratos pagados con compromisos publicitarios (CANJE), en todos sus estados; no salen en el Libro, Por resolver ni la Papelera',
+  },
+  {
     code: AprobacionPermission.LIBRO_PRODUCCION_PAPELERA,
     module: Module.APROBACION,
     section: 'Libro de Producción',

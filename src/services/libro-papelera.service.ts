@@ -17,7 +17,7 @@ import { ValidationError } from '@/lib/errors';
  *   - lleva PAPELERA_DIAS desde su creación (o desde que se restauró: papeleraRestauradaEn),
  *   - no tiene pagos validados por Recaudos,
  *   - y sus personas no tienen clases propias (las compartidas con otro contrato no cuentan).
- * Firmado o no, da igual. Los Rechazados nunca entran.
+ * Firmado o no, da igual. Los Rechazados y los contratos CANJE (pestaña propia) nunca entran.
  *
  * Cron diario (/api/cron/papelera-libro): 1) devuelve lo que ya no cumple la regla,
  * 2) envía lo que la cumple, 3) borra lo que lleva BORRADO_DIAS en la Papelera
@@ -34,7 +34,8 @@ const COMPLETO_SQL = `(COALESCE(p."hashConsentimiento",'') <> ''
   AND COALESCE(p."driveFileId",'') <> '')`;
 const APROB = `LOWER(TRIM(COALESCE(p."aprobacion",'')))`;
 /** El titular `p` cae en la pestaña «Por resolver» (espejo de vistaDe() de la página del Libro). */
-export const POR_RESOLVER_SQL = `(${APROB} !~ '^(aprobad|finaliz)'
+export const POR_RESOLVER_SQL = `(UPPER(COALESCE(p."tipoContrato",'')) <> 'CANJE'
+  AND ${APROB} !~ '^(aprobad|finaliz)'
   AND ${APROB} NOT IN ('pendiente comercial','retractado','rechazado')
   AND NOT (${APROB} IN ('','pendiente') AND ${COMPLETO_SQL}))`;
 /** Ninguna persona del contrato de `p` tiene un pago validado. */

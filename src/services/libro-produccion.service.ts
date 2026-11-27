@@ -75,6 +75,8 @@ export interface RegistroLibro {
   rechazo: { fecha: string | null; motivo: string | null; por: string | null } | null;
   /** Fecha (hora Bogotá) en que entró a la Papelera del libro; null = no está en la Papelera. */
   papeleraEn: string | null;
+  /** Contrato CANJE (PEOPLE.tipoContrato): va en su pestaña, nunca en el Libro ni en la Papelera. */
+  canje: boolean;
   estado: string | null; observaciones: string | null; pais: string | null;
   titular: { nombre: string; documento: string; telefono: string; correo: string; direccion: string; ciudad: string };
   referencias: { nombre: string; telefono: string; parentesco: string }[];
@@ -158,6 +160,7 @@ async function construir(
               p."fullExecutive", p."jefeGrupo", p."gerente", p."gerenteDivision", p."salesManager", p."filial",
               p."origenMatricula", p."suscripcionPago", p."prixus", p."tipoPlanId",
               to_char(p."papeleraEn" AT TIME ZONE 'America/Bogota', 'YYYY-MM-DD"T"HH24:MI') AS papelera_en,
+              (UPPER(COALESCE(p."tipoContrato",'')) = 'CANJE') AS es_canje,
               (COALESCE(p."hashConsentimiento",'') <> '') AS firmado,
               (CASE WHEN jsonb_typeof(p."documentacion") = 'array' THEN jsonb_array_length(p."documentacion") ELSE 0 END) > 0 AS con_docs,
               (p."reciboInscripcion" IS NOT NULL) AS con_recibo,
@@ -269,6 +272,7 @@ async function construir(
       revisarDocumentacion: revisarPor.get(t.contrato) || null,
       rechazo: rechazoPor.get(t._id) || null,
       papeleraEn: t.papelera_en || null,
+      canje: t.es_canje === true,
       estado: t.estado || null,
       observaciones: t.observacionesContrato || null,
       pais: t.plataforma || null,

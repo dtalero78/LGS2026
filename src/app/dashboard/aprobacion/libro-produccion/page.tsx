@@ -14,7 +14,7 @@ import toast from 'react-hot-toast'
 import {
   ArrowPathIcon, ArrowDownTrayIcon, ChevronDownIcon, ChevronRightIcon, ChevronLeftIcon, MagnifyingGlassIcon, FunnelIcon,
   XMarkIcon, ArrowTopRightOnSquareIcon, CalendarDaysIcon, TableCellsIcon, RectangleStackIcon,
-  ArrowsPointingOutIcon, ArrowUturnLeftIcon, PencilSquareIcon, ClockIcon, PresentationChartBarIcon, NoSymbolIcon, TrashIcon,
+  ArrowsPointingOutIcon, ArrowUturnLeftIcon, PencilSquareIcon, ClockIcon, PresentationChartBarIcon, NoSymbolIcon, TrashIcon, HandRaisedIcon,
 } from '@heroicons/react/24/outline'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { PermissionGuard } from '@/components/permissions'
@@ -51,6 +51,8 @@ interface Registro {
   rechazo?: { fecha: string | null; motivo: string | null; por: string | null } | null
   /** Entró a la Papelera (hora Bogotá); null = no está en la Papelera. */
   papeleraEn?: string | null
+  /** Contrato CANJE: pestaña propia. */
+  canje?: boolean
   estado: string | null; observaciones: string | null; pais: string | null
   titular: { nombre: string; documento: string; telefono: string; correo: string; direccion: string; ciudad: string }
   referencias: { nombre: string; telefono: string; parentesco: string }[]
@@ -81,9 +83,10 @@ const vaAlLibro = (r: { aprobacion: string }) => {
   const a = String(r.aprobacion || '').trim().toLowerCase()
   return esAprobado(r.aprobacion) || r.aprobacion === ESTADO_LISTO || a === 'pendiente comercial' || a === 'retractado'
 }
-type Vista = 'libro' | 'resolver' | 'rechazados' | 'papelera'
-const vistaDe = (r: { aprobacion: string; papeleraEn?: string | null }): Vista =>
-  r.papeleraEn ? 'papelera' : esRechazado(r.aprobacion) ? 'rechazados' : vaAlLibro(r) ? 'libro' : 'resolver'
+type Vista = 'libro' | 'resolver' | 'rechazados' | 'papelera' | 'canje'
+/** CANJE va siempre a su pestaña (en cualquier estado); nunca al Libro ni a la Papelera. */
+const vistaDe = (r: { aprobacion: string; papeleraEn?: string | null; canje?: boolean }): Vista =>
+  r.canje ? 'canje' : r.papeleraEn ? 'papelera' : esRechazado(r.aprobacion) ? 'rechazados' : vaAlLibro(r) ? 'libro' : 'resolver'
 /** Papelera: el cron la llena a los 15 días en Por resolver y borra a los 30 días dentro (services/libro-papelera). */
 const BORRADO_DIAS = 30
 const fechaBorrado = (papeleraEn?: string | null) => {
@@ -244,11 +247,12 @@ export default function LibroProduccionPage() {
   const puedePlanes = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_PLANES)
   const puedeGestion = hasPermission(AprobacionPermission.LIBRO_PRODUCCION_GESTION)
   // Cada pestaña tiene su permiso (SUPER_ADMIN/ADMIN ven todas).
-  type Tab = 'libro' | 'sinFirmar' | 'rechazados' | 'papelera' | 'gestion' | 'vigencias' | 'planes'
+  type Tab = 'libro' | 'sinFirmar' | 'rechazados' | 'canje' | 'papelera' | 'gestion' | 'vigencias' | 'planes'
   const TABS: [Tab, string, any][] = [
     ...(hasPermission(AprobacionPermission.LIBRO_PRODUCCION_LIBRO) ? [['libro', 'Libro', TableCellsIcon] as [Tab, string, any]] : []),
     ...(hasPermission(AprobacionPermission.LIBRO_PRODUCCION_POR_RESOLVER) ? [['sinFirmar', 'Por resolver', PencilSquareIcon] as [Tab, string, any]] : []),
     ...(hasPermission(AprobacionPermission.LIBRO_PRODUCCION_RECHAZADOS) ? [['rechazados', 'Rechazados', NoSymbolIcon] as [Tab, string, any]] : []),
+    ...(hasPermission(AprobacionPermission.LIBRO_PRODUCCION_CANJE) ? [['canje', 'Canje', HandRaisedIcon] as [Tab, string, any]] : []),
     ...(hasPermission(AprobacionPermission.LIBRO_PRODUCCION_PAPELERA) ? [['papelera', 'Papelera', TrashIcon] as [Tab, string, any]] : []),
     ...(puedeGestion ? [['gestion', 'Gestión', PresentationChartBarIcon] as [Tab, string, any]] : []),
     ...(puedeVigencias ? [['vigencias', 'Vigencias', CalendarDaysIcon] as [Tab, string, any]] : []),
@@ -256,7 +260,7 @@ export default function LibroProduccionPage() {
   ]
   const [tabSel, setTab] = useState<Tab | null>(null)
   const tab: Tab | null = tabSel && TABS.some(t => t[0] === tabSel) ? tabSel : (TABS[0]?.[0] ?? null)
-  const esHoja = tab === 'libro' || tab === 'sinFirmar' || tab === 'rechazados' || tab === 'papelera'
+  const esHoja = tab === 'libro' || tab === 'sinFirmar' || tab === 'rechazados' || tab === 'canje' || tab === 'papelera'
   const [detalleGestion, setDetalleGestion] = useState<{ id: string; ids: string[] } | null>(null)
   // Pantalla completa: la hoja cubre todo (sin sidebar ni encabezado) y, si el
   // navegador lo permite, también entra en su modo de pantalla completa.
@@ -283,7 +287,7 @@ export default function LibroProduccionPage() {
         <div className={completa ? 'fixed inset-0 z-[60] bg-gray-50 overflow-auto p-4 space-y-3' : 'space-y-4'}>
           {completa ? (
           <div className="flex items-center justify-between gap-3">
-            <h1 className="text-xl font-bold text-gray-900">Libro de Producción{tab === 'sinFirmar' ? ' · Por resolver' : tab === 'rechazados' ? ' · Rechazados' : tab === 'papelera' ? ' · Papelera' : ''}</h1>
+            <h1 className="text-xl font-bold text-gray-900">Libro de Producción{tab === 'sinFirmar' ? ' · Por resolver' : tab === 'rechazados' ? ' · Rechazados' : tab === 'papelera' ? ' · Papelera' : tab === 'canje' ? ' · Canje' : ''}</h1>
             <button type="button" onClick={volver}
               className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700">
               <ArrowUturnLeftIcon className="h-4 w-4" /> Volver
@@ -310,7 +314,7 @@ export default function LibroProduccionPage() {
           </div>
           </>)}
           {!tab ? (permisosCargando ? null : <p className="p-10 text-center text-sm text-gray-500">No tienes permiso para ninguna pestaña del libro.</p>)
-            : esHoja ? <Libro key={tab} completa={completa} vista={tab === 'sinFirmar' ? 'resolver' : tab === 'rechazados' ? 'rechazados' : tab === 'papelera' ? 'papelera' : 'libro'} />
+            : esHoja ? <Libro key={tab} completa={completa} vista={tab === 'sinFirmar' ? 'resolver' : tab === 'rechazados' ? 'rechazados' : tab === 'papelera' ? 'papelera' : tab === 'canje' ? 'canje' : 'libro'} />
             : tab === 'gestion' ? <GestionComercialPanel onAbrirContrato={(id, ids) => setDetalleGestion({ id, ids })} />
             : tab === 'vigencias' ? <Vigencias /> : <PlanesTiposPanel />}
         </div>
@@ -493,7 +497,7 @@ function Libro({ completa = false, vista = 'libro' }: { completa?: boolean; vist
       { header: 'Sales Manager', accessor: x => x.r.comercial.salesManager },
       { header: 'Filial', accessor: x => x.r.comercial.filial },
       { header: 'Origen matrícula', accessor: x => x.r.comercial.origenMatricula },
-    ], enPapelera ? `libro-produccion-papelera-${new Date().toISOString().slice(0, 10)}` : `libro-produccion-${sinFirmar ? 'por-resolver-' : vista === 'rechazados' ? 'rechazados-' : ''}${vigencia ? etiquetaVigencia(vigencia).replace(' ', '-') : 'sin-vigencia'}`)
+    ], enPapelera ? `libro-produccion-papelera-${new Date().toISOString().slice(0, 10)}` : `libro-produccion-${sinFirmar ? 'por-resolver-' : vista === 'rechazados' ? 'rechazados-' : vista === 'canje' ? 'canje-' : ''}${vigencia ? etiquetaVigencia(vigencia).replace(' ', '-') : 'sin-vigencia'}`)
   }
 
   const Sel = ({ label, k, opts }: { label: string; k: keyof typeof f; opts: [string, string][] }) => (

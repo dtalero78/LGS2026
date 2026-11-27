@@ -8,7 +8,7 @@
  * 1) PEOPLE."papeleraEn" (TIMESTAMPTZ) y PEOPLE."papeleraRestauradaEn" (TIMESTAMPTZ) +
  *    índice parcial sobre los que están en la Papelera.
  * 2) Permisos por pestaña: da APROBACION.LIBRO_PRODUCCION.LIBRO / .POR_RESOLVER /
- *    .RECHAZADOS a los roles que hoy tienen .VER (nadie pierde lo que ya veía).
+ *    .RECHAZADOS / .CANJE a los roles que hoy tienen .VER (nadie pierde lo que ya veía).
  *    .PAPELERA y .PAPELERA_BORRAR quedan sin asignar.
  * 3) Conteo: contratos que el cron enviaría a la Papelera en su primera ejecución
  *    (misma regla que src/services/libro-papelera.service.ts). Solo informa.
@@ -20,14 +20,14 @@ const { Client } = require('pg');
 
 const APPLY = process.argv.includes('--apply');
 const VER = 'APROBACION.LIBRO_PRODUCCION.VER';
-const NUEVOS = ['APROBACION.LIBRO_PRODUCCION.LIBRO', 'APROBACION.LIBRO_PRODUCCION.POR_RESOLVER', 'APROBACION.LIBRO_PRODUCCION.RECHAZADOS'];
+const NUEVOS = ['APROBACION.LIBRO_PRODUCCION.LIBRO', 'APROBACION.LIBRO_PRODUCCION.POR_RESOLVER', 'APROBACION.LIBRO_PRODUCCION.RECHAZADOS', 'APROBACION.LIBRO_PRODUCCION.CANJE'];
 
 const norm = (c) => `UPPER(REGEXP_REPLACE(COALESCE(${c},''), '[.[:space:]_-]', '', 'g'))`;
 const APROB = `LOWER(TRIM(COALESCE(p."aprobacion",'')))`;
 const COMPLETO = `(COALESCE(p."hashConsentimiento",'') <> ''
   AND (CASE WHEN jsonb_typeof(p."documentacion") = 'array' THEN jsonb_array_length(p."documentacion") ELSE 0 END) > 0
   AND p."reciboInscripcion" IS NOT NULL AND COALESCE(p."driveFileId",'') <> '')`;
-const POR_RESOLVER = `(${APROB} !~ '^(aprobad|finaliz)' AND ${APROB} NOT IN ('pendiente comercial','retractado','rechazado')
+const POR_RESOLVER = `(UPPER(COALESCE(p."tipoContrato",'')) <> 'CANJE' AND ${APROB} !~ '^(aprobad|finaliz)' AND ${APROB} NOT IN ('pendiente comercial','retractado','rechazado')
   AND NOT (${APROB} IN ('','pendiente') AND ${COMPLETO}))`;
 
 (async () => {
