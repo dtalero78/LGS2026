@@ -362,7 +362,7 @@ export async function gestionComercial(anio: number, mes: number | null, opts: {
        SELECT DISTINCT ON (p."contrato") p."_id" AS titular_id, p."contrato", p."plataforma", p."aprobacion", p."filial",
               CONCAT_WS(' ', NULLIF(TRIM(p."primerNombre"),''), NULLIF(TRIM(p."segundoNombre"),''), NULLIF(TRIM(p."primerApellido"),''), NULLIF(TRIM(p."segundoApellido"),'')) AS titular_nombre,
               p."asesor", p."asesorCreadorContrato", p."fullExecutive", p."jefeGrupo", p."gerente", p."gerenteDivision", p."salesManager",
-              (COALESCE(p."hashConsentimiento",'') <> '') AS firmado, p."listoAprobacion",
+              (COALESCE(p."hashConsentimiento",'') <> '') AS firmado, p."tipoContrato",
               (CASE WHEN jsonb_typeof(p."documentacion") = 'array' THEN jsonb_array_length(p."documentacion") ELSE 0 END) > 0 AS con_docs,
               (p."reciboInscripcion" IS NOT NULL) AS con_recibo,
               (COALESCE(p."driveFileId",'') <> '') AS con_drive,
@@ -373,7 +373,9 @@ export async function gestionComercial(anio: number, mes: number | null, opts: {
           AND p."fechaCreacion" <  ($2::timestamp AT TIME ZONE 'UTC') + INTERVAL '1 day'
         ORDER BY p."contrato", (COALESCE(p."hashConsentimiento",'') <> '') DESC, (p."aprobacion" IS NOT NULL) DESC, p."_createdDate" ASC
      ) t
-     WHERE t.creado_local >= to_char($1::timestamp,'YYYY-MM-DD"T"HH24:MI') AND t.creado_local < to_char($2::timestamp,'YYYY-MM-DD"T"HH24:MI')`,
+     WHERE t.creado_local >= to_char($1::timestamp,'YYYY-MM-DD"T"HH24:MI') AND t.creado_local < to_char($2::timestamp,'YYYY-MM-DD"T"HH24:MI')
+       -- Los contratos CANJE no cuentan en Gestión Comercial (tienen su pestaña propia).
+       AND UPPER(COALESCE(t."tipoContrato",'')) <> 'CANJE'`,
     [desde, hasta]);
 
   const limpio = (s: any) => String(s || '').replace(/\s+/g, ' ').trim();

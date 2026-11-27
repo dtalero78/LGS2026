@@ -288,7 +288,7 @@ export default function GestionComercialPanel({ onAbrirContrato }: {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Gestión Comercial</h2>
-          <p className="text-xs text-gray-500">Contratos por mes comercial (vigencias), sin contratos de prueba. "Devueltas" = Pendiente Comercial; "Pendientes" = sin firmar, Contrato nulo u otro estado. Pase el cursor por un encabezado para ver qué cuenta.</p>
+          <p className="text-xs text-gray-500">Contratos por mes comercial (vigencias), sin contratos de prueba ni de canje. "Devueltas" = Pendiente Comercial; "Pendientes" = sin firmar, Contrato nulo u otro estado. Pase el cursor por un encabezado para ver qué cuenta.</p>
         </div>
         <div className="flex flex-wrap items-end gap-2">
           <Lbl t="Año">

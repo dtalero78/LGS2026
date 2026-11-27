@@ -14,6 +14,7 @@ Las entradas sin commit (`local`) son cambios documentados antes de commitear.
 
 | Commit | Description |
 |---|---|
+| (pendiente) | **Libro de Producción › Gestión · sin contratos CANJE (2026-11-27)**: `gestionComercial()` excluye `tipoContrato='CANJE'` (tienen su pestaña propia); no cuentan en ninguna columna ni en el % de aprobación. |
 | (pendiente) | **Libro de Producción › Gestión · columna Retractadas (2026-11-27)**: los Retractados salen de «Pendientes» a su propia columna, entre Devueltas y Pendientes (grupo `retractada` en `grupoGestion()`). |
 | (pendiente) | **Libro de Producción › Gestión · columnas con los estados nuevos (2026-11-27)**: orden Aprobadas, Firmadas sin aprobar, Rechazadas, Devueltas, Pendientes y **Generadas** (antes «Realizadas», ahora al final). «Devueltas» cuenta Pendiente Comercial además del Devuelto antiguo (antes caía en Pendientes); «Pendientes» = sin firmar, Contrato nulo, Retractado u otro. Encabezados con ayuda al pasar el cursor. |
 | (pendiente) | **Libro de Producción · pestaña Canje (2026-11-26)**: los contratos CANJE (`PEOPLE.tipoContrato`) salen del Libro, Por resolver, Rechazados y Papelera y van a su pestaña propia en cualquier estado (permiso `APROBACION.LIBRO_PRODUCCION.CANJE`, asignado a los roles con `.VER`). La regla de la Papelera los excluye (no tienen recibo de inscripción). |
