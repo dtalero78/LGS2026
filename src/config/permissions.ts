@@ -955,7 +955,14 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
     module: Module.COMERCIAL,
     section: 'Crear Contrato',
     name: "Botón 'Dejar listo para aprobación'",
-    description: 'En la pantalla del contrato, confirmar que ya está firmado, con PDF generado, documentos y recibo subidos e información verificada; el Libro de Producción lo muestra como "Firma, Documentos, pendiente aprobación"',
+    description: '(Sin uso desde 2026-11-27: el botón "Dejar listo para aprobación" lo ve todo el que entra a la pantalla del contrato; cada acción usa su propio permiso)',
+  },
+  {
+    code: ComercialPermission.ANEXAR_SI_ACEPTO,
+    module: Module.COMERCIAL,
+    section: 'Crear Contrato',
+    name: "Casilla 'No tiene firma: anexar el Sí acepto'",
+    description: 'En "Dejar listo para aprobación", anexar la impresión (PDF) del correo "SÍ, ACEPTO" del titular: cuenta como firma del contrato (también lo permite APROBACION.LIBRO_PRODUCCION.RATIFICAR)',
   },
   {
     code: ComercialPermission.ENVIAR_PDF,

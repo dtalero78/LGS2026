@@ -30,7 +30,8 @@ import { fillContractTemplate, type ConsentDisplay } from '@/lib/contract-templa
 import { isContratoPrueba } from '@/components/common/ContratoPruebaBadge'
 import DocumentosReciboModal from '@/components/common/DocumentosReciboModal'
 import CondicionesCanjeModal from '@/components/comercial/CondicionesCanjeModal'
-import { estadoVisible, requisitosFaltantes, LISTO_APROBACION, REQUISITOS_INCOMPLETOS, PENDIENTE_COMERCIAL, REQUISITO_LABEL } from '@/lib/estado-aprobacion'
+import { estadoVisible, requisitosFaltantes, esSinEstado, REQUISITO_LABEL } from '@/lib/estado-aprobacion'
+import DejarListoAprobacionModal, { type EstadoListo } from '@/components/comercial/DejarListoAprobacionModal'
 
 // ── Field definitions ──
 
@@ -330,10 +331,24 @@ export default function ContratoDetailPage() {
     }
   }, [titularId])
 
+  // "Dejar listo para aprobación": lista de comprobación (incluye "PDF enviado" y la
+  // última confirmación) — no bloquea la carga de la página.
+  const [listo, setListo] = useState<EstadoListo | null>(null)
+  const [showListo, setShowListo] = useState(false)
+  const [reabrirListo, setReabrirListo] = useState(false)
+  const loadListo = useCallback(async () => {
+    try { setListo(await api.get(`/api/postgres/contracts/${titularId}/listo-aprobacion`)) } catch { /* opcional */ }
+  }, [titularId])
+  // Recarga silenciosa del titular (sin la pantalla de carga) tras firmar / subir / generar.
+  const refrescarTitular = useCallback(async () => {
+    try { const d = await api.get(`/api/postgres/contracts/${titularId}`); if (d?.titular) setTitular(d.titular) } catch { /* silencioso */ }
+  }, [titularId])
+
   useEffect(() => {
     loadData()
     loadConsentStatus()
-  }, [loadData, loadConsentStatus])
+    loadListo()
+  }, [loadData, loadConsentStatus, loadListo])
 
   // Refetch silencioso del titular al abrir la confirmación de cierre — el
   // indicador "PDF archivado en Drive" lee PEOPLE.driveFileId, que puede haber
@@ -720,26 +735,41 @@ export default function ContratoDetailPage() {
                   </button>
                 </>
               )}
-              {/* Estado de aprobación calculado (lib/estado-aprobacion): reemplaza al antiguo
-                  botón "Dejar listo para aprobación". */}
+              {/* "Dejar listo para aprobación" (2026-11-27): sin estado abre la lista de
+                  comprobación (DejarListoAprobacionModal); con cualquier otro estado es solo
+                  una etiqueta — esos estados los gestiona Aprobación. El estado sigue siendo
+                  el calculado (lib/estado-aprobacion); la confirmación solo queda en el Seguimiento. */}
               {(() => {
-                const falt = requisitosFaltantes(titular)
-                const est = estadoVisible(titular.aprobacion, falt)
-                const cls = est === 'Aprobado' ? 'bg-green-100 text-green-900 border-green-400'
-                  : est === LISTO_APROBACION ? 'bg-sky-100 text-sky-900 border-sky-400'
-                  : est === REQUISITOS_INCOMPLETOS ? 'bg-orange-100 text-orange-900 border-orange-400'
-                  : est === PENDIENTE_COMERCIAL ? 'bg-amber-100 text-amber-900 border-amber-400'
-                  : 'bg-red-100 text-red-900 border-red-400'
+                if (!esSinEstado(titular.aprobacion)) {
+                  const est = estadoVisible(titular.aprobacion, [])
+                  const cls = est === 'Aprobado' ? 'text-green-800' : est === 'Pendiente Comercial' ? 'text-amber-800' : 'text-red-800'
+                  return (
+                    <span className="inline-flex flex-col items-center justify-center text-center leading-tight w-48 min-h-[3rem] px-2 text-sm" title="Estado de aprobación">
+                      <span className={`inline-flex items-center gap-1.5 font-semibold ${cls}`}><CheckBadgeIcon className="h-4 w-4 shrink-0" />Estado: {est}</span>
+                      <span className="text-[11px] text-gray-500">lo gestiona Aprobación</span>
+                    </span>
+                  )
+                }
+                // Faltantes: los de la regla + "Sin enviar" (solo se exige aquí).
+                const falt = listo
+                  ? listo.requisitos.filter(r => !r.ok).map(r => r.clave === 'ENVIADO' ? 'Sin enviar' : REQUISITO_LABEL[r.clave as keyof typeof REQUISITO_LABEL])
+                  : requisitosFaltantes(titular).map(k => REQUISITO_LABEL[k])
+                const confirmado = !!listo?.confirmacion && falt.length === 0
+                const cls = falt.length ? 'bg-orange-100 text-orange-900 border-orange-400 hover:bg-orange-200'
+                  : 'bg-sky-100 text-sky-900 border-sky-400 hover:bg-sky-200'
                 return (
-                  <span
+                  <button
+                    type="button"
+                    onClick={() => setShowListo(true)}
                     className={`inline-flex flex-col items-center justify-center text-center leading-tight w-48 min-h-[3rem] px-3 py-1.5 border rounded-md text-sm font-semibold ${cls}`}
-                    title={est === REQUISITOS_INCOMPLETOS ? 'Falta: ' + falt.map(k => REQUISITO_LABEL[k]).join(', ') : 'Estado de aprobación'}
+                    title={falt.length ? 'Falta: ' + falt.join(', ') : 'Comprobar y confirmar'}
                   >
-                    <span className="inline-flex items-center gap-1.5"><CheckBadgeIcon className="h-4 w-4 shrink-0" />{est}</span>
-                    {est === REQUISITOS_INCOMPLETOS && (
-                      <span className="text-[11px] font-normal">{falt.map(k => REQUISITO_LABEL[k]).join(' · ')}</span>
+                    <span className="inline-flex items-center gap-1.5"><CheckBadgeIcon className="h-4 w-4 shrink-0" />{confirmado ? '✓ Listo para aprobación' : 'Dejar listo para aprobación'}</span>
+                    {falt.length > 0 && <span className="text-[11px] font-normal">{falt.join(' · ')}</span>}
+                    {confirmado && listo?.confirmacion && (
+                      <span className="text-[11px] font-normal">Confirmado por {listo.confirmacion.por} el {new Date(listo.confirmacion.fecha).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit' })}</span>
                     )}
-                  </span>
+                  </button>
                 )
               })()}
               {!consentStatus?.hasConsent && !isContratoPrueba(titular.contrato) && (
@@ -1124,8 +1154,25 @@ export default function ContratoDetailPage() {
           open={showDocReciboModal}
           personId={titularId}
           subtitulo={`${fullName(titular)} · Contrato ${titular.contrato || '—'}`}
-          onClose={() => setShowDocReciboModal(false)}
+          onClose={() => {
+            setShowDocReciboModal(false)
+            // Cambió documentación/recibo: se recarga y, si venía de "Dejar listo", se vuelve allí.
+            refrescarTitular(); loadListo()
+            if (reabrirListo) { setReabrirListo(false); setShowListo(true) }
+          }}
         />
+
+        {/* ── Dejar listo para aprobación ── */}
+        {showListo && (
+          <DejarListoAprobacionModal
+            titularId={titularId}
+            onClose={() => { setShowListo(false); loadListo() }}
+            onCambio={() => { refrescarTitular(); loadConsentStatus(); loadListo() }}
+            onAbrirDocumentos={() => { setShowListo(false); setReabrirListo(true); setShowDocReciboModal(true) }}
+            onEnviarPdf={async () => { await sendContractPdf(); refrescarTitular(); loadListo() }}
+            enviandoPdf={sendingPdf}
+          />
+        )}
 
         {/* ── Condiciones del canje (solo contratos CANJE) ── */}
         <CondicionesCanjeModal
